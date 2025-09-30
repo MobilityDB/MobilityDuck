@@ -1,0 +1,16 @@
+{
+        "dependencies": [
+          "geos",
+          "proj",
+          "json-c",
+          "gsl",
+          { "name": "meos", "version>=": "0" }
+        ],
+        "builtin-baseline": "6603e6392c5a1474ce2d7d0574eb774ab43a3236",
+        "vcpkg-configuration": {
+                "overlay-ports": [
+                        "./extension-ci-tools/vcpkg_ports",
+                        "./vcpkg_ports"
+                ]
+        }
+}

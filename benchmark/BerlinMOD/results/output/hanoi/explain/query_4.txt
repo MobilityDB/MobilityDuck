@@ -1,0 +1,147 @@
+┌─────────────────────────────────────┐
+│┌───────────────────────────────────┐│
+││    Query Profiling Information    ││
+│└───────────────────────────────────┘│
+└─────────────────────────────────────┘
+EXPLAIN ANALYZE SELECT DISTINCT p.PointId, p.Geom, v.Licence FROM Trips t, Vehicles v, Points p WHERE     t.VehicleId = v.VehicleId     AND ST_Intersects(trajectory(t.Trip)::GEOMETRY, p.Geom) ORDER BY p.PointId, v.Licence;
+┌────────────────────────────────────────────────┐
+│┌──────────────────────────────────────────────┐│
+││               Total Time: 2.24s              ││
+│└──────────────────────────────────────────────┘│
+└────────────────────────────────────────────────┘
+┌───────────────────────────┐
+│           QUERY           │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│      EXPLAIN_ANALYZE      │
+│    ────────────────────   │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_decompress_integ│
+│     ral_integer(#0, 1)    │
+│             #1            │
+│__internal_decompress_strin│
+│           g(#2)           │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          ORDER_BY         │
+│    ────────────────────   │
+│       p.PointId ASC       │
+│       v.Licence ASC       │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_compress_integra│
+│     l_utinyint(#0, 1)     │
+│             #1            │
+│__internal_compress_string_│
+│        ubigint(#2)        │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_decompress_integ│
+│     ral_integer(#0, 1)    │
+│             #1            │
+│__internal_decompress_strin│
+│           g(#2)           │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│       HASH_GROUP_BY       │
+│    ────────────────────   │
+│          Groups:          │
+│             #0            │
+│             #1            │
+│             #2            │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│          PointId          │
+│            Geom           │
+│          Licence          │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_compress_integra│
+│     l_utinyint(#0, 1)     │
+│             #1            │
+│__internal_compress_string_│
+│        ubigint(#2)        │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│          PointId          │
+│            Geom           │
+│          Licence          │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         EXTENSION         │
+│    ────────────────────   │
+│      Join Type: INNER     │
+│                           │
+│        Conditions:        │
+│     ST_Intersects(CAST    ├───────────────────────────────────────────┐
+│    (trajectory(Trip) AS   │                                           │
+│      GEOMETRY), Geom)     │                                           │
+│                           │                                           │
+│           0 Rows          │                                           │
+│          (2.12s)          │                                           │
+└─────────────┬─────────────┘                                           │
+┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐
+│         HASH_JOIN         │                             │         TABLE_SCAN        │
+│    ────────────────────   │                             │    ────────────────────   │
+│      Join Type: INNER     │                             │       Table: Points       │
+│                           │                             │   Type: Sequential Scan   │
+│        Conditions:        │                             │                           │
+│   VehicleId = VehicleId   ├──────────────┐              │        Projections:       │
+│                           │              │              │            Geom           │
+│                           │              │              │          PointId          │
+│                           │              │              │                           │
+│          549 Rows         │              │              │          100 Rows         │
+│          (0.00s)          │              │              │          (0.00s)          │
+└─────────────┬─────────────┘              │              └───────────────────────────┘
+┌─────────────┴─────────────┐┌─────────────┴─────────────┐
+│         TABLE_SCAN        ││         TABLE_SCAN        │
+│    ────────────────────   ││    ────────────────────   │
+│        Table: Trips       ││      Table: Vehicles      │
+│   Type: Sequential Scan   ││   Type: Sequential Scan   │
+│                           ││                           │
+│        Projections:       ││        Projections:       │
+│         VehicleId         ││         VehicleId         │
+│            Trip           ││          Licence          │
+│                           ││                           │
+│          549 Rows         ││          63 Rows          │
+│          (0.12s)          ││          (0.00s)          │
+└───────────────────────────┘└───────────────────────────┘

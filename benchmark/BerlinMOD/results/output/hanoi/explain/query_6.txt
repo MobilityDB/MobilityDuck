@@ -1,0 +1,119 @@
+┌─────────────────────────────────────┐
+│┌───────────────────────────────────┐│
+││    Query Profiling Information    ││
+│└───────────────────────────────────┘│
+└─────────────────────────────────────┘
+EXPLAIN ANALYZE WITH Temp(Licence, VehicleId, Trip) AS (     SELECT v.Licence, t.VehicleId, t.Trip     FROM Trips t, Vehicles v     WHERE t.VehicleId = v.VehicleId      AND v.VehicleType = 'truck' ) SELECT t1.Licence, t2.Licence FROM Temp t1, Temp t2 WHERE t1.VehicleId < t2.VehicleId      AND t1.Trip && expandSpace(t2.Trip::STBOX, 10)      AND eDwithin(t1.Trip, t2.Trip, 10.0) ORDER BY t1.Licence, t2.Licence;
+┌────────────────────────────────────────────────┐
+│┌──────────────────────────────────────────────┐│
+││               Total Time: 2.70s              ││
+│└──────────────────────────────────────────────┘│
+└────────────────────────────────────────────────┘
+┌───────────────────────────┐
+│           QUERY           │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│      EXPLAIN_ANALYZE      │
+│    ────────────────────   │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_decompress_strin│
+│           g(#0)           │
+│__internal_decompress_strin│
+│           g(#1)           │
+│                           │
+│          19 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          ORDER_BY         │
+│    ────────────────────   │
+│       t1.Licence ASC      │
+│       t2.Licence ASC      │
+│                           │
+│          19 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_compress_string_│
+│        ubigint(#0)        │
+│__internal_compress_string_│
+│        ubigint(#1)        │
+│                           │
+│          19 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│             #0            │
+│             #3            │
+│                           │
+│          19 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│           FILTER          │
+│    ────────────────────   │
+│ (eDwithin(Trip, Trip, 10.0│
+│ ) AND (Trip && expandSpace│
+│ (CAST(Trip AS STBOX), 10.0│
+│            )))            │
+│                           │
+│          19 Rows          │
+│          (2.64s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│    PIECEWISE_MERGE_JOIN   │
+│    ────────────────────   │
+│      Join Type: INNER     │
+│                           │
+│        Conditions:        ├───────────────────────────────────────────┐
+│   VehicleId < VehicleId   │                                           │
+│                           │                                           │
+│         2352 Rows         │                                           │
+│          (0.02s)          │                                           │
+└─────────────┬─────────────┘                                           │
+┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐
+│         PROJECTION        │                             │         PROJECTION        │
+│    ────────────────────   │                             │    ────────────────────   │
+│          Licence          │                             │          Licence          │
+│         VehicleId         │                             │         VehicleId         │
+│            Trip           │                             │            Trip           │
+│                           │                             │                           │
+│          73 Rows          │                             │          73 Rows          │
+│          (0.00s)          │                             │          (0.00s)          │
+└─────────────┬─────────────┘                             └─────────────┬─────────────┘
+┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐
+│         HASH_JOIN         │                             │         HASH_JOIN         │
+│    ────────────────────   │                             │    ────────────────────   │
+│      Join Type: INNER     │                             │      Join Type: INNER     │
+│                           │                             │                           │
+│        Conditions:        ├──────────────┐              │        Conditions:        ├──────────────┐
+│   VehicleId = VehicleId   │              │              │   VehicleId = VehicleId   │              │
+│                           │              │              │                           │              │
+│          73 Rows          │              │              │          73 Rows          │              │
+│          (0.00s)          │              │              │          (0.00s)          │              │
+└─────────────┬─────────────┘              │              └─────────────┬─────────────┘              │
+┌─────────────┴─────────────┐┌─────────────┴─────────────┐┌─────────────┴─────────────┐┌─────────────┴─────────────┐
+│         TABLE_SCAN        ││         TABLE_SCAN        ││         TABLE_SCAN        ││         TABLE_SCAN        │
+│    ────────────────────   ││    ────────────────────   ││    ────────────────────   ││    ────────────────────   │
+│        Table: Trips       ││      Table: Vehicles      ││        Table: Trips       ││      Table: Vehicles      │
+│      Type: Index Scan     ││   Type: Sequential Scan   ││      Type: Index Scan     ││   Type: Sequential Scan   │
+│                           ││                           ││                           ││                           │
+│        Projections:       ││        Projections:       ││        Projections:       ││        Projections:       │
+│         VehicleId         ││         VehicleId         ││         VehicleId         ││         VehicleId         │
+│            Trip           ││          Licence          ││            Trip           ││          Licence          │
+│                           ││                           ││                           ││                           │
+│                           ││          Filters:         ││                           ││          Filters:         │
+│                           ││    VehicleType='truck'    ││                           ││    VehicleType='truck'    │
+│                           ││                           ││                           ││                           │
+│          73 Rows          ││           9 Rows          ││          73 Rows          ││           9 Rows          │
+│          (0.00s)          ││          (0.00s)          ││          (0.02s)          ││          (0.00s)          │
+└───────────────────────────┘└───────────────────────────┘└───────────────────────────┘└───────────────────────────┘

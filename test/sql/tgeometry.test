@@ -1,0 +1,273 @@
+require mobilityduck
+
+# Test tgeometry constructor with parentheses
+query I
+SELECT tgeometry('[Point(0 0)@2017-01-01 08:00:00, Linestring(0 0,0 1)@2017-01-02 08:05:00]');
+----
+[010100000000000000000000000000000000000000@2017-01-01 08:00:00+00, 010200000002000000000000000000000000000000000000000000000000000000000000000000F03F@2017-01-02 08:05:00+00]
+
+# Test tgeometry constructor without parentheses
+query I
+SELECT tgeometry '[Point(0 0)@2017-01-01 08:00:00, Linestring(0 0,0 1)@2017-01-02 08:05:00]';
+----
+[010100000000000000000000000000000000000000@2017-01-01 08:00:00+00, 010200000002000000000000000000000000000000000000000000000000000000000000000000F03F@2017-01-02 08:05:00+00]
+
+# Test astext function
+query I
+SELECT astext(tgeometry 'Point(1 1)@2023-01-01 10:00:00+00');
+----
+POINT(1 1)@2023-01-01 10:00:00+00
+
+# Test asEWKT with point and timestamp
+query I
+SELECT asEWKT(tgeometry('Point(1 1)', timestamptz '2012-01-01 08:00:00'));
+----
+POINT(1 1)@2012-01-01 08:00:00+00
+
+# Test asEWKT with point and time span
+query I
+SELECT asEWKT(tgeometry('Point(1 1)', tstzspan '[2001-01-01, 2001-01-02]'));
+----
+[POINT(1 1)@2001-01-01 00:00:00+00, POINT(1 1)@2001-01-02 00:00:00+00]
+
+# Test asEWKT with point, time span and step interpolation
+query I
+SELECT asEWKT(tgeometry('Point(1 1)', tstzspan '[2001-01-01, 2001-01-02]', 'step'));
+----
+[POINT(1 1)@2001-01-01 00:00:00+00, POINT(1 1)@2001-01-02 00:00:00+00]
+
+# Test asewkt (lowercase) function
+query I
+SELECT asewkt(tgeometry 'Point(1 1)@2023-01-01 10:00:00+00');
+----
+POINT(1 1)@2023-01-01 10:00:00+00
+
+# Test tgeometrySeq with step interpolation and bounds
+query I
+SELECT asEWKT(tgeometrySeq(ARRAY[tgeometry 'Point(1 1)@2001-01-01', 'Point(2 2 )@2001-01-02'], 'step', 'true','true'));
+----
+[POINT(1 1)@2001-01-01 00:00:00+00, POINT(2 2)@2001-01-02 00:00:00+00]
+
+# Test tgeometrySeq with step interpolation and one bound
+query I
+SELECT asEWKT(tgeometrySeq(ARRAY[tgeometry 'Point(1 1)@2001-01-01', 'Point(2 2 )@2001-01-02'], 'step', 'true'));
+----
+[POINT(1 1)@2001-01-01 00:00:00+00, POINT(2 2)@2001-01-02 00:00:00+00]
+
+# Test tgeometrySeq with step interpolation only
+query I
+SELECT asEWKT(tgeometrySeq(ARRAY[tgeometry 'Point(1 1)@2001-01-01', 'Point(2 2 )@2001-01-02'], 'step'));
+----
+[POINT(1 1)@2001-01-01 00:00:00+00, POINT(2 2)@2001-01-02 00:00:00+00]
+
+# Test tgeometrySeq with default parameters
+query I
+SELECT asEWKT(tgeometrySeq(ARRAY[tgeometry 'Point(1 1)@2001-01-01', 'Point(2 2 )@2001-01-02']));
+----
+[POINT(1 1)@2001-01-01 00:00:00+00, POINT(2 2)@2001-01-02 00:00:00+00]
+
+# Test tgeometrySeq with discrete interpolation
+query I
+SELECT asEWKT(tgeometrySeq(ARRAY[tgeometry 'Point(1 1)@2001-01-01', 'Point(2 2 )@2001-01-02'], 'discrete'));
+----
+{POINT(1 1)@2001-01-01 00:00:00+00, POINT(2 2)@2001-01-02 00:00:00+00}
+
+# Test asewkt with sequence containing different geometry types
+query I
+SELECT asewkt(tgeometry('[Point(0 0)@2017-01-01 08:00:00, Linestring(0 0,0 1)@2017-01-02 08:05:00]'));
+----
+[POINT(0 0)@2017-01-01 08:00:00+00, LINESTRING(0 0,0 1)@2017-01-02 08:05:00+00]
+
+# Test asText with simple point
+query I
+SELECT asText(tgeometry ('Point(1 1)@2012-01-01 08:00:00'));
+----
+POINT(1 1)@2012-01-01 08:00:00+00
+
+# Test timeSpan function with parentheses
+query I
+SELECT timeSpan(tgeometry('Point(1 1)@2023-01-01 10:00:00+00'));
+----
+[2023-01-01 10:00:00+00, 2023-01-01 10:00:00+00]
+
+# Test timeSpan function without parentheses
+query I
+SELECT timeSpan(tgeometry 'Point(1 1)@2023-01-01 10:00:00+00');
+----
+[2023-01-01 10:00:00+00, 2023-01-01 10:00:00+00]
+
+# Test tgeometryInst function
+query I
+SELECT tgeometryInst(tgeometry('Point(1 1)@2023-01-01 10:00:00+00'));
+----
+0101000000000000000000F03F000000000000F03F@2023-01-01 10:00:00+00
+
+# Test setInterp with discrete interpolation
+query I
+SELECT asEWKT(setInterp(tgeometry 'Point(1 1)@2000-01-01', 'discrete'));
+----
+{POINT(1 1)@2000-01-01 00:00:00+00}
+
+# Test setInterp with step interpolation
+query I
+SELECT asEWKT(setInterp(tgeometry 'Point(1 1)@2000-01-01', 'step'));
+----
+[POINT(1 1)@2000-01-01 00:00:00+00]
+
+# Test setInterp with discrete sequence
+query I
+SELECT asEWKT(setInterp(tgeometry '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}', 'discrete'));
+----
+{POINT(1 1)@2000-01-01 00:00:00+00, POINT(2 2)@2000-01-02 00:00:00+00, POINT(1 1)@2000-01-03 00:00:00+00}
+
+# Test merge function
+query I
+SELECT asText(merge(tgeometry 'Point(1 1)@2000-01-01', tgeometry 'Point(1 1)@2000-01-02'));
+----
+{POINT(1 1)@2000-01-01 00:00:00+00, POINT(1 1)@2000-01-02 00:00:00+00}
+
+# Test tempSubtype with instant
+query I
+SELECT tempSubtype(tgeometry 'Point(1 1)@2000-01-01');
+----
+Instant
+
+# Test tempSubtype with discrete sequence
+query I
+SELECT tempSubtype(tgeometry '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}');
+----
+Sequence
+
+# Test tempSubtype with continuous sequence
+query I
+SELECT tempSubtype(tgeometry '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]');
+----
+Sequence
+
+# Test tempSubtype with sequence set
+query I
+SELECT tempSubtype(tgeometry '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}');
+----
+SequenceSet
+
+# Test memSize with instant
+query I
+SELECT memSize(tgeometry 'Point(1 1)@2000-01-01') > 0;
+----
+true
+
+# Test memSize with discrete sequence
+query I
+SELECT memSize(tgeometry '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}') > 0;
+----
+true
+
+# Test memSize with continuous sequence
+query I
+SELECT memSize(tgeometry '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]') > 0;
+----
+true
+
+# Test memSize with sequence set
+query I
+SELECT memSize(tgeometry '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}') > 0;
+----
+true
+
+# Test getValue function
+query I
+SELECT getValue(tgeometry 'Point(1 1)@2000-01-01')::GEOMETRY;
+----
+POINT (1 1)
+
+# Test startValue function
+query I
+SELECT startValue(tgeometry '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}')::GEOMETRY;
+----
+POINT (1 1)
+
+# Test endValue function
+query I
+SELECT endValue(tgeometry '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}')::GEOMETRY;
+----
+POINT (3 3)
+
+# Test startInstant with instant
+query I
+SELECT asEWKT(startInstant(tgeometry 'Point(1 1)@2000-01-01'));
+----
+POINT(1 1)@2000-01-01 00:00:00+00
+
+# Test startInstant with discrete sequence
+query I
+SELECT asEWKT(startInstant(tgeometry '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}'));
+----
+POINT(1 1)@2000-01-01 00:00:00+00
+
+# Test startInstant with continuous sequence
+query I
+SELECT asEWKT(startInstant(tgeometry '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]'));
+----
+POINT(1 1)@2000-01-01 00:00:00+00
+
+# Test startInstant with sequence set
+query I
+SELECT asEWKT(startInstant(tgeometry '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}'));
+----
+POINT(1 1)@2000-01-01 00:00:00+00
+
+# Test endInstant with instant
+query I
+SELECT asEWKT(endInstant(tgeometry 'Point(3 3)@2000-01-05'));
+----
+POINT(3 3)@2000-01-05 00:00:00+00
+
+# Test endInstant with discrete sequence
+query I
+SELECT asEWKT(endInstant(tgeometry '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(3 3)@2000-01-05}'));
+----
+POINT(3 3)@2000-01-05 00:00:00+00
+
+# Test endInstant with continuous sequence
+query I
+SELECT asEWKT(endInstant(tgeometry '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(3 3)@2000-01-05]'));
+----
+POINT(3 3)@2000-01-05 00:00:00+00
+
+# Test endInstant with sequence set
+query I
+SELECT asEWKT(endInstant(tgeometry '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}'));
+----
+POINT(3 3)@2000-01-05 00:00:00+00
+
+# Test instantN with instant
+query I
+SELECT asEWKT(instantN(tgeometry 'Point(1 1)@2000-01-01', 1));
+----
+POINT(1 1)@2000-01-01 00:00:00+00
+
+# Test instantN with discrete sequence
+query I
+SELECT asEWKT(instantN(tgeometry '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}', 1));
+----
+POINT(1 1)@2000-01-01 00:00:00+00
+
+# Test instantN with continuous sequence
+query I
+SELECT asEWKT(instantN(tgeometry '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]', 1));
+----
+POINT(1 1)@2000-01-01 00:00:00+00
+
+# Test instantN with sequence set
+query I
+SELECT asEWKT(instantN(tgeometry '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', 1));
+----
+POINT(1 1)@2000-01-01 00:00:00+00
+
+# Test getTimestamp function
+query I
+SELECT getTimestamp(tgeometry 'Point(1 1)@2023-01-01 10:00:00+00');
+----
+2023-01-01 10:00:00+00
+
+

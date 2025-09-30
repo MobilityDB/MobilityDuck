@@ -1,0 +1,14 @@
+{
+    "name": "meos",
+    "version-string": "git",
+    "description": "MEOS - Mobility Engine Open Source C library (built from MobilityDB with -DMEOS=ON)",
+    "homepage": "https://libmeos.org/",
+    "dependencies": [
+      "vcpkg-cmake",
+      "vcpkg-cmake-config",
+      "geos",
+      "proj",
+      "json-c",
+      "gsl"
+    ]
+  }
