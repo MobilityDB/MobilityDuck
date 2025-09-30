@@ -471,10 +471,7 @@ void SetFunctions::Set_constructor(DataChunk &args, ExpressionState &state, Vect
                     }
                     case T_FLOATSET: {
                         double v = FlatVector::GetData<double>(child)[idx];
-                        Datum d;
-                        static_assert(sizeof(Datum) == sizeof(double));
-                        memcpy(&d, &v, sizeof(double));
-                        values[i] = d;
+                        values[i] = Float8GetDatum(v);
                         break;
                     }
                     case T_TEXTSET: {
