@@ -30,6 +30,7 @@ jobs:
       extension_name: mobilityduck
       ci_tools_version: v1.3.2
       vcpkg_commit: 6603e6392c5a1474ce2d7d0574eb774ab43a3236
+      exclude_archs: windows_amd64;windows_amd64_mingw;linux_amd64_musl
 
   duckdb-latest-deploy:
     needs: duckdb-latest-build
@@ -40,3 +41,4 @@ jobs:
       ci_tools_version: v1.3.2
       extension_name: mobilityduck
       deploy_latest: ${{ startsWith(github.ref, 'refs/heads/v') || github.ref == 'refs/heads/main' }}
+      exclude_archs: windows_amd64;windows_amd64_mingw;linux_amd64_musl
