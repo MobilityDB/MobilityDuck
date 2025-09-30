@@ -1,0 +1,241 @@
+┌─────────────────────────────────────┐
+│┌───────────────────────────────────┐│
+││    Query Profiling Information    ││
+│└───────────────────────────────────┘│
+└─────────────────────────────────────┘
+EXPLAIN ANALYZE WITH Timestamps AS (     SELECT DISTINCT v.Licence, p.PointId, p.Geom,         MIN(startTimestamp(atValues(t.Trip,p.Geom::WKB_BLOB))) AS Instant     FROM Trips t, Vehicles v, Points1 p     WHERE         t.VehicleId = v.VehicleId         AND v.VehicleType = 'passenger'         AND t.Trip && stbox(p.Geom::WKB_BLOB)         AND ST_Intersects(trajectory(t.Trip)::GEOMETRY, p.Geom)     GROUP BY v.Licence, p.PointId, p.Geom ) SELECT t1.Licence, t1.PointId, t1.Geom, t1.Instant FROM Timestamps t1 WHERE t1.Instant <= ALL (     SELECT t2.Instant     FROM Timestamps t2     WHERE t1.PointId = t2.PointId ) ORDER BY t1.PointId, t1.Licence;
+┌────────────────────────────────────────────────┐
+│┌──────────────────────────────────────────────┐│
+││               Total Time: 4.21s              ││
+│└──────────────────────────────────────────────┘│
+└────────────────────────────────────────────────┘
+┌───────────────────────────┐
+│           QUERY           │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│      EXPLAIN_ANALYZE      │
+│    ────────────────────   │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          ORDER_BY         │
+│    ────────────────────   │
+│       t1.PointId ASC      │
+│       t1.Licence ASC      │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│          Licence          │
+│          PointId          │
+│            Geom           │
+│          Instant          │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│            CTE            │
+│    ────────────────────   │
+│    CTE Name: Timestamps   │
+│       Table Index: 0      ├─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                           │                                                                                                     │
+│           0 Rows          │                                                                                                     │
+│          (0.00s)          │                                                                                                     │
+└─────────────┬─────────────┘                                                                                                     │
+┌─────────────┴─────────────┐                                                                                       ┌─────────────┴─────────────┐
+│         PROJECTION        │                                                                                       │           FILTER          │
+│    ────────────────────   │                                                                                       │    ────────────────────   │
+│__internal_decompress_strin│                                                                                       │       (NOT SUBQUERY)      │
+│           g(#0)           │                                                                                       │                           │
+│__internal_decompress_integ│                                                                                       │                           │
+│     ral_integer(#1, 1)    │                                                                                       │                           │
+│             #2            │                                                                                       │                           │
+│             #3            │                                                                                       │                           │
+│                           │                                                                                       │                           │
+│           0 Rows          │                                                                                       │           0 Rows          │
+│          (0.00s)          │                                                                                       │          (0.00s)          │
+└─────────────┬─────────────┘                                                                                       └─────────────┬─────────────┘
+┌─────────────┴─────────────┐                                                                                       ┌─────────────┴─────────────┐
+│       HASH_GROUP_BY       │                                                                                       │         HASH_JOIN         │
+│    ────────────────────   │                                                                                       │    ────────────────────   │
+│          Groups:          │                                                                                       │      Join Type: MARK      │
+│             #0            │                                                                                       │                           │
+│             #1            │                                                                                       │        Conditions:        │
+│             #2            │                                                                                       │  PointId IS NOT DISTINCT  ├──────────────┐
+│             #3            │                                                                                       │        FROM PointId       │              │
+│                           │                                                                                       │        Instant > #0       │              │
+│                           │                                                                                       │                           │              │
+│           0 Rows          │                                                                                       │           0 Rows          │              │
+│          (0.00s)          │                                                                                       │          (0.00s)          │              │
+└─────────────┬─────────────┘                                                                                       └─────────────┬─────────────┘              │
+┌─────────────┴─────────────┐                                                                                       ┌─────────────┴─────────────┐┌─────────────┴─────────────┐
+│         PROJECTION        │                                                                                       │          CTE_SCAN         ││         PROJECTION        │
+│    ────────────────────   │                                                                                       │    ────────────────────   ││    ────────────────────   │
+│          Licence          │                                                                                       │        CTE Index: 0       ││          Instant          │
+│          PointId          │                                                                                       │                           ││          PointId          │
+│            Geom           │                                                                                       │                           ││                           │
+│          Instant          │                                                                                       │                           ││                           │
+│                           │                                                                                       │                           ││                           │
+│           0 Rows          │                                                                                       │           0 Rows          ││           0 Rows          │
+│          (0.00s)          │                                                                                       │          (0.00s)          ││          (0.00s)          │
+└─────────────┬─────────────┘                                                                                       └───────────────────────────┘└─────────────┬─────────────┘
+┌─────────────┴─────────────┐                                                                                                                    ┌─────────────┴─────────────┐
+│         PROJECTION        │                                                                                                                    │         PROJECTION        │
+│    ────────────────────   │                                                                                                                    │    ────────────────────   │
+│__internal_compress_string_│                                                                                                                    │             #1            │
+│        ubigint(#0)        │                                                                                                                    │             #3            │
+│__internal_compress_integra│                                                                                                                    │                           │
+│     l_utinyint(#1, 1)     │                                                                                                                    │                           │
+│             #2            │                                                                                                                    │                           │
+│             #3            │                                                                                                                    │                           │
+│                           │                                                                                                                    │                           │
+│           0 Rows          │                                                                                                                    │           0 Rows          │
+│          (0.00s)          │                                                                                                                    │          (0.00s)          │
+└─────────────┬─────────────┘                                                                                                                    └─────────────┬─────────────┘
+┌─────────────┴─────────────┐                                                                                                                    ┌─────────────┴─────────────┐
+│         PROJECTION        │                                                                                                                    │           FILTER          │
+│    ────────────────────   │                                                                                                                    │    ────────────────────   │
+│__internal_decompress_strin│                                                                                                                    │   (PointId IS NOT NULL)   │
+│           g(#0)           │                                                                                                                    │                           │
+│__internal_decompress_integ│                                                                                                                    │                           │
+│     ral_integer(#1, 1)    │                                                                                                                    │                           │
+│             #2            │                                                                                                                    │                           │
+│             #3            │                                                                                                                    │                           │
+│                           │                                                                                                                    │                           │
+│           0 Rows          │                                                                                                                    │           0 Rows          │
+│          (0.00s)          │                                                                                                                    │          (0.00s)          │
+└─────────────┬─────────────┘                                                                                                                    └─────────────┬─────────────┘
+┌─────────────┴─────────────┐                                                                                                                    ┌─────────────┴─────────────┐
+│       HASH_GROUP_BY       │                                                                                                                    │          CTE_SCAN         │
+│    ────────────────────   │                                                                                                                    │    ────────────────────   │
+│          Groups:          │                                                                                                                    │        CTE Index: 0       │
+│             #0            │                                                                                                                    │                           │
+│             #1            │                                                                                                                    │                           │
+│             #2            │                                                                                                                    │                           │
+│                           │                                                                                                                    │                           │
+│    Aggregates: min(#3)    │                                                                                                                    │                           │
+│                           │                                                                                                                    │                           │
+│           0 Rows          │                                                                                                                    │           0 Rows          │
+│          (0.00s)          │                                                                                                                    │          (0.00s)          │
+└─────────────┬─────────────┘                                                                                                                    └───────────────────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│          Licence          │
+│          PointId          │
+│            Geom           │
+│  startTimestamp(atValues  │
+│    (Trip, CAST(Geom AS    │
+│         WKB_BLOB)))       │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│             #0            │
+│__internal_compress_string_│
+│        ubigint(#1)        │
+│__internal_compress_integra│
+│     l_utinyint(#2, 1)     │
+│             #3            │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│     BLOCKWISE_NL_JOIN     │
+│    ────────────────────   │
+│      Join Type: INNER     │
+│                           │
+│         Condition:        │
+│ ((Trip && stbox(CAST(Geom │
+│     AS WKB_BLOB))) AND    ├───────────────────────────────────────────┐
+│     ST_Intersects(CAST    │                                           │
+│    (trajectory(Trip) AS   │                                           │
+│      GEOMETRY), Geom))    │                                           │
+│                           │                                           │
+│           0 Rows          │                                           │
+│          (4.09s)          │                                           │
+└─────────────┬─────────────┘                                           │
+┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐
+│         HASH_JOIN         │                             │         PROJECTION        │
+│    ────────────────────   │                             │    ────────────────────   │
+│      Join Type: INNER     │                             │__internal_decompress_integ│
+│                           │                             │     ral_integer(#0, 1)    │
+│        Conditions:        ├──────────────┐              │             #1            │
+│   VehicleId = VehicleId   │              │              │                           │
+│                           │              │              │                           │
+│          458 Rows         │              │              │          10 Rows          │
+│          (0.00s)          │              │              │          (0.00s)          │
+└─────────────┬─────────────┘              │              └─────────────┬─────────────┘
+┌─────────────┴─────────────┐┌─────────────┴─────────────┐┌─────────────┴─────────────┐
+│         TABLE_SCAN        ││         TABLE_SCAN        ││          ORDER_BY         │
+│    ────────────────────   ││    ────────────────────   ││    ────────────────────   │
+│        Table: Trips       ││      Table: Vehicles      ││ hanoi.main.Points.PointId │
+│   Type: Sequential Scan   ││   Type: Sequential Scan   ││             ASC           │
+│                           ││                           ││                           │
+│        Projections:       ││        Projections:       ││                           │
+│         VehicleId         ││         VehicleId         ││                           │
+│            Trip           ││          Licence          ││                           │
+│                           ││                           ││                           │
+│                           ││          Filters:         ││                           │
+│                           ││  VehicleType='passenger'  ││                           │
+│                           ││                           ││                           │
+│          549 Rows         ││          52 Rows          ││          10 Rows          │
+│          (0.11s)          ││          (0.00s)          ││          (0.00s)          │
+└───────────────────────────┘└───────────────────────────┘└─────────────┬─────────────┘
+                                                          ┌─────────────┴─────────────┐
+                                                          │         PROJECTION        │
+                                                          │    ────────────────────   │
+                                                          │__internal_compress_integra│
+                                                          │     l_utinyint(#0, 1)     │
+                                                          │             #1            │
+                                                          │                           │
+                                                          │          10 Rows          │
+                                                          │          (0.00s)          │
+                                                          └─────────────┬─────────────┘
+                                                          ┌─────────────┴─────────────┐
+                                                          │         HASH_JOIN         │
+                                                          │    ────────────────────   │
+                                                          │      Join Type: SEMI      │
+                                                          │                           │
+                                                          │        Conditions:        ├──────────────┐
+                                                          │       rowid = rowid       │              │
+                                                          │                           │              │
+                                                          │          10 Rows          │              │
+                                                          │          (0.00s)          │              │
+                                                          └─────────────┬─────────────┘              │
+                                                          ┌─────────────┴─────────────┐┌─────────────┴─────────────┐
+                                                          │         TABLE_SCAN        ││           TOP_N           │
+                                                          │    ────────────────────   ││    ────────────────────   │
+                                                          │       Table: Points       ││          Top: 10          │
+                                                          │   Type: Sequential Scan   ││                           │
+                                                          │                           ││         Order By:         │
+                                                          │        Projections:       ││ hanoi.main.Points.PointId │
+                                                          │          PointId          ││             ASC           │
+                                                          │            Geom           ││                           │
+                                                          │                           ││                           │
+                                                          │          10 Rows          ││          10 Rows          │
+                                                          │          (0.00s)          ││          (0.00s)          │
+                                                          └───────────────────────────┘└─────────────┬─────────────┘
+                                                                                       ┌─────────────┴─────────────┐
+                                                                                       │         TABLE_SCAN        │
+                                                                                       │    ────────────────────   │
+                                                                                       │       Table: Points       │
+                                                                                       │   Type: Sequential Scan   │
+                                                                                       │    Projections: PointId   │
+                                                                                       │                           │
+                                                                                       │          Filters:         │
+                                                                                       │ optional: Dynamic Filter  │
+                                                                                       │         (PointId)         │
+                                                                                       │                           │
+                                                                                       │          100 Rows         │
+                                                                                       │          (0.00s)          │
+                                                                                       └───────────────────────────┘

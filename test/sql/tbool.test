@@ -1,0 +1,98 @@
+# name: test/sql/tbool.test
+# description: test tbool type of mobilityduck extension
+# group: [sql]
+
+# Require statement will ensure this test is run with this extension loaded
+require mobilityduck
+
+# Test extension
+
+query I
+SELECT tbool(true, timestamptz '2012-01-01 08:00:00');
+----
+t@2012-01-01 08:00:00+00
+
+query I
+SELECT tempSubtype(tbool 't@2000-01-01');
+----
+Instant
+
+query I
+SELECT tempSubtype(tbool '{t@2000-01-01, f@2000-01-02, t@2000-01-03}');
+----
+Sequence
+
+query I
+SELECT tempSubtype(tbool '{[t@2025-01-01, f@2025-01-02, t@2025-01-03], [t@2025-01-04, t@2025-01-05]}') as tempType;
+----
+SequenceSet
+
+query I
+SELECT interp(tbool 't@2000-01-01');
+----
+None
+
+query I
+SELECT interp(tbool '{t@2000-01-01, f@2000-01-02, t@2000-01-03}');
+----
+Discrete
+
+query I
+SELECT interp(tbool '[t@2000-01-01, f@2000-01-02, t@2000-01-03]');
+----
+Step
+
+query I
+SELECT interp(tbool '{[t@2000-01-01, f@2000-01-02, t@2000-01-03],[t@2000-01-04, t@2000-01-05]}');
+----
+Step
+
+query I
+SELECT startValue(tbool 't@2000-01-01');
+----
+true
+
+query I
+SELECT startValue(tbool '{t@2000-01-01, f@2000-01-02, t@2000-01-03}');
+----
+true
+
+query I
+SELECT startValue(tbool '[t@2000-01-01, f@2000-01-02, t@2000-01-03]');
+----
+true
+
+query I
+SELECT startValue(tbool '{[f@2000-01-01, f@2000-01-02, t@2000-01-03],[t@2000-01-04, t@2000-01-05]}');
+----
+false
+
+query I
+SELECT endValue(tbool 't@2000-01-01');
+----
+true
+
+query I
+SELECT endValue(tbool '{t@2000-01-01, f@2000-01-02, t@2000-01-03}');
+----
+true
+
+query I
+SELECT endValue(tbool '[t@2000-01-01, f@2000-01-02, t@2000-01-03]');
+----
+true
+
+query I
+SELECT endValue(tbool '{[t@2000-01-01, f@2000-01-02, t@2000-01-03],[t@2000-01-04, f@2000-01-05]}');
+----
+false
+
+query I
+SELECT atValues(tbool '{[t@2000-01-01, f@2000-01-02, t@2000-01-03],[t@2000-01-04, t@2000-01-05]}', true);
+----
+{[t@2000-01-01 00:00:00+00, t@2000-01-02 00:00:00+00), [t@2000-01-03 00:00:00+00], [t@2000-01-04 00:00:00+00, t@2000-01-05 00:00:00+00]}
+
+query I
+SELECT whenTrue(tbool '{[t@2000-01-01, f@2000-01-02, t@2000-01-03],[t@2000-01-04, t@2000-01-05]}');
+----
+{[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00), [2000-01-03 00:00:00+00, 2000-01-03 00:00:00+00], [2000-01-04 00:00:00+00, 2000-01-05 00:00:00+00]}

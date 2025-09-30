@@ -1,0 +1,422 @@
+require mobilityduck
+
+query I
+SELECT tbox 'TBOXINT XT([1, 1],[2000-01-01,2000-01-02])'; -- Both X and T dimensions
+----
+TBOXINT XT([1, 2),[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT tbox 'TBOXFLOAT XT([1.0, 1.0],[2000-01-01,2000-01-02])'; -- Both X and T dimensions
+----
+TBOXFLOAT XT([1, 1],[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT tbox 'TBOXINT X([1, 1])'; -- Only X dimension
+----
+TBOXINT X([1, 2))
+
+query I
+SELECT tbox 'TBOXFLOAT X([1.0, 1.0])'; -- Only X dimension
+----
+TBOXFLOAT X([1, 1])
+
+query I
+SELECT tbox 'TBOX T([2000-01-01,2000-01-02])'; -- Only T dimension
+----
+TBOX T([2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT tbox 'TBOXINT XT([1,2][2000-01-01,2000-01-02])'; -- Optional comma
+----
+TBOXINT XT([1, 3),[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT tbox(10, timestamptz '2000-01-01');
+----
+TBOXINT XT([10, 11),[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00])
+
+query I
+SELECT tbox(10.5, timestamptz '2000-01-01');
+----
+TBOXFLOAT XT([10.5, 10.5],[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00])
+
+query I
+SELECT tbox(intspan '[1,2]', timestamptz '2000-01-01');
+----
+TBOXINT XT([1, 3),[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00])
+
+query I
+SELECT tbox(floatspan '[1,2]', timestamptz '2000-01-01');
+----
+TBOXFLOAT XT([1, 2],[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00])
+
+query I
+SELECT tbox(10, tstzspan '[2000-01-01,2000-01-02]');
+----
+TBOXINT XT([10, 11),[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT tbox(10.5, tstzspan '[2000-01-01,2000-01-02]');
+----
+TBOXFLOAT XT([10.5, 10.5],[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT tbox(intspan '[1,2]', tstzspan '[2000-01-01,2000-01-02]');
+----
+TBOXINT XT([1, 3),[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT tbox(floatspan '[1,2]', tstzspan '[2000-01-01,2000-01-02]');
+----
+TBOXFLOAT XT([1, 2],[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT tbox(10);
+----
+TBOXINT X([10, 11))
+
+query I
+SELECT 10::tbox;
+----
+TBOXINT X([10, 11))
+
+query I
+SELECT tbox(10.5);
+----
+TBOXFLOAT X([10.5, 10.5])
+
+# ERROR: 10.5 is recognized as DECIMAL, not DOUBLE
+#query I
+#SELECT 10.5::tbox;
+#----
+#TBOXFLOAT X([10.5, 10.5])
+
+query I
+SELECT tbox(timestamptz '2000-01-01');
+----
+TBOX T([2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00])
+
+query I
+SELECT timestamptz '2000-01-01'::tbox;
+----
+TBOX T([2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00])
+
+query I
+SELECT tbox(intset '{1, 2}');
+----
+TBOXINT X([1, 3))
+
+query I
+SELECT intset '{1,2}'::tbox;
+----
+TBOXINT X([1, 3))
+
+query I
+SELECT tbox(floatset '{1,2}');
+----
+TBOXFLOAT X([1, 2])
+
+query I
+SELECT floatset '{1,2}'::tbox;
+----
+TBOXFLOAT X([1, 2])
+
+query I
+SELECT tbox(tstzset '{2000-01-01,2000-01-02}');
+----
+TBOX T([2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT tstzset '{2000-01-01,2000-01-02}'::tbox;
+----
+TBOX T([2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT tbox(intspan '[1,2]');
+----
+TBOXINT X([1, 3))
+
+query I
+SELECT intspan '[1,2]'::tbox;
+----
+TBOXINT X([1, 3))
+
+query I
+SELECT tbox(floatspan '[1,2]');
+----
+TBOXFLOAT X([1, 2])
+
+query I
+SELECT floatspan '[1,2]'::tbox;
+----
+TBOXFLOAT X([1, 2])
+
+query I
+SELECT tbox(tstzspan '[2000-01-01,2000-01-02]');
+----
+TBOX T([2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT tstzspan '[2000-01-01,2000-01-02]'::tbox;
+----
+TBOX T([2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT intspan(tbox 'TBOXINT XT([1,2),[2000-01-01, 2000-01-02))');
+----
+[1, 2)
+
+query I
+SELECT tbox 'TBOXINT XT([1,2),[2000-01-01, 2000-01-02))'::intspan;
+----
+[1, 2)
+
+query I
+SELECT floatspan(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])');
+----
+[1, 2]
+
+query I
+SELECT tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])'::floatspan;
+----
+[1, 2]
+
+query I
+SELECT timeSpan(tbox 'TBOX T((2000-01-01,2000-01-02))');
+----
+(2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00)
+
+query I
+SELECT tbox 'TBOX T((2000-01-01,2000-01-02))'::tstzspan;
+----
+(2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00)
+
+query I
+SELECT hasX(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])');
+----
+true
+
+query I
+SELECT hasX(tbox 'TBOXFLOAT X([1.0, 2.0])');
+----
+true
+
+query I
+SELECT hasX(tbox 'TBOX T([2000-01-01,2000-01-02])');
+----
+false
+
+query I
+SELECT hasT(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])');
+----
+true
+
+query I
+SELECT hasT(tbox 'TBOXFLOAT X([1.0, 2.0])');
+----
+false
+
+query I
+SELECT hasT(tbox 'TBOX T([2000-01-01,2000-01-02])');
+----
+true
+
+query I
+SELECT Xmin(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])');
+----
+1
+
+query I
+SELECT XminInc(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])');
+----
+true
+
+query I
+SELECT Xmax(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])');
+----
+2
+
+query I
+SELECT XmaxInc(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])');
+----
+true
+
+query I
+SELECT Tmin(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])');
+----
+2000-01-01 00:00:00+00
+
+query I
+SELECT TminInc(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])');
+----
+true
+
+query I
+SELECT Tmax(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])');
+----
+2000-01-02 00:00:00+00
+
+query I
+SELECT TmaxInc(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])');
+----
+true
+
+query I
+SELECT Xmin(tbox 'TBOXFLOAT X([1.0, 2.0])');
+----
+1
+
+query I
+SELECT Xmax(tbox 'TBOXFLOAT X([1.0, 2.0])');
+----
+2
+
+query I
+SELECT Tmin(tbox 'TBOXFLOAT X([1.0, 2.0])');
+----
+NULL
+
+query I
+SELECT TminInc(tbox 'TBOXFLOAT X([1.0, 2.0])');
+----
+NULL
+
+query I
+SELECT Tmax(tbox 'TBOXFLOAT X([1.0, 2.0])');
+----
+NULL
+
+query I
+SELECT TmaxInc(tbox 'TBOXFLOAT X([1.0, 2.0])');
+----
+NULL
+
+query I
+SELECT Xmin(tbox 'TBOX T([2000-01-01,2000-01-02])');
+----
+NULL
+
+query I
+SELECT XminInc(tbox 'TBOX T([2000-01-01,2000-01-02])');
+----
+NULL
+
+query I
+SELECT Xmax(tbox 'TBOX T([2000-01-01,2000-01-02])');
+----
+NULL
+
+query I
+SELECT XmaxInc(tbox 'TBOX T([2000-01-01,2000-01-02])');
+----
+NULL
+
+query I
+SELECT Tmin(tbox 'TBOX T([2000-01-01,2000-01-02])');
+----
+2000-01-01 00:00:00+00
+
+query I
+SELECT Tmax(tbox 'TBOX T([2000-01-01,2000-01-02])');
+----
+2000-01-02 00:00:00+00
+
+query I
+SELECT shiftValue(tbox 'TBOXINT XT([1,2],[2000-01-01,2000-01-02])', 2);
+----
+TBOXINT XT([3, 5),[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT shiftValue(tbox 'TBOXINT XT([1,2],[2000-01-01,2000-01-02])', -2);
+----
+TBOXINT XT([-1, 1),[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT shiftValue(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])', 1.5);
+----
+TBOXFLOAT XT([2.5, 3.5],[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT shiftValue(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])', -1.5);
+----
+TBOXFLOAT XT([-0.5, 0.5],[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT shiftTime(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])', '1 day');
+----
+TBOXFLOAT XT([1, 2],[2000-01-02 00:00:00+00, 2000-01-03 00:00:00+00])
+
+query I
+SELECT shiftTime(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])', '-1 day');
+----
+TBOXFLOAT XT([1, 2],[1999-12-31 00:00:00+00, 2000-01-01 00:00:00+00])
+
+query I
+SELECT scaleValue(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])', 2.0);
+----
+TBOXFLOAT XT([1, 3],[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT scaleValue(tbox 'TBOXINT XT([2,4],[2000-01-01,2000-01-02])', 5);
+----
+TBOXINT XT([2, 8),[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT scaleTime(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])', '1 day');
+----
+TBOXFLOAT XT([1, 2],[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT scaleTime(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])', '1 hour');
+----
+TBOXFLOAT XT([1, 2],[2000-01-01 00:00:00+00, 2000-01-01 01:00:00+00])
+
+query I
+SELECT shiftScaleValue(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])', 1.0, 2.0);
+----
+TBOXFLOAT XT([2, 4],[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT shiftScaleValue(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])', -1.0, 2.0);
+----
+TBOXFLOAT XT([0, 2],[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT shiftScaleValue(tbox 'TBOXINT XT([1,2],[2000-01-01,2000-01-02])', 1, 2);
+----
+TBOXINT XT([2, 5),[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT shiftScaleValue(tbox 'TBOXINT XT([1,2],[2000-01-01,2000-01-02])', -1, 2);
+----
+TBOXINT XT([0, 3),[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT shiftScaleTime(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])', '1 day', '1 hour');
+----
+TBOXFLOAT XT([1, 2],[2000-01-02 00:00:00+00, 2000-01-02 01:00:00+00])
+
+query I
+SELECT shiftScaleTime(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])', '-1 day', '1 hour');
+----
+TBOXFLOAT XT([1, 2],[1999-12-31 00:00:00+00, 1999-12-31 01:00:00+00])
+
+query I
+SELECT expandValue(tbox 'TBOXINT XT([1,2],[2000-01-01,2000-01-02])', 2);
+----
+TBOXINT XT([-1, 5),[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT expandValue(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])', 2.0);
+----
+TBOXFLOAT XT([-1, 4],[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT expandTime(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])', interval '1 day');
+----
+TBOXFLOAT XT([1, 2],[1999-12-31 00:00:00+00, 2000-01-03 00:00:00+00])
+
+query I
+SELECT expandTime(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])', interval '-12 hours');
+----
+TBOXFLOAT XT([1, 2],[2000-01-01 12:00:00+00, 2000-01-01 12:00:00+00])

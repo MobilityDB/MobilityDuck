@@ -1,0 +1,367 @@
+require mobilityduck
+
+query I 
+SELECT floatspanset '{[8.1, 8.5],[9.2, 9.4]}';
+----
+{[8.1, 8.5], [9.2, 9.4]}
+
+query I 
+SELECT tstzspanset '{[2001-01-01 08:00:00, 2001-01-01 08:10:00]}';
+----
+{[2001-01-01 08:00:00+00, 2001-01-01 08:10:00+00]}
+
+# AsText
+
+query I 
+SELECT asText(floatspanset '{[1.55,2.55],[4,5]}',0);
+----
+{[2, 3], [4, 5]}
+
+# constructor
+
+query I 
+SELECT spanset(ARRAY[intspan '[10,12]', '[13,15]']);
+----
+{[10, 16)}
+
+query I 
+SELECT spanset(ARRAY[floatspan '[10.5,12.5]', '[13.5,15.5]']);
+----
+{[10.5, 12.5], [13.5, 15.5]}
+
+query I
+SELECT spanset(ARRAY [intspan '[1,2)','[3,4)','[5,6)']);
+----
+{[1, 2), [3, 4), [5, 6)}
+
+query I
+SELECT spanset(ARRAY [floatspan '[1,2)','[3,4)','[5,6)']);
+----
+{[1, 2), [3, 4), [5, 6)}
+
+query I
+SELECT spanset(ARRAY [datespan '[2000-01-01, 2000-01-02]', '[2000-01-03,2000-01-04]']);
+----
+{[2000-01-01, 2000-01-05)}
+
+# Conversion base -> spanset
+query I 
+SELECT timestamptz '2001-01-01 08:00:00'::tstzspanset;
+----
+{[2001-01-01 08:00:00+00, 2001-01-01 08:00:00+00]}
+
+# Conversion set -> spanset 
+
+query I 
+SELECT tstzset '{2001-01-01 08:00:00, 2001-01-01 08:15:00, 2001-01-01 08:25:00}'::tstzspanset;
+----
+{[2001-01-01 08:00:00+00, 2001-01-01 08:00:00+00], [2001-01-01 08:15:00+00, 2001-01-01 08:15:00+00], [2001-01-01 08:25:00+00, 2001-01-01 08:25:00+00]}
+
+query I
+SELECT spanset(tstzset '{2001-01-01 08:00:00, 2001-01-01 08:15:00, 2001-01-01 08:25:00}');
+----
+{[2001-01-01 08:00:00+00, 2001-01-01 08:00:00+00], [2001-01-01 08:15:00+00, 2001-01-01 08:15:00+00], [2001-01-01 08:25:00+00, 2001-01-01 08:25:00+00]}
+
+# Conversion span -> spanset
+query I
+SELECT spanset(datespan '[2000-01-01,2000-01-02]');
+----
+{[2000-01-01, 2000-01-03)}
+
+query I
+SELECT datespan '[2000-01-01,2000-01-02]'::datespanset;
+----
+{[2000-01-01, 2000-01-03)}
+
+query I
+SELECT spanset(tstzspan '[2000-01-01,2000-01-02]');
+----
+{[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00]}
+
+# Conversion spanset->span 
+
+query I
+SELECT span(intspanset '{[1,2),[3,4),[5,6)}');
+----
+[1, 6)
+
+query I
+SELECT span(floatspanset '{[1,2),[3,4),[5,6)}');
+----
+[1, 6)
+
+# Conversion intspanset <-> floatspanset
+query I
+SELECT intspanset '{[1,2),[3,4),[5,6)}'::floatspanset;
+----
+{[1, 1], [3, 3], [5, 5]}
+
+query I
+SELECT floatspanset '{[1,2),[3,4),[5,6)}'::intspanset;
+----
+{[1, 2), [3, 4), [5, 6)}
+
+# Conversion tstzspanset <-> datespanset
+
+query I
+SELECT datespanset '{[2000-01-01,2000-01-02),[2000-01-03,2000-01-04),[2000-01-05,2000-01-06)}'::tstzspanset;
+----
+{[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00), [2000-01-03 00:00:00+00, 2000-01-04 00:00:00+00), [2000-01-05 00:00:00+00, 2000-01-06 00:00:00+00)}
+
+query I
+SELECT tstzspanset '{[2000-01-01,2000-01-02),[2000-01-03,2000-01-04),[2000-01-05,2000-01-06)}'::datespanset;
+----
+{[2000-01-01, 2000-01-02), [2000-01-03, 2000-01-04), [2000-01-05, 2000-01-06)}
+
+# mem_size
+
+query I
+SELECT memSize(intspanset '{[1,2),[3,4),[5,6)}');
+----
+112
+
+query I
+SELECT memSize(floatspanset '{[1,2),[3,4),[5,6)}');
+----
+112
+
+query I
+SELECT memSize(datespanset '{[2000-01-01,2000-01-01]}');
+----
+64
+
+query I
+SELECT memSize(tstzspanset '{[2000-01-01,2000-01-01]}');
+----
+64
+
+query I
+SELECT memSize(tstzspanset '{(2000-01-01,2000-01-02),(2000-01-02,2000-01-03),(2000-01-03,2000-01-04)}');
+----
+112
+
+query I
+SELECT memSize(tstzspanset '{(2000-01-01,2000-01-02),(2000-01-03,2000-01-04),(2000-01-05,2000-01-06)}');
+----
+112
+
+query I
+SELECT memSize(tstzspanset '{[2000-01-01,2000-01-02),(2000-01-03,2000-01-04),(2000-01-05,2000-01-06)}');
+----
+112
+
+query I
+SELECT memSize(tstzspanset '{(2000-01-01,2000-01-02),(2000-01-03,2000-01-04),(2000-01-05,2000-01-06]}');
+----
+112
+
+query I
+SELECT memSize(tstzspanset '{[2000-01-01,2000-01-02),(2000-01-03,2000-01-04),(2000-01-05,2000-01-06]}');
+----
+112
+
+# Lower
+query I
+SELECT lower(intspanset '{[1,2),[3,4),[5,6)}');
+----
+1
+
+# Upper 
+query I
+SELECT upper(floatspanset '{[1,2),[3,4),[5,6)}');
+----
+6
+
+query I
+SELECT lowerInc(intspanset '{[1,2),[3,4),[5,6)}');
+----
+1
+
+query I
+SELECT lowerInc(floatspanset '{[1,2),[3,4),[5,6)}');
+----
+1
+
+query I
+SELECT upperInc(floatspanset '{[1,2),[3,4),[5,6)}');
+----
+0
+
+# Width 
+
+query I
+SELECT width(intspanset '{[1,2),[3,4),[5,6)}');
+----
+3
+
+query I
+SELECT width(floatspanset '{[1,2),[3,4),[5,6)}');
+----
+3
+
+query I
+SELECT width(intspanset '{[1,2),[3,4),[5,6)}', true);
+----
+5
+
+query I
+SELECT width(floatspanset '{[1,2),[3,4),[5,6)}', true);
+----
+5
+
+# Duration (datespanset, tstzspanset)
+
+query I 
+SELECT duration(datespanset '{[2000-01-01,2000-01-01]}');
+----
+1 day
+
+query I
+SELECT duration(datespanset '{[2000-01-01,2000-01-02),[2000-01-02,2000-01-03),[2000-01-03,2000-01-04)}');
+----
+3 days
+
+query I
+SELECT duration(datespanset '{[2000-01-01,2000-01-02),[2000-01-03,2000-01-04),[2000-01-05,2000-01-06)}');
+----
+3 days
+
+query I
+SELECT duration(datespanset '{[2000-01-01,2000-01-01]}', true);
+----
+1 day
+
+query I
+SELECT duration(datespanset '{[2000-01-01,2000-01-02),[2000-01-02,2000-01-03),[2000-01-03,2000-01-04)}', true);
+----
+3 days
+
+query I
+SELECT duration(datespanset '{[2000-01-01,2000-01-02),[2000-01-03,2000-01-04),[2000-01-05,2000-01-06)}', true);
+----
+5 days
+
+query I
+SELECT duration(tstzspanset '{[2000-01-01,2000-01-01]}');
+----
+00:00:00
+
+query I
+SELECT duration(tstzspanset '{(2000-01-01,2000-01-02),(2000-01-02,2000-01-03),(2000-01-03,2000-01-04)}');
+----
+3 days
+
+query I
+SELECT duration(tstzspanset '{(2000-01-01,2000-01-02),(2000-01-03,2000-01-04),(2000-01-05,2000-01-06)}');
+----
+3 days
+
+query I
+SELECT duration(tstzspanset '{[2000-01-01,2000-01-02),(2000-01-03,2000-01-04),(2000-01-05,2000-01-06)}');
+----
+3 days
+
+query I
+SELECT duration(tstzspanset '{[2000-01-01,2000-01-01]}', true);
+----
+00:00:00
+
+query I
+SELECT duration(tstzspanset '{(2000-01-01,2000-01-02),(2000-01-02,2000-01-03),(2000-01-03,2000-01-04)}', true);
+----
+3 days
+
+query I
+SELECT duration(tstzspanset '{(2000-01-01,2000-01-02),(2000-01-03,2000-01-04),(2000-01-05,2000-01-06)}', true);
+----
+5 days
+
+query I
+SELECT duration(tstzspanset '{[2000-01-01,2000-01-02),(2000-01-03,2000-01-04),(2000-01-05,2000-01-06)}', true);
+----
+5 days
+
+# numSpans
+query I
+SELECT numSpans(intspanset '{[1,2),[3,4),[5,6)}');
+----
+3
+
+query I
+SELECT numSpans(floatspanset '{[1,2),[3,4),[5,6)}');
+----
+3
+
+query I
+SELECT numSpans(datespanset '{[2000-01-01,2000-01-02),[2000-01-03,2000-01-04),[2000-01-05,2000-01-06)}');
+----
+3
+
+query I
+SELECT numSpans(tstzspanset '{[2000-01-01,2000-01-01]}');
+----
+1
+
+query I
+SELECT numSpans(tstzspanset '{(2000-01-01,2000-01-02),(2000-01-02,2000-01-03),(2000-01-03,2000-01-04)}');
+----
+3
+
+# startSpan
+query I
+SELECT startSpan(intspanset '{[1,2),[3,4),[5,6)}');
+----
+[1, 2)
+
+query I
+SELECT startSpan(floatspanset '{[1,2),[3,4),[5,6)}');
+----
+[1, 2)
+
+query I
+SELECT startSpan(datespanset '{[2000-01-01,2000-01-02),[2000-01-03,2000-01-04),[2000-01-05,2000-01-06)}');
+----
+[2000-01-01, 2000-01-02)
+
+query I
+SELECT startSpan(tstzspanset '{[2000-01-01,2000-01-01]}');
+----
+[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00]
+
+# endSpan
+
+query I
+SELECT endSpan(intspanset '{[1,2),[3,4),[5,6)}');
+----
+[5, 6)
+
+query I
+SELECT endSpan(floatspanset '{[1,2),[3,4),[5,6)}');
+----
+[5, 6)
+
+query I
+SELECT endSpan(datespanset '{[2000-01-01,2000-01-02),[2000-01-03,2000-01-04),[2000-01-05,2000-01-06)}');
+----
+[2000-01-05, 2000-01-06)
+
+query I
+SELECT endSpan(tstzspanset '{(2000-01-01,2000-01-02),(2000-01-02,2000-01-03),(2000-01-03,2000-01-04)}');
+----
+(2000-01-03 00:00:00+00, 2000-01-04 00:00:00+00)
+
+# spanN 
+query I
+SELECT spanN(intspanset '{[1,2),[3,4),[5,6)}', 2);
+----
+[3, 4)
+
+query I
+SELECT spanN(floatspanset '{[1,2),[3,4),[5,6)}', 2);
+----
+[3, 4)
+
+query I
+SELECT spanN(datespanset '{[2000-01-01,2000-01-02),[2000-01-03,2000-01-04),[2000-01-05,2000-01-06)}', 2);
+----
+[2000-01-03, 2000-01-04)

@@ -1,0 +1,285 @@
+┌─────────────────────────────────────┐
+│┌───────────────────────────────────┐│
+││    Query Profiling Information    ││
+│└───────────────────────────────────┘│
+└─────────────────────────────────────┘
+EXPLAIN ANALYZE WITH Temp AS (     SELECT DISTINCT r.RegionId, i.InstantId, i.Instant, t.VehicleId     FROM Trips t, Regions1 r, Instants1 i     WHERE         t.Trip && stbox(r.Geom::WKB_BLOB, i.Instant)         AND ST_Contains(r.Geom, valueAtTimestamp(t.Trip, i.Instant)::GEOMETRY) ) SELECT DISTINCT t.RegionId, t.InstantId, t.Instant, v.Licence FROM Temp t JOIN Vehicles v ON t.VehicleId = v.VehicleId  ORDER BY t.RegionId, t.InstantId, v.Licence;
+┌────────────────────────────────────────────────┐
+│┌──────────────────────────────────────────────┐│
+││               Total Time: 1.13s              ││
+│└──────────────────────────────────────────────┘│
+└────────────────────────────────────────────────┘
+┌───────────────────────────┐
+│           QUERY           │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│      EXPLAIN_ANALYZE      │
+│    ────────────────────   │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_decompress_integ│
+│     ral_integer(#0, 1)    │
+│__internal_decompress_integ│
+│     ral_integer(#1, 1)    │
+│             #2            │
+│__internal_decompress_strin│
+│           g(#3)           │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          ORDER_BY         │
+│    ────────────────────   │
+│       t.RegionId ASC      │
+│      t.InstantId ASC      │
+│       v.Licence ASC       │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_compress_integra│
+│     l_utinyint(#0, 1)     │
+│__internal_compress_integra│
+│     l_utinyint(#1, 1)     │
+│             #2            │
+│__internal_compress_string_│
+│        ubigint(#3)        │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_decompress_integ│
+│     ral_integer(#0, 1)    │
+│__internal_decompress_integ│
+│     ral_integer(#1, 1)    │
+│             #2            │
+│__internal_decompress_strin│
+│           g(#3)           │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│       HASH_GROUP_BY       │
+│    ────────────────────   │
+│          Groups:          │
+│             #0            │
+│             #1            │
+│             #2            │
+│             #3            │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│          RegionId         │
+│         InstantId         │
+│          Instant          │
+│          Licence          │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_compress_integra│
+│     l_utinyint(#0, 1)     │
+│__internal_compress_integra│
+│     l_utinyint(#1, 1)     │
+│             #2            │
+│__internal_compress_string_│
+│        ubigint(#3)        │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         HASH_JOIN         │
+│    ────────────────────   │
+│      Join Type: INNER     │
+│                           │
+│        Conditions:        ├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│   VehicleId = VehicleId   │                                                                                                                                  │
+│                           │                                                                                                                                  │
+│           0 Rows          │                                                                                                                                  │
+│          (0.00s)          │                                                                                                                                  │
+└─────────────┬─────────────┘                                                                                                                                  │
+┌─────────────┴─────────────┐                                                                                                                    ┌─────────────┴─────────────┐
+│         PROJECTION        │                                                                                                                    │         TABLE_SCAN        │
+│    ────────────────────   │                                                                                                                    │    ────────────────────   │
+│__internal_decompress_integ│                                                                                                                    │      Table: Vehicles      │
+│     ral_integer(#0, 1)    │                                                                                                                    │   Type: Sequential Scan   │
+│__internal_decompress_integ│                                                                                                                    │                           │
+│     ral_integer(#1, 1)    │                                                                                                                    │                           │
+│             #2            │                                                                                                                    │                           │
+│__internal_decompress_integ│                                                                                                                    │                           │
+│     ral_integer(#3, 1)    │                                                                                                                    │                           │
+│                           │                                                                                                                    │                           │
+│           0 Rows          │                                                                                                                    │          63 Rows          │
+│          (0.00s)          │                                                                                                                    │          (0.00s)          │
+└─────────────┬─────────────┘                                                                                                                    └───────────────────────────┘
+┌─────────────┴─────────────┐
+│       HASH_GROUP_BY       │
+│    ────────────────────   │
+│          Groups:          │
+│             #0            │
+│             #1            │
+│             #2            │
+│             #3            │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│          RegionId         │
+│         InstantId         │
+│          Instant          │
+│         VehicleId         │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_compress_integra│
+│     l_utinyint(#0, 1)     │
+│__internal_compress_integra│
+│     l_utinyint(#1, 1)     │
+│             #2            │
+│__internal_compress_integra│
+│     l_utinyint(#3, 1)     │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│          RegionId         │
+│         InstantId         │
+│          Instant          │
+│         VehicleId         │
+│                           │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│     BLOCKWISE_NL_JOIN     │
+│    ────────────────────   │
+│      Join Type: INNER     │
+│                           │
+│         Condition:        │
+│ ((Trip && stbox(CAST(Geom │
+│   AS WKB_BLOB), Instant)) │
+│    AND ST_Contains(Geom,  ├────────────────────────────────────────────────────────────────────────┐
+│    CAST(valueAtTimestamp  │                                                                        │
+│     (Trip, Instant) AS    │                                                                        │
+│         GEOMETRY)))       │                                                                        │
+│                           │                                                                        │
+│           0 Rows          │                                                                        │
+│          (1.01s)          │                                                                        │
+└─────────────┬─────────────┘                                                                        │
+┌─────────────┴─────────────┐                                                          ┌─────────────┴─────────────┐
+│       CROSS_PRODUCT       │                                                          │         PROJECTION        │
+│    ────────────────────   │                                                          │    ────────────────────   │
+│                           │                                                          │__internal_decompress_integ│
+│                           │                                                          │     ral_integer(#0, 1)    │
+│                           ├──────────────┐                                           │             #1            │
+│                           │              │                                           │                           │
+│         5490 Rows         │              │                                           │          10 Rows          │
+│          (0.00s)          │              │                                           │          (0.00s)          │
+└─────────────┬─────────────┘              │                                           └─────────────┬─────────────┘
+┌─────────────┴─────────────┐┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐
+│         TABLE_SCAN        ││         PROJECTION        │                             │          ORDER_BY         │
+│    ────────────────────   ││    ────────────────────   │                             │    ────────────────────   │
+│        Table: Trips       ││__internal_decompress_integ│                             │    hanoi.main.Instants    │
+│   Type: Sequential Scan   ││     ral_integer(#0, 1)    │                             │       .InstantId ASC      │
+│                           ││             #1            │                             │                           │
+│        Projections:       ││                           │                             │                           │
+│            Trip           ││                           │                             │                           │
+│         VehicleId         ││                           │                             │                           │
+│                           ││                           │                             │                           │
+│          549 Rows         ││          10 Rows          │                             │          10 Rows          │
+│          (0.11s)          ││          (0.00s)          │                             │          (0.00s)          │
+└───────────────────────────┘└─────────────┬─────────────┘                             └─────────────┬─────────────┘
+                             ┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐
+                             │          ORDER_BY         │                             │         PROJECTION        │
+                             │    ────────────────────   │                             │    ────────────────────   │
+                             │     hanoi.main.Regions    │                             │__internal_compress_integra│
+                             │       .RegionId ASC       │                             │     l_utinyint(#0, 1)     │
+                             │                           │                             │             #1            │
+                             │                           │                             │                           │
+                             │          10 Rows          │                             │          10 Rows          │
+                             │          (0.00s)          │                             │          (0.00s)          │
+                             └─────────────┬─────────────┘                             └─────────────┬─────────────┘
+                             ┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐
+                             │         PROJECTION        │                             │         HASH_JOIN         │
+                             │    ────────────────────   │                             │    ────────────────────   │
+                             │__internal_compress_integra│                             │      Join Type: SEMI      │
+                             │     l_utinyint(#0, 1)     │                             │                           │
+                             │             #1            │                             │        Conditions:        ├──────────────┐
+                             │                           │                             │       rowid = rowid       │              │
+                             │                           │                             │                           │              │
+                             │          10 Rows          │                             │          10 Rows          │              │
+                             │          (0.00s)          │                             │          (0.00s)          │              │
+                             └─────────────┬─────────────┘                             └─────────────┬─────────────┘              │
+                             ┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐┌─────────────┴─────────────┐
+                             │         HASH_JOIN         │                             │         TABLE_SCAN        ││           TOP_N           │
+                             │    ────────────────────   │                             │    ────────────────────   ││    ────────────────────   │
+                             │      Join Type: SEMI      │                             │      Table: Instants      ││          Top: 10          │
+                             │                           │                             │   Type: Sequential Scan   ││                           │
+                             │        Conditions:        │                             │                           ││         Order By:         │
+                             │       rowid = rowid       ├──────────────┐              │        Projections:       ││    hanoi.main.Instants    │
+                             │                           │              │              │         InstantId         ││       .InstantId ASC      │
+                             │                           │              │              │          Instant          ││                           │
+                             │                           │              │              │                           ││                           │
+                             │          10 Rows          │              │              │          10 Rows          ││          10 Rows          │
+                             │          (0.00s)          │              │              │          (0.00s)          ││          (0.00s)          │
+                             └─────────────┬─────────────┘              │              └───────────────────────────┘└─────────────┬─────────────┘
+                             ┌─────────────┴─────────────┐┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐
+                             │         TABLE_SCAN        ││           TOP_N           │                             │         TABLE_SCAN        │
+                             │    ────────────────────   ││    ────────────────────   │                             │    ────────────────────   │
+                             │       Table: Regions      ││          Top: 10          │                             │      Table: Instants      │
+                             │   Type: Sequential Scan   ││                           │                             │   Type: Sequential Scan   │
+                             │                           ││         Order By:         │                             │                           │
+                             │        Projections:       ││     hanoi.main.Regions    │                             │        Projections:       │
+                             │          RegionId         ││       .RegionId ASC       │                             │         InstantId         │
+                             │            Geom           ││                           │                             │                           │
+                             │                           ││                           │                             │          Filters:         │
+                             │                           ││                           │                             │ optional: Dynamic Filter  │
+                             │                           ││                           │                             │        (InstantId)        │
+                             │                           ││                           │                             │                           │
+                             │          10 Rows          ││          10 Rows          │                             │          100 Rows         │
+                             │          (0.00s)          ││          (0.00s)          │                             │          (0.00s)          │
+                             └───────────────────────────┘└─────────────┬─────────────┘                             └───────────────────────────┘
+                                                          ┌─────────────┴─────────────┐
+                                                          │         TABLE_SCAN        │
+                                                          │    ────────────────────   │
+                                                          │       Table: Regions      │
+                                                          │   Type: Sequential Scan   │
+                                                          │   Projections: RegionId   │
+                                                          │                           │
+                                                          │          Filters:         │
+                                                          │ optional: Dynamic Filter  │
+                                                          │         (RegionId)        │
+                                                          │                           │
+                                                          │          100 Rows         │
+                                                          │          (0.00s)          │
+                                                          └───────────────────────────┘

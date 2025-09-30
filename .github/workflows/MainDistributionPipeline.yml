@@ -1,0 +1,42 @@
+#
+# This workflow calls the main distribution pipeline from DuckDB to build, test and (optionally) release the extension
+#
+name: Main Extension Distribution Pipeline
+on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - '**/README.md'
+      - 'doc/**'
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**/README.md'
+      - 'doc/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.head_ref || '' }}-${{ github.base_ref || '' }}-${{ github.ref != 'refs/heads/main' || github.sha }}
+  cancel-in-progress: true
+
+
+jobs:
+  duckdb-latest-build:
+    uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.3.2
+    with:
+      duckdb_version: v1.3.2
+      extension_name: mobilityduck
+      ci_tools_version: v1.3.2
+      vcpkg_commit: 6603e6392c5a1474ce2d7d0574eb774ab43a3236
+
+  duckdb-latest-deploy:
+    needs: duckdb-latest-build
+    uses: duckdb/extension-ci-tools/.github/workflows/_extension_deploy.yml@v1.3.2
+    secrets: inherit
+    with:
+      duckdb_version: v1.3.2
+      ci_tools_version: v1.3.2
+      extension_name: mobilityduck
+      deploy_latest: ${{ startsWith(github.ref, 'refs/heads/v') || github.ref == 'refs/heads/main' }}
