@@ -25,17 +25,17 @@ endif()
 # -----------------------------
 # Dependencies (vcpkg)
 # -----------------------------
-find_package(GEOS CONFIG REQUIRED)        
-find_package(PROJ CONFIG REQUIRED)        
-find_package(GSL REQUIRED)                
-find_package(OpenSSL REQUIRED)            
+find_package(GEOS CONFIG REQUIRED)
+find_package(PROJ CONFIG REQUIRED)
+find_package(GSL REQUIRED)
+find_package(OpenSSL REQUIRED)
 find_package(json-c CONFIG QUIET)
 if(NOT json-c_FOUND)
-  find_package(JSON-C REQUIRED)           
+  find_package(JSON-C REQUIRED)
 endif()
 
 # MEOS from overlay port
-find_package(MEOS CONFIG REQUIRED)        
+find_package(MEOS CONFIG REQUIRED)
 
 if(TARGET GEOS::geos_c)
   set(GEOS_TGT GEOS::geos_c)
@@ -54,7 +54,8 @@ set(LOADABLE_EXTENSION_NAME ${TARGET_NAME}_loadable_extension)
 include_directories(src/include)
 
 set(EXTENSION_SOURCES
-    src/mobilityduck_extension.cpp
+    src/spatial_ref_sys_csv.inc
+    src/mobilityduck_extension.cpp        
     src/temporal/temporal.cpp
     src/temporal/temporal_functions.cpp
     src/temporal/tbox.cpp
@@ -78,32 +79,10 @@ set(EXTENSION_SOURCES
 build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
 build_loadable_extension(${TARGET_NAME} "" ${EXTENSION_SOURCES})
 
-# ----- SRID CSV defaults (works with/without vcpkg) -----
-if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
-  target_compile_definitions(${EXTENSION_NAME} PRIVATE
-    MDUCK_DEFAULT_SRID_CSV="${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share/spatial_ref_sys.csv"
-    MDUCK_SRID_ENV_NAME="SPATIAL_REF_SYS"
-  )
-  target_compile_definitions(${LOADABLE_EXTENSION_NAME} PRIVATE
-    MDUCK_DEFAULT_SRID_CSV="${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share/spatial_ref_sys.csv"
-    MDUCK_SRID_ENV_NAME="SPATIAL_REF_SYS"
-  )
-else()  
-  target_compile_definitions(${EXTENSION_NAME} PRIVATE
-    MDUCK_DEFAULT_SRID_CSV="${CMAKE_SOURCE_DIR}/data/spatial_ref_sys.csv"
-    MDUCK_SRID_ENV_NAME="SPATIAL_REF_SYS"
-  )
-  target_compile_definitions(${LOADABLE_EXTENSION_NAME} PRIVATE
-    MDUCK_DEFAULT_SRID_CSV="${CMAKE_SOURCE_DIR}/data/spatial_ref_sys.csv"
-    MDUCK_SRID_ENV_NAME="SPATIAL_REF_SYS"
-  )
-endif()
-
-
 # -----------------------------
 # json-c target / include handling
 # -----------------------------
-if (TARGET json-c::json-c)
+if(TARGET json-c::json-c)
   set(JSONC_TGT json-c::json-c)
 else()
   target_include_directories(${EXTENSION_NAME} PRIVATE ${JSON-C_INCLUDE_DIRS})
@@ -136,13 +115,8 @@ target_link_libraries(${LOADABLE_EXTENSION_NAME}
   OpenSSL::Crypto
 )
 
-if (WIN32)  
-  # target_link_libraries(${EXTENSION_NAME} ws2_32 crypt32)
-  # target_link_libraries(${LOADABLE_EXTENSION_NAME} ws2_32 crypt32)
-endif()
-
 # -----------------------------
-# Install (static extension)
+# Install (static & loadable)
 # -----------------------------
 install(
   TARGETS ${EXTENSION_NAME}

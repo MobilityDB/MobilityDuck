@@ -337,7 +337,7 @@ inline void Tsequence_constructor(DataChunk &args, ExpressionState &state, Vecto
                 continue;
             }
             
-            TSequence *sequence_result = tsequence_make((const TInstant **) instants, element_count, 
+            TSequence *sequence_result = tsequence_make((TInstant **) instants, element_count, 
                                                     lower_inc, upper_inc, interp, true);
             
             if (!sequence_result) {

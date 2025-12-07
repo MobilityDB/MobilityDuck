@@ -309,7 +309,7 @@ void TemporalFunctions::Tsequence_constructor(DataChunk &args, ExpressionState &
                 valid_idx++;
             }
 
-            TSequence *seq = tsequence_make((const TInstant **)instants, valid_count,
+            TSequence *seq = tsequence_make((TInstant **)instants, valid_count,
                 lower_inc, upper_inc, interp, true);
             if (!seq) {
                 for (idx_t j = 0; j < valid_count; j++) {
@@ -376,7 +376,7 @@ void TemporalFunctions::Tsequenceset_constructor(DataChunk &args, ExpressionStat
                 sequences[i] = (TSequence*)temp;
             }
 
-            TSequenceSet *seqset = tsequenceset_make((const TSequence **)sequences, length, true);
+            TSequenceSet *seqset = tsequenceset_make((TSequence **)sequences, length, true);
             if (!seqset) {
                 for (idx_t j = 0; j < length; j++) {
                     free(sequences[j]);
@@ -1016,7 +1016,7 @@ void TemporalFunctions::Temporal_instants(DataChunk &args, ExpressionState &stat
             }
 
             int inst_count;
-            const TInstant **instants = temporal_instants_p(temp, &inst_count);
+            const TInstant **instants = temporal_insts_p(temp, &inst_count);
             const auto entry = list_entry_t(total_count, inst_count);
             total_count += inst_count;
             ListVector::Reserve(result, total_count);

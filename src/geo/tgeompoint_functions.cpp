@@ -392,7 +392,7 @@ void TgeompointFunctions::Tgeompoint_sequence_constructor(DataChunk &args, Expre
                 valid_idx++;
             }
 
-            TSequence *seq = tsequence_make((const TInstant **)instants, valid_count,
+            TSequence *seq = tsequence_make((TInstant **)instants, valid_count,
                 lower_inc, upper_inc, interp, true);
             if (!seq) {
                 for (idx_t j = 0; j < valid_count; j++) {
