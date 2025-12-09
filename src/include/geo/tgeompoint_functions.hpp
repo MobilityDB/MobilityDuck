@@ -57,6 +57,11 @@ struct TgeompointFunctions {
     static void Tgeompoint_value_at_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
+     * Stops function
+     ****************************************************/
+    static void Tgeompoint_stops(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
      * Spatial functions
      ****************************************************/
     static void Tpoint_length(DataChunk &args, ExpressionState &state, Vector &result);

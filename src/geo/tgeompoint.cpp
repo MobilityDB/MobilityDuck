@@ -273,6 +273,20 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
     );
 
     /* ***************************************************
+     * Stops function
+     ****************************************************/
+    
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stops",
+            {TGEOMPOINT(), LogicalType::DOUBLE, LogicalType::INTERVAL},
+            TGEOMPOINT(),
+            TgeompointFunctions::Tgeompoint_stops
+        )
+    );
+
+    /* ***************************************************
      * Spatial functions
      ****************************************************/
     

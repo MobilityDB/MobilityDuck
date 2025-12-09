@@ -185,6 +185,16 @@ SELECT ST_AsText(valueAtTimestamp(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2
 POINT (1 1)
 
 query I
+SELECT asText(stops(tgeompoint '[Point(1 1)@2001-01-01, Point(1 1)@2001-01-02, Point(2 2)@2001-01-03, Point(2 2)@2001-01-04]', 0.0, interval '0 minutes'));
+----
+{[POINT(1 1)@2001-01-01 00:00:00+00, POINT(1 1)@2001-01-02 00:00:00+00], [POINT(2 2)@2001-01-03 00:00:00+00, POINT(2 2)@2001-01-04 00:00:00+00]}
+
+query I
+SELECT asText(stops(tgeompoint '[Point(1 1)@2001-01-01, Point(1 1)@2001-01-02, Point(2 2)@2001-01-03, Point(2 2)@2001-01-04]', 0.0, interval '2 days'));
+----
+NULL
+
+query I
 SELECT length(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]');
 ----
 2.8284271247461903

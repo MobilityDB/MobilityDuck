@@ -624,6 +624,46 @@ void TgeompointFunctions::Tgeompoint_value_at_timestamptz(DataChunk &args, Expre
 }
 
 /* ***************************************************
+ * Stops function
+ ****************************************************/
+
+void TgeompointFunctions::Tgeompoint_stops(DataChunk &args, ExpressionState &state, Vector &result) {
+    TernaryExecutor::ExecuteWithNulls<string_t, double, interval_t, string_t>(
+        args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t input_blob, double maxdist, interval_t minduration_duckdb, ValidityMask &mask, idx_t idx) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
+            size_t data_size = input_blob.GetSize();
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+            MeosInterval minduration = IntervaltToInterval(minduration_duckdb);
+            TSequenceSet *ret = temporal_stops(temp, maxdist, &minduration);
+            free(temp);
+            if (!ret) {
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+
+            size_t ret_size = temporal_mem_size((Temporal*)ret);
+            uint8_t *ret_data = (uint8_t*)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            string_t ret_string(reinterpret_cast<const char*>(ret_data), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_string);
+            free(ret_data);
+            free(ret);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+/* ***************************************************
  * Spatial functions
  ****************************************************/
 
