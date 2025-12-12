@@ -1,5 +1,7 @@
 .output results/output/explain/query_5.txt
 
+SET memory_limit = '20GB';
+
 /* Slow version
 EXPLAIN ANALYZE
 SELECT l1.Licence AS Licence1, l2.Licence AS Licence2,

@@ -1,5 +1,7 @@
 .output results/output/explain/query_17.txt
 
+SET memory_limit = '20GB';
+
 EXPLAIN ANALYZE
 WITH PointCount AS (
     SELECT p.PointId, COUNT(DISTINCT t.VehicleId) AS Hits

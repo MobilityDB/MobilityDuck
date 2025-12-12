@@ -1,5 +1,7 @@
 .output results/output/explain/query_14.txt
 
+SET memory_limit = '20GB';
+
 /* Old version
 EXPLAIN ANALYZE
 SELECT DISTINCT r.RegionId, i.InstantId, i.Instant, v.Licence

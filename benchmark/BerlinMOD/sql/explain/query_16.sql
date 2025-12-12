@@ -1,5 +1,7 @@
 .output results/output/explain/query_16.txt
 
+SET memory_limit = '20GB';
+
 EXPLAIN ANALYZE
 SELECT p.PeriodId, p.Period, r.RegionId, l1.Licence AS Licence1, l2.Licence AS Licence2
 FROM Trips t1, Licences1 l1, Trips t2, Licences2 l2, Periods1 p, Regions1 r

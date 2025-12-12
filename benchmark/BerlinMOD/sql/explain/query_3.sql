@@ -1,5 +1,7 @@
 .output results/output/explain/query_3.txt
 
+SET memory_limit = '20GB';
+
 EXPLAIN ANALYZE
 SELECT DISTINCT l.Licence, i.InstantId, i.Instant AS Instant,
     valueAtTimestamp(t.Trip, i.Instant)::GEOMETRY AS Pos

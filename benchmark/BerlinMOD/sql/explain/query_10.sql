@@ -1,5 +1,7 @@
 .output results/output/explain/query_10.txt
 
+SET memory_limit = '20GB';
+
 /* Old version
 EXPLAIN ANALYZE
 WITH Values AS (

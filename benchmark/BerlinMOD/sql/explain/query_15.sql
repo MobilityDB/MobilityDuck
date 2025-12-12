@@ -1,5 +1,7 @@
 .output results/output/explain/query_15.txt
 
+SET memory_limit = '20GB';
+
 /* Old version
 EXPLAIN ANALYZE
 SELECT DISTINCT pt.PointId, pt.Geom, pr.PeriodId, pr.Period, v.Licence

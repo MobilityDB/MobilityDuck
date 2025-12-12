@@ -56,7 +56,7 @@ class DataLoader:
             input=sql,
             capture_output=True,
             text=True,
-            timeout=300
+            timeout=3000
         )
 
         end_time = time.time()

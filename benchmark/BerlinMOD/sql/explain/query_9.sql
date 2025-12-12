@@ -1,5 +1,7 @@
 .output results/output/explain/query_9.txt
 
+SET memory_limit = '20GB';
+
 EXPLAIN ANALYZE
 WITH Distances AS (
     SELECT p.PeriodId, p.Period, t.VehicleId,

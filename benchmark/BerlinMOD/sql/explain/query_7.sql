@@ -1,5 +1,7 @@
 .output results/output/explain/query_7.txt
 
+SET memory_limit = '20GB';
+
 EXPLAIN ANALYZE
 WITH Timestamps AS (
     SELECT DISTINCT v.Licence, p.PointId, p.Geom,

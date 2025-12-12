@@ -1,5 +1,7 @@
 .output results/output/explain/query_8.txt
 
+SET memory_limit = '20GB';
+
 EXPLAIN ANALYZE
 SELECT l.Licence, p.PeriodId, p.Period,
     SUM(length(atTime(t.Trip, p.Period))) AS Dist

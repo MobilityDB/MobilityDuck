@@ -1,5 +1,7 @@
 .output results/output/explain/query_1.txt
 
+SET memory_limit = '20GB';
+
 EXPLAIN ANALYZE
 SELECT DISTINCT l.Licence, v.Model AS Model
 FROM Vehicles v, Licences l
