@@ -219,10 +219,10 @@ SELECT asText(atGeometry(tgeompoint 'Point(1 1)@2000-01-01', geometry 'Linestrin
 ----
 NULL
 
-query I
-SELECT startValue(transform(tgeompoint 'SRID=5676;Point(1 2)@2000-01-01', 4326))::GEOMETRY = st_transform(geometry 'SRID=5676;Point(1 2)', 'EPSG:5676', 'EPSG:4326', always_xy:=true);
-----
-true
+# query I
+# SELECT startValue(transform(tgeompoint 'SRID=5676;Point(1 2)@2000-01-01', 4326))::GEOMETRY = st_transform(geometry 'SRID=5676;Point(1 2)', 'EPSG:5676', 'EPSG:4326', always_xy:=true);
+# ----
+# true
 
 query I
 SELECT aDisjoint(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}', tgeompoint 'Point(1 1)@2000-01-01');

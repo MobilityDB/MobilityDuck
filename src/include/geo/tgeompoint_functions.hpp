@@ -66,7 +66,7 @@ struct TgeompointFunctions {
      ****************************************************/
     static void Tpoint_length(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tpoint_trajectory(DataChunk &args, ExpressionState &state, Vector &result);
-    // static void Tpoint_trajectory_gs(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tpoint_trajectory_gs(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tgeo_at_geom(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tspatial_transform(DataChunk &args, ExpressionState &state, Vector &result);
 
@@ -94,8 +94,8 @@ struct TgeompointFunctions {
      ****************************************************/
     static void Tdistance_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     // static void gs_as_text(DataChunk &args, ExpressionState &state, Vector &result);
-    // static void collect_gs(DataChunk &args, ExpressionState &state, Vector &result);
-    // static void distance_geo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void collect_gs(DataChunk &args, ExpressionState &state, Vector &result);
+    static void distance_geo_geo(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

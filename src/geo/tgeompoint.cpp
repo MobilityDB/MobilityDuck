@@ -311,15 +311,15 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    // ExtensionUtil::RegisterFunction(
-    //     instance,
-    //     ScalarFunction(
-    //         "trajectory_gs",
-    //         {TGEOMPOINT()},
-    //         LogicalType::BLOB,
-    //         TgeompointFunctions::Tpoint_trajectory_gs
-    //     )
-    // );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "trajectory_gs",
+            {TGEOMPOINT()},
+            LogicalType::BLOB,
+            TgeompointFunctions::Tpoint_trajectory_gs
+        )
+    );
 
     ExtensionUtil::RegisterFunction(
         instance,
@@ -447,25 +447,25 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
     //     )
     // );
 
-    // ExtensionUtil::RegisterFunction(
-    //     instance,
-    //     ScalarFunction(
-    //         "collect_gs",
-    //         {LogicalType::LIST(LogicalType::BLOB)},
-    //         LogicalType::BLOB,
-    //         TgeompointFunctions::collect_gs
-    //     )
-    // );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "collect_gs",
+            {LogicalType::LIST(LogicalType::BLOB)},
+            LogicalType::BLOB,
+            TgeompointFunctions::collect_gs
+        )
+    );
 
-    // ExtensionUtil::RegisterFunction(
-    //     instance,
-    //     ScalarFunction(
-    //         "distance_gs",
-    //         {LogicalType::BLOB, LogicalType::BLOB},
-    //         LogicalType::DOUBLE,
-    //         TgeompointFunctions::distance_geo_geo
-    //     )
-    // );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "distance_gs",
+            {LogicalType::BLOB, LogicalType::BLOB},
+            LogicalType::DOUBLE,
+            TgeompointFunctions::distance_geo_geo
+        )
+    );
 }
 
 } // namespace duckdb

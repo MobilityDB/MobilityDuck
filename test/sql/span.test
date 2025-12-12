@@ -54,3 +54,53 @@ query I
 SELECT tstzspan '[2000-01-01, 2000-01-05]' * tstzspan '[2000-01-03, 2000-01-08]';
 ----
 [2000-01-03 00:00:00+00, 2000-01-05 00:00:00+00]
+
+query I
+SELECT intspan '[1, 2]' && intspan '[2, 3]';
+----
+true
+
+query I
+SELECT intspan '[1, 2]' && intspan '(2, 3]';
+----
+false
+
+query I
+SELECT bigintspan '[10000, 20000]' && bigintspan '[15000, 30000]';
+----
+true
+
+query I
+SELECT bigintspan '[10000, 20000]' && bigintspan '[25000, 30000]';
+----
+false
+
+query I
+SELECT floatspan '[1.5, 2.5]' && floatspan '[-0.5, 1.7]';
+----
+true
+
+query I
+SELECT floatspan '[1.5, 2.5]' && floatspan '(2.5, 4.5]';
+----
+false
+
+query I
+SELECT datespan '[2000-01-01,2000-01-03]' && datespan '[2000-01-02,2000-01-04]';
+----
+true
+
+query I
+SELECT datespan '[2000-01-01,2000-01-03]' && datespan '[2000-01-04,2000-01-04]';
+----
+false
+
+query I
+SELECT tstzspan '[2000-01-01 08:00:00+05, 2000-01-01 08:00:00+00]' && tstzspan '[2000-01-01 08:00:00+07, 2000-01-01 08:00:00+02]';
+----
+true
+
+query I
+SELECT tstzspan '[2000-01-01 08:00:00+05, 2000-01-01 08:00:00+00]' && tstzspan '[2000-01-01 08:00:00+07, 2000-01-01 08:00:00+06]';
+----
+false

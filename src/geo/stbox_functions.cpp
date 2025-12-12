@@ -269,7 +269,6 @@ void StboxFunctions::Geo_timestamptz_to_stbox(DataChunk &args, ExpressionState &
             timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts_duckdb);
             STBox *ret = geo_timestamptz_to_stbox(gs, (TimestampTz)ts_meos.value);
             if (!ret) {
-                free(ret);
                 free(gs);
                 mask.SetInvalid(idx);
                 return string_t();
@@ -332,6 +331,7 @@ void StboxFunctions::Geo_tstzspan_to_stbox(DataChunk &args, ExpressionState &sta
             memcpy(stbox_data, ret, stbox_size);
             string_t ret_str(reinterpret_cast<const char*>(stbox_data), stbox_size);
             string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(stbox_data);
             free(ret);
             free(span);
             free(gs);
@@ -368,6 +368,8 @@ void StboxFunctions::Geo_to_stbox_common(Vector &source, Vector &result, idx_t c
             size_t stbox_size = sizeof(STBox);
             uint8_t *stbox_data = (uint8_t*)malloc(stbox_size);
             if (!stbox_data) {
+                free(ret);
+                free(gs);
                 throw InternalException("Failure in Geo_to_stbox: unable to allocate memory for stbox");
                 return string_t();
             }
@@ -509,6 +511,7 @@ void StboxFunctions::Stbox_expand_space(DataChunk &args, ExpressionState &state,
             string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
             free(stbox_data);
             free(ret);
+            free(stbox);
             return stored_data;
         }
     );

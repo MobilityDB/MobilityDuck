@@ -714,6 +714,7 @@ void TgeompointFunctions::Tpoint_trajectory(DataChunk &args, ExpressionState &st
             uint8_t *ewkb_data = geo_as_ewkb(gs, NULL, &ewkb_size);
             // uint8_t *ewkb_data = geo_as_ewkb_duckdb(gs, NULL, &ewkb_size);
             if (!ewkb_data) {
+                free(gs);
                 free(temp);
                 throw InvalidInputException("Failed to convert trajectory to EWKB");
             }
@@ -731,40 +732,41 @@ void TgeompointFunctions::Tpoint_trajectory(DataChunk &args, ExpressionState &st
     }
 }
 
-// void TgeompointFunctions::Tpoint_trajectory_gs(DataChunk &args, ExpressionState &state, Vector &result) {
-//     UnaryExecutor::Execute<string_t, string_t>(
-//         args.data[0], result, args.size(),
-//         [&](string_t input_blob) -> string_t {
-//             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
-//             size_t data_size = input_blob.GetSize();
-//             uint8_t *data_copy = (uint8_t*)malloc(data_size);
-//             memcpy(data_copy, data, data_size);
-//             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-//             if (!temp) {
-//                 free(data_copy);
-//                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
-//             }
+void TgeompointFunctions::Tpoint_trajectory_gs(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input_blob) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
+            size_t data_size = input_blob.GetSize();
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
 
-//             GSERIALIZED *gs = tpoint_trajectory(temp, false);
-//             if (!gs) {
-//                 free(temp);
-//                 throw InvalidInputException("Failed to get trajectory from TGEOMPOINT");
-//             }
+            GSERIALIZED *gs = tpoint_trajectory(temp, false);
+            if (!gs) {
+                free(temp);
+                throw InvalidInputException("Failed to get trajectory from TGEOMPOINT");
+            }
 
-//             size_t gs_size = VARSIZE(gs);
-//             uint8_t *gs_data = (uint8_t*)malloc(gs_size);
-//             memcpy(gs_data, gs, gs_size);
-//             string_t gs_string(reinterpret_cast<const char*>(gs_data), gs_size);
-//             string_t stored_result = StringVector::AddStringOrBlob(result, gs_string);
-//             free(gs_data);
-//             free(temp);
-//             return stored_result;
-//         }
-//     );
-//     if (args.size() == 1) {
-//         result.SetVectorType(VectorType::CONSTANT_VECTOR);
-//     }
-// }
+            size_t gs_size = VARSIZE(gs);
+            uint8_t *gs_data = (uint8_t*)malloc(gs_size);
+            memcpy(gs_data, gs, gs_size);
+            string_t gs_string(reinterpret_cast<const char*>(gs_data), gs_size);
+            string_t stored_result = StringVector::AddStringOrBlob(result, gs_string);
+            free(gs_data);
+            free(gs);
+            free(temp);
+            return stored_result;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
 
 void TgeompointFunctions::Tgeo_at_geom(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
@@ -1016,12 +1018,22 @@ void TgeompointFunctions::Tdwithin_tgeo_tgeo(DataChunk &args, ExpressionState &s
                 return string_t();
             }
             size_t ret_size = temporal_mem_size(ret);
-            uint8_t *ret_data = (uint8_t*)malloc(ret_size);
-            memcpy(ret_data, ret, ret_size);
-            string_t ret_string(reinterpret_cast<const char*>(ret_data), ret_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, ret_string);
-            free(ret_data);
+            // uint8_t *ret_data = (uint8_t*)malloc(ret_size);
+            // memcpy(ret_data, ret, ret_size);
+            // string_t ret_string(reinterpret_cast<const char*>(ret_data), ret_size);
+            // string_t stored_data = StringVector::AddStringOrBlob(result, ret_string);
+            // free(ret_data);
+            // free(ret);
+            // return stored_data;
+            string_t stored_data = StringVector::AddStringOrBlob(
+                result,
+                reinterpret_cast<const char *>(ret),
+                ret_size
+            );
+
             free(ret);
+            free(tgeom1);
+            free(tgeom2);
             return stored_data;
         }
     );
@@ -1215,101 +1227,101 @@ void TgeompointFunctions::Tdistance_tgeo_tgeo(DataChunk &args, ExpressionState &
 //     }
 // }
 
-// void TgeompointFunctions::collect_gs(DataChunk &args, ExpressionState &state, Vector &result) {
-//     auto &array_vec = args.data[0];
-//     array_vec.Flatten(args.size());
-//     auto *list_entries = ListVector::GetData(array_vec);
-//     auto &child_vec = ListVector::GetEntry(array_vec);
-//     child_vec.Flatten(ListVector::GetListSize(array_vec));
-//     auto child_data = FlatVector::GetData<string_t>(child_vec);
+void TgeompointFunctions::collect_gs(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &array_vec = args.data[0];
+    array_vec.Flatten(args.size());
+    auto *list_entries = ListVector::GetData(array_vec);
+    auto &child_vec = ListVector::GetEntry(array_vec);
+    child_vec.Flatten(ListVector::GetListSize(array_vec));
+    auto child_data = FlatVector::GetData<string_t>(child_vec);
 
-//     UnaryExecutor::Execute<list_entry_t, string_t>(
-//         array_vec, result, args.size(),
-//         [&](const list_entry_t &list) {
-//             auto offset = list.offset;
-//             auto length = list.length;
-//             GSERIALIZED **gsarr = (GSERIALIZED **)malloc(length * sizeof(GSERIALIZED *));
-//             if (!gsarr) {
-//                 throw InternalException("Failed to allocate memory for GSERIALIZED array");
-//             }
-//             for (idx_t i = 0; i < length; i++) {
-//                 idx_t child_idx = offset + i;
-//                 auto wkb_data = child_data[child_idx];
-//                 size_t data_size = wkb_data.GetSize();
-//                 if (data_size < sizeof(void*)) {
-//                     free(gsarr);
-//                     throw InvalidInputException("Invalid BLOB data: insufficient size");
-//                 }
-//                 uint8_t *data_copy = (uint8_t*)malloc(data_size);
-//                 memcpy(data_copy, wkb_data.GetData(), data_size);
-//                 GSERIALIZED *gs = reinterpret_cast<GSERIALIZED*>(data_copy);
-//                 if (!gs) {
-//                     free(data_copy);
-//                     throw InvalidInputException("Invalid GSERIALIZED data: null pointer");
-//                 }
-//                 gsarr[i] = gs;
-//                 // char *gs_text = geo_as_ewkt(gs, 10);
-//                 // printf("GS %ld: %s\n", i, gs_text);
-//             }
+    UnaryExecutor::Execute<list_entry_t, string_t>(
+        array_vec, result, args.size(),
+        [&](const list_entry_t &list) {
+            auto offset = list.offset;
+            auto length = list.length;
+            GSERIALIZED **gsarr = (GSERIALIZED **)malloc(length * sizeof(GSERIALIZED *));
+            if (!gsarr) {
+                throw InternalException("Failed to allocate memory for GSERIALIZED array");
+            }
+            for (idx_t i = 0; i < length; i++) {
+                idx_t child_idx = offset + i;
+                auto wkb_data = child_data[child_idx];
+                size_t data_size = wkb_data.GetSize();
+                if (data_size < sizeof(void*)) {
+                    free(gsarr);
+                    throw InvalidInputException("Invalid BLOB data: insufficient size");
+                }
+                uint8_t *data_copy = (uint8_t*)malloc(data_size);
+                memcpy(data_copy, wkb_data.GetData(), data_size);
+                GSERIALIZED *gs = reinterpret_cast<GSERIALIZED*>(data_copy);
+                if (!gs) {
+                    free(data_copy);
+                    throw InvalidInputException("Invalid GSERIALIZED data: null pointer");
+                }
+                gsarr[i] = gs;
+                // char *gs_text = geo_as_ewkt(gs, 10);
+                // printf("GS %ld: %s\n", i, gs_text);
+            }
 
-//             GSERIALIZED *gs_out = geo_collect_garray(gsarr, (int)length);
-//             if (!gs_out) {
-//                 free(gsarr);
-//                 throw InvalidInputException("Failed to collect GSERIALIZED array");
-//             }
+            GSERIALIZED *gs_out = geo_collect_garray(gsarr, (int)length);
+            if (!gs_out) {
+                free(gsarr);
+                throw InvalidInputException("Failed to collect GSERIALIZED array");
+            }
 
-//             size_t gs_out_size = VARSIZE(gs_out);
-//             uint8_t *gs_out_data = (uint8_t*)malloc(gs_out_size);
-//             memcpy(gs_out_data, gs_out, gs_out_size);
-//             string_t gs_out_string(reinterpret_cast<const char*>(gs_out_data), gs_out_size);
-//             string_t stored_result = StringVector::AddStringOrBlob(result, gs_out_string);
-//             free(gs_out_data);
-//             free(gs_out);
-//             for (idx_t i = 0; i < length; i++) {
-//                 free(gsarr[i]);
-//             }
-//             free(gsarr);
-//             return stored_result;
-//         }
-//     );
-//     if (args.size() == 1) {
-//         result.SetVectorType(VectorType::CONSTANT_VECTOR);
-//     }
-// }
+            size_t gs_out_size = VARSIZE(gs_out);
+            uint8_t *gs_out_data = (uint8_t*)malloc(gs_out_size);
+            memcpy(gs_out_data, gs_out, gs_out_size);
+            string_t gs_out_string(reinterpret_cast<const char*>(gs_out_data), gs_out_size);
+            string_t stored_result = StringVector::AddStringOrBlob(result, gs_out_string);
+            free(gs_out_data);
+            free(gs_out);
+            for (idx_t i = 0; i < length; i++) {
+                free(gsarr[i]);
+            }
+            free(gsarr);
+            return stored_result;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
 
-// void TgeompointFunctions::distance_geo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
-//     BinaryExecutor::Execute<string_t, string_t, double>(
-//         args.data[0], args.data[1], result, args.size(),
-//         [&](string_t blob1, string_t blob2) -> double {
-//             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(blob1.GetData());
-//             size_t data1_size = blob1.GetSize();
-//             uint8_t *data1_copy = (uint8_t*)malloc(data1_size);
-//             memcpy(data1_copy, data1, data1_size);
-//             GSERIALIZED *gs1 = reinterpret_cast<GSERIALIZED*>(data1_copy);
-//             if (!gs1) {
-//                 free(data1_copy);
-//                 throw InvalidInputException("Invalid GSERIALIZED data 1: null pointer");
-//             }
+void TgeompointFunctions::distance_geo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t blob1, string_t blob2) -> double {
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(blob1.GetData());
+            size_t data1_size = blob1.GetSize();
+            uint8_t *data1_copy = (uint8_t*)malloc(data1_size);
+            memcpy(data1_copy, data1, data1_size);
+            GSERIALIZED *gs1 = reinterpret_cast<GSERIALIZED*>(data1_copy);
+            if (!gs1) {
+                free(data1_copy);
+                throw InvalidInputException("Invalid GSERIALIZED data 1: null pointer");
+            }
 
-//             const uint8_t *data2 = reinterpret_cast<const uint8_t*>(blob2.GetData());
-//             size_t data2_size = blob2.GetSize();
-//             uint8_t *data2_copy = (uint8_t*)malloc(data2_size);
-//             memcpy(data2_copy, data2, data2_size);
-//             GSERIALIZED *gs2 = reinterpret_cast<GSERIALIZED*>(data2_copy);
-//             if (!gs2) {
-//                 free(data2_copy);
-//                 throw InvalidInputException("Invalid GSERIALIZED data 2: null pointer");
-//             }
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(blob2.GetData());
+            size_t data2_size = blob2.GetSize();
+            uint8_t *data2_copy = (uint8_t*)malloc(data2_size);
+            memcpy(data2_copy, data2, data2_size);
+            GSERIALIZED *gs2 = reinterpret_cast<GSERIALIZED*>(data2_copy);
+            if (!gs2) {
+                free(data2_copy);
+                throw InvalidInputException("Invalid GSERIALIZED data 2: null pointer");
+            }
 
-//             double distance = geom_distance2d(gs1, gs2);
-//             free(gs1);
-//             free(gs2);
-//             return distance;
-//         }
-//     );
-//     if (args.size() == 1) {
-//         result.SetVectorType(VectorType::CONSTANT_VECTOR);
-//     }
-// }
+            double distance = geom_distance2d(gs1, gs2);
+            free(gs1);
+            free(gs2);
+            return distance;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
 
 } // namespace duckdb
