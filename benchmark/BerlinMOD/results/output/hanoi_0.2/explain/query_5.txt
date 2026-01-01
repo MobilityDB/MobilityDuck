@@ -1,0 +1,208 @@
+┌─────────────────────────────────────┐
+│┌───────────────────────────────────┐│
+││    Query Profiling Information    ││
+│└───────────────────────────────────┘│
+└─────────────────────────────────────┘
+EXPLAIN ANALYZE WITH Temp1(Licence1, Trajs) AS (     SELECT l1.Licence, collect_gs(list(trajectory_gs(t1.Trip)))     FROM Trips t1, Licences1 l1     WHERE t1.VehicleId = l1.VehicleId     GROUP BY l1.Licence ), Temp2(Licence2, Trajs) AS (     SELECT l2.Licence, collect_gs(list(trajectory_gs(t2.Trip)))     FROM Trips t2, Licences2 l2     WHERE t2.VehicleId = l2.VehicleId     GROUP BY l2.Licence ) SELECT Licence1, Licence2, distance_gs(t1.Trajs, t2.Trajs) AS MinDist FROM Temp1 t1, Temp2 t2   ORDER BY Licence1, Licence2;
+┌────────────────────────────────────────────────┐
+│┌──────────────────────────────────────────────┐│
+││             Total Time: 1666.21s             ││
+│└──────────────────────────────────────────────┘│
+└────────────────────────────────────────────────┘
+┌───────────────────────────┐
+│           QUERY           │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│      EXPLAIN_ANALYZE      │
+│    ────────────────────   │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_decompress_strin│
+│           g(#0)           │
+│__internal_decompress_strin│
+│           g(#1)           │
+│             #2            │
+│                           │
+│          100 Rows         │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          ORDER_BY         │
+│    ────────────────────   │
+│      t1.Licence1 ASC      │
+│      t2.Licence2 ASC      │
+│                           │
+│          100 Rows         │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_compress_string_│
+│        uhugeint(#0)       │
+│__internal_compress_string_│
+│        uhugeint(#1)       │
+│             #2            │
+│                           │
+│          100 Rows         │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│          Licence1         │
+│          Licence2         │
+│          MinDist          │
+│                           │
+│          100 Rows         │
+│         (4466.49s)        │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│       CROSS_PRODUCT       │
+│    ────────────────────   │
+│          100 Rows         ├────────────────────────────────────────────────────────────────────────┐
+│          (0.18s)          │                                                                        │
+└─────────────┬─────────────┘                                                                        │
+┌─────────────┴─────────────┐                                                          ┌─────────────┴─────────────┐
+│         PROJECTION        │                                                          │         PROJECTION        │
+│    ────────────────────   │                                                          │    ────────────────────   │
+│          Licence          │                                                          │          Licence          │
+│      collect_gs(list      │                                                          │      collect_gs(list      │
+│   (trajectory_gs(Trip)))  │                                                          │   (trajectory_gs(Trip)))  │
+│                           │                                                          │                           │
+│          10 Rows          │                                                          │          10 Rows          │
+│          (0.03s)          │                                                          │          (0.03s)          │
+└─────────────┬─────────────┘                                                          └─────────────┬─────────────┘
+┌─────────────┴─────────────┐                                                          ┌─────────────┴─────────────┐
+│         PROJECTION        │                                                          │         PROJECTION        │
+│    ────────────────────   │                                                          │    ────────────────────   │
+│__internal_decompress_strin│                                                          │__internal_decompress_strin│
+│           g(#0)           │                                                          │           g(#0)           │
+│             #1            │                                                          │             #1            │
+│                           │                                                          │                           │
+│          10 Rows          │                                                          │          10 Rows          │
+│          (0.00s)          │                                                          │          (0.00s)          │
+└─────────────┬─────────────┘                                                          └─────────────┬─────────────┘
+┌─────────────┴─────────────┐                                                          ┌─────────────┴─────────────┐
+│       HASH_GROUP_BY       │                                                          │       HASH_GROUP_BY       │
+│    ────────────────────   │                                                          │    ────────────────────   │
+│         Groups: #0        │                                                          │         Groups: #0        │
+│    Aggregates: list(#1)   │                                                          │    Aggregates: list(#1)   │
+│                           │                                                          │                           │
+│          10 Rows          │                                                          │          10 Rows          │
+│          (0.01s)          │                                                          │          (0.02s)          │
+└─────────────┬─────────────┘                                                          └─────────────┬─────────────┘
+┌─────────────┴─────────────┐                                                          ┌─────────────┴─────────────┐
+│         PROJECTION        │                                                          │         PROJECTION        │
+│    ────────────────────   │                                                          │    ────────────────────   │
+│          Licence          │                                                          │          Licence          │
+│    trajectory_gs(Trip)    │                                                          │    trajectory_gs(Trip)    │
+│                           │                                                          │                           │
+│          390 Rows         │                                                          │          379 Rows         │
+│          (0.27s)          │                                                          │          (0.21s)          │
+└─────────────┬─────────────┘                                                          └─────────────┬─────────────┘
+┌─────────────┴─────────────┐                                                          ┌─────────────┴─────────────┐
+│         PROJECTION        │                                                          │         PROJECTION        │
+│    ────────────────────   │                                                          │    ────────────────────   │
+│             #0            │                                                          │             #0            │
+│__internal_compress_string_│                                                          │__internal_compress_string_│
+│        uhugeint(#1)       │                                                          │        uhugeint(#1)       │
+│                           │                                                          │                           │
+│          390 Rows         │                                                          │          379 Rows         │
+│          (0.00s)          │                                                          │          (0.00s)          │
+└─────────────┬─────────────┘                                                          └─────────────┬─────────────┘
+┌─────────────┴─────────────┐                                                          ┌─────────────┴─────────────┐
+│         HASH_JOIN         │                                                          │         HASH_JOIN         │
+│    ────────────────────   │                                                          │    ────────────────────   │
+│      Join Type: INNER     │                                                          │      Join Type: INNER     │
+│                           │                                                          │                           │
+│        Conditions:        ├──────────────┐                                           │        Conditions:        ├──────────────┐
+│   VehicleId = VehicleId   │              │                                           │   VehicleId = VehicleId   │              │
+│                           │              │                                           │                           │              │
+│          390 Rows         │              │                                           │          379 Rows         │              │
+│          (0.00s)          │              │                                           │          (0.00s)          │              │
+└─────────────┬─────────────┘              │                                           └─────────────┬─────────────┘              │
+┌─────────────┴─────────────┐┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐┌─────────────┴─────────────┐
+│         TABLE_SCAN        ││         PROJECTION        │                             │         TABLE_SCAN        ││         PROJECTION        │
+│    ────────────────────   ││    ────────────────────   │                             │    ────────────────────   ││    ────────────────────   │
+│        Table: Trips       ││__internal_decompress_integ│                             │        Table: Trips       ││__internal_decompress_integ│
+│      Type: Index Scan     ││     ral_integer(#0, 1)    │                             │      Type: Index Scan     ││     ral_integer(#0, 1)    │
+│                           ││__internal_decompress_strin│                             │                           ││__internal_decompress_strin│
+│        Projections:       ││           g(#1)           │                             │        Projections:       ││           g(#1)           │
+│         VehicleId         ││__internal_decompress_integ│                             │         VehicleId         ││__internal_decompress_integ│
+│            Trip           ││    ral_integer(#2, 23)    │                             │            Trip           ││    ral_integer(#2, 23)    │
+│                           ││                           │                             │                           ││                           │
+│          Filters:         ││                           │                             │          Filters:         ││                           │
+│     VehicleId>=23 AND     ││                           │                             │     VehicleId>=23 AND     ││                           │
+│       VehicleId<=893      ││                           │                             │       VehicleId<=893      ││                           │
+│                           ││                           │                             │                           ││                           │
+│          390 Rows         ││          10 Rows          │                             │          379 Rows         ││          10 Rows          │
+│          (0.10s)          ││          (0.00s)          │                             │          (0.08s)          ││          (0.00s)          │
+└───────────────────────────┘└─────────────┬─────────────┘                             └───────────────────────────┘└─────────────┬─────────────┘
+                             ┌─────────────┴─────────────┐                                                          ┌─────────────┴─────────────┐
+                             │          ORDER_BY         │                                                          │          ORDER_BY         │
+                             │    ────────────────────   │                                                          │    ────────────────────   │
+                             │   hanoi_0.main.Licences   │                                                          │   hanoi_0.main.Licences   │
+                             │       .LicenceId ASC      │                                                          │       .LicenceId ASC      │
+                             │                           │                                                          │                           │
+                             │          10 Rows          │                                                          │          10 Rows          │
+                             │          (0.00s)          │                                                          │          (0.00s)          │
+                             └─────────────┬─────────────┘                                                          └─────────────┬─────────────┘
+                             ┌─────────────┴─────────────┐                                                          ┌─────────────┴─────────────┐
+                             │         PROJECTION        │                                                          │         PROJECTION        │
+                             │    ────────────────────   │                                                          │    ────────────────────   │
+                             │__internal_compress_integra│                                                          │__internal_compress_integra│
+                             │     l_utinyint(#0, 1)     │                                                          │     l_utinyint(#0, 1)     │
+                             │__internal_compress_string_│                                                          │__internal_compress_string_│
+                             │        uhugeint(#1)       │                                                          │        uhugeint(#1)       │
+                             │__internal_compress_integra│                                                          │__internal_compress_integra│
+                             │    l_usmallint(#2, 23)    │                                                          │    l_usmallint(#2, 23)    │
+                             │                           │                                                          │                           │
+                             │          10 Rows          │                                                          │          10 Rows          │
+                             │          (0.00s)          │                                                          │          (0.00s)          │
+                             └─────────────┬─────────────┘                                                          └─────────────┬─────────────┘
+                             ┌─────────────┴─────────────┐                                                          ┌─────────────┴─────────────┐
+                             │         HASH_JOIN         │                                                          │         HASH_JOIN         │
+                             │    ────────────────────   │                                                          │    ────────────────────   │
+                             │      Join Type: SEMI      │                                                          │      Join Type: SEMI      │
+                             │                           │                                                          │                           │
+                             │        Conditions:        ├──────────────┐                                           │        Conditions:        ├──────────────┐
+                             │       rowid = rowid       │              │                                           │       rowid = rowid       │              │
+                             │                           │              │                                           │                           │              │
+                             │          10 Rows          │              │                                           │          10 Rows          │              │
+                             │          (0.00s)          │              │                                           │          (0.00s)          │              │
+                             └─────────────┬─────────────┘              │                                           └─────────────┬─────────────┘              │
+                             ┌─────────────┴─────────────┐┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐┌─────────────┴─────────────┐
+                             │         TABLE_SCAN        ││           TOP_N           │                             │         TABLE_SCAN        ││           TOP_N           │
+                             │    ────────────────────   ││    ────────────────────   │                             │    ────────────────────   ││    ────────────────────   │
+                             │      Table: Licences      ││          Top: 10          │                             │      Table: Licences      ││          Top: 10          │
+                             │   Type: Sequential Scan   ││                           │                             │   Type: Sequential Scan   ││         Offset: 10        │
+                             │                           ││         Order By:         │                             │                           ││                           │
+                             │        Projections:       ││   hanoi_0.main.Licences   │                             │        Projections:       ││         Order By:         │
+                             │         LicenceId         ││       .LicenceId ASC      │                             │         LicenceId         ││   hanoi_0.main.Licences   │
+                             │          Licence          ││                           │                             │          Licence          ││       .LicenceId ASC      │
+                             │         VehicleId         ││                           │                             │         VehicleId         ││                           │
+                             │                           ││                           │                             │                           ││                           │
+                             │          10 Rows          ││          10 Rows          │                             │          10 Rows          ││          10 Rows          │
+                             │          (0.00s)          ││          (0.00s)          │                             │          (0.00s)          ││          (0.00s)          │
+                             └───────────────────────────┘└─────────────┬─────────────┘                             └───────────────────────────┘└─────────────┬─────────────┘
+                                                          ┌─────────────┴─────────────┐                                                          ┌─────────────┴─────────────┐
+                                                          │         TABLE_SCAN        │                                                          │         TABLE_SCAN        │
+                                                          │    ────────────────────   │                                                          │    ────────────────────   │
+                                                          │      Table: Licences      │                                                          │      Table: Licences      │
+                                                          │   Type: Sequential Scan   │                                                          │   Type: Sequential Scan   │
+                                                          │                           │                                                          │                           │
+                                                          │        Projections:       │                                                          │        Projections:       │
+                                                          │         LicenceId         │                                                          │         LicenceId         │
+                                                          │                           │                                                          │                           │
+                                                          │          Filters:         │                                                          │          Filters:         │
+                                                          │ optional: Dynamic Filter  │                                                          │ optional: Dynamic Filter  │
+                                                          │        (LicenceId)        │                                                          │        (LicenceId)        │
+                                                          │                           │                                                          │                           │
+                                                          │          100 Rows         │                                                          │          100 Rows         │
+                                                          │          (0.00s)          │                                                          │          (0.00s)          │
+                                                          └───────────────────────────┘                                                          └───────────────────────────┘

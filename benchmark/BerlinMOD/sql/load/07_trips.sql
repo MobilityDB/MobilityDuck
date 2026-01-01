@@ -19,7 +19,7 @@ CREATE OR REPLACE TABLE Trips (
     Traj geometry,
     PRIMARY KEY (VehicleId, TripId));
 
-COPY TripsInput(TripId, VehicleId, PosX, PosY, t) FROM './data/trips.csv';
+COPY TripsInput(TripId, VehicleId, PosX, PosY, t) FROM './data/tripsinput.csv';
 
 INSERT INTO TripsTmp(TripId, VehicleId, Tgeom)
 SELECT TripId, VehicleId,

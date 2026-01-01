@@ -1,0 +1,165 @@
+┌─────────────────────────────────────┐
+│┌───────────────────────────────────┐│
+││    Query Profiling Information    ││
+│└───────────────────────────────────┘│
+└─────────────────────────────────────┘
+EXPLAIN ANALYZE WITH Temp AS (     SELECT l1.Licence AS Licence1, t2.VehicleId AS Car2Id,     whenTrue(tDwithin(t1.Trip, t2.Trip, 3.0)) AS Periods     FROM Trips t1, Licences1 l1, Trips t2, Vehicles v     WHERE t1.VehicleId = l1.VehicleId AND t2.VehicleId = v.VehicleId AND     t1.VehicleId <> t2.VehicleId AND t2.Trip && expandSpace(t1.trip::STBOX, 3.0) ) SELECT Licence1, Car2Id, Periods FROM Temp WHERE Periods IS NOT NULL;
+┌────────────────────────────────────────────────┐
+│┌──────────────────────────────────────────────┐│
+││             Total Time: 1345.45s             ││
+│└──────────────────────────────────────────────┘│
+└────────────────────────────────────────────────┘
+┌───────────────────────────┐
+│           QUERY           │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│      EXPLAIN_ANALYZE      │
+│    ────────────────────   │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│          Licence1         │
+│           Car2Id          │
+│          Periods          │
+│                           │
+│         1384 Rows         │
+│          (26.87s)         │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│             #0            │
+│             #1            │
+│             #4            │
+│             #6            │
+│                           │
+│         1384 Rows         │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│           FILTER          │
+│    ────────────────────   │
+│ ((whenTrue(tDwithin(Trip, │
+│  Trip, 3.0)) IS NOT NULL) │
+│  AND (Trip && expandSpace │
+│ (CAST(Trip AS STBOX), 3.0)│
+│             ))            │
+│                           │
+│         1384 Rows         │
+│         (1312.14s)        │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│      NESTED_LOOP_JOIN     │
+│    ────────────────────   │
+│      Join Type: INNER     │
+│                           │
+│        Conditions:        ├───────────────────────────────────────────┐
+│   VehicleId != VehicleId  │                                           │
+│                           │                                           │
+│       13758968 Rows       │                                           │
+│          (0.14s)          │                                           │
+└─────────────┬─────────────┘                                           │
+┌─────────────┴─────────────┐                             ┌─────────────┴─────────────┐
+│         HASH_JOIN         │                             │         HASH_JOIN         │
+│    ────────────────────   │                             │    ────────────────────   │
+│      Join Type: INNER     │                             │      Join Type: INNER     │
+│                           │                             │                           │
+│        Conditions:        ├──────────────┐              │        Conditions:        ├──────────────┐
+│   VehicleId = VehicleId   │              │              │   VehicleId = VehicleId   │              │
+│                           │              │              │                           │              │
+│         35319 Rows        │              │              │          390 Rows         │              │
+│          (0.00s)          │              │              │          (0.00s)          │              │
+└─────────────┬─────────────┘              │              └─────────────┬─────────────┘              │
+┌─────────────┴─────────────┐┌─────────────┴─────────────┐┌─────────────┴─────────────┐┌─────────────┴─────────────┐
+│         TABLE_SCAN        ││         TABLE_SCAN        ││         TABLE_SCAN        ││         PROJECTION        │
+│    ────────────────────   ││    ────────────────────   ││    ────────────────────   ││    ────────────────────   │
+│        Table: Trips       ││      Table: Vehicles      ││        Table: Trips       ││__internal_decompress_integ│
+│   Type: Sequential Scan   ││   Type: Sequential Scan   ││      Type: Index Scan     ││     ral_integer(#0, 1)    │
+│                           ││                           ││                           ││__internal_decompress_strin│
+│        Projections:       ││        Projections:       ││        Projections:       ││           g(#1)           │
+│         VehicleId         ││         VehicleId         ││         VehicleId         ││__internal_decompress_integ│
+│            Trip           ││                           ││            Trip           ││    ral_integer(#2, 23)    │
+│                           ││                           ││                           ││                           │
+│                           ││                           ││          Filters:         ││                           │
+│                           ││                           ││     VehicleId>=23 AND     ││                           │
+│                           ││                           ││       VehicleId<=893      ││                           │
+│                           ││                           ││                           ││                           │
+│         35319 Rows        ││          894 Rows         ││          390 Rows         ││          10 Rows          │
+│          (6.07s)          ││          (0.00s)          ││          (0.09s)          ││          (0.00s)          │
+└───────────────────────────┘└───────────────────────────┘└───────────────────────────┘└─────────────┬─────────────┘
+                                                                                       ┌─────────────┴─────────────┐
+                                                                                       │          ORDER_BY         │
+                                                                                       │    ────────────────────   │
+                                                                                       │   hanoi_0.main.Licences   │
+                                                                                       │       .LicenceId ASC      │
+                                                                                       │                           │
+                                                                                       │          10 Rows          │
+                                                                                       │          (0.00s)          │
+                                                                                       └─────────────┬─────────────┘
+                                                                                       ┌─────────────┴─────────────┐
+                                                                                       │         PROJECTION        │
+                                                                                       │    ────────────────────   │
+                                                                                       │__internal_compress_integra│
+                                                                                       │     l_utinyint(#0, 1)     │
+                                                                                       │__internal_compress_string_│
+                                                                                       │        uhugeint(#1)       │
+                                                                                       │__internal_compress_integra│
+                                                                                       │    l_usmallint(#2, 23)    │
+                                                                                       │                           │
+                                                                                       │          10 Rows          │
+                                                                                       │          (0.00s)          │
+                                                                                       └─────────────┬─────────────┘
+                                                                                       ┌─────────────┴─────────────┐
+                                                                                       │         PROJECTION        │
+                                                                                       │    ────────────────────   │
+                                                                                       │         LicenceId         │
+                                                                                       │          Licence          │
+                                                                                       │         VehicleId         │
+                                                                                       │                           │
+                                                                                       │          10 Rows          │
+                                                                                       │          (0.00s)          │
+                                                                                       └─────────────┬─────────────┘
+                                                                                       ┌─────────────┴─────────────┐
+                                                                                       │         HASH_JOIN         │
+                                                                                       │    ────────────────────   │
+                                                                                       │      Join Type: SEMI      │
+                                                                                       │                           │
+                                                                                       │        Conditions:        ├──────────────┐
+                                                                                       │       rowid = rowid       │              │
+                                                                                       │                           │              │
+                                                                                       │          10 Rows          │              │
+                                                                                       │          (0.00s)          │              │
+                                                                                       └─────────────┬─────────────┘              │
+                                                                                       ┌─────────────┴─────────────┐┌─────────────┴─────────────┐
+                                                                                       │         TABLE_SCAN        ││           TOP_N           │
+                                                                                       │    ────────────────────   ││    ────────────────────   │
+                                                                                       │      Table: Licences      ││          Top: 10          │
+                                                                                       │   Type: Sequential Scan   ││                           │
+                                                                                       │                           ││         Order By:         │
+                                                                                       │        Projections:       ││   hanoi_0.main.Licences   │
+                                                                                       │         LicenceId         ││       .LicenceId ASC      │
+                                                                                       │          Licence          ││                           │
+                                                                                       │         VehicleId         ││                           │
+                                                                                       │                           ││                           │
+                                                                                       │          10 Rows          ││          10 Rows          │
+                                                                                       │          (0.00s)          ││          (0.00s)          │
+                                                                                       └───────────────────────────┘└─────────────┬─────────────┘
+                                                                                                                    ┌─────────────┴─────────────┐
+                                                                                                                    │         TABLE_SCAN        │
+                                                                                                                    │    ────────────────────   │
+                                                                                                                    │      Table: Licences      │
+                                                                                                                    │   Type: Sequential Scan   │
+                                                                                                                    │                           │
+                                                                                                                    │        Projections:       │
+                                                                                                                    │         LicenceId         │
+                                                                                                                    │                           │
+                                                                                                                    │          Filters:         │
+                                                                                                                    │ optional: Dynamic Filter  │
+                                                                                                                    │        (LicenceId)        │
+                                                                                                                    │                           │
+                                                                                                                    │          100 Rows         │
+                                                                                                                    │          (0.00s)          │
+                                                                                                                    └───────────────────────────┘

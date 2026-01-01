@@ -19,7 +19,8 @@ QUERIES = [
     "04_regions.sql",
     "05_vehicles.sql",
     "06_licences.sql",
-    "07_trips.sql"
+    "07_trips.sql",
+    "08_cleanup.sql"
 ]
 
 VALIDATION_QUERIES = {
@@ -55,8 +56,7 @@ class DataLoader:
             [self.duckdb_path, f"./databases/{self.benchmark}.db"],
             input=sql,
             capture_output=True,
-            text=True,
-            timeout=3000
+            text=True
         )
 
         end_time = time.time()

@@ -12,14 +12,15 @@ mkdir brussels
 Put the CSV files in this newly created directory. For example, after copying, `data/` should have the following structure:
 ```
 data
-└── brussels
+└── hanoi_0.05
     ├── instants.csv
     ├── licences.csv
+    ├── municipalities.csv
     ├── periods.csv
     ├── points.csv
     ├── regions.csv
-    ├── trips.csv
-    ├── trips_200k.csv
+    ├── roadsegments.csv
+    ├── tripsinput.csv
     └── vehicles.csv
 ```
 
