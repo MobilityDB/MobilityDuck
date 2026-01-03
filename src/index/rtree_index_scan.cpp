@@ -58,10 +58,15 @@ static unique_ptr<GlobalTableFunctionState> RTreeIndexScanInitGlobal(ClientConte
 	result->local_storage_state.Initialize(result->column_ids, context, input.filters);
 	local_storage.InitializeScan(bind_data.table.GetStorage(), result->local_storage_state.local_state, input.filters);
 
-
-	if (bind_data.query_stbox) {
-        result->index_state = bind_data.index.Cast<RTreeIndex>().InitializeScan(bind_data.query_stbox.get(), sizeof(STBox));
+	// Initialize index scan - works for both STBOX and TSTZSPAN
+	if (bind_data.query_box) {
+        result->index_state = bind_data.index.Cast<RTreeIndex>().InitializeScan(
+            bind_data.query_box.get(), 
+            bind_data.query_box_size,
+			bind_data.operation
+        );
     }
+    
 	return std::move(result);
 }
 

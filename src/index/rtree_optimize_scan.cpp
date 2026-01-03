@@ -7,12 +7,14 @@
 #include "duckdb/planner/operator/logical_top_n.hpp"
 #include "duckdb/planner/operator/logical_filter.hpp"
 #include "duckdb/planner/filter/expression_filter.hpp"
-
+#include "duckdb/planner/expression/bound_function_expression.hpp"
 #include "duckdb/main/database.hpp"
 #include <algorithm>
 
 #include "index/rtree_module.hpp"
 #include "index/rtree_index_scan.hpp"
+#include "time_util.hpp"
+
 
 
 namespace duckdb {
@@ -50,6 +52,14 @@ private:
                     return false;
                 }
 
+                string function_name;
+                if (expr_filter.expr->type == ExpressionType::BOUND_FUNCTION) {
+                    auto &func_expr = expr_filter.expr->Cast<BoundFunctionExpression>();
+                    function_name = func_expr.function.name;
+                } else {
+                    return false;
+                }
+
                 Expression *const_expr = nullptr;
                 
                 for (auto &binding : bindings) {
@@ -64,31 +74,40 @@ private:
 
                 const auto &constant = const_expr->Cast<BoundConstantExpression>();
                 
-                unique_ptr<STBox> query_stbox = nullptr;
+                void *query_box = nullptr;
+                size_t box_size = 0;
                 
                 if (constant.value.type().id() == LogicalTypeId::BLOB) {
                     
                     auto blob_data = constant.value.GetValueUnsafe<duckdb::string_t>();
 
-                    const uint8_t *stbox_data = reinterpret_cast<const uint8_t *>(blob_data.GetDataUnsafe());
-                    size_t stbox_size = blob_data.GetSize();
-
-                    STBox *box = nullptr;
+                   const uint8_t *data = reinterpret_cast<const uint8_t *>(blob_data.GetDataUnsafe());
+                    box_size = blob_data.GetSize();
                     
-                    box = (STBox*)malloc(stbox_size);
-                    
-                    memcpy(box, stbox_data, stbox_size);
-
-                    query_stbox = unique_ptr<STBox>(box);
+                    query_box = malloc(box_size);
+                    memcpy(query_box, data, box_size);
                     
                 }
+                else if (constant.value.type().id() == LogicalTypeId::TIMESTAMP_TZ) {
+                    auto timestamp_duckdb = constant.value.GetValueUnsafe<timestamp_tz_t>();
+    
+                    timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(timestamp_duckdb);
+                    
+                    box_size = sizeof(timestamp_tz_t);
+                    query_box = malloc(box_size);
+                    
+                    if (query_box) {
+                        memcpy(query_box, &ts_meos, box_size);
+                    }
+                }
+                
 
-                if (!query_stbox) {
+                if (!query_box) {
                     return false;
                 }
 
                 bind_data = make_uniq<RTreeIndexScanBindData>(
-                    duck_table, rtree_index, 1000, std::move(query_stbox));
+                    duck_table, rtree_index, 1000, query_box, box_size, function_name);
                 return true;
             });
             
@@ -138,7 +157,6 @@ public:
 
     static void Optimize(OptimizerExtensionInput &input, unique_ptr<LogicalOperator> &plan) {
         OptimizeRecursive(input.context, plan);
-        // fprintf(stderr, "Done OptimizeRecursive\n");
     }
 };
 

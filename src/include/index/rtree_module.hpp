@@ -5,6 +5,7 @@
 #include "duckdb/execution/index/fixed_size_allocator.hpp"
 #include "duckdb/common/case_insensitive_map.hpp"
 #include "duckdb/optimizer/matcher/expression_matcher.hpp"
+#include "meos_wrapper_simple.hpp"
 
 extern "C" {
     #include <meos.h>
@@ -59,14 +60,17 @@ public:
     string GetConstraintViolationMessage(VerifyExistenceType verify_type, idx_t failed_index,
                                        DataChunk &input) override;
 
-    unique_ptr<IndexScanState> InitializeScan(const void* query_blob, size_t blob_size) const;
+    unique_ptr<IndexScanState> InitializeScan(const void* query_blob, size_t blob_size, const string &operation) const;
 
-    vector<row_t> SearchStbox(const STBox *query_stbox) const;
+    vector<row_t> Search(const void *query_box) const;
 
 
     idx_t Scan(IndexScanState &state, Vector &result) const;
 
     bool TryMatchDistanceFunction(const unique_ptr<Expression> &expr, vector<reference<Expression>> &bindings) const;
+
+    meosType GetBboxType() const { return bbox_type_; }
+    size_t GetBboxSize() const { return bbox_size_; }
 
 
 
@@ -77,7 +81,11 @@ private:
     unique_ptr<ExpressionMatcher> MakeFunctionMatcher() const;
 
     RTree *rtree_;
-    STBox *boxes;
+    void *boxes;
+
+    meosType bbox_type_;
+    size_t bbox_size_;
+
     size_t current_size_ = 0;
     size_t current_capacity_ = 0;
     StorageLock rwlock;

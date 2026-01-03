@@ -27,6 +27,7 @@
 #include "index/rtree_module.hpp"
 #include "geo/stbox.hpp"
 #include "index/rtree_index_create_physical.hpp"
+#include "time_util.hpp"
 
 
 namespace duckdb {
@@ -45,20 +46,40 @@ RTreeIndex::RTreeIndex(const string &name, IndexConstraintType constraint_type,
                 unbound_expressions, db), options_(options), rtree_(nullptr) {
     
     
-    // Create RTree specifically for integer stboxs (stbox)
-    rtree_ = rtree_create_stbox();
-    if (!rtree_) {
-        throw InternalException("Failed to create MEOS RTree for stbox");
+    auto &type = unbound_expressions[0]->return_type;
+    
+    if (type == StboxType::STBOX()) {
+        bbox_type_ = T_STBOX;
+        bbox_size_ = sizeof(STBox);
+        rtree_ = rtree_create_stbox();
+    } else if (type == SpanTypes::TSTZSPAN()) {
+        bbox_type_ = T_TSTZSPAN;
+        bbox_size_ = sizeof(Span);  
+        rtree_ = rtree_create_tstzspan();
+    } else {
+        throw InternalException("RTree index only supports STBOX and TSTZSPAN types, got: " + type.ToString());
     }
+    
+    if (!rtree_) {
+        throw InternalException("Failed to create MEOS RTree");
+    }
+    
     function_matcher = MakeFunctionMatcher();
 }
 
 class RTreeIndexScanState final : public IndexScanState {
 public:
-    STBox query_stbox;
+    void* query_box = nullptr; 
     vector<row_t> search_results;
     idx_t current_position = 0;
     bool initialized = false;
+    
+    ~RTreeIndexScanState() {
+        if (query_box) {
+            free(query_box);
+            query_box = nullptr;
+        }
+    }
 };
 
 RTreeIndex::~RTreeIndex() {
@@ -162,9 +183,10 @@ ErrorData RTreeIndex::Insert(IndexLock &lock, DataChunk &data, Vector &row_ids) 
             continue;
         }
         
-        memcpy(&boxes[i], box, sizeof(STBox));
+        void* target = (char*)boxes + (i * bbox_size_);
+        memcpy(target, box, bbox_size_);
         
-        rtree_insert(rtree_, &boxes[i], static_cast<int64_t>(row_data[i]));
+        rtree_insert(rtree_, target, static_cast<int64_t>(row_data[i]));
         
         free(box);
     }
@@ -195,42 +217,50 @@ void RTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifiers
         return; 
     }
     
-    auto &stbox_vector = expression_result.data[0];
+    auto &vector = expression_result.data[0];
     auto row_data = FlatVector::GetData<row_t>(row_identifiers);
 
-    if (stbox_vector.GetVectorType() != VectorType::FLAT_VECTOR) {
-        stbox_vector.Flatten(expression_result.size());
+    if (vector.GetVectorType() != VectorType::FLAT_VECTOR) {
+        vector.Flatten(expression_result.size());
     }
     
-    auto vector_type = stbox_vector.GetType();
+    auto vector_type = vector.GetType();
     
-    STBox* boxes = (STBox*)malloc(sizeof(STBox) * expression_result.size());
+
+    void* boxes = malloc(bbox_size_ * expression_result.size());
     
     for (idx_t i = 0; i < expression_result.size(); i++) {
-        if (FlatVector::IsNull(stbox_vector, i)) {
+        if (FlatVector::IsNull(vector, i)) {
             continue; 
         }
 
-        STBox *box = nullptr;
+        void *box = nullptr;
         
-        if (vector_type.id() == LogicalTypeId::BLOB ) {
-            auto blob_data = FlatVector::GetData<string_t>(stbox_vector)[i];
-            const uint8_t *stbox_data = reinterpret_cast<const uint8_t*>(blob_data.GetData());
-            size_t stbox_size = blob_data.GetSize();
+        if (vector_type.id() == LogicalTypeId::BLOB) {
+            auto blob_data = FlatVector::GetData<string_t>(vector)[i];
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(blob_data.GetData());
+            size_t data_size = blob_data.GetSize();
+            
+           
+            if (data_size != bbox_size_) {
+                continue;
+            }
                         
-            box = (STBox*)malloc(stbox_size);
-            memcpy(box, stbox_data, stbox_size);
+            box = malloc(data_size);
+            memcpy(box, data, data_size);
 
-            int32_t box_srid = stbox_srid(box);
-            if (box_srid != 0) {
-                STBox *normalized_box = stbox_set_srid(box, 0);
-                if (normalized_box) {
-                    free(box);
-                    box = normalized_box;
+            if (bbox_type_ == T_STBOX) {
+                STBox *stbox = (STBox*)box;
+                int32_t box_srid = stbox_srid(stbox);
+                if (box_srid != 0) {
+                    STBox *normalized_box = stbox_set_srid(stbox, 0);
+                    if (normalized_box) {
+                        free(box);
+                        box = normalized_box;
+                    }
                 }
             }
-        } 
-        else { 
+        } else { 
             continue;
         }
 
@@ -238,16 +268,16 @@ void RTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifiers
             continue;
         }
         
-        memcpy(&boxes[i], box, sizeof(STBox));
-        rtree_insert(rtree_, &boxes[i], static_cast<int64_t>(row_data[i]));
+        void* target = (char*)boxes + (i * bbox_size_);
+        memcpy(target, box, bbox_size_);
+        rtree_insert(rtree_, target, static_cast<int64_t>(row_data[i]));
         free(box);
     }
     
     free(boxes);
 }
 
-// Use for create physical plan
-// individual insertion for now
+
 ErrorData RTreeIndex::BulkConstruct(STBox* boxes, const row_t* row_ids, idx_t count) {
     if (!rtree_) {
         return ErrorData("RTree not initialized");
@@ -267,29 +297,63 @@ void RTreeIndex::Delete(IndexLock &lock, DataChunk &entries, Vector &row_identif
 //------------------------------------------------------------------------------
 // RTree Search Operations
 //------------------------------------------------------------------------------
-unique_ptr<IndexScanState> RTreeIndex::InitializeScan(const void* query_blob, size_t blob_size) const {
-
-    const uint8_t *stbox_data = reinterpret_cast<const uint8_t*>(query_blob);
-    STBox *box = (STBox*)malloc(blob_size);
-    memcpy(box, stbox_data, blob_size);
-
+unique_ptr<IndexScanState> RTreeIndex::InitializeScan(const void* query_blob, size_t blob_size, const string &operation) const {
+    const uint8_t *data = reinterpret_cast<const uint8_t*>(query_blob);
+    
     auto state = make_uniq<RTreeIndexScanState>();
     
-    memcpy(&state->query_stbox, box, sizeof(STBox));
-
-    int32_t query_srid = stbox_srid(&state->query_stbox);
-    
-    if (query_srid != 0) {
-        STBox *normalized_query = stbox_set_srid(&state->query_stbox, 0);
-        if (normalized_query) {
-            memcpy(&state->query_stbox, normalized_query, sizeof(STBox));
-            free(normalized_query);
+    if (operation == "@>" && bbox_type_ == T_TSTZSPAN) {
+        if (blob_size != sizeof(timestamp_tz_t)) {
+            throw InvalidInputException("Invalid query box size for @> operation. Expected " + 
+                                      std::to_string(sizeof(timestamp_tz_t)) + 
+                                      ", got " + std::to_string(blob_size));
         }
+        
+        timestamp_tz_t timestamp;
+        memcpy(&timestamp, data, sizeof(timestamp_tz_t));
+        TimestampTz meos_timestamp = static_cast<TimestampTz>(timestamp.value);
+        Datum timestamp_datum = (Datum)meos_timestamp;
+        
+        state->query_box = malloc(sizeof(Span));
+        memset(state->query_box, 0, sizeof(Span));
+        
+        Span *point_span = static_cast<Span*>(state->query_box);
+        point_span->lower = timestamp_datum;
+        point_span->upper = timestamp_datum;
+        point_span->lower_inc = true;
+        point_span->upper_inc = true;
+        point_span->spantype = T_TSTZSPAN;
+        point_span->basetype = T_TIMESTAMPTZ;  
+        
+        
+    } else if (operation == "&&") {
+        
+        state->query_box = malloc(blob_size);
+        memcpy(state->query_box, data, blob_size);
+
+        if (bbox_type_ == T_STBOX) {
+            STBox *stbox = (STBox*)state->query_box;
+            int32_t query_srid = stbox_srid(stbox);
+            if (query_srid != 0) {
+                STBox *normalized_query = stbox_set_srid(stbox, 0);
+                if (normalized_query) {
+                    free(state->query_box);
+                    state->query_box = malloc(blob_size);
+                    memcpy(state->query_box, normalized_query, blob_size);
+                    free(normalized_query);
+                }
+            }
+        }
+        
+    } else {
+        throw InvalidInputException("Unsupported R-Tree operation: " + operation + 
+                                  " for bbox_type: " + std::to_string(bbox_type_));
     }
+    
     if (rtree_) {
-        state->search_results = SearchStbox(&state->query_stbox);
+        state->search_results = Search(state->query_box);
         state->initialized = true;
-    }
+    } 
     
     state->current_position = 0;
     
@@ -319,11 +383,10 @@ idx_t RTreeIndex::Scan(IndexScanState &state, Vector &result) const {
     return output_idx;
 }
 
-
-vector<row_t> RTreeIndex::SearchStbox(const STBox *query_stbox) const {
+vector<row_t> RTreeIndex::Search(const void *query_box) const {  
     vector<row_t> results;
     
-    if (!rtree_ || !query_stbox) {
+    if (!rtree_ || !query_box) {
         return results;
     }
 
@@ -331,7 +394,7 @@ vector<row_t> RTreeIndex::SearchStbox(const STBox *query_stbox) const {
     int *ids = nullptr;
     
     try {
-        ids = rtree_search(rtree_, (const void*)query_stbox, &count);
+        ids = rtree_search(rtree_, query_box, &count);
         
         if (ids && count > 0) {
             results.reserve(count);
@@ -340,7 +403,7 @@ vector<row_t> RTreeIndex::SearchStbox(const STBox *query_stbox) const {
             }
         }
     } catch (...) {
-        fprintf(stderr, "Exception during rtree_search - likely SRID mismatch\n");
+        fprintf(stderr, "Exception during rtree_search\n");
     }
     
     if (ids) {
@@ -349,7 +412,6 @@ vector<row_t> RTreeIndex::SearchStbox(const STBox *query_stbox) const {
     
     return results;
 }
-
 //------------------------------------------------------------------------------
 // Required BoundIndex Interface Methods
 //------------------------------------------------------------------------------
@@ -362,19 +424,14 @@ void RTreeIndex::CommitDrop(IndexLock &index_lock) {
 }
 
 bool RTreeIndex::MergeIndexes(IndexLock &state, BoundIndex &other_index) {
-    // MEOS RTree doesn't have built-in merge operation
     return false;
 }
 
 void RTreeIndex::Vacuum(IndexLock &lock) {
-    // Could potentially rebuild the tree for better performance
-    // For now, no-op
 }
 
 idx_t RTreeIndex::GetInMemorySize(IndexLock &state) {
-    // Since RTree is opaque, we can't access internal structure
-    // Return estimated size or implement a size function in MEOS
-    return rtree_ ? 1024 : 0; // Placeholder
+    return rtree_ ? 1024 : 0;
 }
 
 string RTreeIndex::VerifyAndToString(IndexLock &state, const bool only_verify) {
@@ -382,16 +439,10 @@ string RTreeIndex::VerifyAndToString(IndexLock &state, const bool only_verify) {
         return "Stbox R-tree Index (not initialized)";
     }
     
-    // Since RTree is opaque, we can't access dims directly
-    // You might need a MEOS function to get tree properties
     return "Stbox R-tree Index (MEOS-based)";
 }
 
-void RTreeIndex::VerifyAllocations(IndexLock &lock) {
-    // Verify RTree structure integrity
-    // Since RTree is opaque, limited verification possible
-    // Could implement tree validation function in MEOS if needed
-}
+void RTreeIndex::VerifyAllocations(IndexLock &lock) {}
 
 string RTreeIndex::GetConstraintViolationMessage(VerifyExistenceType verify_type, idx_t failed_index,
                                                DataChunk &input) {
@@ -400,26 +451,44 @@ string RTreeIndex::GetConstraintViolationMessage(VerifyExistenceType verify_type
 
 bool RTreeIndex::TryMatchDistanceFunction(const unique_ptr<Expression> &expr,
                                          vector<reference<Expression>> &bindings) const {
-    return function_matcher->Match(*expr, bindings);
+
+    bool match_result = function_matcher->Match(*expr, bindings);
+    
+    return match_result;
 }
 
 unique_ptr<ExpressionMatcher> RTreeIndex::MakeFunctionMatcher() const {
-    // Create matcher for the && (overlaps) operator
-    unordered_set<string> overlap_functions = {"&&"};
+    unordered_set<string> supported_functions;
+
+    if (bbox_type_ == T_STBOX) {
+        supported_functions = {"&&"};
+    } else if (bbox_type_ == T_TSTZSPAN) {
+        supported_functions = {"&&", "@>"};
+    } else {
+        supported_functions = {"&&"};
+    }
 
     auto matcher = make_uniq<FunctionExpressionMatcher>();
-    matcher->function = make_uniq<ManyFunctionMatcher>(overlap_functions);
+    matcher->function = make_uniq<ManyFunctionMatcher>(supported_functions);
     matcher->expr_type = make_uniq<SpecificExpressionTypeMatcher>(ExpressionType::BOUND_FUNCTION);
     matcher->policy = SetMatcher::Policy::UNORDERED;
 
-    // Left operand: STBOX type
+    LogicalType index_type;
+    if (bbox_type_ == T_STBOX) {
+        index_type = StboxType::STBOX();
+    } else if (bbox_type_ == T_TSTZSPAN) {
+        index_type = SpanTypes::TSTZSPAN();
+    } else {
+        index_type = LogicalType::BLOB;
+    }
+
+    // Left operand
     auto lhs_matcher = make_uniq<ExpressionMatcher>();
-    lhs_matcher->type = make_uniq<SpecificTypeMatcher>(StboxType::STBOX()); 
+    lhs_matcher->type = make_uniq<SpecificTypeMatcher>(index_type); 
     matcher->matchers.push_back(std::move(lhs_matcher));
 
-    // Right operand: STBOX type  
+    // Right operand
     auto rhs_matcher = make_uniq<ExpressionMatcher>();
-    rhs_matcher->type = make_uniq<SpecificTypeMatcher>(StboxType::STBOX());
     matcher->matchers.push_back(std::move(rhs_matcher));
 
     return std::move(matcher);
