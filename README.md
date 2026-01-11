@@ -32,6 +32,7 @@ export VCPKG_TOOLCHAIN_PATH=`pwd`/vcpkg/scripts/buildsystems/vcpkg.cmake
 ### Clone the repository
 ```sh
 git clone --recurse-submodules https://github.com/MobilityDB/MobilityDuck.git
+cd MobilityDuck
 ```
 Note that `--recurse-submodules` will ensure DuckDB is pulled which is required to build the extension.
 
@@ -93,7 +94,7 @@ MobilityDuck$ ./build/release/duckdb [name of db].db
 
 ### 3.2. DuckDB shell without built-in extension
 
-If DuckDB is available on your machine ([installed independently](https://duckdb.org/install/), unrelated to MobilityDuck) and can be called by ```duckdb```, the MobilityDuck extension binary can be loaded later. **Prerequisite**: the independent DuckDB version and the DuckDB version of the build must be identical.
+If DuckDB is available on your machine ([installed independently](https://duckdb.org/install/), unrelated to MobilityDuck) and can be called by ```duckdb```, the MobilityDuck extension binary can be loaded later. **Prerequisite**: the independent DuckDB version and the DuckDB version of the build must be identical. The latest version of MobilityDuck is built with DuckDB v1.3.2, the binaries for which can be obtained from [the v1.3.2 release](https://github.com/duckdb/duckdb/releases/tag/v1.3.2).
 
 If you build MobilityDuck from source code, the loadable extension binary is available at ```./build/release/extension/mobilityduck/mobilityduck.duckdb_extension```.
 
@@ -101,13 +102,13 @@ Alternatively, you can download a pre-build extension binary from the list below
 
 |   Platform   | Download |
 |:------------:|:--------:|
-|  Linux amd64 |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/18434422523/artifacts/4245778529)   |
-|  Linux arm64 |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/18434422523/artifacts/4245766052)   |
-|  macOS amd64 |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/18434422523/artifacts/4245766466)   |
-|  macOS arm64 |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/18434422523/artifacts/4245755693)   |
-|    Wasm EH   |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/18434422523/artifacts/4245801049)   |
-|   Wasm MVP   |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/18434422523/artifacts/4245792712)   |
-| Wasm threads |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/18434422523/artifacts/4245788096)   |
+|  Linux amd64 |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/20683220519/artifacts/5015025521)   |
+|  Linux arm64 |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/20683220519/artifacts/5015017114)   |
+|  macOS amd64 |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/20683220519/artifacts/5015011297)   |
+|  macOS arm64 |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/20683220519/artifacts/5015015385)   |
+|    Wasm EH   |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/20683220519/artifacts/5015060096)   |
+|   Wasm MVP   |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/20683220519/artifacts/5015050266)   |
+| Wasm threads |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/20683220519/artifacts/5015059125)   |
 
 To use your independent DuckDB shell, first, run the shell with an additional flag:
 ```bash
