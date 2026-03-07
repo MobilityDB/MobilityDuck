@@ -181,6 +181,25 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "endTimestamp",
+            {TGEOMPOINT()},
+            LogicalType::TIMESTAMP_TZ,
+            TemporalFunctions::Temporal_end_timestamptz
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "numInstants",
+            {TGEOMPOINT()},
+            LogicalType::INTEGER,
+            TemporalFunctions::Temporal_num_instants
+        )
+    );
     /* ***************************************************
      * Conversion functions
      ****************************************************/
@@ -215,6 +234,16 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
             {TGEOMPOINT()},
             LogicalType::LIST(LogicalType::TIMESTAMP_TZ),
             TemporalFunctions::Temporal_timestamps
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "instants",
+            {TGEOMPOINT()},
+            LogicalType::LIST(TGEOMPOINT()),
+            TemporalFunctions::Temporal_instants
         )
     );
 
@@ -436,7 +465,27 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
             TgeompointFunctions::Tdistance_tgeo_tgeo
         )
     );
-    
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "shortestLine",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            WKB_BLOB(),
+            TgeompointFunctions::ShortestLine_tgeo_tgeo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "numSequences",
+            {TGEOMPOINT()},
+            LogicalType::INTEGER,
+            TemporalFunctions::Temporal_num_sequences
+        )
+    );
+
     // ExtensionUtil::RegisterFunction(
     //     instance,
     //     ScalarFunction(

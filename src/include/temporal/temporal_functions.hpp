@@ -59,6 +59,7 @@ struct TemporalFunctions {
     static void Temporal_min_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_max_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_value_n(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_num_instants(DataChunk &args, ExpressionState &state, Vector &result); 
     static void Temporal_min_instant(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_max_instant(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tinstant_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
@@ -66,8 +67,10 @@ struct TemporalFunctions {
     static void Temporal_duration(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_sequences(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_start_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_end_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_timestamps(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_instants(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_num_sequences(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Transformation functions

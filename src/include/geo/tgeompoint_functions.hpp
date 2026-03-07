@@ -81,7 +81,7 @@ struct TgeompointFunctions {
      * Temporal-spatial relationships
      ****************************************************/
     static void Tdwithin_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
-
+    static void ShortestLine_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
      * Operators (workaround as functions)
      ****************************************************/
