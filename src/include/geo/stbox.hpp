@@ -14,7 +14,6 @@ class ExtensionLoader;
 
 struct StboxType {
     static LogicalType STBOX();
-    static LogicalType WKB_BLOB();
 
     static void RegisterType(DatabaseInstance &db);
     static void RegisterCastFunctions(DatabaseInstance &db);

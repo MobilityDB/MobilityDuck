@@ -1,11 +1,12 @@
 #include "geo/geoset.hpp"
 #include "tydef.hpp"
+#include "geo_util.hpp"
 #include "duckdb/common/types/data_chunk.hpp"
 #include "duckdb/main/extension_util.hpp"
 #include "duckdb/common/extension_type_info.hpp"
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension_util.hpp"
-
+#include "spatial/spatial_types.hpp"
 
 extern "C" {    
     #include "meos.h"    
@@ -19,12 +20,6 @@ namespace duckdb {
 LogicalType SpatialSetType::geomset() {
     auto type = LogicalType(LogicalTypeId::BLOB);     
     type.SetAlias("geomset");
-    return type;
-}
-
-LogicalType SpatialSetType::WKB_BLOB(){
-    auto type = LogicalType(LogicalTypeId::BLOB);     
-    type.SetAlias("WKB_BLOB");
     return type;
 }
 
@@ -122,13 +117,13 @@ void SpatialSetType::RegisterScalarFunctions(DatabaseInstance &db) {
 
     ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"startValue", {SpatialSetType::geomset()},  
-		SpatialSetType::WKB_BLOB(),    // return geometry as WKB --> it will be casted to geometry type in spatial
+		GeoTypes::GEOMETRY(),
 		SpatialSetFunctions::Set_start_value
 	));    
 
     ExtensionUtil::RegisterFunction(db, ScalarFunction(
         "endValue", 
-        {SpatialSetType::geomset()}, SpatialSetType::WKB_BLOB(), SpatialSetFunctions::Set_end_value));
+        {SpatialSetType::geomset()}, GeoTypes::GEOMETRY(), SpatialSetFunctions::Set_end_value));
 
     ExtensionUtil::RegisterFunction(db, ScalarFunction(
         "numValues",
@@ -140,7 +135,7 @@ void SpatialSetType::RegisterScalarFunctions(DatabaseInstance &db) {
 
     ExtensionUtil::RegisterFunction(db, ScalarFunction(
         "valueN", {SpatialSetType::geomset(), LogicalType::INTEGER},  
-        SpatialSetType::WKB_BLOB(),    
+        GeoTypes::GEOMETRY(),
         SpatialSetFunctions::Set_value_n
     )); 
 }
@@ -358,14 +353,10 @@ void SpatialSetFunctions::Set_start_value(DataChunk &args, ExpressionState &stat
 
 		Datum d = set_start_value(s);
         GSERIALIZED *g = DatumGetGserializedP(d);
-		size_t wkb_len = 0;
-		uint8_t *wkb = geo_as_ewkb(g, "NDR", &wkb_len);
-		
-		string_t str = StringVector::AddString(result, std::string((char *)wkb, wkb_len));
-		result_data[i] = str;		
+        string_t geometry_blob = GSerializedToGeometry(g, state, result);
+        string_t str = StringVector::AddStringOrBlob(result, geometry_blob);
+		result_data[i] = str;
 		free(s);
-		free(wkb);  
-        
 	}
 }
 
@@ -390,14 +381,10 @@ void SpatialSetFunctions::Set_end_value(DataChunk &args, ExpressionState &state,
 
         Datum d = set_end_value(s);
         GSERIALIZED *g = DatumGetGserializedP(d);
-        size_t wkb_len = 0;
-        uint8_t *wkb = geo_as_ewkb(g, "NDR", &wkb_len);
-        
-        string_t str = StringVector::AddString(result, std::string((char *)wkb, wkb_len));
+        string_t geometry_blob = GSerializedToGeometry(g, state, result);
+        string_t str = StringVector::AddStringOrBlob(result, geometry_blob);
         result_data[i] = str;		
         free(s);
-        free(wkb);  
-        
     }
 }
 
@@ -454,14 +441,11 @@ void SpatialSetFunctions::Set_value_n(DataChunk &args, ExpressionState &state, V
         Datum d;
         bool found = set_value_n(s, n_data[i], &d);
         GSERIALIZED *g = DatumGetGserializedP(d);
-        size_t wkb_len = 0;
-        uint8_t *wkb = geo_as_ewkb(g, "NDR", &wkb_len);
-        
-        string_t str = StringVector::AddString(result, std::string((char *)wkb, wkb_len));
+        string_t geometry_blob = GSerializedToGeometry(g, state, result);
+        string_t str = StringVector::AddStringOrBlob(result, geometry_blob);
         result_data[i] = str;		
         
         free(s);
-        free(wkb);  
     }
 }
 

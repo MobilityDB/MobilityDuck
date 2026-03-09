@@ -14,7 +14,6 @@ class ExtensionLoader;
 
 struct TgeompointType {
     static LogicalType TGEOMPOINT();
-    static LogicalType WKB_BLOB();
 
     static void RegisterType(DatabaseInstance &db);
     static void RegisterCastFunctions(DatabaseInstance &db);

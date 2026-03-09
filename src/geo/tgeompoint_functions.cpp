@@ -7,9 +7,9 @@
 #include "geo_util.hpp"
 #include "duckdb/common/types/timestamp.hpp"
 #include "duckdb/common/exception.hpp"
-
 #include "duckdb/common/vector.hpp"
 #include "duckdb/common/typedefs.hpp"
+
 #include "spatial/spatial_types.hpp"
 #include "spatial/geometry/wkb_writer.hpp"
 

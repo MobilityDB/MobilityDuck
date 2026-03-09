@@ -21,12 +21,12 @@ SELECT asEWKT(setSRID(geomset '{"Point(1 1)", "Point(2 2)"}', 5676));
 SRID=5676;{"POINT(1 1)", "POINT(2 2)"}
 
 query I 
-SELECT startValue(geomset 'SRID=5676;{"Linestring(1 1,2 2)","Polygon((1 1,1 2,2 2,2 1,1 1))"}')::GEOMETRY;
+SELECT startValue(geomset 'SRID=5676;{"Linestring(1 1,2 2)","Polygon((1 1,1 2,2 2,2 1,1 1))"}');
 ----
 LINESTRING (1 1, 2 2)
 
 query I
-SELECT endValue(geomset 'SRID=5676;{"Linestring(1 1,2 2)","Polygon((1 1,1 2,2 2,2 1,1 1))"}')::GEOMETRY;
+SELECT endValue(geomset 'SRID=5676;{"Linestring(1 1,2 2)","Polygon((1 1,1 2,2 2,2 1,1 1))"}');
 ----
 POLYGON ((1 1, 1 2, 2 2, 2 1, 1 1))
 
@@ -41,7 +41,7 @@ SELECT numValues(geogset '{"Linestring(1 1,2 2)","Polygon((1 1,1 2,2 2,2 1,1 1))
 2
 
 query I
-SELECT valueN(geomset '{"Linestring(1 1,2 2)","Polygon((1 1,1 2,2 2,2 1,1 1))"}', 1)::GEOMETRY;
+SELECT valueN(geomset '{"Linestring(1 1,2 2)","Polygon((1 1,1 2,2 2,2 1,1 1))"}', 1);
 ----
 LINESTRING (1 1, 2 2)
 

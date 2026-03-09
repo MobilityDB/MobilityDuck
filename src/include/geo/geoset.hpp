@@ -11,7 +11,6 @@ namespace duckdb {
 struct SpatialSetType{    
     static LogicalType geomset();     
     static LogicalType geogset();   
-    static LogicalType WKB_BLOB();
 
     static void RegisterTypes(DatabaseInstance &db);
     static void RegisterCastFunctions(DatabaseInstance &db);

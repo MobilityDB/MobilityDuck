@@ -61,6 +61,11 @@ SRID=7844;GEODSTBOX ZT(((1,1,1),(1,1,1)),[2000-01-01 00:00:00+00, 2000-01-01 00:
 # SRID=7844;GEODSTBOX ZT(((1,1,1),(1,1,1)),[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00])
 
 query I
+SELECT geometry(stbox 'STBOX X((1.0,2.0),(3.0,4.0))');
+----
+POLYGON ((1 2, 1 4, 3 4, 3 2, 1 2))
+
+query I
 SELECT area(stbox 'STBOX X((1.0,2.0),(3.0,4.0))');
 ----
 4
@@ -96,12 +101,12 @@ SELECT expandSpace(stbox 'STBOX XT(((1.0,1.0),(2.0,2.0)),[2000-01-01,2000-01-01]
 STBOX XT(((1.5,1.5),(1.5,1.5)),[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00])
 
 query I
-SELECT STBOX(ST_Point(1, 1)::WKB_BLOB);
+SELECT STBOX(ST_Point(1, 1));
 ----
 STBOX X((1,1),(1,1))
 
 query I
-SELECT ST_Point(1, 1)::WKB_BLOB::STBOX;
+SELECT ST_Point(1, 1)::STBOX;
 ----
 STBOX X((1,1),(1,1))
 
@@ -136,11 +141,11 @@ SELECT stbox 'STBOX X((1.0,1.0),(2.0,2.0))' @> stbox 'STBOX XT(((3.0,4.0),(3.0,4
 false
 
 query I
-SELECT STBOX(ST_Point(1, 1)::WKB_BLOB, '2025-01-01'::TIMESTAMPTZ);
+SELECT STBOX(ST_Point(1, 1), '2025-01-01'::TIMESTAMPTZ);
 ----
 STBOX XT(((1,1),(1,1)),[2025-01-01 00:00:00+00, 2025-01-01 00:00:00+00])
 
 query I
-SELECT STBOX(ST_Point(1, 1)::WKB_BLOB, TSTZSPAN '[2001-01-01,2001-01-04]');
+SELECT STBOX(ST_Point(1, 1), TSTZSPAN '[2001-01-01,2001-01-04]');
 ----
 STBOX XT(((1,1),(1,1)),[2001-01-01 00:00:00+00, 2001-01-04 00:00:00+00])

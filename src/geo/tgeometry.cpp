@@ -4,6 +4,8 @@
 #include <string>
 #include <temporal/span.hpp>
 #include<time_util.hpp>
+#include "geo_util.hpp"
+#include "spatial/spatial_types.hpp"
 
 extern "C" {
     #include <meos.h>
@@ -21,11 +23,6 @@ LogicalType TGeometryTypes::TGEOMETRY() {
     return type;
 }
 
-LogicalType TGeometryTypes::MEOS_WKB_BLOB() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("WKB_BLOB");
-    return type;
-}
 /*
  * Constructors
 */
@@ -713,14 +710,10 @@ inline void Tinstant_value(DataChunk &args, ExpressionState &state, Vector &resu
             
             GSERIALIZED *geom = DatumGetGserializedP(geo);
             
-            size_t ewkb_size;
-            uint8_t *ewkb_data = geo_as_ewkb(geom, NULL, &ewkb_size);
+            string_t geometry_blob = GSerializedToGeometry(geom, state, result);
+            string_t stored_result = StringVector::AddStringOrBlob(result, geometry_blob);
 
-            
-            string_t ewkb_string(reinterpret_cast<const char*>(ewkb_data), ewkb_size);
-            string_t stored_result = StringVector::AddStringOrBlob(result, ewkb_string);
-
-            free(ewkb_data);
+            free(geom);
             
             return stored_result;
         });
@@ -747,15 +740,10 @@ inline void Temporal_start_value(DataChunk &args, ExpressionState &state, Vector
             Datum start_datum = temporal_start_value(temp);
             
             GSERIALIZED *start_geom = DatumGetGserializedP(start_datum);
-            
-            size_t ewkb_size;
-            uint8_t *ewkb_data = geo_as_ewkb(start_geom, NULL, &ewkb_size);
+            string_t geometry_blob = GSerializedToGeometry(start_geom, state, result);
+            string_t stored_result = StringVector::AddStringOrBlob(result, geometry_blob);
 
-            
-            string_t ewkb_string(reinterpret_cast<const char*>(ewkb_data), ewkb_size);
-            string_t stored_result = StringVector::AddStringOrBlob(result, ewkb_string);
-
-            free(ewkb_data);
+            free(start_geom);
             
             return stored_result;
         });
@@ -781,15 +769,11 @@ inline void Temporal_end_value(DataChunk &args, ExpressionState &state, Vector &
             Datum start_datum = temporal_end_value(temp);
             
             GSERIALIZED *start_geom = DatumGetGserializedP(start_datum);
-            
+            string_t geometry_blob = GSerializedToGeometry(start_geom, state, result);
             size_t ewkb_size;
-            uint8_t *ewkb_data = geo_as_ewkb(start_geom, NULL, &ewkb_size);
+            string_t stored_result = StringVector::AddStringOrBlob(result, geometry_blob);
 
-            
-            string_t ewkb_string(reinterpret_cast<const char*>(ewkb_data), ewkb_size);
-            string_t stored_result = StringVector::AddStringOrBlob(result, ewkb_string);
-
-            free(ewkb_data);
+            free(start_geom);
             
             return stored_result;
         });
@@ -1214,7 +1198,7 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
     auto getValue_function = ScalarFunction(
         "getValue",
         {TGeometryTypes::TGEOMETRY()},
-        TGeometryTypes::MEOS_WKB_BLOB(),
+        GeoTypes::GEOMETRY(),
         Tinstant_value
     );
     ExtensionUtil::RegisterFunction(instance, getValue_function);
@@ -1223,7 +1207,7 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
     auto tgeometry_start_value_function = ScalarFunction(
         "startValue", 
         {TGeometryTypes::TGEOMETRY()},
-        TGeometryTypes::MEOS_WKB_BLOB(),
+        GeoTypes::GEOMETRY(),
         Temporal_start_value
     );
     ExtensionUtil::RegisterFunction(instance, tgeometry_start_value_function);
@@ -1231,7 +1215,7 @@ void TGeometryTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
     auto tgeometry_end_value_function = ScalarFunction(
         "endValue", 
         {TGeometryTypes::TGEOMETRY()},
-        TGeometryTypes::MEOS_WKB_BLOB(),
+        GeoTypes::GEOMETRY(),
         Temporal_end_value
     );
     ExtensionUtil::RegisterFunction(instance, tgeometry_end_value_function);

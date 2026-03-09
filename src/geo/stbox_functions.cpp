@@ -3,9 +3,15 @@
 
 #include "geo/stbox_functions.hpp"
 #include "time_util.hpp"
+#include "geo_util.hpp"
 #include <cfloat>
 
 #include "duckdb/common/exception.hpp"
+#include "duckdb/common/vector.hpp"
+#include "duckdb/common/typedefs.hpp"
+
+#include "spatial/spatial_types.hpp"
+#include "spatial/geometry/wkb_writer.hpp"
 
 namespace duckdb {
 
@@ -257,13 +263,11 @@ void StboxFunctions::Stbox_as_hexwkb(DataChunk &args, ExpressionState &state, Ve
 void StboxFunctions::Geo_timestamptz_to_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
-        [&](string_t wkb_blob, timestamp_tz_t ts_duckdb, ValidityMask &mask, idx_t idx) -> string_t {
-            const uint8_t *wkb_data = reinterpret_cast<const uint8_t*>(wkb_blob.GetData());
-            size_t wkb_size = wkb_blob.GetSize();
+        [&](string_t geometry_blob, timestamp_tz_t ts_duckdb, ValidityMask &mask, idx_t idx) -> string_t {
             int32 srid = 0;
-            GSERIALIZED *gs = geo_from_ewkb(wkb_data, wkb_size, srid);
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
             if (!gs) {
-                throw InvalidInputException("Invalid geometry format: " + wkb_blob.GetString());
+                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
                 return string_t();
             }
             timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts_duckdb);
@@ -296,13 +300,11 @@ void StboxFunctions::Geo_timestamptz_to_stbox(DataChunk &args, ExpressionState &
 void StboxFunctions::Geo_tstzspan_to_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
-        [&](string_t wkb_blob, string_t span_blob, ValidityMask &mask, idx_t idx) -> string_t {
-            const uint8_t *wkb_data = reinterpret_cast<const uint8_t*>(wkb_blob.GetData());
-            size_t wkb_size = wkb_blob.GetSize();
+        [&](string_t geometry_blob, string_t span_blob, ValidityMask &mask, idx_t idx) -> string_t {
             int32 srid = 0;
-            GSERIALIZED *gs = geo_from_ewkb(wkb_data, wkb_size, srid);
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
             if (!gs) {
-                throw InvalidInputException("Invalid geometry format: " + wkb_blob.GetString());
+                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
                 return string_t();
             }
             const uint8_t *span_data = reinterpret_cast<const uint8_t*>(span_blob.GetData());
@@ -350,13 +352,11 @@ void StboxFunctions::Geo_tstzspan_to_stbox(DataChunk &args, ExpressionState &sta
 void StboxFunctions::Geo_to_stbox_common(Vector &source, Vector &result, idx_t count) {
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
         source, result, count,
-        [&](string_t wkb_blob, ValidityMask &mask, idx_t idx) -> string_t {
-            const uint8_t *wkb_data = reinterpret_cast<const uint8_t*>(wkb_blob.GetData());
-            size_t wkb_size = wkb_blob.GetSize();
+        [&](string_t geometry_blob, ValidityMask &mask, idx_t idx) -> string_t {
             int32 srid = 0;
-            GSERIALIZED *gs = geo_from_ewkb(wkb_data, wkb_size, srid);
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
             if (!gs) {
-                throw InvalidInputException("Invalid geometry format: " + wkb_blob.GetString());
+                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
                 return string_t();
             }
             STBox *ret = geo_to_stbox(gs);
@@ -418,16 +418,14 @@ bool StboxFunctions::Geo_to_stbox_cast(Vector &source, Vector &result, idx_t cou
             }
 
             GSERIALIZED *gs = stbox_to_geo(stbox);
-            size_t ewkb_size = 0;
-            uint8_t *ewkb_data = geo_as_ewkb(gs, NULL, &ewkb_size);
-            if (!ewkb_data) {
+            if (!gs) {
                 free(stbox);
                 throw InvalidInputException("Failed to convert stbox to geometry");
             }
-            string_t ewkb_string(reinterpret_cast<const char*>(ewkb_data), ewkb_size);
-            string_t stored_result = StringVector::AddStringOrBlob(result, ewkb_string);
 
-            free(ewkb_data);
+            string_t geometry_blob = GSerializedToGeometry(gs, state, result);
+            string_t stored_result = StringVector::AddStringOrBlob(result, geometry_blob);
+
             free(gs);
             free(stbox);
             return stored_result;

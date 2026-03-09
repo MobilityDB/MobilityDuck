@@ -176,19 +176,19 @@ true
 
 # Test getValue function
 query I
-SELECT getValue(tgeometry 'Point(1 1)@2000-01-01')::GEOMETRY;
+SELECT getValue(tgeometry 'Point(1 1)@2000-01-01');
 ----
 POINT (1 1)
 
 # Test startValue function
 query I
-SELECT startValue(tgeometry '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}')::GEOMETRY;
+SELECT startValue(tgeometry '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}');
 ----
 POINT (1 1)
 
 # Test endValue function
 query I
-SELECT endValue(tgeometry '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}')::GEOMETRY;
+SELECT endValue(tgeometry '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}');
 ----
 POINT (3 3)
 

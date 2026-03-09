@@ -8,18 +8,13 @@
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension_util.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
+#include "spatial/spatial_types.hpp"
 
 namespace duckdb {
 
 LogicalType StboxType::STBOX() {
     LogicalType type(LogicalTypeId::BLOB);
     type.SetAlias("STBOX");
-    return type;
-}
-
-LogicalType StboxType::WKB_BLOB() {
-    LogicalType type(LogicalTypeId::BLOB);
-    type.SetAlias("WKB_BLOB");
     return type;
 }
 
@@ -44,7 +39,7 @@ void StboxType::RegisterCastFunctions(DatabaseInstance &instance) {
 
     ExtensionUtil::RegisterCastFunction(
         instance,
-        WKB_BLOB(),
+        GeoTypes::GEOMETRY(),
         STBOX(),
         StboxFunctions::Geo_to_stbox_cast
     );
@@ -60,7 +55,7 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
             StboxFunctions::Stbox_in
         )
     );
-    
+
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
@@ -115,7 +110,7 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         instance,
         ScalarFunction(
             "stbox",
-            {StboxType::WKB_BLOB(), LogicalType::TIMESTAMP_TZ},
+            {GeoTypes::GEOMETRY(), LogicalType::TIMESTAMP_TZ},
             StboxType::STBOX(),
             StboxFunctions::Geo_timestamptz_to_stbox
         )
@@ -125,7 +120,7 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         instance,
         ScalarFunction(
             "stbox",
-            {StboxType::WKB_BLOB(), SpanTypes::TSTZSPAN()},
+            {GeoTypes::GEOMETRY(), SpanTypes::TSTZSPAN()},
             StboxType::STBOX(),
             StboxFunctions::Geo_tstzspan_to_stbox
         )
@@ -135,7 +130,7 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         instance,
         ScalarFunction(
             "stbox",
-            {StboxType::WKB_BLOB()},
+            {GeoTypes::GEOMETRY()},
             StboxType::STBOX(),
             StboxFunctions::Geo_to_stbox
         )
@@ -146,7 +141,7 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         ScalarFunction(
             "geometry",
             {STBOX()},
-            WKB_BLOB(),
+            GeoTypes::GEOMETRY(),
             StboxFunctions::Stbox_to_geo
         )
     );
