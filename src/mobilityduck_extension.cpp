@@ -16,6 +16,7 @@
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension_util.hpp"
+#include "duckdb/main/extension_helper.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include "index/rtree_module.hpp"
 
@@ -141,11 +142,6 @@ static void LoadInternal(DatabaseInstance &instance) {
         meos_initialize();
     });
 
-	Connection con(instance);
-
-	// Ensure DuckDB spatial extension is available
-	con.Query("INSTALL spatial;");
-	con.Query("LOAD spatial;");
 
 	// Register scalar function: mobilityduck_openssl_version
 	auto mobilityduck_openssl_version_scalar_function =
@@ -197,12 +193,13 @@ static void LoadInternal(DatabaseInstance &instance) {
 	SpansetTypes::RegisterCastFunctions(instance);
 	SpansetTypes::RegisterScalarFunctions(instance);
 
-	RTreeModule::RegisterRTreeIndex(instance);
-	RTreeModule::RegisterIndexScan(instance);
-	RTreeModule::RegisterScanOptimizer(instance);
+	TRTreeModule::RegisterRTreeIndex(instance);
+	TRTreeModule::RegisterIndexScan(instance);
+	TRTreeModule::RegisterScanOptimizer(instance);
 }
 
 void MobilityduckExtension::Load(DuckDB &db) {
+	ExtensionHelper::LoadExtension(db, "spatial");
 	LoadInternal(*db.instance);
 }
 

@@ -6,12 +6,12 @@ namespace duckdb {
 
 class DuckTableEntry;
 
-class PhysicalCreateRTreeIndex final : public PhysicalOperator {
+class PhysicalCreateTRTreeIndex final : public PhysicalOperator {
 public:
 	static constexpr const PhysicalOperatorType TYPE = PhysicalOperatorType::EXTENSION;
 
 public:
-	PhysicalCreateRTreeIndex(const vector<LogicalType> &types_p, TableCatalogEntry &table,
+	PhysicalCreateTRTreeIndex(const vector<LogicalType> &types_p, TableCatalogEntry &table,
 	                        const vector<column_t> &column_ids, unique_ptr<CreateIndexInfo> info,
 	                        vector<unique_ptr<Expression>> unbound_expressions, idx_t estimated_cardinality);
 

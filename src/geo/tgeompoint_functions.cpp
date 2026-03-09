@@ -4,9 +4,14 @@
 #include "geo/tgeompoint_functions.hpp"
 #include "temporal/temporal_functions.hpp"
 #include "time_util.hpp"
+#include "geo_util.hpp"
 #include "duckdb/common/types/timestamp.hpp"
-
 #include "duckdb/common/exception.hpp"
+
+#include "duckdb/common/vector.hpp"
+#include "duckdb/common/typedefs.hpp"
+#include "spatial/spatial_types.hpp"
+#include "spatial/geometry/wkb_writer.hpp"
 
 namespace duckdb {
 
@@ -129,21 +134,11 @@ void TgeompointFunctions::Tpointinst_constructor(DataChunk &args, ExpressionStat
         srid_child.Flatten(row_count);
         srid = srid_child.GetValue(0).GetValue<int32_t>();
     }
-    
+
     BinaryExecutor::Execute<string_t, timestamp_tz_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
-        [&](string_t wkb_blob, timestamp_tz_t ts_duckdb) -> string_t {
-            const uint8_t *wkb_data = reinterpret_cast<const uint8_t*>(wkb_blob.GetData());
-            size_t wkb_size = wkb_blob.GetSize();
-            if (!wkb_data || wkb_size == 0) {
-                throw InvalidInputException("Empty WKB_BLOB input");
-            }
-
-            GSERIALIZED *gs = geo_from_ewkb(wkb_data, wkb_size, (int32)srid);
-            if (!gs) {
-                throw InvalidInputException("Failed to parse WKB_BLOB into a geometry");
-            }
-
+        [&](string_t geometry_blob, timestamp_tz_t ts_duckdb) -> string_t {
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
             timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts_duckdb);
             Temporal *ret = (Temporal *) tpointinst_make(gs, static_cast<TimestampTz>(ts_meos.value));
             if (ret == NULL) {
@@ -167,8 +162,7 @@ void TgeompointFunctions::Tpointinst_constructor(DataChunk &args, ExpressionStat
             free(gs);
             free(ret_data);
             return stored_data;
-        }
-    );
+        });
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
@@ -249,17 +243,8 @@ void TgeompointFunctions::Tgeompoint_start_value(DataChunk &args, ExpressionStat
                 throw InvalidInputException("Failed to get start value from TGEOMPOINT");
             }
 
-            size_t ewkb_size;
-            uint8_t *ewkb_data = geo_as_ewkb(start_geom, NULL, &ewkb_size);
-            if (!ewkb_data) {
-                free(temp);
-                throw InvalidInputException("Failed to convert start geometry to EWKB");
-            }
-
-            string_t ewkb_string(reinterpret_cast<const char*>(ewkb_data), ewkb_size);
-            string_t stored_result = StringVector::AddStringOrBlob(result, ewkb_string);
-
-            free(ewkb_data);
+            string_t geometry_blob = GSerializedToGeometry(start_geom, state, result);
+            string_t stored_result = StringVector::AddStringOrBlob(result, geometry_blob);
             free(temp);
             return stored_result;
         }
@@ -292,17 +277,8 @@ void TgeompointFunctions::Tgeompoint_end_value(DataChunk &args, ExpressionState 
                 throw InvalidInputException("Failed to get end value from TGEOMPOINT");
             }
 
-            size_t ewkb_size;
-            uint8_t *ewkb_data = geo_as_ewkb(end_geom, NULL, &ewkb_size);
-            if (!ewkb_data) {
-                free(temp);
-                throw InvalidInputException("Failed to convert end geometry to EWKB");
-            }
-
-            string_t ewkb_string(reinterpret_cast<const char*>(ewkb_data), ewkb_size);
-            string_t stored_result = StringVector::AddStringOrBlob(result, ewkb_string);
-
-            free(ewkb_data);
+            string_t geometry_blob = GSerializedToGeometry(end_geom, state, result);
+            string_t stored_result = StringVector::AddStringOrBlob(result, geometry_blob);
             free(temp);
             return stored_result;
         }
@@ -497,18 +473,9 @@ void TgeompointFunctions::Tgeompoint_value(DataChunk &args, ExpressionState &sta
                 throw InvalidInputException("Failed to get geometry from datum");
             }
 
-            size_t ewkb_size;
-            uint8_t *ewkb_data = geo_as_ewkb(gs, NULL, &ewkb_size);
-            if (!ewkb_data) {
-                free(temp);
-                free(gs);
-                throw InvalidInputException("Failed to convert geometry to EWKB");
-            }
+            string_t geometry_blob = GSerializedToGeometry(gs, state, result);
+            string_t stored_data = StringVector::AddStringOrBlob(result, geometry_blob);
 
-            string_t ewkb_string(reinterpret_cast<const char*>(ewkb_data), ewkb_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, ewkb_string);
-
-            free(ewkb_data);
             free(gs);
             free(temp);
             return stored_data;
@@ -527,7 +494,7 @@ void TgeompointFunctions::Tgeompoint_at_value(DataChunk &args, ExpressionState &
     // Adapted from Temporal_at_value
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
-        [&](string_t tgeom_blob, string_t wkb_blob, ValidityMask &mask, idx_t idx) -> string_t {
+        [&](string_t tgeom_blob, string_t geometry_blob, ValidityMask &mask, idx_t idx) -> string_t {
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t*>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             uint8_t *tgeom_data_copy = (uint8_t*)malloc(tgeom_data_size);
@@ -538,13 +505,11 @@ void TgeompointFunctions::Tgeompoint_at_value(DataChunk &args, ExpressionState &
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            const uint8_t *wkb_data = reinterpret_cast<const uint8_t*>(wkb_blob.GetData());
-            size_t wkb_size = wkb_blob.GetSize();
             int32 srid = tspatial_srid(temp);
-            GSERIALIZED *gs = geo_from_ewkb(wkb_data, wkb_size, srid);
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
             if (!gs) {
                 free(temp);
-                throw InvalidInputException("Invalid geometry format: " + wkb_blob.GetString());
+                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
             }
 
             Temporal *ret = temporal_restrict_value(temp, (Datum)gs, true);
@@ -603,17 +568,9 @@ void TgeompointFunctions::Tgeompoint_value_at_timestamptz(DataChunk &args, Expre
                 throw InvalidInputException("Failed to get geometry from datum");
             }
 
-            size_t ewkb_size;
-            uint8_t *ewkb_data = geo_as_ewkb(gs, NULL, &ewkb_size);
-            if (!ewkb_data) {
-                free(gs);
-                throw InvalidInputException("Failed to convert geometry to EWKB");
-            }
+            string_t geometry_blob = GSerializedToGeometry(gs, state, result);
+            string_t stored_data = StringVector::AddStringOrBlob(result, geometry_blob);
 
-            string_t ewkb_string(reinterpret_cast<const char*>(ewkb_data), ewkb_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, ewkb_string);
-
-            free(ewkb_data);
             free(gs);
             return stored_data;
         }
@@ -710,18 +667,9 @@ void TgeompointFunctions::Tpoint_trajectory(DataChunk &args, ExpressionState &st
                 throw InvalidInputException("Failed to get trajectory from TGEOMPOINT");
             }
 
-            size_t ewkb_size = 0;
-            uint8_t *ewkb_data = geo_as_ewkb(gs, NULL, &ewkb_size);
-            // uint8_t *ewkb_data = geo_as_ewkb_duckdb(gs, NULL, &ewkb_size);
-            if (!ewkb_data) {
-                free(gs);
-                free(temp);
-                throw InvalidInputException("Failed to convert trajectory to EWKB");
-            }
-            string_t ewkb_string(reinterpret_cast<const char*>(ewkb_data), ewkb_size);
-            string_t stored_result = StringVector::AddStringOrBlob(result, ewkb_string);
+            string_t geometry_blob = GSerializedToGeometry(gs, state, result);
+            string_t stored_result = StringVector::AddStringOrBlob(result, geometry_blob);
 
-            free(ewkb_data);
             free(gs);
             free(temp);
             return stored_result;
@@ -771,7 +719,7 @@ void TgeompointFunctions::Tpoint_trajectory_gs(DataChunk &args, ExpressionState 
 void TgeompointFunctions::Tgeo_at_geom(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
-        [&](string_t tgeom_blob, string_t wkb_blob, ValidityMask &mask, idx_t idx) -> string_t {
+        [&](string_t tgeom_blob, string_t geometry_blob, ValidityMask &mask, idx_t idx) -> string_t {
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t*>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             uint8_t *tgeom_data_copy = (uint8_t*)malloc(tgeom_data_size);
@@ -782,13 +730,11 @@ void TgeompointFunctions::Tgeo_at_geom(DataChunk &args, ExpressionState &state, 
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            const uint8_t *wkb_data = reinterpret_cast<const uint8_t*>(wkb_blob.GetData());
-            size_t wkb_size = wkb_blob.GetSize();
             int32 srid = tspatial_srid(tgeom);
-            GSERIALIZED *gs = geo_from_ewkb(wkb_data, wkb_size, srid);
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
             if (!gs) {
                 free(tgeom);
-                throw InvalidInputException("Invalid geometry format: " + wkb_blob.GetString());
+                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
             }
 
             Temporal *ret = tgeo_at_geom(tgeom, gs);
@@ -944,7 +890,7 @@ void TgeompointFunctions::Edwithin_tgeo_tgeo(DataChunk &args, ExpressionState &s
 void TgeompointFunctions::Eintersects_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
         args.data[0], args.data[1], result, args.size(),
-        [&](string_t tgeom_blob, string_t wkb_blob, ValidityMask &mask, idx_t idx) -> bool {
+        [&](string_t tgeom_blob, string_t geometry_blob, ValidityMask &mask, idx_t idx) -> bool {
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t*>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             uint8_t *tgeom_data_copy = (uint8_t*)malloc(tgeom_data_size);
@@ -955,16 +901,10 @@ void TgeompointFunctions::Eintersects_tgeo_geo(DataChunk &args, ExpressionState 
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            const uint8_t *wkb_data = reinterpret_cast<const uint8_t*>(wkb_blob.GetData());
-            size_t wkb_size = wkb_blob.GetSize();
-            if (!wkb_data || wkb_size == 0) {
-                throw InvalidInputException("Empty WKB_BLOB input");
-            }
-
             int32 srid = tspatial_srid(tgeom);
-            GSERIALIZED *gs = geo_from_ewkb(wkb_data, wkb_size, (int32)srid);
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
             if (!gs) {
-                throw InvalidInputException("Failed to parse WKB_BLOB into a geometry");
+                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
             }
 
             int ret = eintersects_tgeo_geo(tgeom, gs);
@@ -1068,17 +1008,8 @@ void TgeompointFunctions::ShortestLine_tgeo_tgeo(DataChunk &args, ExpressionStat
                 mask.SetInvalid(idx);
                 return string_t();
             }
-            size_t ewkb_size;
-            uint8_t *ewkb_data = geo_as_ewkb(ret, NULL, &ewkb_size);
-            if (!ewkb_data) {
-                free(ret);
-                free(tgeom1);
-                free(tgeom2);
-                throw InvalidInputException("Failed to convert shortest line geometry to EWKB");
-            }
-            string_t ewkb_string(reinterpret_cast<const char*>(ewkb_data), ewkb_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, ewkb_string);
-            free(ewkb_data);
+            string_t geometry_blob = GSerializedToGeometry(ret, state, result);
+            string_t stored_data = StringVector::AddStringOrBlob(result, geometry_blob);
             free(ret);
             free(tgeom1);
             free(tgeom2);
@@ -1089,6 +1020,7 @@ void TgeompointFunctions::ShortestLine_tgeo_tgeo(DataChunk &args, ExpressionStat
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
+
 /* ***************************************************
  * Operators (workaround as functions)
  ****************************************************/

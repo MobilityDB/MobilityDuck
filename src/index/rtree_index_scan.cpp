@@ -17,8 +17,8 @@
 
 namespace duckdb {
 
-BindInfo RTreeIndexScanBindInfo(const optional_ptr<FunctionData> bind_data_p) {
-	auto &bind_data = bind_data_p->Cast<RTreeIndexScanBindData>();
+BindInfo TRTreeIndexScanBindInfo(const optional_ptr<FunctionData> bind_data_p) {
+	auto &bind_data = bind_data_p->Cast<TRTreeIndexScanBindData>();
 	return BindInfo(bind_data.table);
 }
 
@@ -38,7 +38,7 @@ struct RTreeIndexScanGlobalState : public GlobalTableFunctionState {
 
 static unique_ptr<GlobalTableFunctionState> RTreeIndexScanInitGlobal(ClientContext &context,
                                                                     TableFunctionInitInput &input) {												
-	auto &bind_data = input.bind_data->Cast<RTreeIndexScanBindData>();
+	auto &bind_data = input.bind_data->Cast<TRTreeIndexScanBindData>();
 
 	auto result = make_uniq<RTreeIndexScanGlobalState>();
 
@@ -60,7 +60,7 @@ static unique_ptr<GlobalTableFunctionState> RTreeIndexScanInitGlobal(ClientConte
 
 	// Initialize index scan - works for both STBOX and TSTZSPAN
 	if (bind_data.query_box) {
-        result->index_state = bind_data.index.Cast<RTreeIndex>().InitializeScan(
+        result->index_state = bind_data.index.Cast<TRTreeIndex>().InitializeScan(
             bind_data.query_box.get(), 
             bind_data.query_box_size,
 			bind_data.operation
@@ -75,13 +75,13 @@ static unique_ptr<GlobalTableFunctionState> RTreeIndexScanInitGlobal(ClientConte
 //-------------------------------------------------------------------------
 static void RTreeIndexScanExecute(ClientContext &context, TableFunctionInput &data_p, DataChunk &output) {
 
-	auto &bind_data = data_p.bind_data->Cast<RTreeIndexScanBindData>();
+	auto &bind_data = data_p.bind_data->Cast<TRTreeIndexScanBindData>();
 
 	auto &state = data_p.global_state->Cast<RTreeIndexScanGlobalState>();
 
 	auto &transaction = DuckTransaction::Get(context, bind_data.table.catalog);
 
-	auto row_count = bind_data.index.Cast<RTreeIndex>().Scan(*state.index_state, state.row_ids);
+	auto row_count = bind_data.index.Cast<TRTreeIndex>().Scan(*state.index_state, state.row_ids);
 
 	if (row_count == 0) {
 		output.SetCardinality(0);
@@ -106,11 +106,11 @@ static void RTreeIndexScanExecute(ClientContext &context, TableFunctionInput &da
 //-------------------------------------------------------------------------
 // Get Function
 //-------------------------------------------------------------------------
-TableFunction RTreeIndexScanFunction::GetFunction() {
+TableFunction TRTreeIndexScanFunction::GetFunction() {
 	TableFunction func("mobility rtree index", {}, RTreeIndexScanExecute);
 	func.init_global = RTreeIndexScanInitGlobal;
     
-    func.get_bind_info = RTreeIndexScanBindInfo;
+    func.get_bind_info = TRTreeIndexScanBindInfo;
     
     func.projection_pushdown = true;
     func.filter_pushdown = false; 
@@ -120,8 +120,8 @@ TableFunction RTreeIndexScanFunction::GetFunction() {
 // -------------------------------------------------------------------------
 // Register
 // -------------------------------------------------------------------------
-void RTreeModule::RegisterIndexScan(DatabaseInstance &db) {
-	ExtensionUtil::RegisterFunction(db, RTreeIndexScanFunction::GetFunction());
+void TRTreeModule::RegisterIndexScan(DatabaseInstance &db) {
+	ExtensionUtil::RegisterFunction(db, TRTreeIndexScanFunction::GetFunction());
 }
 
 } 

@@ -19,9 +19,9 @@
 
 namespace duckdb {
 
-class RTreeIndexScanOptimizer : public OptimizerExtension {
+class TRTreeIndexScanOptimizer : public OptimizerExtension {
 public:
-    RTreeIndexScanOptimizer() {
+    TRTreeIndexScanOptimizer() {
         optimize_function = Optimize;
     }
 
@@ -37,14 +37,14 @@ private:
         auto &duck_table = get.GetTable()->Cast<DuckTableEntry>();
         auto &table_info = *get.GetTable()->GetStorage().GetDataTableInfo();
         
-        unique_ptr<RTreeIndexScanBindData> bind_data = nullptr;
+        unique_ptr<TRTreeIndexScanBindData> bind_data = nullptr;
         vector<reference<Expression>> bindings;
 
         for (auto &filter_pair : get.table_filters.filters) {
             auto &filter = filter_pair.second;
             
-            table_info.GetIndexes().BindAndScan<RTreeIndex>(context, table_info, 
-            [&](RTreeIndex &rtree_index) -> bool {
+            table_info.GetIndexes().BindAndScan<TRTreeIndex>(context, table_info, 
+            [&](TRTreeIndex &rtree_index) -> bool {
                 bindings.clear();
 
                 auto &expr_filter = filter->Cast<ExpressionFilter>();
@@ -106,7 +106,7 @@ private:
                     return false;
                 }
 
-                bind_data = make_uniq<RTreeIndexScanBindData>(
+                bind_data = make_uniq<TRTreeIndexScanBindData>(
                     duck_table, rtree_index, 1000, query_box, box_size, function_name);
                 return true;
             });
@@ -120,7 +120,7 @@ private:
             return false;
         }
         auto cardinality = get.function.cardinality(context, bind_data.get());
-        get.function = RTreeIndexScanFunction::GetFunction();
+        get.function = TRTreeIndexScanFunction::GetFunction();
         get.has_estimated_cardinality = cardinality->has_estimated_cardinality;
         get.estimated_cardinality = cardinality->estimated_cardinality;
         get.bind_data = std::move(bind_data);
@@ -160,8 +160,8 @@ public:
     }
 };
 
-void RTreeModule::RegisterScanOptimizer(DatabaseInstance &instance) {
-    instance.config.optimizer_extensions.push_back(RTreeIndexScanOptimizer());
+void TRTreeModule::RegisterScanOptimizer(DatabaseInstance &instance) {
+    instance.config.optimizer_extensions.push_back(TRTreeIndexScanOptimizer());
 }
 
 } // namespace duckdb

@@ -12,18 +12,13 @@
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension_util.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
+#include "spatial/spatial_types.hpp"
 
 namespace duckdb {
 
 LogicalType TgeompointType::TGEOMPOINT() {
     LogicalType type(LogicalTypeId::BLOB);
     type.SetAlias("TGEOMPOINT");
-    return type;
-}
-
-LogicalType TgeompointType::WKB_BLOB() {
-    LogicalType type(LogicalTypeId::BLOB);
-    type.SetAlias("WKB_BLOB");
     return type;
 }
 
@@ -94,7 +89,7 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
         instance,
         ScalarFunction(
             "TGEOMPOINT",
-            {WKB_BLOB(), LogicalType::TIMESTAMP_TZ},
+            {GeoTypes::GEOMETRY(), LogicalType::TIMESTAMP_TZ},
             TGEOMPOINT(),
             TgeompointFunctions::Tpointinst_constructor
         )
@@ -104,7 +99,7 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
         instance,
         ScalarFunction(
             "TGEOMPOINT",
-            {WKB_BLOB(), LogicalType::TIMESTAMP_TZ, LogicalType::INTEGER}, // with SRID
+            {GeoTypes::GEOMETRY(), LogicalType::TIMESTAMP_TZ, LogicalType::INTEGER}, // with SRID
             TGEOMPOINT(),
             TgeompointFunctions::Tpointinst_constructor
         )
@@ -140,13 +135,13 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
             TemporalFunctions::Temporal_time
         )
     );
-
+    
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
             "startValue",
             {TGEOMPOINT()},
-            WKB_BLOB(),
+            GeoTypes::GEOMETRY(),
             TgeompointFunctions::Tgeompoint_start_value
         )
     );
@@ -156,7 +151,7 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
         ScalarFunction(
             "endValue",
             {TGEOMPOINT()},
-            WKB_BLOB(),
+            GeoTypes::GEOMETRY(),
             TgeompointFunctions::Tgeompoint_end_value
         )
     );
@@ -222,7 +217,7 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
         ScalarFunction(
             "getValue",
             {TGEOMPOINT()},
-            WKB_BLOB(),
+            GeoTypes::GEOMETRY(),
             TgeompointFunctions::Tgeompoint_value
         )
     );
@@ -255,7 +250,7 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
         instance,
         ScalarFunction(
             "atValues",
-            {TGEOMPOINT(), WKB_BLOB()},
+            {TGEOMPOINT(), GeoTypes::GEOMETRY()},
             TGEOMPOINT(),
             TgeompointFunctions::Tgeompoint_at_value
         )
@@ -296,7 +291,7 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
         ScalarFunction(
             "valueAtTimestamp",
             {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
-            WKB_BLOB(),
+            GeoTypes::GEOMETRY(),
             TgeompointFunctions::Tgeompoint_value_at_timestamptz
         )
     );
@@ -334,8 +329,7 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
         ScalarFunction(
             "trajectory",
             {TGEOMPOINT()},
-            WKB_BLOB(),
-            // LogicalType::VARCHAR,
+            GeoTypes::GEOMETRY(),
             TgeompointFunctions::Tpoint_trajectory
         )
     );
@@ -354,7 +348,7 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
         instance,
         ScalarFunction(
             "atGeometry",
-            {TGEOMPOINT(), WKB_BLOB()},
+            {TGEOMPOINT(), GeoTypes::GEOMETRY()},
             TGEOMPOINT(),
             TgeompointFunctions::Tgeo_at_geom
         )
@@ -398,9 +392,9 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
         instance,
         ScalarFunction(
             "eIntersects",
-            {TGEOMPOINT(), WKB_BLOB()},
+            {TGEOMPOINT(), GeoTypes::GEOMETRY()},
             LogicalType::BOOLEAN,
-            TgeompointFunctions::Eintersects_tgeo_geo
+            TgeompointFunctions::Eintersects_tgeo_geo  
         )
     );
 
@@ -471,7 +465,7 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
         ScalarFunction(
             "shortestLine",
             {TGEOMPOINT(), TGEOMPOINT()},
-            WKB_BLOB(),
+            GeoTypes::GEOMETRY(),
             TgeompointFunctions::ShortestLine_tgeo_tgeo
         )
     );

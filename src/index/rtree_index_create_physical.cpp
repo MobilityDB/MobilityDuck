@@ -17,7 +17,7 @@ namespace duckdb {
 //-------------------------------------------------------------
 // Physical Create RTree Index
 //-------------------------------------------------------------
-PhysicalCreateRTreeIndex::PhysicalCreateRTreeIndex(const vector<LogicalType> &types_p, TableCatalogEntry &table_p,
+PhysicalCreateTRTreeIndex::PhysicalCreateTRTreeIndex(const vector<LogicalType> &types_p, TableCatalogEntry &table_p,
                                                  const vector<column_t> &column_ids, unique_ptr<CreateIndexInfo> info,
                                                  vector<unique_ptr<Expression>> unbound_expressions,
                                                  idx_t estimated_cardinality)
@@ -41,7 +41,7 @@ public:
 	}
 
 	const PhysicalOperator &op;
-	unique_ptr<RTreeIndex> global_index;
+	unique_ptr<TRTreeIndex> global_index;
 
 	mutex glock;
 	unique_ptr<ColumnDataCollection> collection;
@@ -53,7 +53,7 @@ public:
 	atomic<idx_t> built_count = {0};
 };
 
-unique_ptr<GlobalSinkState> PhysicalCreateRTreeIndex::GetGlobalSinkState(ClientContext &context) const {
+unique_ptr<GlobalSinkState> PhysicalCreateTRTreeIndex::GetGlobalSinkState(ClientContext &context) const {
 
 	auto gstate = make_uniq<CreateRTreeIndexGlobalState>(*this);
 
@@ -67,7 +67,7 @@ unique_ptr<GlobalSinkState> PhysicalCreateRTreeIndex::GetGlobalSinkState(ClientC
 	auto &constraint_type = info->constraint_type;
 	auto &db = storage.db;
 	gstate->global_index =
-	    make_uniq<RTreeIndex>(info->index_name, constraint_type, storage_ids, table_manager, unbound_expressions, db,
+	    make_uniq<TRTreeIndex>(info->index_name, constraint_type, storage_ids, table_manager, unbound_expressions, db,
 	                         info->options, IndexStorageInfo());
 
 	return std::move(gstate);
@@ -83,7 +83,7 @@ public:
 	ColumnDataAppendState append_state;
 };
 
-unique_ptr<LocalSinkState> PhysicalCreateRTreeIndex::GetLocalSinkState(ExecutionContext &context) const {
+unique_ptr<LocalSinkState> PhysicalCreateTRTreeIndex::GetLocalSinkState(ExecutionContext &context) const {
 	auto state = make_uniq<CreateRTreeIndexLocalState>();
 
 	vector<LogicalType> data_types = {unbound_expressions[0]->return_type, LogicalType::ROW_TYPE};
@@ -96,7 +96,7 @@ unique_ptr<LocalSinkState> PhysicalCreateRTreeIndex::GetLocalSinkState(Execution
 // Sink
 //-------------------------------------------------------------
 
-SinkResultType PhysicalCreateRTreeIndex::Sink(ExecutionContext &context, DataChunk &chunk,
+SinkResultType PhysicalCreateTRTreeIndex::Sink(ExecutionContext &context, DataChunk &chunk,
                                              OperatorSinkInput &input) const {
 
 	auto &lstate = input.local_state.Cast<CreateRTreeIndexLocalState>();
@@ -109,7 +109,7 @@ SinkResultType PhysicalCreateRTreeIndex::Sink(ExecutionContext &context, DataChu
 //-------------------------------------------------------------
 // Combine
 //-------------------------------------------------------------
-SinkCombineResultType PhysicalCreateRTreeIndex::Combine(ExecutionContext &context,
+SinkCombineResultType PhysicalCreateTRTreeIndex::Combine(ExecutionContext &context,
                                                        OperatorSinkCombineInput &input) const {
 	auto &gstate = input.global_state.Cast<CreateRTreeIndexGlobalState>();
 	auto &lstate = input.local_state.Cast<CreateRTreeIndexLocalState>();
@@ -132,10 +132,10 @@ SinkCombineResultType PhysicalCreateRTreeIndex::Combine(ExecutionContext &contex
 // Finalize
 //-------------------------------------------------------------
 
-class RTreeIndexConstructTask final : public ExecutorTask {
+class TRTreeIndexConstructTask final : public ExecutorTask {
 public:
-	RTreeIndexConstructTask(shared_ptr<Event> event_p, ClientContext &context, CreateRTreeIndexGlobalState &gstate_p,
-	                       size_t thread_id_p, const PhysicalCreateRTreeIndex &op_p)
+	TRTreeIndexConstructTask(shared_ptr<Event> event_p, ClientContext &context, CreateRTreeIndexGlobalState &gstate_p,
+	                       size_t thread_id_p, const PhysicalCreateTRTreeIndex &op_p)
 	    : ExecutorTask(context, std::move(event_p), op_p), gstate(gstate_p), thread_id(thread_id_p),
 	      local_scan_state() {
 		gstate.collection->InitializeScanChunk(scan_chunk);
@@ -261,16 +261,16 @@ private:
 	ColumnDataLocalScanState local_scan_state;
 };
 
-class RTreeIndexConstructionEvent final : public BasePipelineEvent {
+class TRTreeIndexConstructionEvent final : public BasePipelineEvent {
 public:
-	RTreeIndexConstructionEvent(const PhysicalCreateRTreeIndex &op_p, CreateRTreeIndexGlobalState &gstate_p,
+	TRTreeIndexConstructionEvent(const PhysicalCreateTRTreeIndex &op_p, CreateRTreeIndexGlobalState &gstate_p,
 	                           Pipeline &pipeline_p, CreateIndexInfo &info_p, const vector<column_t> &storage_ids_p,
 	                           DuckTableEntry &table_p)
 	    : BasePipelineEvent(pipeline_p), op(op_p), gstate(gstate_p), info(info_p), storage_ids(storage_ids_p),
 	      table(table_p) {
 	}
 
-	const PhysicalCreateRTreeIndex &op;
+	const PhysicalCreateTRTreeIndex &op;
 	CreateRTreeIndexGlobalState &gstate;
 	CreateIndexInfo &info;
 	const vector<column_t> &storage_ids;
@@ -286,7 +286,7 @@ public:
 
 		vector<shared_ptr<Task>> construct_tasks;
 		for (size_t tnum = 0; tnum < num_threads; tnum++) {
-			construct_tasks.push_back(make_uniq<RTreeIndexConstructTask>(shared_from_this(), context, gstate, tnum, op));
+			construct_tasks.push_back(make_uniq<TRTreeIndexConstructTask>(shared_from_this(), context, gstate, tnum, op));
 		}
 		SetTasks(std::move(construct_tasks));
 	}
@@ -319,7 +319,7 @@ public:
 	}
 };
 
-SinkFinalizeType PhysicalCreateRTreeIndex::Finalize(Pipeline &pipeline, Event &event, ClientContext &context,
+SinkFinalizeType PhysicalCreateTRTreeIndex::Finalize(Pipeline &pipeline, Event &event, ClientContext &context,
                                                    OperatorSinkFinalizeInput &input) const {
 	
 
@@ -331,13 +331,13 @@ SinkFinalizeType PhysicalCreateRTreeIndex::Finalize(Pipeline &pipeline, Event &e
 	auto &ts = TaskScheduler::GetScheduler(context);
 	collection->InitializeScan(gstate.scan_state, ColumnDataScanProperties::ALLOW_ZERO_COPY);
 
-	auto new_event = make_shared_ptr<RTreeIndexConstructionEvent>(*this, gstate, pipeline, *info, storage_ids, table);
+	auto new_event = make_shared_ptr<TRTreeIndexConstructionEvent>(*this, gstate, pipeline, *info, storage_ids, table);
 	event.InsertEvent(std::move(new_event));
 
 	return SinkFinalizeType::READY;
 }
 
-ProgressData PhysicalCreateRTreeIndex::GetSinkProgress(ClientContext &context, GlobalSinkState &gstate,
+ProgressData PhysicalCreateTRTreeIndex::GetSinkProgress(ClientContext &context, GlobalSinkState &gstate,
                                                       ProgressData source_progress) const {
 	ProgressData res;
 

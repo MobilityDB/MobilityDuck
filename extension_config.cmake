@@ -8,3 +8,8 @@ duckdb_extension_load(mobilityduck
 
 # Any extra extensions that should be built
 # e.g.: duckdb_extension_load(json)
+
+duckdb_extension_load(spatial
+    SOURCE_DIR  ${CMAKE_CURRENT_LIST_DIR}/duckdb-spatial
+    INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/duckdb-spatial/src/spatial
+)

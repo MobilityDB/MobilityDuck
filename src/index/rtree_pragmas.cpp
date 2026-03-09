@@ -59,7 +59,7 @@ static unique_ptr<GlobalTableFunctionState> RTreeIndexInfoInitGlobal(ClientConte
 		schema.get().Scan(context, CatalogType::INDEX_ENTRY, [&](CatalogEntry &entry) {
 			auto &index_entry = entry.Cast<IndexCatalogEntry>();
 
-			if (index_entry.index_type == RTreeIndex::TYPE_NAME || 
+			if (index_entry.index_type == TRTreeIndex::TYPE_NAME || 
 			    index_entry.index_type == "TRTREE") {
 				result->entries.push_back(index_entry);
 			}
@@ -101,7 +101,7 @@ static void RTreeIndexInfoExecute(ClientContext &context, TableFunctionInput &da
 //-------------------------------------------------------------------------
 // Helper function to find RTree index by name
 //-------------------------------------------------------------------------
-static optional_ptr<RTreeIndex> TryGetRTreeIndex(ClientContext &context, const string &index_name) {
+static optional_ptr<TRTreeIndex> TryGetRTreeIndex(ClientContext &context, const string &index_name) {
 	auto qname = QualifiedName::Parse(index_name);
 
 	Binder::BindSchemaOrCatalog(context, qname.catalog, qname.schema);
@@ -112,10 +112,10 @@ static optional_ptr<RTreeIndex> TryGetRTreeIndex(ClientContext &context, const s
 	                        .Cast<TableCatalogEntry>();
 
 	auto &storage = table_entry.GetStorage();
-	RTreeIndex *rtree_index = nullptr;
+	TRTreeIndex *rtree_index = nullptr;
 
 	auto &table_info = *storage.GetDataTableInfo();
-	table_info.GetIndexes().BindAndScan<RTreeIndex>(context, table_info, [&](RTreeIndex &index) {
+	table_info.GetIndexes().BindAndScan<TRTreeIndex>(context, table_info, [&](TRTreeIndex &index) {
 		if (index.name == index_name) {
 			rtree_index = &index;
 			return true;

@@ -7,25 +7,23 @@ namespace duckdb {
 
 class Index;
 
-
-struct RTreeIndexScanBindData : public TableFunctionData {
+struct TRTreeIndexScanBindData : public TableFunctionData {
     DuckTableEntry &table;
-    RTreeIndex &index;
+    TRTreeIndex &index;
     idx_t limit;
     unique_ptr<void, void(*)(void*)> query_box;  
     size_t query_box_size;  
     string operation;
     
-    RTreeIndexScanBindData(DuckTableEntry &table, RTreeIndex &index, idx_t limit, 
+    TRTreeIndexScanBindData(DuckTableEntry &table, TRTreeIndex &index, idx_t limit, 
                            void* query_box_ptr, size_t box_size, const string &operation)
         : table(table), index(index), limit(limit), 
           query_box(query_box_ptr, free), query_box_size(box_size), operation(operation) {}
 
 };
 
-struct RTreeIndexScanFunction {
+struct TRTreeIndexScanFunction {
 	static TableFunction GetFunction();
 };
 
 } 
-

@@ -13,21 +13,21 @@ extern "C" {
 
 namespace duckdb {
 
-class RTreeIndex : public BoundIndex {
+class TRTreeIndex : public BoundIndex {
 public:
     static constexpr const char *TYPE_NAME = "TRTREE";
 
-    RTreeIndex(const string &name, IndexConstraintType constraint_type,
+    TRTreeIndex(const string &name, IndexConstraintType constraint_type,
                const vector<column_t> &column_ids, TableIOManager &table_io_manager,
                const vector<unique_ptr<Expression>> &unbound_expressions,
                AttachedDatabase &db,
                const case_insensitive_map_t<Value> &options,
                const IndexStorageInfo &info);
 
-    ~RTreeIndex();
+    ~TRTreeIndex();
 
     static unique_ptr<BoundIndex> Create(CreateIndexInput &input) {
-		auto res = make_uniq<RTreeIndex>(input.name, input.constraint_type, input.column_ids, input.table_io_manager,
+		auto res = make_uniq<TRTreeIndex>(input.name, input.constraint_type, input.column_ids, input.table_io_manager,
 		                                 input.unbound_expressions, input.db, input.options, input.storage_info);
 		return std::move(res);
 	}
@@ -93,7 +93,7 @@ private:
 
 };
 
-struct RTreeModule {
+struct TRTreeModule {
 	static void RegisterRTreeIndex(DatabaseInstance &instance);
     static void RegisterIndexScan(DatabaseInstance &instance);
     static void RegisterScanOptimizer(DatabaseInstance &instance);

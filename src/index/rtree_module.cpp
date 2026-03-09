@@ -36,7 +36,7 @@ namespace duckdb {
 // RTreeIndex Implementation with MEOS RTree Integration
 //------------------------------------------------------------------------------
 
-RTreeIndex::RTreeIndex(const string &name, IndexConstraintType constraint_type,
+TRTreeIndex::TRTreeIndex(const string &name, IndexConstraintType constraint_type,
                        const vector<column_t> &column_ids, TableIOManager &table_io_manager,
                        const vector<unique_ptr<Expression>> &unbound_expressions,
                        AttachedDatabase &db,
@@ -67,14 +67,14 @@ RTreeIndex::RTreeIndex(const string &name, IndexConstraintType constraint_type,
     function_matcher = MakeFunctionMatcher();
 }
 
-class RTreeIndexScanState final : public IndexScanState {
+class TRTreeIndexScanState final : public IndexScanState {
 public:
     void* query_box = nullptr; 
     vector<row_t> search_results;
     idx_t current_position = 0;
     bool initialized = false;
     
-    ~RTreeIndexScanState() {
+    ~TRTreeIndexScanState() {
         if (query_box) {
             free(query_box);
             query_box = nullptr;
@@ -82,7 +82,7 @@ public:
     }
 };
 
-RTreeIndex::~RTreeIndex() {
+TRTreeIndex::~TRTreeIndex() {
     if (rtree_) {
         rtree_free(rtree_);
         rtree_ = nullptr;
@@ -90,7 +90,7 @@ RTreeIndex::~RTreeIndex() {
 
 }
 
-PhysicalOperator &RTreeIndex::CreatePlan(PlanIndexInput &input) {
+PhysicalOperator &TRTreeIndex::CreatePlan(PlanIndexInput &input) {
     auto &create_index = input.op;
     auto &planner = input.planner;
 
@@ -111,7 +111,7 @@ PhysicalOperator &RTreeIndex::CreatePlan(PlanIndexInput &input) {
     projection.children.push_back(input.table_scan);
 
 
-    auto &physical_create_index = planner.Make<PhysicalCreateRTreeIndex>(
+    auto &physical_create_index = planner.Make<PhysicalCreateTRTreeIndex>(
         create_index.types, create_index.table, create_index.info->column_ids, 
         std::move(create_index.info), std::move(create_index.unbound_expressions), 
         create_index.estimated_cardinality);
@@ -124,7 +124,7 @@ PhysicalOperator &RTreeIndex::CreatePlan(PlanIndexInput &input) {
 //------------------------------------------------------------------------------
 // Core RTree Operations using MEOS
 //------------------------------------------------------------------------------
-ErrorData RTreeIndex::Insert(IndexLock &lock, DataChunk &data, Vector &row_ids) {
+ErrorData TRTreeIndex::Insert(IndexLock &lock, DataChunk &data, Vector &row_ids) {
     if (!rtree_) {
         return ErrorData("RTree not initialized");
     }
@@ -196,7 +196,7 @@ ErrorData RTreeIndex::Insert(IndexLock &lock, DataChunk &data, Vector &row_ids) 
     return ErrorData();
 }
 
-ErrorData RTreeIndex::Append(IndexLock &lock, DataChunk &appended_data, Vector &row_identifiers) {
+ErrorData TRTreeIndex::Append(IndexLock &lock, DataChunk &appended_data, Vector &row_identifiers) {
     
     DataChunk expression_result;
     expression_result.Initialize(Allocator::DefaultAllocator(), logical_types);
@@ -208,7 +208,7 @@ ErrorData RTreeIndex::Append(IndexLock &lock, DataChunk &appended_data, Vector &
     return ErrorData();
 }
 
-void RTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifiers) {
+void TRTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifiers) {
     if (!rtree_) {
         throw InternalException("RTree not initialized");
     }
@@ -278,7 +278,7 @@ void RTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifiers
 }
 
 
-ErrorData RTreeIndex::BulkConstruct(STBox* boxes, const row_t* row_ids, idx_t count) {
+ErrorData TRTreeIndex::BulkConstruct(STBox* boxes, const row_t* row_ids, idx_t count) {
     if (!rtree_) {
         return ErrorData("RTree not initialized");
     }
@@ -290,17 +290,17 @@ ErrorData RTreeIndex::BulkConstruct(STBox* boxes, const row_t* row_ids, idx_t co
     return ErrorData();
 }
 
-void RTreeIndex::Delete(IndexLock &lock, DataChunk &entries, Vector &row_identifiers) {
+void TRTreeIndex::Delete(IndexLock &lock, DataChunk &entries, Vector &row_identifiers) {
 
     throw NotImplementedException("RTree deletion not implemented - consider rebuilding index");
 }
 //------------------------------------------------------------------------------
 // RTree Search Operations
 //------------------------------------------------------------------------------
-unique_ptr<IndexScanState> RTreeIndex::InitializeScan(const void* query_blob, size_t blob_size, const string &operation) const {
+unique_ptr<IndexScanState> TRTreeIndex::InitializeScan(const void* query_blob, size_t blob_size, const string &operation) const {
     const uint8_t *data = reinterpret_cast<const uint8_t*>(query_blob);
     
-    auto state = make_uniq<RTreeIndexScanState>();
+    auto state = make_uniq<TRTreeIndexScanState>();
     
     if (operation == "@>" && bbox_type_ == T_TSTZSPAN) {
         if (blob_size != sizeof(timestamp_tz_t)) {
@@ -360,8 +360,8 @@ unique_ptr<IndexScanState> RTreeIndex::InitializeScan(const void* query_blob, si
     return std::move(state);
 }
 
-idx_t RTreeIndex::Scan(IndexScanState &state, Vector &result) const {
-    auto &sstate = state.Cast<RTreeIndexScanState>();
+idx_t TRTreeIndex::Scan(IndexScanState &state, Vector &result) const {
+    auto &sstate = state.Cast<TRTreeIndexScanState>();
     
     if (!sstate.initialized || sstate.search_results.empty()) {
         return 0;
@@ -383,7 +383,7 @@ idx_t RTreeIndex::Scan(IndexScanState &state, Vector &result) const {
     return output_idx;
 }
 
-vector<row_t> RTreeIndex::Search(const void *query_box) const {  
+vector<row_t> TRTreeIndex::Search(const void *query_box) const {  
     vector<row_t> results;
     
     if (!rtree_ || !query_box) {
@@ -416,25 +416,25 @@ vector<row_t> RTreeIndex::Search(const void *query_box) const {
 // Required BoundIndex Interface Methods
 //------------------------------------------------------------------------------
 
-void RTreeIndex::CommitDrop(IndexLock &index_lock) {
+void TRTreeIndex::CommitDrop(IndexLock &index_lock) {
     if (rtree_) {
         rtree_free(rtree_);
         rtree_ = nullptr;
     }
 }
 
-bool RTreeIndex::MergeIndexes(IndexLock &state, BoundIndex &other_index) {
+bool TRTreeIndex::MergeIndexes(IndexLock &state, BoundIndex &other_index) {
     return false;
 }
 
-void RTreeIndex::Vacuum(IndexLock &lock) {
+void TRTreeIndex::Vacuum(IndexLock &lock) {
 }
 
-idx_t RTreeIndex::GetInMemorySize(IndexLock &state) {
+idx_t TRTreeIndex::GetInMemorySize(IndexLock &state) {
     return rtree_ ? 1024 : 0;
 }
 
-string RTreeIndex::VerifyAndToString(IndexLock &state, const bool only_verify) {
+string TRTreeIndex::VerifyAndToString(IndexLock &state, const bool only_verify) {
     if (!rtree_) {
         return "Stbox R-tree Index (not initialized)";
     }
@@ -442,14 +442,14 @@ string RTreeIndex::VerifyAndToString(IndexLock &state, const bool only_verify) {
     return "Stbox R-tree Index (MEOS-based)";
 }
 
-void RTreeIndex::VerifyAllocations(IndexLock &lock) {}
+void TRTreeIndex::VerifyAllocations(IndexLock &lock) {}
 
-string RTreeIndex::GetConstraintViolationMessage(VerifyExistenceType verify_type, idx_t failed_index,
+string TRTreeIndex::GetConstraintViolationMessage(VerifyExistenceType verify_type, idx_t failed_index,
                                                DataChunk &input) {
     return "Stbox R-tree constraint violation (interval index does not support constraints)";
 }
 
-bool RTreeIndex::TryMatchDistanceFunction(const unique_ptr<Expression> &expr,
+bool TRTreeIndex::TryMatchDistanceFunction(const unique_ptr<Expression> &expr,
                                          vector<reference<Expression>> &bindings) const {
 
     bool match_result = function_matcher->Match(*expr, bindings);
@@ -457,7 +457,7 @@ bool RTreeIndex::TryMatchDistanceFunction(const unique_ptr<Expression> &expr,
     return match_result;
 }
 
-unique_ptr<ExpressionMatcher> RTreeIndex::MakeFunctionMatcher() const {
+unique_ptr<ExpressionMatcher> TRTreeIndex::MakeFunctionMatcher() const {
     unordered_set<string> supported_functions;
 
     if (bbox_type_ == T_STBOX) {
@@ -498,13 +498,13 @@ unique_ptr<ExpressionMatcher> RTreeIndex::MakeFunctionMatcher() const {
 // Module Registration
 //------------------------------------------------------------------------------
 
-void RTreeModule::RegisterRTreeIndex(DatabaseInstance &db) {
+void TRTreeModule::RegisterRTreeIndex(DatabaseInstance &db) {
 
     IndexType index_type;
     
-    index_type.name = RTreeIndex::TYPE_NAME;
-    index_type.create_instance = RTreeIndex::Create;
-    index_type.create_plan = RTreeIndex::CreatePlan;
+    index_type.name = TRTreeIndex::TYPE_NAME;
+    index_type.create_instance = TRTreeIndex::Create;
+    index_type.create_plan = TRTreeIndex::CreatePlan;
     
     db.config.GetIndexTypes().RegisterIndexType(index_type);
 }

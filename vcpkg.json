@@ -1,16 +1,48 @@
 {
         "dependencies": [
           "geos",
-          "proj",
-          "json-c",
           "gsl",
-          { "name": "meos", "version>=": "0" }
+          { "name": "meos", "version>=": "0" },
+
+          "vcpkg-cmake",
+          "openssl",
+          "zlib",
+          "expat",
+          {
+            "name": "sqlite3",
+            "features": [ "rtree" ],
+            "default-features": false
+          },
+          {
+            "name": "proj",
+            "default-features": false,
+            "version>=": "9.1.1"
+          },
+          {
+            "name": "curl",
+            "platform": "!wasm32 & !ios & !android",
+            "features": [ "openssl" ],
+            "default-features": false
+          },
+          {
+            "name": "gdal",
+            "version>=": "3.8.5",
+            "features": [
+              {
+                "name": "network",
+                "platform": "!wasm32 & !ios & !android"
+              },
+              "geos"
+            ]
+          }
         ],
         "builtin-baseline": "6603e6392c5a1474ce2d7d0574eb774ab43a3236",
         "vcpkg-configuration": {
                 "overlay-ports": [
                         "./extension-ci-tools/vcpkg_ports",
-                        "./vcpkg_ports"
-                ]
+                        "./vcpkg_ports",
+                        "./duckdb-spatial/vcpkg_ports"
+                ],
+                "default-library-linkage": "dynamic"
         }
 }

@@ -26,20 +26,25 @@ SELECT asEWKT(tgeompoint 'Point(1 1)@2012-01-01 08:00:00');
 POINT(1 1)@2012-01-01 08:00:00+00
 
 query I
-SELECT tgeompoint(ST_Point(1,1)::WKB_BLOB, timestamptz '2012-01-01 08:00:00');
+SELECT tgeompoint(ST_Point(1,1), timestamptz '2012-01-01 08:00:00');
 ----
 0101000000000000000000F03F000000000000F03F@2012-01-01 08:00:00+00
 
 query I
-SELECT asEWKT(tgeompoint(ST_Point(1,1)::WKB_BLOB, timestamptz '2012-01-01 08:00:00'));
+SELECT asEWKT(tgeompoint(ST_Point(1,1), timestamptz '2012-01-01 08:00:00'));
 ----
 POINT(1 1)@2012-01-01 08:00:00+00
 
 query I
+SELECT asEWKT(tgeompoint(ST_Point(1,1), timestamptz '2012-01-01 08:00:00', 4326));
+----
+SRID=4326;POINT(1 1)@2012-01-01 08:00:00+00
+
+query I
 SELECT asEWKT(tgeompointSeq(ARRAY[
-    tgeompoint(ST_Point(1,1)::WKB_BLOB, timestamptz '2012-01-01 08:00:00'),
-    tgeompoint(ST_Point(2,2)::WKB_BLOB, timestamptz '2012-01-01 08:10:00'),
-    tgeompoint(ST_Point(1,1)::WKB_BLOB, timestamptz '2012-01-01 08:20:00')
+    tgeompoint(ST_Point(1,1), timestamptz '2012-01-01 08:00:00'),
+    tgeompoint(ST_Point(2,2), timestamptz '2012-01-01 08:10:00'),
+    tgeompoint(ST_Point(1,1), timestamptz '2012-01-01 08:20:00')
 ]));
 ----
 [POINT(1 1)@2012-01-01 08:00:00+00, POINT(2 2)@2012-01-01 08:10:00+00, POINT(1 1)@2012-01-01 08:20:00+00]
@@ -60,12 +65,12 @@ SELECT getTime(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point
 {[2000-01-01 00:00:00+00, 2000-01-03 00:00:00+00], [2000-01-04 00:00:00+00, 2000-01-05 00:00:00+00]}
 
 query I
-SELECT ST_AsText(startValue(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}')::GEOMETRY);
+SELECT ST_AsText(startValue(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}'));
 ----
 POINT (1 1)
 
 query I
-SELECT ST_AsText(endValue(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}')::GEOMETRY);
+SELECT ST_AsText(endValue(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}'));
 ----
 POINT (3 3)
 
@@ -135,17 +140,17 @@ SELECT tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@20
 [2000-01-01 00:00:00+00, 2000-01-05 00:00:00+00]
 
 query I
-SELECT asEWKT(atValues(tgeompoint 'Point(1 1)@2000-01-01', ST_Point(1,1)::WKB_BLOB));
+SELECT asEWKT(atValues(tgeompoint 'Point(1 1)@2000-01-01', ST_Point(1,1)));
 ----
 POINT(1 1)@2000-01-01 00:00:00+00
 
 query I
-SELECT atValues(tgeompoint 'Point(1 1)@2000-01-01', ST_Point(1,1)::WKB_BLOB);
+SELECT atValues(tgeompoint 'Point(1 1)@2000-01-01', ST_Point(1,1));
 ----
 0101000000000000000000F03F000000000000F03F@2000-01-01 00:00:00+00
 
 query I
-SELECT getValue(tgeompoint 'Point(1 1)@2000-01-01')::GEOMETRY;
+SELECT getValue(tgeompoint 'Point(1 1)@2000-01-01');
 ----
 POINT (1 1)
 
@@ -180,7 +185,7 @@ SELECT asText(atTime(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02,
 {[POINT(1 1)@2000-01-01 00:00:00+00, POINT(2 2)@2000-01-02 00:00:00+00]}
 
 query I
-SELECT ST_AsText(valueAtTimestamp(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', timestamptz '2000-01-01')::GEOMETRY);
+SELECT ST_AsText(valueAtTimestamp(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', timestamptz '2000-01-01'));
 ----
 POINT (1 1)
 
@@ -205,17 +210,17 @@ SELECT length(tgeompoint '{[Point(1 1 1)@2000-01-01, Point(2 2 2)@2000-01-02, Po
 3.4641016151377544
 
 query I
-SELECT ST_AsText(trajectory(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}')::GEOMETRY);
+SELECT ST_AsText(trajectory(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}'));
 ----
 GEOMETRYCOLLECTION (POINT (3 3), LINESTRING (1 1, 2 2))
 
 query I
-SELECT asText(atGeometry(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', geometry 'Linestring(0 0,3 3)'::WKB_BLOB));
+SELECT asText(atGeometry(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', geometry 'Linestring(0 0,3 3)'));
 ----
 {[POINT(1 1)@2000-01-01 00:00:00+00, POINT(2 2)@2000-01-02 00:00:00+00, POINT(1 1)@2000-01-03 00:00:00+00], [POINT(3 3)@2000-01-04 00:00:00+00, POINT(3 3)@2000-01-05 00:00:00+00]}
 
 query I
-SELECT asText(atGeometry(tgeompoint 'Point(1 1)@2000-01-01', geometry 'Linestring empty'::WKB_BLOB));
+SELECT asText(atGeometry(tgeompoint 'Point(1 1)@2000-01-01', geometry 'Linestring empty'));
 ----
 NULL
 
@@ -240,12 +245,12 @@ SELECT eDwithin(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02]', tge
 true
 
 query I
-SELECT eIntersects(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}',  geometry 'Point(1 1)'::WKB_BLOB);
+SELECT eIntersects(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}',  geometry 'Point(1 1)');
 ----
 true
 
 query I
-SELECT eIntersects(tgeompoint '{[Point(10 10)@2000-01-01, Point(20 20)@2000-01-02, Point(10 10)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}',  geometry 'Point(1 1)'::WKB_BLOB);
+SELECT eIntersects(tgeompoint '{[Point(10 10)@2000-01-01, Point(20 20)@2000-01-02, Point(10 10)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}',  geometry 'Point(1 1)');
 ----
 false
 
@@ -293,3 +298,13 @@ query I
 SELECT round(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}' <-> tgeompoint '{[Point(2 2)@2000-01-01, Point(1 1)@2000-01-02, Point(2 2)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', 6);
 ----
 {[1.414214@2000-01-01 00:00:00+00, 0@2000-01-01 12:00:00+00, 1.414214@2000-01-02 00:00:00+00, 0@2000-01-02 12:00:00+00, 1.414214@2000-01-03 00:00:00+00], [0@2000-01-04 00:00:00+00, 0@2000-01-05 00:00:00+00]}
+
+query I
+SELECT ST_AsTexT(shortestLine(tgeompoint 'Point(1 1)@2000-01-01', tgeompoint 'Point(2 2)@2000-01-01'));
+----
+LINESTRING (1 1, 2 2)
+
+query I
+SELECT numSequences(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}');
+----
+2
