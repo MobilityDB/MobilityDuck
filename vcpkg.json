@@ -36,7 +36,7 @@
             ]
           }
         ],
-        "builtin-baseline": "f8be6942c0c5abd48bb325726d57af9ac39e251d",
+        "builtin-baseline": "ed8445dd2a9ba44e0e3ace4e952b2e33130082d9",
         "vcpkg-configuration": {
                 "overlay-ports": [
                         "./extension-ci-tools/vcpkg_ports",
