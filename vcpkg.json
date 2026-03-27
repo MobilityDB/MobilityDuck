@@ -42,7 +42,6 @@
                         "./extension-ci-tools/vcpkg_ports",
                         "./vcpkg_ports",
                         "./duckdb-spatial/vcpkg_ports"
-                ],
-                "default-library-linkage": "dynamic"
+                ]
         }
 }
