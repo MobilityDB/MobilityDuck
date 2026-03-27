@@ -2,7 +2,9 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO MobilityDB/MobilityDB
     REF master            
-    SHA512 9586837799b53b31f41fb3e6c43125ad9b421fe8d098d39d003c3104eefded80e1fa297ff16057363db7dc32dd8822c6ab657e26cc8436d3b82dbef5c3412422
+    SHA512 07c4c62f8901bab29853785a5a39310fbec8cb0ea981db7a2e7e57d7dbb61a505a8d3ae2401abc4304b695e5f5710e83d8ef4957b79024d171eb6ddcaacd610d
+    PATCHES
+        fix-postgres-utils-meos-include.patch
 )
 
 vcpkg_cmake_configure(

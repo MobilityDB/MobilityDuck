@@ -351,7 +351,9 @@ unique_ptr<IndexScanState> TRTreeIndex::InitializeScan(const void* query_blob, s
     }
     
     if (rtree_) {
-        state->search_results = Search(state->query_box);
+        /* MEOS rtree_search: @> uses containment, && uses overlap (see RTreeSearchOp in meos.h). */
+        const RTreeSearchOp search_op = (operation == "@>") ? RTREE_CONTAINS : RTREE_OVERLAPS;
+        state->search_results = Search(state->query_box, search_op);
         state->initialized = true;
     } 
     
@@ -383,7 +385,7 @@ idx_t TRTreeIndex::Scan(IndexScanState &state, Vector &result) const {
     return output_idx;
 }
 
-vector<row_t> TRTreeIndex::Search(const void *query_box) const {  
+vector<row_t> TRTreeIndex::Search(const void *query_box, RTreeSearchOp op) const {  
     vector<row_t> results;
     
     if (!rtree_ || !query_box) {
@@ -394,7 +396,7 @@ vector<row_t> TRTreeIndex::Search(const void *query_box) const {
     int *ids = nullptr;
     
     try {
-        ids = rtree_search(rtree_, query_box, &count);
+        ids = rtree_search(rtree_, op, query_box, &count);
         
         if (ids && count > 0) {
             results.reserve(count);

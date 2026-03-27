@@ -72,6 +72,7 @@ bool TemporalFunctions::Temporal_in(Vector &source, Vector &result, idx_t count,
             string_t output(reinterpret_cast<char*>(temp_data), temp_size);
             string_t stored_data = StringVector::AddStringOrBlob(result, output);
 
+            free(temp_data);
             free(temp);
             return stored_data;
         }
@@ -104,7 +105,8 @@ bool TemporalFunctions::Temporal_out(Vector &source, Vector &result, idx_t count
             }
             std::string ret_string(ret);
             string_t stored_data = StringVector::AddStringOrBlob(result, ret_string);
-            
+
+            free(ret);
             free(temp);
             return stored_data;
         }
@@ -177,6 +179,7 @@ void TemporalFunctions::Tinstant_constructor_common(Vector &value, Vector &ts, V
             string_t output(reinterpret_cast<char*>(temp_data), temp_size);
             string_t stored_data = StringVector::AddStringOrBlob(result, output);
 
+            free(temp_data);
             free(temp);
             return stored_data;
         }
@@ -204,6 +207,7 @@ void TemporalFunctions::Tinstant_constructor_text(Vector &value, Vector &ts, Vec
             string_t output(reinterpret_cast<char*>(temp_data), temp_size);
             string_t stored_data = StringVector::AddStringOrBlob(result, output);
 
+            free(temp_data);
             free(temp);
             return stored_data;
         }
@@ -395,6 +399,7 @@ void TemporalFunctions::Tsequenceset_constructor(DataChunk &args, ExpressionStat
                 free(sequences[j]);
             }
             free(sequences);
+            free(temp_data);
             return stored_data;
         }
     );
@@ -433,6 +438,7 @@ void TemporalFunctions::Temporal_to_tstzspan(DataChunk &args, ExpressionState &s
             string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
             free(span_buffer);
             free(ret);
+            free(temp);
             return stored_data;
         }
     );
@@ -466,6 +472,7 @@ void TemporalFunctions::Tnumber_to_span(DataChunk &args, ExpressionState &state,
             string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
             free(span_buffer);
             free(ret);
+            free(temp);
             return stored_data;
         }
     );
@@ -776,6 +783,8 @@ void TemporalFunctions::Temporal_min_instant(DataChunk &args, ExpressionState &s
             string_t ret_str(reinterpret_cast<const char*>(temp_data), temp_size);
             string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
 
+            free(temp_data);
+            free(ret);
             free(temp);
             return stored_data;
         }
@@ -808,6 +817,8 @@ void TemporalFunctions::Temporal_max_instant(DataChunk &args, ExpressionState &s
             string_t ret_str(reinterpret_cast<const char*>(temp_data), temp_size);
             string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
 
+            free(temp_data);
+            free(ret);
             free(temp);
             return stored_data;
         }
@@ -942,7 +953,9 @@ void TemporalFunctions::Temporal_sequences(DataChunk &args, ExpressionState &sta
                 uint8_t *temp_data = (uint8_t*)malloc(temp_size);
                 memcpy(temp_data, (Temporal*)seq, temp_size);
                 string_t ret_str(reinterpret_cast<const char*>(temp_data), temp_size);
-                seq_data[entry.offset + i] = ret_str;
+                string_t stored = StringVector::AddStringOrBlob(seq_vec, ret_str);
+                free(temp_data);
+                seq_data[entry.offset + i] = stored;
             }
             free(temp);
             return entry;
@@ -1082,7 +1095,9 @@ void TemporalFunctions::Temporal_instants(DataChunk &args, ExpressionState &stat
                 uint8_t *temp_data = (uint8_t*)malloc(temp_size);
                 memcpy(temp_data, (Temporal*)inst, temp_size);
                 string_t ret_str(reinterpret_cast<const char*>(temp_data), temp_size);
-                inst_data[entry.offset + i] = ret_str;
+                string_t stored = StringVector::AddStringOrBlob(inst_vec, ret_str);
+                free(temp_data);
+                inst_data[entry.offset + i] = stored;
             }
             free(instants);
             free(temp);
@@ -1152,8 +1167,10 @@ void TemporalFunctions::Temporal_to_tsequence(DataChunk &args, ExpressionState &
             string_t result_str(reinterpret_cast<const char*>(temp_data), temp_size);
             string_t stored_data = StringVector::AddStringOrBlob(result, result_str);
 
+            free(temp_data);
+            free(ret);
             free(temp);
-            return result_str;
+            return stored_data;
         }
     );
     if (args.size() == 1) {
@@ -1192,6 +1209,8 @@ void TemporalFunctions::Temporal_to_tsequenceset(DataChunk &args, ExpressionStat
             string_t result_str(reinterpret_cast<const char*>(temp_data), temp_size);
             string_t stored_data = StringVector::AddStringOrBlob(result, result_str);
 
+            free(temp_data);
+            free(ret);
             free(temp);
             return stored_data;
         }
@@ -1224,6 +1243,7 @@ void TemporalFunctions::Tnumber_shift_value(DataChunk &args, ExpressionState &st
             string_t ret_str(reinterpret_cast<const char*>(temp_data), temp_size);
             string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
 
+            free(temp_data);
             free(ret);
             free(temp);
             return stored_data;
@@ -1257,6 +1277,7 @@ void TemporalFunctions::Tnumber_scale_value(DataChunk &args, ExpressionState &st
             string_t ret_str(reinterpret_cast<const char*>(temp_data), temp_size);
             string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
 
+            free(temp_data);
             free(ret);
             free(temp);
             return stored_data;
@@ -1290,6 +1311,7 @@ void TemporalFunctions::Tnumber_shift_scale_value(DataChunk &args, ExpressionSta
             string_t ret_str(reinterpret_cast<const char*>(temp_data), temp_size);
             string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
 
+            free(temp_data);
             free(ret);
             free(temp);
             return stored_data;
@@ -1322,6 +1344,7 @@ void TemporalFunctions::Temporal_at_value_tbool(DataChunk &args, ExpressionState
             }
             Temporal *ret = temporal_restrict_value(temp, (Datum)value, true);
             if (!ret) {
+                free(temp);
                 throw InternalException("Failure in TemporalAtValue: unable to cast string to temporal");
                 return string_t();
             }
@@ -1331,7 +1354,9 @@ void TemporalFunctions::Temporal_at_value_tbool(DataChunk &args, ExpressionState
             string_t ret_str(reinterpret_cast<const char*>(temp_data), temp_size);
             string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
 
+            free(temp_data);
             free(ret);
+            free(temp);
             return stored_data;
         }
     );
@@ -1404,6 +1429,7 @@ void TemporalFunctions::Temporal_at_tstzspan(DataChunk &args, ExpressionState &s
                 memcpy(span, span_str.GetData(), span_str.GetSize());
             }
             if (!span) {
+                free(temp);
                 throw InternalException("Failure in TemporalAtTstzspan: unable to cast string to span");
             }
 
@@ -1455,6 +1481,7 @@ void TemporalFunctions::Temporal_at_tstzspanset(DataChunk &args, ExpressionState
                 memcpy(spanset, spanset_str.GetData(), spanset_str.GetSize());
             }
             if (!spanset) {
+                free(temp);
                 throw InternalException("Failure in TemporalAtTstzspanset: unable to cast string to spanset");
             }
 
@@ -1471,6 +1498,7 @@ void TemporalFunctions::Temporal_at_tstzspanset(DataChunk &args, ExpressionState
             string_t ret_str(reinterpret_cast<const char*>(temp_data), temp_size);
             string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
 
+            free(temp_data);
             free(ret);
             free(spanset);
             free(temp);
@@ -1505,6 +1533,7 @@ void TemporalFunctions::Tnumber_at_span(DataChunk &args, ExpressionState &state,
                 memcpy(span, span_str.GetData(), span_str.GetSize());
             }
             if (!span) {
+                free(temp);
                 throw InternalException("Failure in Tnumber_at_span: unable to cast string to span");
             }
 
@@ -1521,6 +1550,7 @@ void TemporalFunctions::Tnumber_at_span(DataChunk &args, ExpressionState &state,
             string_t ret_str(reinterpret_cast<const char*>(temp_data), temp_size);
             string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
 
+            free(temp_data);
             free(ret);
             free(span);
             free(temp);
@@ -1561,6 +1591,7 @@ void TemporalFunctions::Temporal_at_min(DataChunk &args, ExpressionState &state,
             string_t ret_str(reinterpret_cast<const char*>(temp_data), temp_size);
             string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
 
+            free(temp_data);
             free(ret);
             free(temp);
             return stored_data;
@@ -1785,6 +1816,7 @@ void TemporalFunctions::Temporal_round(DataChunk &args, ExpressionState &state, 
             string_t ret_str(reinterpret_cast<const char*>(temp_data), temp_size);
             string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
 
+            free(temp_data);
             free(ret);
             free(temp);
             return stored_data;

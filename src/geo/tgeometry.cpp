@@ -854,6 +854,7 @@ inline void Temporal_start_instant(DataChunk &args, ExpressionState &state, Vect
 
             uint8_t *result_buffer = (uint8_t*)malloc(result_size);
             if (!result_buffer) {
+                free(start_inst);
                 throw InvalidInputException("Failed to allocate memory for result");
             }
             
@@ -862,6 +863,7 @@ inline void Temporal_start_instant(DataChunk &args, ExpressionState &state, Vect
             string_t stored_result = StringVector::AddStringOrBlob(result, result_string_t);
             
             free(result_buffer);
+            free(start_inst);
             return stored_result;
         });
 
@@ -894,6 +896,7 @@ inline void Temporal_end_instant(DataChunk &args, ExpressionState &state, Vector
 
             uint8_t *result_buffer = (uint8_t*)malloc(result_size);
             if (!result_buffer) {
+                free(end_inst);
                 throw InvalidInputException("Failed to allocate memory for result");
             }
             
@@ -902,6 +905,7 @@ inline void Temporal_end_instant(DataChunk &args, ExpressionState &state, Vector
             string_t stored_result = StringVector::AddStringOrBlob(result, result_string_t);
             
             free(result_buffer);
+            free(end_inst);
             return stored_result;
         });
 
@@ -937,6 +941,7 @@ inline void Temporal_instant_n(DataChunk &args, ExpressionState &state, Vector &
             
             uint8_t *result_buffer = (uint8_t*)malloc(result_size);
             if (!result_buffer) {
+                free(inst_n);
                 throw InvalidInputException("Failed to allocate memory for result");
             }
             
@@ -945,6 +950,7 @@ inline void Temporal_instant_n(DataChunk &args, ExpressionState &state, Vector &
             string_t stored_result = StringVector::AddStringOrBlob(result, result_string_t);
             
             free(result_buffer);
+            free(inst_n);
             return stored_result;
         });
     

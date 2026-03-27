@@ -111,12 +111,15 @@ void StboxFunctions::Stbox_from_wkb(DataChunk &args, ExpressionState &state, Vec
             }
             STBox *stbox = stbox_from_wkb(wkb, input_wkb.GetSize());
             if (!stbox) {
+                free(wkb);
                 throw InternalException("Failure in Stbox_from_wkb: unable to cast wkb to stbox");
                 return string_t();
             }
             size_t stbox_size = sizeof(STBox);
             uint8_t *stbox_data = (uint8_t*)malloc(stbox_size);
             if (!stbox_data) {
+                free(stbox);
+                free(wkb);
                 throw InternalException("Failure in Stbox_in: unable to allocate memory for stbox");
                 return string_t();
             }
@@ -125,6 +128,7 @@ void StboxFunctions::Stbox_from_wkb(DataChunk &args, ExpressionState &state, Vec
             string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
             free(stbox_data);
             free(stbox);
+            free(wkb);
             return stored_data;
         }
     );
@@ -142,6 +146,7 @@ void StboxFunctions::Stbox_from_hexwkb(DataChunk &args, ExpressionState &state, 
             size_t stbox_size = sizeof(STBox);
             uint8_t *stbox_data = (uint8_t*)malloc(stbox_size);
             if (!stbox_data) {
+                free(stbox);
                 throw InternalException("Failure in Stbox_in: unable to allocate memory for stbox");
                 return string_t();
             }
@@ -207,6 +212,7 @@ void StboxFunctions::Stbox_as_wkb(DataChunk &args, ExpressionState &state, Vecto
             size_t wkb_size = sizeof(STBox);
             uint8_t *wkb = stbox_as_wkb(stbox, WKB_EXTENDED, &wkb_size);
             if (!wkb) {
+                free(stbox);
                 throw InternalException("Failure in Stbox_as_wkb: unable to cast stbox to wkb");
                 return string_t();
             }
@@ -280,6 +286,8 @@ void StboxFunctions::Geo_timestamptz_to_stbox(DataChunk &args, ExpressionState &
             size_t stbox_size = sizeof(STBox);
             uint8_t *stbox_data = (uint8_t*)malloc(stbox_size);
             if (!stbox_data) {
+                free(ret);
+                free(gs);
                 throw InternalException("Failure in Geo_timestamptz_to_stbox: unable to allocate memory for stbox");
                 return string_t();
             }
@@ -313,6 +321,7 @@ void StboxFunctions::Geo_tstzspan_to_stbox(DataChunk &args, ExpressionState &sta
             memcpy(span_data_copy, span_data, span_data_size);
             Span *span = reinterpret_cast<Span*>(span_data_copy);
             if (!span) {
+                free(gs);
                 free(span_data_copy);
                 throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
             }
@@ -327,6 +336,9 @@ void StboxFunctions::Geo_tstzspan_to_stbox(DataChunk &args, ExpressionState &sta
             size_t stbox_size = sizeof(STBox);
             uint8_t *stbox_data = (uint8_t*)malloc(stbox_size);
             if (!stbox_data) {
+                free(ret);
+                free(span);
+                free(gs);
                 throw InternalException("Failure in Geo_tstzspan_to_stbox: unable to allocate memory for stbox");
                 return string_t();
             }

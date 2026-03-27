@@ -357,6 +357,26 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
+            "atStbox",
+            {TGEOMPOINT(), StboxType::STBOX()},
+            TGEOMPOINT(),
+            TgeompointFunctions::Tgeo_at_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "atStbox",
+            {TGEOMPOINT(), StboxType::STBOX(), LogicalType::BOOLEAN},
+            TGEOMPOINT(),
+            TgeompointFunctions::Tgeo_at_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
             "transform",
             {TGEOMPOINT(), LogicalType::INTEGER},
             TGEOMPOINT(),

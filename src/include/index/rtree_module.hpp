@@ -62,7 +62,7 @@ public:
 
     unique_ptr<IndexScanState> InitializeScan(const void* query_blob, size_t blob_size, const string &operation) const;
 
-    vector<row_t> Search(const void *query_box) const;
+    vector<row_t> Search(const void *query_box, RTreeSearchOp op) const;
 
 
     idx_t Scan(IndexScanState &state, Vector &result) const;

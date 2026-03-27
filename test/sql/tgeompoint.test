@@ -308,3 +308,13 @@ query I
 SELECT numSequences(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}');
 ----
 2
+
+query I
+SELECT asText(atStbox(tgeompoint 'Point(1 1)@2000-01-01', stbox 'STBOX XT(((1,1),(2,2)),[2000-01-01,2000-01-02])'));
+----
+POINT(1 1)@2000-01-01 00:00:00+00
+
+query I
+SELECT asText(atStbox(tgeompoint 'Point(1 1)@2000-01-01', stbox 'STBOX XT(((1,1),(2,2)),[2000-01-01,2000-01-02])', true));
+----
+POINT(1 1)@2000-01-01 00:00:00+00
