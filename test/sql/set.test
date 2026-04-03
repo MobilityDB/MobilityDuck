@@ -299,3 +299,101 @@ query I
 SELECT tstzset '{2000-01-01, 2000-01-02, 2000-01-03}' + tstzset '{2000-01-01, 2000-01-05, 2000-01-10}';
 ----
 {"2000-01-01 00:00:00+00", "2000-01-02 00:00:00+00", "2000-01-03 00:00:00+00", "2000-01-05 00:00:00+00", "2000-01-10 00:00:00+00"}
+
+query I
+SELECT CASE WHEN lower(hex(asBinary(intset '{1,2,3}'))) = lower(asHexWKB(intset '{1,2,3}')) THEN 'ok' ELSE 'fail' END;
+----
+ok
+
+query I
+SELECT CASE WHEN lower(hex(asBinary(bigintset '{1,2,3}'))) = lower(asHexWKB(bigintset '{1,2,3}')) THEN 'ok' ELSE 'fail' END;
+----
+ok
+
+query I
+SELECT CASE WHEN lower(hex(asBinary(floatset '{1.5,2.5}'))) = lower(asHexWKB(floatset '{1.5,2.5}')) THEN 'ok' ELSE 'fail' END;
+----
+ok
+
+query I
+SELECT CASE WHEN lower(hex(asBinary(textset '{"a","b"}'))) = lower(asHexWKB(textset '{"a","b"}')) THEN 'ok' ELSE 'fail' END;
+----
+ok
+
+query I
+SELECT CASE WHEN lower(hex(asBinary(dateset '{2001-01-01,2001-01-03}'))) = lower(asHexWKB(dateset '{2001-01-01,2001-01-03}')) THEN 'ok' ELSE 'fail' END;
+----
+ok
+
+query I
+SELECT CASE WHEN lower(hex(asBinary(tstzset '{2001-01-01 08:00:00,2001-01-03 09:30:00}'))) = lower(asHexWKB(tstzset '{2001-01-01 08:00:00,2001-01-03 09:30:00}')) THEN 'ok' ELSE 'fail' END;
+----
+ok
+
+
+query I
+SELECT asText(textset_cat('pre_', textset '{"highway","car"}'));
+----
+{"pre_car", "pre_highway"}
+
+query I
+SELECT asText(textset_cat(textset '{"highway","car"}', '_suf'));
+----
+{"car_suf", "highway_suf"}
+
+query I
+SELECT asText('pre_' || textset '{"highway","car"}');
+----
+{"pre_car", "pre_highway"}
+
+query I
+SELECT asText(textset '{"highway","car"}' || '_suf');
+----
+{"car_suf", "highway_suf"}
+
+# Set operators (MEOS): contains, overlaps, union with value, distance
+
+query I
+SELECT set_contains(intset '{1,2,3}', 2);
+----
+true
+
+query I
+SELECT intset '{1,2,3}' @> 2;
+----
+true
+
+query I
+SELECT 2 <@ intset '{1,2,3}';
+----
+true
+
+query I
+SELECT intset '{1,2,3}' && intset '{3,4,5}';
+----
+true
+
+query I
+SELECT asText(3 + intset '{1,2}');
+----
+{1, 2, 3}
+
+query I
+SELECT asText(intset '{1,2,3}' - 2);
+----
+{1, 3}
+
+query I
+SELECT set_distance(5, 9);
+----
+4
+
+query I
+SELECT set_distance(intset '{1,5,10}', 7);
+----
+0
+
+query I
+SELECT set_distance(intset '{1,5}', intset '{10,15}');
+----
+5

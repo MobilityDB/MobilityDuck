@@ -1,10 +1,22 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO MobilityDB/MobilityDB
-    REF master            
-    SHA512 07c4c62f8901bab29853785a5a39310fbec8cb0ea981db7a2e7e57d7dbb61a505a8d3ae2401abc4304b695e5f5710e83d8ef4957b79024d171eb6ddcaacd610d
-    PATCHES
-        fix-postgres-utils-meos-include.patch
+    # Pin a commit — REF master + SHA512 breaks whenever GitHub's archive tarball changes.
+    REF f11b7443ee985dc1ffb778c325e62f0edaf255ec
+    SHA512 ae8589acc86016c601f9c3c157e94b35e6e8fc50d6194d26db510d51e65a6e751279a3ced258a6bb6e56a22e083993aaeab92f20b9d18d41c7a2c8c73b7dc9df
+)
+
+# MEOS build: utils needs meos headers
+vcpkg_replace_string(
+    "${SOURCE_PATH}/postgres/utils/CMakeLists.txt"
+    "set_property(TARGET utils PROPERTY POSITION_INDEPENDENT_CODE ON)"
+    [=[
+set_property(TARGET utils PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+if(MEOS)
+  target_include_directories(utils PRIVATE "${CMAKE_SOURCE_DIR}/meos/include")
+endif()
+]=]
 )
 
 vcpkg_cmake_configure(

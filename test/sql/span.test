@@ -15,6 +15,16 @@ SELECT tstzspan('[2000-01-01,2000-01-01]');
 ----
 [2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00]
 
+query I 
+SELECT span(intset '{-1,-3,3}');
+----
+[-3, 4)
+
+query I 
+SELECT intset '{-1,-3,3}'::intspan;
+----
+[-3, 4)
+
 query I
 SELECT tstzspan('[2000-01-01,2000-01-03]') @> timestamptz '2000-01-02';
 ----
@@ -105,7 +115,7 @@ SELECT tstzspan '[2000-01-01 08:00:00+05, 2000-01-01 08:00:00+00]' && tstzspan '
 ----
 false
 
-# Binary span constructor (MobilityDB-compatible bounds); 2-arg defaults to [)
+
 query I
 SELECT asText(span(1, 2));
 ----
@@ -130,3 +140,115 @@ query I
 SELECT asText(span(timestamptz '2000-01-01', timestamptz '2000-01-01', true, true));
 ----
 [2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00]
+
+
+query I
+SELECT splitNSpans(intset '{1,2,3,4,5,6,7,8,9,10}', 3);
+----
+['[1, 5)', '[5, 8)', '[8, 11)']
+
+query I
+SELECT splitEachNSpans(intset '{1,2,3,4,5,6,7,8,9,10}', 3);
+----
+['[1, 4)', '[4, 7)', '[7, 10)', '[10, 11)']
+
+query I
+SELECT lower(intspan '[1, 3)');
+----
+1
+
+query I
+SELECT upper(intspan '[1, 3)');
+----
+3
+
+query I
+SELECT lower(bigintspan '[1000, 3000)');
+----
+1000
+
+query I
+SELECT upper(bigintspan '[1000, 3000)');
+----
+3000
+
+query I
+SELECT lower(floatspan '[1.5, 2.5]');
+----
+1.5
+
+query I
+SELECT upper(floatspan '[1.5, 2.5]');
+----
+2.5
+
+query I
+SELECT lower(datespan '[2000-01-01, 2000-01-05)');
+----
+2000-01-01
+
+query I
+SELECT upper(datespan '[2000-01-01, 2000-01-05)');
+----
+2000-01-05
+
+query I
+SELECT lower(tstzspan '[2000-01-01, 2000-01-03)');
+----
+2000-01-01 00:00:00+00
+
+query I
+SELECT upper(tstzspan '[2000-01-01, 2000-01-03)');
+----
+2000-01-03 00:00:00+00
+
+
+query I 
+SELECT lowerInc(floatspan '[1.5, 2.5]');
+----
+true
+
+query I 
+SELECT upperInc(datespan '[2000-01-01, 2000-01-05)');
+----
+false
+
+query I 
+SELECT width(floatspan '[1.5, 2.5]');
+----
+1
+
+query I 
+SELECT duration(tstzspan '[2000-01-01, 2000-01-03)');
+----
+2 days
+
+query I 
+SELECT expand(intspan '[1, 3)', 5);
+----
+[-4, 8)
+
+query I 
+SELECT expand(tstzspan '[2000-01-01, 2000-01-03)', interval '1 day');
+----
+[1999-12-31 00:00:00+00, 2000-01-04 00:00:00+00)
+
+query I 
+SELECT floor(floatspan '[1.5, 2.5]');
+----
+[1, 2]
+
+query I 
+SELECT round(floatspan '[1.5, 2.5]');
+----
+[2, 3]
+
+query I 
+SELECT span_contains(floatspan '[1.5, 2.5]', 1.5);
+----
+true
+
+query I 
+SELECT span_contained(1.5, floatspan '[1.5, 2.5]');
+----
+true

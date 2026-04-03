@@ -5,6 +5,7 @@
 #include "geo/stbox_functions.hpp"
 
 #include "duckdb/common/types/blob.hpp"
+#include "duckdb/function/function.hpp"
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension_util.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
@@ -48,13 +49,8 @@ void StboxType::RegisterCastFunctions(DatabaseInstance &instance) {
 void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
     ExtensionUtil::RegisterFunction(
         instance,
-        ScalarFunction(
-            "stbox",
-            {LogicalType::VARCHAR},
-            STBOX(),
-            StboxFunctions::Stbox_in
-        )
-    );
+        ScalarFunction("stbox", {LogicalType::VARCHAR}, STBOX(), StboxFunctions::Stbox_in, nullptr, nullptr, nullptr,
+                     nullptr, LogicalType(LogicalTypeId::INVALID), FunctionStability::VOLATILE));
 
     ExtensionUtil::RegisterFunction(
         instance,

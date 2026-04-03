@@ -1,6 +1,9 @@
 #define MOBILITYDUCK_EXTENSION_TYPES
 
 #include "temporal/span.hpp"
+#include "temporal/span_functions.hpp"
+#include "temporal/set.hpp"
+#include "temporal/spanset.hpp"
 #include "duckdb/common/extension_type_info.hpp"
 #include "duckdb/common/vector_operations/binary_executor.hpp"
 #include "duckdb/common/vector_operations/generic_executor.hpp"
@@ -125,6 +128,31 @@ void SpanTypes::RegisterCastFunctions(DatabaseInstance &instance) {
             SpanTypes::DATESPAN(),
             SpanFunctions::Tstzspan_to_datespan_cast // tstzspan -> datespan 
         );
+
+        ExtensionUtil::RegisterCastFunction(
+            instance,
+            SetTypes::intset(),
+            SpanTypes::INTSPAN(),
+            SpanFunctions::Set_to_span_cast // intset -> intspan
+         );
+        ExtensionUtil::RegisterCastFunction(
+            instance,
+            SetTypes::bigintset(),
+            SpanTypes::BIGINTSPAN(),
+            SpanFunctions::Set_to_span_cast // bigintset -> bigintspan
+         );
+        ExtensionUtil::RegisterCastFunction(
+            instance,
+            SetTypes::floatset(),
+            SpanTypes::FLOATSPAN(),
+            SpanFunctions::Set_to_span_cast // floatset -> floatspan
+         );
+        ExtensionUtil::RegisterCastFunction(
+            instance,
+            SetTypes::tstzset(),
+            SpanTypes::TSTZSPAN(),
+            SpanFunctions::Set_to_span_cast // tstzset -> tstzspan
+         );
     }
 }
 
@@ -189,730 +217,1228 @@ void SpanTypes::RegisterScalarFunctions(DatabaseInstance &db) {
             ScalarFunction("tstzspan", {SpanTypes::DATESPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Datespan_to_tstzspan)                 
         );
 
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("span", {SetTypes::intset()},SpanTypes::INTSPAN(), SpanFunctions::Set_to_span)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("span", {SetTypes::bigintset()},SpanTypes::BIGINTSPAN(), SpanFunctions::Set_to_span)
+        );
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("span", {SetTypes::floatset()},SpanTypes::FLOATSPAN(), SpanFunctions::Set_to_span)
+        );
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("span", {SetTypes::tstzset()},SpanTypes::TSTZSPAN(), SpanFunctions::Set_to_span) 
+        );
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("span", {SetTypes::dateset()},SpanTypes::DATESPAN(), SpanFunctions::Set_to_span) 
+        );
+
         if (span_type == SpanTypes::INTSPAN() ||span_type == SpanTypes::DATESPAN()){
 
             ExtensionUtil::RegisterFunction(
                 db, ScalarFunction("shift", {span_type, LogicalType::INTEGER}, span_type, SpanFunctions::Numspan_shift)
             ); 
+            
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("scale", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Numspan_scale)
+            );
+            ExtensionUtil::RegisterFunction(
+                db,
+                ScalarFunction("shiftScale", {span_type, LogicalType::INTEGER, LogicalType::INTEGER}, span_type,
+                               SpanFunctions::Numspan_shift_scale));
+
         }
         else if( span_type == SpanTypes::BIGINTSPAN() ){
-             ExtensionUtil::RegisterFunction(
+            ExtensionUtil::RegisterFunction(
                 db, ScalarFunction("shift", {span_type, LogicalType::BIGINT}, span_type, SpanFunctions::Numspan_shift)
             ); 
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("expand", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Numspan_expand)
+            );
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("scale", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Numspan_scale)
+            );
+            ExtensionUtil::RegisterFunction(
+                db,
+                ScalarFunction("shiftScale", {span_type, LogicalType::BIGINT, LogicalType::BIGINT}, span_type, SpanFunctions::Numspan_shift_scale)
+            );    
         }
         else if( span_type == SpanTypes::FLOATSPAN() ){
-             ExtensionUtil::RegisterFunction(
-                db, ScalarFunction("shift", {span_type, LogicalType::FLOAT}, span_type, SpanFunctions::Numspan_shift)
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("shift", {span_type, LogicalType::DOUBLE}, span_type, SpanFunctions::Numspan_shift)
             ); 
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("expand", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Numspan_expand)
+            );
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("scale", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Numspan_scale)
+            );
+            ExtensionUtil::RegisterFunction(
+                db,
+                ScalarFunction("shiftScale", {span_type, LogicalType::DOUBLE, LogicalType::DOUBLE}, span_type, SpanFunctions::Numspan_shift_scale)
+            );
+
         }
         else if( span_type == SpanTypes::TSTZSPAN() ){
-             ExtensionUtil::RegisterFunction(
-                db, ScalarFunction("shift", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Numspan_shift)
-            ); 
-        }
-
-        if (span_type == SpanTypes::TSTZSPAN()) {
             ExtensionUtil::RegisterFunction(
-                db, ScalarFunction("@>", {span_type, LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Contains_tstzspan_timestamptz)
+                db, ScalarFunction("shift", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Tstzspan_shift)
+            ); 
+
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("expand", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Tstzspan_expand)
             );
-        }
+
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("scale", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Tstzspan_scale)
+            );
+            ExtensionUtil::RegisterFunction(
+                db,
+                ScalarFunction("shiftScale", {span_type, LogicalType::INTERVAL, LogicalType::INTERVAL}, span_type, SpanFunctions::Tstzspan_shift_scale)
+            );
+
+        }      
+        
+        ExtensionUtil::RegisterFunction(
+            db, ScalarFunction("lower", {span_type}, base_type, SpanFunctions::Span_lower));
+        ExtensionUtil::RegisterFunction(
+            db, ScalarFunction("upper", {span_type}, base_type, SpanFunctions::Span_upper));
 
         ExtensionUtil::RegisterFunction(
-            db, ScalarFunction("*", {span_type, span_type}, span_type, SpanFunctions::Intersection_span_span)
-        );
-
+            db, ScalarFunction("lowerInc",{span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_lower_inc));
         ExtensionUtil::RegisterFunction(
-            db, ScalarFunction("&&", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Overlaps_span_span)
-        );
-    }
-}
-
-// --- AsText ---
-void SpanFunctions::Span_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input_vec = args.data[0];
-    input_vec.Flatten(args.size());
-
-    bool has_digits = args.ColumnCount() > 1;
-    Vector *digits_vec_ptr = has_digits ? &args.data[1] : nullptr;
-    if (has_digits) digits_vec_ptr->Flatten(args.size());
-
-    for (idx_t i = 0; i < args.size(); i++) {
-        if (FlatVector::IsNull(input_vec, i) || (has_digits && FlatVector::IsNull(*digits_vec_ptr, i))) {
-            FlatVector::SetNull(result, i, true);
-            continue;
+            db, ScalarFunction("upperInc",{span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_upper_inc));
         }
-
-        auto blob = FlatVector::GetData<string_t>(input_vec)[i];
-        int digits = has_digits ? FlatVector::GetData<int32_t>(*digits_vec_ptr)[i] : 15;
-
-        const uint8_t *data = (const uint8_t *)blob.GetData();
-        size_t size = blob.GetSize();
-
-        Span *s = (Span *)malloc(size);
-        memcpy(s, data, size);
-
-        char *cstr = span_out(s, digits);
-        auto str = StringVector::AddString(result, cstr);
-        FlatVector::GetData<string_t>(result)[i] = str;
-
-        free(s);
-        free(cstr);
-    }
-}
-
-// --- Cast From String ---
-bool SpanFunctions::Span_to_text(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-   UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t input_blob) -> string_t {
-            // Convert binary string_t back to span using direct memory access
-            const uint8_t *span_data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
-            size_t span_size = input_blob.GetSize();
-            
-            // Cast directly to Span*
-            const Span *s = reinterpret_cast<const Span*>(span_data);
-            
-            char *cstr = span_out(s, 15);
-            std::string output(cstr);
-            free(cstr);
-            
-            return StringVector::AddString(result, output);
-        });
-
-    return true;
-}
-
-bool SpanFunctions::Text_to_span(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    auto &result_type = result.GetType();
-    std::string type_alias = result_type.GetAlias();
     
-    // Map the alias to the correct MEOS type
-    meosType target_meos_type = SpanTypeMapping::GetMeosTypeFromAlias(type_alias);
+    ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("expand", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpanTypes::INTSPAN(), SpanFunctions::Numspan_expand)
+    );
+    ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("expand", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpanTypes::BIGINTSPAN(), SpanFunctions::Numspan_expand)
+    );
+    ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("expand", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpanTypes::FLOATSPAN(), SpanFunctions::Numspan_expand)
+    );  
+    ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("expand", {SpanTypes::DATESPAN(), LogicalType::INTEGER}, SpanTypes::DATESPAN(), SpanFunctions::Numspan_expand)
+    );
+    ExtensionUtil::RegisterFunction(
+            db, 
+            ScalarFunction("expand", {SpanTypes::TSTZSPAN(), LogicalType::INTERVAL}, SpanTypes::TSTZSPAN(), SpanFunctions::Tstzspan_expand)
+    );
+
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("width", {SpanTypes::INTSPAN()}, LogicalType::INTEGER, SpanFunctions::Numspan_width)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("width", {SpanTypes::BIGINTSPAN()}, LogicalType::BIGINT, SpanFunctions::Numspan_width)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("width", {SpanTypes::FLOATSPAN()}, LogicalType::DOUBLE, SpanFunctions::Numspan_width)
+    );
+
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("duration", {SpanTypes::DATESPAN()}, LogicalType::INTERVAL, SpanFunctions::Datespan_duration)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("duration", {SpanTypes::TSTZSPAN()}, LogicalType::INTERVAL, SpanFunctions::Tstzspan_duration)
+    );
+
+
+
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("splitNSpans", {SetTypes::intset(), LogicalType::INTEGER},
+                       LogicalType::LIST(SpanTypes::INTSPAN()), SpanFunctions::Set_split_n_spans));
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("splitNSpans", {SetTypes::bigintset(), LogicalType::INTEGER},
+                       LogicalType::LIST(SpanTypes::BIGINTSPAN()), SpanFunctions::Set_split_n_spans));
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("splitNSpans", {SetTypes::floatset(), LogicalType::INTEGER},
+                       LogicalType::LIST(SpanTypes::FLOATSPAN()), SpanFunctions::Set_split_n_spans));
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("splitNSpans", {SetTypes::dateset(), LogicalType::INTEGER},
+                       LogicalType::LIST(SpanTypes::DATESPAN()), SpanFunctions::Set_split_n_spans));
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("splitNSpans", {SetTypes::tstzset(), LogicalType::INTEGER},
+                       LogicalType::LIST(SpanTypes::TSTZSPAN()), SpanFunctions::Set_split_n_spans));
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("splitEachNSpans", {SetTypes::intset(), LogicalType::INTEGER},
+                       LogicalType::LIST(SpanTypes::INTSPAN()), SpanFunctions::Set_split_each_n_spans));
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("splitEachNSpans", {SetTypes::bigintset(), LogicalType::INTEGER},
+                       LogicalType::LIST(SpanTypes::BIGINTSPAN()), SpanFunctions::Set_split_each_n_spans));
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("splitEachNSpans", {SetTypes::floatset(), LogicalType::INTEGER},
+                       LogicalType::LIST(SpanTypes::FLOATSPAN()), SpanFunctions::Set_split_each_n_spans));
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("splitEachNSpans", {SetTypes::dateset(), LogicalType::INTEGER},
+                       LogicalType::LIST(SpanTypes::DATESPAN()), SpanFunctions::Set_split_each_n_spans));
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("splitEachNSpans", {SetTypes::tstzset(), LogicalType::INTEGER},
+                       LogicalType::LIST(SpanTypes::TSTZSPAN()), SpanFunctions::Set_split_each_n_spans));
+                
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("floor", {SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Floatspan_floor)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("ceil", {SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Floatspan_ceil)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("round", {LogicalType::DOUBLE}, LogicalType::DOUBLE, SpanFunctions::Float_round)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("round", {LogicalType::DOUBLE, LogicalType::INTEGER}, LogicalType::DOUBLE, SpanFunctions::Float_round)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("round", {SpanTypes::FLOATSPAN(), LogicalType::INTEGER}, SpanTypes::FLOATSPAN(), SpanFunctions::Floatspan_round)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("round", {SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Floatspan_round)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("degrees", {SpanTypes::FLOATSPAN(), LogicalType::BOOLEAN}, SpanTypes::FLOATSPAN(), SpanFunctions::Floatspan_degrees)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("degrees", {SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Floatspan_degrees)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("radians", {SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Floatspan_radians)
+    );
+
+    ExtensionUtil::RegisterFunction(
+        db, 
+        ScalarFunction("span_contains", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, 
+        ScalarFunction("@>", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, 
+        ScalarFunction("span_contains", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, 
+        ScalarFunction("@>", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, 
+        ScalarFunction("span_contains", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, 
+        ScalarFunction("@>", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, 
+        ScalarFunction("span_contains", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, 
+        ScalarFunction("@>", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, 
+        ScalarFunction("span_contains", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, 
+        ScalarFunction("@>", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, 
+        ScalarFunction("span_contains", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, 
+        ScalarFunction("@>", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, 
+        ScalarFunction("span_contains", {SpanTypes::DATESPAN(), LogicalType::DATE}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, 
+        ScalarFunction("@>", {SpanTypes::DATESPAN(), LogicalType::DATE}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, 
+        ScalarFunction("span_contains", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, 
+        ScalarFunction("@>", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, 
+        ScalarFunction("span_contains", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, 
+        ScalarFunction("@>", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, 
+        ScalarFunction("span_contains", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, 
+        ScalarFunction("@>", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_span)
+    );
+
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_contained", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contained_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<@", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contained_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_contained", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contained_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<@", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contained_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_contained", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contained_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<@", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contained_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_contained", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contained_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<@", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contained_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_contained", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contained_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<@", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contained_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_contained", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contained_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<@", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contained_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_contained", {LogicalType::DATE, SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contained_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<@", {LogicalType::DATE, SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contained_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_contained", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contained_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<@", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contained_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_contained", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contained_value_span)     
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<@", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contained_value_span)     
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_contained", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contained_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<@", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Contained_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overlaps", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overlaps_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&&", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overlaps_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overlaps", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overlaps_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&&", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overlaps_span_span)
+    );              
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overlaps", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overlaps_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&&", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overlaps_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overlaps", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overlaps_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&&", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overlaps_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overlaps", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overlaps_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&&", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overlaps_span_span)
+    );      
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_adjacent", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-|-", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_adjacent", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-|-", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_adjacent", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-|-", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_adjacent", {LogicalType::BIGINT,SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-|-", {LogicalType::BIGINT,SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_adjacent", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-|-", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_adjacent", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-|-", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_adjacent", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-|-", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_adjacent", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-|-", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_adjacent", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-|-", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_adjacent", {LogicalType::DATE, SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-|-", {LogicalType::DATE, SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_adjacent", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-|-", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_adjacent", {SpanTypes::DATESPAN(), LogicalType::DATE}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-|-", {SpanTypes::DATESPAN(), LogicalType::DATE}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_adjacent", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_value_span)   
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-|-", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_value_span)   
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_adjacent", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_span)    
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-|-", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_span)    
+    );  
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_adjacent", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_value)    
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-|-", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_value)    
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_left", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpanTypes::INTSPAN(), SpanFunctions::Left_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<<", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpanTypes::INTSPAN(), SpanFunctions::Left_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_left", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Left_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<<", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Left_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_left", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Left_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<<", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Left_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_left", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpanTypes::BIGINTSPAN(), SpanFunctions::Left_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<<", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpanTypes::BIGINTSPAN(), SpanFunctions::Left_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_left", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Left_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<<", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Left_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_left", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Left_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<<", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Left_span_span)
+    );  
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_left", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpanTypes::FLOATSPAN(), SpanFunctions::Left_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<<", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpanTypes::FLOATSPAN(), SpanFunctions::Left_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_left", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Left_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<<", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Left_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_left", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Left_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<<", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Left_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_left", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpanTypes::DATESPAN(), SpanFunctions::Left_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<<#", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpanTypes::DATESPAN(), SpanFunctions::Left_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_left", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Left_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<<#", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Left_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_left", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Left_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<<#", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Left_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_left", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpanTypes::TSTZSPAN(), SpanFunctions::Left_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<<#", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpanTypes::TSTZSPAN(), SpanFunctions::Left_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_left", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Left_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<<#", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Left_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_left", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Left_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<<#", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Left_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_right", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpanTypes::INTSPAN(), SpanFunctions::Right_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction(">>", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpanTypes::INTSPAN(), SpanFunctions::Right_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_right", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Right_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction(">>", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Right_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_right", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Right_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction(">>", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Right_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_right", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpanTypes::BIGINTSPAN(), SpanFunctions::Right_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction(">>", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpanTypes::BIGINTSPAN(), SpanFunctions::Right_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_right", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Right_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction(">>", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Right_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_right", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Right_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction(">>", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Right_span_span)
+    );      
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_right", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpanTypes::FLOATSPAN(), SpanFunctions::Right_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction(">>", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpanTypes::FLOATSPAN(), SpanFunctions::Right_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_right", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Right_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction(">>", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Right_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_right", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Right_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction(">>", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Right_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_right", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpanTypes::DATESPAN(), SpanFunctions::Right_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("#>>", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpanTypes::DATESPAN(), SpanFunctions::Right_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_right", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Right_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("#>>", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Right_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_right", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Right_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("#>>", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Right_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_right", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpanTypes::TSTZSPAN(), SpanFunctions::Right_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("#>>", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpanTypes::TSTZSPAN(), SpanFunctions::Right_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_right", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Right_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("#>>", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Right_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_right", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Right_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("#>>", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Right_span_span)
+    );  
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overleft", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpanTypes::INTSPAN(), SpanFunctions::Overleft_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&<", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpanTypes::INTSPAN(), SpanFunctions::Overleft_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overleft", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Overleft_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&<", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Overleft_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overleft", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Overleft_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&<", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Overleft_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overleft", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overleft_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&<", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overleft_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overleft", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overleft_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&<", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overleft_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overleft", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overleft_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&<", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overleft_span_span)
+    );  
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overleft", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpanTypes::FLOATSPAN(), SpanFunctions::Overleft_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&<", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpanTypes::FLOATSPAN(), SpanFunctions::Overleft_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overleft", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Overleft_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&<", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Overleft_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overleft", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Overleft_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&<", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Overleft_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overleft", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpanTypes::DATESPAN(), SpanFunctions::Overleft_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&<#", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpanTypes::DATESPAN(), SpanFunctions::Overleft_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overleft", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Overleft_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&<#", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Overleft_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overleft", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Overleft_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&<#", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Overleft_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overleft", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpanTypes::TSTZSPAN(), SpanFunctions::Overleft_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&<", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpanTypes::TSTZSPAN(), SpanFunctions::Overleft_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overleft", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Overleft_value_span)
+    );  
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&<", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Overleft_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overleft", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Overleft_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&<#", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Overleft_span_span)
+    );
     
-    if (target_meos_type == T_UNKNOWN) {
-        throw InvalidInputException("Unknown span type: " + type_alias);
-    }
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overright", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpanTypes::INTSPAN(), SpanFunctions::Overright_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&>", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpanTypes::INTSPAN(), SpanFunctions::Overright_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overright", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Overright_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&>", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Overright_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overright", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Overright_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&>", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Overright_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overright", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overright_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&>", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overright_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overright", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overright_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overright", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overright_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&>", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overright_span_span)
+    );      
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overright", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpanTypes::FLOATSPAN(), SpanFunctions::Overright_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&>", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpanTypes::FLOATSPAN(), SpanFunctions::Overright_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overright", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Overright_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&>", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Overright_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overright", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Overright_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("&>", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Overright_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overright", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpanTypes::DATESPAN(), SpanFunctions::Overright_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("#&>", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpanTypes::DATESPAN(), SpanFunctions::Overright_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overright", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Overright_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("#&>", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Overright_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overright", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Overright_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("#&>", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Overright_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overright", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpanTypes::TSTZSPAN(), SpanFunctions::Overright_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("#&>", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpanTypes::TSTZSPAN(), SpanFunctions::Overright_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overright", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Overright_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("#&>", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Overright_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_overright", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Overright_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("#&>", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Overright_span_span)
+    );  
 
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t input_str) -> string_t {
-            std::string input = input_str.GetString();
-            
-            // Use the correct MEOS type for parsing
-            Span *span = span_in(input.c_str(), target_meos_type);
-            
-            if (span == NULL) {
-                throw InvalidInputException("Invalid " + type_alias + " format: " + input);
-            }
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_union", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpansetTypes::intspanset(), SpanFunctions::Union_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_union", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpansetTypes::intspanset(), SpanFunctions::Union_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_union", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Union_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("+", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpansetTypes::intspanset(), SpanFunctions::Union_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("+", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpansetTypes::intspanset(), SpanFunctions::Union_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("+", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Union_span_span)
+    );
 
-            // Use memcpy instead of WKB format
-            size_t span_size = sizeof(*span);
-            uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-            memcpy(span_buffer, span, span_size);
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_union", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpansetTypes::bigintspanset(), SpanFunctions::Union_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_union", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpansetTypes::bigintspanset(), SpanFunctions::Union_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_union", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Union_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("+", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpansetTypes::bigintspanset(), SpanFunctions::Union_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("+", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpansetTypes::bigintspanset(), SpanFunctions::Union_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("+", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Union_span_span)
+    );
 
-            // Create string_t from binary data and add to result vector
-            string_t span_string_t(reinterpret_cast<const char*>(span_buffer), span_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-            
-            free(span_buffer);
-            free(span);
-            
-            return stored_data;
-        });
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_union", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpansetTypes::floatspanset(), SpanFunctions::Union_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_union", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpansetTypes::floatspanset(), SpanFunctions::Union_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_union", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Union_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("+", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpansetTypes::floatspanset(), SpanFunctions::Union_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("+", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpansetTypes::floatspanset(), SpanFunctions::Union_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("+", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Union_span_span)
+    );
 
-    return true;
-}
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_union", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpansetTypes::datespanset(), SpanFunctions::Union_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_union", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpansetTypes::datespanset(), SpanFunctions::Union_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_union", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Union_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("+", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpansetTypes::datespanset(), SpanFunctions::Union_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("+", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpansetTypes::datespanset(), SpanFunctions::Union_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("+", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Union_span_span)
+    );  
 
-// --- Span constructor from string ---
-void SpanFunctions::Span_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input_vec = args.data[0];
-    auto &result_type = result.GetType();
-    std::string type_alias = result_type.GetAlias();
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_union", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpansetTypes::tstzspanset(), SpanFunctions::Union_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_union", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpansetTypes::tstzspanset(), SpanFunctions::Union_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_union", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Union_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("+", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpansetTypes::tstzspanset(), SpanFunctions::Union_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("+", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpansetTypes::tstzspanset(), SpanFunctions::Union_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("+", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Union_span_span)  
+    );  
+
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_intersection", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpanTypes::INTSPAN(), SpanFunctions::Intersection_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_intersection", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Intersection_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_intersection", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Intersection_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("*", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpanTypes::INTSPAN(), SpanFunctions::Intersection_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("*", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Intersection_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("*", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Intersection_span_span)
+    );
+
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_intersection", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpanTypes::BIGINTSPAN(), SpanFunctions::Intersection_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_intersection", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Intersection_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_intersection", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Intersection_span_span) 
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("*", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpanTypes::BIGINTSPAN(), SpanFunctions::Intersection_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("*", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Intersection_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("*", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Intersection_span_span) 
+    );
+
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_intersection", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpanTypes::FLOATSPAN(), SpanFunctions::Intersection_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_intersection", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Intersection_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_intersection", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Intersection_span_span) 
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("*", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpanTypes::FLOATSPAN(), SpanFunctions::Intersection_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("*", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Intersection_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("*", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Intersection_span_span) 
+    );  
+
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_intersection", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpanTypes::DATESPAN(), SpanFunctions::Intersection_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_intersection", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Intersection_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_intersection", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Intersection_span_span) 
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("*", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpanTypes::DATESPAN(), SpanFunctions::Intersection_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("*", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Intersection_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("*", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Intersection_span_span) 
+    );  
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_intersection", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpanTypes::TSTZSPAN(), SpanFunctions::Intersection_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_intersection", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Intersection_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_intersection", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Intersection_span_span) 
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("*", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpanTypes::TSTZSPAN(), SpanFunctions::Intersection_span_value)  
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("*", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Intersection_value_span)
+    );  
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("*", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Intersection_span_span) 
+    );
     
-    meosType target_meos_type = SpanTypeMapping::GetMeosTypeFromAlias(type_alias);
-    
-    if (target_meos_type == T_UNKNOWN) {
-        throw InvalidInputException("Unknown span type: " + type_alias);
-    }
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_minus", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpansetTypes::intspanset(), SpanFunctions::Minus_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_minus", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpansetTypes::intspanset(), SpanFunctions::Minus_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_minus", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpansetTypes::intspanset(), SpanFunctions::Minus_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpansetTypes::intspanset(), SpanFunctions::Minus_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpansetTypes::intspanset(), SpanFunctions::Minus_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpansetTypes::intspanset(), SpanFunctions::Minus_span_span)
+    );
 
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, args.size(),
-        [&](string_t input_str) -> string_t {
-            std::string input = input_str.GetString();
-            
-            Span *span = span_in(input.c_str(), target_meos_type);
-            
-            if (span == NULL) {
-                throw InvalidInputException("Invalid " + type_alias + " format: " + input);
-            }
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_minus", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpansetTypes::bigintspanset(), SpanFunctions::Minus_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_minus", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpansetTypes::bigintspanset(), SpanFunctions::Minus_value_span)    
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_minus", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpansetTypes::bigintspanset(), SpanFunctions::Minus_span_span) 
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpansetTypes::bigintspanset(), SpanFunctions::Minus_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpansetTypes::bigintspanset(), SpanFunctions::Minus_value_span)    
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpansetTypes::bigintspanset(), SpanFunctions::Minus_span_span) 
+    );
 
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_minus", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpansetTypes::floatspanset(), SpanFunctions::Minus_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_minus", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpansetTypes::floatspanset(), SpanFunctions::Minus_value_span)    
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_minus", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpansetTypes::floatspanset(), SpanFunctions::Minus_span_span) 
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpansetTypes::floatspanset(), SpanFunctions::Minus_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpansetTypes::floatspanset(), SpanFunctions::Minus_value_span)    
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpansetTypes::floatspanset(), SpanFunctions::Minus_span_span) 
+    );
 
-            size_t span_size = sizeof(*span);
-            uint8_t *span_buffer = (uint8_t*) malloc(span_size);
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_minus", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpansetTypes::datespanset(), SpanFunctions::Minus_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_minus", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpansetTypes::datespanset(), SpanFunctions::Minus_value_span)    
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_minus", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpansetTypes::datespanset(), SpanFunctions::Minus_span_span) 
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpansetTypes::datespanset(), SpanFunctions::Minus_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpansetTypes::datespanset(), SpanFunctions::Minus_value_span)    
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpansetTypes::datespanset(), SpanFunctions::Minus_span_span) 
+    );
 
-            memcpy(span_buffer, span, span_size);
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_minus", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpansetTypes::tstzspanset(), SpanFunctions::Minus_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_minus", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpansetTypes::tstzspanset(), SpanFunctions::Minus_value_span)    
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_minus", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpansetTypes::tstzspanset(), SpanFunctions::Minus_span_span) 
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpansetTypes::tstzspanset(), SpanFunctions::Minus_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpansetTypes::tstzspanset(), SpanFunctions::Minus_value_span)    
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("-", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpansetTypes::tstzspanset(), SpanFunctions::Minus_span_span) 
+    );
 
-            string_t span_string_t((char *) span_buffer, span_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-            
-            free(span_buffer);
-            free(span);
-            
-            return stored_data;
-        });
-}
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_distance", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, LogicalType::INTEGER, SpanFunctions::Distance_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_distance", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, LogicalType::INTEGER, SpanFunctions::Distance_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_distance", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, LogicalType::INTEGER, SpanFunctions::Distance_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<->", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, LogicalType::INTEGER, SpanFunctions::Distance_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<->", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, LogicalType::INTEGER, SpanFunctions::Distance_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<->", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, LogicalType::INTEGER, SpanFunctions::Distance_span_span)
+    );
 
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_distance", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, LogicalType::BIGINT, SpanFunctions::Distance_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_distance", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, LogicalType::BIGINT, SpanFunctions::Distance_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_distance", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, LogicalType::BIGINT, SpanFunctions::Distance_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<->", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, LogicalType::BIGINT, SpanFunctions::Distance_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<->", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, LogicalType::BIGINT, SpanFunctions::Distance_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<->", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, LogicalType::BIGINT, SpanFunctions::Distance_span_span)
+    );
 
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_distance", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, LogicalType::DOUBLE, SpanFunctions::Distance_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_distance", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, LogicalType::DOUBLE, SpanFunctions::Distance_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_distance", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, LogicalType::DOUBLE, SpanFunctions::Distance_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<->", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, LogicalType::DOUBLE, SpanFunctions::Distance_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<->", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, LogicalType::DOUBLE, SpanFunctions::Distance_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<->", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, LogicalType::DOUBLE, SpanFunctions::Distance_span_span)
+    );  
 
-// --- Span binary constructor ---
-static string_t Span_make_blob(Datum lower_dat, Datum upper_dat, bool lower_inc, bool upper_inc, meosType span_type,
-                               Vector &result) {
-    meosType basetype = spantype_basetype(span_type);
-    Span *span = span_make(lower_dat, upper_dat, lower_inc, upper_inc, basetype);
-    if (span == NULL) {
-        throw InvalidInputException("Failed to create span from bounds");
-    }
-    size_t span_size = sizeof(Span);
-    string_t out = StringVector::AddStringOrBlob(result, reinterpret_cast<const char *>(span), span_size);
-    free(span);
-    return out;
-}
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_distance", {SpanTypes::DATESPAN(), LogicalType::DATE}, LogicalType::INTEGER, SpanFunctions::Distance_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_distance", {LogicalType::DATE, SpanTypes::DATESPAN()}, LogicalType::INTEGER, SpanFunctions::Distance_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_distance", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, LogicalType::INTEGER, SpanFunctions::Distance_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<->", {SpanTypes::DATESPAN(), LogicalType::DATE}, LogicalType::INTEGER, SpanFunctions::Distance_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<->", {LogicalType::DATE, SpanTypes::DATESPAN()}, LogicalType::INTEGER, SpanFunctions::Distance_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<->", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, LogicalType::INTEGER, SpanFunctions::Distance_span_span)
+    );
 
-void SpanFunctions::Span_binary_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
-    D_ASSERT(args.ColumnCount() == 2 || args.ColumnCount() == 4);
-    auto &args0 = args.data[0];
-    auto &args1 = args.data[1];
-    Vector *args2 = args.ColumnCount() == 4 ? &args.data[2] : nullptr;
-    Vector *args3 = args.ColumnCount() == 4 ? &args.data[3] : nullptr;
-
-    auto out_type = result.GetType();
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
-    const idx_t count = args.size();
-
-    switch (span_type) {
-        case T_INTSPAN:
-            if (args.ColumnCount() == 2) {
-                BinaryExecutor::Execute<int32_t, int32_t, string_t>(
-                    args0, args1, result, count, [&](int32_t lo, int32_t hi) {
-                        return Span_make_blob(Datum(lo), Datum(hi), true, false, span_type, result);
-                    });
-            } else {
-                GenericExecutor::ExecuteQuaternary<PrimitiveType<int32_t>, PrimitiveType<int32_t>, PrimitiveType<bool>,
-                                                   PrimitiveType<bool>, PrimitiveType<string_t>>(
-                    args0, args1, *args2, *args3, result, count,
-                    [&](PrimitiveType<int32_t> lo, PrimitiveType<int32_t> hi, PrimitiveType<bool> li,
-                        PrimitiveType<bool> ui) {
-                        return Span_make_blob(Datum(lo.val), Datum(hi.val), li.val, ui.val, span_type, result);
-                    });
-            }
-            break;
-        case T_BIGINTSPAN:
-            if (args.ColumnCount() == 2) {
-                BinaryExecutor::Execute<int64_t, int64_t, string_t>(
-                    args0, args1, result, count, [&](int64_t lo, int64_t hi) {
-                        return Span_make_blob(Datum(lo), Datum(hi), true, false, span_type, result);
-                    });
-            } else {
-                GenericExecutor::ExecuteQuaternary<PrimitiveType<int64_t>, PrimitiveType<int64_t>, PrimitiveType<bool>,
-                                                   PrimitiveType<bool>, PrimitiveType<string_t>>(
-                    args0, args1, *args2, *args3, result, count,
-                    [&](PrimitiveType<int64_t> lo, PrimitiveType<int64_t> hi, PrimitiveType<bool> li,
-                        PrimitiveType<bool> ui) {
-                        return Span_make_blob(Datum(lo.val), Datum(hi.val), li.val, ui.val, span_type, result);
-                    });
-            }
-            break;
-        case T_FLOATSPAN:
-            if (args.ColumnCount() == 2) {
-                BinaryExecutor::Execute<double, double, string_t>(
-                    args0, args1, result, count, [&](double lo, double hi) {
-                        return Span_make_blob(Float8GetDatum(lo), Float8GetDatum(hi), true, false, span_type, result);
-                    });
-            } else {
-                GenericExecutor::ExecuteQuaternary<PrimitiveType<double>, PrimitiveType<double>, PrimitiveType<bool>,
-                                                   PrimitiveType<bool>, PrimitiveType<string_t>>(
-                    args0, args1, *args2, *args3, result, count,
-                    [&](PrimitiveType<double> lo, PrimitiveType<double> hi, PrimitiveType<bool> li,
-                        PrimitiveType<bool> ui) {
-                        return Span_make_blob(Float8GetDatum(lo.val), Float8GetDatum(hi.val), li.val, ui.val, span_type,
-                                              result);
-                    });
-            }
-            break;
-        case T_DATESPAN:
-            if (args.ColumnCount() == 2) {
-                BinaryExecutor::Execute<date_t, date_t, string_t>(
-                    args0, args1, result, count, [&](date_t lo, date_t hi) {
-                        return Span_make_blob(Datum(ToMeosDate(lo)), Datum(ToMeosDate(hi)), true, false, span_type,
-                                              result);
-                    });
-            } else {
-                GenericExecutor::ExecuteQuaternary<PrimitiveType<date_t>, PrimitiveType<date_t>, PrimitiveType<bool>,
-                                                   PrimitiveType<bool>, PrimitiveType<string_t>>(
-                    args0, args1, *args2, *args3, result, count,
-                    [&](PrimitiveType<date_t> lo, PrimitiveType<date_t> hi, PrimitiveType<bool> li,
-                        PrimitiveType<bool> ui) {
-                        return Span_make_blob(Datum(ToMeosDate(lo.val)), Datum(ToMeosDate(hi.val)), li.val, ui.val,
-                                              span_type, result);
-                    });
-            }
-            break;
-        case T_TSTZSPAN:
-            if (args.ColumnCount() == 2) {
-                BinaryExecutor::Execute<timestamp_tz_t, timestamp_tz_t, string_t>(
-                    args0, args1, result, count, [&](timestamp_tz_t lo_duck, timestamp_tz_t hi_duck) {
-                        timestamp_tz_t lo_meos = DuckDBToMeosTimestamp(lo_duck);
-                        timestamp_tz_t hi_meos = DuckDBToMeosTimestamp(hi_duck);
-                        Datum lo_dat = (Datum) static_cast<TimestampTz>(lo_meos.value);
-                        Datum hi_dat = (Datum) static_cast<TimestampTz>(hi_meos.value);
-                        return Span_make_blob(lo_dat, hi_dat, true, false, span_type, result);
-                    });
-            } else {
-                GenericExecutor::ExecuteQuaternary<PrimitiveType<timestamp_tz_t>, PrimitiveType<timestamp_tz_t>,
-                                                   PrimitiveType<bool>, PrimitiveType<bool>, PrimitiveType<string_t>>(
-                    args0, args1, *args2, *args3, result, count,
-                    [&](PrimitiveType<timestamp_tz_t> lo, PrimitiveType<timestamp_tz_t> hi, PrimitiveType<bool> li,
-                        PrimitiveType<bool> ui) {
-                        timestamp_tz_t lo_meos = DuckDBToMeosTimestamp(lo.val);
-                        timestamp_tz_t hi_meos = DuckDBToMeosTimestamp(hi.val);
-                        Datum lo_dat = (Datum) static_cast<TimestampTz>(lo_meos.value);
-                        Datum hi_dat = (Datum) static_cast<TimestampTz>(hi_meos.value);
-                        return Span_make_blob(lo_dat, hi_dat, li.val, ui.val, span_type, result);
-                    });
-            }
-            break;
-        default:
-            throw NotImplementedException("span(<type>, <type>) not yet implemented for type: " + out_type.GetAlias());
-    }
-}
-
-
-
-static inline void Write_span(Vector &result, idx_t row, Span *s) {
-    size_t span_size = sizeof(*s);
-    auto out = FlatVector::GetData<string_t>(result);
-    out[row] = StringVector::AddStringOrBlob(result, (const char *)s, span_size);
-    free(s);
-}
-
-static void Value_to_span_core(Vector &source, Vector &result, idx_t count, meosType base_type){
-    source.Flatten(count);
-    result.SetVectorType(VectorType::FLAT_VECTOR);
-
-    auto handle_null = [&](idx_t row) {
-        FlatVector::SetNull(result, row, true);
-    };
-            
-    switch(base_type){
-        case T_INT4: {
-            auto in = FlatVector::GetData<int32> (source);
-            for (idx_t i = 0; i < count; i++){
-                if (FlatVector::IsNull(source, i)) {
-                    handle_null(i); continue;
-                }
-                Datum d = Datum(in[i]);
-                Span *s = value_span(d, T_INT4);
-                Write_span(result,i,s);
-            }
-
-        }
-        case T_INT8: {
-            auto in = FlatVector::GetData<int64_t>(source);
-            for (idx_t i = 0; i < count; ++i) {
-                if (FlatVector::IsNull(source, i)) { handle_null(i); continue; }
-                Datum d = Datum(in[i]);               
-                Span *s = value_span(d, T_INT8);
-                Write_span(result, i, s);
-            }
-            break;
-        }
-        case T_FLOAT8: {
-            auto in = FlatVector::GetData<double>(source);
-            for (idx_t i = 0; i < count; ++i) {
-                if (FlatVector::IsNull(source, i)) { handle_null(i); continue; }
-                Datum d = Float8GetDatum(in[i]);
-                Span *s = value_span(d, T_FLOAT8);
-                Write_span(result, i, s);
-            }
-            break;
-        }
-        case T_DATE: {
-            auto in = FlatVector::GetData<date_t>(source);
-            for (idx_t i = 0; i < count; ++i) {
-                if (FlatVector::IsNull(source, i)) { handle_null(i); continue; }
-                int32_t days = (int32_t)ToMeosDate(in[i]);
-                Datum d = Datum(days);
-                Span *s = value_span(d, T_DATE);
-                Write_span(result, i, s);
-            }
-            break;
-        }
-        case T_TIMESTAMPTZ: {
-            auto in = FlatVector::GetData<timestamp_tz_t>(source);
-            for (idx_t i = 0; i < count; ++i) {
-                if (FlatVector::IsNull(source, i)) { handle_null(i); continue; }
-                auto meos_ts = ToMeosTimestamp(in[i]);        
-                Datum d = Datum(meos_ts);
-                Span *s = value_span(d, T_TIMESTAMPTZ);
-                Write_span(result, i, s);
-            }
-            break;
-        }
-    }
-}
-
-void SpanFunctions::Value_to_span(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &source = args.data[0];
-    auto out_type = result.GetType();
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
-    meosType base_type = spantype_basetype(span_type);
-
-    Value_to_span_core(source, result, args.size(), base_type);
-
-}
-
-
-
-
-
-// --- Conversion: intspan <-> floatspan ---
-static void Intspan_to_floatspan_common(Vector &source, Vector &result, idx_t count) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t input_blob) -> string_t {
-            const uint8_t *span_data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
-            size_t span_size = input_blob.GetSize();
-            
-            const Span *src_span = reinterpret_cast<const Span*>(span_data);
-            Span *dst_span = intspan_to_floatspan(src_span);
-            
-            if (dst_span == NULL) {
-                throw InvalidInputException("Failed to convert intspan to floatspan");
-            }
-            
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)dst_span, span_size);
-            free(dst_span);
-            return out;
-        }
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_distance", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, LogicalType::INTERVAL, SpanFunctions::Distance_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_distance", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, LogicalType::INTERVAL, SpanFunctions::Distance_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("span_distance", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, LogicalType::INTERVAL, SpanFunctions::Distance_span_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<->", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, LogicalType::INTERVAL, SpanFunctions::Distance_span_value)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<->", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, LogicalType::INTERVAL, SpanFunctions::Distance_value_span)
+    );
+    ExtensionUtil::RegisterFunction(
+        db, ScalarFunction("<->", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, LogicalType::INTERVAL, SpanFunctions::Distance_span_span)
     );
 }
 
-static void Floatspan_to_intspan_common(Vector &source, Vector &result, idx_t count) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            const uint8_t *span_data = reinterpret_cast<const uint8_t*>(blob.GetData());
-            size_t span_size = blob.GetSize();
-            
-            const Span *src_span = reinterpret_cast<const Span*>(span_data);
-            Span *dst_span = floatspan_to_intspan(src_span);
-            
-            if (dst_span == NULL) {
-                throw InvalidInputException("Failed to convert floatspan to intspan");
-            }
-            
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)dst_span, span_size);
-            free(dst_span);
-            return out;
-        }
-    );
-}
-
-void SpanFunctions::Intspan_to_floatspan(DataChunk &args, ExpressionState &state, Vector &result) {
-    Intspan_to_floatspan_common(args.data[0], result, args.size());
-}
-
-void SpanFunctions::Floatspan_to_intspan(DataChunk &args, ExpressionState &state, Vector &result) {
-    Floatspan_to_intspan_common(args.data[0], result, args.size());
-}
-
-bool SpanFunctions::Intspan_to_floatspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Intspan_to_floatspan_common(source, result, count);
-    return true;    
-}
-
-bool SpanFunctions::Floatspan_to_intspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Floatspan_to_intspan_common(source, result, count);
-    return true;
-}
-
-// --- Conversion: tstzspan <-> datespan ---
-
-// datespan -> tstzspan
-static void Datespan_to_tstzspan_common(Vector &source, Vector &result, idx_t count) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            const uint8_t *span_data = reinterpret_cast<const uint8_t*>(blob.GetData());
-            size_t span_size = blob.GetSize();
-            
-            const Span *src_span = reinterpret_cast<const Span*>(span_data);
-            Span *dst = datespan_to_tstzspan(src_span);
-            
-            if (dst == NULL) {
-                throw InvalidInputException("Failed to convert datespan to tstzspan");
-            }
-            
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)dst, span_size);
-            free(dst);
-            return out;
-        }
-    );
-}
-
-// tstzspan -> datespan
-static void Tstzspan_to_datespan_common(Vector &source, Vector &result, idx_t count) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            const uint8_t *span_data = reinterpret_cast<const uint8_t*>(blob.GetData());
-            size_t span_size = blob.GetSize();
-            
-            const Span *src_span = reinterpret_cast<const Span*>(span_data);
-            Span *dst = tstzspan_to_datespan(src_span);
-            
-            if (dst == NULL) {
-                throw InvalidInputException("Failed to convert tstzspan to datespan");
-            }
-            
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)dst, span_size);
-            free(dst);
-            return out;
-        }
-    );
-}
-
-// --- SCALAR: datespan -> tstzspan ---
-void SpanFunctions::Datespan_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
-    Datespan_to_tstzspan_common(args.data[0], result, args.size());
-}
-
-// --- SCALAR: tstzspan -> datespan ---
-void SpanFunctions::Tstzspan_to_datespan(DataChunk &args, ExpressionState &state, Vector &result) {
-    Tstzspan_to_datespan_common(args.data[0], result, args.size());
-}
-
-// --- CAST: datespan -> tstzspan ---
-bool SpanFunctions::Datespan_to_tstzspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Datespan_to_tstzspan_common(source, result, count);
-    return true;
-}
-
-// --- CAST: tstzspan -> datespan ---
-bool SpanFunctions::Tstzspan_to_datespan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Tstzspan_to_datespan_common(source, result, count);
-    return true;
-}
-
-
-
-static inline string_t Numspan_shift_common(const string_t &blob, Datum shift_datum,
-                                        meosType validate_span_type, Vector &result) {
-    const uint8_t *data = (const uint8_t *)blob.GetData();
-    size_t size = blob.GetSize();
-    
-    Span *s = (Span *)malloc(size);
-    memcpy(s, data, size);
-    
-    switch(validate_span_type) {
-        case T_INTSPAN: VALIDATE_INTSPAN(s, NULL); break;
-        case T_FLOATSPAN: VALIDATE_FLOATSPAN(s, NULL); break;
-        case T_BIGINTSPAN: VALIDATE_BIGINTSPAN(s, NULL); break;
-        case T_DATESPAN: VALIDATE_DATESPAN(s, NULL); break;
-        case T_TSTZSPAN: VALIDATE_TSTZSPAN(s, NULL); break;
-        default: break;
-    }    
-    
-    Span *r = numspan_shift_scale(s, shift_datum, 0, /*do_shift=*/true, /*do_scale=*/false);
-    
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-    
-    free(s);
-    free(r);
-    return out;
-}
-
-static inline string_t Tstzspan_shift_common(const string_t &blob, interval_t duckdb_interval, Vector &result) {
-    const uint8_t *data = (const uint8_t *)blob.GetData();
-    size_t size = blob.GetSize();
-    
-    Span *s = (Span *)malloc(size);
-    memcpy(s, data, size);
-    
-    VALIDATE_TSTZSPAN(s, NULL);
-    
-    // Convert DuckDB interval_t to MEOS Interval
-    MeosInterval meos_interval = IntervaltToInterval(duckdb_interval);
-    
-    Span *r = tstzspan_shift_scale(s, &meos_interval, NULL);
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-    
-    free(s);
-    free(r);
-    return out;
-}
-
-void SpanFunctions::Numspan_shift(DataChunk &args, ExpressionState &state, Vector &result) {    
-    auto &span_vec = args.data[0];
-    auto out_type  = result.GetType();    
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
-    
-    switch (span_type) {
-        case T_INTSPAN: { // shift(intspan, integer) -> intspan
-            BinaryExecutor::Execute<string_t, int32_t, string_t>(
-                span_vec, args.data[1], result, args.size(),
-                [&](string_t blob, int32_t shift) -> string_t {
-                    return Numspan_shift_common(blob, Datum(shift), span_type, result);
-                });
-            break;
-        }
-        case T_BIGINTSPAN: { // shift(bigintspan, bigint) -> bigintspan
-            BinaryExecutor::Execute<string_t, int64_t, string_t>(
-                span_vec, args.data[1], result, args.size(),
-                [&](string_t blob, int64_t shift) -> string_t {
-                    return Numspan_shift_common(blob, Datum(shift), span_type, result);
-                });
-            break;
-        }
-        case T_FLOATSPAN: { // shift(floatspan, double) -> floatspan
-            BinaryExecutor::Execute<string_t, double, string_t>(
-                span_vec, args.data[1], result, args.size(),
-                [&](string_t blob, double shift) -> string_t {                    
-                    return Numspan_shift_common(blob, Float8GetDatum(shift), span_type, result);
-                });
-            break;
-        }
-        case T_DATESPAN: { // shift(datespan, integer) -> datespan
-            BinaryExecutor::Execute<string_t, int32_t, string_t>(
-                span_vec, args.data[1], result, args.size(),
-                [&](string_t blob, int32_t shift_days) -> string_t {
-                    return Numspan_shift_common(blob, Datum(shift_days), span_type, result);
-                });
-            break;
-        }
-        case T_TSTZSPAN: { // shift(tstzspan, interval) -> tstzspan
-            BinaryExecutor::Execute<string_t, interval_t, string_t>(
-                span_vec, args.data[1], result, args.size(),
-                [&](string_t blob, interval_t shift_interval) -> string_t {
-                    return Tstzspan_shift_common(blob, shift_interval, result);
-                });
-            break;
-        }
-        default:
-            throw NotImplementedException("shift(<span>): unsupported span type");
-    }
-}
-
-// --- OPERATOR: tstzspan @> timestamptz ---
-void SpanFunctions::Contains_tstzspan_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
-    BinaryExecutor::Execute<string_t, timestamp_tz_t, bool>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t span_blob, timestamp_tz_t ts_duckdb) -> bool {
-            const uint8_t *span_data = reinterpret_cast<const uint8_t*>(span_blob.GetData());
-            size_t span_data_size = span_blob.GetSize();
-            uint8_t *span_data_copy = (uint8_t*)malloc(span_data_size);
-            memcpy(span_data_copy, span_data, span_data_size);
-            Span *span = reinterpret_cast<Span*>(span_data_copy);
-            if (!span) {
-                free(span_data_copy);
-                throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
-            }
-            timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts_duckdb);
-            bool ret = contains_span_value(span, Datum(ts_meos.value));
-            free(span_data_copy);
-            return ret;
-        }
-    );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-// --- OPERATOR: tstzspan * tstzspan ---
-void SpanFunctions::Intersection_span_span(DataChunk &args, ExpressionState &state, Vector &result) {
-    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t span1_blob, string_t span2_blob, ValidityMask &mask, idx_t idx) -> string_t {
-            const uint8_t *span1_data = reinterpret_cast<const uint8_t*>(span1_blob.GetData());
-            size_t span1_data_size = span1_blob.GetSize();
-            uint8_t *span1_data_copy = (uint8_t*)malloc(span1_data_size);
-            memcpy(span1_data_copy, span1_data, span1_data_size);
-            Span *span1 = reinterpret_cast<Span*>(span1_data_copy);
-            if (!span1) {
-                free(span1_data_copy);
-                throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
-            }
-
-            const uint8_t *span2_data = reinterpret_cast<const uint8_t*>(span2_blob.GetData());
-            size_t span2_data_size = span2_blob.GetSize();
-            uint8_t *span2_data_copy = (uint8_t*)malloc(span2_data_size);
-            memcpy(span2_data_copy, span2_data, span2_data_size);
-            Span *span2 = reinterpret_cast<Span*>(span2_data_copy);
-            if (!span2) {
-                free(span2_data_copy);
-                throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
-            }
-
-            Span *ret = intersection_span_span(span1, span2);
-            if (!ret) {
-                free(span1);
-                free(span2);
-                mask.SetInvalid(idx);
-                return string_t();
-            }
-
-            size_t span_size = sizeof(*ret);
-            uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-            memcpy(span_buffer, ret, span_size);
-            string_t span_string_t((char *) span_buffer, span_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-            free(span_buffer);
-            free(ret);
-            free(span1);
-            free(span2);
-            return stored_data;
-        }
-    );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-// --- OPERATOR: span && span ---
-void SpanFunctions::Overlaps_span_span(DataChunk &args, ExpressionState &state, Vector &result) {
-    BinaryExecutor::Execute<string_t, string_t, bool>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t span1_blob, string_t span2_blob) -> bool {
-            const uint8_t *span1_data = reinterpret_cast<const uint8_t*>(span1_blob.GetData());
-            size_t span1_data_size = span1_blob.GetSize();
-            uint8_t *span1_data_copy = (uint8_t*)malloc(span1_data_size);
-            memcpy(span1_data_copy, span1_data, span1_data_size);
-            Span *span1 = reinterpret_cast<Span*>(span1_data_copy);
-            if (!span1) {
-                free(span1_data_copy);
-                throw InvalidInputException("Invalid SPAN data: null pointer");
-            }
-
-            const uint8_t *span2_data = reinterpret_cast<const uint8_t*>(span2_blob.GetData());
-            size_t span2_data_size = span2_blob.GetSize();
-            uint8_t *span2_data_copy = (uint8_t*)malloc(span2_data_size);
-            memcpy(span2_data_copy, span2_data, span2_data_size);
-            Span *span2 = reinterpret_cast<Span*>(span2_data_copy);
-            if (!span2) {
-                free(span2_data_copy);
-                throw InvalidInputException("Invalid SPAN data: null pointer");
-            }
-
-            bool ret = overlaps_span_span(span1, span2);
-            free(span1);
-            free(span2);
-            return ret;
-        }
-    );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
 
 } // namespace duckdb
 

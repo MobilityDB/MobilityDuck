@@ -67,7 +67,9 @@ set(EXTENSION_SOURCES
     src/geo/tgeompoint.cpp
     src/geo/tgeompoint_functions.cpp
     src/temporal/set.cpp
+    src/temporal/set_functions.cpp
     src/temporal/span.cpp
+    src/temporal/span_functions.cpp
     src/geo/geoset.cpp
     src/temporal/spanset.cpp
     src/geo/tgeometry.cpp

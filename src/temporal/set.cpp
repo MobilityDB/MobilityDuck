@@ -2,6 +2,7 @@
 #include "duckdb/main/extension_util.hpp"
 #include "duckdb/common/extension_type_info.hpp"
 #include "duckdb/function/scalar_function.hpp"
+#include "duckdb/function/table_function.hpp"
 #include "duckdb/main/extension_util.hpp"
 
 #include "time_util.hpp"
@@ -12,6 +13,10 @@ extern "C" {
     #include "meos_internal.h"   
     #include "meos_geo.h"
 }
+
+#ifndef WKB_EXTENDED
+#define WKB_EXTENDED ((uint8_t)0x04)
+#endif
 
 namespace duckdb {
 
@@ -137,7 +142,7 @@ void SetTypes::RegisterCastFunctions(DatabaseInstance &instance) {
     }
 }
 
-void SetTypes::RegisterScalarFunctions(DatabaseInstance &db) {    
+void SetTypes::RegisterScalarFunctions(DatabaseInstance &db) {
     for (const auto &set_type : SetTypes::AllTypes()) {
         auto base_type = SetTypeMapping::GetChildType(set_type);         
 
@@ -344,1245 +349,401 @@ void SetTypes::RegisterScalarFunctions(DatabaseInstance &db) {
             db,
             ScalarFunction("+", {set_type, set_type}, set_type, SetFunctions::Union_set_set)
         );
-    }
-}
 
-// --- AsText ---
-void SetFunctions::Set_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input_vec = args.data[0];
-    input_vec.Flatten(args.size());
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("asBinary", {set_type}, LogicalType::BLOB, SetFunctions::Set_as_binary)
+        );
 
-    bool has_digits = args.ColumnCount() > 1;
-    Vector *digits_vec_ptr = has_digits ? &args.data[1] : nullptr;
-    if (has_digits) digits_vec_ptr->Flatten(args.size());
-
-    for (idx_t i = 0; i < args.size(); i++) {
-        if (FlatVector::IsNull(input_vec, i) || (has_digits && FlatVector::IsNull(*digits_vec_ptr, i))) {
-            FlatVector::SetNull(result, i, true);
-            continue;
-        }
-
-        auto blob = FlatVector::GetData<string_t>(input_vec)[i];
-        int digits = has_digits ? FlatVector::GetData<int32_t>(*digits_vec_ptr)[i] : 15;
-
-        const uint8_t *data = (const uint8_t *)blob.GetData();
-        size_t size = blob.GetSize();
-
-        Set *s = (Set *)malloc(size);
-        memcpy(s, data, size);
-
-        char *cstr = set_out(s, digits);
-        auto str = StringVector::AddString(result, cstr);
-        FlatVector::GetData<string_t>(result)[i] = str;
-
-            free(s);
-            free(cstr);
-    }
-}
-
-
-// --- Cast From String ---
-bool SetFunctions::Set_to_text(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    source.Flatten(count);
-    auto result_data = FlatVector::GetData<string_t>(result); 
-
-    for (idx_t i = 0; i < count; ++i) {
-        if (FlatVector::IsNull(source, i)) {
-            FlatVector::SetNull(result, i, true);
-            continue;
-        }
-
-        Value val = source.GetValue(i);
-        const string_t &blob = StringValue::Get(val);
-        const uint8_t *data = (const uint8_t *)(blob.GetData());
-        size_t size = blob.GetSize();
-
-        Set *s = (Set*)malloc(size);                
-
-        memcpy(s, data, size);             
-        char *cstr = set_out(s, 15);  
-        result_data[i] = StringVector::AddString(result, cstr);
-
-        free(cstr);
-        free(s);
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("asHexWKB", {set_type}, LogicalType::VARCHAR, SetFunctions::Set_as_hexwkb)
+        );
     }
 
-    result.SetVectorType(VectorType::FLAT_VECTOR);
-    return true;
-}
-
-bool SetFunctions::Text_to_set(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    source.Flatten(count);
-    result.SetVectorType(VectorType::FLAT_VECTOR);
-
-    auto target_type = result.GetType();
-    meosType set_type = SetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t input) -> string_t {
-            std::string input_str(input.GetDataUnsafe(), input.GetSize());
-            Set *s = nullptr;
-
-            if (set_type == T_TEXTSET && !input_str.empty() && input_str.front() != '{') {                
-                text *txt = (text *)malloc(VARHDRSZ + input_str.size());
-                SET_VARSIZE(txt, VARHDRSZ + input_str.size());
-                memcpy(VARDATA(txt), input_str.c_str(), input_str.size());
-
-                s = value_set(PointerGetDatum(txt), T_TEXT);                
-            } else {
-                s = set_in(input_str.c_str(), set_type);                              
-            }            
-
-            string_t blob = StringVector::AddStringOrBlob(result, (const char *)s, set_mem_size(s));
-            free(s);
-            return blob;
-        }
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("textset_cat", {LogicalType::VARCHAR, SetTypes::textset()}, SetTypes::textset(),
+                       SetFunctions::Textcat_text_textset)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("textset_cat", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(),
+                       SetFunctions::Textcat_textset_text)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("||", {LogicalType::VARCHAR, SetTypes::textset()}, SetTypes::textset(), SetFunctions::Textcat_text_textset)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("||", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), SetFunctions::Textcat_textset_text)
     );
 
-    return true;
-}
+    // --- set_contains / @> ---
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contains", {SetTypes::textset(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, SetFunctions::Contains_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contains", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Contains_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contains", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SetFunctions::Contains_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contains", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Contains_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contains", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SetFunctions::Contains_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contains", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Contains_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contains", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SetFunctions::Contains_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contains", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Contains_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contains", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::BOOLEAN, SetFunctions::Contains_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contains", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Contains_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contains", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SetFunctions::Contains_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contains", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Contains_set_set));
+
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("@>", {SetTypes::textset(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, SetFunctions::Contains_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("@>", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Contains_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("@>", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SetFunctions::Contains_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("@>", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Contains_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("@>", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SetFunctions::Contains_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("@>", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Contains_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("@>", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SetFunctions::Contains_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("@>", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Contains_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("@>", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::BOOLEAN, SetFunctions::Contains_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("@>", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Contains_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("@>", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SetFunctions::Contains_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("@>", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Contains_set_set));
+
+    // --- set_contained / <@ ---
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contained", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Contained_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contained", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Contained_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contained", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Contained_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contained", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Contained_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contained", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Contained_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contained", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Contained_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contained", {LogicalType::VARCHAR, SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Contained_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contained", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Contained_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contained", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Contained_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contained", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Contained_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contained", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Contained_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_contained", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Contained_set_set));
+
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<@", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Contained_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<@", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Contained_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<@", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Contained_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<@", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Contained_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<@", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Contained_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<@", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Contained_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<@", {LogicalType::VARCHAR, SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Contained_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<@", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Contained_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<@", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Contained_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<@", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Contained_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<@", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Contained_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<@", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Contained_set_set));
+
+    // --- set_overlaps / && ---
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overlaps", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Overlaps_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overlaps", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Overlaps_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overlaps", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Overlaps_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overlaps", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Overlaps_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overlaps", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Overlaps_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overlaps", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Overlaps_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&&", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Overlaps_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&&", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Overlaps_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&&", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Overlaps_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&&", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Overlaps_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&&", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Overlaps_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&&", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Overlaps_set_set));
+
+    // --- Position: set_left / << ---
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_left", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_left", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_left", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_left", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_left", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_left", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_left", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_left", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_left", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_left", {LogicalType::VARCHAR, SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_left", {SetTypes::textset(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_left", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_left", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_left", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_left", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_left", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_left", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_left", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<<", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<<", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<<", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<<", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<<", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<<", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<<", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<<", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<<", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<<", {LogicalType::VARCHAR, SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<<", {SetTypes::textset(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<<", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<<", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<<", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<<", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<<", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<<", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<<", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
+
+    // --- set_right / >> ---
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_right", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_right", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_right", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_right", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_right", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_right", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_right", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_right", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_right", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_right", {LogicalType::VARCHAR, SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_right", {SetTypes::textset(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_right", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_right", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_right", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_right", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_right", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_right", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_right", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">>", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">>", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">>", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">>", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">>", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">>", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">>", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">>", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">>", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">>", {LogicalType::VARCHAR, SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">>", {SetTypes::textset(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">>", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">>", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">>", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">>", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">>", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">>", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">>", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
+
+    // --- set_overleft / &< ---
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overleft", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overleft", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overleft", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overleft", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overleft", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overleft", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overleft", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overleft", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overleft", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overleft", {LogicalType::VARCHAR, SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overleft", {SetTypes::textset(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overleft", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overleft", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overleft", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overleft", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overleft", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overleft", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overleft", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&<", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&<", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&<", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&<", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&<", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&<", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&<", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&<", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&<", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&<", {LogicalType::VARCHAR, SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&<", {SetTypes::textset(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&<", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&<", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&<", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&<", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&<", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&<", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&<", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
+
+    // --- set_overright / &> ---
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overright", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overright", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overright", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overright", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overright", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overright", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overright", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overright", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overright", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overright", {LogicalType::VARCHAR, SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overright", {SetTypes::textset(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overright", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overright", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overright", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overright", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overright", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overright", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_overright", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&>", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&>", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&>", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&>", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&>", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&>", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&>", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&>", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&>", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&>", {LogicalType::VARCHAR, SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&>", {SetTypes::textset(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&>", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&>", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&>", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&>", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&>", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&>", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("&>", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
+
+    // --- set_union / + (value forms) ---
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_union", {LogicalType::INTEGER, SetTypes::intset()}, SetTypes::intset(), SetFunctions::Union_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_union", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), SetFunctions::Union_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_union", {LogicalType::BIGINT, SetTypes::bigintset()}, SetTypes::bigintset(), SetFunctions::Union_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_union", {SetTypes::bigintset(), LogicalType::BIGINT}, SetTypes::bigintset(), SetFunctions::Union_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_union", {LogicalType::DOUBLE, SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Union_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_union", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), SetFunctions::Union_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_union", {LogicalType::VARCHAR, SetTypes::textset()}, SetTypes::textset(), SetFunctions::Union_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_union", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), SetFunctions::Union_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_union", {LogicalType::DATE, SetTypes::dateset()}, SetTypes::dateset(), SetFunctions::Union_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_union", {SetTypes::dateset(), LogicalType::DATE}, SetTypes::dateset(), SetFunctions::Union_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_union", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Union_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_union", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, SetTypes::tstzset(), SetFunctions::Union_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("+", {LogicalType::INTEGER, SetTypes::intset()}, SetTypes::intset(), SetFunctions::Union_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("+", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), SetFunctions::Union_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("+", {LogicalType::BIGINT, SetTypes::bigintset()}, SetTypes::bigintset(), SetFunctions::Union_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("+", {SetTypes::bigintset(), LogicalType::BIGINT}, SetTypes::bigintset(), SetFunctions::Union_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("+", {LogicalType::DOUBLE, SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Union_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("+", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), SetFunctions::Union_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("+", {LogicalType::VARCHAR, SetTypes::textset()}, SetTypes::textset(), SetFunctions::Union_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("+", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), SetFunctions::Union_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("+", {LogicalType::DATE, SetTypes::dateset()}, SetTypes::dateset(), SetFunctions::Union_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("+", {SetTypes::dateset(), LogicalType::DATE}, SetTypes::dateset(), SetFunctions::Union_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("+", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Union_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("+", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, SetTypes::tstzset(), SetFunctions::Union_set_value));
+
+    // --- set_minus / - ---
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_minus", {LogicalType::INTEGER, SetTypes::intset()}, SetTypes::intset(), SetFunctions::Minus_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_minus", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), SetFunctions::Minus_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_minus", {SetTypes::intset(), SetTypes::intset()}, SetTypes::intset(), SetFunctions::Minus_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_minus", {LogicalType::BIGINT, SetTypes::bigintset()}, SetTypes::bigintset(), SetFunctions::Minus_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_minus", {SetTypes::bigintset(), LogicalType::BIGINT}, SetTypes::bigintset(), SetFunctions::Minus_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_minus", {SetTypes::bigintset(), SetTypes::bigintset()}, SetTypes::bigintset(), SetFunctions::Minus_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_minus", {LogicalType::DOUBLE, SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Minus_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_minus", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), SetFunctions::Minus_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_minus", {SetTypes::floatset(), SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Minus_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_minus", {LogicalType::VARCHAR, SetTypes::textset()}, SetTypes::textset(), SetFunctions::Minus_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_minus", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), SetFunctions::Minus_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_minus", {SetTypes::textset(), SetTypes::textset()}, SetTypes::textset(), SetFunctions::Minus_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_minus", {LogicalType::DATE, SetTypes::dateset()}, SetTypes::dateset(), SetFunctions::Minus_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_minus", {SetTypes::dateset(), LogicalType::DATE}, SetTypes::dateset(), SetFunctions::Minus_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_minus", {SetTypes::dateset(), SetTypes::dateset()}, SetTypes::dateset(), SetFunctions::Minus_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_minus", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Minus_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_minus", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, SetTypes::tstzset(), SetFunctions::Minus_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_minus", {SetTypes::tstzset(), SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Minus_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("-", {LogicalType::INTEGER, SetTypes::intset()}, SetTypes::intset(), SetFunctions::Minus_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("-", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), SetFunctions::Minus_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("-", {SetTypes::intset(), SetTypes::intset()}, SetTypes::intset(), SetFunctions::Minus_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("-", {LogicalType::BIGINT, SetTypes::bigintset()}, SetTypes::bigintset(), SetFunctions::Minus_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("-", {SetTypes::bigintset(), LogicalType::BIGINT}, SetTypes::bigintset(), SetFunctions::Minus_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("-", {SetTypes::bigintset(), SetTypes::bigintset()}, SetTypes::bigintset(), SetFunctions::Minus_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("-", {LogicalType::DOUBLE, SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Minus_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("-", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), SetFunctions::Minus_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("-", {SetTypes::floatset(), SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Minus_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("-", {LogicalType::VARCHAR, SetTypes::textset()}, SetTypes::textset(), SetFunctions::Minus_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("-", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), SetFunctions::Minus_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("-", {SetTypes::textset(), SetTypes::textset()}, SetTypes::textset(), SetFunctions::Minus_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("-", {LogicalType::DATE, SetTypes::dateset()}, SetTypes::dateset(), SetFunctions::Minus_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("-", {SetTypes::dateset(), LogicalType::DATE}, SetTypes::dateset(), SetFunctions::Minus_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("-", {SetTypes::dateset(), SetTypes::dateset()}, SetTypes::dateset(), SetFunctions::Minus_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("-", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Minus_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("-", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, SetTypes::tstzset(), SetFunctions::Minus_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("-", {SetTypes::tstzset(), SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Minus_set_set));
+
+    // --- set_intersection / * ---
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_intersection", {LogicalType::INTEGER, SetTypes::intset()}, SetTypes::intset(), SetFunctions::Intersect_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_intersection", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), SetFunctions::Intersect_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_intersection", {SetTypes::intset(), SetTypes::intset()}, SetTypes::intset(), SetFunctions::Intersect_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_intersection", {LogicalType::BIGINT, SetTypes::bigintset()}, SetTypes::bigintset(), SetFunctions::Intersect_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_intersection", {SetTypes::bigintset(), LogicalType::BIGINT}, SetTypes::bigintset(), SetFunctions::Intersect_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_intersection", {SetTypes::bigintset(), SetTypes::bigintset()}, SetTypes::bigintset(), SetFunctions::Intersect_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_intersection", {LogicalType::DOUBLE, SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Intersect_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_intersection", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), SetFunctions::Intersect_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_intersection", {SetTypes::floatset(), SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Intersect_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_intersection", {LogicalType::VARCHAR, SetTypes::textset()}, SetTypes::textset(), SetFunctions::Intersect_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_intersection", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), SetFunctions::Intersect_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_intersection", {SetTypes::textset(), SetTypes::textset()}, SetTypes::textset(), SetFunctions::Intersect_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_intersection", {LogicalType::DATE, SetTypes::dateset()}, SetTypes::dateset(), SetFunctions::Intersect_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_intersection", {SetTypes::dateset(), LogicalType::DATE}, SetTypes::dateset(), SetFunctions::Intersect_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_intersection", {SetTypes::dateset(), SetTypes::dateset()}, SetTypes::dateset(), SetFunctions::Intersect_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_intersection", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Intersect_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_intersection", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, SetTypes::tstzset(), SetFunctions::Intersect_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_intersection", {SetTypes::tstzset(), SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Intersect_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("*", {LogicalType::INTEGER, SetTypes::intset()}, SetTypes::intset(), SetFunctions::Intersect_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("*", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), SetFunctions::Intersect_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("*", {SetTypes::intset(), SetTypes::intset()}, SetTypes::intset(), SetFunctions::Intersect_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("*", {LogicalType::BIGINT, SetTypes::bigintset()}, SetTypes::bigintset(), SetFunctions::Intersect_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("*", {SetTypes::bigintset(), LogicalType::BIGINT}, SetTypes::bigintset(), SetFunctions::Intersect_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("*", {SetTypes::bigintset(), SetTypes::bigintset()}, SetTypes::bigintset(), SetFunctions::Intersect_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("*", {LogicalType::DOUBLE, SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Intersect_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("*", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), SetFunctions::Intersect_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("*", {SetTypes::floatset(), SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Intersect_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("*", {LogicalType::VARCHAR, SetTypes::textset()}, SetTypes::textset(), SetFunctions::Intersect_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("*", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), SetFunctions::Intersect_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("*", {SetTypes::textset(), SetTypes::textset()}, SetTypes::textset(), SetFunctions::Intersect_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("*", {LogicalType::DATE, SetTypes::dateset()}, SetTypes::dateset(), SetFunctions::Intersect_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("*", {SetTypes::dateset(), LogicalType::DATE}, SetTypes::dateset(), SetFunctions::Intersect_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("*", {SetTypes::dateset(), SetTypes::dateset()}, SetTypes::dateset(), SetFunctions::Intersect_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("*", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Intersect_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("*", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, SetTypes::tstzset(), SetFunctions::Intersect_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("*", {SetTypes::tstzset(), SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Intersect_set_set));
+
+    // --- set_distance / <-> ---
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_distance", {LogicalType::INTEGER, LogicalType::INTEGER}, LogicalType::INTEGER, SetFunctions::Distance_value_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_distance", {LogicalType::BIGINT, LogicalType::BIGINT}, LogicalType::BIGINT, SetFunctions::Distance_value_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_distance", {LogicalType::DOUBLE, LogicalType::DOUBLE}, LogicalType::DOUBLE, SetFunctions::Distance_value_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_distance", {LogicalType::DATE, LogicalType::DATE}, LogicalType::INTEGER, SetFunctions::Distance_value_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_distance", {LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, LogicalType::DOUBLE, SetFunctions::Distance_value_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_distance", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::INTEGER, SetFunctions::Distance_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_distance", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::INTEGER, SetFunctions::Distance_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_distance", {SetTypes::intset(), SetTypes::intset()}, LogicalType::INTEGER, SetFunctions::Distance_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_distance", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BIGINT, SetFunctions::Distance_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_distance", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BIGINT, SetFunctions::Distance_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_distance", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BIGINT, SetFunctions::Distance_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_distance", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::DOUBLE, SetFunctions::Distance_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_distance", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::DOUBLE, SetFunctions::Distance_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_distance", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::DOUBLE, SetFunctions::Distance_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_distance", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::INTEGER, SetFunctions::Distance_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_distance", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::INTEGER, SetFunctions::Distance_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_distance", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::INTEGER, SetFunctions::Distance_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_distance", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::DOUBLE, SetFunctions::Distance_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_distance", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::DOUBLE, SetFunctions::Distance_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_distance", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::DOUBLE, SetFunctions::Distance_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {LogicalType::INTEGER, LogicalType::INTEGER}, LogicalType::INTEGER, SetFunctions::Distance_value_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {LogicalType::BIGINT, LogicalType::BIGINT}, LogicalType::BIGINT, SetFunctions::Distance_value_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {LogicalType::DOUBLE, LogicalType::DOUBLE}, LogicalType::DOUBLE, SetFunctions::Distance_value_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {LogicalType::DATE, LogicalType::DATE}, LogicalType::INTEGER, SetFunctions::Distance_value_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, LogicalType::DOUBLE, SetFunctions::Distance_value_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::INTEGER, SetFunctions::Distance_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::INTEGER, SetFunctions::Distance_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {SetTypes::intset(), SetTypes::intset()}, LogicalType::INTEGER, SetFunctions::Distance_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BIGINT, SetFunctions::Distance_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BIGINT, SetFunctions::Distance_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BIGINT, SetFunctions::Distance_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::DOUBLE, SetFunctions::Distance_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::DOUBLE, SetFunctions::Distance_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::DOUBLE, SetFunctions::Distance_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::INTEGER, SetFunctions::Distance_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::INTEGER, SetFunctions::Distance_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::INTEGER, SetFunctions::Distance_set_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::DOUBLE, SetFunctions::Distance_set_value));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::DOUBLE, SetFunctions::Distance_value_set));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::DOUBLE, SetFunctions::Distance_set_set));
 
-// --- Set constructor from list ---
-void SetFunctions::Set_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &list_input = args.data[0];
-    auto meos_type = SetTypeMapping::GetMeosTypeFromAlias(result.GetType().ToString());
-
-    UnaryExecutor::Execute<list_entry_t, string_t>(
-        list_input, result, args.size(),
-        [&](list_entry_t list_entry) -> string_t {
-            auto &child = ListVector::GetEntry(list_input);
-            child.Flatten(args.size());  
-
-            idx_t offset = list_entry.offset;
-            idx_t length = list_entry.length;
-
-            Datum *values = (Datum *)malloc(sizeof(Datum) * length);
-
-            for (idx_t i = 0; i < length; ++i) {
-                idx_t idx = offset + i;
-
-                switch (meos_type) {
-                    case T_INTSET: {
-                        int32_t v = FlatVector::GetData<int32_t>(child)[idx];
-                        values[i] = Datum(v);
-                        break;
-                    }
-                    case T_BIGINTSET: {
-                        int64_t v = FlatVector::GetData<int64_t>(child)[idx];
-                        values[i] = Datum(v);
-                        break;
-                    }
-                    case T_FLOATSET: {
-                        double v = FlatVector::GetData<double>(child)[idx];
-                        values[i] = Float8GetDatum(v);
-                        break;
-                    }
-                    case T_TEXTSET: {
-                        string_t str = FlatVector::GetData<string_t>(child)[idx];
-                        size_t len = str.GetSize();
-                        const char *cstr = str.GetData();
-
-                        text *txt = (text *)malloc(VARHDRSZ + len);
-                        SET_VARSIZE(txt, VARHDRSZ + len);
-                        memcpy(VARDATA(txt), cstr, len);
-
-                        values[i] = (Datum)txt;                        
-                        break;
-                    }
-                    case T_DATESET: {
-                        date_t d = FlatVector::GetData<date_t>(child)[idx];
-                        values[i] = Datum((int32_t)ToMeosDate(d));
-                        break;
-                    }
-                    case T_TSTZSET: {
-                        timestamp_t ts = FlatVector::GetData<timestamp_t>(child)[idx];
-                        values[i] = Datum(ToMeosTimestamp(ts));
-                        break;
-                    }
-                    default:
-                        free(values);
-                        throw InvalidInputException("Unsupported type in Set Constructor");
-                }
-            }
-
-            meosType base_type = settype_basetype(meos_type);            
-            Set *s = set_make_free(values, (int)length, base_type, true);
-                        
-            size_t size = set_mem_size(s);            
-            string_t blob = StringVector::AddStringOrBlob(result, (const char*)s, size);
-            
-            free(s);            
-            return blob;
-        }
-    );
-}
-
-// Conversion function: base type -> set 
-static inline void Write_set(Vector &result, idx_t row, Set *s) {
-    auto out = FlatVector::GetData<string_t>(result);
-    out[row] = StringVector::AddStringOrBlob(result, (const char *)s, set_mem_size(s));
-    free(s);
-}
-
-static inline void Value_to_set_core(Vector &source, Vector &result, idx_t count, meosType base_type) {
-    source.Flatten(count);
-    result.SetVectorType(VectorType::FLAT_VECTOR);
-    
-    auto handle_null = [&](idx_t row) {
-        FlatVector::SetNull(result, row, true);
-    };
-
-    switch (base_type) {
-        case T_INT4: {
-            auto in = FlatVector::GetData<int32_t>(source);
-            for (idx_t i = 0; i < count; ++i) {
-                if (FlatVector::IsNull(source, i)) { handle_null(i); continue; }
-                Datum d = Datum(in[i]);               
-                Set *s = value_set(d, T_INT4);
-                Write_set(result, i, s);
-            }
-            break;
-        }
-        case T_INT8: {
-            auto in = FlatVector::GetData<int64_t>(source);
-            for (idx_t i = 0; i < count; ++i) {
-                if (FlatVector::IsNull(source, i)) { handle_null(i); continue; }
-                Datum d = Datum(in[i]);               
-                Set *s = value_set(d, T_INT8);
-                Write_set(result, i, s);
-            }
-            break;
-        }
-        case T_FLOAT8: {
-            auto in = FlatVector::GetData<double>(source);
-            for (idx_t i = 0; i < count; ++i) {
-                if (FlatVector::IsNull(source, i)) { handle_null(i); continue; }
-                Datum d = Float8GetDatum(in[i]);
-                Set *s = value_set(d, T_FLOAT8);
-                Write_set(result, i, s);
-            }
-            break;
-        }
-        case T_TEXT: {
-            auto in = FlatVector::GetData<string_t>(source);
-            for (idx_t i = 0; i < count; ++i) {
-                if (FlatVector::IsNull(source, i)) {
-                    handle_null(i);
-                    continue;
-                }                
-                const char *data_ptr = in[i].GetDataUnsafe();
-                size_t len = in[i].GetSize();                
-                text *txt = (text *)malloc(VARHDRSZ + len);
-                SET_VARSIZE(txt, VARHDRSZ + len);
-                memcpy(VARDATA(txt), data_ptr, len);
-                Set *s = value_set(PointerGetDatum(txt), T_TEXT);
-                Write_set(result, i, s);
-                free(txt); 
-            }
-            break;
-        }
-            
-        case T_DATE: {
-            auto in = FlatVector::GetData<date_t>(source);
-            for (idx_t i = 0; i < count; ++i) {
-                if (FlatVector::IsNull(source, i)) { handle_null(i); continue; }
-                int32_t days = (int32_t)ToMeosDate(in[i]);
-                Datum d = Datum(days);
-                Set *s = value_set(d, T_DATE);
-                Write_set(result, i, s);
-            }
-            break;
-        }
-        case T_TIMESTAMPTZ: {
-            auto in = FlatVector::GetData<timestamp_t>(source);
-            for (idx_t i = 0; i < count; ++i) {
-                if (FlatVector::IsNull(source, i)) { handle_null(i); continue; }
-                auto meos_ts = ToMeosTimestamp(in[i]);        
-                Datum d = Datum(meos_ts);
-                Set *s = value_set(d, T_TIMESTAMPTZ);
-                Write_set(result, i, s);
-            }
-            break;
-        }
-        default:
-            throw NotImplementedException("SetConversion: unsupported base type for conversion to set");
-    }
-}
-
-// --- CAST (conversion: base -> set) ----
-
-bool SetFunctions::Value_to_set_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    auto target_type = result.GetType();
-    meosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
-    meosType base_type = settype_basetype(set_type);
-
-    Value_to_set_core(source, result, count, base_type);
-    return true;
-}
-
-// --- SCALAR function (base -> set) ----
-void SetFunctions::Value_to_set(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &source = args.data[0];
-    auto out_type = result.GetType();
-    meosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
-    meosType base_type = settype_basetype(set_type);
-
-    Value_to_set_core(source, result, args.size(), base_type);
-}
-
-// --- Conversion: intset <-> floatset ---
-static void Intset_to_floatset_common(Vector &source, Vector &result, idx_t count) {
-            UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            const Set *src_set = (const Set *)blob.GetDataUnsafe();            
-            Set *dst_set = intset_to_floatset(src_set);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)dst_set, set_mem_size(dst_set));
-            free(dst_set);
-            return out;
-        }
-    );
-}
-
-static void Floatset_to_intset_common(Vector &source, Vector &result, idx_t count) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            const Set *src_set = (const Set *)blob.GetDataUnsafe();
-            Set *dst_set = floatset_to_intset(src_set);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)dst_set, set_mem_size(dst_set));
-            free(dst_set);
-            return out;
-        }
-    );
-}
-
-
-void SetFunctions::Intset_to_floatset(DataChunk &args, ExpressionState &state, Vector &result) {
-    Intset_to_floatset_common(args.data[0], result, args.size());
-}
-
-void SetFunctions::Floatset_to_intset(DataChunk &args, ExpressionState &state, Vector &result) {
-    Floatset_to_intset_common(args.data[0], result, args.size());
-}
-
-bool SetFunctions::Intset_to_floatset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Intset_to_floatset_common(source, result, count);
-    return true;    
-}
-
-bool SetFunctions::Floatset_to_intset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Floatset_to_intset_common(source, result, count);
-    return true;
-}
-
-// --- Conversion: tstzset <-> dateset ---
-
-// dateset -> tstzset
-static void Dateset_to_tstzset_common(Vector &source, Vector &result, idx_t count) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            const Set *src = (const Set *)blob.GetDataUnsafe();            
-            Set *dst = dateset_to_tstzset(src);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)dst, set_mem_size(dst));
-            free(dst);
-            return out;
-        }
-    );
-}
-
-// tstzset -> dateset
-static void Tstzset_to_dateset_common(Vector &source, Vector &result, idx_t count) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            const Set *src = (const Set *)blob.GetDataUnsafe();                        
-            Set *dst = tstzset_to_dateset(src);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)dst, set_mem_size(dst));
-            free(dst);
-            return out;
-        }
-    );
-}
-
-// --- SCALAR: dateset -> tstzset ---
-void SetFunctions::Dateset_to_tstzset(DataChunk &args, ExpressionState &state, Vector &result) {
-    Dateset_to_tstzset_common(args.data[0], result, args.size());
-}
-
-// --- SCALAR: tstzset -> dateset ---
-void SetFunctions::Tstzset_to_dateset(DataChunk &args, ExpressionState &state, Vector &result) {
-    Tstzset_to_dateset_common(args.data[0], result, args.size());
-}
-
-// --- CAST: dateset -> tstzset ---
-bool SetFunctions::Dateset_to_tstzset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Dateset_to_tstzset_common(source, result, count);
-    return true;
-}
-
-// --- CAST: tstzset -> dateset ---
-bool SetFunctions::Tstzset_to_dateset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Tstzset_to_dateset_common(source, result, count);
-    return true;
-}
-
-// --- memSize ---
-void SetFunctions::Set_mem_size(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-
-    UnaryExecutor::Execute<string_t, int32_t>(
-        input, result, args.size(),
-        [&](string_t input_blob) -> int32_t {                                 
-            const uint8_t *data = (const uint8_t *)input_blob.GetData();
-            size_t size = input_blob.GetSize();
-            Set *s = (Set*)malloc(size);
-            memcpy(s, data, size);            
-            int mem_size = set_mem_size(s);  
-            free(s);
-            return mem_size;
-        });
-}
-
-
-// --- numValue ---
-void SetFunctions::Set_num_values(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-
-    UnaryExecutor::Execute<string_t, int32_t>(
-        input, result, args.size(),
-        [&](string_t input_blob) -> int32_t {
-            const uint8_t *data = (const uint8_t *)input_blob.GetData();
-            size_t size = input_blob.GetSize();
-            Set *s = (Set*)malloc(size);
-            memcpy(s, data, size);
-            int count = set_num_values(s);
-            free(s);
-            return count;
-        });
-}
-
-// --- startValue ---
-void SetFunctions::Set_start_value(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    auto set_type = SetTypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());
-    auto base_type = settype_basetype(set_type);
-
-    switch (base_type) {
-        case T_INT4:
-            UnaryExecutor::Execute<string_t, int32_t>(
-                input, result, args.size(),
-                [&](string_t input_blob) -> int32_t {
-                    const uint8_t *data = (const uint8_t *)input_blob.GetData();
-                    size_t size = input_blob.GetSize();
-                    Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);
-                    Datum d = set_start_value(s);
-                    free(s);
-                    return int32(d);
-                });
-            break;
-
-        case T_INT8:
-            UnaryExecutor::Execute<string_t, int64_t>(
-                input, result, args.size(),
-                [&](string_t input_blob) -> int64_t {
-                    const uint8_t *data = (const uint8_t *)input_blob.GetData();
-                    size_t size = input_blob.GetSize();
-                    Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);
-                    Datum d = set_start_value(s);
-                    free(s);
-                    return int64(d);
-                });
-            break;
-
-        case T_FLOAT8:
-            UnaryExecutor::Execute<string_t, double>(
-                input, result, args.size(),
-                [&](string_t input_blob) -> double {
-                    const uint8_t *data = (const uint8_t *)input_blob.GetData();
-                    size_t size = input_blob.GetSize();
-                    Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);                    
-                    Datum d = set_start_value(s);
-                    free(s);
-                    return DatumGetFloat8(d);
-                });
-            break;
-
-        case T_TEXT:
-            UnaryExecutor::Execute<string_t, string_t>(
-                input, result, args.size(),
-                [&](string_t input_blob) -> string_t {
-                    const uint8_t *data = (const uint8_t *)input_blob.GetData();
-                    size_t size = input_blob.GetSize();
-                    Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);                    
-                    Datum d = set_start_value(s);
-                    free(s);                    
-                    text *txt = (text *)DatumGetPointer(d);
-                    int len = VARSIZE(txt) - VARHDRSZ;
-                    string str(VARDATA(txt), len);
-                    return StringVector::AddString(result, str); 
-                });
-            break;
-
-        case T_DATE:
-            UnaryExecutor::Execute<string_t, date_t>(
-                input, result, args.size(),
-                [&](string_t input_blob) -> date_t {
-                    const uint8_t *data = (const uint8_t *)input_blob.GetData();
-                    size_t size = input_blob.GetSize();
-                    Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);                    
-                    Datum d = set_start_value(s);
-                    free(s);
-                    return date_t(int32(FromMeosDate(d)));
-                });
-            break;
-
-        case T_TIMESTAMPTZ:
-            UnaryExecutor::Execute<string_t, timestamp_t>(
-                input, result, args.size(),
-                [&](string_t input_blob) -> timestamp_t {
-                    const uint8_t *data = (const uint8_t *)input_blob.GetData();
-                    size_t size = input_blob.GetSize();
-                    Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);                    
-                    Datum d = set_start_value(s);
-                    free(s);
-                    int64_t tmp = int64(d);
-                    return FromMeosTimestamp(tmp);
-                });
-            break;
-
-        default:
-            throw NotImplementedException("startValue: Unsupported set base type.");
-    }
-}
-
-
-// --- endValue ---
-void SetFunctions::Set_end_value(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    auto set_type = SetTypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());
-    auto base_type = settype_basetype(set_type);
-
-    switch (base_type) {
-        case T_INT4:
-            UnaryExecutor::Execute<string_t, int32_t>(
-                input, result, args.size(),
-                [&](string_t input_blob) -> int32_t {
-                    const uint8_t *data = (const uint8_t *)input_blob.GetData();
-                    size_t size = input_blob.GetSize();
-                    Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);                    
-                    Datum d = set_end_value(s);
-                    free(s);
-                    return int32(d);
-                });
-            break;
-
-        case T_INT8:
-            UnaryExecutor::Execute<string_t, int64_t>(
-                input, result, args.size(),
-                [&](string_t input_blob) -> int64_t {
-                    const uint8_t *data = (const uint8_t *)input_blob.GetData();
-                    size_t size = input_blob.GetSize();
-                    Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);                    
-                    Datum d = set_end_value(s);
-                    free(s);
-                    return int64(d);
-                });
-            break;
-
-        case T_FLOAT8:
-            UnaryExecutor::Execute<string_t, double>(
-                input, result, args.size(),
-                [&](string_t input_blob) -> double {
-                    const uint8_t *data = (const uint8_t *)input_blob.GetData();
-                    size_t size = input_blob.GetSize();
-                    Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);                    
-                    Datum d = set_end_value(s);
-                    free(s);
-                    return DatumGetFloat8(d);
-                });
-            break;
-
-        case T_TEXT:
-            UnaryExecutor::Execute<string_t, string_t>(
-                input, result, args.size(),
-                [&](string_t input_blob) -> string_t {
-                    const uint8_t *data = (const uint8_t *)input_blob.GetData();
-                    size_t size = input_blob.GetSize();
-                    Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);                    
-                    Datum d = set_end_value(s);                    
-                    free(s);
-                    text *txt = (text *)DatumGetPointer(d);
-                    int len = VARSIZE(txt) - VARHDRSZ;
-                    string str(VARDATA(txt), len);
-                    return StringVector::AddString(result, str);
-                });
-            break;
-
-        case T_DATE:
-            UnaryExecutor::Execute<string_t, date_t>(
-                input, result, args.size(),
-                [&](string_t input_blob) -> date_t {
-                    const uint8_t *data = (const uint8_t *)input_blob.GetData();
-                    size_t size = input_blob.GetSize();
-                    Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);                    
-                    Datum d = set_end_value(s);
-                    free(s);
-                    return date_t(int32(FromMeosDate(d)));
-                });
-            break;
-
-        case T_TIMESTAMPTZ:
-            UnaryExecutor::Execute<string_t, timestamp_t>(
-                input, result, args.size(),
-                [&](string_t input_blob) -> timestamp_t {
-                    const uint8_t *data = (const uint8_t *)input_blob.GetData();
-                    size_t size = input_blob.GetSize();
-                    Set *s = (Set*)malloc(size);
-                    memcpy(s, data, size);                    
-                    Datum d = set_end_value(s);
-                    free(s);
-                    int64_t tmp = int64(d);
-                    return FromMeosTimestamp(tmp);
-                });
-            break;
-
-        default:
-            throw NotImplementedException("startValue: Unsupported set base type.");
-    }
-}
-
-// --- valueN ---
-void SetFunctions::Set_value_n(DataChunk &args, ExpressionState &state, Vector &result_vec) {
-    auto &set_vec = args.data[0];
-    auto &index_vec = args.data[1];
-
-    const auto set_type = SetTypeMapping::GetMeosTypeFromAlias(set_vec.GetType().ToString());
-    const auto base_type = settype_basetype(set_type);
-
-    result_vec.SetVectorType(VectorType::FLAT_VECTOR);
-    auto &validity = FlatVector::Validity(result_vec);
-
-    for (idx_t i = 0; i < args.size(); i++) {
-        validity.SetInvalid(i);
-
-        if (set_vec.GetValue(i).IsNull() || index_vec.GetValue(i).IsNull())
-            continue;
-        
-        int32_t index = FlatVector::GetData<int32_t>(index_vec)[i];
-        auto blob = FlatVector::GetData<string_t>(set_vec)[i];
-        const uint8_t *data = (const uint8_t *)blob.GetData();
-        size_t size = blob.GetSize();        
-        Set *s = (Set*)malloc(size);
-        memcpy(s, data, size);
-
-        if (!s) continue;
-
-        Datum d;
-        bool found = set_value_n(s, index, &d);
-        free(s);
-
-        if (!found) continue;
-        
-        switch (base_type) {
-            case T_INT4:
-                FlatVector::GetData<int32_t>(result_vec)[i] = int32(d);
-                break;
-            case T_INT8:
-                FlatVector::GetData<int64_t>(result_vec)[i] = int64(d);
-                break;
-            case T_FLOAT8:
-                FlatVector::GetData<double>(result_vec)[i] = DatumGetFloat8(d);
-                break;
-            case T_TEXT: {
-                text *txt = (text *)DatumGetPointer(d);
-                int len = VARSIZE(txt) - VARHDRSZ;
-                string str(VARDATA(txt), len);
-                FlatVector::GetData<string_t>(result_vec)[i] = StringVector::AddString(result_vec, str);
-                break;
-            }
-            case T_DATE: {
-                int32_t raw = int32(d);
-                FlatVector::GetData<date_t>(result_vec)[i] = date_t(FromMeosDate(raw));
-                break;
-            }
-            case T_TIMESTAMPTZ: {
-                int64_t raw = int64(d);
-                FlatVector::GetData<timestamp_t>(result_vec)[i] = timestamp_t(FromMeosTimestamp(raw));
-                break;
-            }
-            default:
-                throw NotImplementedException("valueN: unsupported set base type");
-        }
-
-        validity.SetValid(i);
-    }
-}
-
-// --- getValues ---
-
-void SetFunctions::Set_values(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    idx_t row_count = args.size();
-    
-    auto set_type_alias = SetTypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());
-    auto base_type = settype_basetype(set_type_alias); // MEOS base type enum
-    auto child_type = SetTypeMapping::GetChildType(input.GetType()); // DuckDB LogicalType
-    
-    auto &result_validity = FlatVector::Validity(result);
-    auto list_entries = FlatVector::GetData<list_entry_t>(result);
-    auto &child_vector = ListVector::GetEntry(result);
-    
-    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
-    ListVector::Reserve(result, row_count); 
-    idx_t total_offset = 0;
-
-    for (idx_t i = 0; i < row_count; ++i) {
-        if (input.GetValue(i).IsNull()) {
-            result_validity.SetInvalid(i);
-            continue;
-        }
-
-        string_t blob = FlatVector::GetData<string_t>(input)[i];
-        const uint8_t *data = (const uint8_t *)(blob.GetData());
-        size_t size = blob.GetSize();
-        Set *s = (Set*)malloc(size);
-        memcpy(s, data, size);
-        if (!s) {
-            result_validity.SetInvalid(i);
-            continue;
-        }
-
-        uint64_t count = s->count;
-        Datum *values = set_vals(s);
-        
-        ListVector::SetListSize(result, total_offset + count);
-        list_entries[i] = list_entry_t{total_offset, count};
-        
-        switch (base_type) {
-            case T_INT4: {
-                auto data = FlatVector::GetData<int32_t>(child_vector);
-                for (int j = 0; j < count; ++j) {
-                    data[total_offset + j] = int32(values[j]);
-                }
-                break;
-            }
-            case T_INT8: {
-                auto data = FlatVector::GetData<int64_t>(child_vector);
-                for (int j = 0; j < count; ++j) {
-                    data[total_offset + j] = int64(values[j]);
-                }
-                break;
-            }
-            case T_FLOAT8: {
-                auto data = FlatVector::GetData<double>(child_vector);
-                for (int j = 0; j < count; ++j) {
-                    data[total_offset + j] = DatumGetFloat8(values[j]);
-                }
-                break;
-            }
-            case T_TEXT: {
-                auto data = FlatVector::GetData<string_t>(child_vector);
-                for (int j = 0; j < count; ++j) {
-                    text *txt = (text *)DatumGetPointer(values[j]);
-                    string str(VARDATA(txt), VARSIZE(txt) - VARHDRSZ);
-                    data[total_offset + j] = StringVector::AddString(child_vector, str);
-                }
-                break;
-            }
-            case T_DATE: {
-                auto data = FlatVector::GetData<date_t>(child_vector);
-                for (int j = 0; j < count; ++j) {
-                    data[total_offset + j] = date_t(FromMeosDate(int32(values[j])));
-                }
-                break;
-            }
-            case T_TIMESTAMPTZ: {
-                auto data = FlatVector::GetData<timestamp_t>(child_vector);
-                for (int j = 0; j < count; ++j) {
-                    data[total_offset + j] = timestamp_t(FromMeosTimestamp(int64(values[j])));
-                }
-                break;
-            }
-            default:
-                free(values);
-                free(s);
-                throw NotImplementedException("Unsupported base type in getValues");
-        }
-
-        total_offset += count;
-        result_validity.SetValid(i);
-        free(values);
-        free(s);
-    }
-}
-
-// --- shift ---
-void SetFunctions::Numset_shift(DataChunk &args, ExpressionState &state, Vector &result) {    
-    auto &set_vec  = args.data[0];
-    auto out_type  = result.GetType();    
-    meosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
-
-    switch (set_type) {
-        case T_INTSET: { // shift(intset, integer) -> intset
-            BinaryExecutor::Execute<string_t, int32_t, string_t>(
-                set_vec, args.data[1], result, args.size(),
-                [&](string_t blob, int32_t shift) -> string_t {
-                    const Set *s = (const Set *)blob.GetDataUnsafe();
-                    Set *r = numset_shift_scale(s, Datum(shift), 0, /*do_shift=*/true, /*do_scale=*/false);
-                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-                    free(r);
-                    return out;                    
-                });
-            break;
-        }
-        case T_BIGINTSET: { // shift(bigintset, bigint) -> bigintset
-            BinaryExecutor::Execute<string_t, int64_t, string_t>(
-                set_vec, args.data[1], result, args.size(),
-                [&](string_t blob, int64_t shift) -> string_t {
-                    const Set *s = (const Set *)blob.GetDataUnsafe();
-                    Set *r = numset_shift_scale(s, Datum(shift), 0, /*do_shift=*/true, /*do_scale=*/false);
-                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-                    free(r);
-                    return out;
-                });
-            break;
-        }
-        case T_FLOATSET: { // shift(floatset, float) -> floatset
-            BinaryExecutor::Execute<string_t, double_t, string_t>(
-                set_vec, args.data[1], result, args.size(),
-                [&](string_t blob, double shift) -> string_t {                    
-                    const Set *s = (const Set *)blob.GetDataUnsafe();
-                    Set *r = numset_shift_scale(s, Float8GetDatum(shift), 0, /*do_shift=*/true, /*do_scale=*/false);
-                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-                    free(r);
-                    return out;
-                });
-            break;
-        }
-        case T_DATESET: { // shift(dateset, integer) -> dateset
-            BinaryExecutor::Execute<string_t, int32_t, string_t>(
-                set_vec, args.data[1], result, args.size(),
-                [&](string_t blob, int32_t shift) -> string_t {
-                    const Set *s = (const Set *)blob.GetDataUnsafe();
-                    Set *r = numset_shift_scale(s, Datum(shift), 0, /*do_shift=*/true, /*do_scale=*/false);
-                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-                    free(r);
-                    return out;
-                });
-            break;
-        }
-        default:
-            throw NotImplementedException("shift(<set>): unsupported base type");
-    }
-}
-
-// --- tstzset shift ---
-void SetFunctions::Tstzset_shift(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &set_vec = args.data[0];
-    auto &iv_vec  = args.data[1];
-
-    BinaryExecutor::Execute<string_t, interval_t, string_t>(
-        set_vec, iv_vec, result, args.size(),
-        [&](string_t blob, const interval_t &iv) -> string_t {
-            const Set *s = (const Set *)blob.GetDataUnsafe();            
-            MeosInterval meos_iv = IntervaltToInterval(iv);
-            Set *r = tstzset_shift_scale(s, &meos_iv, NULL);
-            return StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));             
-        }
-    );
-}
-// --- Scale ---
-void SetFunctions::Numset_scale(DataChunk &args, ExpressionState &state, Vector &result){
-    auto &set_vec  = args.data[0];
-    auto out_type  = result.GetType();    
-    meosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
-
-    switch (set_type) {
-        case T_INTSET: { // scale(intset, integer) -> intset
-            BinaryExecutor::Execute<string_t, int32_t, string_t>(
-                set_vec, args.data[1], result, args.size(),
-                [&](string_t blob, int32_t width) -> string_t {
-                    const Set *s = (const Set *)blob.GetDataUnsafe();
-                    Set *r = numset_shift_scale(s, 0, Datum(width), false, true);
-                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-                    free(r);
-                    return out;                    
-                });
-            break;
-        }
-        case T_BIGINTSET: { // scale(bigintset, integer) -> bigintset
-            BinaryExecutor::Execute<string_t, int64_t, string_t>(
-                set_vec, args.data[1], result, args.size(),
-                [&](string_t blob, int64_t width) -> string_t {
-                    const Set *s = (const Set *)blob.GetDataUnsafe();
-                    Set *r = numset_shift_scale(s, 0, Datum(width), false, true);
-                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-                    free(r);
-                    return out;
-                });
-            break;
-        }
-        case T_FLOATSET: { // scale(floatset, integer) -> floatset
-            BinaryExecutor::Execute<string_t, int32_t, string_t>(
-                set_vec, args.data[1], result, args.size(),
-                [&](string_t blob, double width) -> string_t {                    
-                    const Set *s = (const Set *)blob.GetDataUnsafe();
-                    Set *r = numset_shift_scale(s, 0, Float8GetDatum(width), false, true);
-                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-                    free(r);
-                    return out;
-                });
-            break;
-        }
-        case T_DATESET: { // scale(dateset, integer) -> dateset
-            BinaryExecutor::Execute<string_t, int32_t, string_t>(
-                set_vec, args.data[1], result, args.size(),
-                [&](string_t blob, int32_t width) -> string_t {
-                    const Set *s = (const Set *)blob.GetDataUnsafe();
-                    Set *r = numset_shift_scale(s, 0, Datum(width), false, true);
-                    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-                    free(r);
-                    return out;
-                });
-            break;
-        }
-        default:
-            throw NotImplementedException("scale(<set>): unsupported base type");
-    }
-}
-
-// --- tstzset scale ---
-void SetFunctions::Tstzset_scale(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &set_vec = args.data[0];
-    auto &iv_vec  = args.data[1];
-
-    BinaryExecutor::Execute<string_t, interval_t, string_t>(
-        set_vec, iv_vec, result, args.size(),
-        [&](string_t blob, const interval_t &iv) -> string_t {
-            const Set *s = (const Set *)blob.GetDataUnsafe();            
-            MeosInterval meos_iv = IntervaltToInterval(iv);
-            Set *r = tstzset_shift_scale(s, NULL, &meos_iv);
-            return StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));             
-        }
-    );
-}
-// --- Shift Scale ---
-void SetFunctions::Numset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &set_vec = args.data[0];
-    auto &sh_vec  = args.data[1];
-    auto &wd_vec  = args.data[2];
-
-    auto out_type  = result.GetType();
-    meosType set_type = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
-
-    switch (set_type) {
-        case T_INTSET: { // shift_scale(intset, integer, integer) -> intset
-            TernaryExecutor::Execute<string_t, int32_t, int32_t, string_t>(
-                set_vec, sh_vec, wd_vec, result, args.size(),
-                [&](string_t blob, int32_t shift, int32_t width) -> string_t {
-                    const Set *s = (const Set *)blob.GetDataUnsafe();
-                    Set *r = numset_shift_scale(s, Datum(shift), Datum(width), true, true);
-                    auto out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-                    free(r);
-                    return out;
-                });
-            break;
-        }
-
-        case T_BIGINTSET: { // shift_scale(bigintset, bigint, bigint) -> bigintset
-            TernaryExecutor::Execute<string_t, int64_t, int64_t, string_t>(
-                set_vec, sh_vec, wd_vec, result, args.size(),
-                [&](string_t blob, int64_t shift, int64_t width) -> string_t {
-                    const Set *s = (const Set *)blob.GetDataUnsafe();
-                    Set *r = numset_shift_scale(s, Datum(shift),Datum(width), true, true);
-                    auto out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-                    free(r);
-                    return out;
-                });
-            break;
-        }
-
-        case T_FLOATSET: { // shift_scale(floatset, double, double) -> floatset
-            TernaryExecutor::Execute<string_t, double, double, string_t>(
-                set_vec, sh_vec, wd_vec, result, args.size(),
-                [&](string_t blob, double shift, double width) -> string_t {
-                    const Set *s = (const Set *)blob.GetDataUnsafe();
-                    Set *r = numset_shift_scale(s, Float8GetDatum(shift), Float8GetDatum(width), true, true);
-                    auto out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-                    free(r);
-                    return out;
-                });
-            break;
-        }
-
-        case T_DATESET: { // shift_scale(dateset, integer(days), integer(days)) -> dateset
-            TernaryExecutor::Execute<string_t, int32_t, int32_t, string_t>(
-                set_vec, sh_vec, wd_vec, result, args.size(),
-                [&](string_t blob, int32_t shift_days, int32_t width_days) -> string_t {
-                    const Set *s = (const Set *)blob.GetDataUnsafe();
-                    Set *r = numset_shift_scale(s,Datum(shift_days), Datum(width_days), true, true);
-                    auto out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-                    free(r);
-                    return out;
-                });
-            break;
-        }
-
-        default:
-            throw NotImplementedException("shift_scale(<numset>): unsupported base type");
-    }
-}
-void SetFunctions::Tstzset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &set_vec = args.data[0];
-    auto &shift_vec = args.data[1];
-    auto &duration_vec = args.data[2];
-
-    TernaryExecutor::Execute<string_t, interval_t, interval_t, string_t>(
-        set_vec, shift_vec, duration_vec, result, args.size(),
-        [&](string_t blob, const interval_t &shift, const interval_t &duration) -> string_t {
-            const Set *s = (const Set *)blob.GetDataUnsafe();            
-            MeosInterval meos_shift = IntervaltToInterval(shift);
-            MeosInterval meos_duration = IntervaltToInterval(duration);
-            Set *r = tstzset_shift_scale(s, &meos_shift, &meos_duration);
-            return StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));             
-        }
-    );
-}
-
-// --- Floor (floatset) ---
-void SetFunctions::Floatset_floor(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t input_blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)input_blob.GetData();
-            size_t size = input_blob.GetSize();
-            Set *s = (Set*)malloc(size);
-            memcpy(s, data, size);
-            Set *r = floatset_floor(s);
-            free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-            free(r);
-            return out;            
-        });
-}
-
-// --- Ceil (floatset) ---
-void SetFunctions::Floatset_ceil(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t input_blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)input_blob.GetData();
-            size_t size = input_blob.GetSize();
-            Set *s = (Set*)malloc(size);
-            memcpy(s, data, size);
-            Set *r = floatset_ceil(s);
-            free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-            free(r);
-            return out;            
-        });
-}
-
-// --- Round (floatset) ---
-void SetFunctions::Floatset_round(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input_vec = args.data[0];
-    input_vec.Flatten(args.size());
-
-    bool has_digits = args.ColumnCount() > 1;
-    Vector *digits_vec_ptr = has_digits ? &args.data[1] : nullptr;
-    if (has_digits) digits_vec_ptr->Flatten(args.size());
-
-    for (idx_t i = 0; i < args.size(); i++) {
-        if (FlatVector::IsNull(input_vec, i) || (has_digits && FlatVector::IsNull(*digits_vec_ptr, i))) {
-            FlatVector::SetNull(result, i, true);
-            continue;
-        }
-
-        auto blob = FlatVector::GetData<string_t>(input_vec)[i];
-        int digits = has_digits ? FlatVector::GetData<int32_t>(*digits_vec_ptr)[i] : 0;
-
-        const uint8_t *data = (const uint8_t *)blob.GetData();
-        size_t size = blob.GetSize();
-
-        Set *s = (Set *)malloc(size);
-        memcpy(s, data, size);
-        Set *r = set_round(s, digits);
-        free(s);
-        string_t str = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-        FlatVector::GetData<string_t>(result)[i] = str;
-        free(r);
-    }
-}
-
-// --- Degrees (floatset) ---
-void SetFunctions::Floatset_degrees(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input_vec = args.data[0];
-    input_vec.Flatten(args.size());
-
-    bool has_bools = args.ColumnCount() > 1;
-    Vector *bools_vec_ptr = has_bools ? &args.data[1] : nullptr;
-    if (has_bools) bools_vec_ptr->Flatten(args.size());
-
-    for (idx_t i = 0; i < args.size(); i++) {
-        if (FlatVector::IsNull(input_vec, i) || (has_bools && FlatVector::IsNull(*bools_vec_ptr, i))) {
-            FlatVector::SetNull(result, i, true);
-            continue;
-        }
-
-        auto blob = FlatVector::GetData<string_t>(input_vec)[i];
-        int bools = has_bools ? FlatVector::GetData<int32_t>(*bools_vec_ptr)[i] : false;
-
-        const uint8_t *data = (const uint8_t *)blob.GetData();
-        size_t size = blob.GetSize();
-
-        Set *s = (Set *)malloc(size);
-        memcpy(s, data, size);
-        Set *r = floatset_degrees(s, bools);
-        free(s);
-        string_t str = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-        FlatVector::GetData<string_t>(result)[i] = str;
-        free(r);
-    }
-}
-
-// --- Radians (floatset) ---
-void SetFunctions::Floatset_radians(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input_vec = args.data[0];
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, args.size(),
-        [&](string_t input_blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)input_blob.GetData();
-            size_t size = input_blob.GetSize();
-            Set *s = (Set*)malloc(size);
-            memcpy(s, data, size);
-            Set *r = floatset_radians(s);
-            free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-            free(r);
-            return out;            
-        });
-    }
-
-// --- Textset lower ---
-void SetFunctions::Textset_lower(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t input_blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)input_blob.GetData();
-            size_t size = input_blob.GetSize();
-            Set *s = (Set*)malloc(size);
-            memcpy(s, data, size);
-            Set *r = textset_lower(s);
-            free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-            free(r);
-            return out;            
-        });
-}
-
-// --- Textset upper ---
-void SetFunctions::Textset_upper(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t input_blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)input_blob.GetData();
-            size_t size = input_blob.GetSize();
-            Set *s = (Set*)malloc(size);
-            memcpy(s, data, size);
-            Set *r = textset_upper(s);
-            free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-            free(r);
-            return out;            
-        });
-}
-
-// --- Textset initcap ---
-void SetFunctions::Textset_initcap(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t input_blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)input_blob.GetData();
-            size_t size = input_blob.GetSize();
-            Set *s = (Set*)malloc(size);
-            memcpy(s, data, size);
-            Set *r = textset_initcap(s);
-            free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-            free(r);
-            return out;            
-        });
-}
-
-// --- Union: set + set ---
-void SetFunctions::Union_set_set(DataChunk &args, ExpressionState &state, Vector &result) {
-    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t set1_str, string_t set2_str, ValidityMask &mask, idx_t idx) -> string_t {
-            Set *set1 = nullptr;
-            if (set1_str.GetSize() > 0) {
-                set1 = (Set*)malloc(set1_str.GetSize());
-                memcpy(set1, set1_str.GetData(), set1_str.GetSize());
-            }
-            if (!set1) {
-                throw InternalException("Failure in Union_set_set: unable to cast string to set");
-            }
-
-            Set *set2 = nullptr;
-            if (set2_str.GetSize() > 0) {
-                set2 = (Set*)malloc(set2_str.GetSize());
-                memcpy(set2, set2_str.GetData(), set2_str.GetSize());
-            }
-            if (!set2) {
-                throw InternalException("Failure in Union_set_set: unable to cast string to set");
-            }
-
-            Set *ret = union_set_set(set1, set2);
-            if (!ret) {
-                free(set1);
-                free(set2);
-                mask.SetInvalid(idx);
-                return string_t();
-            }
-            size_t set_size = set_mem_size(ret);
-            uint8_t *set_data = (uint8_t*)malloc(set_size);
-            memcpy(set_data, ret, set_size);
-            string_t ret_str(reinterpret_cast<const char*>(set_data), set_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-
-            free(ret);
-            free(set1);
-            free(set2);
-            return stored_data;
-        }
-    );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 // --- Unnest ---
