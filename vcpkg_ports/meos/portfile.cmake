@@ -1,12 +1,10 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO MobilityDB/MobilityDB
-    # Pin a commit — REF master + SHA512 breaks whenever GitHub's archive tarball changes.
     REF f11b7443ee985dc1ffb778c325e62f0edaf255ec
     SHA512 ae8589acc86016c601f9c3c157e94b35e6e8fc50d6194d26db510d51e65a6e751279a3ced258a6bb6e56a22e083993aaeab92f20b9d18d41c7a2c8c73b7dc9df
 )
 
-# MEOS build: utils needs meos headers
 vcpkg_replace_string(
     "${SOURCE_PATH}/postgres/utils/CMakeLists.txt"
     "set_property(TARGET utils PROPERTY POSITION_INDEPENDENT_CODE ON)"

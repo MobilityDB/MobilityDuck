@@ -5,6 +5,7 @@
 
 #include "span.hpp"
 #include "set.hpp"
+#include "spanset.hpp"
 
 namespace duckdb {
 
@@ -59,9 +60,9 @@ struct TboxFunctions {
     static void Span_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static bool Span_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
-    // TODO: implement once spanset is available
-    // static void Spanset_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
-
+    static void SpansetToTboxExecutor(Vector &value, Vector &result, idx_t count); 
+    static void Spanset_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static bool Spanset_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     /* ***************************************************
      * Conversion functions + cast functions: TBOX -> [TYPE]
      ****************************************************/
@@ -118,6 +119,19 @@ struct TboxFunctions {
     static void Tbox_expand_value(DataChunk &args, ExpressionState &state, Vector &result);
 
     static void Tbox_expand_time(DataChunk &args, ExpressionState &state, Vector &result);
+
+    static void Tbox_round(DataChunk &args, ExpressionState &state, Vector &result);
+
+    // TODO: Selectivity functions
+    
+    /********************************************************
+    * Topological operators 
+    ********************************************************/
+    static void Contains_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Contained_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overlaps_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);    
+    static void Same_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Adjacent_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

@@ -467,6 +467,41 @@ bool TboxFunctions::Tbox_to_tstzspan_cast(Vector &source, Vector &result, idx_t 
     return true;
 }
 
+void TboxFunctions::SpansetToTboxExecutor(Vector &value, Vector &result, idx_t count) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        value, result, count,
+        [&](string_t spanset_str) {
+            SpanSet *spanset = nullptr;
+            if (spanset_str.GetSize() > 0) {
+                spanset = (SpanSet*)malloc(spanset_str.GetSize());
+                memcpy(spanset, spanset_str.GetDataUnsafe(), spanset_str.GetSize());
+            }
+            if (!spanset) {
+                throw InternalException("Failure in SpansetToTboxExecutor: unable to cast binary to spanset");
+            }
+            TBox *tbox = spanset_to_tbox(spanset);
+            size_t tbox_size = sizeof(TBox);
+            char *tbox_data = (char*)malloc(tbox_size);
+            memcpy(tbox_data, tbox, tbox_size);
+            free(spanset);
+            free(tbox);
+            return string_t(tbox_data, tbox_size);
+        }
+    );
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TboxFunctions::Spanset_to_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    SpansetToTboxExecutor(args.data[0], result, args.size());
+}
+
+bool TboxFunctions::Spanset_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+    TboxFunctions::SpansetToTboxExecutor(source, result, count);
+    return true;
+}
+
 void TboxFunctions::Tbox_hasx(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, bool>(
         args.data[0], result, args.size(),
@@ -1028,6 +1063,215 @@ void TboxFunctions::Tbox_expand_time(DataChunk &args, ExpressionState &state, Ve
             free(tbox);
             free(ret);
             return string_t(ret_data, ret_size);
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TboxFunctions::Tbox_round(DataChunk &args, ExpressionState &state, Vector &result) {
+    if (args.ColumnCount() == 1){
+        UnaryExecutor::Execute<string_t, string_t>(
+            args.data[0], result, args.size(),
+            [&](string_t tbox_str) {
+                TBox *tbox = nullptr;
+                if (tbox_str.GetSize() > 0) {
+                    tbox = (TBox*)malloc(tbox_str.GetSize());
+                    memcpy(tbox, tbox_str.GetDataUnsafe(), tbox_str.GetSize());
+                }
+                if (!tbox) {
+                    throw InternalException("Failure in Tbox_round: unable to cast binary to tbox");
+                }
+                TBox *rounded_tbox = tbox_round(tbox, 0);
+                size_t rounded_tbox_size = sizeof(TBox);
+                char *rounded_tbox_data = (char*)malloc(rounded_tbox_size);
+                memcpy(rounded_tbox_data, rounded_tbox, rounded_tbox_size);
+                free(tbox);
+                free(rounded_tbox);
+                return string_t(rounded_tbox_data, rounded_tbox_size);
+            }
+        );
+    } else if (args.ColumnCount() == 2) {
+        BinaryExecutor::Execute<string_t, double, string_t>(
+            args.data[0], args.data[1], result, args.size(),
+            [&](string_t tbox_str, double precision) {
+                TBox *tbox = nullptr;
+                if (tbox_str.GetSize() > 0) {
+                    tbox = (TBox*)malloc(tbox_str.GetSize());
+                    memcpy(tbox, tbox_str.GetDataUnsafe(), tbox_str.GetSize());
+                }
+                if (!tbox) {
+                    throw InternalException("Failure in Tbox_round: unable to cast binary to tbox");
+                }
+                TBox *rounded_tbox = tbox_round(tbox, precision);
+                size_t rounded_tbox_size = sizeof(TBox);
+                char *rounded_tbox_data = (char*)malloc(rounded_tbox_size);
+                memcpy(rounded_tbox_data, rounded_tbox, rounded_tbox_size);
+                free(tbox);
+                free(rounded_tbox);
+                return string_t(rounded_tbox_data, rounded_tbox_size);
+            }
+        );
+    }
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TboxFunctions::Contains_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t tbox1_str, string_t tbox2_str) {
+            TBox *tbox1 = nullptr;
+            if (tbox1_str.GetSize() > 0) {
+                tbox1 = (TBox*)malloc(tbox1_str.GetSize());
+                memcpy(tbox1, tbox1_str.GetDataUnsafe(), tbox1_str.GetSize());
+            }
+            if (!tbox1) {
+                throw InternalException("Failure in Contains_tbox_tbox: unable to cast binary to tbox");
+            }
+            TBox *tbox2 = nullptr;
+            if (tbox2_str.GetSize() > 0) {
+                tbox2 = (TBox*)malloc(tbox2_str.GetSize());
+                memcpy(tbox2, tbox2_str.GetDataUnsafe(), tbox2_str.GetSize());
+            }
+            if (!tbox2) {
+                free(tbox1);
+                throw InternalException("Failure in Contains_tbox_tbox: unable to cast binary to tbox");
+            }
+            bool ret = contains_tbox_tbox(tbox1, tbox2);
+            free(tbox1);
+            free(tbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TboxFunctions::Contained_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t tbox1_str, string_t tbox2_str) {
+            TBox *tbox1 = nullptr;
+            if (tbox1_str.GetSize() > 0) {
+                tbox1 = (TBox*)malloc(tbox1_str.GetSize());
+                memcpy(tbox1, tbox1_str.GetDataUnsafe(), tbox1_str.GetSize());
+            }
+            if (!tbox1) {
+                throw InternalException("Failure in Contained_tbox_tbox: unable to cast binary to tbox");
+            }
+            TBox *tbox2 = nullptr;
+            if (tbox2_str.GetSize() > 0) {
+                tbox2 = (TBox*)malloc(tbox2_str.GetSize());
+                memcpy(tbox2, tbox2_str.GetDataUnsafe(), tbox2_str.GetSize());
+            }
+            if (!tbox2) {
+                free(tbox1);
+                throw InternalException("Failure in Contained_tbox_tbox: unable to cast binary to tbox");
+            }
+            bool ret = contained_tbox_tbox(tbox1, tbox2);
+            free(tbox1);
+            free(tbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TboxFunctions::Overlaps_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t tbox1_str, string_t tbox2_str) {
+            TBox *tbox1 = nullptr;
+            if (tbox1_str.GetSize() > 0) {
+                tbox1 = (TBox*)malloc(tbox1_str.GetSize());
+                memcpy(tbox1, tbox1_str.GetDataUnsafe(), tbox1_str.GetSize());
+            }
+            if (!tbox1) {
+                throw InternalException("Failure in Overlaps_tbox_tbox: unable to cast binary to tbox");
+            }
+            TBox *tbox2 = nullptr;
+            if (tbox2_str.GetSize() > 0) {
+                tbox2 = (TBox*)malloc(tbox2_str.GetSize());
+                memcpy(tbox2, tbox2_str.GetDataUnsafe(), tbox2_str.GetSize());
+            }
+            if (!tbox2) {
+                free(tbox1);
+                throw InternalException("Failure in Overlaps_tbox_tbox: unable to cast binary to tbox");
+            }
+            bool ret = overlaps_tbox_tbox(tbox1, tbox2);
+            free(tbox1);
+            free(tbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TboxFunctions::Adjacent_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t tbox1_str, string_t tbox2_str) {
+            TBox *tbox1 = nullptr;
+            if (tbox1_str.GetSize() > 0) {
+                tbox1 = (TBox*)malloc(tbox1_str.GetSize());
+                memcpy(tbox1, tbox1_str.GetDataUnsafe(), tbox1_str.GetSize());
+            }
+            if (!tbox1) {
+                throw InternalException("Failure in Adjacent_tbox_tbox: unable to cast binary to tbox");
+            }
+            TBox *tbox2 = nullptr;
+            if (tbox2_str.GetSize() > 0) {
+                tbox2 = (TBox*)malloc(tbox2_str.GetSize());
+                memcpy(tbox2, tbox2_str.GetDataUnsafe(), tbox2_str.GetSize());
+            }
+            if (!tbox2) {
+                free(tbox1);
+                throw InternalException("Failure in Adjacent_tbox_tbox: unable to cast binary to tbox");
+            }
+            bool ret = adjacent_tbox_tbox(tbox1, tbox2);
+            free(tbox1);
+            free(tbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TboxFunctions::Same_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t tbox1_str, string_t tbox2_str) {
+            TBox *tbox1 = nullptr;
+            if (tbox1_str.GetSize() > 0) {
+                tbox1 = (TBox*)malloc(tbox1_str.GetSize());
+                memcpy(tbox1, tbox1_str.GetDataUnsafe(), tbox1_str.GetSize());
+            }
+            if (!tbox1) {
+                throw InternalException("Failure in Same_tbox_tbox: unable to cast binary to tbox");
+            }
+            TBox *tbox2 = nullptr;
+            if (tbox2_str.GetSize() > 0) {
+                tbox2 = (TBox*)malloc(tbox2_str.GetSize());
+                memcpy(tbox2, tbox2_str.GetDataUnsafe(), tbox2_str.GetSize());
+            }
+            if (!tbox2) {
+                free(tbox1);
+                throw InternalException("Failure in Same_tbox_tbox: unable to cast binary to tbox");
+            }
+            bool ret = same_tbox_tbox(tbox1, tbox2);
+            free(tbox1);
+            free(tbox2);
+            return ret;
         }
     );
     if (args.size() == 1) {

@@ -3,6 +3,7 @@
 #include "common.hpp"
 #include "temporal/tbox.hpp"
 #include "temporal/tbox_functions.hpp"
+#include "temporal/spanset.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 // #include "duckdb/common/exception.hpp"
@@ -121,6 +122,27 @@ void TboxType::RegisterCastFunctions(DatabaseInstance &instance) {
         TBOX(),
         SpanTypes::TSTZSPAN(),
         TboxFunctions::Tbox_to_tstzspan_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        SpansetTypes::intspanset(),
+        TBOX(),
+        TboxFunctions::Spanset_to_tbox_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        SpansetTypes::floatspanset(),
+        TBOX(),
+        TboxFunctions::Spanset_to_tbox_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        SpansetTypes::tstzspanset(),
+        TBOX(),
+        TboxFunctions::Spanset_to_tbox_cast
     );
 }
 
@@ -322,6 +344,36 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
             {TBOX()},
             SpanTypes::TSTZSPAN(),
             TboxFunctions::Tbox_to_tstzspan
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox",
+            {SpansetTypes::intspanset()},
+            TBOX(),
+            TboxFunctions::Spanset_to_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox",
+            {SpansetTypes::floatspanset()},
+            TBOX(),
+            TboxFunctions::Spanset_to_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox",
+            {SpansetTypes::tstzspanset()},
+            TBOX(),
+            TboxFunctions::Spanset_to_tbox
         )
     );
 
@@ -542,6 +594,126 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
             {TBOX(), LogicalType::INTERVAL},
             TBOX(),
             TboxFunctions::Tbox_expand_time
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "round",
+            {TBOX()},
+            TBOX(),
+            TboxFunctions::Tbox_round
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "round",
+            {TBOX(), LogicalType::INTEGER},
+            TBOX(),
+            TboxFunctions::Tbox_round
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_contains",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Contains_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "@>",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Contains_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_contained",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Contained_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "<@",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Contained_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_overlaps",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Overlaps_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "&&",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Overlaps_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_same",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Same_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "~=",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Same_tbox_tbox   
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_adjacent",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Adjacent_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "-|-",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Adjacent_tbox_tbox
         )
     );
 }

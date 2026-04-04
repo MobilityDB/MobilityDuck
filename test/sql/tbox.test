@@ -191,6 +191,22 @@ SELECT tbox 'TBOX T((2000-01-01,2000-01-02))'::tstzspan;
 ----
 (2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00)
 
+
+query I 
+SELECT tbox(intspanset '{[1,2),[3,4),[5,6)}');
+----
+TBOXINT X([1, 6))
+
+query I 
+SELECT intspanset '{[1,2),[3,4),[5,6)}'::tbox;
+----
+TBOXINT X([1, 6))
+
+query I 
+SELECT tbox(floatspanset '{[1,2),[3,4),[5,6)}');
+----
+TBOXFLOAT X([1, 6))
+
 query I
 SELECT hasX(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])');
 ----
@@ -420,3 +436,33 @@ query I
 SELECT expandTime(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])', interval '-12 hours');
 ----
 TBOXFLOAT XT([1, 2],[2000-01-01 12:00:00+00, 2000-01-01 12:00:00+00])
+
+query I 
+SELECT tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])' && tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])';
+----
+true
+
+query I 
+SELECT tbox 'TBOXFLOAT XT([1.0, 2.0],[2000-01-02, 2000-02-01])' @> tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])';
+----
+false
+
+query I 
+SELECT tbox 'TBOXFLOAT XT([1.0, 2.0],[2000-01-02, 2000-02-01])' <@ tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])';
+----
+0
+
+query I 
+SELECT tbox 'TBOXFLOAT XT([1.0, 2.0],[2000-01-02, 2000-02-01])' -|- tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])';
+----
+0
+
+query I 
+SELECT tbox 'TBOXFLOAT XT([1.0, 2.0],[2000-01-02, 2000-02-01])' ~= tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])';
+----
+false
+
+query I 
+SELECT tstzspan '[2000-01-01,2000-01-02]'::tbox -|- tstzspan '[2000-01-02, 2000-01-03]'::tbox;
+----
+0
