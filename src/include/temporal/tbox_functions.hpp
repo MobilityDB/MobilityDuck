@@ -132,6 +132,20 @@ struct TboxFunctions {
     static void Overlaps_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);    
     static void Same_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adjacent_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /********************************************************
+    * Position operators
+    ********************************************************/
+    static void Left_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overleft_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Right_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overright_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Before_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overbefore_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void After_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overafter_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+
+
 };
 
 } // namespace duckdb

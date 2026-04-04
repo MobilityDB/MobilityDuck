@@ -716,6 +716,169 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
             TboxFunctions::Adjacent_tbox_tbox
         )
     );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_left",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Left_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "<<",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Left_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_overleft",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Overleft_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "&<",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Overleft_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_right",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Right_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            ">>",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Right_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_overright",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Overright_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "&>",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Overright_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_before",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Before_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "<<#",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Before_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_overbefore",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Overbefore_tbox_tbox
+        )
+    );
+
+    // Error with #, DuckDB's lexer defines op_chars without #
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "&<#",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Overbefore_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_after",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::After_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "#>>",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::After_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_overafter",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Overafter_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "#&>",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Overafter_tbox_tbox
+        )
+    );
+
 }
 
 } // namespace duckdb
