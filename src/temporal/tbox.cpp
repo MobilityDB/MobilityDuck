@@ -879,6 +879,45 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_union",
+            {TBOX(), TBOX()},
+            TBOX(),
+            TboxFunctions::Union_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_intersection",
+            {TBOX(), TBOX()},
+            TBOX(),
+            TboxFunctions::Intersection_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "+",
+            {TBOX(), TBOX()},
+            TBOX(),
+            TboxFunctions::Union_tbox_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "*",
+            {TBOX(), TBOX()},
+            TBOX(),
+            TboxFunctions::Intersection_tbox_tbox
+        )
+    );
 }
 
 } // namespace duckdb

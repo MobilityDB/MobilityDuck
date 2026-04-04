@@ -486,3 +486,13 @@ query I
 SELECT tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])' &> tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])';
 ----
 true
+
+query I 
+SELECT tbox 'TBOX T([2000-01-01,2000-01-02])' + tbox 'TBOX T([2000-01-01,2000-01-02])';
+----
+TBOX T([2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I 
+SELECT tbox 'TBOXFLOAT X([1,2])' * tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])';
+----
+TBOXFLOAT X([1, 2])

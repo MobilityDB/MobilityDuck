@@ -1534,4 +1534,86 @@ void TboxFunctions::Overafter_tbox_tbox(DataChunk &args, ExpressionState &state,
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
+
+void TboxFunctions::Union_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t tbox1_str, string_t tbox2_str) {
+            TBox *tbox1 = nullptr;
+            if (tbox1_str.GetSize() > 0) {
+                tbox1 = (TBox*)malloc(tbox1_str.GetSize());
+                memcpy(tbox1, tbox1_str.GetDataUnsafe(), tbox1_str.GetSize());
+            }
+            if (!tbox1) {
+                throw InternalException("Failure in Union_tbox_tbox: unable to cast binary to tbox");
+            }
+            TBox *tbox2 = nullptr;
+            if (tbox2_str.GetSize() > 0) {
+                tbox2 = (TBox*)malloc(tbox2_str.GetSize());
+                memcpy(tbox2, tbox2_str.GetDataUnsafe(), tbox2_str.GetSize());
+            }
+            if (!tbox2) {
+                free(tbox1);
+                throw InternalException("Failure in Union_tbox_tbox: unable to cast binary to tbox");
+            }
+            TBox *ret = union_tbox_tbox(tbox1, tbox2, true);
+            if (!ret) {
+                free(tbox1);
+                free(tbox2);
+                return string_t();
+            }
+            size_t ret_size = sizeof(TBox);
+            char *ret_data = (char*)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            free(tbox1);
+            free(tbox2);
+            free(ret);
+            return string_t(ret_data, ret_size);
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TboxFunctions::Intersection_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t tbox1_str, string_t tbox2_str) {
+            TBox *tbox1 = nullptr;
+            if (tbox1_str.GetSize() > 0) {
+                tbox1 = (TBox*)malloc(tbox1_str.GetSize());
+                memcpy(tbox1, tbox1_str.GetDataUnsafe(), tbox1_str.GetSize());
+            }
+            if (!tbox1) {
+                throw InternalException("Failure in Intersect_tbox_tbox: unable to cast binary to tbox");
+            }
+            TBox *tbox2 = nullptr;
+            if (tbox2_str.GetSize() > 0) {
+                tbox2 = (TBox*)malloc(tbox2_str.GetSize());
+                memcpy(tbox2, tbox2_str.GetDataUnsafe(), tbox2_str.GetSize());
+            }
+            if (!tbox2) {
+                free(tbox1);
+                throw InternalException("Failure in Intersect_tbox_tbox: unable to cast binary to tbox");
+            }
+            TBox *ret = intersection_tbox_tbox(tbox1, tbox2);
+            if (!ret) {
+                free(tbox1);
+                free(tbox2);
+                return string_t();
+            }
+            size_t ret_size = sizeof(TBox);
+            char *ret_data = (char*)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            free(tbox1);
+            free(tbox2);
+            free(ret);
+            return string_t(ret_data, ret_size);
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
 } // namespace duckdb

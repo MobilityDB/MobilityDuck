@@ -145,7 +145,11 @@ struct TboxFunctions {
     static void After_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Overafter_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
 
-
+    /********************************************************
+    * set operators
+    ********************************************************/
+    static void Union_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Intersection_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb
