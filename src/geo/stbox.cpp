@@ -261,10 +261,108 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
+            "Ymin",
+            {STBOX()},
+            LogicalType::DOUBLE,
+            StboxFunctions::Stbox_ymin
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "Zmin",
+            {STBOX()},
+            LogicalType::DOUBLE,
+            StboxFunctions::Stbox_zmin
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "Tmin",
+            {STBOX()},
+            LogicalType::TIMESTAMP_TZ,
+            StboxFunctions::Stbox_tmin
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "TminInc",
+            {STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Stbox_tmin_inc
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "Xmax",
+            {STBOX()},
+            LogicalType::DOUBLE,
+            StboxFunctions::Stbox_xmax
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "Ymax",
+            {STBOX()},
+            LogicalType::DOUBLE,
+            StboxFunctions::Stbox_ymax
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "Zmax",
+            {STBOX()},
+            LogicalType::DOUBLE,
+            StboxFunctions::Stbox_zmax
+        )
+    );
+ 
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "Tmax",
+            {STBOX()},
+            LogicalType::TIMESTAMP_TZ,
+            StboxFunctions::Stbox_tmax
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "TmaxInc",
+            {STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Stbox_tmax_inc
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
             "area",
             {STBOX()},
             LogicalType::DOUBLE,
             StboxFunctions::Stbox_area
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "volume",
+            {STBOX()},
+            LogicalType::DOUBLE,
+            StboxFunctions::Stbox_volume
         )
     );
 

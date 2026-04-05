@@ -843,6 +843,288 @@ void StboxFunctions::Stbox_xmin(DataChunk &args, ExpressionState &state, Vector 
     }
 }
 
+void StboxFunctions::Stbox_xmax(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, double>(
+        args.data[0], result, args.size(),
+        [&](string_t input_stbox, ValidityMask &mask, idx_t idx) -> double {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(STBox)) {
+                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_xmax: unable to cast binary to stbox");
+            }
+            double ret;
+            if (!stbox_xmax(stbox, &ret)) {
+                free(stbox);
+                mask.SetInvalid(idx);
+                return double();
+            }
+            free(stbox);
+            return ret;
+        }
+    );
+
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_ymin(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, double>(
+        args.data[0], result, args.size(),
+        [&](string_t input_stbox, ValidityMask &mask, idx_t idx) -> double {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(STBox)) {
+                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_ymin: unable to cast binary to stbox");
+            }
+            double ret;
+            if (!stbox_ymin(stbox, &ret)) {
+                free(stbox);
+                mask.SetInvalid(idx);
+                return double();
+            }
+            free(stbox);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_ymax(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, double>(
+        args.data[0], result, args.size(),
+        [&](string_t input_stbox, ValidityMask &mask, idx_t idx) -> double {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(STBox)) {
+                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_ymax: unable to cast binary to stbox");
+            }
+            double ret;
+            if (!stbox_ymax(stbox, &ret)) {
+                free(stbox);
+                mask.SetInvalid(idx);
+                return double();
+            }
+            free(stbox);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_zmin(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, double>(
+        args.data[0], result, args.size(),
+        [&](string_t input_stbox, ValidityMask &mask, idx_t idx) -> double {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(STBox)) {
+                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_zmin: unable to cast binary to stbox");
+            }
+            double ret;
+            if (!stbox_zmin(stbox, &ret)) {
+                free(stbox);
+                mask.SetInvalid(idx);
+                return double();
+            }
+            free(stbox);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_zmax(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, double>(
+        args.data[0], result, args.size(),
+        [&](string_t input_stbox, ValidityMask &mask, idx_t idx) -> double {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(STBox)) {
+                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_zmax: unable to cast binary to stbox");
+            }
+            double ret;
+            if (!stbox_zmax(stbox, &ret)) {
+                free(stbox);
+                mask.SetInvalid(idx);
+                return double();
+            }
+            free(stbox);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_tmin(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input_stbox, ValidityMask &mask, idx_t idx) -> timestamp_tz_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(STBox)) {
+                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_tmin: unable to cast binary to stbox");
+            }
+            TimestampTz ret_meos;
+            if (!stbox_tmin(stbox, &ret_meos)) {
+                free(stbox);
+                mask.SetInvalid(idx);
+                return timestamp_tz_t();
+            }
+            timestamp_tz_t ret = MeosToDuckDBTimestamp((timestamp_tz_t)ret_meos);
+            free(stbox);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_tmax(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input_stbox, ValidityMask &mask, idx_t idx) -> timestamp_tz_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(STBox)) {
+                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_tmax: unable to cast binary to stbox");
+            }
+            TimestampTz ret_meos;
+            if (!stbox_tmax(stbox, &ret_meos)) {
+                free(stbox);
+                mask.SetInvalid(idx);
+                return timestamp_tz_t();
+            }
+            timestamp_tz_t ret = MeosToDuckDBTimestamp((timestamp_tz_t)ret_meos);
+            free(stbox);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_tmin_inc(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, bool>(
+        args.data[0], result, args.size(),
+        [&](string_t input_stbox, ValidityMask &mask, idx_t idx) -> bool {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(STBox)) {
+                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_tmin_inc: unable to cast binary to stbox");
+            }
+            bool ret;
+            if (!stbox_tmin_inc(stbox, &ret)) {
+                free(stbox);
+                mask.SetInvalid(idx);
+                return bool();
+            }
+            free(stbox);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_tmax_inc(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, bool>(
+        args.data[0], result, args.size(),
+        [&](string_t input_stbox, ValidityMask &mask, idx_t idx) -> bool {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(STBox)) {
+                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_tmax_inc: unable to cast binary to stbox");
+            }
+            bool ret;
+            if (!stbox_tmax_inc(stbox, &ret)) {
+                free(stbox);
+                mask.SetInvalid(idx);
+                return bool();
+            }
+            free(stbox);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
 void StboxFunctions::Stbox_area(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::ExecuteWithNulls<string_t, double>(
         args.data[0], result, args.size(),
@@ -857,7 +1139,7 @@ void StboxFunctions::Stbox_area(DataChunk &args, ExpressionState &state, Vector 
             STBox *stbox = reinterpret_cast<STBox*>(data_copy);
             if (!stbox) {
                 free(data_copy);
-                throw InternalException("Failure in Stbox_as_hexwkb: unable to cast binary to stbox");
+                throw InternalException("Failure in Stbox_area: unable to cast binary to stbox");
             }
             bool spheroid = true; // default value, TODO: handle argument
             double ret;
@@ -873,6 +1155,37 @@ void StboxFunctions::Stbox_area(DataChunk &args, ExpressionState &state, Vector 
                 mask.SetInvalid(idx);
                 return double();
             }
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_volume(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, double>(
+        args.data[0], result, args.size(),
+        [&](string_t input_stbox, ValidityMask &mask, idx_t idx) -> double {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(STBox)) {
+                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_volume: unable to cast binary to stbox");
+            }
+            double ret = stbox_volume(stbox);
+            if (!stbox_volume(stbox)) {
+                free(stbox);
+                mask.SetInvalid(idx);
+                return double();
+            }
+            free(stbox);
             return ret;
         }
     );

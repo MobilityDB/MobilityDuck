@@ -185,3 +185,53 @@ query I
 SELECT xmin(stbox 'STBOX X((1.0,2.0),(3.0,4.0))');
 ----
 1
+
+query I
+SELECT ymin(stbox 'STBOX X((1.0,2.0),(3.0,4.0))');
+----
+2
+
+query I
+SELECT zmin(stbox 'STBOX X((1.0,2.0),(3.0,4.0))');
+----
+NULL
+
+query I 
+SELECT tmin(stbox 'STBOX X((1.0,2.0),(3.0,4.0))');
+----
+NULL
+
+query I 
+SELECT tminInc(stbox 'STBOX X((1.0,2.0),(3.0,4.0))');
+----
+NULL
+
+query I 
+SELECT xmax(stbox 'STBOX X((1.0,2.0),(3.0,4.0))');
+----
+3.0
+
+query I 
+SELECT ymax(stbox 'STBOX X((1.0,2.0),(3.0,4.0))');
+----
+4.0
+
+query I 
+SELECT zmax(stbox 'STBOX X((1.0,2.0),(3.0,4.0))');
+----
+NULL
+
+query I 
+SELECT tmax(stbox 'STBOX X((1.0,2.0),(3.0,4.0))');
+----
+NULL
+
+query I 
+SELECT tmaxInc(stbox 'STBOX X((1.0,2.0),(3.0,4.0))');
+----
+NULL
+
+query I 
+SELECT volume(stbox 'STBOX Z((1.0,2.0,3.0),(4.0,5.0,6.0))');
+----
+27
