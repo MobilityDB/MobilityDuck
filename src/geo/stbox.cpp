@@ -369,6 +369,54 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
+            "shiftTime",
+            {STBOX(), LogicalType::INTERVAL},
+            STBOX(),
+            StboxFunctions::Stbox_shift_time
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "scaleTime",
+            {STBOX(), LogicalType::INTERVAL},
+            STBOX(),
+            StboxFunctions::Stbox_scale_time
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "shiftScaleTime",
+            {STBOX(), LogicalType::INTERVAL, LogicalType::INTERVAL},
+            STBOX(),
+            StboxFunctions::Stbox_shift_scale_time
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "getSpace",
+            {STBOX()},
+            STBOX(),
+            StboxFunctions::Stbox_get_space
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "expandTime",
+            {STBOX(), LogicalType::INTERVAL},
+            STBOX(),
+            StboxFunctions::Stbox_expand_time
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
             "expandSpace",
             {STBOX(), LogicalType::DOUBLE},
             STBOX(),

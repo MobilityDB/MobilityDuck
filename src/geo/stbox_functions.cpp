@@ -1197,6 +1197,183 @@ void StboxFunctions::Stbox_volume(DataChunk &args, ExpressionState &state, Vecto
 /* ***************************************************
  * Transformation functions
  ****************************************************/
+void StboxFunctions::Stbox_shift_time(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox, interval_t interval, ValidityMask &mask, idx_t idx) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(STBox)) {
+                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_shift_time: unable to cast binary to stbox");
+            }
+            MeosInterval shift = IntervaltToInterval(interval);
+            STBox *ret = stbox_shift_scale_time(stbox, &shift, NULL);
+            if (!ret) {
+                free(stbox);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = sizeof(STBox);
+            string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            free(stbox);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_scale_time(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox, interval_t interval, ValidityMask &mask, idx_t idx) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(STBox)) {
+                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_scale_time: unable to cast binary to stbox");
+            }
+            MeosInterval duration = IntervaltToInterval(interval);
+            STBox *ret = stbox_shift_scale_time(stbox, NULL, &duration);
+            if (!ret) {
+                free(stbox);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = sizeof(STBox);
+            string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            free(stbox);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_shift_scale_time(DataChunk &args, ExpressionState &state, Vector &result) {
+    TernaryExecutor::Execute<string_t, interval_t, interval_t, string_t>(
+        args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t input_stbox, interval_t duckdb_shift, interval_t duckdb_duration) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(STBox)) {
+                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_shift_scale_time: unable to cast binary to stbox");
+            }
+            MeosInterval shift = IntervaltToInterval(duckdb_shift);
+            MeosInterval duration = IntervaltToInterval(duckdb_duration);
+            STBox *ret = stbox_shift_scale_time(stbox, &shift, &duration);
+            if (!ret) {
+                free(stbox);
+                throw InternalException("Failure in Stbox_shift_scale_time: stbox_shift_scale_time returned null");
+            }
+            size_t ret_size = sizeof(STBox);
+            string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            free(stbox);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_get_space(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input_stbox) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(STBox)) {
+                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_get_space: unable to cast binary to stbox");
+            }
+            STBox *ret = stbox_get_space(stbox);
+            if (!ret) {
+                free(stbox);
+                throw InternalException("Failure in Stbox_get_space: unable to get space");
+            }
+            size_t ret_size = sizeof(STBox);
+            string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            free(stbox);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_expand_time(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox, interval_t interval, ValidityMask &mask, idx_t idx) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(STBox)) {
+                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_expand_time: unable to cast binary to stbox");
+            }
+            MeosInterval duration = IntervaltToInterval(interval);
+            STBox *ret = stbox_expand_time(stbox, &duration);
+            if (!ret) {
+                free(stbox);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = sizeof(STBox);
+            string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            free(stbox);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
 
 void StboxFunctions::Stbox_expand_space(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(
