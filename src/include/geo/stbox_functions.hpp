@@ -5,6 +5,7 @@
 
 #include "temporal/span.hpp"
 #include "temporal/set.hpp"
+#include "temporal/spanset.hpp"
 
 #include "tydef.hpp"
 
@@ -45,10 +46,14 @@ struct StboxFunctions {
     static void Geo_to_stbox_common(Vector &source, Vector &result, idx_t count);
     static void Geo_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static bool Geo_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    // static void Timestamptz_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    // static void Tstzset_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    // static void Tstzspan_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    // static void Tstzspanset_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Timestamptz_to_stbox(DataChunk &args, ExpressionState &state, Vector &result); 
+    static bool Timestamptz_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    static void Tstzset_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static bool Tstzset_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    static void Tstzspan_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static bool Tstzspan_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    static void Tstzspanset_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static bool Tstzspanset_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* ***************************************************
      * Conversion functions + cast functions: STBOX -> [TYPE]
@@ -59,9 +64,9 @@ struct StboxFunctions {
     /* ***************************************************
      * Accessor functions
      ****************************************************/
-    // static void Stbox_hasx(DataChunk &args, ExpressionState &state, Vector &result);
-    // static void Stbox_hasz(DataChunk &args, ExpressionState &state, Vector &result);
-    // static void Stbox_hast(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_hasx(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_hasz(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_hast(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_area(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************

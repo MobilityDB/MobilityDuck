@@ -44,6 +44,34 @@ void StboxType::RegisterCastFunctions(DatabaseInstance &instance) {
         STBOX(),
         StboxFunctions::Geo_to_stbox_cast
     );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        LogicalType::TIMESTAMP_TZ,
+        STBOX(),
+        StboxFunctions::Timestamptz_to_stbox_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        SetTypes::tstzset(),
+        STBOX(),
+        StboxFunctions::Tstzset_to_stbox_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        SpanTypes::TSTZSPAN(),
+        STBOX(),
+        StboxFunctions::Tstzspan_to_stbox_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        SpansetTypes::tstzspanset(),
+        STBOX(),
+        StboxFunctions::Tstzspanset_to_stbox_cast
+    );
 }
 
 void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
@@ -121,6 +149,47 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
             StboxFunctions::Geo_tstzspan_to_stbox
         )
     );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox",
+            {LogicalType::TIMESTAMP_TZ},
+            StboxType::STBOX(),
+            StboxFunctions::Timestamptz_to_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox",
+            {SetTypes::tstzset()},
+            StboxType::STBOX(),
+            StboxFunctions::Tstzset_to_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox",
+            {SpanTypes::TSTZSPAN()},
+            StboxType::STBOX(),
+            StboxFunctions::Tstzspan_to_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox",
+            {SpansetTypes::tstzspanset()},
+            StboxType::STBOX(),
+            StboxFunctions::Tstzspanset_to_stbox
+        )
+    );
+    
 
     ExtensionUtil::RegisterFunction(
         instance,

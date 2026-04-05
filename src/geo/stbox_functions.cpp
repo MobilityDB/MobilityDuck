@@ -520,6 +520,193 @@ bool StboxFunctions::Geo_to_stbox_cast(Vector &source, Vector &result, idx_t cou
     }
 }
 
+static void Timestamptz_to_stbox_common(Vector &source, Vector &result, idx_t count) {
+    UnaryExecutor::Execute<timestamp_tz_t, string_t>(
+        source, result, count,
+        [&](timestamp_tz_t ts_duckdb) -> string_t {
+            timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts_duckdb);
+            STBox *ret = timestamptz_to_stbox((TimestampTz)ts_meos.value);
+            if (!ret) {
+                throw InternalException("Failure in Timestamptz_to_stbox: unable to convert timestamptz to stbox");
+            }
+            size_t stbox_size = sizeof(STBox);
+            uint8_t *stbox_data = (uint8_t*)malloc(stbox_size);
+            if (!stbox_data) {
+                free(ret);
+                throw InternalException("Failure in Timestamptz_to_stbox: unable to allocate memory for stbox");
+            }
+            memcpy(stbox_data, ret, stbox_size);
+            string_t ret_str(reinterpret_cast<const char*>(stbox_data), stbox_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(stbox_data);
+            free(ret);
+            return stored_data;
+        }
+    );
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Timestamptz_to_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    Timestamptz_to_stbox_common(args.data[0], result, args.size());
+}
+
+bool StboxFunctions::Timestamptz_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+    Timestamptz_to_stbox_common(source, result, count);
+    return true;
+}
+
+static void Tstzset_to_stbox_common(Vector &source, Vector &result, idx_t count) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        source, result, count,
+        [&](string_t input_stbox) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(Set)) {
+                throw InvalidInputException("Invalid TSTZSET data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Set *set = reinterpret_cast<Set*>(data_copy);
+            if (!set) {
+                free(data_copy);
+                throw InternalException("Failure in Tstzset_to_stbox: unable to cast binary to set");
+            }
+            STBox *ret = tstzset_to_stbox(set);
+            if (!ret) {
+                free(set);
+                throw InternalException("Failure in Tstzset_to_stbox: unable to convert tstzset to stbox");
+            }
+            size_t stbox_size = sizeof(STBox);
+            uint8_t *stbox_data = (uint8_t*)malloc(stbox_size);
+            if (!stbox_data) {
+                free(ret);
+                free(set);
+                throw InternalException("Failure in Tstzset_to_stbox: unable to allocate memory for stbox");
+            }
+            memcpy(stbox_data, ret, stbox_size);
+            string_t ret_str(reinterpret_cast<const char*>(stbox_data), stbox_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(stbox_data);
+            free(ret);
+            free(set);
+            return stored_data;
+        }
+    );
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Tstzset_to_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    Tstzset_to_stbox_common(args.data[0], result, args.size());
+}
+
+bool StboxFunctions::Tstzset_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+    Tstzset_to_stbox_common(source, result, count);
+    return true;
+}
+
+static void Tstzspan_to_stbox_common(Vector &source, Vector &result, idx_t count) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        source, result, count,
+        [&](string_t input_stbox) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(Span)) {
+                throw InvalidInputException("Invalid TSTZSPAN data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Span *span = reinterpret_cast<Span*>(data_copy);
+            if (!span) {
+                free(data_copy);
+                throw InternalException("Failure in Tstzspan_to_stbox: unable to cast binary to span");
+            }
+            STBox *ret = tstzspan_to_stbox(span);
+            if (!ret) {
+                free(span);
+                throw InternalException("Failure in Tstzspan_to_stbox: unable to convert tstzspan to stbox");
+            }
+            size_t stbox_size = sizeof(STBox);
+            uint8_t *stbox_data = (uint8_t*)malloc(stbox_size);
+            if (!stbox_data) {
+                free(ret);
+                free(span);
+                throw InternalException("Failure in Tstzspan_to_stbox: unable to allocate memory for stbox");
+            }
+            memcpy(stbox_data, ret, stbox_size);
+            string_t ret_str(reinterpret_cast<const char*>(stbox_data), stbox_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(stbox_data);
+            free(ret);
+            free(span);
+            return stored_data;
+        }
+    );
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Tstzspan_to_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    Tstzspan_to_stbox_common(args.data[0], result, args.size());
+}
+
+bool StboxFunctions::Tstzspan_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+    Tstzspan_to_stbox_common(source, result, count);
+    return true;
+}   
+
+static void Tstzspanset_to_stbox_common(Vector &source, Vector &result, idx_t count) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        source, result, count,
+        [&](string_t input_stbox) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(SpanSet)) {
+                throw InvalidInputException("Invalid TSTZSPANSET data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            SpanSet *set = reinterpret_cast<SpanSet*>(data_copy);
+            if (!set) {
+                free(data_copy);
+                throw InternalException("Failure in Tstzspanset_to_stbox: unable to cast binary to span set");
+            }
+            STBox *ret = tstzspanset_to_stbox(set);
+            if (!ret) {
+                free(set);
+                throw InternalException("Failure in Tstzspanset_to_stbox: unable to convert tstzspanset to stbox");
+            }
+            size_t stbox_size = sizeof(STBox);
+            uint8_t *stbox_data = (uint8_t*)malloc(stbox_size);
+            if (!stbox_data) {
+                free(ret);
+                free(set);
+                throw InternalException("Failure in Tstzspanset_to_stbox: unable to allocate memory for stbox");
+            }
+            memcpy(stbox_data, ret, stbox_size);
+            string_t ret_str(reinterpret_cast<const char*>(stbox_data), stbox_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(stbox_data);
+            free(ret);
+            free(set);
+            return stored_data;
+        }
+    );
+}
+
+void StboxFunctions::Tstzspanset_to_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    Tstzspanset_to_stbox_common(args.data[0], result, args.size());
+}
+
+bool StboxFunctions::Tstzspanset_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+    Tstzspanset_to_stbox_common(source, result, count);
+    return true;
+}
+
 /* ***************************************************
  * Accessor functions
  ****************************************************/

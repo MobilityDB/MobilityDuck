@@ -150,6 +150,9 @@ struct TboxFunctions {
     ********************************************************/
     static void Union_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Intersection_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    // TODO: extend aggregation
+    // TODO: Comparison
+
 };
 
 } // namespace duckdb
