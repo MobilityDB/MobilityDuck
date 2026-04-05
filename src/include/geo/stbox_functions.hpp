@@ -67,8 +67,20 @@ struct StboxFunctions {
     static void Stbox_hasx(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_hasz(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_hast(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_isgeodetic(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_xmin(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_xmax(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_ymin(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_ymax(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_zmin(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_zmax(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_tmin(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_tmax(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_tmin_inc(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_tmax_inc(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_area(DataChunk &args, ExpressionState &state, Vector &result);
-
+    static void Stbox_volume(DataChunk &args, ExpressionState &state, Vector &result);
+    // TODO static void Stbox_perimeter(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
      * Transformation functions
      ****************************************************/

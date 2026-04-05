@@ -160,3 +160,28 @@ query I
 select timestamptz '2001-01-03'::stbox;
 ----
 STBOX T([2001-01-03 00:00:00+00, 2001-01-03 00:00:00+00])
+
+query I
+SELECT hasx(stbox 'STBOX X((1.0,2.0),(3.0,4.0))');
+----
+true
+
+query I 
+SELECT hasz(stbox 'STBOX X((1.0,2.0),(3.0,4.0))');
+----
+false
+
+query I 
+SELECT hast(stbox 'STBOX X((1.0,2.0),(3.0,4.0))');
+----
+false
+
+query I 
+SELECT isGeodetic(stbox 'STBOX X((1.0,2.0),(3.0,4.0))');
+----
+false
+
+query I 
+SELECT xmin(stbox 'STBOX X((1.0,2.0),(3.0,4.0))');
+----
+1

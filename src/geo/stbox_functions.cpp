@@ -711,6 +711,138 @@ bool StboxFunctions::Tstzspanset_to_stbox_cast(Vector &source, Vector &result, i
  * Accessor functions
  ****************************************************/
 
+void StboxFunctions::Stbox_hasx(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, bool>(
+        args.data[0], result, args.size(),
+        [&](string_t input_stbox) -> bool {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(STBox)) {
+                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_hasx: unable to cast binary to stbox");
+            }
+            bool ret = stbox_hasx(stbox);
+            free(stbox);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_hasz(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, bool>(
+        args.data[0], result, args.size(),
+        [&](string_t input_stbox) -> bool {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(STBox)) {
+                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_hasz: unable to cast binary to stbox");
+            }
+            bool ret = stbox_hasz(stbox);
+            free(stbox);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_hast(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, bool>(
+        args.data[0], result, args.size(),
+        [&](string_t input_stbox) -> bool {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(STBox)) {
+                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_hast: unable to cast binary to stbox");
+            }
+            bool ret = stbox_hast(stbox);
+            free(stbox);
+            return ret;
+        }
+    );
+}
+
+void StboxFunctions::Stbox_isgeodetic(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, bool>(
+        args.data[0], result, args.size(),
+        [&](string_t input_stbox) -> bool {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(STBox)) {
+                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_isgeodetic: unable to cast binary to stbox");
+            }
+            bool ret = stbox_isgeodetic(stbox);
+            free(stbox);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_xmin(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, double>(
+        args.data[0], result, args.size(),
+        [&](string_t input_stbox, ValidityMask &mask, idx_t idx) -> double {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+            size_t data_size = input_stbox.GetSize();
+            if (data_size != sizeof(STBox)) {
+                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+            if (!stbox) {
+                free(data_copy);
+                throw InternalException("Failure in Stbox_xmin: unable to cast binary to stbox");
+            }
+            double ret;
+            if (!stbox_xmin(stbox, &ret)) {
+                free(stbox);
+                mask.SetInvalid(idx);
+                return double();
+            }
+            free(stbox);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
 void StboxFunctions::Stbox_area(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::ExecuteWithNulls<string_t, double>(
         args.data[0], result, args.size(),

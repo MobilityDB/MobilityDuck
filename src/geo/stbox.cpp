@@ -214,6 +214,53 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
+            "hasX",
+            {STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Stbox_hasx
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "hasZ",
+            {STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Stbox_hasz
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "hasT",
+            {STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Stbox_hast
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "isGeodetic",
+            {STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Stbox_isgeodetic
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "Xmin",
+            {STBOX()},
+            LogicalType::DOUBLE,
+            StboxFunctions::Stbox_xmin
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
             "area",
             {STBOX()},
             LogicalType::DOUBLE,
