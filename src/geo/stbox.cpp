@@ -9,6 +9,7 @@
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension_util.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
+#include <scoped_allocator>
 #include "spatial/spatial_types.hpp"
 
 namespace duckdb {
@@ -427,7 +428,26 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
-            "&&",
+            "stbox_contains",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Contains_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_contained",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Contained_stbox_stbox
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_overlaps",
             {STBOX(), STBOX()},
             LogicalType::BOOLEAN,
             StboxFunctions::Overlaps_stbox_stbox
@@ -437,10 +457,64 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
-            "@>", // contains
+            "stbox_same",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Same_stbox_stbox
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_adjacent",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Adjacent_stbox_stbox
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "@>",
             {STBOX(), STBOX()},
             LogicalType::BOOLEAN,
             StboxFunctions::Contains_stbox_stbox
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "<@",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Contained_stbox_stbox
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "&&",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Overlaps_stbox_stbox
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "~=",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Same_stbox_stbox
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "-|-",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Adjacent_stbox_stbox
         )
     );
 }

@@ -92,10 +92,17 @@ struct StboxFunctions {
     static void Stbox_expand_time(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
+     * TODO: Selectively functions for operators 
+     ****************************************************/
+
+    /* ***************************************************
      * Topological operators
      ****************************************************/
-    static void Overlaps_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contains_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Contained_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overlaps_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Same_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Adjacent_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 }

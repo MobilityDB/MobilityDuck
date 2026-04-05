@@ -270,3 +270,38 @@ query I
 SELECT expandTime(stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2000-01-01,2000-01-02])', interval '-12 hours');
 ----
 STBOX XT(((1,2),(1,2)),[2000-01-01 12:00:00+00, 2000-01-01 12:00:00+00])
+
+query I 
+SELECT stbox 'STBOX X((1.0,1.0),(2.0,2.0))' && stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2000-01-01,2000-01-01])';
+----
+true
+
+query I 
+SELECT stbox 'STBOX X((1.0,1.0),(2.0,2.0))' @> stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2000-01-01,2000-01-01])';
+----
+true
+
+query I 
+SELECT stbox 'STBOX X((1.0,1.0),(2.0,2.0))' <@ stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2000-01-01,2000-01-01])';
+----
+false
+
+query I 
+SELECT stbox 'STBOX X((1.0,1.0),(2.0,2.0))' -|- stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2000-01-01,2000-01-01])';
+----
+true
+
+query I 
+SELECT stbox 'STBOX X((1.0,1.0),(2.0,2.0))' ~= stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2000-01-01,2000-01-01])';
+----
+false
+
+query I 
+SELECT stbox 'STBOX Z((1.0,1.0,1.0),(2.0,2.0,2.0))' ~= stbox 'STBOX Z((1.0,1.0,1.0),(2.0,2.0,3.0))';
+----
+false
+
+query I 
+SELECT stbox 'STBOX Z((0 0 0),(2 2 2))' -|- stbox 'STBOX Z((1 1 1),(3 3 3))';
+----
+false
