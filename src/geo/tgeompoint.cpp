@@ -306,7 +306,37 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
             TemporalFunctions::Temporal_sequence_n
         )
     );
-    
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "shiftTime",
+            {TGEOMPOINT(), LogicalType::INTERVAL},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_shift_time
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "scaleTime",
+            {TGEOMPOINT(), LogicalType::INTERVAL},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_scale_time
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "shiftScaleTime",
+            {TGEOMPOINT(), LogicalType::INTERVAL, LogicalType::INTERVAL},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_shift_scale_time
+        )
+    );
+
     /* ***************************************************
      * Conversion functions
      ****************************************************/

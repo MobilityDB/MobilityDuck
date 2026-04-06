@@ -86,6 +86,15 @@ struct TemporalFunctions {
     //static void Temporal_segments
 
     /* ***************************************************
+     * Shift and scale 
+     ****************************************************/
+    static void Temporal_shift_time(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_scale_time(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_shift_scale_time(DataChunk &args, ExpressionState &state, Vector &result);
+    // TODO: static void Temporal_tprecision
+    // TODO: static void Temporal_tsample
+
+    /* ***************************************************
      * Transformation functions
      ****************************************************/
     static void Temporal_to_tsequence(DataChunk &args, ExpressionState &state, Vector &result);

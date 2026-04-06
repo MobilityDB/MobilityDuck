@@ -1468,6 +1468,116 @@ void TemporalFunctions::Temporal_sequence_n(DataChunk &args, ExpressionState &st
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
+// shift, scale 
+void TemporalFunctions::Temporal_shift_time(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_temporal, interval_t interval, ValidityMask &mask, idx_t idx) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_temporal.GetData());
+            size_t data_size = input_temporal.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_shift_time] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_shift_time: unable to cast binary to temporal");
+            }
+            MeosInterval shift = IntervaltToInterval(interval);
+            Temporal *ret = temporal_shift_scale_time(temp, &shift, NULL);
+            if (!ret) {
+                free(temp);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            free(temp);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Temporal_scale_time(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_temporal, interval_t interval, ValidityMask &mask, idx_t idx) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_temporal.GetData());
+            size_t data_size = input_temporal.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_scale_time] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_scale_time: unable to cast binary to temporal");
+            }
+            MeosInterval duration = IntervaltToInterval(interval);
+            Temporal *ret = temporal_shift_scale_time(temp, NULL, &duration);
+            if (!ret) {
+                free(temp);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            free(temp);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Temporal_shift_scale_time(DataChunk &args, ExpressionState &state, Vector &result) {
+    TernaryExecutor::Execute<string_t, interval_t, interval_t, string_t>(
+        args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t input_temporal, interval_t duckdb_shift, interval_t duckdb_duration) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_temporal.GetData());
+            size_t data_size = input_temporal.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_shift_scale_time] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_shift_scale_time: unable to cast binary to temporal");
+            }
+            MeosInterval shift = IntervaltToInterval(duckdb_shift);
+            MeosInterval duration = IntervaltToInterval(duckdb_duration);
+            Temporal *ret = temporal_shift_scale_time(temp, &shift, &duration);
+            if (!ret) {
+                free(temp);
+                throw InternalException("Failure in Temporal_shift_scale_time: temporal_shift_scale_time returned null");
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            free(temp);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+
 /* ***************************************************
  * Transformation functions
  ****************************************************/
