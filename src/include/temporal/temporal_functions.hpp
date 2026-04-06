@@ -112,7 +112,8 @@ struct TemporalFunctions {
     static void Temporal_at_tstzspanset(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_at_span(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_at_min(DataChunk &args, ExpressionState &state, Vector &result);
-
+    static void Temporal_before_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_after_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
      * Boolean operators
      ****************************************************/

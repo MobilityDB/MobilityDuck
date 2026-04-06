@@ -438,6 +438,25 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "beforeTimestamp",
+            {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_before_timestamptz
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "afterTimestamp",
+            {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_after_timestamptz
+        )
+    );
     /* ***************************************************
      * Stops function
      ****************************************************/
