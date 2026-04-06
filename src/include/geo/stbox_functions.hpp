@@ -123,6 +123,13 @@ struct StboxFunctions {
     static void Overfront_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Back_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Overback_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * Set operators
+     ****************************************************/
+    static void Union_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Intersection_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+     // TODO: Split functions + Extent aggregation + Comparison
 };
 
 }

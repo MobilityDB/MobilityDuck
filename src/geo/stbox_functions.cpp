@@ -2473,4 +2473,140 @@ void StboxFunctions::Overback_stbox_stbox(DataChunk &args, ExpressionState &stat
     }
 }
 
+void StboxFunctions::Union_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox1, string_t input_stbox2) -> string_t {
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
+            size_t data_size1 = input_stbox1.GetSize();
+            if (data_size1 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
+            if (!data_copy1) {
+                throw InternalException("Failure in Union_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy1, data1, data_size1);
+            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
+            if (!stbox1) {
+                free(data_copy1);
+                throw InternalException("Failure in Union_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
+            size_t data_size2 = input_stbox2.GetSize();
+            if (data_size2 < sizeof(void*)) {
+                free(data_copy1);
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
+            if (!data_copy2) {
+                free(data_copy1);
+                throw InternalException("Failure in Union_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy2, data2, data_size2);
+            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
+            if (!stbox2) {
+                free(data_copy2);
+                free(data_copy1);
+                throw InternalException("Failure in Union_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            STBox *ret = union_stbox_stbox(stbox1, stbox2, true);
+            if (!ret) {
+                free(stbox1);
+                free(stbox2);
+                throw InternalException("Failure in Union_stbox_stbox: unable to union stboxes");
+            }
+            size_t stbox_size = sizeof(STBox);
+            uint8_t *stbox_data = (uint8_t*)malloc(stbox_size);
+            if (!stbox_data) {
+                free(ret);
+                free(stbox1);
+                free(stbox2);
+                throw InternalException("Failure in Union_stbox_stbox: unable to allocate memory for stbox");
+            }
+            memcpy(stbox_data, ret, stbox_size);
+            string_t ret_str(reinterpret_cast<const char*>(stbox_data), stbox_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(stbox_data);
+            free(ret);
+            free(stbox1);
+            free(stbox2);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Intersection_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox1, string_t input_stbox2) -> string_t {
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
+            size_t data_size1 = input_stbox1.GetSize();
+            if (data_size1 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
+            if (!data_copy1) {
+                throw InternalException("Failure in Union_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy1, data1, data_size1);
+            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
+            if (!stbox1) {
+                free(data_copy1);
+                throw InternalException("Failure in Union_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
+            size_t data_size2 = input_stbox2.GetSize();
+            if (data_size2 < sizeof(void*)) {
+                free(data_copy1);
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
+            if (!data_copy2) {
+                free(data_copy1);
+                throw InternalException("Failure in Union_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy2, data2, data_size2);
+            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
+            if (!stbox2) {
+                free(data_copy2);
+                free(data_copy1);
+                throw InternalException("Failure in Union_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            STBox *ret = intersection_stbox_stbox(stbox1, stbox2);
+            if (!ret) {
+                free(stbox1);
+                free(stbox2);
+                throw InternalException("Failure in Union_stbox_stbox: unable to union stboxes");
+            }
+            size_t stbox_size = sizeof(STBox);
+            uint8_t *stbox_data = (uint8_t*)malloc(stbox_size);
+            if (!stbox_data) {
+                free(ret);
+                free(stbox1);
+                free(stbox2);
+                throw InternalException("Failure in Union_stbox_stbox: unable to allocate memory for stbox");
+            }
+            memcpy(stbox_data, ret, stbox_size);
+            string_t ret_str(reinterpret_cast<const char*>(stbox_data), stbox_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(stbox_data);
+            free(ret);
+            free(stbox1);
+            free(stbox2);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
 } // namespace duckdb

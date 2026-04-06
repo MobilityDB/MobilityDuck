@@ -829,7 +829,46 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
             StboxFunctions::Overback_stbox_stbox
         )
     );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_union",
+            {STBOX(), STBOX()},
+            STBOX(),
+            StboxFunctions::Union_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_intersection",
+            {STBOX(), STBOX()},
+            STBOX(),
+            StboxFunctions::Intersection_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "+",
+            {STBOX(), STBOX()},
+            STBOX(),
+            StboxFunctions::Union_stbox_stbox
+        )
+    );
     
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "*",
+            {STBOX(), STBOX()},
+            STBOX(),
+            StboxFunctions::Intersection_stbox_stbox
+        )
+    );
 }
 
 } // namespace duckdb
