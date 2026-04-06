@@ -1673,4 +1673,804 @@ void StboxFunctions::Adjacent_stbox_stbox(DataChunk &args, ExpressionState &stat
     }
 }
 
+void StboxFunctions::Left_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox1, string_t input_stbox2) -> bool {
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
+            size_t data_size1 = input_stbox1.GetSize();
+            if (data_size1 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
+            if (!data_copy1) {
+                throw InternalException("Failure in Left_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy1, data1, data_size1);
+            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
+            if (!stbox1) {
+                free(data_copy1);
+                throw InternalException("Failure in Left_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
+            size_t data_size2 = input_stbox2.GetSize();
+            if (data_size2 < sizeof(void*)) {
+                free(data_copy1);
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
+            if (!data_copy2) {
+                free(data_copy1);
+                throw InternalException("Failure in Left_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy2, data2, data_size2);
+            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
+            if (!stbox2) {
+                free(data_copy2);
+                free(data_copy1);
+                throw InternalException("Failure in Left_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            bool ret = left_stbox_stbox(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Overleft_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox1, string_t input_stbox2) -> bool {
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
+            size_t data_size1 = input_stbox1.GetSize();
+            if (data_size1 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
+            if (!data_copy1) {
+                throw InternalException("Failure in Overleft_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy1, data1, data_size1);
+            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
+            if (!stbox1) {
+                free(data_copy1);
+                throw InternalException("Failure in Overleft_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
+            size_t data_size2 = input_stbox2.GetSize();
+            if (data_size2 < sizeof(void*)) {
+                free(data_copy1);
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
+            if (!data_copy2) {
+                free(data_copy1);
+                throw InternalException("Failure in Overleft_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy2, data2, data_size2);
+            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
+            if (!stbox2) {
+                free(data_copy2);
+                free(data_copy1);
+                throw InternalException("Failure in Overleft_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            bool ret = overleft_stbox_stbox(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Right_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox1, string_t input_stbox2) -> bool {
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
+            size_t data_size1 = input_stbox1.GetSize();
+            if (data_size1 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
+            if (!data_copy1) {
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy1, data1, data_size1);
+            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
+            if (!stbox1) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
+            size_t data_size2 = input_stbox2.GetSize();
+            if (data_size2 < sizeof(void*)) {
+                free(data_copy1);
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
+            if (!data_copy2) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy2, data2, data_size2);
+            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
+            if (!stbox2) {
+                free(data_copy2);
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            bool ret = right_stbox_stbox(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Overright_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox1, string_t input_stbox2) -> bool {
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
+            size_t data_size1 = input_stbox1.GetSize();
+            if (data_size1 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
+            if (!data_copy1) {
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy1, data1, data_size1);
+            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
+            if (!stbox1) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
+            size_t data_size2 = input_stbox2.GetSize();
+            if (data_size2 < sizeof(void*)) {
+                free(data_copy1);
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
+            if (!data_copy2) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy2, data2, data_size2);
+            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
+            if (!stbox2) {
+                free(data_copy2);
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            bool ret = overright_stbox_stbox(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Below_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox1, string_t input_stbox2) -> bool {
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
+            size_t data_size1 = input_stbox1.GetSize();
+            if (data_size1 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
+            if (!data_copy1) {
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy1, data1, data_size1);
+            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
+            if (!stbox1) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
+            size_t data_size2 = input_stbox2.GetSize();
+            if (data_size2 < sizeof(void*)) {
+                free(data_copy1);
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
+            if (!data_copy2) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy2, data2, data_size2);
+            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
+            if (!stbox2) {
+                free(data_copy2);
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            bool ret = below_stbox_stbox(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Overbelow_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox1, string_t input_stbox2) -> bool {
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
+            size_t data_size1 = input_stbox1.GetSize();
+            if (data_size1 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
+            if (!data_copy1) {
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy1, data1, data_size1);
+            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
+            if (!stbox1) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
+            size_t data_size2 = input_stbox2.GetSize();
+            if (data_size2 < sizeof(void*)) {
+                free(data_copy1);
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
+            if (!data_copy2) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy2, data2, data_size2);
+            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
+            if (!stbox2) {
+                free(data_copy2);
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            bool ret = overbelow_stbox_stbox(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Above_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox1, string_t input_stbox2) -> bool {
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
+            size_t data_size1 = input_stbox1.GetSize();
+            if (data_size1 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
+            if (!data_copy1) {
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy1, data1, data_size1);
+            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
+            if (!stbox1) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
+            size_t data_size2 = input_stbox2.GetSize();
+            if (data_size2 < sizeof(void*)) {
+                free(data_copy1);
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
+            if (!data_copy2) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy2, data2, data_size2);
+            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
+            if (!stbox2) {
+                free(data_copy2);
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            bool ret = above_stbox_stbox(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Overabove_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox1, string_t input_stbox2) -> bool {
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
+            size_t data_size1 = input_stbox1.GetSize();
+            if (data_size1 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
+            if (!data_copy1) {
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy1, data1, data_size1);
+            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
+            if (!stbox1) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
+            size_t data_size2 = input_stbox2.GetSize();
+            if (data_size2 < sizeof(void*)) {
+                free(data_copy1);
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
+            if (!data_copy2) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy2, data2, data_size2);
+            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
+            if (!stbox2) {
+                free(data_copy2);
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            bool ret = overabove_stbox_stbox(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Before_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox1, string_t input_stbox2) -> bool {
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
+            size_t data_size1 = input_stbox1.GetSize();
+            if (data_size1 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
+            if (!data_copy1) {
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy1, data1, data_size1);
+            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
+            if (!stbox1) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
+            size_t data_size2 = input_stbox2.GetSize();
+            if (data_size2 < sizeof(void*)) {
+                free(data_copy1);
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
+            if (!data_copy2) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy2, data2, data_size2);
+            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
+            if (!stbox2) {
+                free(data_copy2);
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            bool ret = before_stbox_stbox(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Overbefore_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox1, string_t input_stbox2) -> bool {
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
+            size_t data_size1 = input_stbox1.GetSize();
+            if (data_size1 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
+            if (!data_copy1) {
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy1, data1, data_size1);
+            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
+            if (!stbox1) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
+            size_t data_size2 = input_stbox2.GetSize();
+            if (data_size2 < sizeof(void*)) {
+                free(data_copy1);
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
+            if (!data_copy2) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy2, data2, data_size2);
+            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
+            if (!stbox2) {
+                free(data_copy2);
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            bool ret = overbefore_stbox_stbox(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::After_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox1, string_t input_stbox2) -> bool {
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
+            size_t data_size1 = input_stbox1.GetSize();
+            if (data_size1 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
+            if (!data_copy1) {
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy1, data1, data_size1);
+            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
+            if (!stbox1) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
+            size_t data_size2 = input_stbox2.GetSize();
+            if (data_size2 < sizeof(void*)) {
+                free(data_copy1);
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
+            if (!data_copy2) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy2, data2, data_size2);
+            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
+            if (!stbox2) {
+                free(data_copy2);
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            bool ret = after_stbox_stbox(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Overafter_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox1, string_t input_stbox2) -> bool {
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
+            size_t data_size1 = input_stbox1.GetSize();
+            if (data_size1 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
+            if (!data_copy1) {
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy1, data1, data_size1);
+            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
+            if (!stbox1) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
+            size_t data_size2 = input_stbox2.GetSize();
+            if (data_size2 < sizeof(void*)) {
+                free(data_copy1);
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
+            if (!data_copy2) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy2, data2, data_size2);
+            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
+            if (!stbox2) {
+                free(data_copy2);
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            bool ret = overafter_stbox_stbox(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Front_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox1, string_t input_stbox2) -> bool {
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
+            size_t data_size1 = input_stbox1.GetSize();
+            if (data_size1 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
+            if (!data_copy1) {
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy1, data1, data_size1);
+            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
+            if (!stbox1) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
+            size_t data_size2 = input_stbox2.GetSize();
+            if (data_size2 < sizeof(void*)) {
+                free(data_copy1);
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
+            if (!data_copy2) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy2, data2, data_size2);
+            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
+            if (!stbox2) {
+                free(data_copy2);
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            bool ret = front_stbox_stbox(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Overfront_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox1, string_t input_stbox2) -> bool {
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
+            size_t data_size1 = input_stbox1.GetSize();
+            if (data_size1 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
+            if (!data_copy1) {
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy1, data1, data_size1);
+            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
+            if (!stbox1) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
+            size_t data_size2 = input_stbox2.GetSize();
+            if (data_size2 < sizeof(void*)) {
+                free(data_copy1);
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
+            if (!data_copy2) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy2, data2, data_size2);
+            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
+            if (!stbox2) {
+                free(data_copy2);
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            bool ret = overfront_stbox_stbox(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Back_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox1, string_t input_stbox2) -> bool {
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
+            size_t data_size1 = input_stbox1.GetSize();
+            if (data_size1 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
+            if (!data_copy1) {
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy1, data1, data_size1);
+            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
+            if (!stbox1) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
+            size_t data_size2 = input_stbox2.GetSize();
+            if (data_size2 < sizeof(void*)) {
+                free(data_copy1);
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
+            if (!data_copy2) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy2, data2, data_size2);
+            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
+            if (!stbox2) {
+                free(data_copy2);
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            bool ret = back_stbox_stbox(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Overback_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox1, string_t input_stbox2) -> bool {
+            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
+            size_t data_size1 = input_stbox1.GetSize();
+            if (data_size1 < sizeof(void*)) {
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
+            if (!data_copy1) {
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy1, data1, data_size1);
+            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
+            if (!stbox1) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
+            size_t data_size2 = input_stbox2.GetSize();
+            if (data_size2 < sizeof(void*)) {
+                free(data_copy1);
+                throw InvalidInputException("Invalid STBOX data: insufficient size");
+            }
+            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
+            if (!data_copy2) {
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to allocate stbox copy");
+            }
+            memcpy(data_copy2, data2, data_size2);
+            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
+            if (!stbox2) {
+                free(data_copy2);
+                free(data_copy1);
+                throw InternalException("Failure in Right_stbox_stbox: unable to cast binary to stbox");
+            }
+
+            bool ret = overback_stbox_stbox(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
 } // namespace duckdb

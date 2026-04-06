@@ -103,6 +103,26 @@ struct StboxFunctions {
     static void Overlaps_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Same_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adjacent_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * Position operators
+     ****************************************************/
+    static void Left_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overleft_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Right_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overright_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Below_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overbelow_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Above_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overabove_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Before_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overbefore_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void After_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overafter_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Front_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overfront_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Back_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overback_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 }

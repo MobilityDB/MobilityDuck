@@ -517,6 +517,319 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
             StboxFunctions::Adjacent_stbox_stbox
         )
     );
+
+        ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_left",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Left_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_overleft",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Overleft_stbox_stbox
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_right",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Right_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_overright",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Overright_stbox_stbox
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_below",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Below_stbox_stbox
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_overbelow",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Overbelow_stbox_stbox
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_above",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Above_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_overabove",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Overabove_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_before",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Before_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_overbefore",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Overbefore_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_after",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::After_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_overafter",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Overafter_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_front",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Front_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_overfront",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Overfront_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_back",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Back_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_overback",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Overback_stbox_stbox
+        )
+    );
+
+        ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "<<",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Left_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "&<",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Overleft_stbox_stbox
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            ">>",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Right_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "&>",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Overright_stbox_stbox
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "<<|",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Below_stbox_stbox
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "&<|",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Overbelow_stbox_stbox
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "|>>",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Above_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "|&>",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Overabove_stbox_stbox
+        )
+    );
+// # is not a operator in Duckdb, fix later
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "<<#",  
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Before_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "&<#",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Overbefore_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "#>>",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::After_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "#&>",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Overafter_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "<</",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Front_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "&</",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Overfront_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "/>>",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Back_stbox_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "/&>",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Overback_stbox_stbox
+        )
+    );
+    
 }
 
 } // namespace duckdb
