@@ -52,6 +52,7 @@ struct TemporalFunctions {
      ****************************************************/
     static void Temporal_subtype(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_interp(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_mem_size(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tinstant_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_valueset(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_start_value(DataChunk &args, ExpressionState &state, Vector &result);
@@ -71,6 +72,18 @@ struct TemporalFunctions {
     static void Temporal_timestamps(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_instants(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_num_sequences(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_lower_inc(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_upper_inc(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_start_instant(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_end_instant(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_instant_n(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_num_timestamps(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_timestamptz_n(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_start_sequence(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_end_sequence(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_sequence_n(DataChunk &args, ExpressionState &state, Vector &result);
+    //TODO:
+    //static void Temporal_segments
 
     /* ***************************************************
      * Transformation functions
