@@ -13,6 +13,17 @@
 
 namespace duckdb {
 
+namespace {
+
+inline string_t MallocBlobToResult(Vector &result, void *buf, size_t sz) {
+	string_t blob(reinterpret_cast<const char *>(buf), UnsafeNumericCast<uint32_t>(sz));
+	string_t stored = StringVector::AddStringOrBlob(result, blob);
+	free(buf);
+	return stored;
+}
+
+} // namespace
+
 bool TboxFunctions::Tbox_in(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     bool success = true;
     try {
@@ -32,7 +43,8 @@ bool TboxFunctions::Tbox_in(Vector &source, Vector &result, idx_t count, CastPar
                 size_t tbox_size = sizeof(TBox);
                 char *tbox_data = (char*)malloc(tbox_size);
                 memcpy(tbox_data, tbox, tbox_size);
-                return string_t(tbox_data, tbox_size);
+                free(tbox);
+                return MallocBlobToResult(result, tbox_data, tbox_size);
             }
         );
     } catch (const std::exception &e) {
@@ -58,7 +70,14 @@ bool TboxFunctions::Tbox_out(Vector &source, Vector &result, idx_t count, CastPa
                 return string_t();
             }
             char *str = tbox_out(tbox, OUT_DEFAULT_DECIMAL_DIGITS);
-            return string_t(str);
+            if (!str) {
+                free(tbox);
+                throw InternalException("Failure in Tbox_out: tbox_out returned null");
+            }
+            std::string out(str);
+            free(str);
+            free(tbox);
+            return StringVector::AddString(result, out);
         }
     );
     return success;
@@ -83,7 +102,7 @@ void TboxFunctions::NumberTimestamptzToTboxExecutor(Vector &value, Vector &t, me
             char *tbox_data = (char*)malloc(tbox_size);
             memcpy(tbox_data, tbox, tbox_size);
             free(tbox);
-            return string_t(tbox_data, tbox_size);
+            return MallocBlobToResult(result, tbox_data, tbox_size);
         }
     );
     if (count == 1) {
@@ -122,7 +141,7 @@ void TboxFunctions::Numspan_timestamptz_to_tbox(DataChunk &args, ExpressionState
             memcpy(tbox_data, tbox, tbox_size);
             free(span);
             free(tbox);
-            return string_t(tbox_data, tbox_size);
+            return MallocBlobToResult(result, tbox_data, tbox_size);
         }
     );
     if (args.size() == 1) {
@@ -157,7 +176,7 @@ void TboxFunctions::NumberTstzspanToTboxExecutor(Vector &value, Vector &span_str
             memcpy(tbox_data, tbox, tbox_size);
             free(span);
             free(tbox);
-            return string_t(tbox_data, tbox_size);
+            return MallocBlobToResult(result, tbox_data, tbox_size);
         }
     );
     if (count == 1) {
@@ -206,7 +225,7 @@ void TboxFunctions::Numspan_tstzspan_to_tbox(DataChunk &args, ExpressionState &s
             free(numspan);
             free(tstzspan);
             free(tbox);
-            return string_t(tbox_data, tbox_size);
+            return MallocBlobToResult(result, tbox_data, tbox_size);
         }
     );
     if (args.size() == 1) {
@@ -232,7 +251,7 @@ void TboxFunctions::NumberToTboxExecutor(Vector &value, meosType basetype, Vecto
             char *tbox_data = (char*)malloc(tbox_size);
             memcpy(tbox_data, tbox, tbox_size);
             free(tbox);
-            return string_t(tbox_data, tbox_size);
+            return MallocBlobToResult(result, tbox_data, tbox_size);
         }
     );
     if (count == 1) {
@@ -275,7 +294,7 @@ void TboxFunctions::TimestamptzToTboxExecutor(Vector &value, Vector &result, idx
             char *tbox_data = (char*)malloc(tbox_size);
             memcpy(tbox_data, tbox, tbox_size);
             free(tbox);
-            return string_t(tbox_data, tbox_size);
+            return MallocBlobToResult(result, tbox_data, tbox_size);
         }
     );
     if (count == 1) {
@@ -310,7 +329,7 @@ void TboxFunctions::SetToTboxExecutor(Vector &value, Vector &result, idx_t count
             memcpy(tbox_data, tbox, tbox_size);
             free(set);
             free(tbox);
-            return string_t(tbox_data, tbox_size);
+            return MallocBlobToResult(result, tbox_data, tbox_size);
         }
     );
     if (count == 1) {
@@ -345,7 +364,7 @@ void TboxFunctions::SpanToTboxExecutor(Vector &value, Vector &result, idx_t coun
             memcpy(tbox_data, tbox, tbox_size);
             free(span);
             free(tbox);
-            return string_t(tbox_data, tbox_size);
+            return MallocBlobToResult(result, tbox_data, tbox_size);
         }
     );
     if (count == 1) {
@@ -380,7 +399,7 @@ void TboxFunctions::TboxToIntspanExecutor(Vector &value, Vector &result, idx_t c
             memcpy(span_data, span, span_size);
             free(tbox);
             free(span);
-            return string_t(span_data, span_size);
+            return MallocBlobToResult(result, span_data, span_size);
         }
     );
     if (count == 1) {
@@ -415,7 +434,7 @@ void TboxFunctions::TboxToFloatspanExecutor(Vector &value, Vector &result, idx_t
             memcpy(span_data, span, span_size);
             free(tbox);
             free(span);
-            return string_t(span_data, span_size);
+            return MallocBlobToResult(result, span_data, span_size);
         }
     );
     if (count == 1) {
@@ -450,7 +469,7 @@ void TboxFunctions::TboxToTstzspanExecutor(Vector &value, Vector &result, idx_t 
             memcpy(span_data, span, span_size);
             free(tbox);
             free(span);
-            return string_t(span_data, span_size);
+            return MallocBlobToResult(result, span_data, span_size);
         }
     );
     if (count == 1) {
@@ -485,7 +504,7 @@ void TboxFunctions::SpansetToTboxExecutor(Vector &value, Vector &result, idx_t c
             memcpy(tbox_data, tbox, tbox_size);
             free(spanset);
             free(tbox);
-            return string_t(tbox_data, tbox_size);
+            return MallocBlobToResult(result, tbox_data, tbox_size);
         }
     );
     if (count == 1) {
@@ -791,7 +810,7 @@ void TboxFunctions::TboxShiftValueExecutor(Vector &tbox, Vector &shift, LogicalT
             memcpy(shifted_tbox_data, shifted_tbox, shifted_tbox_size);
             free(tbox);
             free(shifted_tbox);
-            return string_t(shifted_tbox_data, shifted_tbox_size);
+            return MallocBlobToResult(result, shifted_tbox_data, shifted_tbox_size);
         }
     );
     if (count == 1) {
@@ -829,7 +848,7 @@ void TboxFunctions::Tbox_shift_time(DataChunk &args, ExpressionState &state, Vec
             memcpy(shifted_tbox_data, shifted_tbox, shifted_tbox_size);
             free(tbox);
             free(shifted_tbox);
-            return string_t(shifted_tbox_data, shifted_tbox_size);
+            return MallocBlobToResult(result, shifted_tbox_data, shifted_tbox_size);
         }
     );
     if (args.size() == 1) {
@@ -864,7 +883,7 @@ void TboxFunctions::TboxScaleValueExecutor(Vector &tbox, Vector &width, LogicalT
             memcpy(scaled_tbox_data, scaled_tbox, scaled_tbox_size);
             free(tbox);
             free(scaled_tbox);
-            return string_t(scaled_tbox_data, scaled_tbox_size);
+            return MallocBlobToResult(result, scaled_tbox_data, scaled_tbox_size);
         }
     );
     if (count == 1) {
@@ -902,7 +921,7 @@ void TboxFunctions::Tbox_scale_time(DataChunk &args, ExpressionState &state, Vec
             memcpy(scaled_tbox_data, scaled_tbox, scaled_tbox_size);
             free(tbox);
             free(scaled_tbox);
-            return string_t(scaled_tbox_data, scaled_tbox_size);
+            return MallocBlobToResult(result, scaled_tbox_data, scaled_tbox_size);
         }
     );
     if (args.size() == 1) {
@@ -940,7 +959,7 @@ void TboxFunctions::TboxShiftScaleValueExecutor(Vector &tbox, Vector &shift, Vec
             memcpy(shifted_scaled_tbox_data, shifted_scaled_tbox, shifted_scaled_tbox_size);
             free(tbox);
             free(shifted_scaled_tbox);
-            return string_t(shifted_scaled_tbox_data, shifted_scaled_tbox_size);
+            return MallocBlobToResult(result, shifted_scaled_tbox_data, shifted_scaled_tbox_size);
         }
     );
     if (count == 1) {
@@ -979,7 +998,7 @@ void TboxFunctions::Tbox_shift_scale_time(DataChunk &args, ExpressionState &stat
             memcpy(shifted_scaled_tbox_data, shifted_scaled_tbox, shifted_scaled_tbox_size);
             free(tbox);
             free(shifted_scaled_tbox);
-            return string_t(shifted_scaled_tbox_data, shifted_scaled_tbox_size);
+            return MallocBlobToResult(result, shifted_scaled_tbox_data, shifted_scaled_tbox_size);
         }
     );
     if (args.size() == 1) {
@@ -1019,7 +1038,7 @@ void TboxFunctions::TboxExpandValueExecutor(Vector &tbox, Vector &value, meosTyp
             memcpy(ret_data, ret, ret_size);
             free(tbox);
             free(ret);
-            return string_t(ret_data, ret_size);
+            return MallocBlobToResult(result, ret_data, ret_size);
         }
     );
     if (count == 1) {
@@ -1062,7 +1081,7 @@ void TboxFunctions::Tbox_expand_time(DataChunk &args, ExpressionState &state, Ve
             memcpy(ret_data, ret, ret_size);
             free(tbox);
             free(ret);
-            return string_t(ret_data, ret_size);
+            return MallocBlobToResult(result, ret_data, ret_size);
         }
     );
     if (args.size() == 1) {
@@ -1089,7 +1108,7 @@ void TboxFunctions::Tbox_round(DataChunk &args, ExpressionState &state, Vector &
                 memcpy(rounded_tbox_data, rounded_tbox, rounded_tbox_size);
                 free(tbox);
                 free(rounded_tbox);
-                return string_t(rounded_tbox_data, rounded_tbox_size);
+                return MallocBlobToResult(result, rounded_tbox_data, rounded_tbox_size);
             }
         );
     } else if (args.ColumnCount() == 2) {
@@ -1110,7 +1129,7 @@ void TboxFunctions::Tbox_round(DataChunk &args, ExpressionState &state, Vector &
                 memcpy(rounded_tbox_data, rounded_tbox, rounded_tbox_size);
                 free(tbox);
                 free(rounded_tbox);
-                return string_t(rounded_tbox_data, rounded_tbox_size);
+                return MallocBlobToResult(result, rounded_tbox_data, rounded_tbox_size);
             }
         );
     }
@@ -1568,7 +1587,7 @@ void TboxFunctions::Union_tbox_tbox(DataChunk &args, ExpressionState &state, Vec
             free(tbox1);
             free(tbox2);
             free(ret);
-            return string_t(ret_data, ret_size);
+            return MallocBlobToResult(result, ret_data, ret_size);
         }
     );
     if (args.size() == 1) {
@@ -1609,7 +1628,7 @@ void TboxFunctions::Intersection_tbox_tbox(DataChunk &args, ExpressionState &sta
             free(tbox1);
             free(tbox2);
             free(ret);
-            return string_t(ret_data, ret_size);
+            return MallocBlobToResult(result, ret_data, ret_size);
         }
     );
     if (args.size() == 1) {

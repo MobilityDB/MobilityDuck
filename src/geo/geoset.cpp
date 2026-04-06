@@ -356,6 +356,7 @@ void SpatialSetFunctions::Set_start_value(DataChunk &args, ExpressionState &stat
         string_t geometry_blob = GSerializedToGeometry(g, state, result);
         string_t str = StringVector::AddStringOrBlob(result, geometry_blob);
 		result_data[i] = str;
+		free(g);
 		free(s);
 	}
 }
@@ -383,7 +384,8 @@ void SpatialSetFunctions::Set_end_value(DataChunk &args, ExpressionState &state,
         GSERIALIZED *g = DatumGetGserializedP(d);
         string_t geometry_blob = GSerializedToGeometry(g, state, result);
         string_t str = StringVector::AddStringOrBlob(result, geometry_blob);
-        result_data[i] = str;		
+        result_data[i] = str;
+        free(g);
         free(s);
     }
 }
@@ -440,11 +442,16 @@ void SpatialSetFunctions::Set_value_n(DataChunk &args, ExpressionState &state, V
 
         Datum d;
         bool found = set_value_n(s, n_data[i], &d);
+        if (!found) {
+            free(s);
+            FlatVector::SetNull(result, i, true);
+            continue;
+        }
         GSERIALIZED *g = DatumGetGserializedP(d);
         string_t geometry_blob = GSerializedToGeometry(g, state, result);
         string_t str = StringVector::AddStringOrBlob(result, geometry_blob);
-        result_data[i] = str;		
-        
+        result_data[i] = str;
+        free(g);
         free(s);
     }
 }

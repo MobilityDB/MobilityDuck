@@ -79,6 +79,7 @@ void TgeompointFunctions::Tspatial_as_text(DataChunk &args, ExpressionState &sta
             std::string ret_string(ret);
             string_t stored_data = StringVector::AddStringOrBlob(result, ret_string);
 
+            free(ret);
             free(temp);
             return stored_data;
         }
@@ -113,6 +114,7 @@ void TgeompointFunctions::Tspatial_as_ewkt(DataChunk &args, ExpressionState &sta
             std::string ret_string(ewkt);
             string_t stored_data = StringVector::AddStringOrBlob(result, ret_string);
 
+            free(ewkt);
             free(temp);
             return stored_data;
         }
@@ -246,6 +248,7 @@ void TgeompointFunctions::Tgeompoint_start_value(DataChunk &args, ExpressionStat
 
             string_t geometry_blob = GSerializedToGeometry(start_geom, state, result);
             string_t stored_result = StringVector::AddStringOrBlob(result, geometry_blob);
+            free(start_geom);
             free(temp);
             return stored_result;
         }
@@ -280,6 +283,7 @@ void TgeompointFunctions::Tgeompoint_end_value(DataChunk &args, ExpressionState 
 
             string_t geometry_blob = GSerializedToGeometry(end_geom, state, result);
             string_t stored_result = StringVector::AddStringOrBlob(result, geometry_blob);
+            free(end_geom);
             free(temp);
             return stored_result;
         }
@@ -428,6 +432,7 @@ inline void Temporal_to_tstzspan_common(Vector &source, Vector &result, idx_t co
             string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
             free(span_buffer);
             free(ret);
+            free(temp);
             return stored_data;
         }
     );
