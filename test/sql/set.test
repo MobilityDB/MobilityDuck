@@ -397,3 +397,28 @@ query I
 SELECT set_distance(intset '{1,5}', intset '{10,15}');
 ----
 5
+
+query I 
+SELECT dateset '{2000-01-01}' = dateset '{2000-01-01, 2000-01-02, 2000-01-03}';
+----
+false
+
+query I
+SELECT dateset '{2000-01-01}' <> dateset '{2000-01-01, 2000-01-02, 2000-01-03}';
+----
+true
+
+query I
+SELECT dateset '{2000-01-01, 2000-01-02, 2000-01-03}' < dateset '{2000-01-01}';
+----
+false
+
+query I
+SELECT dateset '{2000-01-01}' > dateset '{2000-01-01, 2000-01-02, 2000-01-03}';
+----
+false
+
+query I
+SELECT dateset '{2000-01-01}' >= dateset '{2000-01-01, 2000-01-02, 2000-01-03}';
+----
+false

@@ -744,6 +744,98 @@ void SetTypes::RegisterScalarFunctions(DatabaseInstance &db) {
     ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::DOUBLE, SetFunctions::Distance_value_set));
     ExtensionUtil::RegisterFunction(db, ScalarFunction("<->", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::DOUBLE, SetFunctions::Distance_set_set));
 
+    // --- set_eq / = ---
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_eq", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Set_eq));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_eq", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Set_eq));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_eq", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Set_eq));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_eq", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Set_eq));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_eq", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Set_eq));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_eq", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Set_eq));
+
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("=", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Set_eq));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("=", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Set_eq));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("=", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Set_eq));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("=", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Set_eq));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("=", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Set_eq));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("=", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Set_eq));
+
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_ne", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Set_ne));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_ne", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Set_ne));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_ne", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Set_ne));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_ne", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Set_ne));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_ne", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Set_ne));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_ne", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Set_ne));
+
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<>", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Set_ne));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<>", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Set_ne));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<>", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Set_ne));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<>", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Set_ne));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<>", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Set_ne));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<>", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Set_ne));
+
+
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_lt", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Set_lt));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_lt", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Set_lt));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_lt", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Set_lt));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_lt", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Set_lt));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_lt", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Set_lt));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_lt", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Set_lt));
+
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Set_lt));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Set_lt));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Set_lt));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Set_lt));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Set_lt));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Set_lt));
+
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_le", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Set_le));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_le", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Set_le));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_le", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Set_le));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_le", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Set_le));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_le", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Set_le));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_le", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Set_le));
+
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<=", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Set_le));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<=", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Set_le));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<=", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Set_le));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<=", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Set_le));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<=", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Set_le));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("<=", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Set_le));
+
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_gt", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Set_gt));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_gt", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Set_gt));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_gt", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Set_gt));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_gt", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Set_gt));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_gt", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Set_gt));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_gt", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Set_gt));
+
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Set_gt));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Set_gt));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Set_gt));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Set_gt));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Set_gt));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Set_gt));
+
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_ge", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Set_ge));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_ge", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Set_ge));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_ge", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Set_ge));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_ge", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Set_ge));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_ge", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Set_ge));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_ge", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Set_ge));
+
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">=", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Set_ge));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">=", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Set_ge));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">=", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Set_ge));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">=", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Set_ge));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">=", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Set_ge));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(">=", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Set_ge));
+
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_cmp", {SetTypes::intset(), SetTypes::intset()}, LogicalType::INTEGER, SetFunctions::Set_cmp));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_cmp", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::INTEGER, SetFunctions::Set_cmp));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_cmp", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::INTEGER, SetFunctions::Set_cmp));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_cmp", {SetTypes::textset(), SetTypes::textset()}, LogicalType::INTEGER, SetFunctions::Set_cmp));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_cmp", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::INTEGER, SetFunctions::Set_cmp));
+    ExtensionUtil::RegisterFunction(db, ScalarFunction("set_cmp", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::INTEGER, SetFunctions::Set_cmp));
 }
 
 // --- Unnest ---
