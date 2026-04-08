@@ -72,6 +72,7 @@ set(EXTENSION_SOURCES
     src/temporal/span_functions.cpp
     src/geo/geoset.cpp
     src/temporal/spanset.cpp
+    src/temporal/spanset_functions.cpp
     src/geo/tgeometry.cpp
     src/geo/tgeometry_in_out.cpp
     src/index/rtree_module.cpp

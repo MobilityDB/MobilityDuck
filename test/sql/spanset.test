@@ -365,3 +365,53 @@ query I
 SELECT spanN(datespanset '{[2000-01-01,2000-01-02),[2000-01-03,2000-01-04),[2000-01-05,2000-01-06)}', 2);
 ----
 [2000-01-03, 2000-01-04)
+
+query I
+SELECT numDates(datespanset '{[2000-01-01,2000-01-02)}');
+----
+2
+
+query I
+SELECT startDate(datespanset '{[2000-01-01,2000-01-02)}');
+----
+2000-01-01
+
+query I 
+SELECT endDate(datespanset '{[2000-01-01,2000-01-02)}');
+----
+2000-01-02
+
+query I 
+SELECT dateN(datespanset '{[2000-01-01,2000-01-02)}', 0);
+----
+NULL
+
+query I 
+SELECT numTimestamps(tstzspanset '{[2000-01-01,2000-01-01]}');
+----
+1
+
+query I 
+SELECT dates(datespanset '{[2000-01-01,2000-01-02)}');
+----
+{2000-01-01, 2000-01-02}
+
+query I 
+SELECT startTimestamp(tstzspanset '{[2000-01-01,2000-01-01]}');
+----
+2000-01-01 00:00:00+00
+
+query I 
+SELECT endTimestamp(tstzspanset '{[2000-01-01,2000-01-01]}');
+----
+2000-01-01 00:00:00+00
+
+query I
+SELECT timestampN(tstzspanset '{[2000-01-01,2000-01-01],[2000-01-02,2000-01-02]}',1);
+----
+2000-01-01 00:00:00+00
+
+query I
+SELECT timestamps(tstzspanset '{[2000-01-01,2000-01-01]}');
+----
+{"2000-01-01 00:00:00+00"}
