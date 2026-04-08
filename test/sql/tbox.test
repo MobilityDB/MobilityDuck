@@ -496,3 +496,13 @@ query I
 SELECT tbox 'TBOXFLOAT X([1,2])' * tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-01,2000-01-02])';
 ----
 TBOXFLOAT X([1, 2])
+
+query I
+SELECT tbox_cmp(tbox 'TBOXFLOAT XT([1.0,1.0],[2000-01-02,2000-01-02])', tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-02, 2000-01-02])');
+----
+-1
+
+query I
+SELECT tbox_cmp(tbox 'TBOXFLOAT XT([1.0,2.0],[2000-01-02, 2000-01-02])', tbox 'TBOXFLOAT XT([1.0,1.0],[2000-01-02,2000-01-02])');
+----
+1

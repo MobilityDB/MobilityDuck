@@ -918,6 +918,134 @@ void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
             TboxFunctions::Intersection_tbox_tbox
         )
     );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_eq",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Tbox_eq
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_ne",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Tbox_ne
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_lt",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Tbox_lt
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_le",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Tbox_le
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_ge",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Tbox_ge
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_gt",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Tbox_gt
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox_cmp",
+            {TBOX(), TBOX()},
+            LogicalType::INTEGER,
+            TboxFunctions::Tbox_cmp
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "=",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Tbox_eq
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "<>",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Tbox_ne
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "<",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Tbox_lt
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "<=",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Tbox_le
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            ">=",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Tbox_ge
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            ">",
+            {TBOX(), TBOX()},
+            LogicalType::BOOLEAN,
+            TboxFunctions::Tbox_gt
+        )
+    );
 }
 
 } // namespace duckdb

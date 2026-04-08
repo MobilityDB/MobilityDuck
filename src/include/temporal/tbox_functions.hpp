@@ -152,6 +152,13 @@ struct TboxFunctions {
     static void Intersection_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     // TODO: extend aggregation
     // TODO: Comparison
+    static void Tbox_eq(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tbox_ne(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tbox_lt(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tbox_le(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tbox_ge(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tbox_gt(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tbox_cmp(DataChunk &args, ExpressionState &state, Vector &result);
 
 };
 
