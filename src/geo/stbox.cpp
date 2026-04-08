@@ -869,6 +869,125 @@ void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
             StboxFunctions::Intersection_stbox_stbox
         )
     );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_cmp",
+            {STBOX(), STBOX()},
+            LogicalType::INTEGER,
+            StboxFunctions::Stbox_cmp
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_eq",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Stbox_eq
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_ne",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Stbox_ne
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_lt",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Stbox_lt
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_le",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Stbox_le
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_ge",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Stbox_ge
+        )
+    );  
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "stbox_gt",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Stbox_gt
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "=",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Stbox_eq
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "<>",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Stbox_ne
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "<",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Stbox_lt
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "<=",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Stbox_le
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            ">=",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Stbox_ge
+        )
+    );  
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            ">",
+            {STBOX(), STBOX()},
+            LogicalType::BOOLEAN,
+            StboxFunctions::Stbox_gt
+        )
+    );
 }
 
 } // namespace duckdb

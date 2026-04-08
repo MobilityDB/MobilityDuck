@@ -129,7 +129,19 @@ struct StboxFunctions {
      ****************************************************/
     static void Union_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Intersection_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-     // TODO: Split functions + Extent aggregation + Comparison
+     // TODO: Split functions + Extent aggregation 
+    
+    /* ***************************************************
+     * Comparison operators
+     ****************************************************/
+    static void Stbox_eq(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_ne(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_lt(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_le(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_ge(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_gt(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_cmp(DataChunk &args, ExpressionState &state, Vector &result);
+
 };
 
 }

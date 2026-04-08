@@ -2609,4 +2609,231 @@ void StboxFunctions::Intersection_stbox_stbox(DataChunk &args, ExpressionState &
     }
 }
 
+// Comparison operators
+void StboxFunctions::Stbox_eq(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t stbox1_str, string_t stbox2_str) {
+            STBox *stbox1 = nullptr;
+            if (stbox1_str.GetSize() > 0) {
+                stbox1 = (STBox*)malloc(stbox1_str.GetSize());
+                memcpy(stbox1, stbox1_str.GetDataUnsafe(), stbox1_str.GetSize());
+            }
+            if (!stbox1) {
+                throw InternalException("Failure in Stbox_eq: unable to cast binary to stbox");
+            }
+            STBox *stbox2 = nullptr;
+            if (stbox2_str.GetSize() > 0) {
+                stbox2 = (STBox*)malloc(stbox2_str.GetSize());
+                memcpy(stbox2, stbox2_str.GetDataUnsafe(), stbox2_str.GetSize());
+            }
+            if (!stbox2) {
+                free(stbox1);
+                throw InternalException("Failure in Stbox_eq: unable to cast binary to stbox");
+            }
+            bool ret = stbox_eq(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_ne(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t stbox1_str, string_t stbox2_str) {
+            STBox *stbox1 = nullptr;
+            if (stbox1_str.GetSize() > 0) {
+                stbox1 = (STBox*)malloc(stbox1_str.GetSize());
+                memcpy(stbox1, stbox1_str.GetDataUnsafe(), stbox1_str.GetSize());
+            }
+            if (!stbox1) {
+                throw InternalException("Failure in Stbox_ne: unable to cast binary to stbox");
+            }
+            STBox *stbox2 = nullptr;
+            if (stbox2_str.GetSize() > 0) {
+                stbox2 = (STBox*)malloc(stbox2_str.GetSize());
+                memcpy(stbox2, stbox2_str.GetDataUnsafe(), stbox2_str.GetSize());
+            }
+            if (!stbox2) {
+                free(stbox1);
+                throw InternalException("Failure in Stbox_ne: unable to cast binary to stbox");
+            }
+            bool ret = stbox_ne(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_le(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t stbox1_str, string_t stbox2_str) {
+            STBox *stbox1 = nullptr;
+            if (stbox1_str.GetSize() > 0) {
+                stbox1 = (STBox*)malloc(stbox1_str.GetSize());
+                memcpy(stbox1, stbox1_str.GetDataUnsafe(), stbox1_str.GetSize());
+            }
+            if (!stbox1) {
+                throw InternalException("Failure in Stbox_le: unable to cast binary to stbox");
+            }
+            STBox *stbox2 = nullptr;
+            if (stbox2_str.GetSize() > 0) {
+                stbox2 = (STBox*)malloc(stbox2_str.GetSize());
+                memcpy(stbox2, stbox2_str.GetDataUnsafe(), stbox2_str.GetSize());
+            }
+            if (!stbox2) {
+                free(stbox1);
+                throw InternalException("Failure in Stbox_le: unable to cast binary to stbox");
+            }
+            bool ret = stbox_le(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_lt(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t stbox1_str, string_t stbox2_str) {
+            STBox *stbox1 = nullptr;
+            if (stbox1_str.GetSize() > 0) {
+                stbox1 = (STBox*)malloc(stbox1_str.GetSize());
+                memcpy(stbox1, stbox1_str.GetDataUnsafe(), stbox1_str.GetSize());
+            }
+            if (!stbox1) {
+                throw InternalException("Failure in Stbox_lt: unable to cast binary to stbox");
+            }
+            STBox *stbox2 = nullptr;
+            if (stbox2_str.GetSize() > 0) {
+                stbox2 = (STBox*)malloc(stbox2_str.GetSize());
+                memcpy(stbox2, stbox2_str.GetDataUnsafe(), stbox2_str.GetSize());
+            }
+            if (!stbox2) {
+                free(stbox1);
+                throw InternalException("Failure in Stbox_lt: unable to cast binary to stbox");
+            }
+            bool ret = stbox_lt(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_ge(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t stbox1_str, string_t stbox2_str) {
+            STBox *stbox1 = nullptr;
+            if (stbox1_str.GetSize() > 0) {
+                stbox1 = (STBox*)malloc(stbox1_str.GetSize());
+                memcpy(stbox1, stbox1_str.GetDataUnsafe(), stbox1_str.GetSize());
+            }
+            if (!stbox1) {
+                throw InternalException("Failure in Stbox_ge: unable to cast binary to stbox");
+            }
+            STBox *stbox2 = nullptr;
+            if (stbox2_str.GetSize() > 0) {
+                stbox2 = (STBox*)malloc(stbox2_str.GetSize());
+                memcpy(stbox2, stbox2_str.GetDataUnsafe(), stbox2_str.GetSize());
+            }
+            if (!stbox2) {
+                free(stbox1);
+                throw InternalException("Failure in Stbox_ge: unable to cast binary to stbox");
+            }
+            bool ret = stbox_ge(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_gt(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t stbox1_str, string_t stbox2_str) {
+            STBox *stbox1 = nullptr;
+            if (stbox1_str.GetSize() > 0) {
+                stbox1 = (STBox*)malloc(stbox1_str.GetSize());
+                memcpy(stbox1, stbox1_str.GetDataUnsafe(), stbox1_str.GetSize());
+            }
+            if (!stbox1) {
+                throw InternalException("Failure in Stbox_gt: unable to cast binary to stbox");
+            }
+            STBox *stbox2 = nullptr;
+            if (stbox2_str.GetSize() > 0) {
+                stbox2 = (STBox*)malloc(stbox2_str.GetSize());
+                memcpy(stbox2, stbox2_str.GetDataUnsafe(), stbox2_str.GetSize());
+            }
+            if (!stbox2) {
+                free(stbox1);
+                throw InternalException("Failure in Stbox_gt: unable to cast binary to stbox");
+            }
+            bool ret = stbox_gt(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void StboxFunctions::Stbox_cmp(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, int32_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t stbox1_str, string_t stbox2_str) {
+            STBox *stbox1 = nullptr;
+            if (stbox1_str.GetSize() > 0) {
+                stbox1 = (STBox*)malloc(stbox1_str.GetSize());
+                memcpy(stbox1, stbox1_str.GetDataUnsafe(), stbox1_str.GetSize());
+            }
+            if (!stbox1) {
+                throw InternalException("Failure in Stbox_cmp: unable to cast binary to stbox");
+            }
+            STBox *stbox2 = nullptr;
+            if (stbox2_str.GetSize() > 0) {
+                stbox2 = (STBox*)malloc(stbox2_str.GetSize());
+                memcpy(stbox2, stbox2_str.GetDataUnsafe(), stbox2_str.GetSize());
+            }
+            if (!stbox2) {
+                free(stbox1);
+                throw InternalException("Failure in Stbox_cmp: unable to cast binary to stbox");
+            }
+            int32_t ret = stbox_cmp(stbox1, stbox2);
+            free(stbox1);
+            free(stbox2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+
+
 } // namespace duckdb

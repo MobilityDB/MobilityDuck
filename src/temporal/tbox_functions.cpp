@@ -1679,7 +1679,7 @@ void TboxFunctions::Tbox_ne(DataChunk &args, ExpressionState &state, Vector &res
                 memcpy(tbox1, tbox1_str.GetDataUnsafe(), tbox1_str.GetSize());
             }
             if (!tbox1) {
-                throw InternalException("Failure in Tbox_eq: unable to cast binary to tbox");
+                throw InternalException("Failure in Tbox_ne: unable to cast binary to tbox");
             }
             TBox *tbox2 = nullptr;
             if (tbox2_str.GetSize() > 0) {
@@ -1688,7 +1688,7 @@ void TboxFunctions::Tbox_ne(DataChunk &args, ExpressionState &state, Vector &res
             }
             if (!tbox2) {
                 free(tbox1);
-                throw InternalException("Failure in Tbox_eq: unable to cast binary to tbox");
+                throw InternalException("Failure in Tbox_ne: unable to cast binary to tbox");
             }
             bool ret = tbox_ne(tbox1, tbox2);
             free(tbox1);
@@ -1711,7 +1711,7 @@ void TboxFunctions::Tbox_lt(DataChunk &args, ExpressionState &state, Vector &res
                 memcpy(tbox1, tbox1_str.GetDataUnsafe(), tbox1_str.GetSize());
             }
             if (!tbox1) {
-                throw InternalException("Failure in Tbox_eq: unable to cast binary to tbox");
+                throw InternalException("Failure in Tbox_lt: unable to cast binary to tbox");
             }
             TBox *tbox2 = nullptr;
             if (tbox2_str.GetSize() > 0) {
@@ -1720,7 +1720,7 @@ void TboxFunctions::Tbox_lt(DataChunk &args, ExpressionState &state, Vector &res
             }
             if (!tbox2) {
                 free(tbox1);
-                throw InternalException("Failure in Tbox_eq: unable to cast binary to tbox");
+                throw InternalException("Failure in Tbox_lt: unable to cast binary to tbox");
             }
             bool ret = tbox_lt(tbox1, tbox2);
             free(tbox1);
@@ -1743,7 +1743,7 @@ void TboxFunctions::Tbox_le(DataChunk &args, ExpressionState &state, Vector &res
                 memcpy(tbox1, tbox1_str.GetDataUnsafe(), tbox1_str.GetSize());
             }
             if (!tbox1) {
-                throw InternalException("Failure in Tbox_eq: unable to cast binary to tbox");
+                throw InternalException("Failure in Tbox_le: unable to cast binary to tbox");
             }
             TBox *tbox2 = nullptr;
             if (tbox2_str.GetSize() > 0) {
@@ -1752,7 +1752,7 @@ void TboxFunctions::Tbox_le(DataChunk &args, ExpressionState &state, Vector &res
             }
             if (!tbox2) {
                 free(tbox1);
-                throw InternalException("Failure in Tbox_eq: unable to cast binary to tbox");
+                throw InternalException("Failure in Tbox_le: unable to cast binary to tbox");
             }
             bool ret = tbox_le(tbox1, tbox2);
             free(tbox1);
@@ -1775,7 +1775,7 @@ void TboxFunctions::Tbox_gt(DataChunk &args, ExpressionState &state, Vector &res
                 memcpy(tbox1, tbox1_str.GetDataUnsafe(), tbox1_str.GetSize());
             }
             if (!tbox1) {
-                throw InternalException("Failure in Tbox_eq: unable to cast binary to tbox");
+                throw InternalException("Failure in Tbox_gt: unable to cast binary to tbox");
             }
             TBox *tbox2 = nullptr;
             if (tbox2_str.GetSize() > 0) {
@@ -1784,7 +1784,7 @@ void TboxFunctions::Tbox_gt(DataChunk &args, ExpressionState &state, Vector &res
             }
             if (!tbox2) {
                 free(tbox1);
-                throw InternalException("Failure in Tbox_eq: unable to cast binary to tbox");
+                throw InternalException("Failure in Tbox_gt: unable to cast binary to tbox");
             }
             bool ret = tbox_gt(tbox1, tbox2);
             free(tbox1);
@@ -1807,7 +1807,7 @@ void TboxFunctions::Tbox_ge(DataChunk &args, ExpressionState &state, Vector &res
                 memcpy(tbox1, tbox1_str.GetDataUnsafe(), tbox1_str.GetSize());
             }
             if (!tbox1) {
-                throw InternalException("Failure in Tbox_eq: unable to cast binary to tbox");
+                throw InternalException("Failure in Tbox_ge: unable to cast binary to tbox");
             }
             TBox *tbox2 = nullptr;
             if (tbox2_str.GetSize() > 0) {
@@ -1816,7 +1816,7 @@ void TboxFunctions::Tbox_ge(DataChunk &args, ExpressionState &state, Vector &res
             }
             if (!tbox2) {
                 free(tbox1);
-                throw InternalException("Failure in Tbox_eq: unable to cast binary to tbox");
+                throw InternalException("Failure in Tbox_ge: unable to cast binary to tbox");
             }
             bool ret = tbox_ge(tbox1, tbox2);
             free(tbox1);
@@ -1839,7 +1839,7 @@ void TboxFunctions::Tbox_cmp(DataChunk &args, ExpressionState &state, Vector &re
                 memcpy(tbox1, tbox1_str.GetDataUnsafe(), tbox1_str.GetSize());
             }
             if (!tbox1) {
-                throw InternalException("Failure in Tbox_eq: unable to cast binary to tbox");
+                throw InternalException("Failure in Tbox_cmp: unable to cast binary to tbox");
             }
             TBox *tbox2 = nullptr;
             if (tbox2_str.GetSize() > 0) {
@@ -1848,7 +1848,7 @@ void TboxFunctions::Tbox_cmp(DataChunk &args, ExpressionState &state, Vector &re
             }
             if (!tbox2) {
                 free(tbox1);
-                throw InternalException("Failure in Tbox_eq: unable to cast binary to tbox");
+                throw InternalException("Failure in Tbox_cmp: unable to cast binary to tbox");
             }
             int32_t ret = tbox_cmp(tbox1, tbox2);
             free(tbox1);
