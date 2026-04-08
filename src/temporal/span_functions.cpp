@@ -1,3 +1,4 @@
+#include <cstdint>
 #define MOBILITYDUCK_EXTENSION_TYPES
 
 #include "temporal/span.hpp"
@@ -1524,6 +1525,216 @@ void SpanFunctions::Floatspan_radians(DataChunk &args, ExpressionState &state, V
             return out;
         });
     
+}
+// --- OPERATOR: span = span ---
+void SpanFunctions::Span_eq(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) -> bool {
+            const uint8_t *a_data = reinterpret_cast<const uint8_t*>(a.GetData());
+            size_t a_data_size = a.GetSize();
+            uint8_t *a_data_copy = (uint8_t*)malloc(a_data_size);
+            memcpy(a_data_copy, a_data, a_data_size);
+            Span *a_span = reinterpret_cast<Span*>(a_data_copy);
+            const uint8_t *b_data = reinterpret_cast<const uint8_t*>(b.GetData());
+            size_t b_data_size = b.GetSize();
+            uint8_t *b_data_copy = (uint8_t*)malloc(b_data_size);
+            memcpy(b_data_copy, b_data, b_data_size);
+            Span *b_span = reinterpret_cast<Span*>(b_data_copy);
+            if (!a_span || !b_span) {
+                free(a_data_copy);
+                free(b_data_copy);
+                throw InvalidInputException("Invalid SPAN data: null pointer");
+            }
+            bool ret = span_eq(a_span, b_span);
+            free(a_data_copy);
+            free(b_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+// --- OPERATOR: span <> span ---
+void SpanFunctions::Span_ne(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) -> bool {
+            const uint8_t *a_data = reinterpret_cast<const uint8_t*>(a.GetData());
+            size_t a_data_size = a.GetSize();
+            uint8_t *a_data_copy = (uint8_t*)malloc(a_data_size);
+            memcpy(a_data_copy, a_data, a_data_size);
+            Span *a_span = reinterpret_cast<Span*>(a_data_copy);
+            const uint8_t *b_data = reinterpret_cast<const uint8_t*>(b.GetData());
+            size_t b_data_size = b.GetSize();
+            uint8_t *b_data_copy = (uint8_t*)malloc(b_data_size);
+            memcpy(b_data_copy, b_data, b_data_size);
+            Span *b_span = reinterpret_cast<Span*>(b_data_copy);
+            if (!a_span || !b_span) {
+                free(a_data_copy);
+                free(b_data_copy);
+                throw InvalidInputException("Invalid SPAN data: null pointer");
+            }
+            bool ret = span_ne(a_span, b_span);
+            free(a_data_copy);
+            free(b_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+// --- OPERATOR: span < span ---
+void SpanFunctions::Span_lt(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) -> bool {
+            const uint8_t *a_data = reinterpret_cast<const uint8_t*>(a.GetData());
+            size_t a_data_size = a.GetSize();
+            uint8_t *a_data_copy = (uint8_t*)malloc(a_data_size);
+            memcpy(a_data_copy, a_data, a_data_size);
+            Span *a_span = reinterpret_cast<Span*>(a_data_copy);
+            const uint8_t *b_data = reinterpret_cast<const uint8_t*>(b.GetData());
+            size_t b_data_size = b.GetSize();
+            uint8_t *b_data_copy = (uint8_t*)malloc(b_data_size);
+            memcpy(b_data_copy, b_data, b_data_size);
+            Span *b_span = reinterpret_cast<Span*>(b_data_copy);
+            if (!a_span || !b_span) {
+                free(a_data_copy);
+                free(b_data_copy);
+                throw InvalidInputException("Invalid SPAN data: null pointer");
+            }
+            bool ret = span_lt(a_span, b_span);
+            free(a_data_copy);
+            free(b_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+// --- OPERATOR: span <= span ---
+void SpanFunctions::Span_le(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) -> bool {
+            const uint8_t *a_data = reinterpret_cast<const uint8_t*>(a.GetData());
+            size_t a_data_size = a.GetSize();
+            uint8_t *a_data_copy = (uint8_t*)malloc(a_data_size);
+            memcpy(a_data_copy, a_data, a_data_size);
+            Span *a_span = reinterpret_cast<Span*>(a_data_copy);
+            const uint8_t *b_data = reinterpret_cast<const uint8_t*>(b.GetData());
+            size_t b_data_size = b.GetSize();
+            uint8_t *b_data_copy = (uint8_t*)malloc(b_data_size);
+            memcpy(b_data_copy, b_data, b_data_size);
+            Span *b_span = reinterpret_cast<Span*>(b_data_copy);
+            if (!a_span || !b_span) {
+                free(a_data_copy);
+                free(b_data_copy);
+                throw InvalidInputException("Invalid SPAN data: null pointer");
+            }
+            bool ret = span_le(a_span, b_span);
+            free(a_data_copy);
+            free(b_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void SpanFunctions::Span_gt(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) -> bool {
+            const uint8_t *a_data = reinterpret_cast<const uint8_t*>(a.GetData());
+            size_t a_data_size = a.GetSize();
+            uint8_t *a_data_copy = (uint8_t*)malloc(a_data_size);
+            memcpy(a_data_copy, a_data, a_data_size);
+            Span *a_span = reinterpret_cast<Span*>(a_data_copy);
+            const uint8_t *b_data = reinterpret_cast<const uint8_t*>(b.GetData());
+            size_t b_data_size = b.GetSize();
+            uint8_t *b_data_copy = (uint8_t*)malloc(b_data_size);
+            memcpy(b_data_copy, b_data, b_data_size);
+            Span *b_span = reinterpret_cast<Span*>(b_data_copy);
+            if (!a_span || !b_span) {
+                free(a_data_copy);
+                free(b_data_copy);
+                throw InvalidInputException("Invalid SPAN data: null pointer");
+            }
+            bool ret = span_gt(a_span, b_span);
+            free(a_data_copy);
+            free(b_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+// --- OPERATOR: span >= span ---
+void SpanFunctions::Span_ge(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) -> bool {
+            const uint8_t *a_data = reinterpret_cast<const uint8_t*>(a.GetData());
+            size_t a_data_size = a.GetSize();
+            uint8_t *a_data_copy = (uint8_t*)malloc(a_data_size);
+            memcpy(a_data_copy, a_data, a_data_size);
+            Span *a_span = reinterpret_cast<Span*>(a_data_copy);
+            const uint8_t *b_data = reinterpret_cast<const uint8_t*>(b.GetData());
+            size_t b_data_size = b.GetSize();
+            uint8_t *b_data_copy = (uint8_t*)malloc(b_data_size);
+            memcpy(b_data_copy, b_data, b_data_size);
+            Span *b_span = reinterpret_cast<Span*>(b_data_copy);
+            if (!a_span || !b_span) {
+                free(a_data_copy);
+                free(b_data_copy);
+                throw InvalidInputException("Invalid SPAN data: null pointer");
+            }
+            bool ret = span_ge(a_span, b_span);
+            free(a_data_copy);
+            free(b_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void SpanFunctions::Span_cmp(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, int32_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) -> int32_t {
+            const uint8_t *a_data = reinterpret_cast<const uint8_t*>(a.GetData());
+            size_t a_data_size = a.GetSize();
+            uint8_t *a_data_copy = (uint8_t*)malloc(a_data_size);
+            memcpy(a_data_copy, a_data, a_data_size);
+            Span *a_span = reinterpret_cast<Span*>(a_data_copy);
+            const uint8_t *b_data = reinterpret_cast<const uint8_t*>(b.GetData());
+            size_t b_data_size = b.GetSize();
+            uint8_t *b_data_copy = (uint8_t*)malloc(b_data_size);
+            memcpy(b_data_copy, b_data, b_data_size);
+            Span *b_span = reinterpret_cast<Span*>(b_data_copy);
+            if (!a_span || !b_span) {
+                free(a_data_copy);
+                free(b_data_copy);
+                throw InvalidInputException("Invalid SPAN data: null pointer");
+            }
+            int32_t ret = span_cmp(a_span, b_span);
+            free(a_data_copy);
+            free(b_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
 }
 // --- OPERATOR: span @> value ---
 void SpanFunctions::Contains_span_value(DataChunk &args, ExpressionState &state, Vector &result) {

@@ -439,6 +439,65 @@ void SpanTypes::RegisterScalarFunctions(DatabaseInstance &db) {
         ScalarFunction("radians", {SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Floatspan_radians)
     );
 
+    for (const auto &span_type : SpanTypes::AllTypes()) {
+        ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("span_eq", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_eq)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("span_ne", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_ne)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("span_lt", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_lt)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("span_le", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_le)
+    );
+    
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("span_ge", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_ge)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("span_gt", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_gt)
+    );
+
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("span_cmp", {span_type, span_type}, LogicalType::INTEGER, SpanFunctions::Span_cmp)
+    );
+
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("=", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_eq)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("<>", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_ne)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("<", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_lt)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction("<=", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_le)
+    );
+    
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction(">=", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_ge)
+    );
+    ExtensionUtil::RegisterFunction(
+        db,
+        ScalarFunction(">", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_gt)
+    );
+    }
+
     ExtensionUtil::RegisterFunction(
         db, 
         ScalarFunction("span_contains", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Contains_span_value)

@@ -66,7 +66,14 @@ struct SpanFunctions {
     static void Floatspan_degrees(DataChunk &args, ExpressionState &state, Vector &result);
     static void Floatspan_radians(DataChunk &args, ExpressionState &state, Vector &result);
         // TODO: Selectivity functions
-        // TODO: Comparison operators
+        // Comparison operators
+    static void Span_eq(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Span_ne(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Span_lt(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Span_le(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Span_ge(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Span_gt(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Span_cmp(DataChunk &args, ExpressionState &state, Vector &result);
         // Topological operators
     static void Contains_span_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contains_span_span(DataChunk &args, ExpressionState &state, Vector &result);
