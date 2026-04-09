@@ -65,6 +65,22 @@ struct SpansetFunctions{
     static void Tstzspanset_timestamptz_n(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tstzspanset_timestamps(DataChunk &args, ExpressionState &state, Vector &result);
 
+    // Transformations functions
+    static void Numspanset_shift(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tstzspanset_shift(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Numspanset_scale(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tstzspanset_scale(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Numspanset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tstzspanset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Floatspanset_floor(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Floatspanset_ceil(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Floatspanset_round(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Floatspanset_degrees(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Floatspanset_radians(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Spanset_spans(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Spanset_split_n_spans(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Spanset_split_each_n_spans(DataChunk &args, ExpressionState &state, Vector &result);
+    
 };
 
 

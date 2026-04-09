@@ -1043,4 +1043,474 @@ void SpansetFunctions::Tstzspanset_timestamps(DataChunk &args, ExpressionState &
         });
 }
 
+static inline string_t Numspanset_shift_common(const string_t &blob, Datum shift_datum,
+                                        meosType validate_spanset_type, Vector &result) {
+    const uint8_t *data = (const uint8_t *)blob.GetData();
+    size_t size = blob.GetSize();
+    
+    SpanSet *s = (SpanSet *)malloc(size);
+    memcpy(s, data, size);
+    
+    switch(validate_spanset_type) {
+        case T_INTSPANSET: VALIDATE_INTSPANSET(s, NULL); break;
+        case T_FLOATSPANSET: VALIDATE_FLOATSPANSET(s, NULL); break;
+        case T_BIGINTSPANSET: VALIDATE_BIGINTSPANSET(s, NULL); break;
+        case T_DATESPANSET: VALIDATE_DATESPANSET(s, NULL); break;
+        default: break;
+    }    
+    
+    SpanSet *r = numspanset_shift_scale(s, shift_datum, 0, /*do_shift=*/true, /*do_scale=*/false);
+    
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
+    
+    free(s);
+    free(r);
+    return out;
+}
+
+static inline string_t Tstzspanset_shift_common(const string_t &blob, interval_t duckdb_interval, Vector &result) {
+    const uint8_t *data = (const uint8_t *)blob.GetData();
+    size_t size = blob.GetSize();
+    
+    SpanSet *s = (SpanSet *)malloc(size);
+    memcpy(s, data, size);
+    
+    VALIDATE_TSTZSPANSET(s, NULL);
+    
+    // Convert DuckDB interval_t to MEOS Interval
+    MeosInterval meos_interval = IntervaltToInterval(duckdb_interval);
+    
+    SpanSet *r = tstzspanset_shift_scale(s, &meos_interval, NULL);
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
+    
+    free(s);
+    free(r);
+    return out;
+}
+
+void SpansetFunctions::Numspanset_shift(DataChunk &args, ExpressionState &state, Vector &result) {    
+    auto &spanset_vec = args.data[0];
+    auto out_type  = result.GetType();    
+    meosType spanset_type = SpansetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    
+    switch (spanset_type) {
+        case T_INTSPANSET: { // shift(intspanset, integer) -> intspanset
+            BinaryExecutor::Execute<string_t, int32_t, string_t>(
+                spanset_vec, args.data[1], result, args.size(),
+                [&](string_t blob, int32_t shift) -> string_t {
+                    return Numspanset_shift_common(blob, Datum(shift), spanset_type, result);
+                });
+            break;
+        }
+        case T_BIGINTSPANSET: { // shift(bigintspanset, bigint) -> bigintspanset
+            BinaryExecutor::Execute<string_t, int64_t, string_t>(
+                spanset_vec, args.data[1], result, args.size(),
+                [&](string_t blob, int64_t shift) -> string_t {
+                    return Numspanset_shift_common(blob, Datum(shift), spanset_type, result);
+                });
+            break;
+        }
+        case T_FLOATSPANSET: { // shift(floatspanset, double) -> floatspanset
+            BinaryExecutor::Execute<string_t, double, string_t>(
+                spanset_vec, args.data[1], result, args.size(),
+                [&](string_t blob, double shift) -> string_t {                    
+                    return Numspanset_shift_common(blob, Float8GetDatum(shift), spanset_type, result);
+                });
+            break;
+        }
+        case T_DATESPANSET: { // shift(datespanset, integer) -> datespanset
+            BinaryExecutor::Execute<string_t, int32_t, string_t>(
+                spanset_vec, args.data[1], result, args.size(),
+                [&](string_t blob, int32_t shift_days) -> string_t {
+                    return Numspanset_shift_common(blob, Datum(shift_days), spanset_type, result);
+                });
+            break;
+        }
+        default:
+            throw NotImplementedException("shift(<spanset>): unsupported spanset type");
+    }
+}
+
+void SpansetFunctions::Tstzspanset_shift(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &spanset_vec = args.data[0];
+    auto out_type  = result.GetType();    
+    BinaryExecutor::Execute<string_t, interval_t, string_t>(
+        spanset_vec, args.data[1], result, args.size(),
+        [&](string_t blob, interval_t shift_interval) -> string_t {
+            return Tstzspanset_shift_common(blob, shift_interval, result);
+        });
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+static inline string_t Numspanset_scale_common(const string_t &blob, Datum scale_datum,
+                                        meosType validate_spanset_type, Vector &result) {
+    const uint8_t *data = (const uint8_t *)blob.GetData();
+    size_t size = blob.GetSize();
+    
+    SpanSet *s = (SpanSet *)malloc(size);
+    memcpy(s, data, size);
+    
+    switch(validate_spanset_type) {
+        case T_INTSPANSET: VALIDATE_INTSPANSET(s, NULL); break;
+        case T_FLOATSPANSET: VALIDATE_FLOATSPANSET(s, NULL); break;
+        case T_BIGINTSPANSET: VALIDATE_BIGINTSPANSET(s, NULL); break;
+        case T_DATESPANSET: VALIDATE_DATESPANSET(s, NULL); break;
+        default: break;
+    }    
+    
+    SpanSet *r = numspanset_shift_scale(s, scale_datum, 0, /*do_shift=*/false, /*do_scale=*/true);
+    
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
+    
+    free(s);
+    free(r);
+    return out;
+}
+
+void SpansetFunctions::Numspanset_scale(DataChunk &args, ExpressionState &state, Vector &result) {    
+    auto &spanset_vec = args.data[0];
+    auto out_type  = result.GetType();    
+    meosType spanset_type = SpansetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    
+    switch (spanset_type) {
+        case T_INTSPANSET: { // scale(intspanset, integer) -> intspanset
+            BinaryExecutor::Execute<string_t, int32_t, string_t>(
+                spanset_vec, args.data[1], result, args.size(),
+                [&](string_t blob, int32_t scale) -> string_t {
+                    return Numspanset_scale_common(blob, Datum(scale), spanset_type, result);
+                });
+            break;
+        }
+        case T_BIGINTSPANSET: { // scale(bigintspanset, bigint) -> bigintspanset
+            BinaryExecutor::Execute<string_t, int64_t, string_t>(
+                spanset_vec, args.data[1], result, args.size(),
+                [&](string_t blob, int64_t scale) -> string_t {
+                    return Numspanset_scale_common(blob, Datum(scale), spanset_type, result);
+                });
+            break;
+        }
+        case T_FLOATSPANSET: { // scale(floatspanset, double) -> floatspanset
+            BinaryExecutor::Execute<string_t, double, string_t>(
+                spanset_vec, args.data[1], result, args.size(),
+                [&](string_t blob, double scale) -> string_t {                    
+                    return Numspanset_scale_common(blob, Float8GetDatum(scale), spanset_type, result);
+                });
+            break;
+        }
+        case T_DATESPANSET: { // scale(datespanset, integer) -> datespanset
+            BinaryExecutor::Execute<string_t, int32_t, string_t>(
+                spanset_vec, args.data[1], result, args.size(),
+                [&](string_t blob, int32_t scale) -> string_t {
+                    return Numspanset_scale_common(blob, Datum(scale), spanset_type, result);
+                });
+            break;
+        }
+        default:
+            throw NotImplementedException("scale(<spanset>): unsupported spanset type");
+    }
+}
+
+static inline string_t Tstzspanset_scale_common(const string_t &blob, interval_t duckdb_scale, Vector &result) {
+    const uint8_t *data = (const uint8_t *)blob.GetData();
+    size_t size = blob.GetSize();
+    
+    SpanSet *s = (SpanSet *)malloc(size);
+    memcpy(s, data, size);
+    
+    VALIDATE_TSTZSPANSET(s, NULL);
+    
+    // Convert DuckDB interval_t to MEOS Interval
+    MeosInterval meos_interval = IntervaltToInterval(duckdb_scale);
+    
+    SpanSet *r = tstzspanset_shift_scale(s, NULL, &meos_interval);
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
+    
+    free(s);
+    free(r);
+    return out;
+}
+
+void SpansetFunctions::Tstzspanset_scale(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &spanset_vec = args.data[0];
+    auto out_type  = result.GetType();    
+    BinaryExecutor::Execute<string_t, interval_t, string_t>(
+        spanset_vec, args.data[1], result, args.size(),
+        [&](string_t blob, interval_t scale_interval) -> string_t {
+            return Tstzspanset_scale_common(blob, scale_interval, result);
+        });
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+static inline string_t Tstzspanset_shift_scale_common(const string_t &blob, interval_t shift_iv, interval_t scale_iv,
+                                                   Vector &result) {
+    const uint8_t *data = (const uint8_t *)blob.GetData();
+    size_t size = blob.GetSize();
+
+    SpanSet *s = (SpanSet *)malloc(size);
+    memcpy(s, data, size);
+
+    VALIDATE_TSTZSPAN(s, NULL);
+
+    MeosInterval meos_shift = IntervaltToInterval(shift_iv);
+    MeosInterval meos_scale = IntervaltToInterval(scale_iv);
+
+    SpanSet *r = tstzspanset_shift_scale(s, &meos_shift, &meos_scale);
+    free(s);
+    if (!r) {
+        throw InvalidInputException("tstzspanset_shift_scale failed");
+    }
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
+    free(r);
+    return out;
+}
+
+static inline string_t Numspanset_shift_scale_common(const string_t &blob, Datum shift_datum, Datum scale_datum,
+                                                 meosType validate_spanset_type, Vector &result) {
+    const uint8_t *data = (const uint8_t *)blob.GetData();
+    size_t size = blob.GetSize();
+
+    SpanSet *s = (SpanSet *)malloc(size);
+    memcpy(s, data, size);
+
+    switch (validate_spanset_type) {
+        case T_INTSPANSET:
+            VALIDATE_INTSPANSET(s, NULL);
+            break;
+        case T_FLOATSPANSET:
+            VALIDATE_FLOATSPANSET(s, NULL);
+            break;
+        case T_BIGINTSPANSET:
+            VALIDATE_BIGINTSPANSET(s, NULL);
+            break;
+        case T_DATESPANSET:
+            VALIDATE_DATESPANSET(s, NULL);
+            break;
+        default:
+            break;
+    }
+
+    SpanSet *r = numspanset_shift_scale(s, shift_datum, scale_datum, /*do_shift=*/true, /*do_scale=*/true);
+    free(s);
+    if (!r) {
+        throw InvalidInputException("numspanset_shift_scale failed");
+    }
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
+    free(r);
+    return out;
+}
+
+void SpansetFunctions::Numspanset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &spanset_vec = args.data[0];
+    auto out_type = result.GetType();
+    meosType spanset_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
+
+    switch (spanset_type) {
+        case T_INTSPANSET: {
+            TernaryExecutor::Execute<string_t, int32_t, int32_t, string_t>(
+                spanset_vec, args.data[1], args.data[2], result, args.size(),
+                [&](string_t blob, int32_t shift, int32_t scale) -> string_t {
+                    return Numspanset_shift_scale_common(blob, Datum(shift), Datum(scale), spanset_type, result);
+                });
+            break;
+        }
+        case T_BIGINTSPANSET: {
+            TernaryExecutor::Execute<string_t, int64_t, int64_t, string_t>(
+                spanset_vec, args.data[1], args.data[2], result, args.size(),
+                [&](string_t blob, int64_t shift, int64_t scale) -> string_t {
+                    return Numspanset_shift_scale_common(blob, Datum(shift), Datum(scale), spanset_type, result);
+                });
+            break;
+        }
+        case T_FLOATSPANSET: {
+            TernaryExecutor::Execute<string_t, double, double, string_t>(
+                spanset_vec, args.data[1], args.data[2], result, args.size(),
+                [&](string_t blob, double shift, double scale) -> string_t {
+                    return Numspanset_shift_scale_common(blob, Float8GetDatum(shift), Float8GetDatum(scale), spanset_type,
+                                                      result);
+                });
+            break;
+        }
+        case T_DATESPANSET: {
+            TernaryExecutor::Execute<string_t, int32_t, int32_t, string_t>(
+                spanset_vec, args.data[1], args.data[2], result, args.size(),
+                [&](string_t blob, int32_t shift_days, int32_t scale_days) -> string_t {
+                    return Numspanset_shift_scale_common(blob, Datum(shift_days), Datum(scale_days), spanset_type, result);
+                });
+            break;
+        }
+        default:
+            throw NotImplementedException("shiftScale(<spanset>): unsupported spanset type for this overload");
+    }
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void SpansetFunctions::Tstzspanset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &spanset_vec = args.data[0];
+    TernaryExecutor::Execute<string_t, interval_t, interval_t, string_t>(
+        spanset_vec, args.data[1], args.data[2], result, args.size(),
+        [&](string_t blob, interval_t shift, interval_t scale) -> string_t {
+            return Tstzspanset_shift_scale_common(blob, shift, scale, result);
+        });
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void SpansetFunctions::Floatspanset_floor(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &input = args.data[0];
+    UnaryExecutor::Execute<string_t, string_t>(
+        input, result, args.size(),
+        [&](string_t blob) -> string_t {
+            const uint8_t *data = (const uint8_t *)blob.GetData();
+            size_t size = blob.GetSize();
+            SpanSet *s = (SpanSet *)malloc(size);
+            memcpy(s, data, size);
+            VALIDATE_FLOATSPANSET(s, NULL);
+            SpanSet *r = floatspanset_floor(s);
+            free(s);
+            if (!r) {
+                throw InvalidInputException("floatspan_floor failed");
+            }
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
+            free(r);
+            return out;
+        });
+}
+
+void SpansetFunctions::Floatspanset_ceil(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &input = args.data[0];
+    UnaryExecutor::Execute<string_t, string_t>(
+        input, result, args.size(),
+        [&](string_t blob) -> string_t {
+            const uint8_t *data = (const uint8_t *)blob.GetData();
+            size_t size = blob.GetSize();
+            SpanSet *s = (SpanSet *)malloc(size);
+            memcpy(s, data, size);
+            VALIDATE_FLOATSPANSET(s, NULL);
+            SpanSet *r = floatspanset_ceil(s);
+            free(s);
+            if (!r) {
+                throw InvalidInputException("floatspan_ceil failed");
+            }
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
+            free(r);
+            return out;
+        });
+}
+
+void SpansetFunctions::Floatspanset_round(DataChunk &args, ExpressionState &state, Vector &result) {
+    D_ASSERT(args.ColumnCount() == 1 || args.ColumnCount() == 2);
+    auto &args0 = args.data[0];
+    Vector *args1 = args.ColumnCount() == 2 ? &args.data[1] : 0;
+    if (args.ColumnCount() == 2) {
+        BinaryExecutor::Execute<string_t, int32_t, string_t>(
+            args0, *args1, result, args.size(),
+            [&](string_t blob, int32_t precision) -> string_t {
+                const uint8_t *data = (const uint8_t *)blob.GetData();
+                size_t size = blob.GetSize();
+                SpanSet *s = (SpanSet *)malloc(size);
+                memcpy(s, data, size);
+                VALIDATE_FLOATSPANSET(s, NULL);
+                SpanSet *r = floatspanset_round(s, precision);
+                free(s);
+                if (!r) {
+                    throw InvalidInputException("floatspanset_round failed");
+                }
+                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
+                free(r);
+                return out;
+            });
+    } else {
+        UnaryExecutor::Execute<string_t, string_t>(
+            args0, result, args.size(),
+            [&](string_t blob) -> string_t {
+                const uint8_t *data = (const uint8_t *)blob.GetData();
+                size_t size = blob.GetSize();
+                SpanSet *s = (SpanSet *)malloc(size);
+                memcpy(s, data, size);
+                VALIDATE_FLOATSPANSET(s, NULL);
+                SpanSet *r = floatspanset_round(s, 0); // default precision is 0
+                free(s);
+                if (!r) {
+                    throw InvalidInputException("floatspanset_round failed");
+                }
+                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
+                free(r);
+                return out;
+            });
+    }
+}
+
+void SpansetFunctions::Floatspanset_degrees(DataChunk &args, ExpressionState &state, Vector &result) {
+    D_ASSERT(args.ColumnCount() == 1|| args.ColumnCount() == 2);
+    auto &args0 = args.data[0];
+    Vector *args1 = args.ColumnCount() == 2 ? &args.data[1] : 0;
+    if (args.ColumnCount() == 2) {
+        BinaryExecutor::Execute<string_t, int32_t, string_t>(
+            args0, *args1, result, args.size(),
+            [&](string_t blob, int32_t precision) -> string_t {
+                const uint8_t *data = (const uint8_t *)blob.GetData();
+                size_t size = blob.GetSize();
+                SpanSet *s = (SpanSet *)malloc(size);
+                memcpy(s, data, size);
+                VALIDATE_FLOATSPANSET(s, NULL);
+                SpanSet *r = floatspanset_degrees(s, precision);
+                free(s);
+                if (!r) {
+                    throw InvalidInputException("floatspanset_degrees failed");
+                }
+                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
+                free(r);
+                return out;
+            });
+    } else {
+        UnaryExecutor::Execute<string_t, string_t>(
+            args0, result, args.size(),
+            [&](string_t blob) -> string_t {
+                const uint8_t *data = (const uint8_t *)blob.GetData();
+                size_t size = blob.GetSize();
+                SpanSet *s = (SpanSet *)malloc(size);
+                memcpy(s, data, size);
+                VALIDATE_FLOATSPANSET(s, NULL);
+                SpanSet *r = floatspanset_degrees(s, false); // default precision is false
+                free(s);
+                if (!r) {
+                    throw InvalidInputException("floatspanset_degrees failed");
+                }
+                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
+                free(r);
+                return out;
+            });
+    }
+    
+}
+
+void SpansetFunctions::Floatspanset_radians(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &args0 = args.data[0];
+    UnaryExecutor::Execute<string_t, string_t>(
+        args0, result, args.size(),
+        [&](string_t blob) -> string_t {
+            const uint8_t *data = (const uint8_t *)blob.GetData();
+            size_t size = blob.GetSize();
+            SpanSet *s = (SpanSet *)malloc(size);
+            memcpy(s, data, size);
+            VALIDATE_FLOATSPANSET(s, NULL);
+            SpanSet *r = floatspanset_radians(s); 
+            if (!r) {
+                throw InvalidInputException("floatspanset_radians failed");
+            }
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
+            free(r);
+            return out;
+        });
+    
+}
+
+
 } // namespace duckdb   

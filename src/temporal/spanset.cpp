@@ -297,6 +297,83 @@ void SpansetTypes::RegisterScalarFunctions(DatabaseInstance &db) {
             db,
             ScalarFunction("spanN", {spanset_type, LogicalType::INTEGER}, child_type, SpansetFunctions::Spanset_span_n)
         );
+
+        if (spanset_type == SpansetTypes::intspanset() ||spanset_type == SpansetTypes::datespanset()){
+
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("shift", {spanset_type, LogicalType::INTEGER}, spanset_type, SpansetFunctions::Numspanset_shift)
+            ); 
+            
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("scale", {spanset_type, LogicalType::INTERVAL}, spanset_type, SpansetFunctions::Numspanset_scale)
+            );
+
+            ExtensionUtil::RegisterFunction(
+                db,
+                ScalarFunction("shiftScale", {spanset_type, LogicalType::INTEGER, LogicalType::INTEGER}, spanset_type,
+                               SpansetFunctions::Numspanset_shift_scale));
+
+        }
+        else if( spanset_type == SpansetTypes::bigintspanset() ){
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("shift", {spanset_type, LogicalType::BIGINT}, spanset_type, SpansetFunctions::Numspanset_shift)
+            ); 
+
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("scale", {spanset_type, LogicalType::INTERVAL}, spanset_type, SpansetFunctions::Numspanset_scale)
+            );
+            ExtensionUtil::RegisterFunction(
+                db,
+                ScalarFunction("shiftScale", {spanset_type, LogicalType::BIGINT, LogicalType::BIGINT}, spanset_type, SpansetFunctions::Numspanset_shift_scale)
+            );    
+        }
+        else if( spanset_type == SpansetTypes::floatspanset() ){
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("shift", {spanset_type, LogicalType::DOUBLE}, spanset_type, SpansetFunctions::Numspanset_shift)
+            ); 
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("scale", {spanset_type, LogicalType::INTERVAL}, spanset_type, SpansetFunctions::Numspanset_scale)
+            );
+            ExtensionUtil::RegisterFunction(
+                db,
+                ScalarFunction("shiftScale", {spanset_type, LogicalType::DOUBLE, LogicalType::DOUBLE}, spanset_type, SpansetFunctions::Numspanset_shift_scale)
+            );
+
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("floor", {spanset_type}, spanset_type, SpansetFunctions::Floatspanset_floor)
+            );
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("ceil", {spanset_type}, spanset_type, SpansetFunctions::Floatspanset_ceil)
+            );
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("round", {spanset_type}, spanset_type, SpansetFunctions::Floatspanset_round)
+            );
+
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("round", {spanset_type, LogicalType::INTEGER}, spanset_type, SpansetFunctions::Floatspanset_round)
+            );
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("degrees", {spanset_type}, spanset_type, SpansetFunctions::Floatspanset_degrees)
+            );
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("radians", {spanset_type}, spanset_type, SpansetFunctions::Floatspanset_radians)
+            );
+
+        }
+        else if( spanset_type == SpansetTypes::tstzspanset() ){
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("shift", {spanset_type, LogicalType::INTERVAL}, spanset_type, SpansetFunctions::Tstzspanset_shift)
+            ); 
+
+            ExtensionUtil::RegisterFunction(
+                db, ScalarFunction("scale", {spanset_type, LogicalType::INTERVAL}, spanset_type, SpansetFunctions::Tstzspanset_scale)
+            );
+            ExtensionUtil::RegisterFunction(
+                db,
+                ScalarFunction("shiftScale", {spanset_type, LogicalType::INTERVAL, LogicalType::INTERVAL}, spanset_type, SpansetFunctions::Tstzspanset_shift_scale)
+            );
+
+        }      
     }
     ExtensionUtil::RegisterFunction(
         db,
@@ -367,6 +444,8 @@ void SpansetTypes::RegisterScalarFunctions(DatabaseInstance &db) {
         db,
         ScalarFunction("timestamps", {SpansetTypes::tstzspanset()}, SetTypes::tstzset(), SpansetFunctions::Tstzspanset_timestamps)
     );
+
+
 }
 
 } // namespace duckdb   
