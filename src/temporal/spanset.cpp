@@ -373,7 +373,19 @@ void SpansetTypes::RegisterScalarFunctions(DatabaseInstance &db) {
                 ScalarFunction("shiftScale", {spanset_type, LogicalType::INTERVAL, LogicalType::INTERVAL}, spanset_type, SpansetFunctions::Tstzspanset_shift_scale)
             );
 
-        }      
+        } 
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("spans", {spanset_type}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_spans)
+        );
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("splitNSpans", {spanset_type, LogicalType::INTEGER}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_split_n_spans)
+        );
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("splitEachNSpans", {spanset_type, LogicalType::INTEGER}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_split_each_n_spans)
+        );
     }
     ExtensionUtil::RegisterFunction(
         db,
@@ -444,7 +456,6 @@ void SpansetTypes::RegisterScalarFunctions(DatabaseInstance &db) {
         db,
         ScalarFunction("timestamps", {SpansetTypes::tstzspanset()}, SetTypes::tstzset(), SpansetFunctions::Tstzspanset_timestamps)
     );
-
 
 }
 

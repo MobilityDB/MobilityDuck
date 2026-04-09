@@ -1512,5 +1512,155 @@ void SpansetFunctions::Floatspanset_radians(DataChunk &args, ExpressionState &st
     
 }
 
+void SpansetFunctions::Spanset_spans(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &spanset_vec = args.data[0];
+    idx_t row_count = args.size();
+    spanset_vec.Flatten(row_count);
+
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+
+    idx_t total_offset = 0;
+    const size_t span_bytes = sizeof(Span);
+
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (spanset_vec.GetValue(i).IsNull()) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+
+        string_t blob = FlatVector::GetData<string_t>(spanset_vec)[i];
+        SpanSet *s = (SpanSet *)malloc(blob.GetSize());
+        memcpy(s, blob.GetData(), blob.GetSize());
+
+        int num = spanset_num_spans(s);
+        Span *spans = spanset_spans(s);
+        free(s);
+
+        if (!spans || num <= 0) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+
+        ListVector::SetListSize(result, total_offset + num);
+        list_entries[i] = list_entry_t{total_offset, static_cast<uint64_t>(num)};
+
+        auto *child_data = FlatVector::GetData<string_t>(child_vector);
+        for (int j = 0; j < num; ++j) {
+            child_data[total_offset + j] =
+                StringVector::AddStringOrBlob(child_vector, reinterpret_cast<const char *>(&spans[j]), span_bytes);
+        }
+
+        free(spans);
+        total_offset += num;
+        result_validity.SetValid(i);
+    }
+}
+void SpansetFunctions::Spanset_split_n_spans(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &spanset_vec = args.data[0];
+    auto &n_vec = args.data[1];
+    idx_t row_count = args.size();
+    spanset_vec.Flatten(row_count);
+    n_vec.Flatten(row_count);
+
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+
+    idx_t total_offset = 0;
+    const size_t span_bytes = sizeof(Span);
+
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (spanset_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+
+        string_t spanset_blob = FlatVector::GetData<string_t>(spanset_vec)[i];
+        int32_t n = FlatVector::GetData<int32_t>(n_vec)[i];
+
+        SpanSet *s = (SpanSet *)malloc(spanset_blob.GetSize());
+        memcpy(s, spanset_blob.GetData(), spanset_blob.GetSize());
+
+        int out_count = 0;
+        Span *spans = spanset_split_n_spans(s, n, &out_count);
+        free(s);
+
+        if (!spans || out_count <= 0) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+
+        ListVector::SetListSize(result, total_offset + out_count);
+        list_entries[i] = list_entry_t{total_offset, static_cast<uint64_t>(out_count)};
+
+        auto *child_data = FlatVector::GetData<string_t>(child_vector);
+        for (int j = 0; j < out_count; ++j) {
+            child_data[total_offset + j] =
+                StringVector::AddStringOrBlob(child_vector, reinterpret_cast<const char *>(&spans[j]), span_bytes);
+        }
+
+        free(spans);
+        total_offset += out_count;
+        result_validity.SetValid(i);
+    }
+}
+
+void SpansetFunctions::Spanset_split_each_n_spans(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &spanset_vec = args.data[0];
+    auto &n_vec = args.data[1];
+    idx_t row_count = args.size();
+    spanset_vec.Flatten(row_count);
+    n_vec.Flatten(row_count);
+
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+
+    idx_t total_offset = 0;
+    const size_t span_bytes = sizeof(Span);
+
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (spanset_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+
+        string_t spanset_blob = FlatVector::GetData<string_t>(spanset_vec)[i];
+        int32_t n = FlatVector::GetData<int32_t>(n_vec)[i];
+
+        SpanSet *s = (SpanSet *)malloc(spanset_blob.GetSize());
+        memcpy(s, spanset_blob.GetData(), spanset_blob.GetSize());
+
+        int out_count = 0;
+        Span *spans = spanset_split_each_n_spans(s, n, &out_count);
+        free(s);
+
+        if (!spans || out_count <= 0) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+
+        ListVector::SetListSize(result, total_offset + out_count);
+        list_entries[i] = list_entry_t{total_offset, static_cast<uint64_t>(out_count)};
+
+        auto *child_data = FlatVector::GetData<string_t>(child_vector);
+        for (int j = 0; j < out_count; ++j) {
+            child_data[total_offset + j] =
+                StringVector::AddStringOrBlob(child_vector, reinterpret_cast<const char *>(&spans[j]), span_bytes);
+        }
+
+        free(spans);
+        total_offset += out_count;
+        result_validity.SetValid(i);
+    }
+}
 
 } // namespace duckdb   
