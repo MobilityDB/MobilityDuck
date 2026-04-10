@@ -41,6 +41,13 @@ struct TemporalFunctions {
     static void Tsequence_constructor(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tsequenceset_constructor(DataChunk &args, ExpressionState &state, Vector &result);
 
+    /***************************************************** 
+     * Special cast 
+     *****************************************************/
+
+    static void Temporal_enforce_typmod(DataChunk &args, ExpressionState &state, Vector &result);
+    static bool Temporal_enforce_typmod_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    
     /* ***************************************************
      * Conversion functions: [TYPE] -> Temporal
      ****************************************************/

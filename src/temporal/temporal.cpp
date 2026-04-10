@@ -72,7 +72,15 @@ void TemporalTypes::RegisterCastFunctions(DatabaseInstance &instance) {
             LogicalType::VARCHAR,
             TemporalFunctions::Temporal_out
         );
-    }
+
+    //     ExtensionUtil::RegisterCastFunction(
+    //         instance,
+    //         type,
+    //         type,
+    //         TemporalFunctions::Temporal_enforce_typmod_cast,
+    //         100
+    //     );
+    // }
 
     ExtensionUtil::RegisterCastFunction(
         instance,
@@ -80,6 +88,7 @@ void TemporalTypes::RegisterCastFunctions(DatabaseInstance &instance) {
         SpansetTypes::tstzspanset(),
         TemporalFunctions::Blob_to_tstzspanset
     );
+}
 }
 
 void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
@@ -91,6 +100,15 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 {TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()), LogicalType::TIMESTAMP_TZ},
                 type,
                 TemporalFunctions::Tinstant_constructor
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                StringUtil::Lower(type.GetAlias()),
+                {type, LogicalType::INTEGER},
+                type,
+                TemporalFunctions::Temporal_enforce_typmod
             )
         );
 

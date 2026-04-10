@@ -481,6 +481,38 @@ void TemporalFunctions::Tnumber_to_span(DataChunk &args, ExpressionState &state,
     }
 }
 
+/****************************************************
+ * Special Cast
+****************************************************/
+
+void TemporalFunctions::Temporal_enforce_typmod(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, int32_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input, int32_t typmod) -> string_t {
+            return StringVector::AddStringOrBlob(result, input);
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+bool TemporalFunctions::Temporal_enforce_typmod_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+    source.Flatten(count);
+    auto result_data = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < count; ++i) {
+        if (FlatVector::IsNull(source, i)) {
+            FlatVector::SetNull(result, i, true);
+            continue;
+        }
+        Value val = source.GetValue(i);
+        const string_t &blob = StringValue::Get(val);
+        result_data[i] = StringVector::AddStringOrBlob(result, blob);
+    }
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    return true;
+}
+
 /* ***************************************************
  * Accessor functions
  ****************************************************/
