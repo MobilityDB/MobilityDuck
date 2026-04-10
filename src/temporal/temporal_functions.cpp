@@ -408,6 +408,72 @@ void TemporalFunctions::Tsequenceset_constructor(DataChunk &args, ExpressionStat
     }
 }
 
+static string_t Tsequence_from_base_tstzset_impl(Datum datum, string_t set_blob, meosType temptype, Vector &result) {
+    size_t data_size = set_blob.GetSize();
+    if (data_size < sizeof(void*)) {
+        throw InvalidInputException("[Tsequence_from_base_tstzset] Invalid tstzset data: insufficient size");
+    }
+    uint8_t *data_copy = (uint8_t*)malloc(data_size);
+    memcpy(data_copy, set_blob.GetData(), data_size);
+    Set *s = reinterpret_cast<Set*>(data_copy);
+
+    TSequence *seq = tsequence_from_base_tstzset(datum, temptype, s);
+    if (!seq) {
+        free(data_copy);
+        throw InternalException("Failure in Tsequence_from_base_tstzset: unable to create sequence");
+    }
+
+    size_t temp_size = temporal_mem_size((Temporal*)seq);
+    uint8_t *temp_data = (uint8_t*)malloc(temp_size);
+    memcpy(temp_data, (Temporal*)seq, temp_size);
+    string_t result_str(reinterpret_cast<char*>(temp_data), temp_size);
+    string_t stored_data = StringVector::AddStringOrBlob(result, result_str);
+
+    free(temp_data);
+    free(seq);
+    free(data_copy);
+    return stored_data;
+}
+
+void TemporalFunctions::Tsequence_from_base_tstzset(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    const auto &arg_type = args.data[0].GetType();
+    meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
+
+    if (arg_type.id() == LogicalTypeId::VARCHAR) {
+        BinaryExecutor::Execute<string_t, string_t, string_t>(
+            args.data[0], args.data[1], result, count,
+            [&](string_t value, string_t set_blob) {
+                text *txt = cstring2text(value.GetString().c_str());
+                return Tsequence_from_base_tstzset_impl(PointerGetDatum(txt), set_blob, temptype, result);
+            });
+    } else if (arg_type.id() == LogicalTypeId::DOUBLE) {
+        BinaryExecutor::Execute<double, string_t, string_t>(
+            args.data[0], args.data[1], result, count,
+            [&](double value, string_t set_blob) {
+                return Tsequence_from_base_tstzset_impl(Float8GetDatum(value), set_blob, temptype, result);
+            });
+    } else if (arg_type.id() == LogicalTypeId::BOOLEAN) {
+        BinaryExecutor::Execute<bool, string_t, string_t>(
+            args.data[0], args.data[1], result, count,
+            [&](bool value, string_t set_blob) {
+                return Tsequence_from_base_tstzset_impl((Datum)value, set_blob, temptype, result);
+            });
+    } else if (arg_type.id() == LogicalTypeId::INTEGER || arg_type.id() == LogicalTypeId::BIGINT || arg_type.id() == LogicalTypeId::SMALLINT || arg_type.id() == LogicalTypeId::TINYINT) {
+        BinaryExecutor::Execute<int64_t, string_t, string_t>(
+            args.data[0], args.data[1], result, count,
+            [&](int64_t value, string_t set_blob) {
+                return Tsequence_from_base_tstzset_impl((Datum)value, set_blob, temptype, result);
+            });
+    } else {
+        throw InvalidInputException("Invalid argument type for Tsequence_from_base_tstzset: " + arg_type.ToString());
+    }
+
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}   
+
 /* ***************************************************
  * Conversion functions: [TYPE] -> Temporal
  ****************************************************/

@@ -115,6 +115,16 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         ExtensionUtil::RegisterFunction(
             instance,
             ScalarFunction(
+                StringUtil::Lower(type.GetAlias()),
+                {TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()), SetTypes::tstzset()},
+                type,
+                TemporalFunctions::Tsequence_from_base_tstzset
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
                 "tempSubtype",
                 {type},
                 LogicalType::VARCHAR,
