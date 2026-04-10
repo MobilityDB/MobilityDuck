@@ -125,6 +125,43 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         ExtensionUtil::RegisterFunction(
             instance,
             ScalarFunction(
+                StringUtil::Lower(type.GetAlias()),
+                {TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()), SpanTypes::TSTZSPAN()},
+                type,
+                TemporalFunctions::Tsequence_from_base_tstzspan
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                StringUtil::Lower(type.GetAlias()),
+                {TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()), SpanTypes::TSTZSPAN(), LogicalType::VARCHAR},
+                type,
+                TemporalFunctions::Tsequence_from_base_tstzspan
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                StringUtil::Lower(type.GetAlias()),
+                {TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()), SpansetTypes::tstzspanset()},
+                type,
+                TemporalFunctions::Tsequenceset_from_base_tstzspanset
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                StringUtil::Lower(type.GetAlias()),
+                {TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()), SpansetTypes::tstzspanset(), LogicalType::VARCHAR},
+                type,
+                TemporalFunctions::Tsequenceset_from_base_tstzspanset
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
                 "tempSubtype",
                 {type},
                 LogicalType::VARCHAR,
