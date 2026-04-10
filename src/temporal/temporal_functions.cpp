@@ -2119,9 +2119,46 @@ void TemporalFunctions::Temporal_shift_scale_time(DataChunk &args, ExpressionSta
  * Transformation functions
  ****************************************************/
 
+void TemporalFunctions::Temporal_to_tinstant(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input.GetData());
+            size_t data_size = input.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_to_tinstant] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_to_tinstant: unable to cast string to temporal");
+            }
+            TInstant *ret = temporal_to_tinstant(temp);
+            if (!ret) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_to_tinstant: conversion failed");
+            }
+            size_t ret_size = temporal_mem_size((Temporal*)ret);
+            uint8_t *ret_data = (uint8_t*)malloc(ret_size);
+            memcpy(ret_data, (Temporal*)ret, ret_size);
+            string_t result_str(reinterpret_cast<const char*>(ret_data), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, result_str);
+            free(ret_data);
+            free(ret);
+            free(data_copy);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
 void TemporalFunctions::Temporal_to_tsequence(DataChunk &args, ExpressionState &state, Vector &result) {
     interpType interp = INTERP_NONE;
-    if (args.size() > 1) {
+    if (args.ColumnCount() > 1) {
         auto &interp_child = args.data[1];
         interp_child.Flatten(args.size());
         auto interp_str = interp_child.GetValue(0).ToString();
@@ -2162,9 +2199,9 @@ void TemporalFunctions::Temporal_to_tsequence(DataChunk &args, ExpressionState &
 }
 
 void TemporalFunctions::Temporal_to_tsequenceset(DataChunk &args, ExpressionState &state, Vector &result) {
-        interpType interp = INTERP_NONE;
-        if (args.size() > 1) {
-            auto &interp_child = args.data[1];
+    interpType interp = INTERP_NONE;
+    if (args.ColumnCount() > 1) {
+        auto &interp_child = args.data[1];
         interp_child.Flatten(args.size());
         auto interp_str = interp_child.GetValue(0).ToString();
         interp = interptype_from_string(interp_str.c_str());
@@ -2199,6 +2236,249 @@ void TemporalFunctions::Temporal_to_tsequenceset(DataChunk &args, ExpressionStat
         }
     );
     if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Temporal_set_interp(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &interp_child = args.data[1];
+    interp_child.Flatten(count);
+    auto interp_str = interp_child.GetValue(0).ToString();
+    interpType interp = interptype_from_string(interp_str.c_str());
+
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, count,
+        [&](string_t input) {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input.GetData());
+            size_t data_size = input.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_set_interp] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_set_interp: unable to cast string to temporal");
+            }
+            Temporal *ret = temporal_set_interp(temp, interp);
+            if (!ret) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_set_interp: conversion failed");
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            uint8_t *ret_data = (uint8_t*)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            string_t result_str(reinterpret_cast<const char*>(ret_data), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, result_str);
+            free(ret_data);
+            free(ret);
+            free(data_copy);
+            return stored_data;
+        }
+    );
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Temporal_append_tinstant(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
+    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
+    if (args.ColumnCount() > 2) {
+        auto &interp_child = args.data[2];
+        interp_child.Flatten(count);
+        auto interp_str = interp_child.GetValue(0).ToString();
+        interp = interptype_from_string(interp_str.c_str());
+    }
+
+    BinaryExecutor::Execute<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, count,
+        [&](string_t input_temp, string_t input_inst) {
+            size_t temp_size = input_temp.GetSize();
+            if (temp_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_append_tinstant] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *temp_copy = (uint8_t*)malloc(temp_size);
+            memcpy(temp_copy, input_temp.GetData(), temp_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(temp_copy);
+
+            size_t inst_size = input_inst.GetSize();
+            if (inst_size < sizeof(void*)) {
+                free(temp_copy);
+                throw InvalidInputException("[Temporal_append_tinstant] Invalid TInstant data: insufficient size");
+            }
+            uint8_t *inst_copy = (uint8_t*)malloc(inst_size);
+            memcpy(inst_copy, input_inst.GetData(), inst_size);
+            TInstant *inst = reinterpret_cast<TInstant*>(inst_copy);
+
+            Temporal *ret = temporal_append_tinstant(temp, inst, interp, 0.0, NULL, false);
+            if (!ret) {
+                free(inst_copy);
+                free(temp_copy);
+                throw InternalException("Failure in Temporal_append_tinstant: append failed");
+            }
+
+            size_t ret_size = temporal_mem_size(ret);
+            uint8_t *ret_data = (uint8_t*)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            string_t result_str(reinterpret_cast<const char*>(ret_data), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, result_str);
+            free(ret_data);
+            free(ret);
+            free(inst_copy);
+            free(temp_copy);
+            return stored_data;
+        }
+    );
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Temporal_append_tsequence(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    BinaryExecutor::Execute<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, count,
+        [&](string_t input_temp, string_t input_seq) {
+            size_t temp_size = input_temp.GetSize();
+            if (temp_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_append_tsequence] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *temp_copy = (uint8_t*)malloc(temp_size);
+            memcpy(temp_copy, input_temp.GetData(), temp_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(temp_copy);
+
+            size_t seq_size = input_seq.GetSize();
+            if (seq_size < sizeof(void*)) {
+                free(temp_copy);
+                throw InvalidInputException("[Temporal_append_tsequence] Invalid TSequence data: insufficient size");
+            }
+            uint8_t *seq_copy = (uint8_t*)malloc(seq_size);
+            memcpy(seq_copy, input_seq.GetData(), seq_size);
+            TSequence *seq = reinterpret_cast<TSequence*>(seq_copy);
+
+            Temporal *ret = temporal_append_tsequence(temp, seq, false);
+            if (!ret) {
+                free(seq_copy);
+                free(temp_copy);
+                throw InternalException("Failure in Temporal_append_tsequence: append failed");
+            }
+
+            size_t ret_size = temporal_mem_size(ret);
+            uint8_t *ret_data = (uint8_t*)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            string_t result_str(reinterpret_cast<const char*>(ret_data), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, result_str);
+            free(ret_data);
+            free(ret);
+            free(seq_copy);
+            free(temp_copy);
+            return stored_data;
+        }
+    );
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Temporal_merge(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, count,
+        [&](string_t input1, string_t input2, ValidityMask &mask, idx_t idx) -> string_t {
+            size_t size1 = input1.GetSize();
+            size_t size2 = input2.GetSize();
+            if (size1 < sizeof(void*) || size2 < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_merge] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *copy1 = (uint8_t*)malloc(size1);
+            memcpy(copy1, input1.GetData(), size1);
+            Temporal *temp1 = reinterpret_cast<Temporal*>(copy1);
+
+            uint8_t *copy2 = (uint8_t*)malloc(size2);
+            memcpy(copy2, input2.GetData(), size2);
+            Temporal *temp2 = reinterpret_cast<Temporal*>(copy2);
+
+            Temporal *ret = temporal_merge(temp1, temp2);
+            if (!ret) {
+                free(copy2);
+                free(copy1);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+
+            size_t ret_size = temporal_mem_size(ret);
+            uint8_t *ret_data = (uint8_t*)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            string_t result_str(reinterpret_cast<const char*>(ret_data), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, result_str);
+            free(ret_data);
+            free(ret);
+            free(copy2);
+            free(copy1);
+            return stored_data;
+        }
+    );
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Temporal_merge_array(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    auto &array_vec = args.data[0];
+    array_vec.Flatten(count);
+    auto &child_vec = ListVector::GetEntry(array_vec);
+    child_vec.Flatten(ListVector::GetListSize(array_vec));
+    auto child_data = FlatVector::GetData<string_t>(child_vec);
+
+    UnaryExecutor::Execute<list_entry_t, string_t>(
+        array_vec, result, count,
+        [&](const list_entry_t &list) {
+            auto offset = list.offset;
+            auto length = list.length;
+            if (length == 0) {
+                throw InvalidInputException("[Temporal_merge_array] Empty array");
+            }
+
+            Temporal **temparr = (Temporal **)malloc(length * sizeof(Temporal *));
+            for (idx_t i = 0; i < length; i++) {
+                auto blob = child_data[offset + i];
+                size_t blob_size = blob.GetSize();
+                if (blob_size < sizeof(void*)) {
+                    for (idx_t j = 0; j < i; j++) free(temparr[j]);
+                    free(temparr);
+                    throw InvalidInputException("[Temporal_merge_array] Invalid Temporal data: insufficient size");
+                }
+                uint8_t *data_copy = (uint8_t*)malloc(blob_size);
+                memcpy(data_copy, blob.GetData(), blob_size);
+                temparr[i] = reinterpret_cast<Temporal*>(data_copy);
+            }
+
+            Temporal *ret = temporal_merge_array(temparr, (int)length);
+            if (!ret) {
+                for (idx_t j = 0; j < length; j++) free(temparr[j]);
+                free(temparr);
+                throw InternalException("Failure in Temporal_merge_array: merge failed");
+            }
+
+            size_t ret_size = temporal_mem_size(ret);
+            uint8_t *ret_data = (uint8_t*)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            string_t result_str(reinterpret_cast<const char*>(ret_data), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, result_str);
+
+            free(ret_data);
+            free(ret);
+            for (idx_t j = 0; j < length; j++) free(temparr[j]);
+            free(temparr);
+            return stored_data;
+        }
+    );
+    if (count == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }

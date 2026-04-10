@@ -115,12 +115,17 @@ struct TemporalFunctions {
     /* ***************************************************
      * Transformation functions
      ****************************************************/
+    static void Temporal_to_tinstant(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_to_tsequence(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_to_tsequenceset(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_set_interp(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_shift_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_scale_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_shift_scale_value(DataChunk &args, ExpressionState &state, Vector &result);
-
+    static void Temporal_append_tinstant(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_append_tsequence(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_merge(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_merge_array(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
      * Restriction functions
      ****************************************************/

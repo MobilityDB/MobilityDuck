@@ -371,6 +371,16 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         ExtensionUtil::RegisterFunction(
             instance,
             ScalarFunction(
+                StringUtil::Lower(type.GetAlias()) + "Inst",
+                {type},
+                type,
+                TemporalFunctions::Temporal_to_tinstant
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
                 StringUtil::Lower(type.GetAlias()) + "Seq",
                 {LogicalType::LIST(type), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN},
                 type,
@@ -415,6 +425,78 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 {type},
                 type,
                 TemporalFunctions::Temporal_to_tsequenceset
+            )
+        );
+
+        if (type.GetAlias() == "TFLOAT") {
+            ExtensionUtil::RegisterFunction(
+                instance,
+                ScalarFunction(
+                    StringUtil::Lower(type.GetAlias()) + "SeqSet",
+                    {type, LogicalType::VARCHAR},
+                    type,
+                    TemporalFunctions::Temporal_to_tsequenceset
+                )
+            );
+        }
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "setInterp",
+                {type, LogicalType::VARCHAR},
+                type,
+                TemporalFunctions::Temporal_set_interp
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "appendInstant",
+                {type, type},
+                type,
+                TemporalFunctions::Temporal_append_tinstant
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "appendInstant",
+                {type, type, LogicalType::VARCHAR},
+                type,
+                TemporalFunctions::Temporal_append_tinstant
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "appendSequence",
+                {type, type},
+                type,
+                TemporalFunctions::Temporal_append_tsequence
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "merge",
+                {type, type},
+                type,
+                TemporalFunctions::Temporal_merge
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "merge",
+                {LogicalType::LIST(type)},
+                type,
+                TemporalFunctions::Temporal_merge_array
             )
         );
 
