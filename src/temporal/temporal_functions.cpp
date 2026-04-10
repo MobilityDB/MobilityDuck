@@ -694,6 +694,245 @@ void TemporalFunctions::Tnumber_to_span(DataChunk &args, ExpressionState &state,
     }
 }
 
+static string_t Tbool_to_tint_common(string_t input, Vector &result) {
+    const uint8_t *data = reinterpret_cast<const uint8_t*>(input.GetData());
+    size_t data_size = input.GetSize();
+    if (data_size < sizeof(void*)) {
+        throw InvalidInputException("[Tbool_to_tint] Invalid Temporal data: insufficient size");
+    }
+    uint8_t *data_copy = (uint8_t*)malloc(data_size);
+    memcpy(data_copy, data, data_size);
+    Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+
+    Temporal *ret = tbool_to_tint(temp);
+    if (!ret) {
+        free(data_copy);
+        throw InternalException("Failure in Tbool_to_tint: unable to convert tbool to tint");
+    }
+
+    size_t ret_size = temporal_mem_size(ret);
+    uint8_t *ret_data = (uint8_t*)malloc(ret_size);
+    memcpy(ret_data, ret, ret_size);
+    string_t result_str(reinterpret_cast<char*>(ret_data), ret_size);
+    string_t stored_data = StringVector::AddStringOrBlob(result, result_str);
+
+    free(ret_data);
+    free(ret);
+    free(data_copy);
+    return stored_data;
+}
+
+void TemporalFunctions::Tbool_to_tint(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) {
+            return Tbool_to_tint_common(input, result);
+        }
+    );
+}
+
+bool TemporalFunctions::Tbool_to_tint_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        source, result, count,
+        [&](string_t input) {
+            return Tbool_to_tint_common(input, result);
+        }
+    );
+    return true;
+}
+
+static inline string_t Tint_to_tfloat_common(string_t input, Vector &result) {
+    const uint8_t *data = reinterpret_cast<const uint8_t*>(input.GetData());
+    size_t data_size = input.GetSize();
+    if (data_size < sizeof(void*)) {
+        throw InvalidInputException("[Tint_to_tfloat] Invalid Temporal data: insufficient size");
+    }
+    uint8_t *data_copy = (uint8_t*)malloc(data_size);
+    memcpy(data_copy, data, data_size);
+    Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+    if (!temp) {
+        free(data_copy);
+        throw InternalException("Failure in Tint_to_tfloat: unable to cast string to temporal");
+    }
+    Temporal *ret = tint_to_tfloat(temp);
+    if (!ret) {
+        free(data_copy);
+        throw InternalException("Failure in Tint_to_tfloat: unable to convert tint to tfloat");
+    }
+    size_t ret_size = temporal_mem_size(ret);
+    uint8_t *ret_data = (uint8_t*)malloc(ret_size);
+    memcpy(ret_data, ret, ret_size);
+    string_t result_str(reinterpret_cast<char*>(ret_data), ret_size);
+    string_t stored_data = StringVector::AddStringOrBlob(result, result_str);
+    free(ret_data);
+    free(ret);
+    free(data_copy);
+    return stored_data;
+}
+void TemporalFunctions::Tint_to_tfloat(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) {
+            return Tint_to_tfloat_common(input, result);
+        }
+    );
+}
+bool TemporalFunctions::Tint_to_tfloat_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        source, result, count,
+        [&](string_t input) {
+            return Tint_to_tfloat_common(input, result);
+        }
+    );
+    return true;
+}
+static inline string_t Tfloat_to_tint_common(string_t input, Vector &result) {
+    const uint8_t *data = reinterpret_cast<const uint8_t*>(input.GetData());
+    size_t data_size = input.GetSize();
+    if (data_size < sizeof(void*)) {
+        throw InvalidInputException("[Tfloat_to_tint] Invalid Temporal data: insufficient size");
+    }
+    uint8_t *data_copy = (uint8_t*)malloc(data_size);
+    memcpy(data_copy, data, data_size);
+    Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+    if (!temp) {
+        free(data_copy);
+        throw InternalException("Failure in Tfloat_to_tint: unable to cast string to temporal");
+    }
+    Temporal *ret = tfloat_to_tint(temp);
+    if (!ret) {
+        free(data_copy);
+        throw InternalException("Failure in Tfloat_to_tint: unable to convert tfloat to tint");
+    }
+    size_t ret_size = temporal_mem_size(ret);
+    uint8_t *ret_data = (uint8_t*)malloc(ret_size);
+    memcpy(ret_data, ret, ret_size);
+    string_t result_str(reinterpret_cast<char*>(ret_data), ret_size);
+    string_t stored_data = StringVector::AddStringOrBlob(result, result_str);
+    free(ret_data);
+    free(ret);
+    free(data_copy);
+    return stored_data;
+}
+void TemporalFunctions::Tfloat_to_tint(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) {
+            return Tfloat_to_tint_common(input, result);
+        }
+    );
+}
+bool TemporalFunctions::Tfloat_to_tint_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        source, result, count,
+        [&](string_t input) {
+            return Tfloat_to_tint_common(input, result);
+        }
+    );
+    return true;
+}
+
+static inline string_t Tnumber_to_tbox_common(Datum datum, meosType basetype, Vector &result) {
+    TBox *tbox = number_tbox(datum, basetype);
+    size_t tbox_size = sizeof(TBox);
+    uint8_t *tbox_data = (uint8_t*)malloc(tbox_size);
+    memcpy(tbox_data, tbox, tbox_size);
+    string_t result_str(reinterpret_cast<char*>(tbox_data), tbox_size);
+    string_t stored_data = StringVector::AddStringOrBlob(result, result_str);
+    free(tbox_data);
+    free(tbox);
+    return stored_data;
+}
+static string_t Tnumber_temporal_to_tbox_common(string_t input, Vector &result) {
+    const uint8_t *data = reinterpret_cast<const uint8_t*>(input.GetData());
+    size_t data_size = input.GetSize();
+    if (data_size < sizeof(void*)) {
+        throw InvalidInputException("[Tnumber_to_tbox] Invalid Temporal data: insufficient size");
+    }
+    uint8_t *data_copy = (uint8_t*)malloc(data_size);
+    memcpy(data_copy, data, data_size);
+    Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+
+    TBox *tbox = tnumber_to_tbox(temp);
+    if (!tbox) {
+        free(data_copy);
+        throw InternalException("Failure in Tnumber_to_tbox: unable to convert temporal to tbox");
+    }
+
+    size_t tbox_size = sizeof(TBox);
+    uint8_t *tbox_data = (uint8_t*)malloc(tbox_size);
+    memcpy(tbox_data, tbox, tbox_size);
+    string_t result_str(reinterpret_cast<char*>(tbox_data), tbox_size);
+    string_t stored_data = StringVector::AddStringOrBlob(result, result_str);
+
+    free(tbox_data);
+    free(tbox);
+    free(data_copy);
+    return stored_data;
+}
+
+void TemporalFunctions::Tnumber_to_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    const auto &arg_type = args.data[0].GetType();
+    if (arg_type.id() == LogicalTypeId::BLOB) {
+        UnaryExecutor::Execute<string_t, string_t>(
+            args.data[0], result, count,
+            [&](string_t input) {
+                return Tnumber_temporal_to_tbox_common(input, result);
+            });
+    } else if (arg_type.id() == LogicalTypeId::DOUBLE || arg_type.id() == LogicalTypeId::FLOAT) {
+        meosType basetype = TemporalHelpers::GetTemptypeFromAlias(arg_type.GetAlias().c_str());
+        UnaryExecutor::Execute<double, string_t>(
+            args.data[0], result, count,
+            [&](double value) {
+                return Tnumber_to_tbox_common(Float8GetDatum(value), basetype, result);
+            });
+    } else if (arg_type.id() == LogicalTypeId::INTEGER || arg_type.id() == LogicalTypeId::BIGINT ||
+               arg_type.id() == LogicalTypeId::SMALLINT || arg_type.id() == LogicalTypeId::TINYINT) {
+        meosType basetype = TemporalHelpers::GetTemptypeFromAlias(arg_type.GetAlias().c_str());
+        UnaryExecutor::Execute<int64_t, string_t>(
+            args.data[0], result, count,
+            [&](int64_t value) {
+                return Tnumber_to_tbox_common((Datum)value, basetype, result);
+            });
+    } else {
+        throw InvalidInputException("Invalid argument type for Tnumber_to_tbox: " + arg_type.ToString());
+    }
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+bool TemporalFunctions::Tnumber_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+    if (source.GetType().id() == LogicalTypeId::BLOB) {
+        UnaryExecutor::Execute<string_t, string_t>(
+            source, result, count,
+            [&](string_t input) {
+                return Tnumber_temporal_to_tbox_common(input, result);
+            }
+        );
+    } else if (source.GetType().id() == LogicalTypeId::DOUBLE) {
+        meosType basetype = TemporalHelpers::GetTemptypeFromAlias(source.GetType().GetAlias().c_str());
+        UnaryExecutor::Execute<double, string_t>(
+            source, result, count,
+            [&](double value) {
+                return Tnumber_to_tbox_common(Float8GetDatum(value), basetype, result);
+            }
+        );
+    } else if (source.GetType().id() == LogicalTypeId::INTEGER || source.GetType().id() == LogicalTypeId::BIGINT ||
+               source.GetType().id() == LogicalTypeId::SMALLINT || source.GetType().id() == LogicalTypeId::TINYINT) {
+        meosType basetype = TemporalHelpers::GetTemptypeFromAlias(source.GetType().GetAlias().c_str());
+        UnaryExecutor::Execute<int64_t, string_t>(
+            source, result, count,
+            [&](int64_t value) {
+                return Tnumber_to_tbox_common((Datum)value, basetype, result);
+            }
+        );
+    } else {
+        throw InvalidInputException("Invalid argument type for Tnumber_to_tbox_cast: " + source.GetType().ToString());
+    }
+    return true;
+}
 /****************************************************
  * Special Cast
 ****************************************************/

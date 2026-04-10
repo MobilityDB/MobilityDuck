@@ -4,6 +4,7 @@
 #include "temporal/temporal.hpp"
 #include "temporal/temporal_functions.hpp"
 #include "temporal/spanset.hpp"
+#include "temporal/tbox.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/common/exception.hpp"
@@ -88,6 +89,42 @@ void TemporalTypes::RegisterCastFunctions(DatabaseInstance &instance) {
         SpansetTypes::tstzspanset(),
         TemporalFunctions::Blob_to_tstzspanset
     );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        TemporalTypes::TBOOL(),
+        TemporalTypes::TINT(),
+        TemporalFunctions::Tbool_to_tint_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        TemporalTypes::TINT(),
+        TemporalTypes::TFLOAT(),
+        TemporalFunctions::Tint_to_tfloat_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        TemporalTypes::TFLOAT(),
+        TemporalTypes::TINT(),
+        TemporalFunctions::Tfloat_to_tint_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        TemporalTypes::TINT(),
+        TboxType::TBOX(),
+        TemporalFunctions::Tnumber_to_tbox_cast
+    );
+
+    ExtensionUtil::RegisterCastFunction(
+        instance,
+        TemporalTypes::TFLOAT(),
+        TboxType::TBOX(),
+        TemporalFunctions::Tnumber_to_tbox_cast
+    );
+
 }
 }
 
@@ -619,6 +656,56 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
             {TemporalTypes::TFLOAT(), LogicalType::INTEGER},
             TemporalTypes::TFLOAT(),
             TemporalFunctions::Temporal_round
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tint",
+            {TemporalTypes::TBOOL()},
+            TemporalTypes::TINT(),
+            TemporalFunctions::Tbool_to_tint
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tfloat",
+            {TemporalTypes::TINT()},
+            TemporalTypes::TFLOAT(),
+            TemporalFunctions::Tint_to_tfloat
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tint",
+            {TemporalTypes::TFLOAT()},
+            TemporalTypes::TINT(),
+            TemporalFunctions::Tfloat_to_tint
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox",
+            {TemporalTypes::TINT()},
+            TboxType::TBOX(),
+            TemporalFunctions::Tnumber_to_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tbox",
+            {TemporalTypes::TFLOAT()},
+            TboxType::TBOX(),
+            TemporalFunctions::Tnumber_to_tbox
         )
     );
 }

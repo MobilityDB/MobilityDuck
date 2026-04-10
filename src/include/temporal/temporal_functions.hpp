@@ -57,7 +57,14 @@ struct TemporalFunctions {
      ****************************************************/
     static void Temporal_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_to_span(DataChunk &args, ExpressionState &state, Vector &result);
-
+    static void Tbool_to_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tint_to_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tfloat_to_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static bool Tbool_to_tint_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    static bool Tint_to_tfloat_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    static bool Tfloat_to_tint_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    static bool Tnumber_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     /* ***************************************************
      * Accessor functions
      ****************************************************/
