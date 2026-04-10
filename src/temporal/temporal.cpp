@@ -483,6 +483,16 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
         ExtensionUtil::RegisterFunction(
             instance,
             ScalarFunction(
+                "segments",
+                {type},
+                LogicalType::LIST(type),
+                TemporalFunctions::Temporal_segments
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
                 "startTimestamp",
                 {type},
                 LogicalType::TIMESTAMP_TZ,
@@ -706,6 +716,46 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
             {TemporalTypes::TFLOAT()},
             TboxType::TBOX(),
             TemporalFunctions::Tnumber_to_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "getValues",
+            {TemporalTypes::TINT()},
+            SpansetTypes::intspanset(),
+            TemporalFunctions::Tnumber_valuespans
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "getValues",
+            {TemporalTypes::TFLOAT()},
+            SpansetTypes::floatspanset(),
+            TemporalFunctions::Tnumber_valuespans
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "avgValue",
+            {TemporalTypes::TINT()},
+            LogicalType::DOUBLE,
+            TemporalFunctions::Tnumber_avg_value
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "avgValue",
+            {TemporalTypes::TFLOAT()},
+            LogicalType::DOUBLE,
+            TemporalFunctions::Tnumber_avg_value
         )
     );
 }

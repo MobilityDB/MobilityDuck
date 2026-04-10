@@ -9,6 +9,7 @@
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension_util.hpp"
+#include <cmath>
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 
 #include "time_util.hpp"
@@ -1952,6 +1953,58 @@ void TemporalFunctions::Temporal_sequence_n(DataChunk &args, ExpressionState &st
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
+
+void TemporalFunctions::Temporal_segments(DataChunk &args, ExpressionState &state, Vector &result) {
+    idx_t total_count = 0;
+    UnaryExecutor::Execute<string_t, list_entry_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input.GetData());
+            size_t data_size = input.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_segments] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_segments: unable to cast string to temporal");
+            }
+
+            int32_t seg_count;
+            TSequence **segments = temporal_segments(temp, &seg_count);
+            if (seg_count == 0 || !segments) {
+                free(data_copy);
+                return list_entry_t();
+            }
+
+            const auto entry = list_entry_t(total_count, seg_count);
+            total_count += seg_count;
+            ListVector::Reserve(result, total_count);
+
+            auto &seg_vec = ListVector::GetEntry(result);
+            auto seg_data = FlatVector::GetData<string_t>(seg_vec);
+
+            for (idx_t i = 0; i < (idx_t)seg_count; i++) {
+                TSequence *seg = segments[i];
+                size_t seg_size = temporal_mem_size((Temporal*)seg);
+                uint8_t *seg_buf = (uint8_t*)malloc(seg_size);
+                memcpy(seg_buf, (Temporal*)seg, seg_size);
+                string_t ret_str(reinterpret_cast<const char*>(seg_buf), seg_size);
+                string_t stored = StringVector::AddStringOrBlob(seg_vec, ret_str);
+                free(seg_buf);
+                free(seg);
+                seg_data[entry.offset + i] = stored;
+            }
+            free(segments);
+            free(data_copy);
+            return entry;
+        }
+    );
+    ListVector::SetListSize(result, total_count);
+}
+
 // shift, scale 
 void TemporalFunctions::Temporal_shift_time(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(
@@ -2597,6 +2650,69 @@ void TemporalFunctions::Temporal_after_timestamptz(DataChunk &args, ExpressionSt
             free(ret);
             free(temp);
             return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Tnumber_valuespans(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t temp_str) {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Tnumber_valuespans] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Tnumber_valuespans: unable to cast string to temporal");
+            }
+            SpanSet *ret = tnumber_valuespans(temp);
+            if (!ret) {
+                free(temp);
+                return string_t();
+            }
+            size_t spanset_size = spanset_mem_size(ret);
+            uint8_t *spanset_buffer = (uint8_t*)malloc(spanset_size);
+            memcpy(spanset_buffer, ret, spanset_size);
+            string_t ret_str(reinterpret_cast<const char*>(spanset_buffer), spanset_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(spanset_buffer);
+            free(ret);
+            free(temp);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Tnumber_avg_value(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, double_t>(
+        args.data[0], result, args.size(),
+        [&](string_t temp_str) {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Tnumber_avg_value] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Tnumber_avg_value: unable to cast string to temporal");
+            }
+            double ret = tnumber_avg_value(temp);
+            free(data_copy);
+            return ret;
         }
     );
     if (args.size() == 1) {

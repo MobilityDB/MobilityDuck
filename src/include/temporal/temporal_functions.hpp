@@ -73,10 +73,12 @@ struct TemporalFunctions {
     static void Temporal_mem_size(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tinstant_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_valueset(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_valuespans(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_start_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_end_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_min_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_max_value(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_avg_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_value_n(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_num_instants(DataChunk &args, ExpressionState &state, Vector &result); 
     static void Temporal_min_instant(DataChunk &args, ExpressionState &state, Vector &result);
@@ -100,9 +102,7 @@ struct TemporalFunctions {
     static void Temporal_start_sequence(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_end_sequence(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_sequence_n(DataChunk &args, ExpressionState &state, Vector &result);
-    //TODO:
-    //static void Temporal_segments
-
+    static void Temporal_segments(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
      * Shift and scale 
      ****************************************************/
