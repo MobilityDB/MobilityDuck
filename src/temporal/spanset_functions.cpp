@@ -1662,5 +1662,215 @@ void SpansetFunctions::Spanset_split_each_n_spans(DataChunk &args, ExpressionSta
         result_validity.SetValid(i);
     }
 }
+// operator = 
+void SpansetFunctions::Spanset_eq(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) -> bool {
+            const uint8_t *a_data = reinterpret_cast<const uint8_t*>(a.GetData());
+            size_t a_data_size = a.GetSize();
+            uint8_t *a_data_copy = (uint8_t*)malloc(a_data_size);
+            memcpy(a_data_copy, a_data, a_data_size);
+            SpanSet *a_spanset = reinterpret_cast<SpanSet*>(a_data_copy);
+            const uint8_t *b_data = reinterpret_cast<const uint8_t*>(b.GetData());
+            size_t b_data_size = b.GetSize();
+            uint8_t *b_data_copy = (uint8_t*)malloc(b_data_size);
+            memcpy(b_data_copy, b_data, b_data_size);
+            SpanSet *b_spanset = reinterpret_cast<SpanSet*>(b_data_copy);
+            if (!a_spanset || !b_spanset) {
+                free(a_data_copy);
+                free(b_data_copy);
+                throw InvalidInputException("Invalid SPANSET data: null pointer");
+            }
+            bool ret = spanset_eq(a_spanset, b_spanset);
+            free(a_data_copy);
+            free(b_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+// --- OPERATOR: spanset <> spanset ---
+void SpansetFunctions::Spanset_ne(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) -> bool {
+            const uint8_t *a_data = reinterpret_cast<const uint8_t*>(a.GetData());
+            size_t a_data_size = a.GetSize();
+            uint8_t *a_data_copy = (uint8_t*)malloc(a_data_size);
+            memcpy(a_data_copy, a_data, a_data_size);
+            SpanSet *a_spanset = reinterpret_cast<SpanSet*>(a_data_copy);
+            const uint8_t *b_data = reinterpret_cast<const uint8_t*>(b.GetData());
+            size_t b_data_size = b.GetSize();
+            uint8_t *b_data_copy = (uint8_t*)malloc(b_data_size);
+            memcpy(b_data_copy, b_data, b_data_size);
+            SpanSet *b_spanset = reinterpret_cast<SpanSet*>(b_data_copy);
+            if (!a_spanset || !b_spanset) {
+                free(a_data_copy);
+                free(b_data_copy);
+                throw InvalidInputException("Invalid SPAN data: null pointer");
+            }
+            bool ret = spanset_ne(a_spanset, b_spanset);
+            free(a_data_copy);
+            free(b_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+// --- OPERATOR: spanset < spanset ---
+void SpansetFunctions::Spanset_lt(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) -> bool {
+            const uint8_t *a_data = reinterpret_cast<const uint8_t*>(a.GetData());
+            size_t a_data_size = a.GetSize();
+            uint8_t *a_data_copy = (uint8_t*)malloc(a_data_size);
+            memcpy(a_data_copy, a_data, a_data_size);
+            SpanSet *a_spanset = reinterpret_cast<SpanSet*>(a_data_copy);
+            const uint8_t *b_data = reinterpret_cast<const uint8_t*>(b.GetData());
+            size_t b_data_size = b.GetSize();
+            uint8_t *b_data_copy = (uint8_t*)malloc(b_data_size);
+            memcpy(b_data_copy, b_data, b_data_size);
+            SpanSet *b_spanset = reinterpret_cast<SpanSet*>(b_data_copy);
+            if (!a_spanset || !b_spanset) {
+                free(a_data_copy);
+                free(b_data_copy);
+                throw InvalidInputException("Invalid SPAN data: null pointer");
+            }
+            bool ret = spanset_lt(a_spanset, b_spanset);
+            free(a_data_copy);
+            free(b_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+// --- OPERATOR: spanset <= spanset---
+void SpansetFunctions::Spanset_le(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) -> bool {
+            const uint8_t *a_data = reinterpret_cast<const uint8_t*>(a.GetData());
+            size_t a_data_size = a.GetSize();
+            uint8_t *a_data_copy = (uint8_t*)malloc(a_data_size);
+            memcpy(a_data_copy, a_data, a_data_size);
+            SpanSet *a_spanset = reinterpret_cast<SpanSet*>(a_data_copy);
+            const uint8_t *b_data = reinterpret_cast<const uint8_t*>(b.GetData());
+            size_t b_data_size = b.GetSize();
+            uint8_t *b_data_copy = (uint8_t*)malloc(b_data_size);
+            memcpy(b_data_copy, b_data, b_data_size);
+            SpanSet *b_spanset = reinterpret_cast<SpanSet*>(b_data_copy);
+            if (!a_spanset || !b_spanset) {
+                free(a_data_copy);
+                free(b_data_copy);
+                throw InvalidInputException("Invalid SPAN data: null pointer");
+            }
+            bool ret = spanset_le(a_spanset, b_spanset);
+            free(a_data_copy);
+            free(b_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void SpansetFunctions::Spanset_gt(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) -> bool {
+            const uint8_t *a_data = reinterpret_cast<const uint8_t*>(a.GetData());
+            size_t a_data_size = a.GetSize();
+            uint8_t *a_data_copy = (uint8_t*)malloc(a_data_size);
+            memcpy(a_data_copy, a_data, a_data_size);
+            SpanSet *a_spanset = reinterpret_cast<SpanSet*>(a_data_copy);
+            const uint8_t *b_data = reinterpret_cast<const uint8_t*>(b.GetData());
+            size_t b_data_size = b.GetSize();
+            uint8_t *b_data_copy = (uint8_t*)malloc(b_data_size);
+            memcpy(b_data_copy, b_data, b_data_size);
+            SpanSet *b_spanset = reinterpret_cast<SpanSet*>(b_data_copy);
+            if (!a_spanset || !b_spanset) {
+                free(a_data_copy);
+                free(b_data_copy);
+                throw InvalidInputException("Invalid SPAN data: null pointer");
+            }
+            bool ret = spanset_gt(a_spanset, b_spanset);
+            free(a_data_copy);
+            free(b_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+// --- OPERATOR: span >= span ---
+void SpansetFunctions::Spanset_ge(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) -> bool {
+            const uint8_t *a_data = reinterpret_cast<const uint8_t*>(a.GetData());
+            size_t a_data_size = a.GetSize();
+            uint8_t *a_data_copy = (uint8_t*)malloc(a_data_size);
+            memcpy(a_data_copy, a_data, a_data_size);
+            SpanSet *a_spanset = reinterpret_cast<SpanSet*>(a_data_copy);
+            const uint8_t *b_data = reinterpret_cast<const uint8_t*>(b.GetData());
+            size_t b_data_size = b.GetSize();
+            uint8_t *b_data_copy = (uint8_t*)malloc(b_data_size);
+            memcpy(b_data_copy, b_data, b_data_size);
+            SpanSet *b_spanset = reinterpret_cast<SpanSet*>(b_data_copy);
+            if (!a_spanset || !b_spanset) {
+                free(a_data_copy);
+                free(b_data_copy);
+                throw InvalidInputException("Invalid SPAN data: null pointer");
+            }
+            bool ret = spanset_ge(a_spanset, b_spanset);
+            free(a_data_copy);
+            free(b_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void SpansetFunctions::Spanset_cmp(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, int32_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) -> int32_t {
+            const uint8_t *a_data = reinterpret_cast<const uint8_t*>(a.GetData());
+            size_t a_data_size = a.GetSize();
+            uint8_t *a_data_copy = (uint8_t*)malloc(a_data_size);
+            memcpy(a_data_copy, a_data, a_data_size);
+            SpanSet *a_spanset = reinterpret_cast<SpanSet*>(a_data_copy);
+            const uint8_t *b_data = reinterpret_cast<const uint8_t*>(b.GetData());
+            size_t b_data_size = b.GetSize();
+            uint8_t *b_data_copy = (uint8_t*)malloc(b_data_size);
+            memcpy(b_data_copy, b_data, b_data_size);
+            SpanSet *b_spanset = reinterpret_cast<SpanSet*>(b_data_copy);
+            if (!a_spanset || !b_spanset) {
+                free(a_data_copy);
+                free(b_data_copy);
+                throw InvalidInputException("Invalid SPAN data: null pointer");
+            }
+            int32_t ret = spanset_cmp(a_spanset, b_spanset);
+            free(a_data_copy);
+            free(b_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
 
 } // namespace duckdb   

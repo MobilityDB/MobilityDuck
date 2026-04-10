@@ -81,6 +81,15 @@ struct SpansetFunctions{
     static void Spanset_split_n_spans(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spanset_split_each_n_spans(DataChunk &args, ExpressionState &state, Vector &result);
     
+
+    // Comparison functions
+    static void Spanset_eq(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Spanset_ne(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Spanset_lt(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Spanset_le(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Spanset_gt(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Spanset_ge(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Spanset_cmp(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 

@@ -386,6 +386,62 @@ void SpansetTypes::RegisterScalarFunctions(DatabaseInstance &db) {
             db,
             ScalarFunction("splitEachNSpans", {spanset_type, LogicalType::INTEGER}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_split_each_n_spans)
         );
+
+        // comparison operators
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("spanset_eq", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_eq)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("=", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_eq)
+        );
+
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("spanset_ne", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_ne)
+        );
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("<>", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_ne)
+        );
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("spanset_le", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_le)
+        );
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("<=", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_le)
+        );
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("spanset_lt", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_lt)
+        );
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("<", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_lt)
+        );
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("spanset_ge", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_ge)
+        );
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction(">=", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_ge)
+        );
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("spanset_gt", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_gt)
+        );
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction(">", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_gt)
+        );
+        ExtensionUtil::RegisterFunction(
+            db,
+            ScalarFunction("spanset_cmp", {spanset_type, spanset_type}, LogicalType::INTEGER, SpansetFunctions::Spanset_cmp)
+        );
     }
     ExtensionUtil::RegisterFunction(
         db,
