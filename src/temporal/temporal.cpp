@@ -952,6 +952,43 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 TemporalFunctions::Temporal_delete_tstzspanset
             )
         );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "segmentMinDuration",
+                {type, LogicalType::INTERVAL},
+                type,
+                TemporalFunctions::Temporal_segm_min_duration
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "segmentMinDuration",
+                {type, LogicalType::INTERVAL, LogicalType::BOOLEAN},
+                type,
+                TemporalFunctions::Temporal_segm_min_duration
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "segmentMaxDuration",
+                {type, LogicalType::INTERVAL},
+                type,
+                TemporalFunctions::Temporal_segm_max_duration
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "segmentMaxDuration",
+                {type, LogicalType::INTERVAL, LogicalType::BOOLEAN},
+                type,
+                TemporalFunctions::Temporal_segm_max_duration
+            )
+        );
     }
 
     ExtensionUtil::RegisterFunction(

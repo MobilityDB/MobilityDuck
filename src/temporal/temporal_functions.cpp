@@ -4309,6 +4309,90 @@ void TemporalFunctions::Temporal_delete_tstzspanset(DataChunk &args, ExpressionS
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
+
+
+/* ***************************************************
+* Segment Duration Functions
+****************************************************/
+void TemporalFunctions::Temporal_segm_min_duration(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    bool strict = true;
+    if (args.ColumnCount() == 3) {
+        auto &flag_vec = args.data[2];
+        flag_vec.Flatten(count);
+        strict = flag_vec.GetValue(0).GetValue<bool>();
+    }
+
+    BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(
+        args.data[0], args.data[1], result, count,
+        [&](string_t temp_str, interval_t interval, ValidityMask &mask, idx_t idx) -> string_t {
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_segm_min_duration] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, temp_str.GetData(), data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+
+            MeosInterval meos_interval = IntervaltToInterval(interval);
+            TSequenceSet *ret = temporal_segm_duration(temp, &meos_interval, true, strict);
+            if (!ret) {
+                free(data_copy);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = temporal_mem_size((Temporal*)ret);
+            string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
+            string_t stored = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            free(data_copy);
+            return stored;
+        }
+    );
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Temporal_segm_max_duration(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    bool strict = true;
+    if (args.ColumnCount() == 3) {
+        auto &flag_vec = args.data[2];
+        flag_vec.Flatten(count);
+        strict = flag_vec.GetValue(0).GetValue<bool>();
+    }
+
+    BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(
+        args.data[0], args.data[1], result, count,
+        [&](string_t temp_str, interval_t interval, ValidityMask &mask, idx_t idx) -> string_t {
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_segm_max_duration] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, temp_str.GetData(), data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+
+            MeosInterval meos_interval = IntervaltToInterval(interval);
+            TSequenceSet *ret = temporal_segm_duration(temp, &meos_interval, false, strict);
+            if (!ret) {
+                free(data_copy);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = temporal_mem_size((Temporal*)ret);
+            string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
+            string_t stored = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            free(data_copy);
+            return stored;
+        }
+    );
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
 /* ***************************************************
  * Boolean operators
  ****************************************************/
