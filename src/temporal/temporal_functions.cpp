@@ -4393,6 +4393,59 @@ void TemporalFunctions::Temporal_segm_max_duration(DataChunk &args, ExpressionSt
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
+
+/* ***************************************************
+ * Local Aggregate Functions
+ ****************************************************/
+void TemporalFunctions::Tnumber_integral(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, double_t>(
+        args.data[0], result, args.size(),
+        [&](string_t temp_str, ValidityMask &mask, idx_t idx) -> double_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Tnumber_integral] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Tnumber_integral: unable to cast string to temporal");
+            }
+            double ret = tnumber_integral(temp);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Tnumber_twavg(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, double_t>(
+        args.data[0], result, args.size(),
+        [&](string_t temp_str, ValidityMask &mask, idx_t idx) -> double_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Tnumber_twavg] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Tnumber_twavg: unable to cast string to temporal");
+            }
+            double ret = tnumber_twavg(temp);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
 /* ***************************************************
  * Boolean operators
  ****************************************************/

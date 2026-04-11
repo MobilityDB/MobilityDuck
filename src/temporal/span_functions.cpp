@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdint>
 #define MOBILITYDUCK_EXTENSION_TYPES
 
@@ -1381,41 +1382,20 @@ void SpanFunctions::Float_round(DataChunk &args, ExpressionState &state, Vector 
     auto &args0 = args.data[0];
     Vector *args1 = args.ColumnCount() == 2 ? &args.data[1] : 0;
     if (args.ColumnCount() == 2) {
-        BinaryExecutor::Execute<string_t, int32_t, string_t>(
+        BinaryExecutor::Execute<double_t, int32_t, double_t>(
             args0, *args1, result, args.size(),
-            [&](string_t blob, int32_t precision) -> string_t {
-                const uint8_t *data = (const uint8_t *)blob.GetData();
-                size_t size = blob.GetSize();
-                Span *s = (Span *)malloc(size);
-                memcpy(s, data, size);
-                VALIDATE_FLOATSPAN(s, NULL);
-                Span *r = floatspan_round(s, precision);
-                free(s);
-                if (!r) {
-                    throw InvalidInputException("floatspan_round failed");
-                }
-                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-                free(r);
-                return out;
+            [&](double_t float_value, int32_t precision) -> double_t {
+                return float_round(float_value, precision);
             });
     } else {
-        UnaryExecutor::Execute<string_t, string_t>(
+        UnaryExecutor::Execute<double_t, double_t>(
             args0, result, args.size(),
-            [&](string_t blob) -> string_t {
-                const uint8_t *data = (const uint8_t *)blob.GetData();
-                size_t size = blob.GetSize();
-                Span *s = (Span *)malloc(size);
-                memcpy(s, data, size);
-                VALIDATE_FLOATSPAN(s, NULL);
-                Span *r = floatspan_round(s, 0); // default precision is 0
-                free(s);
-                if (!r) {
-                    throw InvalidInputException("floatspan_round failed");
-                }
-                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-                free(r);
-                return out;
+            [&](double_t float_value) -> double_t {
+                return float_round(float_value, 0);
             });
+    }
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
 

@@ -554,3 +554,13 @@ query I
 SELECT beforeTimestamp(tint '1@2000-01-02', timestamptz '2000-01-02');
 ----
 NULL
+
+query I 
+SELECT integral(tint '{[1@2000-01-01, 2@2000-01-02, 1@2000-01-03],[3@2000-01-04, 3@2000-01-05]}');
+----
+518400000000
+
+query I 
+SELECT round(twAvg(tint '[1@2000-01-01, 2@2000-01-02, 1@2000-01-03]'), 6);
+----
+1.5

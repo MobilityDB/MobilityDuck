@@ -764,6 +764,27 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                     TemporalFunctions::Tnumber_shift_scale_value
                 )
             );
+
+            ExtensionUtil::RegisterFunction(
+                instance,
+                ScalarFunction(
+                    "integral",
+                    {type},
+                    LogicalType::DOUBLE,
+                    TemporalFunctions::Tnumber_integral
+                )
+            );
+
+            ExtensionUtil::RegisterFunction(
+                instance,
+                ScalarFunction(
+                    "twAvg",
+                    {type},
+                    LogicalType::DOUBLE,
+                    TemporalFunctions::Tnumber_twavg
+                )
+            );
+            
         }
         if (type.GetAlias() != "TBOOL") {
             ExtensionUtil::RegisterFunction(
