@@ -5,6 +5,7 @@
 #include "temporal/temporal_functions.hpp"
 #include "temporal/spanset.hpp"
 #include "temporal/tbox.hpp"
+#include "temporal/set.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/common/exception.hpp"
@@ -294,6 +295,36 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                     {type},
                     type,
                     TemporalFunctions::Temporal_at_min
+                )
+            );
+
+            ExtensionUtil::RegisterFunction(
+                instance,
+                ScalarFunction(
+                    "minusMin",
+                    {type},
+                    type,
+                    TemporalFunctions::Temporal_minus_min
+                )
+            );
+
+            ExtensionUtil::RegisterFunction(
+                instance,
+                ScalarFunction(
+                    "atMax",
+                    {type},
+                    type,
+                    TemporalFunctions::Temporal_at_max
+                )
+            );
+
+            ExtensionUtil::RegisterFunction(
+                instance,
+                ScalarFunction(
+                    "minusMax",
+                    {type},
+                    type,
+                    TemporalFunctions::Temporal_minus_max
                 )
             );
         }
@@ -642,6 +673,66 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
             )
         );
 
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "minusTime",
+                {type, LogicalType::TIMESTAMP_TZ},
+                type,
+                TemporalFunctions::Temporal_minus_timestamptz
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "atTime",
+                {type, SetTypes::tstzset()},
+                type,
+                TemporalFunctions::Temporal_at_tstzset
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "minusTime",
+                {type, SetTypes::tstzset()},
+                type,
+                TemporalFunctions::Temporal_minus_tstzset
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "minusTime",
+                {type, SpanTypes::TSTZSPAN()},
+                type,
+                TemporalFunctions::Temporal_minus_tstzspan
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "minusTime",
+                {type, SpansetTypes::tstzspanset()},
+                type,
+                TemporalFunctions::Temporal_minus_tstzspanset
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "valueAtTimestamp",
+                {type, LogicalType::TIMESTAMP_TZ},
+                TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()),
+                TemporalFunctions::Temporal_value_at_timestamptz
+            )
+        );
+
         if (type.GetAlias() == "TINT" || type.GetAlias() == "TFLOAT") {
             ExtensionUtil::RegisterFunction(
                 instance,
@@ -689,18 +780,120 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 )
             );
         }
+        
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "atValues",
+                {type, TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str())},
+                type,
+                TemporalFunctions::Temporal_at_value
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "minusValues",
+                {type, TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str())},
+                type,
+                TemporalFunctions::Temporal_minus_value
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "beforeTimestamp",
+                {type, LogicalType::TIMESTAMP_TZ},
+                type,
+                TemporalFunctions::Temporal_before_timestamptz
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "beforeTimestamp",
+                {type, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN},
+                type,
+                TemporalFunctions::Temporal_before_timestamptz
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "afterTimestamp",
+                {type, LogicalType::TIMESTAMP_TZ},
+                type,
+                TemporalFunctions::Temporal_after_timestamptz
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "afterTimestamp",
+                {type, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN},
+                type,
+                TemporalFunctions::Temporal_after_timestamptz
+            )
+        );
     }
 
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
             "atValues",
-            {TemporalTypes::TBOOL(), LogicalType::BOOLEAN},
-            TemporalTypes::TBOOL(),
-            TemporalFunctions::Temporal_at_value_tbool
+            {TemporalTypes::TINT(), SetTypes::intset()},
+            TemporalTypes::TINT(),
+            TemporalFunctions::Temporal_at_values
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "atValues",
+            {TemporalTypes::TFLOAT(), SetTypes::floatset()},
+            TemporalTypes::TFLOAT(),
+            TemporalFunctions::Temporal_at_values
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "atValues",
+            {TemporalTypes::TTEXT(), SetTypes::textset()},
+            TemporalTypes::TTEXT(),
+            TemporalFunctions::Temporal_at_values
         )
     );
 
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "minusValues",
+            {TemporalTypes::TINT(), SetTypes::intset()},
+            TemporalTypes::TINT(),
+            TemporalFunctions::Temporal_minus_value
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "minusValues",
+            {TemporalTypes::TFLOAT(), SetTypes::floatset()},
+            TemporalTypes::TFLOAT(),
+            TemporalFunctions::Temporal_minus_value
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "minusValues",
+            {TemporalTypes::TTEXT(), SetTypes::textset()},
+            TemporalTypes::TTEXT(),
+            TemporalFunctions::Temporal_minus_value
+        )
+    );
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
@@ -728,6 +921,106 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
             {TemporalTypes::TFLOAT(), SpanTypes::FLOATSPAN()},
             TemporalTypes::TFLOAT(),
             TemporalFunctions::Tnumber_at_span
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "minusValues",
+            {TemporalTypes::TINT(), SpanTypes::INTSPAN()},
+            TemporalTypes::TINT(),
+            TemporalFunctions::Tnumber_minus_span
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "minusValues",
+            {TemporalTypes::TFLOAT(), SpanTypes::FLOATSPAN()},
+            TemporalTypes::TFLOAT(),
+            TemporalFunctions::Tnumber_minus_span
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "atValues",
+            {TemporalTypes::TINT(), SpansetTypes::intspanset()},
+            TemporalTypes::TINT(),
+            TemporalFunctions::Tnumber_at_spanset
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "atValues",
+            {TemporalTypes::TFLOAT(), SpansetTypes::floatspanset()},
+            TemporalTypes::TFLOAT(),
+            TemporalFunctions::Tnumber_at_spanset
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "minusValues",
+            {TemporalTypes::TINT(), SpansetTypes::intspanset()},
+            TemporalTypes::TINT(),
+            TemporalFunctions::Tnumber_minus_spanset
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "minusValues",
+            {TemporalTypes::TFLOAT(), SpansetTypes::floatspanset()},
+            TemporalTypes::TFLOAT(),
+            TemporalFunctions::Tnumber_minus_spanset
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "atTbox",
+            {TemporalTypes::TINT(), TboxType::TBOX()},
+            TemporalTypes::TINT(),
+            TemporalFunctions::Tnumber_at_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "atTbox",
+            {TemporalTypes::TFLOAT(), TboxType::TBOX()},
+            TemporalTypes::TFLOAT(),
+            TemporalFunctions::Tnumber_at_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "minusTbox",
+            {TemporalTypes::TINT(), TboxType::TBOX()},
+            TemporalTypes::TINT(),
+            TemporalFunctions::Tnumber_minus_tbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "minusTbox",
+            {TemporalTypes::TFLOAT(), TboxType::TBOX()},
+            TemporalTypes::TFLOAT(),
+            TemporalFunctions::Tnumber_minus_tbox
         )
     );
 

@@ -129,12 +129,28 @@ struct TemporalFunctions {
     /* ***************************************************
      * Restriction functions
      ****************************************************/
-    static void Temporal_at_value_tbool(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_at_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_at_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_at_tstzspanset(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_at_value(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_at_values(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_minus_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_at_span(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_minus_span(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_at_spanset(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_minus_spanset(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_at_min(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_minus_min(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_at_max(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_minus_max(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_at_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_minus_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_at_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_minus_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_value_at_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_at_tstzset(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_minus_tstzset(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_at_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_minus_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_at_tstzspanset(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_minus_tstzspanset(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_before_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_after_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
