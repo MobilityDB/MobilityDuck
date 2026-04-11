@@ -154,10 +154,49 @@ struct TemporalFunctions {
     static void Temporal_before_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_after_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
+     * Modification Functions
+     ****************************************************/
+    static void Temporal_insert(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_update(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_delete_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_delete_tstzset(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_delete_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_delete_tstzspanset(DataChunk &args, ExpressionState &state, Vector &result);
+
+
+    /* ***************************************************
+     * Modification Functions
+    ****************************************************/
+    static void Temporal_segm_min_duration(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_segm_max_duration(DataChunk &args, ExpressionState &state, Vector &result);
+
+    // TODO: Stop functions 
+    
+    /* ***************************************************
+     * Local Aggregate Functions
+     ****************************************************/
+    static void Tnumber_integral(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_twavg(DataChunk &args, ExpressionState &state, Vector &result);
+
+    // TODO: Selectivity functions 
+
+    /* ***************************************************
      * Boolean operators
      ****************************************************/
     static void Tbool_when_true(DataChunk &args, ExpressionState &state, Vector &result);
 
+
+    /* ***************************************************
+     * Comparison operators
+     ****************************************************/
+    static void Temporal_eq(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_ne(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_le(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_lt(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_ge(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_gt(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_cmp(DataChunk &args, ExpressionState &state, Vector &result);
+    
     /* ***************************************************
      * Workaround functions
      ****************************************************/

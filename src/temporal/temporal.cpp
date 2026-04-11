@@ -6,6 +6,7 @@
 #include "temporal/spanset.hpp"
 #include "temporal/tbox.hpp"
 #include "temporal/set.hpp"
+#include "temporal/span.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/common/exception.hpp"
@@ -835,6 +836,120 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 {type, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN},
                 type,
                 TemporalFunctions::Temporal_after_timestamptz
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "insert",
+                {type, type},
+                type,
+                TemporalFunctions::Temporal_insert
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "insert",
+                {type, type, LogicalType::BOOLEAN},
+                type,
+                TemporalFunctions::Temporal_insert
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "update",
+                {type, type},
+                type,
+                TemporalFunctions::Temporal_update
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "update",
+                {type, type, LogicalType::BOOLEAN},
+                type,
+                TemporalFunctions::Temporal_update
+            )
+        );
+        
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "deleteTime",
+                {type, LogicalType::TIMESTAMP_TZ},
+                type,
+                TemporalFunctions::Temporal_delete_timestamptz
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "deleteTime",
+                {type, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN},
+                type,
+                TemporalFunctions::Temporal_delete_timestamptz
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "deleteTime",
+                {type, SetTypes::tstzset()},
+                type,
+                TemporalFunctions::Temporal_delete_tstzset
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "deleteTime",
+                {type, SetTypes::tstzset(), LogicalType::BOOLEAN},
+                type,
+                TemporalFunctions::Temporal_delete_tstzset
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "deleteTime",
+                {type, SpanTypes::TSTZSPAN()},
+                type,
+                TemporalFunctions::Temporal_delete_tstzspan
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "deleteTime",
+                {type, SpanTypes::TSTZSPAN(), LogicalType::BOOLEAN},
+                type,
+                TemporalFunctions::Temporal_delete_tstzspan
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "deleteTime",
+                {type, SpansetTypes::tstzspanset()},
+                type,
+                TemporalFunctions::Temporal_delete_tstzspanset
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "deleteTime",
+                {type, SpansetTypes::tstzspanset(), LogicalType::BOOLEAN},
+                type,
+                TemporalFunctions::Temporal_delete_tstzspanset
             )
         );
     }
