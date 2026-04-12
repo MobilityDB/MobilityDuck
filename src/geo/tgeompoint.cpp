@@ -171,6 +171,16 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
+            "tgeompointSeqSet",
+            {LogicalType::LIST(TGEOMPOINT())},
+            TGEOMPOINT(),
+            TemporalFunctions::Tsequenceset_constructor
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
             "stbox",
             {TGEOMPOINT()},
             StboxType::STBOX(),
@@ -399,6 +409,110 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
             {TGEOMPOINT()},
             SpanTypes::TSTZSPAN(),
             TgeompointFunctions::Temporal_to_tstzspan
+        )
+    );
+
+    /***************************************************
+     * Transformation functions
+     ****************************************************/
+    
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tgeompointInst",
+            {TGEOMPOINT()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_to_tinstant
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tgeompointSeq",
+            {TGEOMPOINT(), LogicalType::VARCHAR},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_to_tsequence
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tgeompointSeq",
+            {TGEOMPOINT()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_to_tsequence
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tgeompointSeqSet",
+            {TGEOMPOINT(), LogicalType::VARCHAR},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_to_tsequenceset
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tgeompointSeqSet",
+            {TGEOMPOINT()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_to_tsequenceset
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "setInterp",
+            {TGEOMPOINT(), LogicalType::VARCHAR},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_set_interp
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "appendInstant",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_append_tinstant
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "appendSequence",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_append_tsequence
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "merge",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_merge
+        )
+     );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "merge",
+            {LogicalType::LIST(TGEOMPOINT())},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_merge_array
         )
     );
 
