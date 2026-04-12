@@ -784,7 +784,6 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                     TemporalFunctions::Tnumber_twavg
                 )
             );
-            
         }
         if (type.GetAlias() != "TBOOL") {
             ExtensionUtil::RegisterFunction(
@@ -1008,6 +1007,125 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 {type, LogicalType::INTERVAL, LogicalType::BOOLEAN},
                 type,
                 TemporalFunctions::Temporal_segm_max_duration
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "temporal_eq",
+                {type, type},
+                LogicalType::BOOLEAN,
+                TemporalFunctions::Temporal_eq
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "=",
+                {type, type},
+                LogicalType::BOOLEAN,
+                TemporalFunctions::Temporal_eq
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "temporal_ne",
+                {type, type},
+                LogicalType::BOOLEAN,
+                TemporalFunctions::Temporal_ne
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "<>",
+                {type, type},
+                LogicalType::BOOLEAN,
+                TemporalFunctions::Temporal_ne
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "temporal_le",
+                {type, type},
+                LogicalType::BOOLEAN,
+                TemporalFunctions::Temporal_le
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "<=",
+                {type, type},
+                LogicalType::BOOLEAN,
+                TemporalFunctions::Temporal_le
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "temporal_lt",
+                {type, type},
+                LogicalType::BOOLEAN,
+                TemporalFunctions::Temporal_lt
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "<",
+                {type, type},
+                LogicalType::BOOLEAN,
+                TemporalFunctions::Temporal_lt
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "temporal_ge",
+                {type, type},
+                LogicalType::BOOLEAN,
+                TemporalFunctions::Temporal_ge
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                ">=",
+                {type, type},
+                LogicalType::BOOLEAN,
+                TemporalFunctions::Temporal_ge
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "temporal_gt",
+                {type, type},
+                LogicalType::BOOLEAN,
+                TemporalFunctions::Temporal_gt
+            )
+        );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                ">",
+                {type, type},
+                LogicalType::BOOLEAN,
+                TemporalFunctions::Temporal_gt
+            )
+        );
+
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "temporal_cmp",
+                {type, type},
+                LogicalType::INTEGER,
+                TemporalFunctions::Temporal_cmp
             )
         );
     }

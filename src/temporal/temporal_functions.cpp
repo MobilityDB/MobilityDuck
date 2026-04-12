@@ -11,6 +11,7 @@
 #include "duckdb/main/extension_util.hpp"
 #include <cmath>
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
+#include <functional>
 
 #include "time_util.hpp"
 
@@ -4446,6 +4447,281 @@ void TemporalFunctions::Tnumber_twavg(DataChunk &args, ExpressionState &state, V
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
+/* ***************************************************
+ * Comparison operators
+ ****************************************************/
+void TemporalFunctions::Temporal_eq(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t temp_str, string_t other_str, ValidityMask &mask, idx_t idx) -> bool {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_eq] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_eq: unable to cast string to temporal");
+            }
+            const uint8_t *other_data = reinterpret_cast<const uint8_t*>(other_str.GetData());
+            size_t other_data_size = other_str.GetSize();
+            if (other_data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_eq] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *other_data_copy = (uint8_t*)malloc(other_data_size);
+            memcpy(other_data_copy, other_data, other_data_size);
+            Temporal *other = reinterpret_cast<Temporal*>(other_data_copy);
+            if (!other) {
+                free(other_data_copy);
+                throw InternalException("Failure in Temporal_eq: unable to cast string to temporal");
+            }
+            bool ret = temporal_eq(temp, other);
+            free(data_copy);
+            free(other_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Temporal_ne(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t temp_str, string_t other_str, ValidityMask &mask, idx_t idx) -> bool {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_ne] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_ne: unable to cast string to temporal");
+            }
+            const uint8_t *other_data = reinterpret_cast<const uint8_t*>(other_str.GetData());
+            size_t other_data_size = other_str.GetSize();
+            if (other_data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_ne] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *other_data_copy = (uint8_t*)malloc(other_data_size);
+            memcpy(other_data_copy, other_data, other_data_size);
+            Temporal *other = reinterpret_cast<Temporal*>(other_data_copy);
+            if (!other) {
+                free(other_data_copy);
+                throw InternalException("Failure in Temporal_ne: unable to cast string to temporal");
+            }
+            bool ret = temporal_ne(temp, other);
+            free(data_copy);
+            free(other_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Temporal_le(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t temp_str, string_t other_str, ValidityMask &mask, idx_t idx) -> bool {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_le] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_le: unable to cast string to temporal");
+            }
+            const uint8_t *other_data = reinterpret_cast<const uint8_t*>(other_str.GetData());
+            size_t other_data_size = other_str.GetSize();
+            if (other_data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_le] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *other_data_copy = (uint8_t*)malloc(other_data_size);
+            memcpy(other_data_copy, other_data, other_data_size);
+            Temporal *other = reinterpret_cast<Temporal*>(other_data_copy);
+            if (!other) {
+                free(other_data_copy);
+                throw InternalException("Failure in Temporal_le: unable to cast string to temporal");
+            }
+            bool ret = temporal_le(temp, other);
+            free(data_copy);
+            free(other_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Temporal_lt(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t temp_str, string_t other_str, ValidityMask &mask, idx_t idx) -> bool {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_lt] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_lt: unable to cast string to temporal");
+            }
+            const uint8_t *other_data = reinterpret_cast<const uint8_t*>(other_str.GetData());
+            size_t other_data_size = other_str.GetSize();
+            if (other_data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_lt] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *other_data_copy = (uint8_t*)malloc(other_data_size);
+            memcpy(other_data_copy, other_data, other_data_size);
+            Temporal *other = reinterpret_cast<Temporal*>(other_data_copy);
+            if (!other) {
+                free(other_data_copy);
+                throw InternalException("Failure in Temporal_lt: unable to cast string to temporal");
+            }
+            bool ret = temporal_lt(temp, other);
+            free(data_copy);
+            free(other_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Temporal_ge(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t temp_str, string_t other_str, ValidityMask &mask, idx_t idx) -> bool {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_ge] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_ge: unable to cast string to temporal");
+            }
+            const uint8_t *other_data = reinterpret_cast<const uint8_t*>(other_str.GetData());
+            size_t other_data_size = other_str.GetSize();
+            if (other_data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_ge] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *other_data_copy = (uint8_t*)malloc(other_data_size);
+            memcpy(other_data_copy, other_data, other_data_size);
+            Temporal *other = reinterpret_cast<Temporal*>(other_data_copy);
+            if (!other) {
+                free(other_data_copy);
+                throw InternalException("Failure in Temporal_ge: unable to cast string to temporal");
+            }
+            bool ret = temporal_ge(temp, other);
+            free(data_copy);
+            free(other_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+void TemporalFunctions::Temporal_gt(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t temp_str, string_t other_str, ValidityMask &mask, idx_t idx) -> bool {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_gt] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_gt: unable to cast string to temporal");
+            }
+            const uint8_t *other_data = reinterpret_cast<const uint8_t*>(other_str.GetData());
+            size_t other_data_size = other_str.GetSize();
+            if (other_data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_gt] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *other_data_copy = (uint8_t*)malloc(other_data_size);
+            memcpy(other_data_copy, other_data, other_data_size);
+            Temporal *other = reinterpret_cast<Temporal*>(other_data_copy);
+            if (!other) {
+                free(other_data_copy);
+                throw InternalException("Failure in Temporal_gt: unable to cast string to temporal");
+            }
+            bool ret = temporal_gt(temp, other);
+            free(data_copy);
+            free(other_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Temporal_cmp(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, int32_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t temp_str, string_t other_str, ValidityMask &mask, idx_t idx) -> int32_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_cmp] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_cmp: unable to cast string to temporal");
+            }
+            const uint8_t *other_data = reinterpret_cast<const uint8_t*>(other_str.GetData());
+            size_t other_data_size = other_str.GetSize();
+            if (other_data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_cmp] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *other_data_copy = (uint8_t*)malloc(other_data_size);
+            memcpy(other_data_copy, other_data, other_data_size);
+            Temporal *other = reinterpret_cast<Temporal*>(other_data_copy);
+            if (!other) {
+                free(other_data_copy);
+                throw InternalException("Failure in Temporal_cmp: unable to cast string to temporal");
+            }
+            int32_t ret = temporal_cmp(temp, other);
+            free(data_copy);
+            free(other_data_copy);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
 /* ***************************************************
  * Boolean operators
  ****************************************************/

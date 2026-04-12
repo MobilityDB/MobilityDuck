@@ -124,3 +124,8 @@ query I
 SELECT beforeTimestamp(ttext '{AAA@2000-01-02, BBB@2000-01-04, AAA@2000-01-05}', timestamptz '2000-01-04');
 ----
 {"AAA"@2000-01-02 00:00:00+00}
+
+query I 
+SELECT ttext 'AAA@2000-01-01' <> ttext 'AAA@2000-01-01';
+----
+false
