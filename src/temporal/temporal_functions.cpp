@@ -1,8 +1,8 @@
 #include "meos_wrapper_simple.hpp"
 #include "common.hpp"
-// #include "temporal/temporal_types.hpp"
 #include "temporal/temporal_functions.hpp"
 #include "temporal/spanset.hpp"
+#include "geo_util.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/common/exception.hpp"
@@ -449,6 +449,15 @@ void TemporalFunctions::Tsequence_from_base_tstzset(DataChunk &args, ExpressionS
                 text *txt = cstring2text(value.GetString().c_str());
                 return Tsequence_from_base_tstzset_impl(PointerGetDatum(txt), set_blob, temptype, result);
             });
+    } else if (arg_type.id() == LogicalTypeId::BLOB) {
+        BinaryExecutor::Execute<string_t, string_t, string_t>(
+            args.data[0], args.data[1], result, count,
+            [&](string_t value, string_t set_blob) {
+                GSERIALIZED *gs = GeometryToGSerialized(value, 0);
+                auto stored = Tsequence_from_base_tstzset_impl(PointerGetDatum(gs), set_blob, temptype, result);
+                free(gs);
+                return stored;
+            });
     } else if (arg_type.id() == LogicalTypeId::DOUBLE) {
         BinaryExecutor::Execute<double, string_t, string_t>(
             args.data[0], args.data[1], result, count,
@@ -521,6 +530,15 @@ void TemporalFunctions::Tsequence_from_base_tstzspan(DataChunk &args, Expression
             [&](string_t value, string_t span_blob) {
                 text *txt = cstring2text(value.GetString().c_str());
                 return Tsequence_from_base_tstzspan_impl(PointerGetDatum(txt), span_blob, temptype, interp, result);
+            });
+    } else if (arg_type.id() == LogicalTypeId::BLOB) {
+        BinaryExecutor::Execute<string_t, string_t, string_t>(
+            args.data[0], args.data[1], result, count,
+            [&](string_t value, string_t span_blob) {
+                GSERIALIZED *gs = GeometryToGSerialized(value, 0);
+                auto stored = Tsequence_from_base_tstzspan_impl(PointerGetDatum(gs), span_blob, temptype, interp, result);
+                free(gs);
+                return stored;
             });
     } else if (arg_type.id() == LogicalTypeId::DOUBLE || arg_type.id() == LogicalTypeId::FLOAT) {
         BinaryExecutor::Execute<double, string_t, string_t>(
@@ -595,6 +613,15 @@ void TemporalFunctions::Tsequenceset_from_base_tstzspanset(DataChunk &args, Expr
             [&](string_t value, string_t spanset_blob) {
                 text *txt = cstring2text(value.GetString().c_str());
                 return Tsequenceset_from_base_tstzspanset_impl(PointerGetDatum(txt), spanset_blob, temptype, interp, result);
+            });
+    } else if (arg_type.id() == LogicalTypeId::BLOB) {
+        BinaryExecutor::Execute<string_t, string_t, string_t>(
+            args.data[0], args.data[1], result, count,
+            [&](string_t value, string_t spanset_blob) {
+                GSERIALIZED *gs = GeometryToGSerialized(value, 0);
+                auto stored = Tsequenceset_from_base_tstzspanset_impl(PointerGetDatum(gs), spanset_blob, temptype, interp, result);
+                free(gs);
+                return stored;
             });
     } else if (arg_type.id() == LogicalTypeId::DOUBLE || arg_type.id() == LogicalTypeId::FLOAT) {
         BinaryExecutor::Execute<double, string_t, string_t>(
@@ -3552,144 +3579,80 @@ void TemporalFunctions::Temporal_minus_tstzspanset(DataChunk &args, ExpressionSt
 }
 
 void TemporalFunctions::Temporal_before_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
-    if (args.ColumnCount() == 2) {
-        BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(
-            args.data[0], args.data[1], result, args.size(),
-            [&](string_t temp_str, timestamp_tz_t ts_duckdb, ValidityMask &mask, idx_t idx) -> string_t {
-                const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
-                size_t data_size = temp_str.GetSize();
-                if (data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_before_timestamptz] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *data_copy = (uint8_t*)malloc(data_size);
-                memcpy(data_copy, data, data_size);
-                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-                if (!temp) {
-                    free(data_copy);
-                    throw InternalException("Failure in Temporal_before_timestamptz: unable to cast string to temporal");
-                }
-                timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts_duckdb);
-                Temporal *ret = temporal_before_timestamptz(temp, (TimestampTz)ts_meos.value, true);
-                if (!ret) {
-                    free(temp);
-                    mask.SetInvalid(idx);
-                    return string_t();
-                }
-                size_t ret_size = temporal_mem_size(ret);
-                string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
-                string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-                free(ret);
-                free(temp);
-                return stored_data;
-            }
-        );
-    } else if (args.ColumnCount() == 3) {
-        TernaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, bool, string_t>(
-            args.data[0], args.data[1], args.data[2], result, args.size(),
-            [&](string_t temp_str, timestamp_tz_t ts_duckdb, bool strict_str, ValidityMask &mask, idx_t idx) -> string_t {
-                const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
-                size_t data_size = temp_str.GetSize();
-                if (data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_before_timestamptz] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *data_copy = (uint8_t*)malloc(data_size);
-                memcpy(data_copy, data, data_size);
-                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-                if (!temp) {
-                    free(data_copy);
-                    throw InternalException("Failure in Temporal_before_timestamptz: unable to cast string to temporal");
-                }
-                timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts_duckdb);
-                Temporal *ret = temporal_before_timestamptz(temp, (TimestampTz)ts_meos.value, strict_str);
-                if (!ret) {
-                    free(temp);
-                    mask.SetInvalid(idx);
-                    return string_t();
-                }
-                size_t ret_size = temporal_mem_size(ret);
-                string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
-                string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-                free(ret);
-                free(temp);
-                return stored_data;
-            }
-        );
+    bool bool_str = true; 
+    if (args.ColumnCount() >2){
+        bool_str = args.data[2].GetValue(0).GetValue<bool>();
     }
-    else {
-        throw InvalidInputException("[Temporal_before_timestamptz] Invalid number of arguments");
-    }
+    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t temp_str, timestamp_tz_t ts_duckdb, ValidityMask &mask, idx_t idx) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_before_timestamptz] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_before_timestamptz: unable to cast string to temporal");
+            }
+            timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts_duckdb);
+            Temporal *ret = temporal_before_timestamptz(temp, (TimestampTz)ts_meos.value, bool_str);
+            if (!ret) {
+                free(temp);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            free(temp);
+            return stored_data;
+        }
+    );
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
 
 void TemporalFunctions::Temporal_after_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
-    if (args.ColumnCount() == 2) {
-        BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(
-            args.data[0], args.data[1], result, args.size(),
-            [&](string_t temp_str, timestamp_tz_t ts_duckdb, ValidityMask &mask, idx_t idx) -> string_t {
-                const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
-                size_t data_size = temp_str.GetSize();
-                if (data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_after_timestamptz] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *data_copy = (uint8_t*)malloc(data_size);
-                memcpy(data_copy, data, data_size);
-                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-                if (!temp) {
-                    free(data_copy);
-                    throw InternalException("Failure in Temporal_after_timestamptz: unable to cast string to temporal");
-                }
-                timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts_duckdb);
-                Temporal *ret = temporal_after_timestamptz(temp, (TimestampTz)ts_meos.value, true);
-                if (!ret) {
-                    free(temp);
-                    mask.SetInvalid(idx);
-                    return string_t();
-                }
-                size_t ret_size = temporal_mem_size(ret);
-                string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
-                string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-                free(ret);
-                free(temp);
-                return stored_data;
-            }
-        );
-    } else if (args.ColumnCount() == 3) {
-        TernaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, bool, string_t>(
-            args.data[0], args.data[1], args.data[2], result, args.size(),
-            [&](string_t temp_str, timestamp_tz_t ts_duckdb, bool strict_str, ValidityMask &mask, idx_t idx) -> string_t {
-                const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
-                size_t data_size = temp_str.GetSize();
-                if (data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_after_timestamptz] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *data_copy = (uint8_t*)malloc(data_size);
-                memcpy(data_copy, data, data_size);
-                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-                if (!temp) {
-                    free(data_copy);
-                    throw InternalException("Failure in Temporal_after_timestamptz: unable to cast string to temporal");
-                }
-                timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts_duckdb);
-                Temporal *ret = temporal_after_timestamptz(temp, (TimestampTz)ts_meos.value, strict_str);
-                if (!ret) {
-                    free(temp);
-                    mask.SetInvalid(idx);
-                    return string_t();
-                }
-                size_t ret_size = temporal_mem_size(ret);
-                string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
-                string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-                free(ret);
-                free(temp);
-                return stored_data;
-            }
-        );
+    bool bool_str = true; 
+    if (args.ColumnCount() >2){
+        bool_str = args.data[2].GetValue(0).GetValue<bool>();
     }
-    else {
-        throw InvalidInputException("[Temporal_after_timestamptz] Invalid number of arguments");
-    }
+    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t temp_str, timestamp_tz_t ts_duckdb, ValidityMask &mask, idx_t idx) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_after_timestamptz] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_after_timestamptz: unable to cast string to temporal");
+            }
+            timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts_duckdb);
+            Temporal *ret = temporal_after_timestamptz(temp, (TimestampTz)ts_meos.value, bool_str);
+            if (!ret) {
+                free(temp);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            free(temp);
+            return stored_data;
+        }
+    );
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
@@ -3761,551 +3724,308 @@ void TemporalFunctions::Tnumber_avg_value(DataChunk &args, ExpressionState &stat
  * Modification Functions
  ****************************************************/
 void TemporalFunctions::Temporal_insert(DataChunk &args, ExpressionState &state, Vector &result) {
-    if (args.ColumnCount() == 2) {
-        BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
-            args.data[0], args.data[1], result, args.size(),
-            [&](string_t temp_str, string_t insert_temp_str, ValidityMask &mask, idx_t idx) -> string_t {
-                const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
-                size_t data_size = temp_str.GetSize();
-                if (data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_insert] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *data_copy = (uint8_t*)malloc(data_size);
-                memcpy(data_copy, data, data_size);
-                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-                if (!temp) {
-                    free(data_copy);
-                    throw InternalException("Failure in Temporal_insert: unable to cast string to temporal");
-                }
-
-                const uint8_t *insert_data = reinterpret_cast<const uint8_t*>(insert_temp_str.GetData());
-                size_t insert_data_size = insert_temp_str.GetSize();
-                if (insert_data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_insert] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *insert_data_copy = (uint8_t*)malloc(insert_data_size);
-                memcpy(insert_data_copy, insert_data, insert_data_size);
-                Temporal *insert_temp = reinterpret_cast<Temporal*>(insert_data_copy);
-                if (!insert_temp) {
-                    free(insert_data_copy);
-                    throw InternalException("Failure in Temporal_insert: unable to cast string to temporal");
-                }
-
-                Temporal *ret = temporal_insert(temp, insert_temp, true);
-                if (!ret) {
-                    free(temp);
-                    mask.SetInvalid(idx);
-                    return string_t();
-                }
-                size_t ret_size = temporal_mem_size(ret);
-                string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
-                string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-                free(ret);
-                free(temp);
-                return stored_data;
-            }
-        );
-    } else if (args.ColumnCount() == 3) {
-        TernaryExecutor::ExecuteWithNulls<string_t, string_t, bool, string_t>(
-            args.data[0], args.data[1], args.data[2], result, args.size(),
-            [&](string_t temp_str, string_t insert_temp_str, bool connect_str, ValidityMask &mask, idx_t idx) -> string_t {
-                const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
-                size_t data_size = temp_str.GetSize();
-                if (data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_insert] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *data_copy = (uint8_t*)malloc(data_size);
-                memcpy(data_copy, data, data_size);
-                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-                if (!temp) {
-                    free(data_copy);
-                    throw InternalException("Failure in Temporal_insert: unable to cast string to temporal");
-                }
-                const uint8_t *insert_data = reinterpret_cast<const uint8_t*>(insert_temp_str.GetData());
-                size_t insert_data_size = insert_temp_str.GetSize();
-                if (insert_data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_insert] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *insert_data_copy = (uint8_t*)malloc(insert_data_size);
-                memcpy(insert_data_copy, insert_data, insert_data_size);
-                Temporal *insert_temp = reinterpret_cast<Temporal*>(insert_data_copy);
-                if (!insert_temp) {
-                    free(insert_data_copy);
-                    throw InternalException("Failure in Temporal_insert: unable to cast string to temporal");
-                }
-
-                Temporal *ret = temporal_insert(temp, insert_temp, connect_str);
-                if (!ret) {
-                    free(temp);
-                    mask.SetInvalid(idx);
-                    return string_t();
-                }
-                size_t ret_size = temporal_mem_size(ret);
-                string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
-                string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-                free(ret);
-                free(temp);
-                return stored_data;
-            }
-        );
-    } else {
-        throw InvalidInputException("[Temporal_insert] Invalid number of arguments");
+    bool connect_str = true; 
+    if (args.ColumnCount() >2){
+        connect_str = args.data[2].GetValue(0).GetValue<bool>();
     }
+    
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t temp_str, string_t insert_temp_str, ValidityMask &mask, idx_t idx) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_insert] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_insert: unable to cast string to temporal");
+            }
+
+            const uint8_t *insert_data = reinterpret_cast<const uint8_t*>(insert_temp_str.GetData());
+            size_t insert_data_size = insert_temp_str.GetSize();
+            if (insert_data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_insert] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *insert_data_copy = (uint8_t*)malloc(insert_data_size);
+            memcpy(insert_data_copy, insert_data, insert_data_size);
+            Temporal *insert_temp = reinterpret_cast<Temporal*>(insert_data_copy);
+            if (!insert_temp) {
+                free(insert_data_copy);
+                throw InternalException("Failure in Temporal_insert: unable to cast string to temporal");
+            }
+
+            Temporal *ret = temporal_insert(temp, insert_temp, connect_str);
+            if (!ret) {
+                free(temp);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            free(temp);
+            return stored_data;
+        }
+    );
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
 
 void TemporalFunctions::Temporal_update(DataChunk &args, ExpressionState &state, Vector &result) {
-    if (args.ColumnCount() == 2) {
-        BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
-            args.data[0], args.data[1], result, args.size(),
-            [&](string_t temp_str, string_t update_temp_str, ValidityMask &mask, idx_t idx) -> string_t {
-                const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
-                size_t data_size = temp_str.GetSize();
-                if (data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_update] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *data_copy = (uint8_t*)malloc(data_size);
-                memcpy(data_copy, data, data_size);
-                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-                if (!temp) {
-                    free(data_copy);
-                    throw InternalException("Failure in Temporal_update: unable to cast string to temporal");
-                }
-
-                const uint8_t *update_data = reinterpret_cast<const uint8_t*>(update_temp_str.GetData());
-                size_t update_data_size = update_temp_str.GetSize();
-                if (update_data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_update] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *update_data_copy = (uint8_t*)malloc(update_data_size);
-                memcpy(update_data_copy, update_data, update_data_size);
-                Temporal *update_temp = reinterpret_cast<Temporal*>(update_data_copy);
-                if (!update_temp) {
-                    free(update_data_copy);
-                    throw InternalException("Failure in Temporal_update: unable to cast string to temporal");
-                }
-
-                Temporal *ret = temporal_update(temp, update_temp, true);
-                if (!ret) {
-                    free(temp);
-                    mask.SetInvalid(idx);
-                    return string_t();
-                }
-                size_t ret_size = temporal_mem_size(ret);
-                string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
-                string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-                free(ret);
-                free(temp);
-                return stored_data;
+    bool bool_str = true; 
+    if (args.ColumnCount() >2){
+        bool_str = args.data[2].GetValue(0).GetValue<bool>();
+    }        
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t temp_str, string_t update_temp_str, ValidityMask &mask, idx_t idx) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_update] Invalid Temporal data: insufficient size");
             }
-        );
-    } else if (args.ColumnCount() == 3) {
-        TernaryExecutor::ExecuteWithNulls<string_t, string_t, bool, string_t>(
-            args.data[0], args.data[1], args.data[2], result, args.size(),
-            [&](string_t temp_str, string_t update_temp_str, bool connect_str, ValidityMask &mask, idx_t idx) -> string_t {
-                const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
-                size_t data_size = temp_str.GetSize();
-                if (data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_update] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *data_copy = (uint8_t*)malloc(data_size);
-                memcpy(data_copy, data, data_size);
-                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-                if (!temp) {
-                    free(data_copy);
-                    throw InternalException("Failure in Temporal_update: unable to cast string to temporal");
-                }
-                const uint8_t *update_data = reinterpret_cast<const uint8_t*>(update_temp_str.GetData());
-                size_t update_data_size = update_temp_str.GetSize();
-                if (update_data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_update] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *update_data_copy = (uint8_t*)malloc(update_data_size);
-                memcpy(update_data_copy, update_data, update_data_size);
-                Temporal *update_temp = reinterpret_cast<Temporal*>(update_data_copy);
-                if (!update_temp) {
-                    free(update_data_copy);
-                    throw InternalException("Failure in Temporal_update: unable to cast string to temporal");
-                }
-
-                Temporal *ret = temporal_update(temp, update_temp, connect_str);
-                if (!ret) {
-                    free(temp);
-                    mask.SetInvalid(idx);
-                    return string_t();
-                }
-                size_t ret_size = temporal_mem_size(ret);
-                string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
-                string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-                free(ret);
-                free(temp);
-                return stored_data;
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_update: unable to cast string to temporal");
             }
-        );
-    } else {
-        throw InvalidInputException("[Temporal_insert] Invalid number of arguments");
-    }
+
+            const uint8_t *update_data = reinterpret_cast<const uint8_t*>(update_temp_str.GetData());
+            size_t update_data_size = update_temp_str.GetSize();
+            if (update_data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_update] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *update_data_copy = (uint8_t*)malloc(update_data_size);
+            memcpy(update_data_copy, update_data, update_data_size);
+            Temporal *update_temp = reinterpret_cast<Temporal*>(update_data_copy);
+            if (!update_temp) {
+                free(update_data_copy);
+                throw InternalException("Failure in Temporal_update: unable to cast string to temporal");
+            }
+
+            Temporal *ret = temporal_update(temp, update_temp, bool_str);
+            if (!ret) {
+                free(temp);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            free(temp);
+            return stored_data;
+        }
+    );
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
 
 void TemporalFunctions::Temporal_delete_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
-    if (args.ColumnCount() == 2) {
-        BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(
-            args.data[0], args.data[1], result, args.size(),
-            [&](string_t temp_str, timestamp_tz_t ts_duckdb, ValidityMask &mask, idx_t idx) -> string_t {
-                const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
-                size_t data_size = temp_str.GetSize();
-                if (data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_delete_timestamptz] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *data_copy = (uint8_t*)malloc(data_size);
-                memcpy(data_copy, data, data_size);
-                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-                if (!temp) {
-                    free(data_copy);
-                    throw InternalException("Failure in Temporal_delete_timestamptz: unable to cast string to temporal");
-                }
-                timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts_duckdb);
-                Temporal *ret = temporal_delete_timestamptz(temp, (TimestampTz)ts_meos.value, true);
-                if (!ret) {
-                    free(temp);
-                    mask.SetInvalid(idx);
-                    return string_t();
-                }
-                size_t ret_size = temporal_mem_size(ret);
-                string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
-                string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-                free(ret);
-                free(temp);
-                return stored_data;
+    bool bool_str = true; 
+    if (args.ColumnCount() >2){
+        bool_str = args.data[2].GetValue(0).GetValue<bool>();
+    }
+    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t temp_str, timestamp_tz_t ts_duckdb, ValidityMask &mask, idx_t idx) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_delete_timestamptz] Invalid Temporal data: insufficient size");
             }
-        );
-    } else if (args.ColumnCount() == 3) {
-        TernaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, bool, string_t>(
-            args.data[0], args.data[1], args.data[2], result, args.size(),
-            [&](string_t temp_str, timestamp_tz_t ts_duckdb, bool connect_str, ValidityMask &mask, idx_t idx) -> string_t {
-                const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
-                size_t data_size = temp_str.GetSize();
-                if (data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_delete_timestamptz] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *data_copy = (uint8_t*)malloc(data_size);
-                memcpy(data_copy, data, data_size);
-                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-                if (!temp) {
-                    free(data_copy);
-                    throw InternalException("Failure in Temporal_delete_timestamptz: unable to cast string to temporal");
-                }
-                timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts_duckdb);
-                Temporal *ret = temporal_delete_timestamptz(temp, (TimestampTz)ts_meos.value, connect_str);
-                if (!ret) {
-                    free(temp);
-                    mask.SetInvalid(idx);
-                    return string_t();
-                }
-                size_t ret_size = temporal_mem_size(ret);
-                string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
-                string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-                free(ret);
-                free(temp);
-                return stored_data;
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_delete_timestamptz: unable to cast string to temporal");
             }
-        );
-    } else {
-        throw InvalidInputException("[Temporal_delete_timestamptz] Invalid number of arguments");
+            timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts_duckdb);
+            Temporal *ret = temporal_delete_timestamptz(temp, (TimestampTz)ts_meos.value, bool_str);
+            if (!ret) {
+                free(temp);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            free(temp);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
 
 void TemporalFunctions::Temporal_delete_tstzset(DataChunk &args, ExpressionState &state, Vector &result) {
-    if (args.ColumnCount() == 2) {
-        BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
-            args.data[0], args.data[1], result, args.size(),
-            [&](string_t temp_str, string_t delete_temp_str, ValidityMask &mask, idx_t idx) -> string_t {
-                const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
-                size_t data_size = temp_str.GetSize();
-                if (data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_delete_tstzset] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *data_copy = (uint8_t*)malloc(data_size);
-                memcpy(data_copy, data, data_size);
-                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-                if (!temp) {
-                    free(data_copy);
-                    throw InternalException("Failure in Temporal_delete_tstzset: unable to cast string to temporal");
-                }
-
-                const uint8_t *delete_data = reinterpret_cast<const uint8_t*>(delete_temp_str.GetData());
-                size_t delete_data_size = delete_temp_str.GetSize();
-                if (delete_data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_delete_tstzset] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *delete_data_copy = (uint8_t*)malloc(delete_data_size);
-                memcpy(delete_data_copy, delete_data, delete_data_size);
-                Set *delete_set = reinterpret_cast<Set*>(delete_data_copy);
-                if (!delete_set) {
-                    free(delete_data_copy);
-                    throw InternalException("Failure in Temporal_delete_tstzset: unable to cast string to set");
-                }
-
-                Temporal *ret = temporal_delete_tstzset(temp, delete_set, true);
-                if (!ret) {
-                    free(temp);
-                    mask.SetInvalid(idx);
-                    return string_t();
-                }
-                size_t ret_size = temporal_mem_size(ret);
-                string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
-                string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-                free(ret);
-                free(temp);
-                return stored_data;
-            }
-        );
-    } else if (args.ColumnCount() == 3) {
-        TernaryExecutor::ExecuteWithNulls<string_t, string_t, bool, string_t>(
-            args.data[0], args.data[1], args.data[2], result, args.size(),
-            [&](string_t temp_str, string_t delete_temp_str, bool connect_str, ValidityMask &mask, idx_t idx) -> string_t {
-                const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
-                size_t data_size = temp_str.GetSize();  
-                if (data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_delete_tstzset] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *data_copy = (uint8_t*)malloc(data_size);
-                memcpy(data_copy, data, data_size);
-                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-                if (!temp) {
-                    free(data_copy);
-                    throw InternalException("Failure in Temporal_delete_tstzset: unable to cast string to temporal");
-                }
-
-                const uint8_t *delete_data = reinterpret_cast<const uint8_t*>(delete_temp_str.GetData());
-                size_t delete_data_size = delete_temp_str.GetSize();
-                if (delete_data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_delete_tstzset] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *delete_data_copy = (uint8_t*)malloc(delete_data_size);
-                memcpy(delete_data_copy, delete_data, delete_data_size);
-                Set *delete_set = reinterpret_cast<Set*>(delete_data_copy);
-                if (!delete_set) {
-                    free(delete_data_copy);
-                    throw InternalException("Failure in Temporal_delete_tstzset: unable to cast string to set");
-                }
-
-                Temporal *ret = temporal_delete_tstzset(temp, delete_set, connect_str);
-                if (!ret) {
-                    free(temp);
-                    mask.SetInvalid(idx);
-                    return string_t();
-                }
-                size_t ret_size = temporal_mem_size(ret);
-                string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
-                string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-                free(ret);
-                free(temp);
-                return stored_data;
-            }
-        );
-    } else {
-        throw InvalidInputException("[Temporal_delete_tstzset] Invalid number of arguments");
+    bool bool_str = true; 
+    if (args.ColumnCount() >2){
+        bool_str = args.data[2].GetValue(0).GetValue<bool>();
     }
+
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t temp_str, string_t delete_temp_str, ValidityMask &mask, idx_t idx) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_delete_tstzset] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_delete_tstzset: unable to cast string to temporal");
+            }
+
+            const uint8_t *delete_data = reinterpret_cast<const uint8_t*>(delete_temp_str.GetData());
+            size_t delete_data_size = delete_temp_str.GetSize();
+            if (delete_data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_delete_tstzset] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *delete_data_copy = (uint8_t*)malloc(delete_data_size);
+            memcpy(delete_data_copy, delete_data, delete_data_size);
+            Set *delete_set = reinterpret_cast<Set*>(delete_data_copy);
+            if (!delete_set) {
+                free(delete_data_copy);
+                throw InternalException("Failure in Temporal_delete_tstzset: unable to cast string to set");
+            }
+
+            Temporal *ret = temporal_delete_tstzset(temp, delete_set, bool_str);
+            if (!ret) {
+                free(temp);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            free(temp);
+            return stored_data;
+        }
+    );
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
 
 void TemporalFunctions::Temporal_delete_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
-    if (args.ColumnCount() == 2) {
-        BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
-            args.data[0], args.data[1], result, args.size(),
-            [&](string_t temp_str, string_t delete_temp_str, ValidityMask &mask, idx_t idx) -> string_t {
-                const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
-                size_t data_size = temp_str.GetSize();
-                if (data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_delete_tstzspan] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *data_copy = (uint8_t*)malloc(data_size);
-                memcpy(data_copy, data, data_size);
-                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-                if (!temp) {
-                    free(data_copy);
-                    throw InternalException("Failure in Temporal_delete_tstzspan: unable to cast string to temporal");
-                }
-
-                const uint8_t *delete_data = reinterpret_cast<const uint8_t*>(delete_temp_str.GetData());
-                size_t delete_data_size = delete_temp_str.GetSize();
-                if (delete_data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_delete_tstzspan] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *delete_data_copy = (uint8_t*)malloc(delete_data_size);
-                memcpy(delete_data_copy, delete_data, delete_data_size);
-                Span *delete_span = reinterpret_cast<Span*>(delete_data_copy);
-                if (!delete_span) {
-                    free(delete_data_copy);
-                    throw InternalException("Failure in Temporal_delete_tstzspan: unable to cast string to span");
-                }
-
-                Temporal *ret = temporal_delete_tstzspan(temp, delete_span, true);
-                if (!ret) {
-                    free(temp);
-                    mask.SetInvalid(idx);
-                    return string_t();
-                }
-                size_t ret_size = temporal_mem_size(ret);
-                string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
-                string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-                free(ret);
-                free(temp);
-                return stored_data;
-            }
-        );
-    } else if (args.ColumnCount() == 3) {
-        TernaryExecutor::ExecuteWithNulls<string_t, string_t, bool, string_t>(
-            args.data[0], args.data[1], args.data[2], result, args.size(),
-            [&](string_t temp_str, string_t delete_temp_str, bool connect_str, ValidityMask &mask, idx_t idx) -> string_t {
-                const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
-                size_t data_size = temp_str.GetSize();
-                if (data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_delete_tstzspan] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *data_copy = (uint8_t*)malloc(data_size);
-                memcpy(data_copy, data, data_size);
-                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);    
-                if (!temp) {
-                    free(data_copy);
-                    throw InternalException("Failure in Temporal_delete_tstzspan: unable to cast string to temporal");
-                }
-
-                const uint8_t *delete_data = reinterpret_cast<const uint8_t*>(delete_temp_str.GetData());
-                size_t delete_data_size = delete_temp_str.GetSize();
-                if (delete_data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_delete_tstzspan] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *delete_data_copy = (uint8_t*)malloc(delete_data_size);
-                memcpy(delete_data_copy, delete_data, delete_data_size);
-                Span *delete_span = reinterpret_cast<Span*>(delete_data_copy);
-                if (!delete_span) {
-                    free(delete_data_copy);
-                    throw InternalException("Failure in Temporal_delete_tstzspan: unable to cast string to span");
-                }
-
-                Temporal *ret = temporal_delete_tstzspan(temp, delete_span, connect_str);
-                if (!ret) {
-                    free(temp);
-                    mask.SetInvalid(idx);
-                    return string_t();
-                }
-                size_t ret_size = temporal_mem_size(ret);
-                string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
-                string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-                free(ret);
-                free(temp);
-                return stored_data;
-            }
-        );
-    } else {
-        throw InvalidInputException("[Temporal_delete_tstzspan] Invalid number of arguments");
+    bool bool_str = true; 
+    if (args.ColumnCount() >2){
+        bool_str = args.data[2].GetValue(0).GetValue<bool>();
     }
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t temp_str, string_t delete_temp_str, ValidityMask &mask, idx_t idx) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_delete_tstzspan] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_delete_tstzspan: unable to cast string to temporal");
+            }
+
+            const uint8_t *delete_data = reinterpret_cast<const uint8_t*>(delete_temp_str.GetData());
+            size_t delete_data_size = delete_temp_str.GetSize();
+            if (delete_data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_delete_tstzspan] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *delete_data_copy = (uint8_t*)malloc(delete_data_size);
+            memcpy(delete_data_copy, delete_data, delete_data_size);
+            Span *delete_span = reinterpret_cast<Span*>(delete_data_copy);
+            if (!delete_span) {
+                free(delete_data_copy);
+                throw InternalException("Failure in Temporal_delete_tstzspan: unable to cast string to span");
+            }
+
+            Temporal *ret = temporal_delete_tstzspan(temp, delete_span, bool_str);
+            if (!ret) {
+                free(temp);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            free(temp);
+            return stored_data;
+        }
+    );
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
 
 void TemporalFunctions::Temporal_delete_tstzspanset(DataChunk &args, ExpressionState &state, Vector &result) {
-    if (args.ColumnCount() == 2) {
-        BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
-            args.data[0], args.data[1], result, args.size(),
-            [&](string_t temp_str, string_t delete_temp_str, ValidityMask &mask, idx_t idx) -> string_t {
-                const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
-                size_t data_size = temp_str.GetSize();
-                if (data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_delete_tstzspanset] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *data_copy = (uint8_t*)malloc(data_size);
-                memcpy(data_copy, data, data_size);
-                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-                if (!temp) {
-                    free(data_copy);
-                    throw InternalException("Failure in Temporal_delete_tstzspanset: unable to cast string to temporal");
-                }
-
-                const uint8_t *delete_data = reinterpret_cast<const uint8_t*>(delete_temp_str.GetData());
-                size_t delete_data_size = delete_temp_str.GetSize();
-                if (delete_data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_delete_tstzspanset] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *delete_data_copy = (uint8_t*)malloc(delete_data_size);
-                memcpy(delete_data_copy, delete_data, delete_data_size);
-                SpanSet *delete_spanset = reinterpret_cast<SpanSet*>(delete_data_copy);
-                if (!delete_spanset) {
-                    free(delete_data_copy);
-                    throw InternalException("Failure in Temporal_delete_tstzspanset: unable to cast string to span set");
-                }
-
-                Temporal *ret = temporal_delete_tstzspanset(temp, delete_spanset, true);
-                if (!ret) {
-                    free(temp);
-                    mask.SetInvalid(idx);
-                    return string_t();
-                }
-                size_t ret_size = temporal_mem_size(ret);
-                string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
-                string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-                free(ret);
-                free(temp);
-                return stored_data;
-            }
-        );
-    } else if (args.ColumnCount() == 3) {
-        TernaryExecutor::ExecuteWithNulls<string_t, string_t, bool, string_t>(
-            args.data[0], args.data[1], args.data[2], result, args.size(),
-            [&](string_t temp_str, string_t delete_temp_str, bool connect_str, ValidityMask &mask, idx_t idx) -> string_t {
-                const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
-                size_t data_size = temp_str.GetSize();
-                if (data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_delete_tstzspanset] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *data_copy = (uint8_t*)malloc(data_size);
-                memcpy(data_copy, data, data_size);
-                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-                if (!temp) {
-                    free(data_copy);
-                    throw InternalException("Failure in Temporal_delete_tstzspanset: unable to cast string to temporal");
-                }
-
-                const uint8_t *delete_data = reinterpret_cast<const uint8_t*>(delete_temp_str.GetData());
-                size_t delete_data_size = delete_temp_str.GetSize();
-                if (delete_data_size < sizeof(void*)) {
-                    throw InvalidInputException("[Temporal_delete_tstzspanset] Invalid Temporal data: insufficient size");
-                }
-                uint8_t *delete_data_copy = (uint8_t*)malloc(delete_data_size);
-                memcpy(delete_data_copy, delete_data, delete_data_size);
-                SpanSet *delete_spanset = reinterpret_cast<SpanSet*>(delete_data_copy);
-                if (!delete_spanset) {
-                    free(delete_data_copy);
-                    throw InternalException("Failure in Temporal_delete_tstzspanset: unable to cast string to span set");
-                }
-
-                Temporal *ret = temporal_delete_tstzspanset(temp, delete_spanset, connect_str);
-                if (!ret) {
-                    free(temp);
-                    mask.SetInvalid(idx);
-                    return string_t();
-                }
-                size_t ret_size = temporal_mem_size(ret);
-                string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
-                string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-                free(ret);
-                free(temp);
-                return stored_data;
-            }
-        );
-    } else {
-        throw InvalidInputException("[Temporal_delete_tstzspanset] Invalid number of arguments");
+    bool bool_str = true; 
+    if (args.ColumnCount() >2){
+        bool_str = args.data[2].GetValue(0).GetValue<bool>();
     }
+
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t temp_str, string_t delete_temp_str, ValidityMask &mask, idx_t idx) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_delete_tstzspanset] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InternalException("Failure in Temporal_delete_tstzspanset: unable to cast string to temporal");
+            }
+
+            const uint8_t *delete_data = reinterpret_cast<const uint8_t*>(delete_temp_str.GetData());
+            size_t delete_data_size = delete_temp_str.GetSize();
+            if (delete_data_size < sizeof(void*)) {
+                throw InvalidInputException("[Temporal_delete_tstzspanset] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *delete_data_copy = (uint8_t*)malloc(delete_data_size);
+            memcpy(delete_data_copy, delete_data, delete_data_size);
+            SpanSet *delete_spanset = reinterpret_cast<SpanSet*>(delete_data_copy);
+            if (!delete_spanset) {
+                free(delete_data_copy);
+                throw InternalException("Failure in Temporal_delete_tstzspanset: unable to cast string to span set");
+            }
+
+            Temporal *ret = temporal_delete_tstzspanset(temp, delete_spanset, bool_str);
+            if (!ret) {
+                free(temp);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            free(temp);
+            return stored_data;
+        }
+    );
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }

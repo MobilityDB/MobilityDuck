@@ -40,6 +40,11 @@ SELECT asEWKT(tgeompoint(ST_Point(1,1), timestamptz '2012-01-01 08:00:00', 4326)
 ----
 SRID=4326;POINT(1 1)@2012-01-01 08:00:00+00
 
+query I 
+SELECT asEWKT(tgeompoint(ST_Point(1,1), tstzspan '[2012-01-01, 2012-01-03]', 'step'));
+----
+Interp=Step;[POINT(1 1)@2012-01-01 00:00:00+00, POINT(1 1)@2012-01-03 00:00:00+00]
+
 query I
 SELECT asEWKT(tgeompointSeq(ARRAY[
     tgeompoint(ST_Point(1,1), timestamptz '2012-01-01 08:00:00'),
@@ -368,3 +373,8 @@ query I
 SELECT asText(afterTimestamp(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}', timestamptz '2000-01-01'));
 ----
 NULL
+
+query I 
+SELECT asEWKT(tgeompoint(ST_Point(1,1), tstzspanset '{[2012-01-01, 2012-01-03]}'));
+----
+{[POINT(1 1)@2012-01-01 00:00:00+00, POINT(1 1)@2012-01-03 00:00:00+00]}

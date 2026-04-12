@@ -7,6 +7,8 @@
 #include "geo/stbox.hpp"
 #include "temporal/spanset.hpp"
 #include "temporal/temporal.hpp"
+#include "temporal/set.hpp"
+#include "temporal/span.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/function/scalar_function.hpp"
@@ -102,6 +104,56 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
             {GeoTypes::GEOMETRY(), LogicalType::TIMESTAMP_TZ, LogicalType::INTEGER}, // with SRID
             TGEOMPOINT(),
             TgeompointFunctions::Tpointinst_constructor
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tgeompoint",
+            {GeoTypes::GEOMETRY(), SetTypes::tstzset()},
+            TGEOMPOINT(),
+            TemporalFunctions::Tsequence_from_base_tstzset
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tgeompoint",
+            {GeoTypes::GEOMETRY(), SpanTypes::TSTZSPAN()},
+            TGEOMPOINT(),
+            TemporalFunctions::Tsequence_from_base_tstzspan
+        )
+    );
+
+     ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tgeompoint",
+            {GeoTypes::GEOMETRY(), SpanTypes::TSTZSPAN(), LogicalType::VARCHAR},
+            TGEOMPOINT(),
+            TemporalFunctions::Tsequence_from_base_tstzspan
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tgeompoint",
+            {GeoTypes::GEOMETRY(), SpansetTypes::tstzspanset()},
+            TGEOMPOINT(),
+            TemporalFunctions::Tsequenceset_from_base_tstzspanset
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tgeompoint",
+            {GeoTypes::GEOMETRY(), SpansetTypes::tstzspanset(), LogicalType::VARCHAR},
+            TGEOMPOINT(),
+            TemporalFunctions::Tsequenceset_from_base_tstzspanset
         )
     );
 
