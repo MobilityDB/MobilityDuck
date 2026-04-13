@@ -61,15 +61,47 @@ struct TgeompointFunctions {
      * Stops function
      ****************************************************/
     static void Tgeompoint_stops(DataChunk &args, ExpressionState &state, Vector &result);
-
+    
+    /* ***************************************************
+    * TODO: Ever/Always Comparison functions
+    ****************************************************/
+    static void Ever_eq_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_eq_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_ne_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_ne_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_eq_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_eq_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_ne_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_ne_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_eq_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_eq_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_ne_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_ne_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Teq_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tne_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Teq_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Teq_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tne_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
      * Spatial functions
      ****************************************************/
+    static void Tpoint_get_x(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tpoint_get_y(DataChunk &args, ExpressionState &state, Vector &result);  
+    static void Tpoint_get_z(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tpoint_length(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tpoint_cumulative_length(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tpoint_twcentroid(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tpoint_direction(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tpoint_azimuth(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tpoint_angular_difference(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tpoint_is_simple(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tpoint_make_simple(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tpoint_trajectory(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tpoint_trajectory_gs(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tgeo_at_geom(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_minus_geom(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tgeo_at_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_minus_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tspatial_transform(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************

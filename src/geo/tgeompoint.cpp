@@ -1135,7 +1135,36 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
     /* ***************************************************
      * Spatial functions
      ****************************************************/
-    
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "getX",
+            {TGEOMPOINT()},
+            TemporalTypes::TFLOAT(),
+            TgeompointFunctions::Tpoint_get_x
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "getY",
+            {TGEOMPOINT()},
+            TemporalTypes::TFLOAT(),
+            TgeompointFunctions::Tpoint_get_y
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "getZ",
+            {TGEOMPOINT()},
+            TemporalTypes::TFLOAT(),
+            TgeompointFunctions::Tpoint_get_z
+        )
+    );
+
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
@@ -1143,6 +1172,86 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
             {TGEOMPOINT()},
             LogicalType::DOUBLE,
             TgeompointFunctions::Tpoint_length
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "cumulativeLength",
+            {TGEOMPOINT()},
+            TemporalTypes::TFLOAT(),
+            TgeompointFunctions::Tpoint_cumulative_length
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "speed",
+            {TGEOMPOINT()},
+            TemporalTypes::TFLOAT(),
+            TemporalFunctions::Temporal_derivative
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "twCentroid",
+            {TGEOMPOINT()},
+            GeoTypes::GEOMETRY(),
+            TgeompointFunctions::Tpoint_twcentroid
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "direction",
+            {TGEOMPOINT()},
+            TemporalTypes::TFLOAT(),
+            TgeompointFunctions::Tpoint_direction
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "azimuth",
+            {TGEOMPOINT()},
+            TemporalTypes::TFLOAT(),
+            TgeompointFunctions::Tpoint_azimuth
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "angularDifference",
+            {TGEOMPOINT()},
+            GeoTypes::GEOMETRY(),
+            TgeompointFunctions::Tpoint_angular_difference
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "isSimple",
+            {TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Tpoint_is_simple
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "makeSimple",
+            {TGEOMPOINT()},
+            LogicalType::LIST(TGEOMPOINT()),
+            TgeompointFunctions::Tpoint_make_simple
         )
     );
 
@@ -1179,6 +1288,26 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
+            "minusGeometry",
+            {TGEOMPOINT(), GeoTypes::GEOMETRY()},
+            TGEOMPOINT(),
+            TgeompointFunctions::Tgeo_minus_geom
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "minusGeometry",
+            {TGEOMPOINT(), GeoTypes::GEOMETRY(), SpanTypes::FLOATSPAN()},
+            TGEOMPOINT(),
+            TgeompointFunctions::Tgeo_minus_geom
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
             "atStbox",
             {TGEOMPOINT(), StboxType::STBOX()},
             TGEOMPOINT(),
@@ -1199,10 +1328,50 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
+            "minusStbox",
+            {TGEOMPOINT(), StboxType::STBOX()},
+            TGEOMPOINT(),
+            TgeompointFunctions::Tgeo_minus_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "minusStbox",
+            {TGEOMPOINT(), StboxType::STBOX(), LogicalType::BOOLEAN},
+            TGEOMPOINT(),
+            TgeompointFunctions::Tgeo_minus_stbox
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
             "transform",
             {TGEOMPOINT(), LogicalType::INTEGER},
             TGEOMPOINT(),
             TgeompointFunctions::Tspatial_transform
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "round",
+            {TGEOMPOINT(), LogicalType::INTEGER},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_round
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "round",
+            {TGEOMPOINT()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_round
         )
     );
 

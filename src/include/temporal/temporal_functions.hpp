@@ -208,6 +208,7 @@ struct TemporalFunctions {
      * Math functions
      ****************************************************/
     static void Temporal_round(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_derivative(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

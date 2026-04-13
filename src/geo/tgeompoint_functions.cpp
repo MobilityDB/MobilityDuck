@@ -759,6 +759,104 @@ void TgeompointFunctions::Tgeompoint_stops(DataChunk &args, ExpressionState &sta
 /* ***************************************************
  * Spatial functions
  ****************************************************/
+void TgeompointFunctions::Tpoint_get_x(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input_blob) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
+            size_t data_size = input_blob.GetSize();
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+            Temporal *ret = tpoint_get_x(temp);
+            free(temp);
+            if (!ret) {
+                throw InvalidInputException("Failed to get X coordinate from TGEOMPOINT");
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            uint8_t *ret_data = (uint8_t*)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            string_t ret_string(reinterpret_cast<const char*>(ret_data), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_string);
+            free(ret_data);
+            free(ret);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TgeompointFunctions::Tpoint_get_y(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input_blob) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
+            size_t data_size = input_blob.GetSize();
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+            Temporal *ret = tpoint_get_y(temp);
+            free(temp);
+            if (!ret) {
+                throw InvalidInputException("Failed to get Y coordinate from TGEOMPOINT");
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            uint8_t *ret_data = (uint8_t*)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            string_t ret_string(reinterpret_cast<const char*>(ret_data), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_string);
+            free(ret_data);
+            free(ret);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TgeompointFunctions::Tpoint_get_z(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input_blob) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
+            size_t data_size = input_blob.GetSize();
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+            Temporal *ret = tpoint_get_z(temp);
+            free(temp);
+            if (!ret) {
+                throw InvalidInputException("Failed to get Z coordinate from TGEOMPOINT");
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            uint8_t *ret_data = (uint8_t*)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            string_t ret_string(reinterpret_cast<const char*>(ret_data), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_string);
+            free(ret_data);
+            free(ret);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
 
 void TgeompointFunctions::Tpoint_length(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, double>(
@@ -781,6 +879,250 @@ void TgeompointFunctions::Tpoint_length(DataChunk &args, ExpressionState &state,
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
+}
+
+void TgeompointFunctions::Tpoint_cumulative_length(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input_blob) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
+            size_t data_size = input_blob.GetSize();
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+            Temporal *ret = tpoint_cumulative_length(temp);
+            free(temp);
+            if (!ret) {
+                throw InvalidInputException("Failed to compute cumulative length of TGEOMPOINT");
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            uint8_t *ret_data = (uint8_t*)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            string_t ret_string(reinterpret_cast<const char*>(ret_data), ret_size);
+            string_t stored_result = StringVector::AddStringOrBlob(result, ret_string);
+            free(ret_data);
+            free(ret);
+            return stored_result;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TgeompointFunctions::Tpoint_twcentroid(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input_blob) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
+            size_t data_size = input_blob.GetSize();
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+            GSERIALIZED *ret = tpoint_twcentroid(temp);
+            free(temp);
+            if (!ret) {
+                throw InvalidInputException("Failed to compute time-weighted centroid of TGEOMPOINT");
+            }
+            string_t geometry_blob = GSerializedToGeometry(ret, state, result);
+            string_t stored_result = StringVector::AddStringOrBlob(result, geometry_blob);
+            free(ret);
+            return stored_result;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TgeompointFunctions::Tpoint_direction(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, double>(
+        args.data[0], result, args.size(),
+        [&](string_t input_blob) -> double {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
+            size_t data_size = input_blob.GetSize();
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+            double ret;
+            bool has_direction = tpoint_direction(temp, &ret);
+            if (!has_direction) {                   
+                free(temp);
+                throw InvalidInputException("Failed to compute direction of TGEOMPOINT");
+            }
+            free(temp);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TgeompointFunctions::Tpoint_azimuth(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input_blob) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
+            size_t data_size = input_blob.GetSize();
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+            Temporal *ret = tpoint_azimuth(temp);
+            free(temp);
+            if (!ret) {
+                throw InvalidInputException("Failed to compute azimuth of TGEOMPOINT"); 
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            uint8_t *ret_data = (uint8_t*)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            string_t ret_string(reinterpret_cast<const char*>(ret_data), ret_size);
+            string_t stored_result = StringVector::AddStringOrBlob(result, ret_string);
+            free(ret_data);
+            free(ret);
+            return stored_result;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TgeompointFunctions::Tpoint_angular_difference(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input_blob) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
+            size_t data_size = input_blob.GetSize();
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+            Temporal *ret = tpoint_angular_difference(temp);
+            free(temp);
+            if (!ret) {
+                throw InvalidInputException("Failed to compute angular difference of TGEOMPOINT");
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            uint8_t *ret_data = (uint8_t*)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            string_t ret_string(reinterpret_cast<const char*>(ret_data), ret_size);
+            string_t stored_result = StringVector::AddStringOrBlob(result, ret_string);
+            free(ret_data);
+            free(ret);
+            return stored_result;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TgeompointFunctions::Tpoint_is_simple(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, bool>(
+        args.data[0], result, args.size(),
+        [&](string_t input_blob) -> bool {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
+            size_t data_size = input_blob.GetSize();
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+            bool ret = tpoint_is_simple(temp);
+            free(temp);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TgeompointFunctions::Tpoint_make_simple(DataChunk &args, ExpressionState &state, Vector &result) {
+	idx_t total_count = 0;
+	UnaryExecutor::Execute<string_t, list_entry_t>(
+	    args.data[0], result, args.size(),
+	    [&](string_t input_blob) -> list_entry_t {
+		    const uint8_t *data = reinterpret_cast<const uint8_t *>(input_blob.GetData());
+		    size_t data_size = input_blob.GetSize();
+		    if (data_size < sizeof(void *)) {
+			    throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
+		    }
+		    uint8_t *data_copy = (uint8_t *)malloc(data_size);
+		    memcpy(data_copy, data, data_size);
+		    Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
+		    if (!temp) {
+			    free(data_copy);
+			    throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+		    }
+
+		    int frag_count = 0;
+		    Temporal **fragments = tpoint_make_simple(temp, &frag_count);
+		    free(data_copy);
+
+		    if (!fragments || frag_count <= 0) {
+			    if (fragments) {
+				    free(fragments);
+			    }
+			    throw InvalidInputException("makeSimple: failed to split temporal point");
+		    }
+
+		    const list_entry_t entry(total_count, static_cast<uint64_t>(frag_count));
+		    total_count += frag_count;
+		    ListVector::Reserve(result, total_count);
+
+		    auto &child_vec = ListVector::GetEntry(result);
+		    auto child_data = FlatVector::GetData<string_t>(child_vec);
+
+		    for (int i = 0; i < frag_count; i++) {
+			    Temporal *frag = fragments[i];
+			    if (!frag) {
+				    for (int k = i; k < frag_count; k++) {
+					    if (fragments[k]) {
+						    free(fragments[k]);
+					    }
+				    }
+				    free(fragments);
+				    throw InvalidInputException("makeSimple: null fragment in result array");
+			    }
+			    size_t frag_size = temporal_mem_size(frag);
+			    uint8_t *frag_buf = (uint8_t *)malloc(frag_size);
+			    memcpy(frag_buf, frag, frag_size);
+			    string_t frag_blob(reinterpret_cast<const char *>(frag_buf), frag_size);
+			    string_t stored = StringVector::AddStringOrBlob(child_vec, frag_blob);
+			    free(frag_buf);
+			    free(frag);
+			    child_data[entry.offset + static_cast<idx_t>(i)] = stored;
+		    }
+		    free(fragments);
+		    return entry;
+	    });
+	ListVector::SetListSize(result, total_count);
+	if (args.size() == 1) {
+		result.SetVectorType(VectorType::CONSTANT_VECTOR);
+	}
 }
 
 void TgeompointFunctions::Tpoint_trajectory(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -889,6 +1231,137 @@ void TgeompointFunctions::Tgeo_at_geom(DataChunk &args, ExpressionState &state, 
             free(ret);
             free(gs);
             free(tgeom);
+            return stored_data;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TgeompointFunctions::Tgeo_minus_geom(DataChunk &args, ExpressionState &state, Vector &result) {
+	const idx_t count = args.size();
+
+	auto minus_geom_common = [&](string_t tgeom_blob, string_t geometry_blob, const Span *zspan,
+	                             ValidityMask &mask, idx_t idx) -> string_t {
+		const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
+		size_t tgeom_data_size = tgeom_blob.GetSize();
+		if (tgeom_data_size < sizeof(void *)) {
+			throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
+		}
+		uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
+		memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
+		Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
+		if (!tgeom) {
+			free(tgeom_data_copy);
+			throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+		}
+
+		int32 srid = tspatial_srid(tgeom);
+		GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
+		if (!gs) {
+			free(tgeom);
+			throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+		}
+
+		Temporal *ret = zspan ? tpoint_minus_geom(tgeom, gs, zspan) : tgeo_minus_geom(tgeom, gs);
+		free(tgeom);
+		free(gs);
+		if (!ret) {
+			mask.SetInvalid(idx);
+			return string_t();
+		}
+		size_t ret_size = temporal_mem_size(ret);
+		uint8_t *ret_data = (uint8_t *)malloc(ret_size);
+		memcpy(ret_data, ret, ret_size);
+		string_t ret_string(reinterpret_cast<const char *>(ret_data), ret_size);
+		string_t stored_data = StringVector::AddStringOrBlob(result, ret_string);
+		free(ret_data);
+		free(ret);
+		return stored_data;
+	};
+
+	if (args.ColumnCount() == 2) {
+		BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+		    args.data[0], args.data[1], result, count,
+		    [&](string_t tgeom_blob, string_t geometry_blob, ValidityMask &mask, idx_t idx) -> string_t {
+			    return minus_geom_common(tgeom_blob, geometry_blob, nullptr, mask, idx);
+		    });
+	} else if (args.ColumnCount() == 3) {
+		TernaryExecutor::ExecuteWithNulls<string_t, string_t, string_t, string_t>(
+		    args.data[0], args.data[1], args.data[2], result, count,
+		    [&](string_t tgeom_blob, string_t geometry_blob, string_t span_blob, ValidityMask &mask,
+		        idx_t idx) -> string_t {
+			    size_t span_size = span_blob.GetSize();
+			    if (span_size < sizeof(void *)) {
+				    throw InvalidInputException("Invalid floatspan data: insufficient size");
+			    }
+			    uint8_t *span_copy = (uint8_t *)malloc(span_size);
+			    memcpy(span_copy, span_blob.GetData(), span_size);
+			    Span *zspan = reinterpret_cast<Span *>(span_copy);
+			    try {
+				    string_t out = minus_geom_common(tgeom_blob, geometry_blob, zspan, mask, idx);
+				    free(span_copy);
+				    return out;
+			    } catch (...) {
+				    free(span_copy);
+				    throw;
+			    }
+		    });
+	} else {
+		throw InternalException("Tgeo_minus_geom: expected 2 or 3 arguments");
+	}
+
+	if (count == 1) {
+		result.SetVectorType(VectorType::CONSTANT_VECTOR);
+	}
+}
+
+void TgeompointFunctions::Tgeo_minus_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    bool border_inc = true;
+    if (args.ColumnCount() > 2) {
+        border_inc = args.data[2].GetValue(0).GetValue<bool>();
+    }
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t tgeom_blob, string_t stbox_blob, ValidityMask &mask, idx_t idx) -> string_t {
+            const uint8_t *tgeom_data = reinterpret_cast<const uint8_t*>(tgeom_blob.GetData());
+            size_t tgeom_data_size = tgeom_blob.GetSize();
+            uint8_t *tgeom_data_copy = (uint8_t*)malloc(tgeom_data_size);
+            memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
+            Temporal *tgeom = reinterpret_cast<Temporal*>(tgeom_data_copy);
+            if (!tgeom) {
+                free(tgeom_data_copy);
+                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+
+            const uint8_t *stbox_raw = reinterpret_cast<const uint8_t *>(stbox_blob.GetData());
+            size_t stbox_size = stbox_blob.GetSize();
+            uint8_t *stbox_data_copy = (uint8_t *)malloc(stbox_size);
+            memcpy(stbox_data_copy, stbox_raw, stbox_size);
+            STBox *stbox = reinterpret_cast<STBox *>(stbox_data_copy);
+            if (!stbox) {
+                free(tgeom_data_copy);
+                free(stbox_data_copy);
+                throw InvalidInputException("Invalid STBOX data: null pointer");
+            }
+
+            Temporal *ret = tgeo_minus_stbox(tgeom, stbox, border_inc);
+            if (!ret) {
+                free(tgeom_data_copy);
+                free(stbox_data_copy);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            uint8_t *ret_data = (uint8_t*)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            string_t ret_string(reinterpret_cast<const char*>(ret_data), ret_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_string);
+            free(ret_data);
+            free(ret);
+            free(stbox_data_copy);
+            free(tgeom_data_copy);
             return stored_data;
         }
     );
