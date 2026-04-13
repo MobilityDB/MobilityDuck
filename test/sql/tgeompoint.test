@@ -533,3 +533,23 @@ query I
 SELECT asText(minusTime(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', tstzspanset '{[2000-01-01,2000-01-02]}'));
 ----
 {(POINT(2 2)@2000-01-02 00:00:00+00, POINT(1 1)@2000-01-03 00:00:00+00], [POINT(3 3)@2000-01-04 00:00:00+00, POINT(3 3)@2000-01-05 00:00:00+00]}
+
+query I 
+SELECT asText(deleteTime(tgeompoint 'Point(1 1)@2000-01-01', timestamptz '2000-01-01'));
+----
+NULL
+
+query I 
+SELECT asText(deleteTime(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}', tstzset '{2000-01-01}'));
+----
+{POINT(2 2)@2000-01-02 00:00:00+00, POINT(1 1)@2000-01-03 00:00:00+00}
+
+query I 
+SELECT asText(deleteTime(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]', tstzspan '[2000-01-01,2000-01-02]'));
+----
+[POINT(1 1)@2000-01-03 00:00:00+00]
+
+query I 
+SELECT asText(deleteTime(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]', tstzspanset '{[2000-01-01,2000-01-02]}'));
+----
+[POINT(1 1)@2000-01-03 00:00:00+00]

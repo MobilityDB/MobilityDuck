@@ -862,6 +862,129 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
             TemporalFunctions::Temporal_after_timestamptz
         )
     );
+
+    /* ***************************************************
+     * Modification function
+     ****************************************************/
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "insert",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_update
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "insert",
+            {TGEOMPOINT(), TGEOMPOINT(), LogicalType::BOOLEAN},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_update
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "update",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_update
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "update",
+            {TGEOMPOINT(), TGEOMPOINT(), LogicalType::BOOLEAN},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_update
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "deleteTime",
+            {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_delete_timestamptz
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "deleteTime",
+            {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_delete_timestamptz
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "deleteTime",
+            {TGEOMPOINT(), SetTypes::tstzset()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_delete_tstzset
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "deleteTime",
+            {TGEOMPOINT(), SetTypes::tstzset(), LogicalType::BOOLEAN},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_delete_tstzset
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "deleteTime",
+            {TGEOMPOINT(), SpanTypes::TSTZSPAN()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_delete_tstzspan
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "deleteTime",
+            {TGEOMPOINT(), SpanTypes::TSTZSPAN(), LogicalType::BOOLEAN},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_delete_tstzspan
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "deleteTime",
+            {TGEOMPOINT(), SpansetTypes::tstzspanset()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_delete_tstzspanset
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "deleteTime",
+            {TGEOMPOINT(), SpansetTypes::tstzspanset(), LogicalType::BOOLEAN},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_delete_tstzspanset
+        )
+    );
+
+
     /* ***************************************************
      * Stops function
      ****************************************************/
