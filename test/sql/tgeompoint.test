@@ -690,3 +690,73 @@ query I
 SELECT eDwithin(tgeompoint 'Interp=Step;[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02]', tgeompoint 'Interp=Step;[Point(5 0)@2000-01-01, Point(3 2)@2000-01-02]', 1);
 ----
 true
+
+query I 
+SELECT tContains(geometry 'Point(1 1)', tgeompoint 'Point(1 1)@2000-01-01');
+----
+t@2000-01-01 00:00:00+00
+
+query I 
+SELECT tContains(geometry 'Point(1 1)', tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]', true);
+----
+{[t@2000-01-01 00:00:00+00], [t@2000-01-03 00:00:00+00]}
+
+query I 
+SELECT tDisjoint(geometry 'Point(1 1)', NULL::tgeompoint);
+----
+NULL
+
+query I 
+SELECT tDisjoint(geometry 'Point(1 1)', tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03], [Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}');
+----
+{[f@2000-01-01 00:00:00+00], (t@2000-01-01 00:00:00+00, f@2000-01-03 00:00:00+00], [t@2000-01-04 00:00:00+00, t@2000-01-05 00:00:00+00]}
+
+query I 
+SELECT tDisjoint(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03], [Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', tgeompoint 'Point(1 1)@2000-01-01', false);
+----
+f@2000-01-01 00:00:00+00
+
+query I 
+SELECT tIntersects(tgeompoint '{Point(1 1 1)@2000-01-01, Point(2 2 2)@2000-01-02, Point(1 1 1)@2000-01-03}', geometry 'Point Z (2 2 2)');
+----
+{f@2000-01-01 00:00:00+00, t@2000-01-02 00:00:00+00, f@2000-01-03 00:00:00+00}
+
+query I 
+SELECT tIntersects(tgeompoint 'Point(1 1)@2000-01-01', geometry 'Point(1 1)', true);
+----
+t@2000-01-01 00:00:00+00
+
+query I 
+SELECT tTouches(geometry 'Point(1 1)', tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03], [Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}');
+----
+{[f@2000-01-01 00:00:00+00, f@2000-01-03 00:00:00+00], [f@2000-01-04 00:00:00+00, f@2000-01-05 00:00:00+00]}
+
+query I 
+SELECT tTouches(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}', geometry 'Point(1 1)', true);
+----
+NULL
+
+query I 
+SELECT tDwithin(geometry 'Point empty', tgeompoint 'Point(1 1)@2000-01-01', 2);
+----
+NULL
+
+query I 
+SELECT tDwithin(tgeompoint '{[Point(1 1 1)@2000-01-01, Point(2 2 2)@2000-01-02, Point(1 1 1)@2000-01-03], [Point(3 3 3)@2000-01-04, Point(3 3 3)@2000-01-05]}', geometry 'Point Z (1 1 1)', 2);
+----
+{[t@2000-01-01 00:00:00+00, t@2000-01-03 00:00:00+00], [f@2000-01-04 00:00:00+00, f@2000-01-05 00:00:00+00]}
+
+query I 
+SELECT tDwithin(tgeompoint '[Point(0 0)@2000-01-01, Point(1 1)@2000-01-02]', tgeompoint '[Point(1 0)@2000-01-01, Point(2 0)@2000-01-02]', 1);
+----
+{[t@2000-01-01 00:00:00+00], (f@2000-01-01 00:00:00+00, f@2000-01-02 00:00:00+00]}
+
+query I 
+SELECT tDwithin(tgeompoint 'Interp=Step;{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', tgeompoint 'Interp=Step;{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', 2);
+----
+{[t@2000-01-01 00:00:00+00, t@2000-01-03 00:00:00+00], [t@2000-01-04 00:00:00+00, t@2000-01-05 00:00:00+00]}
+
+query I 
+SELECT tDwithin(tgeompoint 'Point(1 1 1)@2000-01-01', tgeompoint 'Point(1 1)@2000-01-01', 2);
+----
+t@2000-01-01 00:00:00+00

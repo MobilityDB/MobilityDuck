@@ -134,6 +134,17 @@ struct TgeompointFunctions {
     /* ***************************************************
      * Temporal-spatial relationships
      ****************************************************/
+    static void Tcontains_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tdisjoint_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tdisjoint_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tdisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tintersects_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tintersects_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tintersects_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ttouches_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ttouches_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tdwithin_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tdwithin_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tdwithin_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     static void ShortestLine_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************

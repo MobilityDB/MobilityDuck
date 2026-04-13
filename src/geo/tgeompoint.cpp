@@ -1618,6 +1618,220 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
     /* ***************************************************
      * Temporal-spatial relationships
      ****************************************************/
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tContains",
+            {GeoTypes::GEOMETRY(), TGEOMPOINT()},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Tcontains_geo_tgeo
+        )
+    );
+    
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tContains",
+            {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::BOOLEAN},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Tcontains_geo_tgeo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tDisjoint",
+            {TGEOMPOINT(), GeoTypes::GEOMETRY()},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Tdisjoint_tgeo_geo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tDisjoint",
+            {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::BOOLEAN},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Tdisjoint_tgeo_geo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tDisjoint",
+            {GeoTypes::GEOMETRY(), TGEOMPOINT()},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Tdisjoint_geo_tgeo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tDisjoint",
+            {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::BOOLEAN},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Tdisjoint_geo_tgeo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tDisjoint",
+            {TGEOMPOINT(), TGEOMPOINT(), LogicalType::BOOLEAN},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Tdisjoint_tgeo_tgeo  
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tDisjoint",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Tdisjoint_tgeo_tgeo  
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tIntersects",
+            {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::BOOLEAN},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Tintersects_geo_tgeo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tIntersects",
+            {GeoTypes::GEOMETRY(), TGEOMPOINT()},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Tintersects_geo_tgeo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tIntersects",
+            {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::BOOLEAN},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Tintersects_tgeo_geo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tIntersects",
+            {TGEOMPOINT(), GeoTypes::GEOMETRY()},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Tintersects_tgeo_geo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tIntersects",
+            {TGEOMPOINT(), TGEOMPOINT(), LogicalType::BOOLEAN},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Tintersects_tgeo_tgeo
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tIntersects",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Tintersects_tgeo_tgeo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tTouches",
+            {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::BOOLEAN},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Ttouches_geo_tgeo
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tTouches",
+            {GeoTypes::GEOMETRY(), TGEOMPOINT()},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Ttouches_geo_tgeo
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tTouches",
+            {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::BOOLEAN},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Ttouches_tgeo_geo
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tTouches",
+            {TGEOMPOINT(), GeoTypes::GEOMETRY()},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Ttouches_tgeo_geo
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tDwithin",
+            {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::DOUBLE},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Tdwithin_geo_tgeo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tDwithin",
+            {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::DOUBLE, LogicalType::BOOLEAN},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Tdwithin_geo_tgeo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tDwithin",
+            {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE, LogicalType::BOOLEAN},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Tdwithin_tgeo_geo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tDwithin",
+            {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Tdwithin_tgeo_geo
+        )
+    );
 
     ExtensionUtil::RegisterFunction(
         instance,
@@ -1628,6 +1842,17 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
             TgeompointFunctions::Tdwithin_tgeo_tgeo
         )
     );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tDwithin",
+            {TGEOMPOINT(), TGEOMPOINT(), LogicalType::DOUBLE, LogicalType::BOOLEAN},
+            TemporalTypes::TBOOL(),
+            TgeompointFunctions::Tdwithin_tgeo_tgeo
+        )
+    );
+    
 
     /* ***************************************************
      * Operators (workaround as functions)
