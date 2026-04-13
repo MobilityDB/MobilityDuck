@@ -20,7 +20,8 @@ struct TgeompointFunctions {
     // Out function: overload Temporal_out
     static void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result);
-    
+    static void Spatialarr_as_text(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Spatialarr_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
     * Constructor functions
     ****************************************************/

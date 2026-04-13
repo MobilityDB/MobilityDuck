@@ -3,6 +3,7 @@
 #include "common.hpp"
 #include "geo/tgeompoint.hpp"
 #include "geo/tgeompoint_functions.hpp"
+#include "geo/geoset.hpp"
 #include "temporal/temporal_functions.hpp"
 #include "geo/stbox.hpp"
 #include "temporal/spanset.hpp"
@@ -81,6 +82,82 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
             {TGEOMPOINT()},
             LogicalType::VARCHAR,
             TgeompointFunctions::Tspatial_as_ewkt
+        )
+    );
+
+    const auto varchar_list = LogicalType::LIST(LogicalType::VARCHAR);
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "asText",
+            {LogicalType::LIST(TGEOMPOINT())},
+            varchar_list,
+            TgeompointFunctions::Spatialarr_as_text
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "asText",
+            {LogicalType::LIST(TGEOMPOINT()), LogicalType::INTEGER},
+            varchar_list,
+            TgeompointFunctions::Spatialarr_as_text
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "asText",
+            {LogicalType::LIST(GeoTypes::GEOMETRY())},
+            varchar_list,
+            TgeompointFunctions::Spatialarr_as_text
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "asText",
+            {LogicalType::LIST(GeoTypes::GEOMETRY()), LogicalType::INTEGER},
+            varchar_list,
+            TgeompointFunctions::Spatialarr_as_text
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "asEWKT",
+            {LogicalType::LIST(TGEOMPOINT())},
+            varchar_list,
+            TgeompointFunctions::Spatialarr_as_ewkt
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "asEWKT",
+            {LogicalType::LIST(TGEOMPOINT()), LogicalType::INTEGER},
+            varchar_list,
+            TgeompointFunctions::Spatialarr_as_ewkt
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "asEWKT",
+            {LogicalType::LIST(GeoTypes::GEOMETRY())},
+            varchar_list,
+            TgeompointFunctions::Spatialarr_as_ewkt
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "asEWKT",
+            {LogicalType::LIST(GeoTypes::GEOMETRY()), LogicalType::INTEGER},
+            varchar_list,
+            TgeompointFunctions::Spatialarr_as_ewkt
         )
     );
 
@@ -187,218 +264,7 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
             TgeompointFunctions::Tspatial_to_stbox
         )
     );
-
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "getTime",
-            {TGEOMPOINT()},
-            SpansetTypes::tstzspanset(),
-            TemporalFunctions::Temporal_time
-        )
-    );
     
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "startValue",
-            {TGEOMPOINT()},
-            GeoTypes::GEOMETRY(),
-            TgeompointFunctions::Tgeompoint_start_value
-        )
-    );
-
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "endValue",
-            {TGEOMPOINT()},
-            GeoTypes::GEOMETRY(),
-            TgeompointFunctions::Tgeompoint_end_value
-        )
-    );
-
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "duration",
-            {TGEOMPOINT(), LogicalType::BOOLEAN},
-            LogicalType::INTERVAL,
-            TemporalFunctions::Temporal_duration
-        )
-    );
-
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "memSize",
-            {TGEOMPOINT()},
-            LogicalType::INTEGER,
-            TemporalFunctions::Temporal_mem_size
-        )
-    );
-
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "lowerInc",
-            {TGEOMPOINT()},
-            LogicalType::BOOLEAN,
-            TemporalFunctions::Temporal_lower_inc
-        )
-    );
-
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "upperInc",
-            {TGEOMPOINT()},
-            LogicalType::BOOLEAN,
-            TemporalFunctions::Temporal_upper_inc
-        )
-    );
-
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "startTimestamp",
-            {TGEOMPOINT()},
-            LogicalType::TIMESTAMP_TZ,
-            TemporalFunctions::Temporal_start_timestamptz
-        )
-    );
-
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "endTimestamp",
-            {TGEOMPOINT()},
-            LogicalType::TIMESTAMP_TZ,
-            TemporalFunctions::Temporal_end_timestamptz
-        )
-    );
-
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "numInstants",
-            {TGEOMPOINT()},
-            LogicalType::INTEGER,
-            TemporalFunctions::Temporal_num_instants
-        )
-    );
-
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "startInstant",
-            {TGEOMPOINT()},
-            TGEOMPOINT(),
-            TemporalFunctions::Temporal_start_instant
-        )
-    );
-
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "endInstant",
-            {TGEOMPOINT()},
-            TGEOMPOINT(),
-            TemporalFunctions::Temporal_end_instant
-        )
-    );
-
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "instantN",
-            {TGEOMPOINT(), LogicalType::INTEGER},
-            TGEOMPOINT(),
-            TemporalFunctions::Temporal_instant_n
-        )
-    );
-
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "numTimestamps",
-            {TGEOMPOINT()},
-            LogicalType::INTEGER,
-            TemporalFunctions::Temporal_num_timestamps
-        )
-    );
-
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "timestampN",
-            {TGEOMPOINT(), LogicalType::INTEGER},
-            LogicalType::TIMESTAMP_TZ,
-            TemporalFunctions::Temporal_timestamptz_n
-        )
-    );
-
-
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "startSequence",
-            {TGEOMPOINT()},
-            TGEOMPOINT(),
-            TemporalFunctions::Temporal_start_sequence
-        )
-    );
-
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "endSequence",
-            {TGEOMPOINT()},
-            TGEOMPOINT(),
-            TemporalFunctions::Temporal_end_sequence
-        )
-    );
-    
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "sequenceN",
-            {TGEOMPOINT(), LogicalType::INTEGER},
-            TGEOMPOINT(),
-            TemporalFunctions::Temporal_sequence_n
-        )
-    );
-
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "shiftTime",
-            {TGEOMPOINT(), LogicalType::INTERVAL},
-            TGEOMPOINT(),
-            TemporalFunctions::Temporal_shift_time
-        )
-    );
-
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "scaleTime",
-            {TGEOMPOINT(), LogicalType::INTERVAL},
-            TGEOMPOINT(),
-            TemporalFunctions::Temporal_scale_time
-        )
-    );
-
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "shiftScaleTime",
-            {TGEOMPOINT(), LogicalType::INTERVAL, LogicalType::INTERVAL},
-            TGEOMPOINT(),
-            TemporalFunctions::Temporal_shift_scale_time
-        )
-    );
-
     /* ***************************************************
      * Conversion functions
      ****************************************************/
@@ -519,6 +385,25 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
     /* ***************************************************
     * Accessor functions
     ****************************************************/
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "tempSubtype",
+            {TGEOMPOINT()},
+            LogicalType::VARCHAR,
+            TemporalFunctions::Temporal_subtype
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "interp",
+            {TGEOMPOINT()},
+            LogicalType::VARCHAR,
+            TemporalFunctions::Temporal_interp
+        )
+    );
 
     ExtensionUtil::RegisterFunction(
         instance,
@@ -529,7 +414,196 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
             TgeompointFunctions::Tgeompoint_value
         )
     );
-    
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "getTimestamp",
+            {TGEOMPOINT()},
+            LogicalType::TIMESTAMP_TZ,
+            TemporalFunctions::Tinstant_timestamptz
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "valueSet",
+            {TGEOMPOINT()},
+            SpatialSetType::geomset(),
+            TemporalFunctions::Temporal_valueset
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "valueN",
+            {TGEOMPOINT(), LogicalType::INTEGER},
+            GeoTypes::GEOMETRY(),
+            TemporalFunctions::Temporal_value_n
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "getTime",
+            {TGEOMPOINT()},
+            SpansetTypes::tstzspanset(),
+            TemporalFunctions::Temporal_time
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "startValue",
+            {TGEOMPOINT()},
+            GeoTypes::GEOMETRY(),
+            TgeompointFunctions::Tgeompoint_start_value
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "endValue",
+            {TGEOMPOINT()},
+            GeoTypes::GEOMETRY(),
+            TgeompointFunctions::Tgeompoint_end_value
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "duration",
+            {TGEOMPOINT(), LogicalType::BOOLEAN},
+            LogicalType::INTERVAL,
+            TemporalFunctions::Temporal_duration
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "memSize",
+            {TGEOMPOINT()},
+            LogicalType::INTEGER,
+            TemporalFunctions::Temporal_mem_size
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "lowerInc",
+            {TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TemporalFunctions::Temporal_lower_inc
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "upperInc",
+            {TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TemporalFunctions::Temporal_upper_inc
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "numInstants",
+            {TGEOMPOINT()},
+            LogicalType::INTEGER,
+            TemporalFunctions::Temporal_num_instants
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "startInstant",
+            {TGEOMPOINT()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_start_instant
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "endInstant",
+            {TGEOMPOINT()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_end_instant
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "instantN",
+            {TGEOMPOINT(), LogicalType::INTEGER},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_instant_n
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "instants",
+            {TGEOMPOINT()},
+            LogicalType::LIST(TGEOMPOINT()),
+            TemporalFunctions::Temporal_instants
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "numTimestamps",
+            {TGEOMPOINT()},
+            LogicalType::INTEGER,
+            TemporalFunctions::Temporal_num_timestamps
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "startTimestamp",
+            {TGEOMPOINT()},
+            LogicalType::TIMESTAMP_TZ,
+            TemporalFunctions::Temporal_start_timestamptz
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "endTimestamp",
+            {TGEOMPOINT()},
+            LogicalType::TIMESTAMP_TZ,
+            TemporalFunctions::Temporal_end_timestamptz
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "timestampN",
+            {TGEOMPOINT(), LogicalType::INTEGER},
+            LogicalType::TIMESTAMP_TZ,
+            TemporalFunctions::Temporal_timestamptz_n
+        )
+    );
+
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
@@ -543,12 +617,97 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
-            "instants",
+            "numSequences",
             {TGEOMPOINT()},
-            LogicalType::LIST(TGEOMPOINT()),
-            TemporalFunctions::Temporal_instants
+            LogicalType::INTEGER,
+            TemporalFunctions::Temporal_num_sequences
         )
     );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "startSequence",
+            {TGEOMPOINT()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_start_sequence
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "endSequence",
+            {TGEOMPOINT()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_end_sequence
+        )
+    );
+    
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "sequenceN",
+            {TGEOMPOINT(), LogicalType::INTEGER},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_sequence_n
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "sequences",
+            {TGEOMPOINT()},
+            LogicalType::LIST(TGEOMPOINT()),
+            TemporalFunctions::Temporal_sequences
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "segments",
+            {TGEOMPOINT()},
+            LogicalType::LIST(TGEOMPOINT()),
+            TemporalFunctions::Temporal_segments
+        )
+    );
+
+    /* ***************************************************
+     * Shift and Scale functions
+     ****************************************************/
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "shiftTime",
+            {TGEOMPOINT(), LogicalType::INTERVAL},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_shift_time
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "scaleTime",
+            {TGEOMPOINT(), LogicalType::INTERVAL},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_scale_time
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "shiftScaleTime",
+            {TGEOMPOINT(), LogicalType::INTERVAL, LogicalType::INTERVAL},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_shift_scale_time
+        )
+    );
+
+    //TODO: unnest 
 
     /* ***************************************************
      * Restriction functions
@@ -817,15 +976,6 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
         )
     );
 
-    ExtensionUtil::RegisterFunction(
-        instance,
-        ScalarFunction(
-            "numSequences",
-            {TGEOMPOINT()},
-            LogicalType::INTEGER,
-            TemporalFunctions::Temporal_num_sequences
-        )
-    );
 
     // ExtensionUtil::RegisterFunction(
     //     instance,

@@ -14,7 +14,129 @@
 #include "spatial/spatial_types.hpp"
 #include "spatial/geometry/wkb_writer.hpp"
 
+#include "duckdb/common/types.hpp"
+
 namespace duckdb {
+
+namespace {
+
+enum class SpatialarrElemKind { TGEOM_POINT, GEOMETRY_BLOB };
+
+static SpatialarrElemKind spatialarr_elem_kind_from_list(const LogicalType &list_type) {
+	if (list_type.id() != LogicalTypeId::LIST) {
+		throw InvalidInputException("Spatialarr_as_text/asEWKT: expected a LIST input");
+	}
+	const auto &child = ListType::GetChildType(list_type);
+	const auto &alias = child.GetAlias();
+	if (alias == "TGEOMPOINT" || alias == "TGEOGPOINT") {
+		return SpatialarrElemKind::TGEOM_POINT;
+	}
+	if (alias == "GEOMETRY") {
+		return SpatialarrElemKind::GEOMETRY_BLOB;
+	}
+	throw InvalidInputException(
+	    "Spatialarr_as_text/asEWKT: expected LIST(tgeompoint), LIST(tgeogpoint), or LIST(geometry), got LIST(" +
+	    alias + ")");
+}
+
+static void spatialarr_wkt_array(DataChunk &args, ExpressionState &state, Vector &result, bool extended,
+                                 int default_maxdd) {
+	auto &list_vec = args.data[0];
+	const idx_t row_count = args.size();
+	list_vec.Flatten(row_count);
+
+	const SpatialarrElemKind kind = spatialarr_elem_kind_from_list(list_vec.GetType());
+
+	const bool has_maxdd = args.ColumnCount() > 1;
+	if (has_maxdd) {
+		args.data[1].Flatten(row_count);
+	}
+
+	auto *in_list_entries = ListVector::GetData(list_vec);
+	auto &in_child = ListVector::GetEntry(list_vec);
+	const idx_t list_child_size = ListVector::GetListSize(list_vec);
+	in_child.Flatten(list_child_size);
+	auto in_child_data = FlatVector::GetData<string_t>(in_child);
+	auto &in_child_validity = FlatVector::Validity(in_child);
+
+	auto &list_validity = FlatVector::Validity(list_vec);
+
+	auto *out_list_entries = ListVector::GetData(result);
+	auto &out_child = ListVector::GetEntry(result);
+	out_child.SetVectorType(VectorType::FLAT_VECTOR);
+	auto out_child_data = FlatVector::GetData<string_t>(out_child);
+	auto &out_validity = FlatVector::Validity(result);
+
+	idx_t total_offset = 0;
+
+	for (idx_t row = 0; row < row_count; row++) {
+		if (!list_validity.RowIsValid(row)) {
+			out_validity.SetInvalid(row);
+			continue;
+		}
+
+		int maxdd = default_maxdd;
+		if (has_maxdd) {
+			auto &dd_vec = args.data[1];
+			if (!FlatVector::Validity(dd_vec).RowIsValid(row)) {
+				out_validity.SetInvalid(row);
+				continue;
+			}
+			maxdd = FlatVector::GetData<int32_t>(dd_vec)[row];
+			if (maxdd < 0) {
+				throw InvalidInputException("Spatialarr_as_text/asEWKT: maxdecimaldigits must be non-negative");
+			}
+		}
+
+		const list_entry_t le = in_list_entries[row];
+		if (le.length == 0) {
+			out_validity.SetInvalid(row);
+			continue;
+		}
+
+		ListVector::Reserve(result, total_offset + le.length);
+		ListVector::SetListSize(result, total_offset + le.length);
+		out_list_entries[row] = list_entry_t{total_offset, le.length};
+
+		for (idx_t j = 0; j < le.length; j++) {
+			const idx_t child_idx = le.offset + j;
+			if (!in_child_validity.RowIsValid(child_idx)) {
+				throw InvalidInputException("Spatialarr_as_text/asEWKT: NULL element inside spatial array");
+			}
+			const string_t &blob = in_child_data[child_idx];
+			char *wkt = nullptr;
+			if (kind == SpatialarrElemKind::TGEOM_POINT) {
+				size_t data_size = blob.GetSize();
+				if (data_size < sizeof(void *)) {
+					throw InvalidInputException("Spatialarr_as_text/asEWKT: invalid temporal blob in array");
+				}
+				uint8_t *data_copy = (uint8_t *)malloc(data_size);
+				memcpy(data_copy, blob.GetData(), data_size);
+				Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
+				wkt = extended ? tspatial_as_ewkt(temp, maxdd) : tspatial_as_text(temp, maxdd);
+				free(data_copy);
+			} else {
+				GSERIALIZED *gs = GeometryToGSerialized(blob, 0);
+				wkt = extended ? geo_as_ewkt(gs, maxdd) : geo_as_text(gs, maxdd);
+				free(gs);
+			}
+			if (!wkt) {
+				throw InvalidInputException("Spatialarr_as_text/asEWKT: failed to convert array element");
+			}
+			out_child_data[total_offset + j] = StringVector::AddString(out_child, wkt);
+			free(wkt);
+		}
+		total_offset += le.length;
+	}
+
+	ListVector::SetListSize(result, total_offset);
+
+	if (row_count == 1) {
+		result.SetVectorType(VectorType::CONSTANT_VECTOR);
+	}
+}
+
+} // namespace
 
 /* ***************************************************
  * In/out functions
@@ -122,6 +244,14 @@ void TgeompointFunctions::Tspatial_as_ewkt(DataChunk &args, ExpressionState &sta
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
+}
+
+void TgeompointFunctions::Spatialarr_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
+	spatialarr_wkt_array(args, state, result, false, 15);
+}
+
+void TgeompointFunctions::Spatialarr_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result) {
+	spatialarr_wkt_array(args, state, result, true, OUT_DEFAULT_DECIMAL_DIGITS);
 }
 
 /* ***************************************************

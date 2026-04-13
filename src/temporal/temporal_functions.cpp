@@ -1242,33 +1242,128 @@ void TemporalFunctions::Temporal_max_value(DataChunk &args, ExpressionState &sta
 }
 
 void TemporalFunctions::Temporal_value_n(DataChunk &args, ExpressionState &state, Vector &result) {
-    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, int64_t>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t input, int64_t n, ValidityMask &mask, idx_t idx) {
-            const uint8_t *data = reinterpret_cast<const uint8_t*>(input.GetData());
-            size_t data_size = input.GetSize();
-            if (data_size < sizeof(void*)) {
-                throw InvalidInputException("[Temporal_value_n] Invalid Temporal data: insufficient size");
-            }
-            uint8_t *data_copy = (uint8_t*)malloc(data_size);
-            memcpy(data_copy, data, data_size);
-            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-            if (!temp) {
+    auto count = args.size();
+    auto &res_type = result.GetType();
+
+    if (res_type.id() == LogicalTypeId::BLOB) {
+        BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(
+            args.data[0], args.data[1], result, count,
+            [&](string_t input, int64_t n, ValidityMask &mask, idx_t idx) -> string_t {
+                size_t data_size = input.GetSize();
+                if (data_size < sizeof(void*)) {
+                    throw InvalidInputException("[Temporal_value_n] Invalid Temporal data: insufficient size");
+                }
+                uint8_t *data_copy = (uint8_t*)malloc(data_size);
+                memcpy(data_copy, input.GetData(), data_size);
+                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+
+                Datum ret;
+                bool found = temporal_value_n(temp, n, &ret);
+                if (!found) {
+                    free(data_copy);
+                    mask.SetInvalid(idx);
+                    return string_t();
+                }
+                GSERIALIZED *gs = DatumGetGserializedP(ret);
+                string_t geom_blob = GSerializedToGeometry(gs, state, result);
+                free(gs);
                 free(data_copy);
-                throw InternalException("Failure in Temporal_value_n: unable to cast string to temporal");
+                return geom_blob;
             }
-        Datum ret;
-        bool found = temporal_value_n(temp, n, &ret);
-        if (!found) {
-                free(temp);
-                mask.SetInvalid(idx);
-                return int64_t();
+        );
+    } else if (res_type.id() == LogicalTypeId::BOOLEAN) {
+        BinaryExecutor::ExecuteWithNulls<string_t, int64_t, bool>(
+            args.data[0], args.data[1], result, count,
+            [&](string_t input, int64_t n, ValidityMask &mask, idx_t idx) -> bool {
+                size_t data_size = input.GetSize();
+                if (data_size < sizeof(void*)) {
+                    throw InvalidInputException("[Temporal_value_n] Invalid Temporal data: insufficient size");
+                }
+                uint8_t *data_copy = (uint8_t*)malloc(data_size);
+                memcpy(data_copy, input.GetData(), data_size);
+                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+
+                Datum ret;
+                bool found = temporal_value_n(temp, n, &ret);
+                free(data_copy);
+                if (!found) {
+                    mask.SetInvalid(idx);
+                    return false;
+                }
+                return (bool)ret;
             }
-            free(temp);
-            return (int64_t)ret;
-        }
-    );
-    if (args.size() == 1) {
+        );
+    } else if (res_type.id() == LogicalTypeId::DOUBLE) {
+        BinaryExecutor::ExecuteWithNulls<string_t, int64_t, double>(
+            args.data[0], args.data[1], result, count,
+            [&](string_t input, int64_t n, ValidityMask &mask, idx_t idx) -> double {
+                size_t data_size = input.GetSize();
+                if (data_size < sizeof(void*)) {
+                    throw InvalidInputException("[Temporal_value_n] Invalid Temporal data: insufficient size");
+                }
+                uint8_t *data_copy = (uint8_t*)malloc(data_size);
+                memcpy(data_copy, input.GetData(), data_size);
+                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+
+                Datum ret;
+                bool found = temporal_value_n(temp, n, &ret);
+                free(data_copy);
+                if (!found) {
+                    mask.SetInvalid(idx);
+                    return 0.0;
+                }
+                return DatumGetFloat8(ret);
+            }
+        );
+    } else if (res_type.id() == LogicalTypeId::VARCHAR) {
+        BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(
+            args.data[0], args.data[1], result, count,
+            [&](string_t input, int64_t n, ValidityMask &mask, idx_t idx) -> string_t {
+                size_t data_size = input.GetSize();
+                if (data_size < sizeof(void*)) {
+                    throw InvalidInputException("[Temporal_value_n] Invalid Temporal data: insufficient size");
+                }
+                uint8_t *data_copy = (uint8_t*)malloc(data_size);
+                memcpy(data_copy, input.GetData(), data_size);
+                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+
+                Datum ret;
+                bool found = temporal_value_n(temp, n, &ret);
+                free(data_copy);
+                if (!found) {
+                    mask.SetInvalid(idx);
+                    return string_t();
+                }
+                text *txt = DatumGetTextP(ret);
+                char *cstr = text2cstring(txt);
+                return StringVector::AddString(result, cstr);
+            }
+        );
+    } else {
+        BinaryExecutor::ExecuteWithNulls<string_t, int64_t, int64_t>(
+            args.data[0], args.data[1], result, count,
+            [&](string_t input, int64_t n, ValidityMask &mask, idx_t idx) -> int64_t {
+                size_t data_size = input.GetSize();
+                if (data_size < sizeof(void*)) {
+                    throw InvalidInputException("[Temporal_value_n] Invalid Temporal data: insufficient size");
+                }
+                uint8_t *data_copy = (uint8_t*)malloc(data_size);
+                memcpy(data_copy, input.GetData(), data_size);
+                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+
+                Datum ret;
+                bool found = temporal_value_n(temp, n, &ret);
+                free(data_copy);
+                if (!found) {
+                    mask.SetInvalid(idx);
+                    return 0;
+                }
+                return (int64_t)ret;
+            }
+        );
+    }
+
+    if (count == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
