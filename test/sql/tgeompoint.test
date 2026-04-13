@@ -640,3 +640,53 @@ SELECT asText(minusStbox(tgeompoint '[Point(1 1)@2001-01-01, Point(1 2)@2001-01-
   stbox 'STBOX X((0,0),(2,2))', false));
 ----
 {[POINT(1 2)@2001-01-02 00:00:00+00, POINT(2 2)@2001-01-03 00:00:00+00, POINT(2 1)@2001-01-04 00:00:00+00]}
+
+query I 
+SELECT eContains(geometry 'Linestring(1 1,3 3,1 1)', tgeompoint '[Point(4 2)@2000-01-01, Point(2 4)@2000-01-02]');
+----
+true
+
+query I 
+SELECT eContains(geometry 'Point(1 1)', tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}');
+----
+true
+
+query I 
+SELECT eDisjoint(tgeompoint 'Point(1 1)@2000-01-01',  geometry 'Point(1 1)');
+----
+false
+
+query I 
+SELECT eDisjoint(geometry 'Polygon((0 0,0 2,2 2,2 0,0 0))', tgeompoint '{Point(0 0)@2000-01-01, Point(0 2)@2000-01-02}');
+----
+false
+
+query I 
+SELECT eIntersects(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]',  geometry 'Point(1 1)');
+----
+true
+
+query I 
+SELECT eIntersects(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]', tgeompoint 'Point(1 1)@2000-01-01');
+----
+true
+
+query I 
+SELECT eIntersects(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}');
+----
+true
+
+query I
+SELECT eTouches(geometry 'Point(1 1)', tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}');
+----
+false
+
+query I 
+SELECT aTouches(geometry 'Point(1 1)', tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]');
+----
+false
+
+query I 
+SELECT eDwithin(tgeompoint 'Interp=Step;[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02]', tgeompoint 'Interp=Step;[Point(5 0)@2000-01-01, Point(3 2)@2000-01-02]', 1);
+----
+true

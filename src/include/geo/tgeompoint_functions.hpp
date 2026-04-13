@@ -107,10 +107,30 @@ struct TgeompointFunctions {
     /* ***************************************************
      * Spatial relationships
      ****************************************************/
+    static void Econtains_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Acontains_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Edisjoint_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Edisjoint_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Edisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Edwithin_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Adisjoint_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Adisjoint_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Eintersects_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Eintersects_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
-
+    static void Eintersects_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Aintersects_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Aintersects_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Aintersects_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Etouches_geo_tpoint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Etouches_tpoint_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Atouches_geo_tpoint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Atouches_tpoint_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Edwithin_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Edwithin_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Edwithin_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Adwithin_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Adwithin_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Adwithin_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
      * Temporal-spatial relationships
      ****************************************************/

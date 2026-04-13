@@ -1378,7 +1378,75 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
     /* ***************************************************
      * Spatial relationships
      ****************************************************/
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "eContains",
+            {GeoTypes::GEOMETRY(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Econtains_geo_tgeo
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "aContains",
+            {GeoTypes::GEOMETRY(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Acontains_geo_tgeo
+        )
+    );
     
+     ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "eDisjoint",
+            {GeoTypes::GEOMETRY(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Edisjoint_geo_tgeo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "eDisjoint",
+            {TGEOMPOINT(), GeoTypes::GEOMETRY()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Edisjoint_tgeo_geo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "eDisjoint",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Edisjoint_tgeo_tgeo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "aDisjoint",
+            {GeoTypes::GEOMETRY(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Adisjoint_geo_tgeo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "aDisjoint",
+            {TGEOMPOINT(), GeoTypes::GEOMETRY()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Adisjoint_tgeo_geo
+        )
+    );
+
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
@@ -1386,6 +1454,104 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
             {TGEOMPOINT(), TGEOMPOINT()},
             LogicalType::BOOLEAN,
             TgeompointFunctions::Adisjoint_tgeo_tgeo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "eIntersects",
+            {TGEOMPOINT(), GeoTypes::GEOMETRY()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Eintersects_tgeo_geo  
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "eIntersects",
+            {GeoTypes::GEOMETRY(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Eintersects_geo_tgeo  
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "eIntersects",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Eintersects_tgeo_tgeo  
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "aIntersects",
+            {TGEOMPOINT(), GeoTypes::GEOMETRY()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Aintersects_tgeo_geo  
+        )
+    );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "aIntersects",
+            {GeoTypes::GEOMETRY(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Aintersects_geo_tgeo  
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "aIntersects",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Aintersects_tgeo_tgeo  
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "eTouches",
+            {GeoTypes::GEOMETRY(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Etouches_geo_tpoint
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "eTouches",
+            {TGEOMPOINT(), GeoTypes::GEOMETRY()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Etouches_tpoint_geo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "aTouches",
+            {GeoTypes::GEOMETRY(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Atouches_geo_tpoint
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "aTouches",
+            {TGEOMPOINT(), GeoTypes::GEOMETRY()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Atouches_tpoint_geo
         )
     );
 
@@ -1402,10 +1568,50 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
-            "eIntersects",
-            {TGEOMPOINT(), GeoTypes::GEOMETRY()},
+            "eDwithin",
+            {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::DOUBLE},
             LogicalType::BOOLEAN,
-            TgeompointFunctions::Eintersects_tgeo_geo  
+            TgeompointFunctions::Edwithin_geo_tgeo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "eDwithin",
+            {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Edwithin_tgeo_geo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "aDwithin",
+            {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::DOUBLE},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Adwithin_geo_tgeo
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "aDwithin",
+            {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Adwithin_tgeo_geo
+        )
+    );
+
+     ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "aDwithin",
+            {TGEOMPOINT(), TGEOMPOINT(), LogicalType::DOUBLE},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Adwithin_tgeo_tgeo
         )
     );
 
