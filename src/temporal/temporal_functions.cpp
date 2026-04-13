@@ -3403,8 +3403,33 @@ void TemporalFunctions::Temporal_minus_timestamptz(DataChunk &args, ExpressionSt
 void TemporalFunctions::Temporal_value_at_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &res_type = result.GetType();
+    if (res_type.id() == LogicalTypeId::BLOB) {
+        BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(
+            args.data[0], args.data[1], result, count,
+            [&](string_t temp_str, timestamp_tz_t ts, ValidityMask &mask, idx_t idx) -> string_t {
+                size_t data_size = temp_str.GetSize();
+                if (data_size < sizeof(void*)) {
+                    throw InvalidInputException("[Temporal_value_at_timestamptz] Invalid Temporal data");
+                }
+                uint8_t *data_copy = (uint8_t*)malloc(data_size);
+                memcpy(data_copy, temp_str.GetData(), data_size);
+                Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
 
-    if (res_type.id() == LogicalTypeId::BOOLEAN) {
+                timestamp_tz_t meos_ts = DuckDBToMeosTimestamp(ts);
+                Datum ret; 
+                bool found = temporal_value_at_timestamptz(temp, (TimestampTz)meos_ts.value, true, &ret);
+                free(data_copy);
+                if (!found) {
+                    mask.SetInvalid(idx);
+                    return string_t();
+                }
+                GSERIALIZED *gs = DatumGetGserializedP(ret);
+                string_t geom_blob = GSerializedToGeometry(gs, state, result);
+                free(gs);
+                return geom_blob;
+            });
+
+    } else if (res_type.id() == LogicalTypeId::BOOLEAN) {
         BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, bool>(
             args.data[0], args.data[1], result, count,
             [&](string_t temp_str, timestamp_tz_t ts, ValidityMask &mask, idx_t idx) -> bool {

@@ -726,10 +726,60 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
+            "minusValues",
+            {TGEOMPOINT(), GeoTypes::GEOMETRY()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_minus_value
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "atValues",
+            {TGEOMPOINT(), SpatialSetType::geomset()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_at_values
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "minusValues",
+            {TGEOMPOINT(), SpatialSetType::geomset()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_minus_value
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
             "atTime",
             {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
             TGEOMPOINT(),
             TemporalFunctions::Temporal_at_timestamptz
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "minusTime",
+            {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_minus_timestamptz
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "valueAtTimestamp",
+            {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
+            GeoTypes::GEOMETRY(),
+            TemporalFunctions::Temporal_value_at_timestamptz
         )
     );
     
@@ -737,9 +787,39 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
         instance,
         ScalarFunction(
             "atTime",
+            {TGEOMPOINT(), SetTypes::tstzset()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_at_tstzset
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "minusTime",
+            {TGEOMPOINT(), SetTypes::tstzset()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_minus_tstzset
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "atTime",
             {TGEOMPOINT(), SpanTypes::TSTZSPAN()},
             TGEOMPOINT(),
             TemporalFunctions::Temporal_at_tstzspan
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "minusTime",
+            {TGEOMPOINT(), SpanTypes::TSTZSPAN()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_minus_tstzspan
         )
     );
 
@@ -756,10 +836,10 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
     ExtensionUtil::RegisterFunction(
         instance,
         ScalarFunction(
-            "valueAtTimestamp",
-            {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
-            GeoTypes::GEOMETRY(),
-            TgeompointFunctions::Tgeompoint_value_at_timestamptz
+            "minusTime",
+            {TGEOMPOINT(), SpansetTypes::tstzspanset()},
+            TGEOMPOINT(),
+            TemporalFunctions::Temporal_minus_tstzspanset   
         )
     );
 
