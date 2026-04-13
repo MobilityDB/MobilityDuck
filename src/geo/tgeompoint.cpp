@@ -1000,6 +1000,139 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
     );
 
     /* ***************************************************
+     * Comparison functions
+     ****************************************************/
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "temporal_eq",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TemporalFunctions::Temporal_eq
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "temporal_ne",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TemporalFunctions::Temporal_ne
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "temporal_lt",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TemporalFunctions::Temporal_lt
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "temporal_le",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TemporalFunctions::Temporal_le
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "temporal_gt",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TemporalFunctions::Temporal_gt
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "temporal_ge",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TemporalFunctions::Temporal_ge
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "temporal_cmp",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            LogicalType::INTEGER,
+            TemporalFunctions::Temporal_cmp
+        )
+    );
+
+        ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "=",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TemporalFunctions::Temporal_eq
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "<>",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TemporalFunctions::Temporal_ne
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "<",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TemporalFunctions::Temporal_lt
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "<=",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TemporalFunctions::Temporal_le
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            ">",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TemporalFunctions::Temporal_gt
+        )
+    );
+
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            ">=",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TemporalFunctions::Temporal_ge
+        )
+    );
+
+    /* ***************************************************
      * Spatial functions
      ****************************************************/
     
