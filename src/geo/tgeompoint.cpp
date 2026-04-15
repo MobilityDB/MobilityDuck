@@ -474,6 +474,15 @@ void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
             TgeompointFunctions::Tgeompoint_end_value
         )
     );
+    ExtensionUtil::RegisterFunction(
+        instance,
+        ScalarFunction(
+            "duration",
+            {TGEOMPOINT()},
+            LogicalType::INTERVAL,
+            TemporalFunctions::Temporal_duration
+        )
+    );
 
     ExtensionUtil::RegisterFunction(
         instance,

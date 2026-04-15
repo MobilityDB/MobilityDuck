@@ -129,3 +129,13 @@ query I
 SELECT ttext 'AAA@2000-01-01' <> ttext 'AAA@2000-01-01';
 ----
 false
+
+query I 
+SELECT duration(ttext '{[AAA@2000-01-01, BBB@2000-01-02, AAA@2000-01-03],[CCC@2000-01-04, CCC@2000-01-05]}', true);
+----
+4 days
+
+query I 
+SELECT duration(ttext '{[AAA@2000-01-01, BBB@2000-01-02, AAA@2000-01-03],[CCC@2000-01-04, CCC@2000-01-05]}');
+----
+3 days

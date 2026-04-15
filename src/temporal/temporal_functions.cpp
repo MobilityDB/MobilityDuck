@@ -1524,9 +1524,17 @@ void TemporalFunctions::Temporal_time(DataChunk &args, ExpressionState &state, V
 }
 
 void TemporalFunctions::Temporal_duration(DataChunk &args, ExpressionState &state, Vector &result) {
-    BinaryExecutor::Execute<string_t, bool, interval_t>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t input, bool boundspan) {
+    bool boundspan = false;
+    if (args.ColumnCount()==2) {
+        auto &second_arg = args.data[1];
+        if (second_arg.GetType().id() != LogicalTypeId::BOOLEAN) {
+            throw InvalidInputException("Second argument to Temporal_duration must be of type BOOLEAN");
+        }
+        boundspan = FlatVector::GetData<bool>(second_arg)[0];
+    }
+    UnaryExecutor::Execute<string_t, interval_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) {
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input.GetData());
             size_t data_size = input.GetSize();
             if (data_size < sizeof(void*)) {

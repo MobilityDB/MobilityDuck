@@ -359,6 +359,15 @@ void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
                 TemporalFunctions::Temporal_time
             )
         );
+        ExtensionUtil::RegisterFunction(
+            instance,
+            ScalarFunction(
+                "duration",
+                {type},
+                LogicalType::INTERVAL,
+                TemporalFunctions::Temporal_duration
+            )
+        );
 
         ExtensionUtil::RegisterFunction(
             instance,
