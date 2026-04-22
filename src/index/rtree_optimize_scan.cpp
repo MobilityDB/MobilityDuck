@@ -10,6 +10,8 @@
 #include "duckdb/planner/filter/expression_filter.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
 #include "duckdb/main/database.hpp"
+#include "duckdb/storage/index.hpp"
+#include "duckdb/storage/table/data_table_info.hpp"
 #include <algorithm>
 
 #include "index/rtree_module.hpp"
@@ -41,11 +43,19 @@ private:
         unique_ptr<TRTreeIndexScanBindData> bind_data = nullptr;
         vector<reference<Expression>> bindings;
 
+        // 1.4 replaced TableIndexList::BindAndScan with a two-step pattern:
+        // BindIndexes promotes any unbound TRTreeIndex entries to bound, and
+        // Scan iterates the bound indexes; the callback returns true to stop.
+        table_info.BindIndexes(context, TRTreeIndex::TYPE_NAME);
+
         for (auto &filter_pair : get.table_filters.filters) {
             auto &filter = filter_pair.second;
-            
-            table_info.GetIndexes().BindAndScan<TRTreeIndex>(context, table_info, 
-            [&](TRTreeIndex &rtree_index) -> bool {
+
+            table_info.GetIndexes().Scan([&](Index &index) -> bool {
+                if (!index.IsBound() || index.GetIndexType() != TRTreeIndex::TYPE_NAME) {
+                    return false;
+                }
+                auto &rtree_index = index.Cast<TRTreeIndex>();
                 bindings.clear();
 
                 auto &expr_filter = filter->Cast<ExpressionFilter>();
