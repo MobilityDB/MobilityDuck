@@ -17,6 +17,7 @@
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension_util.hpp"
 #include "duckdb/main/extension_helper.hpp"
+#include "duckdb/main/extension/extension_loader.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include "index/rtree_module.hpp"
 
@@ -198,9 +199,11 @@ static void LoadInternal(DatabaseInstance &instance) {
 	TRTreeModule::RegisterScanOptimizer(instance);
 }
 
-void MobilityduckExtension::Load(DuckDB &db) {
-	ExtensionHelper::LoadExtension(db, "spatial");
-	LoadInternal(*db.instance);
+void MobilityduckExtension::Load(ExtensionLoader &loader) {
+	auto &instance = loader.GetDatabaseInstance();
+	DuckDB db_wrapper(instance);
+	ExtensionHelper::LoadExtension(db_wrapper, "spatial");
+	LoadInternal(instance);
 }
 
 std::string MobilityduckExtension::Name() {
@@ -219,9 +222,11 @@ std::string MobilityduckExtension::Version() const {
 
 extern "C" {
 
-DUCKDB_EXTENSION_API void mobilityduck_init(duckdb::DatabaseInstance &db) {
-	duckdb::DuckDB db_wrapper(db);
-	db_wrapper.LoadExtension<duckdb::MobilityduckExtension>();
+DUCKDB_CPP_EXTENSION_ENTRY(mobilityduck, loader) {
+	auto &instance = loader.GetDatabaseInstance();
+	duckdb::DuckDB db_wrapper(instance);
+	duckdb::ExtensionHelper::LoadExtension(db_wrapper, "spatial");
+	duckdb::LoadInternal(instance);
 }
 
 DUCKDB_EXTENSION_API const char *mobilityduck_version() {
