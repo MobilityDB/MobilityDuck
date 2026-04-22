@@ -11,8 +11,9 @@ public:
 	static constexpr const PhysicalOperatorType TYPE = PhysicalOperatorType::EXTENSION;
 
 public:
-	PhysicalCreateTRTreeIndex(const vector<LogicalType> &types_p, TableCatalogEntry &table,
-	                        const vector<column_t> &column_ids, unique_ptr<CreateIndexInfo> info,
+	PhysicalCreateTRTreeIndex(PhysicalPlan &physical_plan, const vector<LogicalType> &types_p,
+	                        TableCatalogEntry &table, const vector<column_t> &column_ids,
+	                        unique_ptr<CreateIndexInfo> info,
 	                        vector<unique_ptr<Expression>> unbound_expressions, idx_t estimated_cardinality);
 
 	DuckTableEntry &table;
