@@ -173,13 +173,16 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         auto set_type = SpansetTypeMapping::GetSetType(spanset_type);       // set
         // Register: asText
         if (spanset_type == SpansetTypes::floatspanset()) {            
-            loader.RegisterFunction(// asText(floatset) ScalarFunction("asText", {spanset_type}, LogicalType::VARCHAR, SpansetFunctions::Spanset_as_text)
+            loader.RegisterFunction( // asText(floatset)
+                ScalarFunction("asText", {spanset_type}, LogicalType::VARCHAR, SpansetFunctions::Spanset_as_text)
             );
             
-            loader.RegisterFunction(// asText(floatset, int) ScalarFunction("asText", {spanset_type, LogicalType::INTEGER}, LogicalType::VARCHAR, SpansetFunctions::Spanset_as_text)
+            loader.RegisterFunction( // asText(floatset, int)
+                ScalarFunction("asText", {spanset_type, LogicalType::INTEGER}, LogicalType::VARCHAR, SpansetFunctions::Spanset_as_text)
             );
         } else {            
-            loader.RegisterFunction(// All other set types ScalarFunction("asText", {spanset_type}, LogicalType::VARCHAR, SpansetFunctions::Spanset_as_text)
+            loader.RegisterFunction( // All other set types
+                ScalarFunction("asText", {spanset_type}, LogicalType::VARCHAR, SpansetFunctions::Spanset_as_text)
             );
         }
 

@@ -152,13 +152,16 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
         // Register: asText
         if (span_type == SpanTypes::FLOATSPAN()) {            
-            loader.RegisterFunction(// asText(floatspan) ScalarFunction("asText", {span_type}, LogicalType::VARCHAR, SpanFunctions::Span_as_text)
+            loader.RegisterFunction( // asText(floatspan)
+                ScalarFunction("asText", {span_type}, LogicalType::VARCHAR, SpanFunctions::Span_as_text)
             );
             
-            loader.RegisterFunction(// asText(floatspan, int) ScalarFunction("asText", {span_type, LogicalType::INTEGER}, LogicalType::VARCHAR, SpanFunctions::Span_as_text)
+            loader.RegisterFunction( // asText(floatspan, int)
+                ScalarFunction("asText", {span_type, LogicalType::INTEGER}, LogicalType::VARCHAR, SpanFunctions::Span_as_text)
             );
         } else {            
-            loader.RegisterFunction(// All other span types ScalarFunction("asText", {span_type}, LogicalType::VARCHAR, SpanFunctions::Span_as_text)
+            loader.RegisterFunction( // All other span types
+                ScalarFunction("asText", {span_type}, LogicalType::VARCHAR, SpanFunctions::Span_as_text)
             );
         }
 

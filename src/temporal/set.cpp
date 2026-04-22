@@ -141,13 +141,16 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
         // Register: asText
         if (set_type == SetTypes::floatset()) {            
-            loader.RegisterFunction(// asText(floatset) ScalarFunction("asText", {set_type}, LogicalType::VARCHAR, SetFunctions::Set_as_text)
+            loader.RegisterFunction( // asText(floatset)
+                ScalarFunction("asText", {set_type}, LogicalType::VARCHAR, SetFunctions::Set_as_text)
             );
             
-            loader.RegisterFunction(// asText(floatset, int) ScalarFunction("asText", {set_type, LogicalType::INTEGER}, LogicalType::VARCHAR, SetFunctions::Set_as_text)
+            loader.RegisterFunction( // asText(floatset, int)
+                ScalarFunction("asText", {set_type, LogicalType::INTEGER}, LogicalType::VARCHAR, SetFunctions::Set_as_text)
             );
         } else {            
-            loader.RegisterFunction(// All other set types ScalarFunction("asText", {set_type}, LogicalType::VARCHAR, SetFunctions::Set_as_text)
+            loader.RegisterFunction( // All other set types
+                ScalarFunction("asText", {set_type}, LogicalType::VARCHAR, SetFunctions::Set_as_text)
             );
         }
 
