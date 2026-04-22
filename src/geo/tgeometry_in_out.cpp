@@ -1,4 +1,5 @@
 #include "geo/tgeometry.hpp"
+#include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/common/extension_type_info.hpp"
 #include <regex>
 #include <string>
@@ -193,14 +194,14 @@ bool TgeometryFunctions::TgeometryToString(Vector &source, Vector &result, idx_t
     return true;   
 }
 
-void TGeometryTypes::RegisterScalarInOutFunctions(DatabaseInstance &instance){
+void TGeometryTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
     auto TgeometryAsText = ScalarFunction(
             "asText", 
             {TGeometryTypes::TGEOMETRY()},
             LogicalType::VARCHAR,
             Tspatial_as_text
         );
-        ExtensionUtil::RegisterFunction(instance, TgeometryAsText);
+        loader.RegisterFunction( TgeometryAsText);
 
     auto TgeometryAsEWKT = ScalarFunction(
         "asEWKT",
@@ -208,13 +209,13 @@ void TGeometryTypes::RegisterScalarInOutFunctions(DatabaseInstance &instance){
         LogicalType::VARCHAR,
         Tspatial_as_ewkt
     );
-    ExtensionUtil::RegisterFunction(instance, TgeometryAsEWKT);
+    loader.RegisterFunction( TgeometryAsEWKT);
 }
 
 
-void TGeometryTypes::RegisterCastFunctions(DatabaseInstance &instance) {
-    ExtensionUtil::RegisterCastFunction(instance, LogicalType::VARCHAR, TGeometryTypes::TGEOMETRY(), TgeometryFunctions::StringToTgeometry);
-    ExtensionUtil::RegisterCastFunction(instance, TGeometryTypes::TGEOMETRY(), LogicalType::VARCHAR, TgeometryFunctions::TgeometryToString);
+void TGeometryTypes::RegisterCastFunctions(ExtensionLoader &loader) {
+    loader.RegisterCastFunction( LogicalType::VARCHAR, TGeometryTypes::TGEOMETRY(), TgeometryFunctions::StringToTgeometry);
+    loader.RegisterCastFunction( TGeometryTypes::TGEOMETRY(), LogicalType::VARCHAR, TgeometryFunctions::TgeometryToString);
 }
 
 }

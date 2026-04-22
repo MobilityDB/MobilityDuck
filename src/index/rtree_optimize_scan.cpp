@@ -1,4 +1,5 @@
 #include "meos_wrapper_simple.hpp"
+#include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/catalog/catalog_entry/duck_table_entry.hpp"
 #include "duckdb/optimizer/optimizer_extension.hpp"
 #include "duckdb/planner/expression/bound_constant_expression.hpp"
@@ -160,8 +161,8 @@ public:
     }
 };
 
-void TRTreeModule::RegisterScanOptimizer(DatabaseInstance &instance) {
-    instance.config.optimizer_extensions.push_back(TRTreeIndexScanOptimizer());
+void TRTreeModule::RegisterScanOptimizer(ExtensionLoader &loader) {
+    loader.GetDatabaseInstance().config.optimizer_extensions.push_back(TRTreeIndexScanOptimizer());
 }
 
 } // namespace duckdb
