@@ -18,6 +18,8 @@
 #include "duckdb/function/table_function.hpp"
 #include "duckdb/common/types/data_chunk.hpp"
 
+#include "mobilityduck/bindings.hpp"
+
 namespace duckdb {
 
 #define DEFINE_TEMPORAL_TYPE(NAME) \
@@ -201,52 +203,15 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
-            ScalarFunction(
-                "getValue",
-                {type},
-                TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()),
-                TemporalFunctions::Tinstant_value
-            )
-        );
-
-        loader.RegisterFunction(
-            ScalarFunction(
-                "startValue",
-                {type},
-                TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()),
-                TemporalFunctions::Temporal_start_value
-            )
-        );
-
-        loader.RegisterFunction(
-            ScalarFunction(
-                "endValue",
-                {type},
-                TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()),
-                TemporalFunctions::Temporal_end_value
-            )
-        );
+        // getValue / startValue / endValue / minValue / maxValue on
+        // temporal types are now registered below via typed overloads
+        // (mobilityduck::RegisterTemporalDatumAccessor) so that each
+        // overload's result Vector type matches the base type of the
+        // incoming alias. See src/include/mobilityduck/bindings.hpp for
+        // the helper and the explanation of the 1.4 type-check bug it
+        // fixes.
 
         if (type.GetAlias() != "TBOOL") {
-            loader.RegisterFunction(
-                ScalarFunction(
-                    "minValue",
-                    {type},
-                    TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()),
-                    TemporalFunctions::Temporal_min_value
-                )
-            );
-
-            loader.RegisterFunction(
-                ScalarFunction(
-                    "maxValue",
-                    {type},
-                    TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()),
-                    TemporalFunctions::Temporal_max_value
-                )
-            );
-
             loader.RegisterFunction(
                 ScalarFunction(
                     "minInstant",
@@ -1028,6 +993,51 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
     }
+
+    // Typed `getValue` / `startValue` / `endValue` / `minValue` / `maxValue`
+    // overloads for TINT, TBOOL, TFLOAT. Each registration pairs the input
+    // temporal-type alias with the C++ scalar result type so the generated
+    // DuckDB result Vector type matches what the MEOS accessor actually
+    // writes, which DuckDB 1.4's UnaryExecutor asserts strictly. See the
+    // comment in src/include/mobilityduck/bindings.hpp for the full rationale.
+    auto tinstant_value_temporal = [](const Temporal *t) -> uintptr_t {
+        return tinstant_value(reinterpret_cast<const TInstant *>(t));
+    };
+
+    // getValue(tint / tbool / tfloat) — instant-level accessor
+    mobilityduck::RegisterTemporalDatumAccessor<int64_t>(
+        loader, "getValue", TemporalTypes::TINT(),   LogicalType::BIGINT,  tinstant_value_temporal);
+    mobilityduck::RegisterTemporalDatumAccessor<bool>(
+        loader, "getValue", TemporalTypes::TBOOL(),  LogicalType::BOOLEAN, tinstant_value_temporal);
+    mobilityduck::RegisterTemporalDatumAccessor<double>(
+        loader, "getValue", TemporalTypes::TFLOAT(), LogicalType::DOUBLE,  tinstant_value_temporal);
+
+    // startValue / endValue on TINT / TBOOL / TFLOAT
+    mobilityduck::RegisterTemporalDatumAccessor<int64_t>(
+        loader, "startValue", TemporalTypes::TINT(),   LogicalType::BIGINT,  temporal_start_value);
+    mobilityduck::RegisterTemporalDatumAccessor<bool>(
+        loader, "startValue", TemporalTypes::TBOOL(),  LogicalType::BOOLEAN, temporal_start_value);
+    mobilityduck::RegisterTemporalDatumAccessor<double>(
+        loader, "startValue", TemporalTypes::TFLOAT(), LogicalType::DOUBLE,  temporal_start_value);
+
+    mobilityduck::RegisterTemporalDatumAccessor<int64_t>(
+        loader, "endValue", TemporalTypes::TINT(),   LogicalType::BIGINT,  temporal_end_value);
+    mobilityduck::RegisterTemporalDatumAccessor<bool>(
+        loader, "endValue", TemporalTypes::TBOOL(),  LogicalType::BOOLEAN, temporal_end_value);
+    mobilityduck::RegisterTemporalDatumAccessor<double>(
+        loader, "endValue", TemporalTypes::TFLOAT(), LogicalType::DOUBLE,  temporal_end_value);
+
+    // minValue / maxValue on TINT / TFLOAT (TBOOL omitted — min/max on a
+    // boolean is meaningless and the existing API does not expose it)
+    mobilityduck::RegisterTemporalDatumAccessor<int64_t>(
+        loader, "minValue", TemporalTypes::TINT(),   LogicalType::BIGINT, temporal_min_value);
+    mobilityduck::RegisterTemporalDatumAccessor<double>(
+        loader, "minValue", TemporalTypes::TFLOAT(), LogicalType::DOUBLE, temporal_min_value);
+
+    mobilityduck::RegisterTemporalDatumAccessor<int64_t>(
+        loader, "maxValue", TemporalTypes::TINT(),   LogicalType::BIGINT, temporal_max_value);
+    mobilityduck::RegisterTemporalDatumAccessor<double>(
+        loader, "maxValue", TemporalTypes::TFLOAT(), LogicalType::DOUBLE, temporal_max_value);
 
     loader.RegisterFunction(
         ScalarFunction(
