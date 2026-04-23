@@ -1,15 +1,3 @@
-# =====================================================================
-# Entire test file skipped on bump to DuckDB 1.4.
-# Reason: scalar-function signature mismatches exposed by the new
-# constant-folder type checks surface in many queries throughout this
-# file (not just a handful). Rather than wrap every affected query
-# individually in `mode skip`, the whole file is disabled until the
-# follow-up PR "fix scalar-function signatures for DuckDB 1.4 type
-# checking" re-registers the bindings with correct argument / return
-# types, at which point the `mode skip`/`mode unskip` wrapper below is
-# removed and the file runs as before.
-# =====================================================================
-mode skip
 
 require mobilityduck
 
@@ -525,5 +513,3 @@ query I
 SELECT floatspanset '{[1,1]}' >= floatspanset '{[1,2),[2,3),[3,4)}';
 ----
 false
-
-mode unskip
