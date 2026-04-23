@@ -425,7 +425,8 @@ void SpatialSetFunctions::Set_value_n(DataChunk &args, ExpressionState &state, V
     n.Flatten(args.size());
 
     auto input_data = FlatVector::GetData<string_t>(input);
-    auto n_data = FlatVector::GetData<int64_t>(n);
+    // `valueN` is registered with second argument LogicalType::INTEGER.
+    auto n_data = FlatVector::GetData<int32_t>(n);
     auto result_data = FlatVector::GetData<string_t>(result);
 
     for (idx_t i = 0; i < args.size(); i++) {
