@@ -1201,7 +1201,10 @@ void SetFunctions::Floatset_degrees(DataChunk &args, ExpressionState &state, Vec
         }
 
         auto blob = FlatVector::GetData<string_t>(input_vec)[i];
-        int bools = has_bools ? FlatVector::GetData<int32_t>(*bools_vec_ptr)[i] : false;
+        // Registered in set.cpp as a BOOLEAN argument; DuckDB 1.4 asserts the
+        // Vector's template type matches the declared type, so reading this as
+        // `int32_t` triggered `Expected INT32, found BOOL` (set.test:227).
+        bool bools = has_bools ? FlatVector::GetData<bool>(*bools_vec_ptr)[i] : false;
 
         const uint8_t *data = (const uint8_t *)blob.GetData();
         size_t size = blob.GetSize();
