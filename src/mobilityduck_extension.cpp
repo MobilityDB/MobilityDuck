@@ -15,8 +15,9 @@
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
-#include "duckdb/main/extension_util.hpp"
+#include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/main/extension_helper.hpp"
+#include "duckdb/main/extension/extension_loader.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include "index/rtree_module.hpp"
 
@@ -132,7 +133,7 @@ static void ConfigureMeosSridCsvOnce() {
 // 4. Extension load logic
 // =====================================================================
 
-static void LoadInternal(DatabaseInstance &instance) {
+static void LoadInternal(ExtensionLoader &loader) {
 	// Configure MEOS SRID CSV once (env / embedded)
 	ConfigureMeosSridCsvOnce();
 
@@ -151,56 +152,57 @@ static void LoadInternal(DatabaseInstance &instance) {
 	        LogicalType::VARCHAR,
 	        MobilityduckOpenSSLVersionScalarFun
 	    );
-	ExtensionUtil::RegisterFunction(instance, mobilityduck_openssl_version_scalar_function);
+	loader.RegisterFunction( mobilityduck_openssl_version_scalar_function);
 
 	// Temporal and related types/functions
-	TemporalTypes::RegisterTypes(instance);
-	TemporalTypes::RegisterCastFunctions(instance);
-	TemporalTypes::RegisterScalarFunctions(instance);
-	TemporalTypes::RegisterTemporalUnnestFunction(instance);
+	TemporalTypes::RegisterTypes(loader);
+	TemporalTypes::RegisterCastFunctions(loader);
+	TemporalTypes::RegisterScalarFunctions(loader);
+	TemporalTypes::RegisterTemporalUnnestFunction(loader);
 
-	TboxType::RegisterType(instance);
-	TboxType::RegisterCastFunctions(instance);
-	TboxType::RegisterScalarFunctions(instance);
+	TboxType::RegisterType(loader);
+	TboxType::RegisterCastFunctions(loader);
+	TboxType::RegisterScalarFunctions(loader);
 
-	StboxType::RegisterType(instance);
-	StboxType::RegisterCastFunctions(instance);
-	StboxType::RegisterScalarFunctions(instance);
+	StboxType::RegisterType(loader);
+	StboxType::RegisterCastFunctions(loader);
+	StboxType::RegisterScalarFunctions(loader);
 
-	SpanTypes::RegisterScalarFunctions(instance);
-	SpanTypes::RegisterTypes(instance);
-	SpanTypes::RegisterCastFunctions(instance);
+	SpanTypes::RegisterScalarFunctions(loader);
+	SpanTypes::RegisterTypes(loader);
+	SpanTypes::RegisterCastFunctions(loader);
 
-	TgeompointType::RegisterType(instance);
-	TgeompointType::RegisterCastFunctions(instance);
-	TgeompointType::RegisterScalarFunctions(instance);
+	TgeompointType::RegisterType(loader);
+	TgeompointType::RegisterCastFunctions(loader);
+	TgeompointType::RegisterScalarFunctions(loader);
 
-	TGeometryTypes::RegisterScalarFunctions(instance);
-	TGeometryTypes::RegisterTypes(instance);
-	TGeometryTypes::RegisterCastFunctions(instance);
-	TGeometryTypes::RegisterScalarInOutFunctions(instance);
+	TGeometryTypes::RegisterScalarFunctions(loader);
+	TGeometryTypes::RegisterTypes(loader);
+	TGeometryTypes::RegisterCastFunctions(loader);
+	TGeometryTypes::RegisterScalarInOutFunctions(loader);
 
-	SetTypes::RegisterTypes(instance);
-	SetTypes::RegisterCastFunctions(instance);
-	SetTypes::RegisterScalarFunctions(instance);
-	SetTypes::RegisterSetUnnest(instance);
+	SetTypes::RegisterTypes(loader);
+	SetTypes::RegisterCastFunctions(loader);
+	SetTypes::RegisterScalarFunctions(loader);
+	SetTypes::RegisterSetUnnest(loader);
 
-	SpatialSetType::RegisterTypes(instance);
-	SpatialSetType::RegisterCastFunctions(instance);
-	SpatialSetType::RegisterScalarFunctions(instance);
+	SpatialSetType::RegisterTypes(loader);
+	SpatialSetType::RegisterCastFunctions(loader);
+	SpatialSetType::RegisterScalarFunctions(loader);
 
-	SpansetTypes::RegisterTypes(instance);
-	SpansetTypes::RegisterCastFunctions(instance);
-	SpansetTypes::RegisterScalarFunctions(instance);
+	SpansetTypes::RegisterTypes(loader);
+	SpansetTypes::RegisterCastFunctions(loader);
+	SpansetTypes::RegisterScalarFunctions(loader);
 
-	TRTreeModule::RegisterRTreeIndex(instance);
-	TRTreeModule::RegisterIndexScan(instance);
-	TRTreeModule::RegisterScanOptimizer(instance);
+	TRTreeModule::RegisterRTreeIndex(loader);
+	TRTreeModule::RegisterIndexScan(loader);
+	TRTreeModule::RegisterScanOptimizer(loader);
 }
 
-void MobilityduckExtension::Load(DuckDB &db) {
-	ExtensionHelper::LoadExtension(db, "spatial");
-	LoadInternal(*db.instance);
+void MobilityduckExtension::Load(ExtensionLoader &loader) {
+	DuckDB db_wrapper(loader.GetDatabaseInstance());
+	ExtensionHelper::LoadExtension(db_wrapper, "spatial");
+	LoadInternal(loader);
 }
 
 std::string MobilityduckExtension::Name() {
@@ -219,9 +221,10 @@ std::string MobilityduckExtension::Version() const {
 
 extern "C" {
 
-DUCKDB_EXTENSION_API void mobilityduck_init(duckdb::DatabaseInstance &db) {
-	duckdb::DuckDB db_wrapper(db);
-	db_wrapper.LoadExtension<duckdb::MobilityduckExtension>();
+DUCKDB_CPP_EXTENSION_ENTRY(mobilityduck, loader) {
+	duckdb::DuckDB db_wrapper(loader.GetDatabaseInstance());
+	duckdb::ExtensionHelper::LoadExtension(db_wrapper, "spatial");
+	duckdb::LoadInternal(loader);
 }
 
 DUCKDB_EXTENSION_API const char *mobilityduck_version() {

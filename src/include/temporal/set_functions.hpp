@@ -2,7 +2,7 @@
 
 #include "duckdb/common/exception.hpp"
 #include "duckdb/function/scalar_function.hpp"
-#include "duckdb/main/extension_util.hpp"
+#include "duckdb/main/extension/extension_loader.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include <tydef.hpp>
 
@@ -15,7 +15,7 @@ extern "C" {
 namespace duckdb {
 
 struct SetFunctions {
-    static void RegisterScalarFunctions(DatabaseInstance &db);
+    static void RegisterScalarFunctions(ExtensionLoader &loader);
 
     // for cast
     static bool Set_to_text(Vector &source, Vector &result, idx_t count, CastParameters &parameters);

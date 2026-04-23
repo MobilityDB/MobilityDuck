@@ -17,12 +17,13 @@ namespace duckdb {
 //-------------------------------------------------------------
 // Physical Create RTree Index
 //-------------------------------------------------------------
-PhysicalCreateTRTreeIndex::PhysicalCreateTRTreeIndex(const vector<LogicalType> &types_p, TableCatalogEntry &table_p,
+PhysicalCreateTRTreeIndex::PhysicalCreateTRTreeIndex(PhysicalPlan &physical_plan,
+                                                 const vector<LogicalType> &types_p, TableCatalogEntry &table_p,
                                                  const vector<column_t> &column_ids, unique_ptr<CreateIndexInfo> info,
                                                  vector<unique_ptr<Expression>> unbound_expressions,
                                                  idx_t estimated_cardinality)
 
-    : PhysicalOperator(PhysicalOperatorType::EXTENSION, types_p, estimated_cardinality),
+    : PhysicalOperator(physical_plan, PhysicalOperatorType::EXTENSION, types_p, estimated_cardinality),
       table(table_p.Cast<DuckTableEntry>()), info(std::move(info)), unbound_expressions(std::move(unbound_expressions)),
       sorted(false) {
 
