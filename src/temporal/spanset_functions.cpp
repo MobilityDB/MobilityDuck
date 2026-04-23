@@ -856,13 +856,15 @@ void SpansetFunctions::Spanset_span_n(DataChunk &args, ExpressionState &state, V
     auto &n = args.data[1];
     BinaryExecutor::Execute<string_t, int32_t, string_t>(
             input, n, result, args.size(),
-            [&](string_t blob, int32_t pos) -> string_t {                             
+            [&](string_t blob, int32_t pos) -> string_t {
             const uint8_t *data = (const uint8_t *)blob.GetData();
             size_t size = blob.GetSize();
             SpanSet *s = (SpanSet*)malloc(size);
-            memcpy(s, data, size);            
-            int64_t n_value = FlatVector::GetData<int64_t>(n)[0];
-            Span *span_n = spanset_span_n(s, n_value);  
+            memcpy(s, data, size);
+            // Use the int32_t `pos` the executor passes us; the previous
+            // `FlatVector::GetData<int64_t>(n)[0]` mis-typed the arg Vector
+            // and tripped DuckDB 1.4's "Expected INT64, found INT32" check.
+            Span *span_n = spanset_span_n(s, pos);
             free(s);
             string_t out = StringVector::AddStringOrBlob(result, (const char *)span_n, sizeof(Span));
             free(span_n);
