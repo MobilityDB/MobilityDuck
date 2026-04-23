@@ -4,8 +4,14 @@
 name: Main Extension Distribution Pipeline
 on:
   pull_request:
+    # `main` for release-bound PRs, plus `feat/**` and `fix/**` so stacked
+    # PRs (each targeting the previous branch rather than `main`) trigger
+    # CI automatically — instead of needing a manual `workflow_dispatch`
+    # call from a reviewer or from a maintainer's local machine.
     branches:
       - main
+      - 'feat/**'
+      - 'fix/**'
     paths-ignore:
       - '**/README.md'
       - 'doc/**'
