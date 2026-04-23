@@ -714,7 +714,9 @@ void SpansetFunctions::Numspanset_width(DataChunk &args, ExpressionState &state,
         }
 
         auto blob = FlatVector::GetData<string_t>(input_vec)[i];
-        int bools = has_bools ? FlatVector::GetData<int32_t>(*bools_vec_ptr)[i] : false;
+        // Second argument registered as BOOLEAN; read as bool, not int32_t
+        // (see set_functions.cpp:Floatset_degrees for the same pattern).
+        bool bools = has_bools ? FlatVector::GetData<bool>(*bools_vec_ptr)[i] : false;
 
         const uint8_t *data = (const uint8_t *)blob.GetData();
         size_t size = blob.GetSize();
@@ -753,7 +755,7 @@ void SpansetFunctions::Datespanset_duration(DataChunk &args, ExpressionState &st
         }
 
         auto blob = FlatVector::GetData<string_t>(input_vec)[i];
-        int bools = has_bools ? FlatVector::GetData<int32_t>(*bools_vec_ptr)[i] : false;
+        bool bools = has_bools ? FlatVector::GetData<bool>(*bools_vec_ptr)[i] : false;
 
         const uint8_t *data = (const uint8_t *)blob.GetData();
         size_t size = blob.GetSize();
@@ -782,7 +784,7 @@ void SpansetFunctions::Tstzspanset_duration(DataChunk &args, ExpressionState &st
         }
 
         auto blob = FlatVector::GetData<string_t>(input_vec)[i];
-        int bools = has_bools ? FlatVector::GetData<int32_t>(*bools_vec_ptr)[i] : false;
+        bool bools = has_bools ? FlatVector::GetData<bool>(*bools_vec_ptr)[i] : false;
 
         const uint8_t *data = (const uint8_t *)blob.GetData();
         size_t size = blob.GetSize();

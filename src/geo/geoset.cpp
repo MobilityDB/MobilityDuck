@@ -393,7 +393,9 @@ void SpatialSetFunctions::Set_num_values(DataChunk &args, ExpressionState &state
     auto &input = args.data[0];
     input.Flatten(args.size());
     auto input_data = FlatVector::GetData<string_t>(input);
-    auto result_data = FlatVector::GetData<int64_t>(result);
+    // numValues is registered as returning INTEGER (INT32); DuckDB 1.4 asserts
+    // the result Vector's template type matches the declared type.
+    auto result_data = FlatVector::GetData<int32_t>(result);
 
     for (idx_t i = 0; i < args.size(); i++) {
         if (FlatVector::IsNull(input, i)) {
