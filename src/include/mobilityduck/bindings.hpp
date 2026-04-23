@@ -75,11 +75,21 @@ inline int64_t DatumTo<int64_t>(uintptr_t d) {
 
 template <>
 inline double DatumTo<double>(uintptr_t d) {
+#if UINTPTR_MAX >= 0xFFFFFFFFFFFFFFFFull
+	// 64-bit platforms (Linux amd64/arm64, macOS amd64/arm64, Windows amd64):
+	// `Datum` is a 64-bit integer carrying the double's raw IEEE-754 bits
+	// (Postgres's USE_FLOAT8_BYVAL convention).
 	double v;
-	static_assert(sizeof(uintptr_t) >= sizeof(double),
-	              "Datum must be at least as wide as double");
 	std::memcpy(&v, &d, sizeof(double));
 	return v;
+#else
+	// 32-bit platforms (notably wasm32-emscripten): `Datum` is a pointer to
+	// a double stored elsewhere — matching Postgres's !USE_FLOAT8_BYVAL
+	// convention. Lifetime is the caller's responsibility (MEOS currently
+	// points at storage owned by the Temporal or palloc'd context; copy
+	// before freeing the source).
+	return *reinterpret_cast<const double *>(d);
+#endif
 }
 
 // ---------------------------------------------------------------------
@@ -124,8 +134,11 @@ MakeTemporalDatumAccessor(uintptr_t (*meos_fn)(const Temporal *),
 			    std::memcpy(data_copy, data, data_size);
 			    Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
 			    uintptr_t ret = meos_fn(temp);
+			    // On 32-bit platforms (wasm32) Datum may be a pointer into
+			    // `data_copy`; copy the value out before freeing the buffer.
+			    CppResult result_value = DatumTo<CppResult>(ret);
 			    std::free(data_copy);
-			    return DatumTo<CppResult>(ret);
+			    return result_value;
 		    });
 		if (args.size() == 1) {
 			result.SetVectorType(duckdb::VectorType::CONSTANT_VECTOR);
