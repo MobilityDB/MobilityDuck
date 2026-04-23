@@ -2,10 +2,10 @@
 #include "tydef.hpp"
 #include "geo_util.hpp"
 #include "duckdb/common/types/data_chunk.hpp"
-#include "duckdb/main/extension/extension_loader.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/common/extension_type_info.hpp"
 #include "duckdb/function/scalar_function.hpp"
-#include "duckdb/main/extension/extension_loader.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include "spatial/spatial_types.hpp"
 
 extern "C" {    
@@ -29,18 +29,20 @@ LogicalType SpatialSetType::geogset() {
     return type;
 }
 
-void SpatialSetType::RegisterTypes(ExtensionLoader &loader){
-    loader.RegisterType( "geomset", geomset());
-    loader.RegisterType( "geogset", geogset());
+void SpatialSetType::RegisterTypes(DatabaseInstance &db){
+    ExtensionUtil::RegisterType(db, "geomset", geomset());
+    ExtensionUtil::RegisterType(db, "geogset", geogset());
 }
 
-void SpatialSetType::RegisterCastFunctions(ExtensionLoader &loader) {        
-    loader.RegisterCastFunction(
+void SpatialSetType::RegisterCastFunctions(DatabaseInstance &instance) {        
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         LogicalType::VARCHAR, 
         SpatialSetType::geomset(),                                    
         SpatialSetFunctions::Text_to_geoset   
     );     
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         LogicalType::VARCHAR, 
         SpatialSetType::geogset(),                                    
         SpatialSetFunctions::Text_to_geoset   
@@ -48,90 +50,90 @@ void SpatialSetType::RegisterCastFunctions(ExtensionLoader &loader) {
  
 }
 
-void SpatialSetType::RegisterScalarFunctions(ExtensionLoader &loader) {	    
-    loader.RegisterFunction( ScalarFunction(
+void SpatialSetType::RegisterScalarFunctions(DatabaseInstance &db) {	    
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"asText", 
         {SpatialSetType::geomset()}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_text));
     
-    loader.RegisterFunction( ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"asText", 
         {SpatialSetType::geogset()}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_text));
 
-    loader.RegisterFunction( ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"asText", 
         {SpatialSetType::geomset(), LogicalType::INTEGER}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_text));
     
-    loader.RegisterFunction( ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"asText", 
         {SpatialSetType::geogset(), LogicalType::INTEGER}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_text));
 
-        loader.RegisterFunction( ScalarFunction(
+        ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"asEWKT", 
         {SpatialSetType::geomset()}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_ewkt));
     
-    loader.RegisterFunction( ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"asEWKT", 
         {SpatialSetType::geogset()}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_ewkt));
 
-    loader.RegisterFunction( ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"asEWKT", 
         {SpatialSetType::geomset(), LogicalType::INTEGER}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_ewkt));
     
-    loader.RegisterFunction( ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"asEWKT", 
         {SpatialSetType::geogset(), LogicalType::INTEGER}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_ewkt));    
 
-    loader.RegisterFunction( ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
         "memSize", 
         {SpatialSetType::geomset()}, LogicalType::INTEGER, SpatialSetFunctions::Set_mem_size));
     
-    loader.RegisterFunction( ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
         "memSize", 
         {SpatialSetType::geogset()}, LogicalType::INTEGER, SpatialSetFunctions::Set_mem_size));
 
-    loader.RegisterFunction( ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
         "SRID", 
         {SpatialSetType::geomset()}, LogicalType::INTEGER, SpatialSetFunctions::Spatialset_srid));
     
-    loader.RegisterFunction( ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
         "SRID", 
         {SpatialSetType::geogset()}, LogicalType::INTEGER, SpatialSetFunctions::Spatialset_srid));
 
-    loader.RegisterFunction( ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"setSRID", 
         {SpatialSetType::geomset(), LogicalType::INTEGER}, SpatialSetType::geomset(), SpatialSetFunctions::Spatialset_set_srid));
 
-    loader.RegisterFunction( ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"setSRID", 
         {SpatialSetType::geogset(), LogicalType::INTEGER}, SpatialSetType::geogset(), SpatialSetFunctions::Spatialset_set_srid));
 
-    loader.RegisterFunction( ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"transform", 
         {SpatialSetType::geomset(), LogicalType::INTEGER}, SpatialSetType::geomset(), SpatialSetFunctions::Spatialset_transform));
     
-    loader.RegisterFunction( ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"transform", 
         {SpatialSetType::geogset(), LogicalType::INTEGER}, SpatialSetType::geogset(), SpatialSetFunctions::Spatialset_transform));
 
-    loader.RegisterFunction( ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
 		"startValue", {SpatialSetType::geomset()},  
 		GeoTypes::GEOMETRY(),
 		SpatialSetFunctions::Set_start_value
 	));    
 
-    loader.RegisterFunction( ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
         "endValue", 
         {SpatialSetType::geomset()}, GeoTypes::GEOMETRY(), SpatialSetFunctions::Set_end_value));
 
-    loader.RegisterFunction( ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
         "numValues",
         {SpatialSetType::geomset()}, LogicalType::INTEGER, SpatialSetFunctions::Set_num_values));
     
-    loader.RegisterFunction( ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
         "numValues",
         {SpatialSetType::geogset()}, LogicalType::INTEGER, SpatialSetFunctions::Set_num_values));
 
-    loader.RegisterFunction( ScalarFunction(
+    ExtensionUtil::RegisterFunction(db, ScalarFunction(
         "valueN", {SpatialSetType::geomset(), LogicalType::INTEGER},  
         GeoTypes::GEOMETRY(),
         SpatialSetFunctions::Set_value_n

@@ -12,7 +12,7 @@
 #include "duckdb/common/vector_operations/ternary_executor.hpp"
 #include "duckdb/common/vector_operations/generic_executor.hpp"
 #include "duckdb/function/scalar_function.hpp"
-#include "duckdb/main/extension/extension_loader.hpp"
+#include "duckdb/main/extension_util.hpp"
 
 #include "time_util.hpp"
 

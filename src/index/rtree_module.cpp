@@ -1,5 +1,4 @@
 #include "meos_wrapper_simple.hpp"
-#include "duckdb/main/extension/extension_loader.hpp"
 
 #include "duckdb/execution/index/fixed_size_allocator.hpp"
 #include "duckdb/execution/index/index_pointer.hpp"
@@ -501,15 +500,15 @@ unique_ptr<ExpressionMatcher> TRTreeIndex::MakeFunctionMatcher() const {
 // Module Registration
 //------------------------------------------------------------------------------
 
-void TRTreeModule::RegisterRTreeIndex(ExtensionLoader &loader) {
+void TRTreeModule::RegisterRTreeIndex(DatabaseInstance &db) {
 
     IndexType index_type;
-
+    
     index_type.name = TRTreeIndex::TYPE_NAME;
     index_type.create_instance = TRTreeIndex::Create;
     index_type.create_plan = TRTreeIndex::CreatePlan;
-
-    loader.GetDatabaseInstance().config.GetIndexTypes().RegisterIndexType(index_type);
+    
+    db.config.GetIndexTypes().RegisterIndexType(index_type);
 }
 
 } 

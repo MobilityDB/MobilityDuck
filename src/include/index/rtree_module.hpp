@@ -1,7 +1,6 @@
 #pragma once
 
 #include "duckdb/execution/index/bound_index.hpp"
-#include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/execution/index/index_pointer.hpp"
 #include "duckdb/execution/index/fixed_size_allocator.hpp"
 #include "duckdb/common/case_insensitive_map.hpp"
@@ -95,9 +94,9 @@ private:
 };
 
 struct TRTreeModule {
-	static void RegisterRTreeIndex(ExtensionLoader &loader);
-    static void RegisterIndexScan(ExtensionLoader &loader);
-    static void RegisterScanOptimizer(ExtensionLoader &loader);
+	static void RegisterRTreeIndex(DatabaseInstance &instance);
+    static void RegisterIndexScan(DatabaseInstance &instance);
+    static void RegisterScanOptimizer(DatabaseInstance &instance);
 };
 
 } // namespace duckdb

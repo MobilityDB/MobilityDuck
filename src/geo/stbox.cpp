@@ -7,7 +7,7 @@
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/function/function.hpp"
 #include "duckdb/function/scalar_function.hpp"
-#include "duckdb/main/extension/extension_loader.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include <scoped_allocator>
 #include "spatial/spatial_types.hpp"
@@ -20,60 +20,69 @@ LogicalType StboxType::STBOX() {
     return type;
 }
 
-void StboxType::RegisterType(ExtensionLoader &loader) {
-    loader.RegisterType( "STBOX", STBOX());
+void StboxType::RegisterType(DatabaseInstance &instance) {
+    ExtensionUtil::RegisterType(instance, "STBOX", STBOX());
 }
 
-void StboxType::RegisterCastFunctions(ExtensionLoader &loader) {
-    loader.RegisterCastFunction(
+void StboxType::RegisterCastFunctions(DatabaseInstance &instance) {
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         LogicalType::VARCHAR,
         STBOX(),
         StboxFunctions::Stbox_in_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         STBOX(),
         LogicalType::VARCHAR,
         StboxFunctions::Stbox_out
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         GeoTypes::GEOMETRY(),
         STBOX(),
         StboxFunctions::Geo_to_stbox_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         LogicalType::TIMESTAMP_TZ,
         STBOX(),
         StboxFunctions::Timestamptz_to_stbox_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         SetTypes::tstzset(),
         STBOX(),
         StboxFunctions::Tstzset_to_stbox_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         SpanTypes::TSTZSPAN(),
         STBOX(),
         StboxFunctions::Tstzspan_to_stbox_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         SpansetTypes::tstzspanset(),
         STBOX(),
         StboxFunctions::Tstzspanset_to_stbox_cast
     );
 }
 
-void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
-    loader.RegisterFunction(
+void StboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction("stbox", {LogicalType::VARCHAR}, STBOX(), StboxFunctions::Stbox_in, nullptr, nullptr, nullptr,
                      nullptr, LogicalType(LogicalTypeId::INVALID), FunctionStability::VOLATILE));
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stboxFromBinary",
             {LogicalType::BLOB},
@@ -92,7 +101,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
     //     )
     // );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "asText",
             {STBOX()},
@@ -101,7 +111,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "asBinary",
             {STBOX()},
@@ -120,7 +131,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
     //     )
     // );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox",
             {GeoTypes::GEOMETRY(), LogicalType::TIMESTAMP_TZ},
@@ -129,7 +141,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox",
             {GeoTypes::GEOMETRY(), SpanTypes::TSTZSPAN()},
@@ -138,7 +151,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox",
             {LogicalType::TIMESTAMP_TZ},
@@ -147,7 +161,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox",
             {SetTypes::tstzset()},
@@ -156,7 +171,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox",
             {SpanTypes::TSTZSPAN()},
@@ -165,7 +181,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox",
             {SpansetTypes::tstzspanset()},
@@ -175,7 +192,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
     
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox",
             {GeoTypes::GEOMETRY()},
@@ -184,7 +202,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "geometry",
             {STBOX()},
@@ -193,7 +212,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "hasX",
             {STBOX()},
@@ -201,7 +221,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_hasx
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "hasZ",
             {STBOX()},
@@ -209,7 +230,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_hasz
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "hasT",
             {STBOX()},
@@ -217,7 +239,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_hast
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "isGeodetic",
             {STBOX()},
@@ -226,7 +249,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "Xmin",
             {STBOX()},
@@ -235,7 +259,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "Ymin",
             {STBOX()},
@@ -243,7 +268,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_ymin
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "Zmin",
             {STBOX()},
@@ -252,7 +278,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "Tmin",
             {STBOX()},
@@ -261,7 +288,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "TminInc",
             {STBOX()},
@@ -270,7 +298,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "Xmax",
             {STBOX()},
@@ -279,7 +308,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "Ymax",
             {STBOX()},
@@ -288,7 +318,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "Zmax",
             {STBOX()},
@@ -297,7 +328,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
  
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "Tmax",
             {STBOX()},
@@ -305,7 +337,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_tmax
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "TmaxInc",
             {STBOX()},
@@ -314,7 +347,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "area",
             {STBOX()},
@@ -323,7 +357,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "volume",
             {STBOX()},
@@ -332,7 +367,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "shiftTime",
             {STBOX(), LogicalType::INTERVAL},
@@ -340,7 +376,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_shift_time
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "scaleTime",
             {STBOX(), LogicalType::INTERVAL},
@@ -348,7 +385,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_scale_time
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "shiftScaleTime",
             {STBOX(), LogicalType::INTERVAL, LogicalType::INTERVAL},
@@ -357,7 +395,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "getSpace",
             {STBOX()},
@@ -366,7 +405,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "expandTime",
             {STBOX(), LogicalType::INTERVAL},
@@ -375,7 +415,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "expandSpace",
             {STBOX(), LogicalType::DOUBLE},
@@ -384,7 +425,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_contains",
             {STBOX(), STBOX()},
@@ -393,7 +435,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_contained",
             {STBOX(), STBOX()},
@@ -401,7 +444,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Contained_stbox_stbox
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_overlaps",
             {STBOX(), STBOX()},
@@ -410,7 +454,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_same",
             {STBOX(), STBOX()},
@@ -418,7 +463,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Same_stbox_stbox
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_adjacent",
             {STBOX(), STBOX()},
@@ -426,7 +472,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Adjacent_stbox_stbox
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "@>",
             {STBOX(), STBOX()},
@@ -434,7 +481,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Contains_stbox_stbox
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "<@",
             {STBOX(), STBOX()},
@@ -442,7 +490,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Contained_stbox_stbox
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "&&",
             {STBOX(), STBOX()},
@@ -450,7 +499,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Overlaps_stbox_stbox
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "~=",
             {STBOX(), STBOX()},
@@ -458,7 +508,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Same_stbox_stbox
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "-|-",
             {STBOX(), STBOX()},
@@ -467,7 +518,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_left",
             {STBOX(), STBOX()},
@@ -476,7 +528,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_overleft",
             {STBOX(), STBOX()},
@@ -484,7 +537,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Overleft_stbox_stbox
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_right",
             {STBOX(), STBOX()},
@@ -493,7 +547,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_overright",
             {STBOX(), STBOX()},
@@ -501,7 +556,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Overright_stbox_stbox
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_below",
             {STBOX(), STBOX()},
@@ -509,7 +565,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Below_stbox_stbox
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_overbelow",
             {STBOX(), STBOX()},
@@ -517,7 +574,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Overbelow_stbox_stbox
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_above",
             {STBOX(), STBOX()},
@@ -526,7 +584,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_overabove",
             {STBOX(), STBOX()},
@@ -535,7 +594,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_before",
             {STBOX(), STBOX()},
@@ -544,7 +604,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_overbefore",
             {STBOX(), STBOX()},
@@ -553,7 +614,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_after",
             {STBOX(), STBOX()},
@@ -562,7 +624,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_overafter",
             {STBOX(), STBOX()},
@@ -571,7 +634,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_front",
             {STBOX(), STBOX()},
@@ -580,7 +644,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_overfront",
             {STBOX(), STBOX()},
@@ -589,7 +654,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_back",
             {STBOX(), STBOX()},
@@ -598,7 +664,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_overback",
             {STBOX(), STBOX()},
@@ -607,7 +674,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "<<",
             {STBOX(), STBOX()},
@@ -616,7 +684,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "&<",
             {STBOX(), STBOX()},
@@ -624,7 +693,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Overleft_stbox_stbox
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             ">>",
             {STBOX(), STBOX()},
@@ -633,7 +703,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "&>",
             {STBOX(), STBOX()},
@@ -641,7 +712,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Overright_stbox_stbox
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "<<|",
             {STBOX(), STBOX()},
@@ -649,7 +721,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Below_stbox_stbox
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "&<|",
             {STBOX(), STBOX()},
@@ -657,7 +730,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Overbelow_stbox_stbox
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "|>>",
             {STBOX(), STBOX()},
@@ -666,7 +740,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "|&>",
             {STBOX(), STBOX()},
@@ -675,7 +750,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 // # is not a operator in Duckdb, fix later
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "<<#",  
             {STBOX(), STBOX()},
@@ -684,7 +760,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "&<#",
             {STBOX(), STBOX()},
@@ -693,7 +770,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "#>>",
             {STBOX(), STBOX()},
@@ -702,7 +780,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "#&>",
             {STBOX(), STBOX()},
@@ -711,7 +790,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "<</",
             {STBOX(), STBOX()},
@@ -720,7 +800,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "&</",
             {STBOX(), STBOX()},
@@ -729,7 +810,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "/>>",
             {STBOX(), STBOX()},
@@ -738,7 +820,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "/&>",
             {STBOX(), STBOX()},
@@ -747,7 +830,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_union",
             {STBOX(), STBOX()},
@@ -756,7 +840,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_intersection",
             {STBOX(), STBOX()},
@@ -765,7 +850,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "+",
             {STBOX(), STBOX()},
@@ -774,7 +860,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
     
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "*",
             {STBOX(), STBOX()},
@@ -783,7 +870,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_cmp",
             {STBOX(), STBOX()},
@@ -791,7 +879,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_cmp
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_eq",
             {STBOX(), STBOX()},
@@ -799,7 +888,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_eq
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_ne",
             {STBOX(), STBOX()},
@@ -807,7 +897,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_ne
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_lt",
             {STBOX(), STBOX()},
@@ -815,7 +906,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_lt
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_le",
             {STBOX(), STBOX()},
@@ -823,7 +915,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_le
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_ge",
             {STBOX(), STBOX()},
@@ -831,7 +924,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_ge
         )
     );  
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox_gt",
             {STBOX(), STBOX()},
@@ -840,7 +934,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "=",
             {STBOX(), STBOX()},
@@ -848,7 +943,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_eq
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "<>",
             {STBOX(), STBOX()},
@@ -856,7 +952,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_ne
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "<",
             {STBOX(), STBOX()},
@@ -864,7 +961,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_lt
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "<=",
             {STBOX(), STBOX()},
@@ -872,7 +970,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_le
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             ">=",
             {STBOX(), STBOX()},
@@ -880,7 +979,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_ge
         )
     );  
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             ">",
             {STBOX(), STBOX()},

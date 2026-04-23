@@ -15,9 +15,9 @@ class ExtensionLoader;
 struct TgeompointType {
     static LogicalType TGEOMPOINT();
 
-    static void RegisterType(ExtensionLoader &loader);
-    static void RegisterCastFunctions(ExtensionLoader &loader);
-    static void RegisterScalarFunctions(ExtensionLoader &loader);
+    static void RegisterType(DatabaseInstance &db);
+    static void RegisterCastFunctions(DatabaseInstance &db);
+    static void RegisterScalarFunctions(DatabaseInstance &db);
 };
 
 } // namespace duckdb

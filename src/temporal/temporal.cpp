@@ -12,7 +12,7 @@
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
-#include "duckdb/main/extension/extension_loader.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include "duckdb/common/extension_type_info.hpp"
 #include "duckdb/function/table_function.hpp"
@@ -34,11 +34,11 @@ DEFINE_TEMPORAL_TYPE(TTEXT)
 
 #undef DEFINE_TEMPORAL_TYPE
 
-void TemporalTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType( "TINT", TINT());
-    loader.RegisterType( "TBOOL", TBOOL());
-    loader.RegisterType( "TFLOAT", TFLOAT());
-    loader.RegisterType( "TTEXT", TTEXT());
+void TemporalTypes::RegisterTypes(DatabaseInstance &db) {
+    ExtensionUtil::RegisterType(db, "TINT", TINT());
+    ExtensionUtil::RegisterType(db, "TBOOL", TBOOL());
+    ExtensionUtil::RegisterType(db, "TFLOAT", TFLOAT());
+    ExtensionUtil::RegisterType(db, "TTEXT", TTEXT());
 }
 
 const std::vector<LogicalType> &TemporalTypes::AllTypes() {
@@ -60,15 +60,17 @@ LogicalType TemporalTypes::GetBaseTypeFromAlias(const char *alias) {
     throw InternalException("Invalid temporal type alias: %s", alias);
 }
 
-void TemporalTypes::RegisterCastFunctions(ExtensionLoader &loader) {
+void TemporalTypes::RegisterCastFunctions(DatabaseInstance &instance) {
     for (auto &type : TemporalTypes::AllTypes()) {
-        loader.RegisterCastFunction(
+        ExtensionUtil::RegisterCastFunction(
+            instance,
             LogicalType::VARCHAR,
             type,
             TemporalFunctions::Temporal_in
         );
 
-        loader.RegisterCastFunction(
+        ExtensionUtil::RegisterCastFunction(
+            instance,
             type,
             LogicalType::VARCHAR,
             TemporalFunctions::Temporal_out
@@ -83,37 +85,43 @@ void TemporalTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     //     );
     // }
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         LogicalType::BLOB,
         SpansetTypes::tstzspanset(),
         TemporalFunctions::Blob_to_tstzspanset
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         TemporalTypes::TBOOL(),
         TemporalTypes::TINT(),
         TemporalFunctions::Tbool_to_tint_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         TemporalTypes::TINT(),
         TemporalTypes::TFLOAT(),
         TemporalFunctions::Tint_to_tfloat_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         TemporalTypes::TFLOAT(),
         TemporalTypes::TINT(),
         TemporalFunctions::Tfloat_to_tint_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         TemporalTypes::TINT(),
         TboxType::TBOX(),
         TemporalFunctions::Tnumber_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         TemporalTypes::TFLOAT(),
         TboxType::TBOX(),
         TemporalFunctions::Tnumber_to_tbox_cast
@@ -122,9 +130,10 @@ void TemporalTypes::RegisterCastFunctions(ExtensionLoader &loader) {
 }
 }
 
-void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
+void TemporalTypes::RegisterScalarFunctions(DatabaseInstance &instance) {
     for (auto &type : TemporalTypes::AllTypes()) {
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 StringUtil::Lower(type.GetAlias()),
                 {TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()), LogicalType::TIMESTAMP_TZ},
@@ -132,7 +141,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Tinstant_constructor
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 StringUtil::Lower(type.GetAlias()),
                 {type, LogicalType::INTEGER},
@@ -141,7 +151,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 StringUtil::Lower(type.GetAlias()),
                 {TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()), SetTypes::tstzset()},
@@ -150,7 +161,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 StringUtil::Lower(type.GetAlias()),
                 {TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()), SpanTypes::TSTZSPAN()},
@@ -158,7 +170,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Tsequence_from_base_tstzspan
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 StringUtil::Lower(type.GetAlias()),
                 {TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()), SpanTypes::TSTZSPAN(), LogicalType::VARCHAR},
@@ -166,7 +179,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Tsequence_from_base_tstzspan
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 StringUtil::Lower(type.GetAlias()),
                 {TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()), SpansetTypes::tstzspanset()},
@@ -174,7 +188,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Tsequenceset_from_base_tstzspanset
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 StringUtil::Lower(type.GetAlias()),
                 {TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()), SpansetTypes::tstzspanset(), LogicalType::VARCHAR},
@@ -183,7 +198,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "tempSubtype",
                 {type},
@@ -192,7 +208,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "interp",
                 {type},
@@ -201,7 +218,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "getValue",
                 {type},
@@ -210,7 +228,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "startValue",
                 {type},
@@ -219,7 +238,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "endValue",
                 {type},
@@ -229,7 +249,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         );
 
         if (type.GetAlias() != "TBOOL") {
-            loader.RegisterFunction(
+            ExtensionUtil::RegisterFunction(
+                instance,
                 ScalarFunction(
                     "minValue",
                     {type},
@@ -238,7 +259,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 )
             );
 
-            loader.RegisterFunction(
+            ExtensionUtil::RegisterFunction(
+                instance,
                 ScalarFunction(
                     "maxValue",
                     {type},
@@ -247,7 +269,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 )
             );
 
-            loader.RegisterFunction(
+            ExtensionUtil::RegisterFunction(
+                instance,
                 ScalarFunction(
                     "minInstant",
                     {type},
@@ -256,7 +279,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 )
             );
     
-            loader.RegisterFunction(
+            ExtensionUtil::RegisterFunction(
+                instance,
                 ScalarFunction(
                     "maxInstant",
                     {type},
@@ -265,7 +289,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 )
             );
 
-            loader.RegisterFunction(
+            ExtensionUtil::RegisterFunction(
+                instance,
                 ScalarFunction(
                     "atMin",
                     {type},
@@ -274,7 +299,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 )
             );
 
-            loader.RegisterFunction(
+            ExtensionUtil::RegisterFunction(
+                instance,
                 ScalarFunction(
                     "minusMin",
                     {type},
@@ -283,7 +309,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 )
             );
 
-            loader.RegisterFunction(
+            ExtensionUtil::RegisterFunction(
+                instance,
                 ScalarFunction(
                     "atMax",
                     {type},
@@ -292,7 +319,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 )
             );
 
-            loader.RegisterFunction(
+            ExtensionUtil::RegisterFunction(
+                instance,
                 ScalarFunction(
                     "minusMax",
                     {type},
@@ -302,7 +330,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             );
         }
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "valueN",
                 {type, LogicalType::BIGINT},
@@ -311,7 +340,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "getTimestamp",
                 {type},
@@ -320,7 +350,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "getTime",
                 {type},
@@ -328,7 +359,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_time
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "duration",
                 {type},
@@ -337,7 +369,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "duration",
                 {type, LogicalType::BOOLEAN},
@@ -346,7 +379,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 StringUtil::Lower(type.GetAlias()) + "Seq",
                 {LogicalType::LIST(type)},
@@ -355,7 +389,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 StringUtil::Lower(type.GetAlias()) + "Seq",
                 {LogicalType::LIST(type), LogicalType::VARCHAR},
@@ -364,7 +399,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 StringUtil::Lower(type.GetAlias()) + "Seq",
                 {LogicalType::LIST(type), LogicalType::VARCHAR, LogicalType::BOOLEAN},
@@ -373,7 +409,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 StringUtil::Lower(type.GetAlias()) + "Inst",
                 {type},
@@ -382,7 +419,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 StringUtil::Lower(type.GetAlias()) + "Seq",
                 {LogicalType::LIST(type), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN},
@@ -391,7 +429,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
         
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 StringUtil::Lower(type.GetAlias()) + "Seq",
                 {type, LogicalType::VARCHAR},
@@ -400,7 +439,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 StringUtil::Lower(type.GetAlias()) + "Seq",
                 {type},
@@ -409,7 +449,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 StringUtil::Lower(type.GetAlias()) + "SeqSet",
                 {LogicalType::LIST(type)},
@@ -418,7 +459,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 StringUtil::Lower(type.GetAlias()) + "SeqSet",
                 {type},
@@ -428,7 +470,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         );
 
         if (type.GetAlias() == "TFLOAT") {
-            loader.RegisterFunction(
+            ExtensionUtil::RegisterFunction(
+                instance,
                 ScalarFunction(
                     StringUtil::Lower(type.GetAlias()) + "SeqSet",
                     {type, LogicalType::VARCHAR},
@@ -438,7 +481,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             );
         }
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "setInterp",
                 {type, LogicalType::VARCHAR},
@@ -447,7 +491,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "appendInstant",
                 {type, type},
@@ -456,7 +501,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "appendInstant",
                 {type, type, LogicalType::VARCHAR},
@@ -465,7 +511,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "appendSequence",
                 {type, type},
@@ -474,7 +521,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "merge",
                 {type, type},
@@ -483,7 +531,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "merge",
                 {LogicalType::LIST(type)},
@@ -492,7 +541,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "timeSpan",
                 {type},
@@ -502,7 +552,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         );
 
         if (type.GetAlias() == "TINT") {
-            loader.RegisterFunction(
+            ExtensionUtil::RegisterFunction(
+                instance,
                 ScalarFunction(
                     "valueSpan",
                     {type},
@@ -511,7 +562,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 )
             );
 
-            loader.RegisterFunction(
+            ExtensionUtil::RegisterFunction(
+                instance,
                 ScalarFunction(
                     "valueSet",
                     {type},
@@ -520,7 +572,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 )
             );
         } else if (type.GetAlias() == "TFLOAT") {
-            loader.RegisterFunction(
+            ExtensionUtil::RegisterFunction(
+                instance,
                 ScalarFunction(
                     "valueSpan",
                     {type},
@@ -529,7 +582,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 )
             );
 
-            loader.RegisterFunction(
+            ExtensionUtil::RegisterFunction(
+                instance,
                 ScalarFunction(
                     "valueSet",
                     {type},
@@ -539,7 +593,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             );
         }
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "sequences",
                 {type},
@@ -548,7 +603,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "segments",
                 {type},
@@ -557,7 +613,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "startTimestamp",
                 {type},
@@ -566,7 +623,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "endTimestamp",
                 {type},
@@ -575,7 +633,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "timestamps",
                 {type},
@@ -584,7 +643,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "instants",
                 {type},
@@ -593,7 +653,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "atTime",
                 {type, LogicalType::TIMESTAMP_TZ},
@@ -602,7 +663,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "atTime",
                 {type, SpanTypes::TSTZSPAN()},
@@ -611,7 +673,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "atTime",
                 {type, SpansetTypes::tstzspanset()},
@@ -620,7 +683,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "minusTime",
                 {type, LogicalType::TIMESTAMP_TZ},
@@ -629,7 +693,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "atTime",
                 {type, SetTypes::tstzset()},
@@ -638,7 +703,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "minusTime",
                 {type, SetTypes::tstzset()},
@@ -647,7 +713,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "minusTime",
                 {type, SpanTypes::TSTZSPAN()},
@@ -656,7 +723,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "minusTime",
                 {type, SpansetTypes::tstzspanset()},
@@ -665,7 +733,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "valueAtTimestamp",
                 {type, LogicalType::TIMESTAMP_TZ},
@@ -675,7 +744,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         );
 
         if (type.GetAlias() == "TINT" || type.GetAlias() == "TFLOAT") {
-            loader.RegisterFunction(
+            ExtensionUtil::RegisterFunction(
+                instance,
                 ScalarFunction(
                     "shiftValue",
                     {type, LogicalType::BIGINT},
@@ -684,7 +754,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 )
             );
 
-            loader.RegisterFunction(
+            ExtensionUtil::RegisterFunction(
+                instance,
                 ScalarFunction(
                     "scaleValue",
                     {type, LogicalType::BIGINT},
@@ -693,7 +764,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 )
             );
 
-            loader.RegisterFunction(
+            ExtensionUtil::RegisterFunction(
+                instance,
                 ScalarFunction(
                     "shiftScaleValue",
                     {type, LogicalType::BIGINT, LogicalType::BIGINT},
@@ -702,7 +774,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 )
             );
 
-            loader.RegisterFunction(
+            ExtensionUtil::RegisterFunction(
+                instance,
                 ScalarFunction(
                     "integral",
                     {type},
@@ -711,7 +784,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 )
             );
 
-            loader.RegisterFunction(
+            ExtensionUtil::RegisterFunction(
+                instance,
                 ScalarFunction(
                     "twAvg",
                     {type},
@@ -721,7 +795,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             );
         }
         if (type.GetAlias() != "TBOOL") {
-            loader.RegisterFunction(
+            ExtensionUtil::RegisterFunction(
+                instance,
                 ScalarFunction(
                     "tempDump",
                     {type},
@@ -736,7 +811,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             );
         }
         
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "atValues",
                 {type, TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str())},
@@ -744,7 +820,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_at_value
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "minusValues",
                 {type, TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str())},
@@ -753,7 +830,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "beforeTimestamp",
                 {type, LogicalType::TIMESTAMP_TZ},
@@ -761,7 +839,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_before_timestamptz
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "beforeTimestamp",
                 {type, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN},
@@ -770,7 +849,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "afterTimestamp",
                 {type, LogicalType::TIMESTAMP_TZ},
@@ -778,7 +858,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_after_timestamptz
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "afterTimestamp",
                 {type, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN},
@@ -787,7 +868,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "insert",
                 {type, type},
@@ -795,7 +877,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_insert
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "insert",
                 {type, type, LogicalType::BOOLEAN},
@@ -804,7 +887,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "update",
                 {type, type},
@@ -812,7 +896,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_update
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "update",
                 {type, type, LogicalType::BOOLEAN},
@@ -821,7 +906,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
         
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "deleteTime",
                 {type, LogicalType::TIMESTAMP_TZ},
@@ -829,7 +915,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_delete_timestamptz
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "deleteTime",
                 {type, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN},
@@ -838,7 +925,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "deleteTime",
                 {type, SetTypes::tstzset()},
@@ -846,7 +934,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_delete_tstzset
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "deleteTime",
                 {type, SetTypes::tstzset(), LogicalType::BOOLEAN},
@@ -855,7 +944,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "deleteTime",
                 {type, SpanTypes::TSTZSPAN()},
@@ -863,7 +953,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_delete_tstzspan
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "deleteTime",
                 {type, SpanTypes::TSTZSPAN(), LogicalType::BOOLEAN},
@@ -872,7 +963,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "deleteTime",
                 {type, SpansetTypes::tstzspanset()},
@@ -880,7 +972,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_delete_tstzspanset
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "deleteTime",
                 {type, SpansetTypes::tstzspanset(), LogicalType::BOOLEAN},
@@ -888,7 +981,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_delete_tstzspanset
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "segmentMinDuration",
                 {type, LogicalType::INTERVAL},
@@ -896,7 +990,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_segm_min_duration
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "segmentMinDuration",
                 {type, LogicalType::INTERVAL, LogicalType::BOOLEAN},
@@ -905,7 +1000,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "segmentMaxDuration",
                 {type, LogicalType::INTERVAL},
@@ -913,7 +1009,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_segm_max_duration
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "segmentMaxDuration",
                 {type, LogicalType::INTERVAL, LogicalType::BOOLEAN},
@@ -922,7 +1019,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "temporal_eq",
                 {type, type},
@@ -930,7 +1028,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_eq
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "=",
                 {type, type},
@@ -938,7 +1037,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_eq
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "temporal_ne",
                 {type, type},
@@ -946,7 +1046,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_ne
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "<>",
                 {type, type},
@@ -954,7 +1055,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_ne
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "temporal_le",
                 {type, type},
@@ -962,7 +1064,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_le
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "<=",
                 {type, type},
@@ -970,7 +1073,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_le
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "temporal_lt",
                 {type, type},
@@ -978,7 +1082,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_lt
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "<",
                 {type, type},
@@ -986,7 +1091,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_lt
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "temporal_ge",
                 {type, type},
@@ -994,7 +1100,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_ge
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 ">=",
                 {type, type},
@@ -1002,7 +1109,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_ge
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "temporal_gt",
                 {type, type},
@@ -1010,7 +1118,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_gt
             )
         );
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 ">",
                 {type, type},
@@ -1019,7 +1128,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+            instance,
             ScalarFunction(
                 "temporal_cmp",
                 {type, type},
@@ -1029,7 +1139,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         );
     }
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "atValues",
             {TemporalTypes::TINT(), SetTypes::intset()},
@@ -1037,7 +1148,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             TemporalFunctions::Temporal_at_values
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "atValues",
             {TemporalTypes::TFLOAT(), SetTypes::floatset()},
@@ -1045,7 +1157,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             TemporalFunctions::Temporal_at_values
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "atValues",
             {TemporalTypes::TTEXT(), SetTypes::textset()},
@@ -1054,7 +1167,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "minusValues",
             {TemporalTypes::TINT(), SetTypes::intset()},
@@ -1062,7 +1176,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             TemporalFunctions::Temporal_minus_value
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "minusValues",
             {TemporalTypes::TFLOAT(), SetTypes::floatset()},
@@ -1070,7 +1185,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             TemporalFunctions::Temporal_minus_value
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "minusValues",
             {TemporalTypes::TTEXT(), SetTypes::textset()},
@@ -1078,7 +1194,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             TemporalFunctions::Temporal_minus_value
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "whenTrue",
             {TemporalTypes::TBOOL()},
@@ -1087,7 +1204,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "atValues",
             {TemporalTypes::TINT(), SpanTypes::INTSPAN()},
@@ -1096,7 +1214,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "atValues",
             {TemporalTypes::TFLOAT(), SpanTypes::FLOATSPAN()},
@@ -1105,7 +1224,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "minusValues",
             {TemporalTypes::TINT(), SpanTypes::INTSPAN()},
@@ -1114,7 +1234,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "minusValues",
             {TemporalTypes::TFLOAT(), SpanTypes::FLOATSPAN()},
@@ -1123,7 +1244,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "atValues",
             {TemporalTypes::TINT(), SpansetTypes::intspanset()},
@@ -1132,7 +1254,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "atValues",
             {TemporalTypes::TFLOAT(), SpansetTypes::floatspanset()},
@@ -1141,7 +1264,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "minusValues",
             {TemporalTypes::TINT(), SpansetTypes::intspanset()},
@@ -1150,7 +1274,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "minusValues",
             {TemporalTypes::TFLOAT(), SpansetTypes::floatspanset()},
@@ -1159,7 +1284,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "atTbox",
             {TemporalTypes::TINT(), TboxType::TBOX()},
@@ -1168,7 +1294,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "atTbox",
             {TemporalTypes::TFLOAT(), TboxType::TBOX()},
@@ -1177,7 +1304,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "minusTbox",
             {TemporalTypes::TINT(), TboxType::TBOX()},
@@ -1186,7 +1314,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "minusTbox",
             {TemporalTypes::TFLOAT(), TboxType::TBOX()},
@@ -1195,7 +1324,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "round",
             {TemporalTypes::TFLOAT()},
@@ -1204,7 +1334,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "round",
             {TemporalTypes::TFLOAT(), LogicalType::INTEGER},
@@ -1213,7 +1344,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tint",
             {TemporalTypes::TBOOL()},
@@ -1222,7 +1354,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tfloat",
             {TemporalTypes::TINT()},
@@ -1231,7 +1364,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tint",
             {TemporalTypes::TFLOAT()},
@@ -1240,7 +1374,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {TemporalTypes::TINT()},
@@ -1249,7 +1384,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {TemporalTypes::TFLOAT()},
@@ -1258,7 +1394,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "getValues",
             {TemporalTypes::TINT()},
@@ -1267,7 +1404,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "getValues",
             {TemporalTypes::TFLOAT()},
@@ -1276,7 +1414,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "avgValue",
             {TemporalTypes::TINT()},
@@ -1285,7 +1424,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "avgValue",
             {TemporalTypes::TFLOAT()},
@@ -1406,7 +1546,7 @@ static void TemporalUnnestExec(ClientContext &context, TableFunctionInput &input
     output.SetCardinality(count);
 }
 
-void TemporalTypes::RegisterTemporalUnnestFunction(ExtensionLoader &loader) {
+void TemporalTypes::RegisterTemporalUnnestFunction(DatabaseInstance &instance) {
     for (auto &type : TemporalTypes::AllTypes()) {
         if (type.GetAlias() != "TBOOL") {
             TableFunction fn("tempUnnest",
@@ -1414,7 +1554,7 @@ void TemporalTypes::RegisterTemporalUnnestFunction(ExtensionLoader &loader) {
                             TemporalUnnestExec,
                             TemporalUnnestBind,
                             TemporalUnnestInit);
-            loader.RegisterFunction( fn);
+            ExtensionUtil::RegisterFunction(instance, fn);
         }
     }
 }

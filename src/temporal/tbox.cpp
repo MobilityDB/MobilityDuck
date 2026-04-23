@@ -9,7 +9,7 @@
 // #include "duckdb/common/exception.hpp"
 // #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
-#include "duckdb/main/extension/extension_loader.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 // #include "duckdb/common/extension_type_info.hpp"
 
@@ -21,116 +21,134 @@ LogicalType TboxType::TBOX() {
     return type;
 }
 
-void TboxType::RegisterType(ExtensionLoader &loader) {
-    loader.RegisterType( "TBOX", TBOX());
+void TboxType::RegisterType(DatabaseInstance &instance) {
+    ExtensionUtil::RegisterType(instance, "TBOX", TBOX());
 }
 
-void TboxType::RegisterCastFunctions(ExtensionLoader &loader) {
-    loader.RegisterCastFunction(
+void TboxType::RegisterCastFunctions(DatabaseInstance &instance) {
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         LogicalType::VARCHAR,
         TBOX(),
         TboxFunctions::Tbox_in
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         TBOX(),
         LogicalType::VARCHAR,
         TboxFunctions::Tbox_out
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         LogicalType::INTEGER,
         TBOX(),
         TboxFunctions::Number_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         LogicalType::DOUBLE,
         TBOX(),
         TboxFunctions::Number_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         LogicalType::TIMESTAMP_TZ,
         TBOX(),
         TboxFunctions::Timestamptz_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         SetTypes::intset(),
         TBOX(),
         TboxFunctions::Set_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         SetTypes::floatset(),
         TBOX(),
         TboxFunctions::Set_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         SetTypes::tstzset(),
         TBOX(),
         TboxFunctions::Set_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         SpanTypes::INTSPAN(),
         TBOX(),
         TboxFunctions::Span_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         SpanTypes::FLOATSPAN(),
         TBOX(),
         TboxFunctions::Span_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         SpanTypes::TSTZSPAN(),
         TBOX(),
         TboxFunctions::Span_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         TBOX(),
         SpanTypes::INTSPAN(),
         TboxFunctions::Tbox_to_intspan_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         TBOX(),
         SpanTypes::FLOATSPAN(),
         TboxFunctions::Tbox_to_floatspan_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         TBOX(),
         SpanTypes::TSTZSPAN(),
         TboxFunctions::Tbox_to_tstzspan_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         SpansetTypes::intspanset(),
         TBOX(),
         TboxFunctions::Spanset_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         SpansetTypes::floatspanset(),
         TBOX(),
         TboxFunctions::Spanset_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         SpansetTypes::tstzspanset(),
         TBOX(),
         TboxFunctions::Spanset_to_tbox_cast
     );
 }
 
-void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
-    loader.RegisterFunction(
+void TboxType::RegisterScalarFunctions(DatabaseInstance &instance) {
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ},
@@ -139,7 +157,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ},
@@ -148,7 +167,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {SpanTypes::INTSPAN(), LogicalType::TIMESTAMP_TZ},
@@ -157,7 +177,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {SpanTypes::FLOATSPAN(), LogicalType::TIMESTAMP_TZ},
@@ -166,7 +187,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {LogicalType::INTEGER, SpanTypes::TSTZSPAN()},
@@ -175,7 +197,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {LogicalType::DOUBLE, SpanTypes::TSTZSPAN()},
@@ -184,7 +207,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {SpanTypes::INTSPAN(), SpanTypes::TSTZSPAN()},
@@ -193,7 +217,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {SpanTypes::FLOATSPAN(), SpanTypes::TSTZSPAN()},
@@ -202,7 +227,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {LogicalType::INTEGER},
@@ -211,7 +237,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {LogicalType::DOUBLE},
@@ -220,7 +247,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {LogicalType::TIMESTAMP_TZ},
@@ -229,7 +257,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {SetTypes::intset()},
@@ -238,7 +267,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {SetTypes::floatset()},
@@ -247,7 +277,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {SetTypes::tstzset()},
@@ -256,7 +287,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {SpanTypes::INTSPAN()},
@@ -265,7 +297,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {SpanTypes::FLOATSPAN()},
@@ -274,7 +307,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {SpanTypes::TSTZSPAN()},
@@ -283,7 +317,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "intspan",
             {TBOX()},
@@ -292,7 +327,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "floatspan",
             {TBOX()},
@@ -301,7 +337,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "timeSpan",
             {TBOX()},
@@ -310,7 +347,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {SpansetTypes::intspanset()},
@@ -319,7 +357,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {SpansetTypes::floatspanset()},
@@ -328,7 +367,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox",
             {SpansetTypes::tstzspanset()},
@@ -337,7 +377,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "hasX",
             {TBOX()},
@@ -346,7 +387,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "hasT",
             {TBOX()},
@@ -355,7 +397,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "Xmin",
             {TBOX()},
@@ -364,7 +407,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "XminInc",
             {TBOX()},
@@ -373,7 +417,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "Xmax",
             {TBOX()},
@@ -382,7 +427,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "XmaxInc",
             {TBOX()},
@@ -391,7 +437,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "Tmin",
             {TBOX()},
@@ -400,7 +447,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "TminInc",
             {TBOX()},
@@ -409,7 +457,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "Tmax",
             {TBOX()},
@@ -418,7 +467,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "TmaxInc",
             {TBOX()},
@@ -427,7 +477,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "shiftValue",
             {TBOX(), LogicalType::INTEGER},
@@ -436,7 +487,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "shiftValue",
             {TBOX(), LogicalType::DOUBLE},
@@ -445,7 +497,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "shiftTime",
             {TBOX(), LogicalType::INTERVAL},
@@ -454,7 +507,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "scaleValue",
             {TBOX(), LogicalType::INTEGER},
@@ -463,7 +517,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "scaleValue",
             {TBOX(), LogicalType::DOUBLE},
@@ -472,7 +527,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "scaleTime",
             {TBOX(), LogicalType::INTERVAL},
@@ -481,7 +537,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "shiftScaleValue",
             {TBOX(), LogicalType::INTEGER, LogicalType::INTEGER},
@@ -490,7 +547,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "shiftScaleValue",
             {TBOX(), LogicalType::DOUBLE, LogicalType::DOUBLE},
@@ -499,7 +557,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "shiftScaleTime",
             {TBOX(), LogicalType::INTERVAL, LogicalType::INTERVAL},
@@ -508,7 +567,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "expandValue",
             {TBOX(), LogicalType::INTEGER},
@@ -517,7 +577,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "expandValue",
             {TBOX(), LogicalType::DOUBLE},
@@ -526,7 +587,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "expandTime",
             {TBOX(), LogicalType::INTERVAL},
@@ -535,7 +597,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "round",
             {TBOX()},
@@ -544,7 +607,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "round",
             {TBOX(), LogicalType::INTEGER},
@@ -553,7 +617,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_contains",
             {TBOX(), TBOX()},
@@ -562,7 +627,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "@>",
             {TBOX(), TBOX()},
@@ -571,7 +637,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_contained",
             {TBOX(), TBOX()},
@@ -580,7 +647,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "<@",
             {TBOX(), TBOX()},
@@ -589,7 +657,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_overlaps",
             {TBOX(), TBOX()},
@@ -598,7 +667,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "&&",
             {TBOX(), TBOX()},
@@ -607,7 +677,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_same",
             {TBOX(), TBOX()},
@@ -616,7 +687,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "~=",
             {TBOX(), TBOX()},
@@ -625,7 +697,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_adjacent",
             {TBOX(), TBOX()},
@@ -634,7 +707,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "-|-",
             {TBOX(), TBOX()},
@@ -643,7 +717,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_left",
             {TBOX(), TBOX()},
@@ -652,7 +727,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "<<",
             {TBOX(), TBOX()},
@@ -661,7 +737,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_overleft",
             {TBOX(), TBOX()},
@@ -670,7 +747,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "&<",
             {TBOX(), TBOX()},
@@ -679,7 +757,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_right",
             {TBOX(), TBOX()},
@@ -688,7 +767,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             ">>",
             {TBOX(), TBOX()},
@@ -697,7 +777,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_overright",
             {TBOX(), TBOX()},
@@ -706,7 +787,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "&>",
             {TBOX(), TBOX()},
@@ -715,7 +797,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_before",
             {TBOX(), TBOX()},
@@ -724,7 +807,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "<<#",
             {TBOX(), TBOX()},
@@ -733,7 +817,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_overbefore",
             {TBOX(), TBOX()},
@@ -744,7 +829,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     // Error with #, DuckDB's lexer defines op_chars without #
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "&<#",
             {TBOX(), TBOX()},
@@ -753,7 +839,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_after",
             {TBOX(), TBOX()},
@@ -762,7 +849,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "#>>",
             {TBOX(), TBOX()},
@@ -771,7 +859,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_overafter",
             {TBOX(), TBOX()},
@@ -780,7 +869,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "#&>",
             {TBOX(), TBOX()},
@@ -789,7 +879,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_union",
             {TBOX(), TBOX()},
@@ -798,7 +889,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_intersection",
             {TBOX(), TBOX()},
@@ -807,7 +899,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "+",
             {TBOX(), TBOX()},
@@ -816,7 +909,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "*",
             {TBOX(), TBOX()},
@@ -825,7 +919,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_eq",
             {TBOX(), TBOX()},
@@ -834,7 +929,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_ne",
             {TBOX(), TBOX()},
@@ -843,7 +939,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_lt",
             {TBOX(), TBOX()},
@@ -852,7 +949,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_le",
             {TBOX(), TBOX()},
@@ -861,7 +959,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_ge",
             {TBOX(), TBOX()},
@@ -869,7 +968,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TboxFunctions::Tbox_ge
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_gt",
             {TBOX(), TBOX()},
@@ -878,7 +978,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tbox_cmp",
             {TBOX(), TBOX()},
@@ -887,7 +988,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "=",
             {TBOX(), TBOX()},
@@ -896,7 +998,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "<>",
             {TBOX(), TBOX()},
@@ -905,7 +1008,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "<",
             {TBOX(), TBOX()},
@@ -914,7 +1018,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "<=",
             {TBOX(), TBOX()},
@@ -923,7 +1028,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             ">=",
             {TBOX(), TBOX()},
@@ -931,7 +1037,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TboxFunctions::Tbox_ge
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             ">",
             {TBOX(), TBOX()},

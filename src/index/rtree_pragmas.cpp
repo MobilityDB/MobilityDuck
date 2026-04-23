@@ -8,7 +8,7 @@
 #include "duckdb/storage/table/scan_state.hpp"
 #include "duckdb/transaction/duck_transaction.hpp"
 #include "duckdb/transaction/local_storage.hpp"
-#include "duckdb/main/extension/extension_loader.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/catalog/catalog_entry/duck_index_entry.hpp"
 #include "duckdb/storage/data_table.hpp"
 
@@ -213,17 +213,17 @@ static void DebugAllIndexesExecute(ClientContext &context, TableFunctionInput &d
 //-------------------------------------------------------------------------
 // Register all pragma functions
 //-------------------------------------------------------------------------
-// void RTreeModule::RegisterIndexPragmas(ExtensionLoader &loader) {
+// void RTreeModule::RegisterIndexPragmas(DatabaseInstance &db) {
 // 	ExtensionUtil::RegisterFunction(
 // 	    db, PragmaFunction::PragmaCall("rtree_vacuum_index", VacuumRTreeIndexPragma, {LogicalType::VARCHAR}));
 
 // 	TableFunction info_function("pragma_rtree_index_info", {}, RTreeIndexInfoExecute, RTreeIndexInfoBind,
 // 	                            RTreeIndexInfoInitGlobal);
-// 	loader.RegisterFunction( info_function);
+// 	ExtensionUtil::RegisterFunction(db, info_function);
 
 //     TableFunction debug_function("debug_all_indexes", {}, DebugAllIndexesExecute, DebugAllIndexesBind,
 // 	                            DebugAllIndexesInitGlobal);
-// 	loader.RegisterFunction( debug_function);
+// 	ExtensionUtil::RegisterFunction(db, debug_function);
 // }
 
 } 

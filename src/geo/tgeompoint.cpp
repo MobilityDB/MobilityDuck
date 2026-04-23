@@ -13,7 +13,7 @@
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/function/scalar_function.hpp"
-#include "duckdb/main/extension/extension_loader.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include "spatial/spatial_types.hpp"
 
@@ -25,43 +25,48 @@ LogicalType TgeompointType::TGEOMPOINT() {
     return type;
 }
 
-void TgeompointType::RegisterType(ExtensionLoader &loader) {
-    loader.RegisterType( "TGEOMPOINT", TGEOMPOINT());
+void TgeompointType::RegisterType(DatabaseInstance &instance) {
+    ExtensionUtil::RegisterType(instance, "TGEOMPOINT", TGEOMPOINT());
 }
 
-void TgeompointType::RegisterCastFunctions(ExtensionLoader &loader) {
-    loader.RegisterCastFunction(
+void TgeompointType::RegisterCastFunctions(DatabaseInstance &instance) {
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         LogicalType::VARCHAR,
         TGEOMPOINT(),
         TgeompointFunctions::Tpoint_in
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         TGEOMPOINT(),
         LogicalType::VARCHAR,
         TemporalFunctions::Temporal_out
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         TGEOMPOINT(),
         StboxType::STBOX(),
         TgeompointFunctions::Tspatial_to_stbox_cast
     );
 
-    loader.RegisterCastFunction(
+    ExtensionUtil::RegisterCastFunction(
+        instance,
         TGEOMPOINT(),
         SpanTypes::TSTZSPAN(),
         TgeompointFunctions::Temporal_to_tstzspan_cast
     );
 }
 
-void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
+void TgeompointType::RegisterScalarFunctions(DatabaseInstance &instance) {
 
     /* ***************************************************
      * In/out functions
      ****************************************************/
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "asText",
             {TGEOMPOINT()},
@@ -70,7 +75,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "asEWKT",
             {TGEOMPOINT()},
@@ -81,7 +87,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     const auto varchar_list = LogicalType::LIST(LogicalType::VARCHAR);
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "asText",
             {LogicalType::LIST(TGEOMPOINT())},
@@ -89,7 +96,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Spatialarr_as_text
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "asText",
             {LogicalType::LIST(TGEOMPOINT()), LogicalType::INTEGER},
@@ -97,7 +105,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Spatialarr_as_text
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "asText",
             {LogicalType::LIST(GeoTypes::GEOMETRY())},
@@ -105,7 +114,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Spatialarr_as_text
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "asText",
             {LogicalType::LIST(GeoTypes::GEOMETRY()), LogicalType::INTEGER},
@@ -114,7 +124,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "asEWKT",
             {LogicalType::LIST(TGEOMPOINT())},
@@ -122,7 +133,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Spatialarr_as_ewkt
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "asEWKT",
             {LogicalType::LIST(TGEOMPOINT()), LogicalType::INTEGER},
@@ -130,7 +142,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Spatialarr_as_ewkt
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "asEWKT",
             {LogicalType::LIST(GeoTypes::GEOMETRY())},
@@ -138,7 +151,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Spatialarr_as_ewkt
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "asEWKT",
             {LogicalType::LIST(GeoTypes::GEOMETRY()), LogicalType::INTEGER},
@@ -150,7 +164,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
     * Constructor functions
     ****************************************************/
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "TGEOMPOINT",
             {GeoTypes::GEOMETRY(), LogicalType::TIMESTAMP_TZ},
@@ -159,7 +174,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "TGEOMPOINT",
             {GeoTypes::GEOMETRY(), LogicalType::TIMESTAMP_TZ, LogicalType::INTEGER}, // with SRID
@@ -168,7 +184,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tgeompoint",
             {GeoTypes::GEOMETRY(), SetTypes::tstzset()},
@@ -177,7 +194,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tgeompoint",
             {GeoTypes::GEOMETRY(), SpanTypes::TSTZSPAN()},
@@ -186,7 +204,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-     loader.RegisterFunction(
+     ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tgeompoint",
             {GeoTypes::GEOMETRY(), SpanTypes::TSTZSPAN(), LogicalType::VARCHAR},
@@ -195,7 +214,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tgeompoint",
             {GeoTypes::GEOMETRY(), SpansetTypes::tstzspanset()},
@@ -204,7 +224,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tgeompoint",
             {GeoTypes::GEOMETRY(), SpansetTypes::tstzspanset(), LogicalType::VARCHAR},
@@ -213,7 +234,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tgeompointSeq",
             {LogicalType::LIST(TGEOMPOINT())},
@@ -223,7 +245,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tgeompointSeqSet",
             {LogicalType::LIST(TGEOMPOINT())},
@@ -232,7 +255,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stbox",
             {TGEOMPOINT()},
@@ -244,7 +268,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Conversion functions
      ****************************************************/
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "timeSpan",
             {TGEOMPOINT()},
@@ -257,7 +282,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
      * Transformation functions
      ****************************************************/
     
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tgeompointInst",
             {TGEOMPOINT()},
@@ -266,7 +292,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tgeompointSeq",
             {TGEOMPOINT(), LogicalType::VARCHAR},
@@ -275,7 +302,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tgeompointSeq",
             {TGEOMPOINT()},
@@ -284,7 +312,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tgeompointSeqSet",
             {TGEOMPOINT(), LogicalType::VARCHAR},
@@ -293,7 +322,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tgeompointSeqSet",
             {TGEOMPOINT()},
@@ -302,7 +332,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "setInterp",
             {TGEOMPOINT(), LogicalType::VARCHAR},
@@ -311,7 +342,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "appendInstant",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -320,7 +352,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "appendSequence",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -329,7 +362,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "merge",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -338,7 +372,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
      );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "merge",
             {LogicalType::LIST(TGEOMPOINT())},
@@ -350,7 +385,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
     * Accessor functions
     ****************************************************/
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tempSubtype",
             {TGEOMPOINT()},
@@ -359,7 +395,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "interp",
             {TGEOMPOINT()},
@@ -368,7 +405,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "getValue",
             {TGEOMPOINT()},
@@ -377,7 +415,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "getTimestamp",
             {TGEOMPOINT()},
@@ -386,7 +425,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "valueSet",
             {TGEOMPOINT()},
@@ -395,7 +435,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "valueN",
             {TGEOMPOINT(), LogicalType::INTEGER},
@@ -404,7 +445,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "getTime",
             {TGEOMPOINT()},
@@ -413,7 +455,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "startValue",
             {TGEOMPOINT()},
@@ -422,7 +465,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "endValue",
             {TGEOMPOINT()},
@@ -430,7 +474,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Tgeompoint_end_value
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "duration",
             {TGEOMPOINT()},
@@ -439,7 +484,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "duration",
             {TGEOMPOINT(), LogicalType::BOOLEAN},
@@ -448,7 +494,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "memSize",
             {TGEOMPOINT()},
@@ -457,7 +504,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "lowerInc",
             {TGEOMPOINT()},
@@ -466,7 +514,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "upperInc",
             {TGEOMPOINT()},
@@ -475,7 +524,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "numInstants",
             {TGEOMPOINT()},
@@ -484,7 +534,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "startInstant",
             {TGEOMPOINT()},
@@ -493,7 +544,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "endInstant",
             {TGEOMPOINT()},
@@ -502,7 +554,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "instantN",
             {TGEOMPOINT(), LogicalType::INTEGER},
@@ -511,7 +564,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "instants",
             {TGEOMPOINT()},
@@ -520,7 +574,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "numTimestamps",
             {TGEOMPOINT()},
@@ -528,7 +583,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TemporalFunctions::Temporal_num_timestamps
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "startTimestamp",
             {TGEOMPOINT()},
@@ -537,7 +593,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "endTimestamp",
             {TGEOMPOINT()},
@@ -546,7 +603,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "timestampN",
             {TGEOMPOINT(), LogicalType::INTEGER},
@@ -555,7 +613,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "timestamps",
             {TGEOMPOINT()},
@@ -564,7 +623,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "numSequences",
             {TGEOMPOINT()},
@@ -573,7 +633,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "startSequence",
             {TGEOMPOINT()},
@@ -582,7 +643,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "endSequence",
             {TGEOMPOINT()},
@@ -591,7 +653,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
     
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "sequenceN",
             {TGEOMPOINT(), LogicalType::INTEGER},
@@ -600,7 +663,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "sequences",
             {TGEOMPOINT()},
@@ -609,7 +673,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "segments",
             {TGEOMPOINT()},
@@ -621,7 +686,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Shift and Scale functions
      ****************************************************/
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "shiftTime",
             {TGEOMPOINT(), LogicalType::INTERVAL},
@@ -630,7 +696,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "scaleTime",
             {TGEOMPOINT(), LogicalType::INTERVAL},
@@ -639,7 +706,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "shiftScaleTime",
             {TGEOMPOINT(), LogicalType::INTERVAL, LogicalType::INTERVAL},
@@ -654,7 +722,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
      * Restriction functions
      ****************************************************/
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "atValues",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -663,7 +732,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "minusValues",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -672,7 +742,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "atValues",
             {TGEOMPOINT(), SpatialSetType::geomset()},
@@ -681,7 +752,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "minusValues",
             {TGEOMPOINT(), SpatialSetType::geomset()},
@@ -690,7 +762,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "atTime",
             {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
@@ -699,7 +772,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "minusTime",
             {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
@@ -708,7 +782,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "valueAtTimestamp",
             {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
@@ -717,7 +792,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
     
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "atTime",
             {TGEOMPOINT(), SetTypes::tstzset()},
@@ -726,7 +802,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "minusTime",
             {TGEOMPOINT(), SetTypes::tstzset()},
@@ -735,7 +812,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "atTime",
             {TGEOMPOINT(), SpanTypes::TSTZSPAN()},
@@ -744,7 +822,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "minusTime",
             {TGEOMPOINT(), SpanTypes::TSTZSPAN()},
@@ -753,7 +832,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "atTime",
             {TGEOMPOINT(), SpansetTypes::tstzspanset()},
@@ -762,7 +842,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "minusTime",
             {TGEOMPOINT(), SpansetTypes::tstzspanset()},
@@ -771,7 +852,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "beforeTimestamp",
             {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
@@ -780,7 +862,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "afterTimestamp",
             {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
@@ -792,7 +875,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Modification function
      ****************************************************/
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "insert",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -801,7 +885,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "insert",
             {TGEOMPOINT(), TGEOMPOINT(), LogicalType::BOOLEAN},
@@ -810,7 +895,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "update",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -819,7 +905,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "update",
             {TGEOMPOINT(), TGEOMPOINT(), LogicalType::BOOLEAN},
@@ -828,7 +915,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "deleteTime",
             {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
@@ -836,7 +924,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TemporalFunctions::Temporal_delete_timestamptz
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "deleteTime",
             {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN},
@@ -845,7 +934,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "deleteTime",
             {TGEOMPOINT(), SetTypes::tstzset()},
@@ -853,7 +943,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TemporalFunctions::Temporal_delete_tstzset
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "deleteTime",
             {TGEOMPOINT(), SetTypes::tstzset(), LogicalType::BOOLEAN},
@@ -862,7 +953,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "deleteTime",
             {TGEOMPOINT(), SpanTypes::TSTZSPAN()},
@@ -871,7 +963,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "deleteTime",
             {TGEOMPOINT(), SpanTypes::TSTZSPAN(), LogicalType::BOOLEAN},
@@ -880,7 +973,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "deleteTime",
             {TGEOMPOINT(), SpansetTypes::tstzspanset()},
@@ -889,7 +983,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "deleteTime",
             {TGEOMPOINT(), SpansetTypes::tstzspanset(), LogicalType::BOOLEAN},
@@ -903,7 +998,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
      * Stops function
      ****************************************************/
     
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "stops",
             {TGEOMPOINT(), LogicalType::DOUBLE, LogicalType::INTERVAL},
@@ -915,7 +1011,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Comparison functions
      ****************************************************/
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "temporal_eq",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -924,7 +1021,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "temporal_ne",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -933,7 +1031,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "temporal_lt",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -942,7 +1041,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "temporal_le",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -951,7 +1051,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "temporal_gt",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -960,7 +1061,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "temporal_ge",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -969,7 +1071,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "temporal_cmp",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -978,7 +1081,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-        loader.RegisterFunction(
+        ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "=",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -987,7 +1091,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "<>",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -996,7 +1101,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "<",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1005,7 +1111,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "<=",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1014,7 +1121,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             ">",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1023,7 +1131,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             ">=",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1035,7 +1144,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Spatial functions
      ****************************************************/
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "getX",
             {TGEOMPOINT()},
@@ -1044,7 +1154,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "getY",
             {TGEOMPOINT()},
@@ -1053,7 +1164,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "getZ",
             {TGEOMPOINT()},
@@ -1062,7 +1174,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "length",
             {TGEOMPOINT()},
@@ -1071,7 +1184,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "cumulativeLength",
             {TGEOMPOINT()},
@@ -1080,7 +1194,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "speed",
             {TGEOMPOINT()},
@@ -1089,7 +1204,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "twCentroid",
             {TGEOMPOINT()},
@@ -1098,7 +1214,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "direction",
             {TGEOMPOINT()},
@@ -1107,7 +1224,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "azimuth",
             {TGEOMPOINT()},
@@ -1116,7 +1234,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "angularDifference",
             {TGEOMPOINT()},
@@ -1125,7 +1244,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "isSimple",
             {TGEOMPOINT()},
@@ -1134,7 +1254,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "makeSimple",
             {TGEOMPOINT()},
@@ -1143,7 +1264,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "trajectory",
             {TGEOMPOINT()},
@@ -1152,7 +1274,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "trajectory_gs",
             {TGEOMPOINT()},
@@ -1161,7 +1284,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "atGeometry",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1170,7 +1294,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "minusGeometry",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1179,7 +1304,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "minusGeometry",
             {TGEOMPOINT(), GeoTypes::GEOMETRY(), SpanTypes::FLOATSPAN()},
@@ -1188,7 +1314,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "atStbox",
             {TGEOMPOINT(), StboxType::STBOX()},
@@ -1197,7 +1324,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "atStbox",
             {TGEOMPOINT(), StboxType::STBOX(), LogicalType::BOOLEAN},
@@ -1206,7 +1334,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "minusStbox",
             {TGEOMPOINT(), StboxType::STBOX()},
@@ -1215,7 +1344,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "minusStbox",
             {TGEOMPOINT(), StboxType::STBOX(), LogicalType::BOOLEAN},
@@ -1224,7 +1354,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "transform",
             {TGEOMPOINT(), LogicalType::INTEGER},
@@ -1233,7 +1364,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "round",
             {TGEOMPOINT(), LogicalType::INTEGER},
@@ -1242,7 +1374,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "round",
             {TGEOMPOINT()},
@@ -1254,7 +1387,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Spatial relationships
      ****************************************************/
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "eContains",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1262,7 +1396,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Econtains_geo_tgeo
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "aContains",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1271,7 +1406,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
     
-     loader.RegisterFunction(
+     ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "eDisjoint",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1280,7 +1416,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "eDisjoint",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1289,7 +1426,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "eDisjoint",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1298,7 +1436,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "aDisjoint",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1307,7 +1446,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "aDisjoint",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1316,7 +1456,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "aDisjoint",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1325,7 +1466,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "eIntersects",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1333,7 +1475,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Eintersects_tgeo_geo  
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "eIntersects",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1342,7 +1485,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "eIntersects",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1351,7 +1495,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "aIntersects",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1359,7 +1504,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Aintersects_tgeo_geo  
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "aIntersects",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1368,7 +1514,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "aIntersects",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1377,7 +1524,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "eTouches",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1386,7 +1534,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "eTouches",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1395,7 +1544,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "aTouches",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1404,7 +1554,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "aTouches",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1413,7 +1564,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "eDwithin",
             {TGEOMPOINT(), TGEOMPOINT(), LogicalType::DOUBLE},
@@ -1422,7 +1574,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "eDwithin",
             {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::DOUBLE},
@@ -1431,7 +1584,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "eDwithin",
             {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE},
@@ -1440,7 +1594,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "aDwithin",
             {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::DOUBLE},
@@ -1449,7 +1604,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "aDwithin",
             {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE},
@@ -1458,7 +1614,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-     loader.RegisterFunction(
+     ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "aDwithin",
             {TGEOMPOINT(), TGEOMPOINT(), LogicalType::DOUBLE},
@@ -1470,7 +1627,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Temporal-spatial relationships
      ****************************************************/
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tContains",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1479,7 +1637,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
     
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tContains",
             {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::BOOLEAN},
@@ -1488,7 +1647,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tDisjoint",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1497,7 +1657,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tDisjoint",
             {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::BOOLEAN},
@@ -1506,7 +1667,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tDisjoint",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1515,7 +1677,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tDisjoint",
             {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::BOOLEAN},
@@ -1524,7 +1687,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tDisjoint",
             {TGEOMPOINT(), TGEOMPOINT(), LogicalType::BOOLEAN},
@@ -1533,7 +1697,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tDisjoint",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1542,7 +1707,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tIntersects",
             {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::BOOLEAN},
@@ -1551,7 +1717,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tIntersects",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1560,7 +1727,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tIntersects",
             {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::BOOLEAN},
@@ -1569,7 +1737,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tIntersects",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1578,7 +1747,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tIntersects",
             {TGEOMPOINT(), TGEOMPOINT(), LogicalType::BOOLEAN},
@@ -1586,7 +1756,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Tintersects_tgeo_tgeo
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tIntersects",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1595,7 +1766,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tTouches",
             {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::BOOLEAN},
@@ -1603,7 +1775,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Ttouches_geo_tgeo
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tTouches",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1611,7 +1784,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Ttouches_geo_tgeo
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tTouches",
             {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::BOOLEAN},
@@ -1619,7 +1793,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Ttouches_tgeo_geo
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tTouches",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1627,7 +1802,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Ttouches_tgeo_geo
         )
     );
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tDwithin",
             {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::DOUBLE},
@@ -1636,7 +1812,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tDwithin",
             {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::DOUBLE, LogicalType::BOOLEAN},
@@ -1645,7 +1822,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tDwithin",
             {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE, LogicalType::BOOLEAN},
@@ -1654,7 +1832,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tDwithin",
             {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE},
@@ -1663,7 +1842,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tDwithin",
             {TGEOMPOINT(), TGEOMPOINT(), LogicalType::DOUBLE},
@@ -1672,7 +1852,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "tDwithin",
             {TGEOMPOINT(), TGEOMPOINT(), LogicalType::DOUBLE, LogicalType::BOOLEAN},
@@ -1686,7 +1867,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
      * Operators (workaround as functions)
      ****************************************************/
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "&&", // overlaps
             {TGEOMPOINT(), StboxType::STBOX()},
@@ -1695,7 +1877,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "&&", // overlaps
             {TGEOMPOINT(), SpanTypes::TSTZSPAN()},
@@ -1704,7 +1887,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "@>", // contains
             {TGEOMPOINT(), StboxType::STBOX()},
@@ -1717,7 +1901,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
      * Distance functions
      ****************************************************/
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "<->",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1726,7 +1911,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "shortestLine",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1746,7 +1932,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     //     )
     // );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "collect_gs",
             {LogicalType::LIST(LogicalType::BLOB)},
@@ -1755,7 +1942,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    ExtensionUtil::RegisterFunction(
+        instance,
         ScalarFunction(
             "distance_gs",
             {LogicalType::BLOB, LogicalType::BLOB},
