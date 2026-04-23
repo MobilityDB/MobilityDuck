@@ -479,15 +479,10 @@ SELECT numTimestamps(tgeompoint 'Point(1 1)@2000-01-01');
 ----
 1
 
-# Skipped on bump to DuckDB 1.4: scalar-function signature mismatch exposed by the new constant-folder type checks. Re-enable in the follow-up PR that fixes the binding signatures.
-mode skip
-
-query I 
+query I
 SELECT ST_AsText(valueN(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]', 1));
 ----
 POINT (1 1)
-
-mode unskip
 
 
 query I 

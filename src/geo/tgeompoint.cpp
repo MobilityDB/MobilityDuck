@@ -398,7 +398,12 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(
         ScalarFunction(
             "valueN",
-            {TGEOMPOINT(), LogicalType::INTEGER},
+            // BIGINT to match the sibling `valueN(<other temporal>, BIGINT)`
+            // overload in temporal.cpp and the C function's int64_t template
+            // arg (BinaryExecutor<string_t,int64_t,string_t>). Registering
+            // INTEGER here made DuckDB 1.4 reject the bind with
+            // "Expected INT64, found INT32" (tgeompoint.test:482).
+            {TGEOMPOINT(), LogicalType::BIGINT},
             GeoTypes::GEOMETRY(),
             TemporalFunctions::Temporal_value_n
         )
