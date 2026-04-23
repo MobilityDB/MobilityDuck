@@ -800,14 +800,15 @@ void SpansetFunctions::Tstzspanset_duration(DataChunk &args, ExpressionState &st
 // --- numSpans ---
 void SpansetFunctions::Spanset_num_spans(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
-    UnaryExecutor::Execute<string_t, int64_t>(
+    // numSpans is registered as returning LogicalType::INTEGER.
+    UnaryExecutor::Execute<string_t, int32_t>(
         input, result, args.size(),
-        [&](string_t input_blob) -> int64_t {                                 
+        [&](string_t input_blob) -> int32_t {
             const uint8_t *data = (const uint8_t *)input_blob.GetData();
             size_t size = input_blob.GetSize();
             SpanSet *s = (SpanSet*)malloc(size);
-            memcpy(s, data, size);            
-            int64_t num_spans = spanset_num_spans(s);  
+            memcpy(s, data, size);
+            int32_t num_spans = spanset_num_spans(s);
             free(s);
             return num_spans;
         });
@@ -872,14 +873,15 @@ void SpansetFunctions::Spanset_span_n(DataChunk &args, ExpressionState &state, V
 // --- numDates ---
 void SpansetFunctions::Datespanset_num_dates(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
-    UnaryExecutor::Execute<string_t, int64_t>(
+    // Registered as returning LogicalType::INTEGER.
+    UnaryExecutor::Execute<string_t, int32_t>(
         input, result, args.size(),
-        [&](string_t input_blob) -> int64_t {                                 
+        [&](string_t input_blob) -> int32_t {
             const uint8_t *data = (const uint8_t *)input_blob.GetData();
             size_t size = input_blob.GetSize();
             SpanSet *s = (SpanSet*)malloc(size);
-            memcpy(s, data, size);            
-            int64_t num_dates = datespanset_num_dates(s);  
+            memcpy(s, data, size);
+            int32_t num_dates = datespanset_num_dates(s);
             free(s);
             return num_dates;
         });
@@ -960,14 +962,15 @@ void SpansetFunctions::Datespanset_dates(DataChunk &args, ExpressionState &state
 // --- numTimestamps ---
 void SpansetFunctions::Tstzspanset_num_timestamps(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input = args.data[0];
-    UnaryExecutor::Execute<string_t, int64_t>(
+    // Registered as returning LogicalType::INTEGER.
+    UnaryExecutor::Execute<string_t, int32_t>(
         input, result, args.size(),
-        [&](string_t input_blob) -> int64_t {                                 
+        [&](string_t input_blob) -> int32_t {
             const uint8_t *data = (const uint8_t *)input_blob.GetData();
             size_t size = input_blob.GetSize();
             SpanSet *s = (SpanSet*)malloc(size);
-            memcpy(s, data, size);            
-            int64_t num_timestamps = tstzspanset_num_timestamps(s);  
+            memcpy(s, data, size);
+            int32_t num_timestamps = tstzspanset_num_timestamps(s);
             free(s);
             return num_timestamps;
         });
