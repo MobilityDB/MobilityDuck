@@ -64,9 +64,13 @@ SELECT tstzset '{2000-01-01, 2000-01-02, 2000-01-03}';
 
 statement error
 SELECT tstzset '2000-01-01, 2000-01-02';
+----
+Could not parse
 
 statement error
 SELECT tstzset '{2000-01-01, 2000-01-02';
+----
+Could not parse
 
 # =============================================================================
 # Output in WKT format
@@ -80,6 +84,8 @@ SELECT asText(floatset '{1.12345678, 2.123456789}', 6);
 # --- negative digits should error ---
 statement error
 SELECT asText(floatset '{1.12345678, 2.123456789}', -6);
+----
+cannot be negative
 
 # =============================================================================
 # Constructors
@@ -108,6 +114,8 @@ SELECT set(ARRAY [timestamptz '2000-01-01', '2000-01-01', '2000-01-03']);
 # --- empty array should error ---
 statement error
 SELECT set('{}'::timestamptz[]);
+----
+cannot be empty
 
 mode skip
 # gap: set(ARRAY[GEOMETRY ...]) geomset constructor is not registered in
@@ -126,12 +134,18 @@ SELECT asText(set(ARRAY[geometry 'Point(1 1)', 'Linestring(1 1,2 2)']));
 
 statement error
 SELECT set(ARRAY[geometry 'Point(1 1)', 'Point(1 1 1)']);
+----
+mixed 2D/3D
 
 statement error
 SELECT set(ARRAY[geometry 'Point(1 1)', 'Point empty']);
+----
+non-empty
 
 statement error
 SELECT set(ARRAY[geometry 'Point(1 1)', 'SRID=5676;Point(1 1)']);
+----
+mixed SRID
 mode unskip
 
 # =============================================================================
@@ -255,6 +269,8 @@ SELECT splitNspans(intset '{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}', 10);
 
 statement error
 SELECT splitNspans(intset '{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}', -1);
+----
+strictly positive
 
 query I
 SELECT splitEachNspans(intset '{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}', 1);
@@ -288,6 +304,8 @@ SELECT splitEachNspans(intset '{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}', 6);
 
 statement error
 SELECT splitEachNspans(intset '{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}', -1);
+----
+strictly positive
 mode unskip
 
 query I
