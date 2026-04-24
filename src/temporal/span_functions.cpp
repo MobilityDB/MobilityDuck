@@ -408,23 +408,56 @@ bool SpanFunctions::Set_to_span_cast(Vector &source, Vector &result, idx_t count
     return true;
 }
 
+// spans(<set_type>) — returns a LIST(<span_type>) of unit spans, one per
+// element of the input set. Mirrors SpansetFunctions::Spanset_spans but
+// reads a Set and uses set_spans() / set_num_values() from MEOS.
 void SpanFunctions::Set_spans(DataChunk &args, ExpressionState &state, Vector &result) {
-    BinaryExecutor::Execute<string_t, string_t, string_t>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t set_blob, string_t span_blob) -> string_t {
-            const uint8_t *set_data = reinterpret_cast<const uint8_t*>(set_blob.GetData());
-            size_t set_size = set_blob.GetSize();
-            const Set *s = reinterpret_cast<const Set*>(set_data);
-            Span *span = set_to_span(s);
-            if (span == NULL) {
-                throw InvalidInputException("Failed to convert set to span");
-            }
-            size_t span_size = sizeof(*span);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)span, span_size);
-            free(span);
-            return out;
+    auto &set_vec = args.data[0];
+    idx_t row_count = args.size();
+    set_vec.Flatten(row_count);
+
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+
+    idx_t total_offset = 0;
+    const size_t span_bytes = sizeof(Span);
+
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (FlatVector::IsNull(set_vec, i)) {
+            result_validity.SetInvalid(i);
+            continue;
         }
-    );
+
+        string_t blob = FlatVector::GetData<string_t>(set_vec)[i];
+        Set *s = (Set *)malloc(blob.GetSize());
+        memcpy(s, blob.GetData(), blob.GetSize());
+
+        int num = set_num_values(s);
+        Span *spans = set_spans(s);
+        free(s);
+
+        if (!spans || num <= 0) {
+            if (spans) free(spans);
+            result_validity.SetInvalid(i);
+            continue;
+        }
+
+        ListVector::SetListSize(result, total_offset + num);
+        list_entries[i] = list_entry_t{total_offset, static_cast<uint64_t>(num)};
+
+        auto *child_data = FlatVector::GetData<string_t>(child_vector);
+        for (int j = 0; j < num; ++j) {
+            child_data[total_offset + j] =
+                StringVector::AddStringOrBlob(child_vector, reinterpret_cast<const char *>(&spans[j]), span_bytes);
+        }
+
+        free(spans);
+        total_offset += num;
+        result_validity.SetValid(i);
+    }
 }
 
 // --- Conversion: intspan <-> floatspan ---
