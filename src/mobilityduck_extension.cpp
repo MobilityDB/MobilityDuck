@@ -130,17 +130,42 @@ static void ConfigureMeosSridCsvOnce() {
 }
 
 // =====================================================================
-// 4. Extension load logic
+// 4. MEOS error handler: translate MEOS_ERROR to a DuckDB exception
+// =====================================================================
+
+// MEOS's default handler calls exit(EXIT_FAILURE) on errlevel == ERROR,
+// which tears down the whole DuckDB process on any invalid input. We
+// install a handler that throws duckdb::InvalidInputException instead,
+// so MEOS errors surface as ordinary query failures and `statement
+// error` tests behave as expected.
+//
+// `ERROR` is the numeric value of PostgreSQL's elog ERROR level (21),
+// carried through MEOS via <postgres.h>. Anything at or above that
+// level (ERROR, FATAL, PANIC) is fatal in MEOS's model; lower levels
+// are informational and we ignore them silently.
+static constexpr int MEOS_ERRLEVEL_ERROR = 21;
+
+extern "C" void MobilityduckMeosErrorHandler(int errlevel, int errcode, const char *errmsg) {
+    (void) errcode;
+    if (errlevel >= MEOS_ERRLEVEL_ERROR) {
+        throw duckdb::InvalidInputException(errmsg ? errmsg : "MEOS error");
+    }
+}
+
+// =====================================================================
+// 5. Extension load logic
 // =====================================================================
 
 static void LoadInternal(ExtensionLoader &loader) {
 	// Configure MEOS SRID CSV once (env / embedded)
 	ConfigureMeosSridCsvOnce();
 
-	// Initialize MEOS once
+	// Initialize MEOS once and install our error handler so MEOS errors
+	// become DuckDB exceptions instead of exit()ing the process.
 	static std::once_flag meos_init_flag;
     std::call_once(meos_init_flag, []() {
         meos_initialize();
+        meos_initialize_error_handler(&MobilityduckMeosErrorHandler);
     });
 
 
