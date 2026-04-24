@@ -319,6 +319,23 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
 
 
+    // spans(<set_type>) — list of unit spans, one per set element
+    loader.RegisterFunction(
+        ScalarFunction("spans", {SetTypes::intset()},
+                       LogicalType::LIST(SpanTypes::INTSPAN()), SpanFunctions::Set_spans));
+    loader.RegisterFunction(
+        ScalarFunction("spans", {SetTypes::bigintset()},
+                       LogicalType::LIST(SpanTypes::BIGINTSPAN()), SpanFunctions::Set_spans));
+    loader.RegisterFunction(
+        ScalarFunction("spans", {SetTypes::floatset()},
+                       LogicalType::LIST(SpanTypes::FLOATSPAN()), SpanFunctions::Set_spans));
+    loader.RegisterFunction(
+        ScalarFunction("spans", {SetTypes::dateset()},
+                       LogicalType::LIST(SpanTypes::DATESPAN()), SpanFunctions::Set_spans));
+    loader.RegisterFunction(
+        ScalarFunction("spans", {SetTypes::tstzset()},
+                       LogicalType::LIST(SpanTypes::TSTZSPAN()), SpanFunctions::Set_spans));
+
     loader.RegisterFunction(
         ScalarFunction("splitNSpans", {SetTypes::intset(), LogicalType::INTEGER},
                        LogicalType::LIST(SpanTypes::INTSPAN()), SpanFunctions::Set_split_n_spans));
