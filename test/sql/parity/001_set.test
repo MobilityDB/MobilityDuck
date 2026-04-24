@@ -207,10 +207,6 @@ SELECT spans(intset '{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}');
 {"[1, 2)","[2, 3)","[3, 4)","[4, 5)","[5, 6)","[6, 7)","[7, 8)","[8, 9)","[9, 10)","[10, 11)"}
 mode unskip
 
-mode skip
-# Naming divergence: MobilityDB uses lowercase splitNspans /
-# splitEachNspans; MobilityDuck registers camelCase splitNSpans /
-# splitEachNSpans in src/temporal/span.cpp.
 query I
 SELECT splitNspans(intset '{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}', 1);
 ----
@@ -285,7 +281,6 @@ statement error
 SELECT splitEachNspans(intset '{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}', -1);
 ----
 strictly positive
-mode unskip
 
 query I
 SELECT numValues(dateset '{2000-01-01}');

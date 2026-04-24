@@ -349,7 +349,41 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(
         ScalarFunction("splitEachNSpans", {SetTypes::tstzset(), LogicalType::INTEGER},
                        LogicalType::LIST(SpanTypes::TSTZSPAN()), SpanFunctions::Set_split_each_n_spans));
-                
+
+    // Lowercase-"spans" aliases matching MobilityDB's SQL surface
+    // (`splitNspans` / `splitEachNspans`). The camelCase forms above
+    // stay registered for back-compat with existing MobilityDuck callers.
+    loader.RegisterFunction(
+        ScalarFunction("splitNspans", {SetTypes::intset(), LogicalType::INTEGER},
+                       LogicalType::LIST(SpanTypes::INTSPAN()), SpanFunctions::Set_split_n_spans));
+    loader.RegisterFunction(
+        ScalarFunction("splitNspans", {SetTypes::bigintset(), LogicalType::INTEGER},
+                       LogicalType::LIST(SpanTypes::BIGINTSPAN()), SpanFunctions::Set_split_n_spans));
+    loader.RegisterFunction(
+        ScalarFunction("splitNspans", {SetTypes::floatset(), LogicalType::INTEGER},
+                       LogicalType::LIST(SpanTypes::FLOATSPAN()), SpanFunctions::Set_split_n_spans));
+    loader.RegisterFunction(
+        ScalarFunction("splitNspans", {SetTypes::dateset(), LogicalType::INTEGER},
+                       LogicalType::LIST(SpanTypes::DATESPAN()), SpanFunctions::Set_split_n_spans));
+    loader.RegisterFunction(
+        ScalarFunction("splitNspans", {SetTypes::tstzset(), LogicalType::INTEGER},
+                       LogicalType::LIST(SpanTypes::TSTZSPAN()), SpanFunctions::Set_split_n_spans));
+    loader.RegisterFunction(
+        ScalarFunction("splitEachNspans", {SetTypes::intset(), LogicalType::INTEGER},
+                       LogicalType::LIST(SpanTypes::INTSPAN()), SpanFunctions::Set_split_each_n_spans));
+    loader.RegisterFunction(
+        ScalarFunction("splitEachNspans", {SetTypes::bigintset(), LogicalType::INTEGER},
+                       LogicalType::LIST(SpanTypes::BIGINTSPAN()), SpanFunctions::Set_split_each_n_spans));
+    loader.RegisterFunction(
+        ScalarFunction("splitEachNspans", {SetTypes::floatset(), LogicalType::INTEGER},
+                       LogicalType::LIST(SpanTypes::FLOATSPAN()), SpanFunctions::Set_split_each_n_spans));
+    loader.RegisterFunction(
+        ScalarFunction("splitEachNspans", {SetTypes::dateset(), LogicalType::INTEGER},
+                       LogicalType::LIST(SpanTypes::DATESPAN()), SpanFunctions::Set_split_each_n_spans));
+    loader.RegisterFunction(
+        ScalarFunction("splitEachNspans", {SetTypes::tstzset(), LogicalType::INTEGER},
+                       LogicalType::LIST(SpanTypes::TSTZSPAN()), SpanFunctions::Set_split_each_n_spans));
+
     loader.RegisterFunction(
         ScalarFunction("floor", {SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Floatspan_floor)
     );
