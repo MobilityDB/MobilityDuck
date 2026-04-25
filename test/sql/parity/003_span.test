@@ -1,0 +1,821 @@
+# name: test/sql/parity/003_span.test
+# description: MobilityDB regression file 003_span.test.sql adapted for MobilityDuck
+# group: [sql]
+#
+# Queries from mobilitydb/test/temporal/queries/003_span.test.sql.
+# Expected outputs reflect MobilityDuck's display format (ISO dates,
+# UTC timestamps under TZ=UTC) rather than MobilityDB's PG-locale
+# format ("01-01-2000", "Sat Jan 01 00:00:00 2000 PST").
+
+require mobilityduck
+
+# =============================================================================
+# I/O — parse errors
+# =============================================================================
+
+statement error
+SELECT intspan '[1,2] xxx';
+----
+Could not parse
+
+statement error
+SELECT floatspan '[1,2] xxx';
+----
+Could not parse
+
+statement error
+SELECT tstzspan '[2000-01-01,2000-01-02] xxx';
+----
+Could not parse
+
+statement error
+SELECT tstzspan '2000-01-01, 2000-01-02';
+----
+Could not parse
+
+statement error
+SELECT tstzspan '[2000-01-01, 2000-01-02';
+----
+Could not parse
+
+# =============================================================================
+# Output in WKT format
+# =============================================================================
+
+query I
+SELECT asText(floatspan '[1.12345678, 2.123456789]', 6);
+----
+[1.123457, 2.123457]
+
+statement error
+SELECT asText(floatspan '[1.12345678, 2.123456789]', -6);
+----
+cannot be negative
+
+# =============================================================================
+# Constructors
+# =============================================================================
+
+query I
+SELECT span(timestamptz '2000-01-01', '2000-01-02');
+----
+[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00)
+
+query I
+SELECT span(timestamptz '2000-01-01', '2000-01-01', true, true);
+----
+[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00]
+
+statement error
+SELECT span(timestamptz '2000-01-01', '2000-01-01');
+----
+cannot be empty
+
+statement error
+SELECT span(timestamptz '2000-01-02', '2000-01-01');
+----
+must be less than or equal
+
+# =============================================================================
+# Conversion
+# =============================================================================
+
+mode skip
+# range(<span>) and span(<range>) use PG-only daterange / tstzrange
+# types that DuckDB does not have. The DuckDB-side equivalents would
+# need a separate range/multirange type binding.
+query I
+SELECT range(datespan '[2000-01-01,2000-01-01]');
+----
+empty
+
+query I
+SELECT range(datespan '[2000-01-01,2000-01-02]');
+----
+[2000-01-01,2000-01-03)
+
+query I
+SELECT range(datespan '(2000-01-01,2000-01-02]');
+----
+[2000-01-02,2000-01-03)
+
+query I
+SELECT range(datespan '[2000-01-01,2000-01-02)');
+----
+[2000-01-01,2000-01-02)
+
+query I
+SELECT range(datespan '(2000-01-01,2000-01-03)');
+----
+[2000-01-02,2000-01-03)
+
+query I
+SELECT span(daterange '[2000-01-01,2000-01-01]');
+----
+[2000-01-01, 2000-01-02)
+
+query I
+SELECT span(daterange '[2000-01-01,2000-01-02]');
+----
+[2000-01-01, 2000-01-03)
+
+query I
+SELECT span(daterange '(2000-01-01,2000-01-02]');
+----
+[2000-01-02, 2000-01-03)
+
+query I
+SELECT span(daterange '[2000-01-01,2000-01-02)');
+----
+[2000-01-01, 2000-01-02)
+
+query I
+SELECT span(daterange'(2000-01-01,2000-01-03)');
+----
+[2000-01-02, 2000-01-03)
+mode unskip
+
+query I
+SELECT span(date '2000-01-01');
+----
+[2000-01-01, 2000-01-02)
+
+query I
+SELECT date '2000-01-01'::datespan;
+----
+[2000-01-01, 2000-01-02)
+
+mode skip
+# range(<span>) / span(<range>) — PG range types not portable to DuckDB.
+query I
+SELECT range(tstzspan '[2000-01-01,2000-01-01]');
+----
+empty
+
+query I
+SELECT range(tstzspan '[2000-01-01,2000-01-02]');
+----
+[2000-01-01,2000-01-02]
+
+query I
+SELECT range(tstzspan '(2000-01-01,2000-01-02]');
+----
+(2000-01-01,2000-01-02]
+
+query I
+SELECT range(tstzspan '[2000-01-01,2000-01-02)');
+----
+[2000-01-01,2000-01-02)
+
+query I
+SELECT range(tstzspan '(2000-01-01,2000-01-02)');
+----
+(2000-01-01,2000-01-02)
+
+query I
+SELECT span(tstzrange '[2000-01-01,2000-01-01]');
+----
+[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00]
+
+query I
+SELECT span(tstzrange '[2000-01-01,2000-01-02]');
+----
+[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00]
+
+query I
+SELECT span(tstzrange '(2000-01-01,2000-01-02]');
+----
+(2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00]
+
+query I
+SELECT span(tstzrange '[2000-01-01,2000-01-02)');
+----
+[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00)
+
+query I
+SELECT span(tstzrange'(2000-01-01,2000-01-02)');
+----
+(2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00)
+mode unskip
+
+query I
+SELECT span(timestamptz '2000-01-01');
+----
+[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00]
+
+query I
+SELECT timestamptz '2000-01-01'::tstzspan;
+----
+[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00]
+
+query I
+SELECT (date '2000-01-01'::timestamptz)::tstzspan;
+----
+[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00]
+
+query I
+SELECT span(date '2000-01-01'::timestamptz);
+----
+[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00]
+
+mode skip
+# tstzrange not portable to DuckDB.
+statement error
+SELECT tstzrange '[2000-01-01,]'::tstzspan;
+----
+
+statement error
+SELECT tstzrange '[,2000-01-01]'::tstzspan;
+----
+
+statement error
+SELECT tstzrange 'empty'::tstzspan;
+----
+mode unskip
+
+# =============================================================================
+# Accessor functions
+# =============================================================================
+
+query I
+SELECT lower(tstzspan '[2000-01-01,2000-01-01]');
+----
+2000-01-01 00:00:00+00
+
+query I
+SELECT lower(tstzspan '[2000-01-01,2000-01-02]');
+----
+2000-01-01 00:00:00+00
+
+query I
+SELECT lower(tstzspan '(2000-01-01,2000-01-02]');
+----
+2000-01-01 00:00:00+00
+
+query I
+SELECT lower(tstzspan '[2000-01-01,2000-01-02)');
+----
+2000-01-01 00:00:00+00
+
+query I
+SELECT lower(tstzspan '(2000-01-01,2000-01-02)');
+----
+2000-01-01 00:00:00+00
+
+query I
+SELECT upper(tstzspan '[2000-01-01,2000-01-01]');
+----
+2000-01-01 00:00:00+00
+
+query I
+SELECT upper(tstzspan '[2000-01-01,2000-01-02]');
+----
+2000-01-02 00:00:00+00
+
+query I
+SELECT upper(tstzspan '(2000-01-01,2000-01-02]');
+----
+2000-01-02 00:00:00+00
+
+query I
+SELECT upper(tstzspan '[2000-01-01,2000-01-02)');
+----
+2000-01-02 00:00:00+00
+
+query I
+SELECT upper(tstzspan '(2000-01-01,2000-01-02)');
+----
+2000-01-02 00:00:00+00
+
+query I
+SELECT lowerInc(tstzspan '[2000-01-01,2000-01-01]');
+----
+true
+
+query I
+SELECT lowerInc(tstzspan '[2000-01-01,2000-01-02]');
+----
+true
+
+query I
+SELECT lowerInc(tstzspan '(2000-01-01,2000-01-02]');
+----
+false
+
+query I
+SELECT lowerInc(tstzspan '[2000-01-01,2000-01-02)');
+----
+true
+
+query I
+SELECT lowerInc(tstzspan '(2000-01-01,2000-01-02)');
+----
+false
+
+query I
+SELECT upperInc(tstzspan '[2000-01-01,2000-01-01]');
+----
+true
+
+query I
+SELECT upperInc(tstzspan '[2000-01-01,2000-01-02]');
+----
+true
+
+query I
+SELECT upperInc(tstzspan '(2000-01-01,2000-01-02]');
+----
+true
+
+query I
+SELECT upperInc(tstzspan '[2000-01-01,2000-01-02)');
+----
+false
+
+query I
+SELECT upperInc(tstzspan '(2000-01-01,2000-01-02)');
+----
+false
+
+query I
+SELECT duration(tstzspan '[2000-01-01,2000-01-01]');
+----
+00:00:00
+
+query I
+SELECT duration(tstzspan '[2000-01-01,2000-01-02]');
+----
+1 day
+
+query I
+SELECT duration(tstzspan '(2000-01-01,2000-01-02]');
+----
+1 day
+
+query I
+SELECT duration(tstzspan '[2000-01-01,2000-01-02)');
+----
+1 day
+
+query I
+SELECT duration(tstzspan '(2000-01-01,2000-01-02)');
+----
+1 day
+
+query I
+SELECT span_cmp(tstzspan '[2000-01-01,2000-01-01]', '(2000-01-01,2000-01-02)');
+----
+-1
+
+query I
+SELECT span_cmp(tstzspan '[2000-01-01, 2000-01-02]', '[2000-01-01, 2000-01-02)');
+----
+1
+
+query I
+SELECT tstzspan '[2000-01-01,2000-01-01]' = tstzspan '(2000-01-01,2000-01-02)';
+----
+false
+
+query I
+SELECT tstzspan '[2000-01-01,2000-01-01]' <> tstzspan '(2000-01-01,2000-01-02)';
+----
+true
+
+query I
+SELECT tstzspan '[2000-01-01,2000-01-01]' < tstzspan '(2000-01-01,2000-01-02)';
+----
+true
+
+query I
+SELECT tstzspan '[2000-01-01,2000-01-01]' <= tstzspan '(2000-01-01,2000-01-02)';
+----
+true
+
+query I
+SELECT tstzspan '[2000-01-01,2000-01-01]' > tstzspan '(2000-01-01,2000-01-02)';
+----
+false
+
+query I
+SELECT tstzspan '[2000-01-01,2000-01-01]' >= tstzspan '(2000-01-01,2000-01-02)';
+----
+false
+
+query I
+SELECT span_hash(tstzspan '[2000-01-01,2000-01-02]') = span_hash(tstzspan '[2000-01-01,2000-01-02]');
+----
+true
+
+query I
+SELECT span_hash(tstzspan '[2000-01-01,2000-01-02]') <> span_hash(tstzspan '[2000-01-02,2000-01-02]');
+----
+true
+
+query I
+SELECT span_hash_extended(tstzspan '[2000-01-01,2000-01-02]', 1) = span_hash_extended(tstzspan '[2000-01-01,2000-01-02]', 1);
+----
+true
+
+query I
+SELECT span_hash_extended(tstzspan '[2000-01-01,2000-01-02]', 1) <> span_hash_extended(tstzspan '[2000-01-02,2000-01-02]', 1);
+----
+true
+
+# =============================================================================
+# Canonicalize
+# =============================================================================
+
+query I
+SELECT intspan '[1,2]';
+----
+[1, 3)
+
+query I
+SELECT intspan '(1,2]';
+----
+[2, 3)
+
+query I
+SELECT datespan '[2000-01-01,2000-01-02]';
+----
+[2000-01-01, 2000-01-03)
+
+query I
+SELECT datespan '(2000-01-01,2000-01-02]';
+----
+[2000-01-02, 2000-01-03)
+
+# =============================================================================
+# Transformation functions
+# =============================================================================
+
+query I
+SELECT expand(floatspan '[1,1]', 1);
+----
+[0, 2]
+
+query I
+SELECT expand(floatspan '[1,2]', 1);
+----
+[0, 3]
+
+query I
+SELECT expand(floatspan '(1,4]', -1);
+----
+(2, 3]
+
+query I
+SELECT expand(floatspan '[1,3]', -1);
+----
+[2, 2]
+
+query I
+SELECT expand(floatspan '[1,3)', -1);
+----
+NULL
+
+query I
+SELECT expand(floatspan '(1,2)', -2);
+----
+NULL
+
+query I
+SELECT expand(tstzspan '[2000-01-01,2000-01-01]', '1 day');
+----
+[1999-12-31 00:00:00+00, 2000-01-02 00:00:00+00]
+
+query I
+SELECT expand(tstzspan '[2000-01-01,2000-01-02]', '1 day');
+----
+[1999-12-31 00:00:00+00, 2000-01-03 00:00:00+00]
+
+query I
+SELECT expand(tstzspan '(2000-01-01,2000-01-04]', '-1 day');
+----
+(2000-01-02 00:00:00+00, 2000-01-03 00:00:00+00]
+
+query I
+SELECT expand(tstzspan '[2000-01-01,2000-01-03]', '-1 day');
+----
+[2000-01-02 00:00:00+00, 2000-01-02 00:00:00+00]
+
+query I
+SELECT expand(tstzspan '[2000-01-01,2000-01-03)', '-1 day');
+----
+NULL
+
+query I
+SELECT expand(tstzspan '(2000-01-01,2000-01-02)', '-2 days');
+----
+NULL
+
+query I
+SELECT shift(intspan '[1,2)', 2);
+----
+[3, 4)
+
+query I
+SELECT shift(datespan '[2000-01-01,2000-01-02)', 2);
+----
+[2000-01-03, 2000-01-04)
+
+query I
+SELECT shift(tstzspan '[2000-01-01,2000-01-01]', '5 min');
+----
+[2000-01-01 00:05:00+00, 2000-01-01 00:05:00+00]
+
+query I
+SELECT shift(tstzspan '[2000-01-01,2000-01-02]', '5 min');
+----
+[2000-01-01 00:05:00+00, 2000-01-02 00:05:00+00]
+
+query I
+SELECT shift(tstzspan '(2000-01-01,2000-01-02]', '5 min');
+----
+(2000-01-01 00:05:00+00, 2000-01-02 00:05:00+00]
+
+query I
+SELECT shift(tstzspan '[2000-01-01,2000-01-02)', '5 min');
+----
+[2000-01-01 00:05:00+00, 2000-01-02 00:05:00+00)
+
+query I
+SELECT shift(tstzspan '(2000-01-01,2000-01-02)', '5 min');
+----
+(2000-01-01 00:05:00+00, 2000-01-02 00:05:00+00)
+
+query I
+SELECT scale(intspan '[1,2)', 4);
+----
+[1, 5)
+
+query I
+SELECT scale(datespan '[2000-01-01,2000-01-02)', 4);
+----
+[2000-01-01, 2000-01-05)
+
+query I
+SELECT scale(tstzspan '[2000-01-01,2000-01-01]', '1 hour');
+----
+[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00]
+
+query I
+SELECT scale(tstzspan '[2000-01-01,2000-01-02]', '1 hour');
+----
+[2000-01-01 00:00:00+00, 2000-01-01 01:00:00+00]
+
+query I
+SELECT scale(tstzspan '(2000-01-01,2000-01-02]', '1 hour');
+----
+(2000-01-01 00:00:00+00, 2000-01-01 01:00:00+00]
+
+query I
+SELECT scale(tstzspan '[2000-01-01,2000-01-02)', '1 hour');
+----
+[2000-01-01 00:00:00+00, 2000-01-01 01:00:00+00)
+
+query I
+SELECT scale(tstzspan '(2000-01-01,2000-01-02)', '1 hour');
+----
+(2000-01-01 00:00:00+00, 2000-01-01 01:00:00+00)
+
+query I
+SELECT shiftScale(intspan '[1,2)', 4, 4);
+----
+[5, 9)
+
+query I
+SELECT shiftScale(datespan '[2000-01-01,2000-01-02)', 4, 4);
+----
+[2000-01-05, 2000-01-09)
+
+query I
+SELECT shiftScale(tstzspan '[2000-01-01,2000-01-01]', '5 min', '1 hour');
+----
+[2000-01-01 00:05:00+00, 2000-01-01 00:05:00+00]
+
+query I
+SELECT shiftScale(tstzspan '[2000-01-01,2000-01-02]', '5 min', '1 hour');
+----
+[2000-01-01 00:05:00+00, 2000-01-01 01:05:00+00]
+
+query I
+SELECT shiftScale(tstzspan '(2000-01-01,2000-01-02]', '5 min', '1 hour');
+----
+(2000-01-01 00:05:00+00, 2000-01-01 01:05:00+00]
+
+query I
+SELECT shiftScale(tstzspan '[2000-01-01,2000-01-02)', '5 min', '1 hour');
+----
+[2000-01-01 00:05:00+00, 2000-01-01 01:05:00+00)
+
+query I
+SELECT shiftScale(tstzspan '(2000-01-01,2000-01-02)', '5 min', '1 hour');
+----
+(2000-01-01 00:05:00+00, 2000-01-01 01:05:00+00)
+
+query I
+SELECT floor(floatspan '[1.5,2.5]');
+----
+[1, 3]
+
+query I
+SELECT ceil(floatspan '[1.5,2.5]');
+----
+[2, 3]
+
+query I
+SELECT floor(floatspan '(1.5,1.6)');
+----
+[1, 2)
+
+query I
+SELECT ceil(floatspan '(1.5,1.6)');
+----
+(1, 2]
+
+query I
+SELECT round(floatspan '[1.123456789,1.123456789]', 6);
+----
+[1.123457, 1.123457]
+
+query I
+SELECT round(floatspan '[1.123456789,2.123456789]', 6);
+----
+[1.123457, 2.123457]
+
+query I
+SELECT round(floatspan '[-inf,2.123456789]', 6);
+----
+[-inf, 2.123457]
+
+query I
+SELECT round(floatspan '[1.123456789,inf]', 6);
+----
+[1.123457, inf]
+
+query I
+SELECT round(floatspan '[1.5,1.6]');
+----
+[2, 2]
+
+# =============================================================================
+# Position functions
+# =============================================================================
+
+query I
+SELECT intspan '[3,5)' << 5;
+----
+true
+
+query I
+SELECT 5 << intspan '[3,5)';
+----
+false
+
+query I
+SELECT intspan '[3,5)' >> 5;
+----
+false
+
+query I
+SELECT 5 >> intspan '[3,5)';
+----
+true
+
+query I
+SELECT intspan '[3,5)' &< 5;
+----
+true
+
+query I
+SELECT 5 &< intspan '[3,5)';
+----
+false
+
+query I
+SELECT intspan '[3,5)' &> 5;
+----
+false
+
+query I
+SELECT 5 &> intspan '[3,5)';
+----
+true
+
+query I
+SELECT intspan '[3,5)' -|- 5;
+----
+true
+
+query I
+SELECT 5 -|- intspan '[3,5)';
+----
+true
+
+query I
+SELECT floatspan '[3.5, 5.5]' << 5.5;
+----
+false
+
+query I
+SELECT 5.5 << floatspan '[3.5, 5.5]';
+----
+false
+
+query I
+SELECT floatspan '[3.5, 5.5]' >> 5.5;
+----
+false
+
+query I
+SELECT 5.5 >> floatspan '[3.5, 5.5]';
+----
+false
+
+query I
+SELECT floatspan '[3.5, 5.5]' &< 5.5;
+----
+true
+
+query I
+SELECT 5.5 &< floatspan '[3.5, 5.5]';
+----
+false
+
+query I
+SELECT floatspan '[3.5, 5.5]' &> 5.5;
+----
+false
+
+query I
+SELECT 5.5 &> floatspan '[3.5, 5.5]';
+----
+true
+
+query I
+SELECT floatspan '[3.5, 5.5]' -|- 5.5;
+----
+false
+
+query I
+SELECT 5.5 -|- floatspan '[3.5, 5.5]';
+----
+false
+
+mode skip
+# DuckDB's SQL parser does not accept `#` inside operator names, so the
+# time-position MEOS operators (<<#, #>>, &<#, #&>) cannot be invoked
+# from SQL even though the underlying ScalarFunctions are registered
+# with BOOLEAN return type.
+query I
+SELECT datespan '[2000-01-03,2000-01-05)' <<# date '2000-01-05';
+----
+true
+
+query I
+SELECT date '2000-01-05' <<# datespan '[2000-01-03,2000-01-05)';
+----
+false
+
+query I
+SELECT datespan '[2000-01-03,2000-01-05)' #>> date '2000-01-05';
+----
+false
+
+query I
+SELECT date '2000-01-05' #>> datespan '[2000-01-03,2000-01-05)';
+----
+true
+
+query I
+SELECT datespan '[2000-01-03,2000-01-05)' &<# date '2000-01-05';
+----
+true
+
+query I
+SELECT date '2000-01-05' &<# datespan '[2000-01-03,2000-01-05)';
+----
+false
+
+query I
+SELECT datespan '[2000-01-03,2000-01-05)' #&> date '2000-01-05';
+----
+false
+
+query I
+SELECT date '2000-01-05' #&> datespan '[2000-01-03,2000-01-05)';
+----
+true
+
+query I
+SELECT datespan '[2000-01-03,2000-01-05)' -|- date '2000-01-05';
+----
+true
+
+query I
+SELECT date '2000-01-05' -|- datespan '[2000-01-03,2000-01-05)';
+----
+true
+mode unskip
