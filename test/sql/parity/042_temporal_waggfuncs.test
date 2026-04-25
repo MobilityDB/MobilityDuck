@@ -1,0 +1,35 @@
+# name: test/sql/parity/042_temporal_waggfuncs.test
+# description: MobilityDB regression file 042_temporal_waggfuncs.test.sql adapted for MobilityDuck
+# group: [sql]
+#
+# Whole file under `mode skip`. Windowed temporal aggregates
+# (wcount, wmin, wmax, wsum, wavg) over a fixed-width interval
+# window. Same architectural blocker as PR #21 (015) and PR #24
+# (040): MobilityDuck has no AggregateFunction infrastructure, and
+# windowed aggregates additionally need DuckDB's WindowFunction
+# infrastructure (also unused in temporal/geo today).
+#
+# MEOS symbols: tnumber_wcount_transfn, tnumber_wmin_transfn,
+# tnumber_wmax_transfn, tnumber_wsum_transfn, tnumber_wavg_transfn,
+# plus the corresponding combinefn / finalfn for each.
+
+require mobilityduck
+
+mode skip
+
+query I
+SELECT wcount(temp, '1 day') FROM (VALUES (tint '[1@2000-01-01, 5@2000-01-05]')) t(temp);
+----
+{[1@2000-01-01 00:00:00+00, 1@2000-01-05 00:00:00+00]}
+
+query I
+SELECT wmin(temp, '1 day') FROM (VALUES (tint '[1@2000-01-01, 5@2000-01-05]')) t(temp);
+----
+{[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]}
+
+query I
+SELECT wsum(temp, '1 day') FROM (VALUES (tint '[1@2000-01-01, 5@2000-01-05]')) t(temp);
+----
+{[1@2000-01-01 00:00:00+00, ...]}
+
+mode unskip
