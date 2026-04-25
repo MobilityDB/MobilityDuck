@@ -1,33 +1,11 @@
 # name: test/sql/parity/001_set.test
-# description: Parity harness — MobilityDB regression file 001_set.test.sql mirrored for MobilityDuck
+# description: MobilityDB regression file 001_set.test.sql adapted for MobilityDuck
 # group: [sql]
 #
-# ----------------------------------------------------------------------------
-# Goal
-# ----------------------------------------------------------------------------
-# The long-term objective is that the same SQL query can be run against
-# MobilityDB (PostgreSQL extension, historical store) and MobilityDuck
-# (DuckDB extension, pipeline side) and produce comparable results. This
-# file is the first parity harness that makes the gap measurable.
-#
-# Queries are ported verbatim from the upstream regression file
-# `mobilitydb/test/temporal/queries/001_set.test.sql`. Each query that runs
-# on MobilityDuck today is an active assertion; each that hits an unbound
-# MEOS symbol, a naming divergence, or an output-format divergence is
-# wrapped in `mode skip` with a `# gap:` annotation that names the
-# specific missing binding or divergence. Every skip is a tracked backlog
-# item for a follow-up PR.
-#
-# ----------------------------------------------------------------------------
-# Output-format note
-# ----------------------------------------------------------------------------
-# MobilityDB emits PG-locale output (e.g. `01-01-2000` dates, `Sat Jan 01
-# 00:00:00 2000 PST` timestamps). MobilityDuck emits DuckDB-shaped output
-# (ISO dates, UTC timestamps under TZ=UTC, which the Makefile sets
-# explicitly). Where a query passes on both sides, the expected block in
-# this file reflects MobilityDuck's output — the parity is in the query
-# *surface*, not the display layer. Display-layer alignment, if desired,
-# is a separate follow-up.
+# Queries from mobilitydb/test/temporal/queries/001_set.test.sql.
+# Expected outputs reflect MobilityDuck's display format (ISO dates,
+# UTC timestamps under TZ=UTC) rather than MobilityDB's PG-locale
+# format ("01-01-2000", "Sat Jan 01 00:00:00 2000 PST").
 
 require mobilityduck
 
@@ -113,18 +91,11 @@ SELECT set(ARRAY [timestamptz '2000-01-01', '2000-01-01', '2000-01-03']);
 
 # --- empty array should error ---
 mode skip
-# gap: array-literal syntax divergence, not a MEOS-error-handler test.
-# DuckDB parses `'{}'` as a string literal (PG's array-literal form) and
-# rejects the cast at the DuckDB layer before MEOS sees it, with
-# "Conversion Error: Type VARCHAR with value '{}' can't be cast...".
-# The parity intent is "an empty array should error" — both sides
-# reject, but by different mechanisms. An equivalent DuckDB-syntax
-# form `set(ARRAY[]::TIMESTAMPTZ[])` reaches MEOS but the constructor
+# DuckDB parses `'{}'` as a string literal and rejects the cast to
+# timestamptz[]; the equivalent DuckDB-native form
+# `set(ARRAY[]::TIMESTAMPTZ[])` reaches MEOS but the constructor
 # wrapper in src/temporal/set_functions.cpp returns a null pointer
-# instead of calling `meos_error(ERROR, MEOS_ERR_INVALID_ARG_VALUE,
-# "The input array cannot be empty")`. Follow-up: port the empty-array
-# check into the wrapper so `set(ARRAY[]::TIMESTAMPTZ[])` raises a
-# proper InvalidInputException via the MEOS path.
+# rather than raising an "input array cannot be empty" error.
 statement error
 SELECT set('{}'::timestamptz[]);
 ----
@@ -132,10 +103,8 @@ cannot be empty
 mode unskip
 
 mode skip
-# gap: set(ARRAY[GEOMETRY ...]) geomset constructor is not registered in
-# src/geo/geoset.cpp (only I/O / asText / memSize / SRID / transform /
-# accessors are). MEOS symbol: geomset_make. Track: follow-up PR to
-# register ScalarFunction("set", {LIST(GEOMETRY)}, geomset(), ...).
+# set(ARRAY[GEOMETRY ...]) geomset constructor not registered in
+# src/geo/geoset.cpp. MEOS symbol: geomset_make.
 query I
 SELECT asText(set(ARRAY[geometry 'Point(1 1)', 'Point(2 2)', 'Point(3 3)']));
 ----
@@ -231,9 +200,7 @@ SELECT span(tstzset '{2000-01-01, 2000-01-02, 2000-01-03}');
 [2000-01-01 00:00:00+00, 2000-01-03 00:00:00+00]
 
 mode skip
-# gap: `spans(<set_type>)` — returns a list of unit spans. MobilityDuck
-# only registers `spans(<spanset_type>)` (src/temporal/spanset.cpp:330);
-# the set-level version is not bound. MEOS symbol: set_spans.
+# spans(<set_type>) not registered in MobilityDuck. MEOS symbol: set_spans.
 query I
 SELECT spans(intset '{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}');
 ----
@@ -241,11 +208,9 @@ SELECT spans(intset '{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}');
 mode unskip
 
 mode skip
-# gap: naming divergence — MobilityDB SQL uses `splitNspans` /
-# `splitEachNspans` (lowercase "spans"), MobilityDuck registers
-# `splitNSpans` / `splitEachNSpans` (camelCase, capital S) in
-# src/temporal/span.cpp:313-340. Follow-up: add lowercase aliases in
-# span.cpp registration for parity.
+# Naming divergence: MobilityDB uses lowercase splitNspans /
+# splitEachNspans; MobilityDuck registers camelCase splitNSpans /
+# splitEachNSpans in src/temporal/span.cpp.
 query I
 SELECT splitNspans(intset '{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}', 1);
 ----
@@ -526,10 +491,6 @@ SELECT tstzset '{2000-01-01}' >= tstzset '{2000-01-01, 2000-01-02, 2000-01-03}';
 ----
 false
 
-mode skip
-# gap: `set_hash` / `set_hash_extended` are not registered in
-# src/temporal/set.cpp. MEOS symbols: set_hash, set_hash_extended.
-# Follow-up: add ScalarFunction bindings returning BIGINT/UBIGINT.
 query I
 SELECT set_hash(dateset '{2000-01-01,2000-01-02}') = set_hash(dateset '{2000-01-01,2000-01-02}');
 ----
@@ -569,7 +530,6 @@ query I
 SELECT set_hash_extended(tstzset '{2000-01-01,2000-01-02}', 1) <> set_hash_extended(tstzset '{2000-01-01,2000-01-02}', 1);
 ----
 false
-mode unskip
 
 # =============================================================================
 # Transformations
