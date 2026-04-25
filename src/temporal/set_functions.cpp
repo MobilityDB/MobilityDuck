@@ -210,6 +210,10 @@ void SetFunctions::Set_constructor(DataChunk &args, ExpressionState &state, Vect
             idx_t offset = list_entry.offset;
             idx_t length = list_entry.length;
 
+            if (length == 0) {
+                throw InvalidInputException("The input array cannot be empty");
+            }
+
             Datum *values = (Datum *)malloc(sizeof(Datum) * length);
 
             for (idx_t i = 0; i < length; ++i) {
