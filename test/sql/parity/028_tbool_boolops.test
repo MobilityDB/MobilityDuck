@@ -1,0 +1,25 @@
+# name: test/sql/parity/028_tbool_boolops.test
+# description: MobilityDB regression file 028_tbool_boolops.test.sql adapted for MobilityDuck
+# group: [sql]
+
+require mobilityduck
+
+query I
+SELECT TRUE & tbool 't@2000-01-01';
+----
+t@2000-01-01 00:00:00+00
+
+query I
+SELECT tbool 't@2000-01-01' & tbool 't@2000-01-01';
+----
+t@2000-01-01 00:00:00+00
+
+query I
+SELECT TRUE | tbool 'f@2000-01-01';
+----
+t@2000-01-01 00:00:00+00
+
+query I
+SELECT ~ tbool 't@2000-01-01';
+----
+f@2000-01-01 00:00:00+00
