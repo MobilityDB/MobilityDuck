@@ -1,0 +1,102 @@
+# name: test/sql/parity/050_geo_inventory.test
+# description: Single-file inventory of MobilityDB's mobilitydb/test/geo/queries/ surface
+# group: [sql]
+#
+# Rather than one parity file per upstream geo regression file, this
+# is a flat inventory of what each upstream file covers, what's bound
+# in MobilityDuck today, and what's missing. Per-file ports follow
+# the same pattern as the temporal directory's parity files (PRs #6
+# / #13 / #17 / #18 / #21 / #22 / #23 / #24 / #25); they should land
+# incrementally as the corresponding bindings come online.
+#
+# Bound surface (covered by direct registrations in
+# src/geo/tgeompoint.cpp etc.):
+#   - tgeompoint / tgeometry I/O for instant / discrete sequence /
+#     continuous sequence / sequence set
+#   - asText / asEWKT / memSize / interp / round / transform
+#   - tgeompoint constructors (TGEOMPOINT, tgeompointInst,
+#     tgeompointSeq, tgeompointSeqSet)
+#   - Spatial accessors: getX / getY / getZ, length, cumulativeLength,
+#     speed, direction, azimuth, angularDifference, trajectory
+#   - Topological ever-/transient-/always- predicates: eContains,
+#     aContains, tContains and the same triple for Disjoint, Dwithin,
+#     Intersects, Touches
+#   - Set operators: makeSimple, isSimple, stops
+#   - Restriction: atGeometry, minusGeometry, atStbox, minusStbox,
+#     atValues, minusValues, atTime, minusTime
+#   - Modification: appendInstant, appendSequence, insert, update,
+#     deleteTime, merge
+#   - Comparison: temporal_eq / temporal_ne / temporal_lt / etc.
+#   - twCentroid, shortestLine, distance_gs, collect_gs
+#
+# Unbound surface (per upstream regression file):
+#
+# 051_stbox.test.sql
+#   stbox type. The basic type is registered in src/geo/stbox.cpp but
+#   the wholesale tests in test/sql/stbox.test are currently skipped
+#   in MobilityDuck for DuckDB-1.4 signature reasons (see the existing
+#   tbox.test wholesale-skip header).
+#
+# 052_tgeo.test.sql / 052_tpoint.test.sql
+#   Mostly bound (constructors, I/O, accessors). Per-type parity port
+#   would mirror PRs #13 / #17 / #18 for tgeompoint and tgeometry.
+#
+# 053_tgeo_inout.test.sql / 053_tpoint_inout.test.sql
+#   asMFJSON / asWKB / asHexWKB / asGeoJSON family — verify which are
+#   bound. MEOS symbols: temporal_as_mfjson, temporal_as_wkb,
+#   temporal_as_hexwkb, tpoint_as_geojson.
+#
+# 054_tgeo_compops.test.sql / 054_tpoint_compops.test.sql
+#   Same parser blocker as PR #24's 030: ever-/always- comparison
+#   operators (?=, #=, ?<>, #<>, ?<, #<, ?<=, #<=, ?>, #>, ?>=, #>=)
+#   that DuckDB's parser does not accept.
+#
+# 056_tgeo_spatialfuncs.test.sql / 056_tpoint_spatialfuncs.test.sql
+#   Per the audit above, the bulk of spatial functions IS bound
+#   (length, speed, azimuth, direction, getX/Y/Z, makeSimple, stops,
+#   trajectory, transform). What's NOT bound: setSRID-on-temporal,
+#   spatialReferenceSystems-related accessors, time-based accessors
+#   that mix temporal types with timestamptz / tstzspan.
+#
+# 058_tgeo_tile.test.sql / 058_tpoint_tile.test.sql
+#   Temporal tiling — same gap as PR #23's 025 but for tgeo / tpoint
+#   rather than tnumber. MEOS symbols: tspatial_value_split,
+#   tspatial_time_split, tspatial_value_time_split.
+#
+# 060_tgeo_topops.test.sql / 060_tpoint_topops.test.sql
+#   Same pattern as PR #25's 032_temporal_topops but for tgeo /
+#   tpoint. Topological operators (@>, <@, &&, -|-) between
+#   tgeompoint / tgeometry and {GEOMETRY, stbox, temporal} pairs.
+#
+# 062_tgeo_posops.test.sql / 062_tpoint_posops.test.sql
+#   Same pattern as PR #24's 034_temporal_posops but for tgeo /
+#   tpoint. Position operators with the additional spatial
+#   directional set (above, below, before, after, in front, behind).
+#
+# 064_tgeo_distance.test.sql / 064_tpoint_distance.test.sql
+#   Distance operator <-> for tgeo / tpoint pairs and
+#   nearestApproachDistance / nad / shortestLine — partially bound
+#   (shortestLine and distance_gs are registered for tgeompoint).
+#
+# 066_tpoint_similarity.test.sql
+#   Similarity measures for tpoint (frechetDistance, dynTimeWarp,
+#   hausdorffDistance, similarityPath). Same architectural gap as
+#   PR #23's 038_temporal_similarity but specialised for tpoint.
+#
+# 068_tgeo_aggfuncs.test.sql / 068_tpoint_aggfuncs.test.sql
+#   Aggregate functions over tgeo / tpoint — extent (returns stbox),
+#   tcentroid, twCentroid agg variant. Same architectural blocker as
+#   PR #21 (no AggregateFunction infrastructure).
+
+require mobilityduck
+
+mode skip
+
+# Token assertion just to keep the runner happy; the value of this
+# file is the manifest above, not the assertions.
+query I
+SELECT 1;
+----
+1
+
+mode unskip
