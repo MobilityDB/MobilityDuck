@@ -4877,6 +4877,143 @@ void TemporalFunctions::Nad_tfloat_tfloat(DataChunk &args, ExpressionState &stat
 }
 
 /* ***************************************************
+ * Temporal topological predicates
+ ****************************************************/
+
+namespace {
+
+template <typename Fn>
+void TempTempBoolPred(DataChunk &args, Vector &result, Fn fn) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a_blob, string_t b_blob) -> bool {
+            Temporal *a = BlobToTemporal(a_blob);
+            Temporal *b = BlobToTemporal(b_blob);
+            bool r = fn(a, b);
+            free(a); free(b);
+            return r;
+        });
+}
+
+template <typename Fn>
+void TempSpanBoolPred(DataChunk &args, Vector &result, Fn fn) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t blob, string_t span_blob) -> bool {
+            Temporal *t = BlobToTemporal(blob);
+            // Spans are blobs of fixed size; copy into a Span struct.
+            Span *s = (Span *)malloc(span_blob.GetSize());
+            memcpy(s, span_blob.GetData(), span_blob.GetSize());
+            bool r = fn(t, s);
+            free(t); free(s);
+            return r;
+        });
+}
+
+template <typename Fn>
+void SpanTempBoolPred(DataChunk &args, Vector &result, Fn fn) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t span_blob, string_t blob) -> bool {
+            Span *s = (Span *)malloc(span_blob.GetSize());
+            memcpy(s, span_blob.GetData(), span_blob.GetSize());
+            Temporal *t = BlobToTemporal(blob);
+            bool r = fn(s, t);
+            free(s); free(t);
+            return r;
+        });
+}
+
+} // namespace
+
+void TemporalFunctions::Contains_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempTempBoolPred(args, result, [](Temporal *a, Temporal *b) { return contains_temporal_temporal(a, b); });
+}
+void TemporalFunctions::Contained_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempTempBoolPred(args, result, [](Temporal *a, Temporal *b) { return contained_temporal_temporal(a, b); });
+}
+void TemporalFunctions::Overlaps_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempTempBoolPred(args, result, [](Temporal *a, Temporal *b) { return overlaps_temporal_temporal(a, b); });
+}
+void TemporalFunctions::Adjacent_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempTempBoolPred(args, result, [](Temporal *a, Temporal *b) { return adjacent_temporal_temporal(a, b); });
+}
+
+void TemporalFunctions::Contains_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempSpanBoolPred(args, result, [](Temporal *t, Span *s) { return contains_temporal_tstzspan(t, s); });
+}
+void TemporalFunctions::Contained_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempSpanBoolPred(args, result, [](Temporal *t, Span *s) { return contained_temporal_tstzspan(t, s); });
+}
+void TemporalFunctions::Overlaps_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempSpanBoolPred(args, result, [](Temporal *t, Span *s) { return overlaps_temporal_tstzspan(t, s); });
+}
+void TemporalFunctions::Adjacent_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempSpanBoolPred(args, result, [](Temporal *t, Span *s) { return adjacent_temporal_tstzspan(t, s); });
+}
+
+// Span-temporal direction: MEOS only exposes the temporal-span functions,
+// so we swap arg order and use the inverse op (contains <-> contained).
+void TemporalFunctions::Contains_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result) {
+    SpanTempBoolPred(args, result, [](Span *s, Temporal *t) { return contained_temporal_tstzspan(t, s); });
+}
+void TemporalFunctions::Contained_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result) {
+    SpanTempBoolPred(args, result, [](Span *s, Temporal *t) { return contains_temporal_tstzspan(t, s); });
+}
+void TemporalFunctions::Overlaps_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result) {
+    SpanTempBoolPred(args, result, [](Span *s, Temporal *t) { return overlaps_temporal_tstzspan(t, s); });
+}
+void TemporalFunctions::Adjacent_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result) {
+    SpanTempBoolPred(args, result, [](Span *s, Temporal *t) { return adjacent_temporal_tstzspan(t, s); });
+}
+
+/* ***************************************************
+ * Temporal time-position predicates
+ ****************************************************/
+
+void TemporalFunctions::Before_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempTempBoolPred(args, result, [](Temporal *a, Temporal *b) { return before_temporal_temporal(a, b); });
+}
+void TemporalFunctions::After_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempTempBoolPred(args, result, [](Temporal *a, Temporal *b) { return after_temporal_temporal(a, b); });
+}
+void TemporalFunctions::Overbefore_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempTempBoolPred(args, result, [](Temporal *a, Temporal *b) { return overbefore_temporal_temporal(a, b); });
+}
+void TemporalFunctions::Overafter_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempTempBoolPred(args, result, [](Temporal *a, Temporal *b) { return overafter_temporal_temporal(a, b); });
+}
+
+void TemporalFunctions::Before_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempSpanBoolPred(args, result, [](Temporal *t, Span *s) { return before_temporal_tstzspan(t, s); });
+}
+void TemporalFunctions::After_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempSpanBoolPred(args, result, [](Temporal *t, Span *s) { return after_temporal_tstzspan(t, s); });
+}
+void TemporalFunctions::Overbefore_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempSpanBoolPred(args, result, [](Temporal *t, Span *s) { return overbefore_temporal_tstzspan(t, s); });
+}
+void TemporalFunctions::Overafter_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempSpanBoolPred(args, result, [](Temporal *t, Span *s) { return overafter_temporal_tstzspan(t, s); });
+}
+
+// Reverse direction: tstzspan op temporal — swap inverse op,
+// e.g. `tstzspan <<# temporal` (span is before temporal) means
+// the temporal is after the span: after_temporal_tstzspan(t, s).
+void TemporalFunctions::Before_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result) {
+    SpanTempBoolPred(args, result, [](Span *s, Temporal *t) { return after_temporal_tstzspan(t, s); });
+}
+void TemporalFunctions::After_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result) {
+    SpanTempBoolPred(args, result, [](Span *s, Temporal *t) { return before_temporal_tstzspan(t, s); });
+}
+void TemporalFunctions::Overbefore_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result) {
+    SpanTempBoolPred(args, result, [](Span *s, Temporal *t) { return overafter_temporal_tstzspan(t, s); });
+}
+void TemporalFunctions::Overafter_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result) {
+    SpanTempBoolPred(args, result, [](Span *s, Temporal *t) { return overbefore_temporal_tstzspan(t, s); });
+}
+
+/* ***************************************************
  * Text functions on ttext
  ****************************************************/
 
