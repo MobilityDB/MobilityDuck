@@ -41,6 +41,7 @@ extern "C" {
     #include <stdarg.h>
     #include <geos_c.h>
     #include <meos.h>
+    #include <proj.h>
 }
 
 // OpenSSL linked through vcpkg
@@ -50,7 +51,7 @@ namespace duckdb {
 #include "spatial_ref_sys_csv.inc"
 
 // =====================================================================
-// 2. Utility: OpenSSL version scalar function
+// 2. Utility: version scalar functions
 // =====================================================================
 
 inline void MobilityduckOpenSSLVersionScalarFun(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -62,6 +63,49 @@ inline void MobilityduckOpenSSLVersionScalarFun(DataChunk &args, ExpressionState
 		        ", my linked OpenSSL version is " + OPENSSL_VERSION_TEXT
 		);
 	});
+}
+
+// Keep this short pin in sync with vcpkg_ports/meos/portfile.cmake's REF.
+// MEOS does not expose a runtime version symbol, so the build-time pin
+// is the most precise version stamp the extension can report.
+#ifndef MOBILITYDUCK_MEOS_PIN
+#define MOBILITYDUCK_MEOS_PIN "f11b7443e"
+#endif
+
+inline std::string MobilityduckShortVersion() {
+#ifdef EXT_VERSION_MOBILITYDUCK
+	return std::string("MobilityDuck ") + EXT_VERSION_MOBILITYDUCK;
+#else
+	return std::string("MobilityDuck");
+#endif
+}
+
+inline std::string MobilityduckFullVersion() {
+	std::string out = MobilityduckShortVersion();
+	out += ", linked MEOS ";
+	out += MOBILITYDUCK_MEOS_PIN;
+	out += ", DuckDB ";
+	out += DuckDB::LibraryVersion();
+	out += ", GEOS ";
+	out += GEOSversion();
+	out += ", PROJ ";
+	out += std::to_string(PROJ_VERSION_MAJOR) + "." +
+	       std::to_string(PROJ_VERSION_MINOR) + "." +
+	       std::to_string(PROJ_VERSION_PATCH);
+	// OPENSSL_VERSION_TEXT already starts with "OpenSSL", so just append it.
+	out += ", ";
+	out += OPENSSL_VERSION_TEXT;
+	return out;
+}
+
+inline void MobilityduckVersionScalarFun(DataChunk &args, ExpressionState &state, Vector &result) {
+	const std::string s = MobilityduckShortVersion();
+	result.Reference(Value(s));
+}
+
+inline void MobilityduckFullVersionScalarFun(DataChunk &args, ExpressionState &state, Vector &result) {
+	const std::string s = MobilityduckFullVersion();
+	result.Reference(Value(s));
 }
 
 // =====================================================================
@@ -174,6 +218,13 @@ static void LoadInternal(ExtensionLoader &loader) {
 	        MobilityduckOpenSSLVersionScalarFun
 	    );
 	loader.RegisterFunction( mobilityduck_openssl_version_scalar_function);
+
+	loader.RegisterFunction(ScalarFunction(
+		"mobilityduck_version", {}, LogicalType::VARCHAR,
+		MobilityduckVersionScalarFun));
+	loader.RegisterFunction(ScalarFunction(
+		"mobilityduck_full_version", {}, LogicalType::VARCHAR,
+		MobilityduckFullVersionScalarFun));
 
 	// Temporal and related types/functions
 	TemporalTypes::RegisterTypes(loader);
