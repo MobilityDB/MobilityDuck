@@ -5239,6 +5239,48 @@ void TemporalFunctions::Adjacent_tbox_tnumber(DataChunk &args, ExpressionState &
 }
 
 /* ***************************************************
+ * tnumber × {numspan, tbox} position predicates
+ ****************************************************/
+
+#define DEFINE_NUMSPAN_POS(NAME, MEOS_FN) \
+void TemporalFunctions::NAME##_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result) { \
+    TempBoxBoolPred<Span>(args, result, [](Temporal *t, Span *s) { return MEOS_FN##_tnumber_numspan(t, s); }); \
+} \
+void TemporalFunctions::NAME##_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result) { \
+    BoxTempBoolPred<Span>(args, result, [](Span *s, Temporal *t) { return MEOS_FN##_numspan_tnumber(s, t); }); \
+}
+
+#define DEFINE_TBOX_POS(NAME, MEOS_FN) \
+void TemporalFunctions::NAME##_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result) { \
+    TempBoxBoolPred<TBox>(args, result, [](Temporal *t, TBox *b) { return MEOS_FN##_tnumber_tbox(t, b); }); \
+} \
+void TemporalFunctions::NAME##_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result) { \
+    BoxTempBoolPred<TBox>(args, result, [](TBox *b, Temporal *t) { return MEOS_FN##_tbox_tnumber(b, t); }); \
+}
+
+#define DEFINE_TNUM_POS(NAME, MEOS_FN) \
+void TemporalFunctions::NAME##_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result) { \
+    TempTempBoolPred(args, result, [](Temporal *a, Temporal *b) { return MEOS_FN##_tnumber_tnumber(a, b); }); \
+}
+
+DEFINE_NUMSPAN_POS(Left, left)
+DEFINE_NUMSPAN_POS(Right, right)
+DEFINE_NUMSPAN_POS(Overleft, overleft)
+DEFINE_NUMSPAN_POS(Overright, overright)
+DEFINE_TBOX_POS(Left, left)
+DEFINE_TBOX_POS(Right, right)
+DEFINE_TBOX_POS(Overleft, overleft)
+DEFINE_TBOX_POS(Overright, overright)
+DEFINE_TNUM_POS(Left, left)
+DEFINE_TNUM_POS(Right, right)
+DEFINE_TNUM_POS(Overleft, overleft)
+DEFINE_TNUM_POS(Overright, overright)
+
+#undef DEFINE_NUMSPAN_POS
+#undef DEFINE_TBOX_POS
+#undef DEFINE_TNUM_POS
+
+/* ***************************************************
  * Text functions on ttext
  ****************************************************/
 
