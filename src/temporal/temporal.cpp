@@ -1438,6 +1438,25 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     REG_EA("always_ne", Always_ne)
 #undef REG_EA
 
+    // Ordering ever/always — no tbool variant (booleans have no ordering)
+#define REG_EA_ORD(NAME, FN)                                                                                                                                          \
+    loader.RegisterFunction(ScalarFunction(NAME, {LogicalType::INTEGER,    TemporalTypes::TINT()},   LogicalType::BOOLEAN, TemporalFunctions::FN##_int_tint));        \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TINT(),   LogicalType::INTEGER},    LogicalType::BOOLEAN, TemporalFunctions::FN##_tint_int));        \
+    loader.RegisterFunction(ScalarFunction(NAME, {LogicalType::DOUBLE,     TemporalTypes::TFLOAT()}, LogicalType::BOOLEAN, TemporalFunctions::FN##_float_tfloat));    \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TFLOAT(), LogicalType::DOUBLE},     LogicalType::BOOLEAN, TemporalFunctions::FN##_tfloat_float));    \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TINT(),   TemporalTypes::TINT()},   LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal)); \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal));
+
+    REG_EA_ORD("ever_lt",   Ever_lt)
+    REG_EA_ORD("always_lt", Always_lt)
+    REG_EA_ORD("ever_le",   Ever_le)
+    REG_EA_ORD("always_le", Always_le)
+    REG_EA_ORD("ever_gt",   Ever_gt)
+    REG_EA_ORD("always_gt", Always_gt)
+    REG_EA_ORD("ever_ge",   Ever_ge)
+    REG_EA_ORD("always_ge", Always_ge)
+#undef REG_EA_ORD
+
     // ttext text functions
     loader.RegisterFunction(ScalarFunction("lower", {TemporalTypes::TTEXT()}, TemporalTypes::TTEXT(), TemporalFunctions::Ttext_lower));
     loader.RegisterFunction(ScalarFunction("upper", {TemporalTypes::TTEXT()}, TemporalTypes::TTEXT(), TemporalFunctions::Ttext_upper));

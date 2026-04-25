@@ -312,6 +312,56 @@ struct TemporalFunctions {
     static void Always_ne_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
     static void Always_ne_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
 
+    // Ever / always ordering (no tbool — boolean has no ordering)
+    // ever_lt
+    static void Ever_lt_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_lt_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_lt_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_lt_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_lt_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    // always_lt
+    static void Always_lt_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_lt_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_lt_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_lt_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_lt_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    // ever_le
+    static void Ever_le_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_le_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_le_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_le_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_le_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    // always_le
+    static void Always_le_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_le_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_le_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_le_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_le_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    // ever_gt
+    static void Ever_gt_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_gt_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_gt_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_gt_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_gt_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    // always_gt
+    static void Always_gt_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_gt_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_gt_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_gt_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_gt_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    // ever_ge
+    static void Ever_ge_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_ge_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_ge_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_ge_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_ge_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    // always_ge
+    static void Always_ge_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_ge_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_ge_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_ge_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_ge_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+
     /* ***************************************************
      * Text functions on ttext
      ****************************************************/

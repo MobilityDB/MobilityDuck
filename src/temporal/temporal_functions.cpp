@@ -5089,6 +5089,35 @@ DEFINE_EA_OP(Always_ne, always_ne)
 
 #undef DEFINE_EA_OP
 
+// Ordering ops have no tbool variant.
+#define DEFINE_EA_ORD_OP(NAME, MEOS_NAME)                                                              \
+void TemporalFunctions::NAME##_int_tint(DataChunk &args, ExpressionState &state, Vector &result) {     \
+    EverAlwaysValTemp<int32_t>(args, result, [](int32_t i, Temporal *t) { return MEOS_NAME##_int_tint(i, t); }); \
+}                                                                                                      \
+void TemporalFunctions::NAME##_tint_int(DataChunk &args, ExpressionState &state, Vector &result) {     \
+    EverAlwaysTempVal<int32_t>(args, result, [](Temporal *t, int32_t i) { return MEOS_NAME##_tint_int(t, i); }); \
+}                                                                                                      \
+void TemporalFunctions::NAME##_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result) { \
+    EverAlwaysValTemp<double>(args, result, [](double d, Temporal *t) { return MEOS_NAME##_float_tfloat(d, t); }); \
+}                                                                                                      \
+void TemporalFunctions::NAME##_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result) { \
+    EverAlwaysTempVal<double>(args, result, [](Temporal *t, double d) { return MEOS_NAME##_tfloat_float(t, d); }); \
+}                                                                                                      \
+void TemporalFunctions::NAME##_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result) { \
+    EverAlwaysTempTemp(args, result, [](Temporal *a, Temporal *b) { return MEOS_NAME##_temporal_temporal(a, b); }); \
+}
+
+DEFINE_EA_ORD_OP(Ever_lt, ever_lt)
+DEFINE_EA_ORD_OP(Always_lt, always_lt)
+DEFINE_EA_ORD_OP(Ever_le, ever_le)
+DEFINE_EA_ORD_OP(Always_le, always_le)
+DEFINE_EA_ORD_OP(Ever_gt, ever_gt)
+DEFINE_EA_ORD_OP(Always_gt, always_gt)
+DEFINE_EA_ORD_OP(Ever_ge, ever_ge)
+DEFINE_EA_ORD_OP(Always_ge, always_ge)
+
+#undef DEFINE_EA_ORD_OP
+
 /* ***************************************************
  * Text functions on ttext
  ****************************************************/
