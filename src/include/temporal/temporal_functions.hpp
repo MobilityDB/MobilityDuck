@@ -185,6 +185,26 @@ struct TemporalFunctions {
      ****************************************************/
     static void Tbool_when_true(DataChunk &args, ExpressionState &state, Vector &result);
 
+    /* ***************************************************
+     * Boolean operators on tbool
+     ****************************************************/
+    static void Tand_tbool_bool(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tand_bool_tbool(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tand_tbool_tbool(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tor_tbool_bool(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tor_bool_tbool(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tor_tbool_tbool(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnot_tbool(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * Text functions on ttext
+     ****************************************************/
+    static void Ttext_lower(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ttext_upper(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ttext_initcap(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Textcat_text_ttext(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Textcat_ttext_text(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Textcat_ttext_ttext(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Comparison operators

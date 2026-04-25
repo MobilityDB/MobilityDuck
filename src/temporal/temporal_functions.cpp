@@ -4614,6 +4614,157 @@ void TemporalFunctions::Tbool_when_true(DataChunk &args, ExpressionState &state,
 }
 
 /* ***************************************************
+ * Boolean operators on tbool
+ ****************************************************/
+
+namespace {
+
+// Helper: Temporal* -> string_t result blob
+inline string_t TemporalToBlob(Vector &result, Temporal *t) {
+    size_t sz = temporal_mem_size(t);
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)t, sz);
+    free(t);
+    return out;
+}
+
+// Helper: copy string_t blob into a malloc'd Temporal*
+inline Temporal *BlobToTemporal(string_t blob) {
+    size_t sz = blob.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return reinterpret_cast<Temporal *>(copy);
+}
+
+template <typename Fn>
+void TemporalUnary(DataChunk &args, Vector &result, Fn fn) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t blob) -> string_t {
+            Temporal *t = BlobToTemporal(blob);
+            Temporal *r = fn(t);
+            free(t);
+            if (!r) throw InvalidInputException("MEOS returned null");
+            return TemporalToBlob(result, r);
+        });
+}
+
+template <typename T2, typename Fn>
+void TemporalBinaryV(DataChunk &args, Vector &result, Fn fn) {
+    BinaryExecutor::Execute<string_t, T2, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t blob, T2 v) -> string_t {
+            Temporal *t = BlobToTemporal(blob);
+            Temporal *r = fn(t, v);
+            free(t);
+            if (!r) throw InvalidInputException("MEOS returned null");
+            return TemporalToBlob(result, r);
+        });
+}
+
+template <typename T1, typename Fn>
+void TemporalBinaryV1(DataChunk &args, Vector &result, Fn fn) {
+    BinaryExecutor::Execute<T1, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](T1 v, string_t blob) -> string_t {
+            Temporal *t = BlobToTemporal(blob);
+            Temporal *r = fn(v, t);
+            free(t);
+            if (!r) throw InvalidInputException("MEOS returned null");
+            return TemporalToBlob(result, r);
+        });
+}
+
+template <typename Fn>
+void TemporalBinaryTT(DataChunk &args, Vector &result, Fn fn) {
+    BinaryExecutor::Execute<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a_blob, string_t b_blob) -> string_t {
+            Temporal *a = BlobToTemporal(a_blob);
+            Temporal *b = BlobToTemporal(b_blob);
+            Temporal *r = fn(a, b);
+            free(a);
+            free(b);
+            if (!r) throw InvalidInputException("MEOS returned null");
+            return TemporalToBlob(result, r);
+        });
+}
+
+inline text *TextFromBlob(string_t s) {
+    text *t = (text *)malloc(VARHDRSZ + s.GetSize());
+    SET_VARSIZE(t, VARHDRSZ + s.GetSize());
+    memcpy(VARDATA(t), s.GetData(), s.GetSize());
+    return t;
+}
+
+} // namespace
+
+void TemporalFunctions::Tand_tbool_bool(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalBinaryV<bool>(args, result, [](Temporal *t, bool b) { return tand_tbool_bool(t, b); });
+}
+void TemporalFunctions::Tand_bool_tbool(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalBinaryV1<bool>(args, result, [](bool b, Temporal *t) { return tand_tbool_bool(t, b); });
+}
+void TemporalFunctions::Tand_tbool_tbool(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalBinaryTT(args, result, [](Temporal *a, Temporal *b) { return tand_tbool_tbool(a, b); });
+}
+void TemporalFunctions::Tor_tbool_bool(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalBinaryV<bool>(args, result, [](Temporal *t, bool b) { return tor_tbool_bool(t, b); });
+}
+void TemporalFunctions::Tor_bool_tbool(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalBinaryV1<bool>(args, result, [](bool b, Temporal *t) { return tor_tbool_bool(t, b); });
+}
+void TemporalFunctions::Tor_tbool_tbool(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalBinaryTT(args, result, [](Temporal *a, Temporal *b) { return tor_tbool_tbool(a, b); });
+}
+void TemporalFunctions::Tnot_tbool(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return tnot_tbool(t); });
+}
+
+/* ***************************************************
+ * Text functions on ttext
+ ****************************************************/
+
+void TemporalFunctions::Ttext_lower(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return ttext_lower(t); });
+}
+void TemporalFunctions::Ttext_upper(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return ttext_upper(t); });
+}
+void TemporalFunctions::Ttext_initcap(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return ttext_initcap(t); });
+}
+
+void TemporalFunctions::Textcat_text_ttext(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t txt_str, string_t blob) -> string_t {
+            text *txt = TextFromBlob(txt_str);
+            Temporal *t = BlobToTemporal(blob);
+            Temporal *r = textcat_text_ttext(txt, t);
+            free(txt);
+            free(t);
+            if (!r) throw InvalidInputException("MEOS returned null");
+            return TemporalToBlob(result, r);
+        });
+}
+void TemporalFunctions::Textcat_ttext_text(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t blob, string_t txt_str) -> string_t {
+            Temporal *t = BlobToTemporal(blob);
+            text *txt = TextFromBlob(txt_str);
+            Temporal *r = textcat_ttext_text(t, txt);
+            free(t);
+            free(txt);
+            if (!r) throw InvalidInputException("MEOS returned null");
+            return TemporalToBlob(result, r);
+        });
+}
+void TemporalFunctions::Textcat_ttext_ttext(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalBinaryTT(args, result, [](Temporal *a, Temporal *b) { return textcat_ttext_ttext(a, b); });
+}
+
+/* ***************************************************
  * Workaround functions
  ****************************************************/
 
