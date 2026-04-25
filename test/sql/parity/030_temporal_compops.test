@@ -1,0 +1,39 @@
+# name: test/sql/parity/030_temporal_compops.test
+# description: MobilityDB regression file 030_temporal_compops.test.sql adapted for MobilityDuck
+# group: [sql]
+#
+# DuckDB's SQL parser does not accept `?` or `#` inside operator names,
+# so MobilityDB's `?=` / `?<>` / `?<` / `#=` / `#<>` / `#<` etc. forms
+# cannot be invoked from SQL. MobilityDuck exposes them as the named
+# scalar functions ever_eq / always_eq / ever_ne / always_ne / ever_lt
+# / always_lt / etc. — this parity test uses those forms.
+
+require mobilityduck
+
+# Ever-equal — value ever_eq temporal
+
+query I
+SELECT ever_eq(1, tint '1@2000-01-01');
+----
+true
+
+# Ever-not-equal — temporal ever_ne value
+
+query I
+SELECT ever_ne(tint '[1@2000-01-01, 2@2000-01-02]', 1);
+----
+true
+
+# Always-equal — value always_eq temporal
+
+query I
+SELECT always_eq(1, tint '1@2000-01-01');
+----
+true
+
+# Always-less-than — temporal always_lt temporal
+
+query I
+SELECT always_lt(tint '[1@2000-01-01, 2@2000-01-02]', tint '[3@2000-01-01, 4@2000-01-02]');
+----
+true

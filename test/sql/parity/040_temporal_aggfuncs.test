@@ -1,0 +1,49 @@
+# name: test/sql/parity/040_temporal_aggfuncs.test
+# description: MobilityDB regression file 040_temporal_aggfuncs.test.sql adapted for MobilityDuck
+# group: [sql]
+#
+# Whole file under `mode skip`: same root cause as PR #21 (015) —
+# MobilityDuck registers no AggregateFunction calls anywhere in the
+# temporal/geo code, so `tcount`, `tand`, `tor`, `tmin`, `tmax`,
+# `tsum`, `extent`, etc. all fail with "function not found".
+#
+# This file is the per-temporal-type aggregate manifest:
+#   - tcount (over any temporal type)
+#   - tand / tor (over tbool)
+#   - tmin / tmax / tsum (over tint, tfloat)
+#   - extent (over tnumber, returns tbox)
+# MEOS symbols: temporal_tcount_transfn, tnumber_extent_transfn,
+# tbool_tand_transfn, tbool_tor_transfn, tnumber_tsum_transfn,
+# tnumber_tmin_transfn, tnumber_tmax_transfn, plus combinefn /
+# finalfn for each.
+
+require mobilityduck
+
+mode skip
+
+query I
+SELECT tcount(temp) FROM (VALUES (tint '1@2000-01-01'), (tint '2@2000-01-02')) t(temp);
+----
+{[2@2000-01-01 00:00:00+00, 2@2000-01-02 00:00:00+00]}
+
+query I
+SELECT tand(temp) FROM (VALUES (tbool 't@2000-01-01'), (tbool 'f@2000-01-02')) t(temp);
+----
+{[t@2000-01-01 00:00:00+00, f@2000-01-02 00:00:00+00]}
+
+query I
+SELECT tmin(temp) FROM (VALUES (tint '3@2000-01-01'), (tint '1@2000-01-02')) t(temp);
+----
+{[1@2000-01-01 00:00:00+00, 1@2000-01-02 00:00:00+00]}
+
+query I
+SELECT tsum(temp) FROM (VALUES (tint '1@2000-01-01'), (tint '2@2000-01-02')) t(temp);
+----
+{[3@2000-01-01 00:00:00+00, 3@2000-01-02 00:00:00+00]}
+
+query I
+SELECT extent(temp) FROM (VALUES (tfloat '[1@2000-01-01, 5@2000-01-05]')) t(temp);
+----
+TBOXFLOAT XT([1, 5],[2000-01-01 00:00:00+00, 2000-01-05 00:00:00+00])
+
+mode unskip
