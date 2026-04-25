@@ -370,6 +370,53 @@ struct TemporalFunctions {
     static void Temporal_hausdorff_distance(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
+     * tnumber × {numspan, tbox} topological predicates
+     * (4 ops × 4 type-pair shapes = 16 wrappers)
+     ****************************************************/
+    static void Contains_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Contained_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overlaps_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Adjacent_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Contains_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Contained_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overlaps_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Adjacent_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Contains_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Contained_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overlaps_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Adjacent_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Contains_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Contained_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overlaps_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Adjacent_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * tnumber × {numspan, tbox} position predicates
+     * (4 ops × 4 type-pair shapes × 2 directions)
+     ****************************************************/
+    static void Left_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Right_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overleft_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overright_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Left_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Right_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overleft_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overright_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Left_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Right_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overleft_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overright_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Left_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Right_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overleft_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overright_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    // tnumber × tnumber position
+    static void Left_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Right_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overleft_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overright_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
      * Text functions on ttext
      ****************************************************/
     static void Ttext_lower(DataChunk &args, ExpressionState &state, Vector &result);
