@@ -143,6 +143,13 @@ void SpanTypes::RegisterCastFunctions(ExtensionLoader &loader) {
             SpanTypes::TSTZSPAN(),
             SpanFunctions::Set_to_span_cast // tstzset -> tstzspan
          );
+
+        // Scalar value -> span casts
+        loader.RegisterCastFunction(LogicalType::INTEGER,      SpanTypes::INTSPAN(),    SpanFunctions::Value_to_span_cast);
+        loader.RegisterCastFunction(LogicalType::BIGINT,       SpanTypes::BIGINTSPAN(), SpanFunctions::Value_to_span_cast);
+        loader.RegisterCastFunction(LogicalType::DOUBLE,       SpanTypes::FLOATSPAN(),  SpanFunctions::Value_to_span_cast);
+        loader.RegisterCastFunction(LogicalType::DATE,         SpanTypes::DATESPAN(),   SpanFunctions::Value_to_span_cast);
+        loader.RegisterCastFunction(LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN(),   SpanFunctions::Value_to_span_cast);
     }
 }
 
