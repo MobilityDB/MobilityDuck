@@ -197,6 +197,51 @@ struct TemporalFunctions {
     static void Tnot_tbool(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
+     * Arithmetic operators on tnumber
+     ****************************************************/
+    static void Add_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Add_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Add_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Add_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Add_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Sub_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Sub_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Sub_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Sub_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Sub_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Mult_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Mult_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Mult_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Mult_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Mult_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Div_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Div_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Div_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Div_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Div_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * Unary tnumber functions
+     ****************************************************/
+    static void Tnumber_abs(DataChunk &args, ExpressionState &state, Vector &result);
+    // Temporal_derivative declared in the math-functions block below.
+    static void Tfloat_degrees(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tfloat_radians(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * Distance operator on tnumber
+     ****************************************************/
+    static void Tdistance_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tdistance_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tdistance_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tdistance_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tdistance_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nad_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nad_tint_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nad_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nad_tfloat_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
      * Text functions on ttext
      ****************************************************/
     static void Ttext_lower(DataChunk &args, ExpressionState &state, Vector &result);
