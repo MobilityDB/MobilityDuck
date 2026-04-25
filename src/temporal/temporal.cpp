@@ -1313,6 +1313,35 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction("|", {TemporalTypes::TBOOL(), TemporalTypes::TBOOL()}, TemporalTypes::TBOOL(), TemporalFunctions::Tor_tbool_tbool));
     loader.RegisterFunction(ScalarFunction("~", {TemporalTypes::TBOOL()}, TemporalTypes::TBOOL(), TemporalFunctions::Tnot_tbool));
 
+    // tnumber arithmetic operators
+    loader.RegisterFunction(ScalarFunction("+", {LogicalType::INTEGER, TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Add_int_tint));
+    loader.RegisterFunction(ScalarFunction("+", {TemporalTypes::TINT(), LogicalType::INTEGER}, TemporalTypes::TINT(), TemporalFunctions::Add_tint_int));
+    loader.RegisterFunction(ScalarFunction("+", {LogicalType::DOUBLE, TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Add_float_tfloat));
+    loader.RegisterFunction(ScalarFunction("+", {TemporalTypes::TFLOAT(), LogicalType::DOUBLE}, TemporalTypes::TFLOAT(), TemporalFunctions::Add_tfloat_float));
+    loader.RegisterFunction(ScalarFunction("+", {TemporalTypes::TINT(), TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Add_tnumber_tnumber));
+    loader.RegisterFunction(ScalarFunction("+", {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Add_tnumber_tnumber));
+
+    loader.RegisterFunction(ScalarFunction("-", {LogicalType::INTEGER, TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Sub_int_tint));
+    loader.RegisterFunction(ScalarFunction("-", {TemporalTypes::TINT(), LogicalType::INTEGER}, TemporalTypes::TINT(), TemporalFunctions::Sub_tint_int));
+    loader.RegisterFunction(ScalarFunction("-", {LogicalType::DOUBLE, TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Sub_float_tfloat));
+    loader.RegisterFunction(ScalarFunction("-", {TemporalTypes::TFLOAT(), LogicalType::DOUBLE}, TemporalTypes::TFLOAT(), TemporalFunctions::Sub_tfloat_float));
+    loader.RegisterFunction(ScalarFunction("-", {TemporalTypes::TINT(), TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Sub_tnumber_tnumber));
+    loader.RegisterFunction(ScalarFunction("-", {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Sub_tnumber_tnumber));
+
+    loader.RegisterFunction(ScalarFunction("*", {LogicalType::INTEGER, TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Mult_int_tint));
+    loader.RegisterFunction(ScalarFunction("*", {TemporalTypes::TINT(), LogicalType::INTEGER}, TemporalTypes::TINT(), TemporalFunctions::Mult_tint_int));
+    loader.RegisterFunction(ScalarFunction("*", {LogicalType::DOUBLE, TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Mult_float_tfloat));
+    loader.RegisterFunction(ScalarFunction("*", {TemporalTypes::TFLOAT(), LogicalType::DOUBLE}, TemporalTypes::TFLOAT(), TemporalFunctions::Mult_tfloat_float));
+    loader.RegisterFunction(ScalarFunction("*", {TemporalTypes::TINT(), TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Mult_tnumber_tnumber));
+    loader.RegisterFunction(ScalarFunction("*", {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Mult_tnumber_tnumber));
+
+    loader.RegisterFunction(ScalarFunction("/", {LogicalType::INTEGER, TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Div_int_tint));
+    loader.RegisterFunction(ScalarFunction("/", {TemporalTypes::TINT(), LogicalType::INTEGER}, TemporalTypes::TINT(), TemporalFunctions::Div_tint_int));
+    loader.RegisterFunction(ScalarFunction("/", {LogicalType::DOUBLE, TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Div_float_tfloat));
+    loader.RegisterFunction(ScalarFunction("/", {TemporalTypes::TFLOAT(), LogicalType::DOUBLE}, TemporalTypes::TFLOAT(), TemporalFunctions::Div_tfloat_float));
+    loader.RegisterFunction(ScalarFunction("/", {TemporalTypes::TINT(), TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Div_tnumber_tnumber));
+    loader.RegisterFunction(ScalarFunction("/", {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Div_tnumber_tnumber));
+
     // ttext text functions
     loader.RegisterFunction(ScalarFunction("lower", {TemporalTypes::TTEXT()}, TemporalTypes::TTEXT(), TemporalFunctions::Ttext_lower));
     loader.RegisterFunction(ScalarFunction("upper", {TemporalTypes::TTEXT()}, TemporalTypes::TTEXT(), TemporalFunctions::Ttext_upper));
