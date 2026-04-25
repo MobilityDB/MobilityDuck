@@ -242,6 +242,22 @@ struct TemporalFunctions {
     static void Nad_tfloat_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
+     * Temporal topological predicates
+     ****************************************************/
+    static void Contains_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Contained_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overlaps_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Adjacent_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Contains_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Contained_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overlaps_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Adjacent_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Contains_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Contained_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overlaps_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Adjacent_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
      * Text functions on ttext
      ****************************************************/
     static void Ttext_lower(DataChunk &args, ExpressionState &state, Vector &result);
