@@ -1,0 +1,48 @@
+# name: test/sql/parity/036_tnumber_distance.test
+# description: MobilityDB regression file 036_tnumber_distance.test.sql adapted for MobilityDuck
+# group: [sql]
+#
+# Whole file under `mode skip`: MobilityDuck does not register the
+# temporal-distance operator (`<->`) for tnumber types or the related
+# `nearestApproachDistance` / `nad` / `shortestLine`. MEOS symbols:
+# distance_tnumber_value, distance_tnumber_tnumber, nad_tnumber_value,
+# nad_tnumber_tnumber.
+
+require mobilityduck
+
+mode skip
+# value-tnumber / tnumber-value `<->` is intentionally NOT registered:
+# the installed MEOS library's `tdistance_tfloat_float` /
+# `tdistance_tint_int` returns the temporal's own value at each instant
+# rather than the |t.value - v| absolute difference. Kept skipped until
+# the MEOS upstream bug is resolved. See temporal.cpp lines ~1355-1365
+# for the full notes.
+query I
+SELECT 1 <-> tint '1@2000-01-01';
+----
+0@2000-01-01 00:00:00+00
+
+query I
+SELECT tfloat '[1@2000-01-01, 5@2000-01-05]' <-> 3.5;
+----
+{[2.5@2000-01-01 00:00:00+00, ...]}
+mode unskip
+
+# tnumber <-> tnumber
+
+query I
+SELECT tint '[1@2000-01-01, 5@2000-01-05]' <-> tint '[3@2000-01-01, 3@2000-01-05]';
+----
+[2@2000-01-01 00:00:00+00, 2@2000-01-05 00:00:00+00]
+
+# nearestApproachDistance / nad
+
+query I
+SELECT nearestApproachDistance(tint '[1@2000-01-01, 5@2000-01-05]', 3);
+----
+0
+
+query I
+SELECT nad(tfloat '[1@2000-01-01, 5@2000-01-05]', tfloat '[3@2000-01-01, 3@2000-01-05]');
+----
+0
