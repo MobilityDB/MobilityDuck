@@ -417,6 +417,49 @@ struct TemporalFunctions {
     static void Overright_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
+     * tspatial × {stbox, tspatial} position predicates
+     * (12 directions × 3 type-pair shapes)
+     ****************************************************/
+    static void Left_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Right_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Below_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Above_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Front_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Back_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overleft_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overright_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overbelow_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overabove_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overfront_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overback_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+
+    static void Left_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Right_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Below_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Above_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Front_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Back_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overleft_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overright_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overbelow_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overabove_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overfront_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overback_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+
+    static void Left_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Right_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Below_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Above_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Front_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Back_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overleft_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overright_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overbelow_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overabove_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overfront_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overback_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
      * Text functions on ttext
      ****************************************************/
     static void Ttext_lower(DataChunk &args, ExpressionState &state, Vector &result);

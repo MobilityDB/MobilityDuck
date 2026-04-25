@@ -7,6 +7,8 @@
 #include "temporal/tbox.hpp"
 #include "temporal/set.hpp"
 #include "temporal/span.hpp"
+#include "geo/stbox.hpp"
+#include "geo/tgeompoint.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/common/exception.hpp"
@@ -1539,6 +1541,52 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         loader.RegisterFunction(ScalarFunction(">>", {tflt, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Right_tnumber_tnumber));
         loader.RegisterFunction(ScalarFunction("&<", {tflt, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Overleft_tnumber_tnumber));
         loader.RegisterFunction(ScalarFunction("&>", {tflt, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Overright_tnumber_tnumber));
+    }
+
+    // tspatial × {stbox, tspatial} position predicates
+    {
+        auto tg    = TgeompointType::TGEOMPOINT();
+        auto stbox = StboxType::STBOX();
+
+        // L/R operators (DuckDB parser-friendly)
+        loader.RegisterFunction(ScalarFunction("<<", {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Left_tspatial_stbox));
+        loader.RegisterFunction(ScalarFunction(">>", {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Right_tspatial_stbox));
+        loader.RegisterFunction(ScalarFunction("&<", {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Overleft_tspatial_stbox));
+        loader.RegisterFunction(ScalarFunction("&>", {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Overright_tspatial_stbox));
+        loader.RegisterFunction(ScalarFunction("<<", {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Left_stbox_tspatial));
+        loader.RegisterFunction(ScalarFunction(">>", {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Right_stbox_tspatial));
+        loader.RegisterFunction(ScalarFunction("&<", {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Overleft_stbox_tspatial));
+        loader.RegisterFunction(ScalarFunction("&>", {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Overright_stbox_tspatial));
+        loader.RegisterFunction(ScalarFunction("<<", {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Left_tspatial_tspatial));
+        loader.RegisterFunction(ScalarFunction(">>", {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Right_tspatial_tspatial));
+        loader.RegisterFunction(ScalarFunction("&<", {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Overleft_tspatial_tspatial));
+        loader.RegisterFunction(ScalarFunction("&>", {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Overright_tspatial_tspatial));
+
+        // Above/below/front/back as named functions (DuckDB parser rejects |>>, <<|, etc.)
+        loader.RegisterFunction(ScalarFunction("below",     {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Below_tspatial_stbox));
+        loader.RegisterFunction(ScalarFunction("above",     {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Above_tspatial_stbox));
+        loader.RegisterFunction(ScalarFunction("front",     {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Front_tspatial_stbox));
+        loader.RegisterFunction(ScalarFunction("back",      {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Back_tspatial_stbox));
+        loader.RegisterFunction(ScalarFunction("overbelow", {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Overbelow_tspatial_stbox));
+        loader.RegisterFunction(ScalarFunction("overabove", {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Overabove_tspatial_stbox));
+        loader.RegisterFunction(ScalarFunction("overfront", {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Overfront_tspatial_stbox));
+        loader.RegisterFunction(ScalarFunction("overback",  {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Overback_tspatial_stbox));
+        loader.RegisterFunction(ScalarFunction("below",     {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Below_stbox_tspatial));
+        loader.RegisterFunction(ScalarFunction("above",     {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Above_stbox_tspatial));
+        loader.RegisterFunction(ScalarFunction("front",     {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Front_stbox_tspatial));
+        loader.RegisterFunction(ScalarFunction("back",      {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Back_stbox_tspatial));
+        loader.RegisterFunction(ScalarFunction("overbelow", {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Overbelow_stbox_tspatial));
+        loader.RegisterFunction(ScalarFunction("overabove", {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Overabove_stbox_tspatial));
+        loader.RegisterFunction(ScalarFunction("overfront", {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Overfront_stbox_tspatial));
+        loader.RegisterFunction(ScalarFunction("overback",  {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Overback_stbox_tspatial));
+        loader.RegisterFunction(ScalarFunction("below",     {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Below_tspatial_tspatial));
+        loader.RegisterFunction(ScalarFunction("above",     {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Above_tspatial_tspatial));
+        loader.RegisterFunction(ScalarFunction("front",     {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Front_tspatial_tspatial));
+        loader.RegisterFunction(ScalarFunction("back",      {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Back_tspatial_tspatial));
+        loader.RegisterFunction(ScalarFunction("overbelow", {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Overbelow_tspatial_tspatial));
+        loader.RegisterFunction(ScalarFunction("overabove", {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Overabove_tspatial_tspatial));
+        loader.RegisterFunction(ScalarFunction("overfront", {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Overfront_tspatial_tspatial));
+        loader.RegisterFunction(ScalarFunction("overback",  {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Overback_tspatial_tspatial));
     }
 
     // ttext text functions
