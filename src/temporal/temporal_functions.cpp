@@ -5014,6 +5014,82 @@ void TemporalFunctions::Overafter_tstzspan_temporal(DataChunk &args, ExpressionS
 }
 
 /* ***************************************************
+ * Ever / always equality and inequality
+ ****************************************************/
+
+namespace {
+
+// MEOS ever/always functions return int (1=true, 0=false, -1=null/error).
+template <typename TVal, typename Fn>
+void EverAlwaysValTemp(DataChunk &args, Vector &result, Fn fn) {
+    BinaryExecutor::Execute<TVal, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](TVal v, string_t blob) -> bool {
+            Temporal *t = BlobToTemporal(blob);
+            int r = fn(v, t);
+            free(t);
+            return r > 0;
+        });
+}
+
+template <typename TVal, typename Fn>
+void EverAlwaysTempVal(DataChunk &args, Vector &result, Fn fn) {
+    BinaryExecutor::Execute<string_t, TVal, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t blob, TVal v) -> bool {
+            Temporal *t = BlobToTemporal(blob);
+            int r = fn(t, v);
+            free(t);
+            return r > 0;
+        });
+}
+
+template <typename Fn>
+void EverAlwaysTempTemp(DataChunk &args, Vector &result, Fn fn) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a_blob, string_t b_blob) -> bool {
+            Temporal *a = BlobToTemporal(a_blob);
+            Temporal *b = BlobToTemporal(b_blob);
+            int r = fn(a, b);
+            free(a); free(b);
+            return r > 0;
+        });
+}
+
+} // namespace
+
+#define DEFINE_EA_OP(NAME, MEOS_NAME)                                                                  \
+void TemporalFunctions::NAME##_bool_tbool(DataChunk &args, ExpressionState &state, Vector &result) {   \
+    EverAlwaysValTemp<bool>(args, result, [](bool b, Temporal *t) { return MEOS_NAME##_bool_tbool(b, t); });   \
+}                                                                                                      \
+void TemporalFunctions::NAME##_tbool_bool(DataChunk &args, ExpressionState &state, Vector &result) {   \
+    EverAlwaysTempVal<bool>(args, result, [](Temporal *t, bool b) { return MEOS_NAME##_tbool_bool(t, b); });   \
+}                                                                                                      \
+void TemporalFunctions::NAME##_int_tint(DataChunk &args, ExpressionState &state, Vector &result) {     \
+    EverAlwaysValTemp<int32_t>(args, result, [](int32_t i, Temporal *t) { return MEOS_NAME##_int_tint(i, t); }); \
+}                                                                                                      \
+void TemporalFunctions::NAME##_tint_int(DataChunk &args, ExpressionState &state, Vector &result) {     \
+    EverAlwaysTempVal<int32_t>(args, result, [](Temporal *t, int32_t i) { return MEOS_NAME##_tint_int(t, i); }); \
+}                                                                                                      \
+void TemporalFunctions::NAME##_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result) { \
+    EverAlwaysValTemp<double>(args, result, [](double d, Temporal *t) { return MEOS_NAME##_float_tfloat(d, t); }); \
+}                                                                                                      \
+void TemporalFunctions::NAME##_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result) { \
+    EverAlwaysTempVal<double>(args, result, [](Temporal *t, double d) { return MEOS_NAME##_tfloat_float(t, d); }); \
+}                                                                                                      \
+void TemporalFunctions::NAME##_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result) { \
+    EverAlwaysTempTemp(args, result, [](Temporal *a, Temporal *b) { return MEOS_NAME##_temporal_temporal(a, b); }); \
+}
+
+DEFINE_EA_OP(Ever_eq, ever_eq)
+DEFINE_EA_OP(Always_eq, always_eq)
+DEFINE_EA_OP(Ever_ne, ever_ne)
+DEFINE_EA_OP(Always_ne, always_ne)
+
+#undef DEFINE_EA_OP
+
+/* ***************************************************
  * Text functions on ttext
  ****************************************************/
 

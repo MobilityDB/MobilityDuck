@@ -1419,6 +1419,25 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         loader.RegisterFunction(ScalarFunction("overafter",  {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Overafter_tstzspan_temporal));
     }
 
+    // Ever / always equality and inequality (named functions; DuckDB
+    // parser does not accept ?= / #= operator names).
+#define REG_EA(NAME, FN)                                                                                                                                                          \
+    loader.RegisterFunction(ScalarFunction(NAME, {LogicalType::BOOLEAN,        TemporalTypes::TBOOL()},   LogicalType::BOOLEAN, TemporalFunctions::FN##_bool_tbool));             \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TBOOL(),      LogicalType::BOOLEAN},     LogicalType::BOOLEAN, TemporalFunctions::FN##_tbool_bool));             \
+    loader.RegisterFunction(ScalarFunction(NAME, {LogicalType::INTEGER,        TemporalTypes::TINT()},    LogicalType::BOOLEAN, TemporalFunctions::FN##_int_tint));               \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TINT(),       LogicalType::INTEGER},     LogicalType::BOOLEAN, TemporalFunctions::FN##_tint_int));               \
+    loader.RegisterFunction(ScalarFunction(NAME, {LogicalType::DOUBLE,         TemporalTypes::TFLOAT()},  LogicalType::BOOLEAN, TemporalFunctions::FN##_float_tfloat));           \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TFLOAT(),     LogicalType::DOUBLE},      LogicalType::BOOLEAN, TemporalFunctions::FN##_tfloat_float));           \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TINT(),       TemporalTypes::TINT()},    LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal));      \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TFLOAT(),     TemporalTypes::TFLOAT()},  LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal));      \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TBOOL(),      TemporalTypes::TBOOL()},   LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal));
+
+    REG_EA("ever_eq",   Ever_eq)
+    REG_EA("always_eq", Always_eq)
+    REG_EA("ever_ne",   Ever_ne)
+    REG_EA("always_ne", Always_ne)
+#undef REG_EA
+
     // ttext text functions
     loader.RegisterFunction(ScalarFunction("lower", {TemporalTypes::TTEXT()}, TemporalTypes::TTEXT(), TemporalFunctions::Ttext_lower));
     loader.RegisterFunction(ScalarFunction("upper", {TemporalTypes::TTEXT()}, TemporalTypes::TTEXT(), TemporalFunctions::Ttext_upper));
