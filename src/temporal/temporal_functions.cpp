@@ -5119,6 +5119,37 @@ DEFINE_EA_ORD_OP(Always_ge, always_ge)
 #undef DEFINE_EA_ORD_OP
 
 /* ***************************************************
+ * Similarity measures
+ ****************************************************/
+
+namespace {
+
+template <typename Fn>
+void TempTempDoublePred(DataChunk &args, Vector &result, Fn fn) {
+    BinaryExecutor::Execute<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a_blob, string_t b_blob) -> double {
+            Temporal *a = BlobToTemporal(a_blob);
+            Temporal *b = BlobToTemporal(b_blob);
+            double r = fn(a, b);
+            free(a); free(b);
+            return r;
+        });
+}
+
+} // namespace
+
+void TemporalFunctions::Temporal_frechet_distance(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempTempDoublePred(args, result, [](Temporal *a, Temporal *b) { return temporal_frechet_distance(a, b); });
+}
+void TemporalFunctions::Temporal_dyntimewarp_distance(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempTempDoublePred(args, result, [](Temporal *a, Temporal *b) { return temporal_dyntimewarp_distance(a, b); });
+}
+void TemporalFunctions::Temporal_hausdorff_distance(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempTempDoublePred(args, result, [](Temporal *a, Temporal *b) { return temporal_hausdorff_distance(a, b); });
+}
+
+/* ***************************************************
  * Text functions on ttext
  ****************************************************/
 
