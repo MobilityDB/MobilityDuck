@@ -595,244 +595,244 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
     loader.RegisterFunction( ScalarFunction("-|-", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_value)    
     );
-    loader.RegisterFunction( ScalarFunction("span_left", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpanTypes::INTSPAN(), SpanFunctions::Left_span_value)
+    loader.RegisterFunction( ScalarFunction("span_left", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Left_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("<<", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpanTypes::INTSPAN(), SpanFunctions::Left_span_value)
+    loader.RegisterFunction( ScalarFunction("<<", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Left_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("span_left", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Left_value_span)
+    loader.RegisterFunction( ScalarFunction("span_left", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Left_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("<<", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Left_value_span)
+    loader.RegisterFunction( ScalarFunction("<<", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Left_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_left", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Left_span_span)
+    loader.RegisterFunction( ScalarFunction("span_left", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Left_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("<<", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Left_span_span)
+    loader.RegisterFunction( ScalarFunction("<<", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Left_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_left", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpanTypes::BIGINTSPAN(), SpanFunctions::Left_span_value)
+    loader.RegisterFunction( ScalarFunction("span_left", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SpanFunctions::Left_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("<<", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpanTypes::BIGINTSPAN(), SpanFunctions::Left_span_value)
+    loader.RegisterFunction( ScalarFunction("<<", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SpanFunctions::Left_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("span_left", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Left_value_span)
+    loader.RegisterFunction( ScalarFunction("span_left", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Left_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("<<", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Left_value_span)
+    loader.RegisterFunction( ScalarFunction("<<", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Left_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_left", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Left_span_span)
+    loader.RegisterFunction( ScalarFunction("span_left", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Left_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("<<", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Left_span_span)
+    loader.RegisterFunction( ScalarFunction("<<", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Left_span_span)
     );  
-    loader.RegisterFunction( ScalarFunction("span_left", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpanTypes::FLOATSPAN(), SpanFunctions::Left_span_value)
+    loader.RegisterFunction( ScalarFunction("span_left", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SpanFunctions::Left_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("<<", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpanTypes::FLOATSPAN(), SpanFunctions::Left_span_value)
+    loader.RegisterFunction( ScalarFunction("<<", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SpanFunctions::Left_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("span_left", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Left_value_span)
+    loader.RegisterFunction( ScalarFunction("span_left", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Left_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("<<", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Left_value_span)
+    loader.RegisterFunction( ScalarFunction("<<", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Left_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_left", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Left_span_span)
+    loader.RegisterFunction( ScalarFunction("span_left", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Left_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("<<", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Left_span_span)
+    loader.RegisterFunction( ScalarFunction("<<", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Left_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_left", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpanTypes::DATESPAN(), SpanFunctions::Left_span_value)
+    loader.RegisterFunction( ScalarFunction("span_left", {SpanTypes::DATESPAN(), LogicalType::DATE}, LogicalType::BOOLEAN, SpanFunctions::Left_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("<<#", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpanTypes::DATESPAN(), SpanFunctions::Left_span_value)
+    loader.RegisterFunction( ScalarFunction("<<#", {SpanTypes::DATESPAN(), LogicalType::DATE}, LogicalType::BOOLEAN, SpanFunctions::Left_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("span_left", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Left_value_span)
+    loader.RegisterFunction( ScalarFunction("span_left", {LogicalType::DATE, SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Left_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("<<#", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Left_value_span)
+    loader.RegisterFunction( ScalarFunction("<<#", {LogicalType::DATE, SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Left_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_left", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Left_span_span)
+    loader.RegisterFunction( ScalarFunction("span_left", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Left_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("<<#", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Left_span_span)
+    loader.RegisterFunction( ScalarFunction("<<#", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Left_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_left", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpanTypes::TSTZSPAN(), SpanFunctions::Left_span_value)
+    loader.RegisterFunction( ScalarFunction("span_left", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Left_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("<<#", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpanTypes::TSTZSPAN(), SpanFunctions::Left_span_value)
+    loader.RegisterFunction( ScalarFunction("<<#", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Left_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("span_left", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Left_value_span)
+    loader.RegisterFunction( ScalarFunction("span_left", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Left_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("<<#", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Left_value_span)
+    loader.RegisterFunction( ScalarFunction("<<#", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Left_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_left", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Left_span_span)
+    loader.RegisterFunction( ScalarFunction("span_left", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Left_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("<<#", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Left_span_span)
+    loader.RegisterFunction( ScalarFunction("<<#", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Left_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_right", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpanTypes::INTSPAN(), SpanFunctions::Right_span_value)
+    loader.RegisterFunction( ScalarFunction("span_right", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Right_span_value)
     );
-    loader.RegisterFunction( ScalarFunction(">>", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpanTypes::INTSPAN(), SpanFunctions::Right_span_value)
+    loader.RegisterFunction( ScalarFunction(">>", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Right_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("span_right", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Right_value_span)
+    loader.RegisterFunction( ScalarFunction("span_right", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Right_value_span)
     );
-    loader.RegisterFunction( ScalarFunction(">>", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Right_value_span)
+    loader.RegisterFunction( ScalarFunction(">>", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Right_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_right", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Right_span_span)
+    loader.RegisterFunction( ScalarFunction("span_right", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Right_span_span)
     );
-    loader.RegisterFunction( ScalarFunction(">>", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Right_span_span)
+    loader.RegisterFunction( ScalarFunction(">>", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Right_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_right", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpanTypes::BIGINTSPAN(), SpanFunctions::Right_span_value)
+    loader.RegisterFunction( ScalarFunction("span_right", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SpanFunctions::Right_span_value)
     );
-    loader.RegisterFunction( ScalarFunction(">>", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpanTypes::BIGINTSPAN(), SpanFunctions::Right_span_value)
+    loader.RegisterFunction( ScalarFunction(">>", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SpanFunctions::Right_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("span_right", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Right_value_span)
+    loader.RegisterFunction( ScalarFunction("span_right", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Right_value_span)
     );
-    loader.RegisterFunction( ScalarFunction(">>", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Right_value_span)
+    loader.RegisterFunction( ScalarFunction(">>", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Right_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_right", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Right_span_span)
+    loader.RegisterFunction( ScalarFunction("span_right", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Right_span_span)
     );
-    loader.RegisterFunction( ScalarFunction(">>", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Right_span_span)
+    loader.RegisterFunction( ScalarFunction(">>", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Right_span_span)
     );      
-    loader.RegisterFunction( ScalarFunction("span_right", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpanTypes::FLOATSPAN(), SpanFunctions::Right_span_value)
+    loader.RegisterFunction( ScalarFunction("span_right", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SpanFunctions::Right_span_value)
     );
-    loader.RegisterFunction( ScalarFunction(">>", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpanTypes::FLOATSPAN(), SpanFunctions::Right_span_value)
+    loader.RegisterFunction( ScalarFunction(">>", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SpanFunctions::Right_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("span_right", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Right_value_span)
+    loader.RegisterFunction( ScalarFunction("span_right", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Right_value_span)
     );
-    loader.RegisterFunction( ScalarFunction(">>", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Right_value_span)
+    loader.RegisterFunction( ScalarFunction(">>", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Right_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_right", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Right_span_span)
+    loader.RegisterFunction( ScalarFunction("span_right", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Right_span_span)
     );
-    loader.RegisterFunction( ScalarFunction(">>", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Right_span_span)
+    loader.RegisterFunction( ScalarFunction(">>", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Right_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_right", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpanTypes::DATESPAN(), SpanFunctions::Right_span_value)
+    loader.RegisterFunction( ScalarFunction("span_right", {SpanTypes::DATESPAN(), LogicalType::DATE}, LogicalType::BOOLEAN, SpanFunctions::Right_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("#>>", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpanTypes::DATESPAN(), SpanFunctions::Right_span_value)
+    loader.RegisterFunction( ScalarFunction("#>>", {SpanTypes::DATESPAN(), LogicalType::DATE}, LogicalType::BOOLEAN, SpanFunctions::Right_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("span_right", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Right_value_span)
+    loader.RegisterFunction( ScalarFunction("span_right", {LogicalType::DATE, SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Right_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("#>>", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Right_value_span)
+    loader.RegisterFunction( ScalarFunction("#>>", {LogicalType::DATE, SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Right_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_right", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Right_span_span)
+    loader.RegisterFunction( ScalarFunction("span_right", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Right_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("#>>", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Right_span_span)
+    loader.RegisterFunction( ScalarFunction("#>>", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Right_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_right", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpanTypes::TSTZSPAN(), SpanFunctions::Right_span_value)
+    loader.RegisterFunction( ScalarFunction("span_right", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Right_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("#>>", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpanTypes::TSTZSPAN(), SpanFunctions::Right_span_value)
+    loader.RegisterFunction( ScalarFunction("#>>", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Right_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("span_right", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Right_value_span)
+    loader.RegisterFunction( ScalarFunction("span_right", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Right_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("#>>", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Right_value_span)
+    loader.RegisterFunction( ScalarFunction("#>>", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Right_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_right", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Right_span_span)
+    loader.RegisterFunction( ScalarFunction("span_right", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Right_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("#>>", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Right_span_span)
+    loader.RegisterFunction( ScalarFunction("#>>", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Right_span_span)
     );  
-    loader.RegisterFunction( ScalarFunction("span_overleft", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpanTypes::INTSPAN(), SpanFunctions::Overleft_span_value)
+    loader.RegisterFunction( ScalarFunction("span_overleft", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("&<", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpanTypes::INTSPAN(), SpanFunctions::Overleft_span_value)
+    loader.RegisterFunction( ScalarFunction("&<", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("span_overleft", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Overleft_value_span)
+    loader.RegisterFunction( ScalarFunction("span_overleft", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("&<", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Overleft_value_span)
+    loader.RegisterFunction( ScalarFunction("&<", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_overleft", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Overleft_span_span)
+    loader.RegisterFunction( ScalarFunction("span_overleft", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("&<", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Overleft_span_span)
+    loader.RegisterFunction( ScalarFunction("&<", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_overleft", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overleft_span_value)
+    loader.RegisterFunction( ScalarFunction("span_overleft", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("&<", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overleft_span_value)
+    loader.RegisterFunction( ScalarFunction("&<", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("span_overleft", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overleft_value_span)
+    loader.RegisterFunction( ScalarFunction("span_overleft", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("&<", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overleft_value_span)
+    loader.RegisterFunction( ScalarFunction("&<", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_overleft", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overleft_span_span)
+    loader.RegisterFunction( ScalarFunction("span_overleft", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("&<", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overleft_span_span)
+    loader.RegisterFunction( ScalarFunction("&<", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_span)
     );  
-    loader.RegisterFunction( ScalarFunction("span_overleft", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpanTypes::FLOATSPAN(), SpanFunctions::Overleft_span_value)
+    loader.RegisterFunction( ScalarFunction("span_overleft", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("&<", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpanTypes::FLOATSPAN(), SpanFunctions::Overleft_span_value)
+    loader.RegisterFunction( ScalarFunction("&<", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("span_overleft", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Overleft_value_span)
+    loader.RegisterFunction( ScalarFunction("span_overleft", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("&<", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Overleft_value_span)
+    loader.RegisterFunction( ScalarFunction("&<", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_overleft", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Overleft_span_span)
+    loader.RegisterFunction( ScalarFunction("span_overleft", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("&<", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Overleft_span_span)
+    loader.RegisterFunction( ScalarFunction("&<", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_overleft", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpanTypes::DATESPAN(), SpanFunctions::Overleft_span_value)
+    loader.RegisterFunction( ScalarFunction("span_overleft", {SpanTypes::DATESPAN(), LogicalType::DATE}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("&<#", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpanTypes::DATESPAN(), SpanFunctions::Overleft_span_value)
+    loader.RegisterFunction( ScalarFunction("&<#", {SpanTypes::DATESPAN(), LogicalType::DATE}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("span_overleft", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Overleft_value_span)
+    loader.RegisterFunction( ScalarFunction("span_overleft", {LogicalType::DATE, SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("&<#", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Overleft_value_span)
+    loader.RegisterFunction( ScalarFunction("&<#", {LogicalType::DATE, SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_overleft", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Overleft_span_span)
+    loader.RegisterFunction( ScalarFunction("span_overleft", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("&<#", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Overleft_span_span)
+    loader.RegisterFunction( ScalarFunction("&<#", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_overleft", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpanTypes::TSTZSPAN(), SpanFunctions::Overleft_span_value)
+    loader.RegisterFunction( ScalarFunction("span_overleft", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("&<", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpanTypes::TSTZSPAN(), SpanFunctions::Overleft_span_value)
+    loader.RegisterFunction( ScalarFunction("&<", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("span_overleft", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Overleft_value_span)
+    loader.RegisterFunction( ScalarFunction("span_overleft", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_value_span)
     );  
-    loader.RegisterFunction( ScalarFunction("&<", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Overleft_value_span)
+    loader.RegisterFunction( ScalarFunction("&<", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_overleft", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Overleft_span_span)
+    loader.RegisterFunction( ScalarFunction("span_overleft", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("&<#", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Overleft_span_span)
+    loader.RegisterFunction( ScalarFunction("&<#", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_span)
     );
     
-    loader.RegisterFunction( ScalarFunction("span_overright", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpanTypes::INTSPAN(), SpanFunctions::Overright_span_value)
+    loader.RegisterFunction( ScalarFunction("span_overright", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("&>", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpanTypes::INTSPAN(), SpanFunctions::Overright_span_value)
+    loader.RegisterFunction( ScalarFunction("&>", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("span_overright", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Overright_value_span)
+    loader.RegisterFunction( ScalarFunction("span_overright", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overright_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("&>", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Overright_value_span)
+    loader.RegisterFunction( ScalarFunction("&>", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overright_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_overright", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Overright_span_span)
+    loader.RegisterFunction( ScalarFunction("span_overright", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("&>", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Overright_span_span)
+    loader.RegisterFunction( ScalarFunction("&>", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_overright", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overright_span_value)
+    loader.RegisterFunction( ScalarFunction("span_overright", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("&>", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overright_span_value)
+    loader.RegisterFunction( ScalarFunction("&>", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("span_overright", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overright_value_span)
+    loader.RegisterFunction( ScalarFunction("span_overright", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overright_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_overright", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overright_span_span)
+    loader.RegisterFunction( ScalarFunction("span_overright", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("&>", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Overright_span_span)
+    loader.RegisterFunction( ScalarFunction("&>", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_span)
     );      
-    loader.RegisterFunction( ScalarFunction("span_overright", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpanTypes::FLOATSPAN(), SpanFunctions::Overright_span_value)
+    loader.RegisterFunction( ScalarFunction("span_overright", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("&>", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpanTypes::FLOATSPAN(), SpanFunctions::Overright_span_value)
+    loader.RegisterFunction( ScalarFunction("&>", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("span_overright", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Overright_value_span)
+    loader.RegisterFunction( ScalarFunction("span_overright", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overright_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("&>", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Overright_value_span)
+    loader.RegisterFunction( ScalarFunction("&>", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overright_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_overright", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Overright_span_span)
+    loader.RegisterFunction( ScalarFunction("span_overright", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("&>", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Overright_span_span)
+    loader.RegisterFunction( ScalarFunction("&>", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_overright", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpanTypes::DATESPAN(), SpanFunctions::Overright_span_value)
+    loader.RegisterFunction( ScalarFunction("span_overright", {SpanTypes::DATESPAN(), LogicalType::DATE}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("#&>", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpanTypes::DATESPAN(), SpanFunctions::Overright_span_value)
+    loader.RegisterFunction( ScalarFunction("#&>", {SpanTypes::DATESPAN(), LogicalType::DATE}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("span_overright", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Overright_value_span)
+    loader.RegisterFunction( ScalarFunction("span_overright", {LogicalType::DATE, SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overright_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("#&>", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Overright_value_span)
+    loader.RegisterFunction( ScalarFunction("#&>", {LogicalType::DATE, SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overright_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_overright", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Overright_span_span)
+    loader.RegisterFunction( ScalarFunction("span_overright", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("#&>", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Overright_span_span)
+    loader.RegisterFunction( ScalarFunction("#&>", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_overright", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpanTypes::TSTZSPAN(), SpanFunctions::Overright_span_value)
+    loader.RegisterFunction( ScalarFunction("span_overright", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("#&>", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpanTypes::TSTZSPAN(), SpanFunctions::Overright_span_value)
+    loader.RegisterFunction( ScalarFunction("#&>", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_value)
     );
-    loader.RegisterFunction( ScalarFunction("span_overright", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Overright_value_span)
+    loader.RegisterFunction( ScalarFunction("span_overright", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overright_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("#&>", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Overright_value_span)
+    loader.RegisterFunction( ScalarFunction("#&>", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overright_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_overright", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Overright_span_span)
+    loader.RegisterFunction( ScalarFunction("span_overright", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_span)
     );
-    loader.RegisterFunction( ScalarFunction("#&>", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Overright_span_span)
+    loader.RegisterFunction( ScalarFunction("#&>", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_span)
     );  
 
     loader.RegisterFunction( ScalarFunction("span_union", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpansetTypes::intspanset(), SpanFunctions::Union_span_value)
