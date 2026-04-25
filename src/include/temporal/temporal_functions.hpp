@@ -363,6 +363,13 @@ struct TemporalFunctions {
     static void Always_ge_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
+     * Similarity measures
+     ****************************************************/
+    static void Temporal_frechet_distance(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_dyntimewarp_distance(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_hausdorff_distance(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
      * Text functions on ttext
      ****************************************************/
     static void Ttext_lower(DataChunk &args, ExpressionState &state, Vector &result);

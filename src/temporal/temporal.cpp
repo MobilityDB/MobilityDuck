@@ -1457,6 +1457,14 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     REG_EA_ORD("always_ge", Always_ge)
 #undef REG_EA_ORD
 
+    // Similarity measures (tnumber × tnumber)
+    for (auto &t : {TemporalTypes::TINT(), TemporalTypes::TFLOAT()}) {
+        loader.RegisterFunction(ScalarFunction("frechetDistance", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
+        loader.RegisterFunction(ScalarFunction("discreteFrechet", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
+        loader.RegisterFunction(ScalarFunction("dynTimeWarp",     {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_dyntimewarp_distance));
+        loader.RegisterFunction(ScalarFunction("hausdorffDistance", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_hausdorff_distance));
+    }
+
     // ttext text functions
     loader.RegisterFunction(ScalarFunction("lower", {TemporalTypes::TTEXT()}, TemporalTypes::TTEXT(), TemporalFunctions::Ttext_lower));
     loader.RegisterFunction(ScalarFunction("upper", {TemporalTypes::TTEXT()}, TemporalTypes::TTEXT(), TemporalFunctions::Ttext_upper));
