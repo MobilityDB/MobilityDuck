@@ -134,15 +134,11 @@ static void ConfigureMeosSridCsvOnce() {
 // =====================================================================
 
 // MEOS's default handler calls exit(EXIT_FAILURE) on errlevel == ERROR,
-// which tears down the whole DuckDB process on any invalid input. We
-// install a handler that throws duckdb::InvalidInputException instead,
-// so MEOS errors surface as ordinary query failures and `statement
-// error` tests behave as expected.
-//
-// `ERROR` is the numeric value of PostgreSQL's elog ERROR level (21),
-// carried through MEOS via <postgres.h>. Anything at or above that
-// level (ERROR, FATAL, PANIC) is fatal in MEOS's model; lower levels
-// are informational and we ignore them silently.
+// which would tear down the whole DuckDB process on any invalid input.
+// Throw a DuckDB exception instead. Numeric levels follow PostgreSQL's
+// elog values carried through via <postgres.h>: ERROR / FATAL / PANIC
+// are fatal (>= 21); lower levels (WARNING / NOTICE / INFO) are
+// informational and ignored.
 static constexpr int MEOS_ERRLEVEL_ERROR = 21;
 
 extern "C" void MobilityduckMeosErrorHandler(int errlevel, int errcode, const char *errmsg) {
