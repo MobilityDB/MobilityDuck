@@ -109,7 +109,7 @@ bool SpansetFunctions::Text_to_spanset(Vector &source, Vector &result, idx_t cou
 // --- Constructor ---
 void SpansetFunctions::Spanset_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &list_input = args.data[0];
-    auto meos_type = SpansetTypeMapping::GetMeosTypeFromAlias(result.GetType().ToString());    
+    auto meos_type = SpansetTypeMapping::GetMeosTypeFromAlias(result.GetType().ToString());
     UnaryExecutor::Execute<list_entry_t, string_t>(
         list_input, result, args.size(),
         [&](list_entry_t list_entry) -> string_t {
@@ -118,6 +118,10 @@ void SpansetFunctions::Spanset_constructor(DataChunk &args, ExpressionState &sta
 
             idx_t offset = list_entry.offset;
             idx_t length = list_entry.length;
+
+            if (length == 0) {
+                throw InvalidInputException("The input array cannot be empty");
+            }
 
             Span *spans = (Span *)malloc(sizeof(Span) * length);
             if (!spans) throw std::bad_alloc();
@@ -664,6 +668,39 @@ void SpansetFunctions::Spanset_upper(DataChunk &args, ExpressionState &state, Ve
         }
     }
 }    
+
+// --- spanset_hash / spanset_hash_extended ---
+
+void SpansetFunctions::Spanset_hash(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &input = args.data[0];
+    UnaryExecutor::Execute<string_t, uint32_t>(
+        input, result, args.size(),
+        [&](string_t input_blob) -> uint32_t {
+            const uint8_t *data = (const uint8_t *)input_blob.GetData();
+            size_t size = input_blob.GetSize();
+            SpanSet *s = (SpanSet*)malloc(size);
+            memcpy(s, data, size);
+            uint32_t h = spanset_hash(s);
+            free(s);
+            return h;
+        });
+}
+
+void SpansetFunctions::Spanset_hash_extended(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &input = args.data[0];
+    auto &seed_vec = args.data[1];
+    BinaryExecutor::Execute<string_t, int64_t, uint64_t>(
+        input, seed_vec, result, args.size(),
+        [&](string_t input_blob, int64_t seed) -> uint64_t {
+            const uint8_t *data = (const uint8_t *)input_blob.GetData();
+            size_t size = input_blob.GetSize();
+            SpanSet *s = (SpanSet*)malloc(size);
+            memcpy(s, data, size);
+            uint64_t h = spanset_hash_extended(s, (uint64_t)seed);
+            free(s);
+            return h;
+        });
+}
 
 // --- lower_inc ---
 
