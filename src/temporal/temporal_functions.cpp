@@ -4789,6 +4789,31 @@ void TemporalFunctions::Div_tnumber_tnumber(DataChunk &args, ExpressionState &st
 }
 
 /* ***************************************************
+ * Unary tnumber functions
+ ****************************************************/
+
+void TemporalFunctions::Tnumber_abs(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return tnumber_abs(t); });
+}
+
+// Temporal_derivative is implemented later in this file in the Math
+// functions block (existed before the unary-tnumber additions).
+
+void TemporalFunctions::Tfloat_degrees(DataChunk &args, ExpressionState &state, Vector &result) {
+    if (args.ColumnCount() == 2) {
+        TemporalBinaryV<bool>(args, result, [](Temporal *t, bool normalize) {
+            return tfloat_degrees(t, normalize);
+        });
+    } else {
+        TemporalUnary(args, result, [](Temporal *t) { return tfloat_degrees(t, false); });
+    }
+}
+
+void TemporalFunctions::Tfloat_radians(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return tfloat_radians(t); });
+}
+
+/* ***************************************************
  * Text functions on ttext
  ****************************************************/
 
