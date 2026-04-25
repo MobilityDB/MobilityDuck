@@ -1350,6 +1350,30 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction("degrees", {TemporalTypes::TFLOAT(), LogicalType::BOOLEAN}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_degrees));
     loader.RegisterFunction(ScalarFunction("radians", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_radians));
 
+    // tnumber distance and nearest-approach-distance.
+    //
+    // Value-distance variants `<-> ` for (tint, INTEGER), (INTEGER, tint),
+    // (tfloat, DOUBLE), (DOUBLE, tfloat) are intentionally NOT registered
+    // here: in the installed MEOS library, tdistance_tfloat_float / tint_int
+    // return the temporal's own value at each instant rather than the
+    // |t.value - v| absolute difference. Verified by smoke test:
+    //   SELECT 5.0::DOUBLE <-> tfloat '5.0@2000-01-01';   -- returns 5.0, expected 0.0
+    //   SELECT 100.0::DOUBLE <-> tfloat '2.5@2000-01-01'; -- returns 2.5, expected 97.5
+    // The temporal-temporal variant DOES work correctly, and so does nad_*.
+    // Restore the value-distance registrations once the MEOS issue is resolved.
+    loader.RegisterFunction(ScalarFunction("<->", {TemporalTypes::TINT(), TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Tdistance_tnumber_tnumber));
+    loader.RegisterFunction(ScalarFunction("<->", {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tdistance_tnumber_tnumber));
+
+    // nearestApproachDistance / nad — scalar return
+    loader.RegisterFunction(ScalarFunction("nad", {TemporalTypes::TINT(), LogicalType::INTEGER}, LogicalType::INTEGER, TemporalFunctions::Nad_tint_int));
+    loader.RegisterFunction(ScalarFunction("nad", {TemporalTypes::TINT(), TemporalTypes::TINT()}, LogicalType::INTEGER, TemporalFunctions::Nad_tint_tint));
+    loader.RegisterFunction(ScalarFunction("nad", {TemporalTypes::TFLOAT(), LogicalType::DOUBLE}, LogicalType::DOUBLE, TemporalFunctions::Nad_tfloat_float));
+    loader.RegisterFunction(ScalarFunction("nad", {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, LogicalType::DOUBLE, TemporalFunctions::Nad_tfloat_tfloat));
+    loader.RegisterFunction(ScalarFunction("nearestApproachDistance", {TemporalTypes::TINT(), LogicalType::INTEGER}, LogicalType::INTEGER, TemporalFunctions::Nad_tint_int));
+    loader.RegisterFunction(ScalarFunction("nearestApproachDistance", {TemporalTypes::TINT(), TemporalTypes::TINT()}, LogicalType::INTEGER, TemporalFunctions::Nad_tint_tint));
+    loader.RegisterFunction(ScalarFunction("nearestApproachDistance", {TemporalTypes::TFLOAT(), LogicalType::DOUBLE}, LogicalType::DOUBLE, TemporalFunctions::Nad_tfloat_float));
+    loader.RegisterFunction(ScalarFunction("nearestApproachDistance", {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, LogicalType::DOUBLE, TemporalFunctions::Nad_tfloat_tfloat));
+
     // ttext text functions
     loader.RegisterFunction(ScalarFunction("lower", {TemporalTypes::TTEXT()}, TemporalTypes::TTEXT(), TemporalFunctions::Ttext_lower));
     loader.RegisterFunction(ScalarFunction("upper", {TemporalTypes::TTEXT()}, TemporalTypes::TTEXT(), TemporalFunctions::Ttext_upper));

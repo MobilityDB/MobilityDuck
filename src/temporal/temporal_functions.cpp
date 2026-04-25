@@ -4814,6 +4814,69 @@ void TemporalFunctions::Tfloat_radians(DataChunk &args, ExpressionState &state, 
 }
 
 /* ***************************************************
+ * Distance operator on tnumber
+ ****************************************************/
+
+void TemporalFunctions::Tdistance_tint_int(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalBinaryV<int32_t>(args, result, [](Temporal *t, int32_t i) { return tdistance_tint_int(t, i); });
+}
+void TemporalFunctions::Tdistance_int_tint(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalBinaryV1<int32_t>(args, result, [](int32_t i, Temporal *t) { return tdistance_tint_int(t, i); });
+}
+void TemporalFunctions::Tdistance_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalBinaryV<double>(args, result, [](Temporal *t, double d) { return tdistance_tfloat_float(t, d); });
+}
+void TemporalFunctions::Tdistance_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalBinaryV1<double>(args, result, [](double d, Temporal *t) { return tdistance_tfloat_float(t, d); });
+}
+void TemporalFunctions::Tdistance_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalBinaryTT(args, result, [](Temporal *a, Temporal *b) { return tdistance_tnumber_tnumber(a, b); });
+}
+
+void TemporalFunctions::Nad_tint_int(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, int32_t, int32_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t blob, int32_t i) -> int32_t {
+            Temporal *t = BlobToTemporal(blob);
+            int32_t r = nad_tint_int(t, i);
+            free(t);
+            return r;
+        });
+}
+void TemporalFunctions::Nad_tint_tint(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, int32_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a_blob, string_t b_blob) -> int32_t {
+            Temporal *a = BlobToTemporal(a_blob);
+            Temporal *b = BlobToTemporal(b_blob);
+            int32_t r = nad_tint_tint(a, b);
+            free(a); free(b);
+            return r;
+        });
+}
+void TemporalFunctions::Nad_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, double, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t blob, double d) -> double {
+            Temporal *t = BlobToTemporal(blob);
+            double r = nad_tfloat_float(t, d);
+            free(t);
+            return r;
+        });
+}
+void TemporalFunctions::Nad_tfloat_tfloat(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a_blob, string_t b_blob) -> double {
+            Temporal *a = BlobToTemporal(a_blob);
+            Temporal *b = BlobToTemporal(b_blob);
+            double r = nad_tfloat_tfloat(a, b);
+            free(a); free(b);
+            return r;
+        });
+}
+
+/* ***************************************************
  * Text functions on ttext
  ****************************************************/
 

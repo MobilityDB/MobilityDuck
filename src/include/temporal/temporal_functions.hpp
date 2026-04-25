@@ -229,6 +229,19 @@ struct TemporalFunctions {
     static void Tfloat_radians(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
+     * Distance operator on tnumber
+     ****************************************************/
+    static void Tdistance_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tdistance_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tdistance_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tdistance_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tdistance_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nad_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nad_tint_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nad_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nad_tfloat_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
      * Text functions on ttext
      ****************************************************/
     static void Ttext_lower(DataChunk &args, ExpressionState &state, Vector &result);
