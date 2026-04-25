@@ -315,7 +315,7 @@ static void Value_to_span_core(Vector &source, Vector &result, idx_t count, meos
                 Span *s = value_span(d, T_INT4);
                 Write_span(result,i,s);
             }
-
+            break;
         }
         case T_INT8: {
             auto in = FlatVector::GetData<int64_t>(source);
@@ -372,6 +372,13 @@ void SpanFunctions::Value_to_span(DataChunk &args, ExpressionState &state, Vecto
 
     Value_to_span_core(source, result, args.size(), base_type);
 
+}
+
+bool SpanFunctions::Value_to_span_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(result.GetType().GetAlias());
+    meosType base_type = spantype_basetype(span_type);
+    Value_to_span_core(source, result, count, base_type);
+    return true;
 }
 
 static void Set_to_span_common(Vector &source, Vector &result, idx_t count) {
