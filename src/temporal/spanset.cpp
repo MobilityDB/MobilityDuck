@@ -336,6 +336,22 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("splitEachNSpans", {spanset_type, LogicalType::INTEGER}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_split_each_n_spans)
         );
 
+        // Lowercase aliases matching MobilityDB's SQL surface
+        loader.RegisterFunction(
+            ScalarFunction("splitNspans", {spanset_type, LogicalType::INTEGER}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_split_n_spans)
+        );
+        loader.RegisterFunction(
+            ScalarFunction("splitEachNspans", {spanset_type, LogicalType::INTEGER}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_split_each_n_spans)
+        );
+
+        // Hash
+        loader.RegisterFunction(
+            ScalarFunction("spanset_hash", {spanset_type}, LogicalType::UINTEGER, SpansetFunctions::Spanset_hash)
+        );
+        loader.RegisterFunction(
+            ScalarFunction("spanset_hash_extended", {spanset_type, LogicalType::BIGINT}, LogicalType::UBIGINT, SpansetFunctions::Spanset_hash_extended)
+        );
+
         // comparison operators
         loader.RegisterFunction(
             ScalarFunction("spanset_eq", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_eq)
