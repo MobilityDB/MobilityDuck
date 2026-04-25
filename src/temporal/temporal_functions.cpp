@@ -5150,6 +5150,95 @@ void TemporalFunctions::Temporal_hausdorff_distance(DataChunk &args, ExpressionS
 }
 
 /* ***************************************************
+ * tnumber × {numspan, tbox} topological predicates
+ ****************************************************/
+
+namespace {
+
+template <typename Box, typename Fn>
+void TempBoxBoolPred(DataChunk &args, Vector &result, Fn fn) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t blob, string_t box_blob) -> bool {
+            Temporal *t = BlobToTemporal(blob);
+            Box *b = (Box *)malloc(box_blob.GetSize());
+            memcpy(b, box_blob.GetData(), box_blob.GetSize());
+            bool r = fn(t, b);
+            free(t); free(b);
+            return r;
+        });
+}
+
+template <typename Box, typename Fn>
+void BoxTempBoolPred(DataChunk &args, Vector &result, Fn fn) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t box_blob, string_t blob) -> bool {
+            Box *b = (Box *)malloc(box_blob.GetSize());
+            memcpy(b, box_blob.GetData(), box_blob.GetSize());
+            Temporal *t = BlobToTemporal(blob);
+            bool r = fn(b, t);
+            free(b); free(t);
+            return r;
+        });
+}
+
+} // namespace
+
+// tnumber × numspan (uses Span)
+void TemporalFunctions::Contains_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempBoxBoolPred<Span>(args, result, [](Temporal *t, Span *s) { return contains_tnumber_numspan(t, s); });
+}
+void TemporalFunctions::Contained_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempBoxBoolPred<Span>(args, result, [](Temporal *t, Span *s) { return contained_tnumber_numspan(t, s); });
+}
+void TemporalFunctions::Overlaps_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempBoxBoolPred<Span>(args, result, [](Temporal *t, Span *s) { return overlaps_tnumber_numspan(t, s); });
+}
+void TemporalFunctions::Adjacent_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempBoxBoolPred<Span>(args, result, [](Temporal *t, Span *s) { return adjacent_tnumber_numspan(t, s); });
+}
+// numspan × tnumber
+void TemporalFunctions::Contains_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result) {
+    BoxTempBoolPred<Span>(args, result, [](Span *s, Temporal *t) { return contains_numspan_tnumber(s, t); });
+}
+void TemporalFunctions::Contained_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result) {
+    BoxTempBoolPred<Span>(args, result, [](Span *s, Temporal *t) { return contained_numspan_tnumber(s, t); });
+}
+void TemporalFunctions::Overlaps_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result) {
+    BoxTempBoolPred<Span>(args, result, [](Span *s, Temporal *t) { return overlaps_numspan_tnumber(s, t); });
+}
+void TemporalFunctions::Adjacent_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result) {
+    BoxTempBoolPred<Span>(args, result, [](Span *s, Temporal *t) { return adjacent_numspan_tnumber(s, t); });
+}
+// tnumber × tbox (uses TBox)
+void TemporalFunctions::Contains_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempBoxBoolPred<TBox>(args, result, [](Temporal *t, TBox *b) { return contains_tnumber_tbox(t, b); });
+}
+void TemporalFunctions::Contained_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempBoxBoolPred<TBox>(args, result, [](Temporal *t, TBox *b) { return contained_tnumber_tbox(t, b); });
+}
+void TemporalFunctions::Overlaps_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempBoxBoolPred<TBox>(args, result, [](Temporal *t, TBox *b) { return overlaps_tnumber_tbox(t, b); });
+}
+void TemporalFunctions::Adjacent_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    TempBoxBoolPred<TBox>(args, result, [](Temporal *t, TBox *b) { return adjacent_tnumber_tbox(t, b); });
+}
+// tbox × tnumber
+void TemporalFunctions::Contains_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result) {
+    BoxTempBoolPred<TBox>(args, result, [](TBox *b, Temporal *t) { return contains_tbox_tnumber(b, t); });
+}
+void TemporalFunctions::Contained_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result) {
+    BoxTempBoolPred<TBox>(args, result, [](TBox *b, Temporal *t) { return contained_tbox_tnumber(b, t); });
+}
+void TemporalFunctions::Overlaps_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result) {
+    BoxTempBoolPred<TBox>(args, result, [](TBox *b, Temporal *t) { return overlaps_tbox_tnumber(b, t); });
+}
+void TemporalFunctions::Adjacent_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result) {
+    BoxTempBoolPred<TBox>(args, result, [](TBox *b, Temporal *t) { return adjacent_tbox_tnumber(b, t); });
+}
+
+/* ***************************************************
  * Text functions on ttext
  ****************************************************/
 
