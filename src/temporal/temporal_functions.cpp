@@ -5281,6 +5281,36 @@ DEFINE_TNUM_POS(Overright, overright)
 #undef DEFINE_TNUM_POS
 
 /* ***************************************************
+ * tspatial × {stbox, tspatial} position predicates
+ ****************************************************/
+
+#define DEFINE_TSPATIAL_STBOX_POS(NAME, MEOS_FN) \
+void TemporalFunctions::NAME##_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result) { \
+    TempBoxBoolPred<STBox>(args, result, [](Temporal *t, STBox *b) { return MEOS_FN##_tspatial_stbox(t, b); }); \
+} \
+void TemporalFunctions::NAME##_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result) { \
+    BoxTempBoolPred<STBox>(args, result, [](STBox *b, Temporal *t) { return MEOS_FN##_stbox_tspatial(b, t); }); \
+} \
+void TemporalFunctions::NAME##_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result) { \
+    TempTempBoolPred(args, result, [](Temporal *a, Temporal *b) { return MEOS_FN##_tspatial_tspatial(a, b); }); \
+}
+
+DEFINE_TSPATIAL_STBOX_POS(Left,       left)
+DEFINE_TSPATIAL_STBOX_POS(Right,      right)
+DEFINE_TSPATIAL_STBOX_POS(Below,      below)
+DEFINE_TSPATIAL_STBOX_POS(Above,      above)
+DEFINE_TSPATIAL_STBOX_POS(Front,      front)
+DEFINE_TSPATIAL_STBOX_POS(Back,       back)
+DEFINE_TSPATIAL_STBOX_POS(Overleft,   overleft)
+DEFINE_TSPATIAL_STBOX_POS(Overright,  overright)
+DEFINE_TSPATIAL_STBOX_POS(Overbelow,  overbelow)
+DEFINE_TSPATIAL_STBOX_POS(Overabove,  overabove)
+DEFINE_TSPATIAL_STBOX_POS(Overfront,  overfront)
+DEFINE_TSPATIAL_STBOX_POS(Overback,   overback)
+
+#undef DEFINE_TSPATIAL_STBOX_POS
+
+/* ***************************************************
  * Text functions on ttext
  ****************************************************/
 
