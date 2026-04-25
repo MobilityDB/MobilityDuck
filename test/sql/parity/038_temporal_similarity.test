@@ -1,0 +1,46 @@
+# name: test/sql/parity/038_temporal_similarity.test
+# description: MobilityDB regression file 038_temporal_similarity.test.sql adapted for MobilityDuck
+# group: [sql]
+#
+# Whole file under `mode skip`: MobilityDuck does not register the
+# similarity-measure family — `frechetDistance`, `discreteFrechet`,
+# `dynTimeWarp` (DTW), `hausdorffDistance`, `similarityPath`. MEOS
+# symbols: temporal_frechet_distance, temporal_dyntimewarp_distance,
+# temporal_hausdorff_distance, temporal_similarity_path.
+
+require mobilityduck
+
+# Frechet distance
+
+query I
+SELECT frechetDistance(tfloat '[1@2000-01-01, 2@2000-01-02]', tfloat '[2@2000-01-01, 3@2000-01-02]');
+----
+1
+
+query I
+SELECT discreteFrechet(tfloat '[1@2000-01-01, 2@2000-01-02]', tfloat '[2@2000-01-01, 3@2000-01-02]');
+----
+1
+
+# Dynamic time warping
+
+query I
+SELECT dynTimeWarp(tfloat '[1@2000-01-01, 2@2000-01-02]', tfloat '[2@2000-01-01, 3@2000-01-02]');
+----
+2
+
+# Hausdorff distance
+
+query I
+SELECT hausdorffDistance(tfloat '[1@2000-01-01, 2@2000-01-02]', tfloat '[2@2000-01-01, 3@2000-01-02]');
+----
+1
+
+mode skip
+# similarityPath returns a relation (matched-pair indices) and needs
+# TableFunction infrastructure that MobilityDuck does not yet expose.
+query II
+SELECT * FROM similarityPath(tfloat '[1@2000-01-01]', tfloat '[2@2000-01-01]', 'frechet');
+----
+0  0
+mode unskip
