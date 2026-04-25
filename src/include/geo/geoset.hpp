@@ -18,10 +18,13 @@ struct SpatialSetType{
 };
 
 struct SpatialSetFunctions{
-    //cast    
+    //cast
     static bool Text_to_geoset(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
-    //other    
+    //constructor
+    static void Geomset_constructor(DataChunk &args, ExpressionState &state, Vector &result);
+
+    //other
     static void Spatialset_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spatialset_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result);    
     static void Set_mem_size(DataChunk &args, ExpressionState &state, Vector &result);

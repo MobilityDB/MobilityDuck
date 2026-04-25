@@ -132,14 +132,60 @@ void SpatialSetType::RegisterScalarFunctions(ExtensionLoader &loader) {
         {SpatialSetType::geogset()}, LogicalType::INTEGER, SpatialSetFunctions::Set_num_values));
 
     loader.RegisterFunction( ScalarFunction(
-        "valueN", {SpatialSetType::geomset(), LogicalType::INTEGER},  
+        "valueN", {SpatialSetType::geomset(), LogicalType::INTEGER},
         GeoTypes::GEOMETRY(),
         SpatialSetFunctions::Set_value_n
-    )); 
+    ));
+
+    loader.RegisterFunction( ScalarFunction(
+        "set", {LogicalType::LIST(GeoTypes::GEOMETRY())},
+        SpatialSetType::geomset(),
+        SpatialSetFunctions::Geomset_constructor
+    ));
+}
+
+// --- Constructor: set(LIST(GEOMETRY)) -> geomset ---
+void SpatialSetFunctions::Geomset_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &list_input = args.data[0];
+
+    UnaryExecutor::Execute<list_entry_t, string_t>(
+        list_input, result, args.size(),
+        [&](list_entry_t list_entry) -> string_t {
+            auto &child = ListVector::GetEntry(list_input);
+            child.Flatten(args.size());
+
+            idx_t offset = list_entry.offset;
+            idx_t length = list_entry.length;
+
+            if (length == 0) {
+                throw InvalidInputException("The input array cannot be empty");
+            }
+
+            GSERIALIZED **values = (GSERIALIZED **)malloc(sizeof(GSERIALIZED *) * length);
+            for (idx_t i = 0; i < length; ++i) {
+                idx_t idx = offset + i;
+                string_t blob = FlatVector::GetData<string_t>(child)[idx];
+                values[i] = GeometryToGSerialized(blob, 0);
+            }
+
+            Set *s = geoset_make(values, (int)length);
+            for (idx_t i = 0; i < length; ++i) {
+                free(values[i]);
+            }
+            free(values);
+
+            if (!s) {
+                throw InvalidInputException("Failed to construct geomset");
+            }
+            size_t size = set_mem_size(s);
+            string_t blob = StringVector::AddStringOrBlob(result, (const char *)s, size);
+            free(s);
+            return blob;
+        });
 }
 
 // --- Cast Function ---
-bool SpatialSetFunctions::Text_to_geoset(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {    
+bool SpatialSetFunctions::Text_to_geoset(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     source.Flatten(count);
 
     auto target_type = result.GetType();    

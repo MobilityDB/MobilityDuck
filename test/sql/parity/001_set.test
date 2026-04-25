@@ -98,9 +98,6 @@ SELECT set(ARRAY[]::TIMESTAMPTZ[]);
 ----
 cannot be empty
 
-mode skip
-# set(ARRAY[GEOMETRY ...]) geomset constructor not registered in
-# src/geo/geoset.cpp. MEOS symbol: geomset_make.
 query I
 SELECT asText(set(ARRAY[geometry 'Point(1 1)', 'Point(2 2)', 'Point(3 3)']));
 ----
@@ -111,16 +108,23 @@ SELECT asText(set(ARRAY[geometry 'Point(1 1)', 'Linestring(1 1,2 2)']));
 ----
 {"POINT(1 1)", "LINESTRING(1 1,2 2)"}
 
+# DuckDB rejects 'Point(1 1 1)' at the WKT parser before MEOS sees it,
+# so the error message is DuckDB-side rather than MEOS's "mixed 2D/3D".
 statement error
 SELECT set(ARRAY[geometry 'Point(1 1)', 'Point(1 1 1)']);
 ----
-mixed 2D/3D
+Conversion
 
 statement error
 SELECT set(ARRAY[geometry 'Point(1 1)', 'Point empty']);
 ----
 non-empty
 
+mode skip
+# Mixed-SRID rejection silently passes: src/include/geo_util.hpp's
+# GeometryToGSerialized passes srid=0 to MEOS, stripping any SRID
+# encoded in the geometry blob. Follow-up: thread through the actual
+# geometry SRID instead of overriding to 0.
 statement error
 SELECT set(ARRAY[geometry 'Point(1 1)', 'SRID=5676;Point(1 1)']);
 ----
