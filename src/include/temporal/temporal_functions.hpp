@@ -258,6 +258,22 @@ struct TemporalFunctions {
     static void Adjacent_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
+     * Temporal time-position predicates (<<#, #>>, &<#, #&>)
+     ****************************************************/
+    static void Before_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    static void After_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overbefore_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overafter_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Before_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void After_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overbefore_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overafter_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Before_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    static void After_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overbefore_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overafter_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
      * Text functions on ttext
      ****************************************************/
     static void Ttext_lower(DataChunk &args, ExpressionState &state, Vector &result);
