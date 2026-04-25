@@ -274,6 +274,95 @@ struct TemporalFunctions {
     static void Overafter_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
+     * Ever / always equality and inequality
+     * (DuckDB parser cannot accept ?= / #= operator names,
+     * so the upstream MobilityDB ?= / ?<> / #= / #<> map to
+     * named functions ever_eq / ever_ne / always_eq / always_ne.)
+     ****************************************************/
+    // ever_eq
+    static void Ever_eq_bool_tbool(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_eq_tbool_bool(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_eq_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_eq_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_eq_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_eq_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_eq_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    // always_eq
+    static void Always_eq_bool_tbool(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_eq_tbool_bool(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_eq_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_eq_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_eq_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_eq_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_eq_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    // ever_ne
+    static void Ever_ne_bool_tbool(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_ne_tbool_bool(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_ne_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_ne_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_ne_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_ne_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_ne_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    // always_ne
+    static void Always_ne_bool_tbool(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_ne_tbool_bool(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_ne_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_ne_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_ne_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_ne_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_ne_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+
+    // Ever / always ordering (no tbool — boolean has no ordering)
+    // ever_lt
+    static void Ever_lt_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_lt_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_lt_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_lt_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_lt_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    // always_lt
+    static void Always_lt_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_lt_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_lt_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_lt_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_lt_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    // ever_le
+    static void Ever_le_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_le_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_le_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_le_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_le_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    // always_le
+    static void Always_le_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_le_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_le_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_le_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_le_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    // ever_gt
+    static void Ever_gt_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_gt_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_gt_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_gt_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_gt_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    // always_gt
+    static void Always_gt_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_gt_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_gt_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_gt_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_gt_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    // ever_ge
+    static void Ever_ge_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_ge_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_ge_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_ge_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ever_ge_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    // always_ge
+    static void Always_ge_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_ge_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_ge_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_ge_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Always_ge_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
      * Text functions on ttext
      ****************************************************/
     static void Ttext_lower(DataChunk &args, ExpressionState &state, Vector &result);
