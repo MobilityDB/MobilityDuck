@@ -45,6 +45,8 @@ struct SpanFunctions {
         // accessors
     static void Span_lower(DataChunk &args, ExpressionState &state, Vector &result);
     static void Span_upper(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Span_hash(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Span_hash_extended(DataChunk &args, ExpressionState &state, Vector &result);
     static void Span_lower_inc(DataChunk &args, ExpressionState &state, Vector &result);
     static void Span_upper_inc(DataChunk &args, ExpressionState &state, Vector &result);
     static void Numspan_width(DataChunk &args, ExpressionState &state, Vector &result);

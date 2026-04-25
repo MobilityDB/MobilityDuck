@@ -272,6 +272,9 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
         loader.RegisterFunction( ScalarFunction("lowerInc",{span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_lower_inc));
         loader.RegisterFunction( ScalarFunction("upperInc",{span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_upper_inc));
+
+        loader.RegisterFunction( ScalarFunction("span_hash", {span_type}, LogicalType::UINTEGER, SpanFunctions::Span_hash));
+        loader.RegisterFunction( ScalarFunction("span_hash_extended", {span_type, LogicalType::BIGINT}, LogicalType::UBIGINT, SpanFunctions::Span_hash_extended));
         }
     
     loader.RegisterFunction( 
