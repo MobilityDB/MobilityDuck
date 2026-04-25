@@ -1,0 +1,48 @@
+# name: test/sql/parity/009_time_ops.test
+# description: MobilityDB regression file 009_time_ops.test.sql adapted for MobilityDuck
+# group: [sql]
+#
+# Time-only specialisations of operators between dateset / datespan /
+# datespanset / tstzset / tstzspan / tstzspanset and timestamptz /
+# date — most of the surface is covered transitively by the existing
+# set / span / spanset operator registrations (containment, overlap,
+# union, intersection, difference, distance), which already pass in
+# the parity files for those types.
+#
+# What this file additionally exercises that is NOT yet bound:
+# - Time-shift arithmetic: `+ interval`, `- interval` between
+#   tstzset / tstzspan / tstzspanset and INTERVAL.
+# - Time-difference operator `<->` returning INTERVAL between
+#   timestamptz / tstzset / tstzspan / tstzspanset pairs (only the
+#   span-span / set-span / spanset-spanset distance variants are
+#   bound; the timestamptz-vs-time-type variants are not).
+
+require mobilityduck
+
+mode skip
+
+# tstzset / tstzspan / tstzspanset + interval (shift)
+
+query I
+SELECT tstzset '{2000-01-01}' + interval '1 day';
+----
+{"2000-01-02 00:00:00+00"}
+
+query I
+SELECT tstzspan '[2000-01-01, 2000-01-02]' + interval '1 day';
+----
+[2000-01-02 00:00:00+00, 2000-01-03 00:00:00+00]
+
+# Time-difference distance
+
+query I
+SELECT timestamptz '2000-01-01' <-> tstzset '{2000-01-03}';
+----
+2 days
+
+query I
+SELECT tstzspan '[2000-01-01, 2000-01-02]' <-> tstzspan '[2000-01-04, 2000-01-05]';
+----
+2 days
+
+mode unskip
