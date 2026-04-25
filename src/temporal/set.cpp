@@ -178,11 +178,19 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("tstzset", {SetTypes::dateset()}, SetTypes::tstzset(), SetFunctions::Dateset_to_tstzset)                 
         );
 
-        loader.RegisterFunction( 
+        loader.RegisterFunction(
             ScalarFunction("memSize",{set_type}, LogicalType::INTEGER, SetFunctions::Set_mem_size)
         );
-        
-        loader.RegisterFunction( 
+
+        loader.RegisterFunction(
+            ScalarFunction("set_hash", {set_type}, LogicalType::UINTEGER, SetFunctions::Set_hash)
+        );
+
+        loader.RegisterFunction(
+            ScalarFunction("set_hash_extended", {set_type, LogicalType::BIGINT}, LogicalType::UBIGINT, SetFunctions::Set_hash_extended)
+        );
+
+        loader.RegisterFunction(
             ScalarFunction("numValues", {set_type}, LogicalType::INTEGER,SetFunctions::Set_num_values)
         );
 
