@@ -1,0 +1,138 @@
+# name: test/sql/parity/015_span_aggfuncs.test
+# description: MobilityDB regression file 015_span_aggfuncs.test.sql adapted for MobilityDuck
+# group: [sql]
+#
+# Queries from mobilitydb/test/temporal/queries/015_span_aggfuncs.test.sql.
+# Whole file currently under `mode skip`: MobilityDuck registers no
+# aggregate functions (no AggregateFunction calls in src/temporal/ or
+# src/geo/), so every query in this file fails with "function not
+# found". Aggregate infrastructure landing is the precondition for
+# turning the assertions in this file on; until then the file is a
+# tracked manifest of what `extent`, `setUnion`, `spanUnion`,
+# `tcount`, `tand`, `tor`, `tmin`, `tmax`, `tsum`, `tcount_transfn`,
+# `tagg_combinefn`, `tagg_finalfn` etc. need to cover.
+
+require mobilityduck
+
+mode skip
+
+# extent(<span>) and extent(<spanset>) — MEOS symbol: span_extent_transfn
+# / spanset_extent_transfn / span_extent_combinefn etc.
+
+query I
+SELECT extent(temp) FROM (VALUES
+(NULL::tstzspan),(NULL::tstzspan)) t(temp);
+----
+NULL
+
+query I
+SELECT extent(temp) FROM (VALUES
+(NULL::tstzspan),('[2000-01-01, 2000-01-02]'::tstzspan)) t(temp);
+----
+[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00]
+
+query I
+SELECT extent(temp) FROM (VALUES
+('[2000-01-01, 2000-01-02]'::tstzspan),(NULL::tstzspan)) t(temp);
+----
+[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00]
+
+query I
+SELECT extent(temp) FROM (VALUES
+(NULL::tstzspanset),(NULL::tstzspanset)) t(temp);
+----
+NULL
+
+query I
+SELECT extent(temp) FROM (VALUES
+(NULL::tstzspanset),('{[2000-01-01, 2000-01-02]}'::tstzspanset)) t(temp);
+----
+[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00]
+
+query I
+SELECT extent(temp) FROM (VALUES
+('{[2000-01-01, 2000-01-02]}'::tstzspanset),(NULL::tstzspanset)) t(temp);
+----
+[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00]
+
+# extent(<base>) — value-aggregate variants
+
+query I
+SELECT extent(NULL::int) FROM generate_series(1,10);
+----
+NULL
+
+query I
+SELECT extent(NULL::bigint) FROM generate_series(1,10);
+----
+NULL
+
+query I
+SELECT extent(NULL::float) FROM generate_series(1,10);
+----
+NULL
+
+query I
+SELECT extent(NULL::timestamptz) FROM generate_series(1,10);
+----
+NULL
+
+# extent(<set>)
+
+query I
+SELECT extent(NULL::intset) FROM generate_series(1,10);
+----
+NULL
+
+query I
+SELECT extent(NULL::bigintset) FROM generate_series(1,10);
+----
+NULL
+
+query I
+SELECT extent(NULL::floatset) FROM generate_series(1,10);
+----
+NULL
+
+query I
+SELECT extent(NULL::tstzset) FROM generate_series(1,10);
+----
+NULL
+
+# extent(<spanset>)
+
+query I
+SELECT extent(NULL::intspanset) FROM generate_series(1,10);
+----
+NULL
+
+query I
+SELECT extent(NULL::bigintspanset) FROM generate_series(1,10);
+----
+NULL
+
+query I
+SELECT extent(NULL::floatspanset) FROM generate_series(1,10);
+----
+NULL
+
+query I
+SELECT extent(NULL::tstzspanset) FROM generate_series(1,10);
+----
+NULL
+
+# setUnion / spanUnion — accumulator aggregates returning set / span
+
+query I
+SELECT setUnion(t) FROM (VALUES
+('{2000-01-01}'::tstzset)) t(t);
+----
+{"2000-01-01 00:00:00+00"}
+
+query I
+SELECT spanUnion(t) FROM (VALUES
+('[2000-01-01, 2000-01-02]'::tstzspan)) t(t);
+----
+{[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00]}
+
+mode unskip
