@@ -90,12 +90,9 @@ SELECT set(ARRAY [timestamptz '2000-01-01', '2000-01-01', '2000-01-03']);
 {"2000-01-01 00:00:00+00", "2000-01-03 00:00:00+00"}
 
 # --- empty array should error ---
-mode skip
-# DuckDB parses `'{}'` as a string literal and rejects the cast to
-# timestamptz[]; the equivalent DuckDB-native form
-# `set(ARRAY[]::TIMESTAMPTZ[])` reaches MEOS but the constructor
-# wrapper in src/temporal/set_functions.cpp returns a null pointer
-# rather than raising an "input array cannot be empty" error.
+# MobilityDB writes this as set('{}'::timestamptz[]); DuckDB rejects
+# the PG array-literal `'{}'` at the cast layer, so the DuckDB-native
+# ARRAY[]::TIMESTAMPTZ[] form is used.
 statement error
 SELECT set(ARRAY[]::TIMESTAMPTZ[]);
 ----
