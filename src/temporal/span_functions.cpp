@@ -3714,12 +3714,8 @@ void SpanFunctions::Union_span_span(DataChunk &args, ExpressionState &state, Vec
                 throw InvalidInputException("Invalid SPAN data: null pointer");
             }
             SpanSet *ret = union_span_span(span1, span2);
-            size_t span_size = sizeof(*ret);
-            uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-            memcpy(span_buffer, ret, span_size);
-            string_t span_string_t((char *) span_buffer, span_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-            free(span_buffer);
+            size_t out_size = spanset_mem_size(ret);
+            string_t stored_data = StringVector::AddStringOrBlob(result, (const char *) ret, out_size);
             free(span1);
             free(span2);
             free(ret);
