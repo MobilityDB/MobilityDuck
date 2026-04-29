@@ -251,6 +251,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 		TemporalAggregates::AddExtentOverloads(extent_set);
 		loader.RegisterFunction(std::move(extent_set));
 	}
+	TemporalAggregates::RegisterTCount(loader);
 
 	TgeompointType::RegisterType(loader);
 	TgeompointType::RegisterCastFunctions(loader);

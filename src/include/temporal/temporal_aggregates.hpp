@@ -8,6 +8,9 @@ namespace duckdb {
 struct TemporalAggregates {
     // Add tnumber overloads of extent() to the given set.
     static void AddExtentOverloads(AggregateFunctionSet &extent_set);
+
+    // Register tCount(temporal) → tint as its own AggregateFunctionSet.
+    static void RegisterTCount(ExtensionLoader &loader);
 };
 
 } // namespace duckdb
