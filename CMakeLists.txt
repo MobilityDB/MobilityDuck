@@ -70,6 +70,7 @@ set(EXTENSION_SOURCES
     src/temporal/set_functions.cpp
     src/temporal/span.cpp
     src/temporal/span_functions.cpp
+    src/temporal/span_aggregates.cpp
     src/geo/geoset.cpp
     src/temporal/spanset.cpp
     src/temporal/spanset_functions.cpp
