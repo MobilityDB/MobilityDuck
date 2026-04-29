@@ -253,6 +253,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 	}
 	TemporalAggregates::RegisterTCount(loader);
 	TemporalAggregates::RegisterTemporalAggregates(loader);
+	SpanAggregates::RegisterSpanUnion(loader);
 
 	TgeompointType::RegisterType(loader);
 	TgeompointType::RegisterCastFunctions(loader);
