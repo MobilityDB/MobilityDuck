@@ -11,6 +11,9 @@ struct TemporalAggregates {
 
     // Register tCount(temporal) → tint as its own AggregateFunctionSet.
     static void RegisterTCount(ExtensionLoader &loader);
+
+    // Register tAnd / tOr / tMin / tMax / tSum aggregates.
+    static void RegisterTemporalAggregates(ExtensionLoader &loader);
 };
 
 } // namespace duckdb

@@ -187,6 +187,138 @@ struct TCountFunction {
     }
 };
 
+// ============================================================================
+// Generic skiplist-backed aggregate (tand / tor / tmin / tmax / tsum)
+//
+// Same shape as TCountFunction. Parameterised on:
+//   - TRANSFN: the MEOS transition function (e.g. tbool_tand_transfn)
+//   - MERGE_FN: the per-instant merge function used during Combine
+//                (e.g. mduck_datum_and, mduck_datum_min_int32)
+//   - CROSSINGS: whether MEOS should split sequences at crossings during
+//                Combine. true for tfloat aggregates, false for the rest.
+// ============================================================================
+
+using TempTransfn = SkipList *(*)(SkipList *, const Temporal *);
+
+// Local equivalents of the unexported MEOS datum_* merge functions. Datum is
+// a uintptr_t; for primitive types these are simple bit-level reinterprets.
+static Datum mduck_datum_and(Datum l, Datum r) {
+    return static_cast<Datum>(static_cast<bool>(l) && static_cast<bool>(r));
+}
+static Datum mduck_datum_or(Datum l, Datum r) {
+    return static_cast<Datum>(static_cast<bool>(l) || static_cast<bool>(r));
+}
+static Datum mduck_datum_min_int32(Datum l, Datum r) {
+    int32_t li = static_cast<int32_t>(l);
+    int32_t ri = static_cast<int32_t>(r);
+    return static_cast<Datum>(static_cast<int32_t>(li < ri ? li : ri));
+}
+static Datum mduck_datum_max_int32(Datum l, Datum r) {
+    int32_t li = static_cast<int32_t>(l);
+    int32_t ri = static_cast<int32_t>(r);
+    return static_cast<Datum>(static_cast<int32_t>(li > ri ? li : ri));
+}
+// Float8: PostgreSQL/MEOS pass-by-value convention encodes the IEEE 754 bits
+// of the double in the Datum. Convert via an aliased union to avoid UB.
+static double datum_to_float8(Datum d) {
+    union { uint64_t u; double f; } u;
+    u.u = static_cast<uint64_t>(d);
+    return u.f;
+}
+static Datum float8_to_datum(double f) {
+    union { uint64_t u; double f; } u;
+    u.f = f;
+    return static_cast<Datum>(u.u);
+}
+static Datum mduck_datum_min_float8(Datum l, Datum r) {
+    double lf = datum_to_float8(l);
+    double rf = datum_to_float8(r);
+    return float8_to_datum(lf < rf ? lf : rf);
+}
+static Datum mduck_datum_max_float8(Datum l, Datum r) {
+    double lf = datum_to_float8(l);
+    double rf = datum_to_float8(r);
+    return float8_to_datum(lf > rf ? lf : rf);
+}
+static Datum mduck_datum_sum_float8(Datum l, Datum r) {
+    return float8_to_datum(datum_to_float8(l) + datum_to_float8(r));
+}
+
+template <TempTransfn TRANSFN, Datum (*MERGE_FN)(Datum, Datum), bool CROSSINGS>
+struct SkiplistAggFunction {
+    template <class STATE>
+    static void Initialize(STATE &state) {
+        state.skiplist = nullptr;
+    }
+
+    static bool IgnoreNull() {
+        return true;
+    }
+
+    template <class INPUT_TYPE, class STATE, class OP>
+    static void Operation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &) {
+        const uint8_t *bytes = reinterpret_cast<const uint8_t *>(input.GetData());
+        size_t size = input.GetSize();
+        Temporal *temp = reinterpret_cast<Temporal *>(malloc(size));
+        memcpy(temp, bytes, size);
+        state.skiplist = TRANSFN(state.skiplist, temp);
+        free(temp);
+    }
+
+    template <class INPUT_TYPE, class STATE, class OP>
+    static void ConstantOperation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &unary_input,
+                                  idx_t /*count*/) {
+        Operation<INPUT_TYPE, STATE, OP>(state, input, unary_input);
+    }
+
+    template <class STATE, class OP>
+    static void Combine(const STATE &source, STATE &target, AggregateInputData &) {
+        if (!source.skiplist || source.skiplist->length == 0) {
+            return;
+        }
+        if (!target.skiplist) {
+            const_cast<STATE &>(target).skiplist = temporal_skiplist_make();
+        }
+        void **values = skiplist_values(source.skiplist);
+        int count = source.skiplist->length;
+        temporal_skiplist_splice(target.skiplist, values, count, MERGE_FN, CROSSINGS);
+        free(values);
+    }
+
+    template <class T, class STATE>
+    static void Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data) {
+        if (!state.skiplist || state.skiplist->length == 0) {
+            finalize_data.ReturnNull();
+            return;
+        }
+        Temporal *result = temporal_tagg_finalfn(state.skiplist);
+        state.skiplist = nullptr;
+        if (!result) {
+            finalize_data.ReturnNull();
+            return;
+        }
+        size_t out_size = temporal_mem_size(result);
+        target = finalize_data.ReturnString(
+            string_t(reinterpret_cast<const char *>(result), out_size));
+        free(result);
+    }
+
+    template <class STATE>
+    static void Destroy(STATE &state, AggregateInputData &) {
+        if (state.skiplist) {
+            skiplist_free(state.skiplist);
+            state.skiplist = nullptr;
+        }
+    }
+};
+
+template <TempTransfn TRANSFN, Datum (*MERGE_FN)(Datum, Datum), bool CROSSINGS>
+static AggregateFunction MakeSkiplistAggregate(const LogicalType &input_type, const LogicalType &output_type) {
+    using OPS = SkiplistAggFunction<TRANSFN, MERGE_FN, CROSSINGS>;
+    return AggregateFunction::UnaryAggregateDestructor<TCountState, string_t, string_t, OPS>(
+        input_type, output_type);
+}
+
 } // namespace
 
 void TemporalAggregates::AddExtentOverloads(AggregateFunctionSet &extent_set) {
@@ -203,6 +335,61 @@ void TemporalAggregates::RegisterTCount(ExtensionLoader &loader) {
         tcount_set.AddFunction(fn);
     }
     loader.RegisterFunction(std::move(tcount_set));
+}
+
+void TemporalAggregates::RegisterTemporalAggregates(ExtensionLoader &loader) {
+    // tAnd / tOr: tbool only.
+    {
+        AggregateFunctionSet tand_set("tAnd");
+        tand_set.AddFunction(
+            MakeSkiplistAggregate<&tbool_tand_transfn, &mduck_datum_and, false>(
+                TemporalTypes::TBOOL(), TemporalTypes::TBOOL()));
+        loader.RegisterFunction(std::move(tand_set));
+
+        AggregateFunctionSet tor_set("tOr");
+        tor_set.AddFunction(
+            MakeSkiplistAggregate<&tbool_tor_transfn, &mduck_datum_or, false>(
+                TemporalTypes::TBOOL(), TemporalTypes::TBOOL()));
+        loader.RegisterFunction(std::move(tor_set));
+    }
+
+    // tMin / tMax / tSum: registered as tagg_min / tagg_max / tagg_sum
+    // because the names Tmin / Tmax are already taken by scalar
+    // time-min / time-max accessors on tbox / stbox (registered in
+    // src/temporal/tbox.cpp and src/geo/stbox.cpp). DuckDB's catalog
+    // is case-insensitive at the name level, so registering an
+    // aggregate with the same lowercased name as an existing scalar
+    // triggers an ALTER path that CreateAggregateFunctionInfo doesn't
+    // support and the extension fails to load.
+    // ttext skipped — text merge needs text_cmp plumbing.
+    {
+        AggregateFunctionSet tmin_set("tagg_min");
+        tmin_set.AddFunction(
+            MakeSkiplistAggregate<&tint_tmin_transfn, &mduck_datum_min_int32, false>(
+                TemporalTypes::TINT(), TemporalTypes::TINT()));
+        tmin_set.AddFunction(
+            MakeSkiplistAggregate<&tfloat_tmin_transfn, &mduck_datum_min_float8, true>(
+                TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()));
+        loader.RegisterFunction(std::move(tmin_set));
+
+        AggregateFunctionSet tmax_set("tagg_max");
+        tmax_set.AddFunction(
+            MakeSkiplistAggregate<&tint_tmax_transfn, &mduck_datum_max_int32, false>(
+                TemporalTypes::TINT(), TemporalTypes::TINT()));
+        tmax_set.AddFunction(
+            MakeSkiplistAggregate<&tfloat_tmax_transfn, &mduck_datum_max_float8, true>(
+                TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()));
+        loader.RegisterFunction(std::move(tmax_set));
+
+        AggregateFunctionSet tsum_set("tagg_sum");
+        tsum_set.AddFunction(
+            MakeSkiplistAggregate<&tint_tsum_transfn, &mduck_datum_sum_int32, false>(
+                TemporalTypes::TINT(), TemporalTypes::TINT()));
+        tsum_set.AddFunction(
+            MakeSkiplistAggregate<&tfloat_tsum_transfn, &mduck_datum_sum_float8, true>(
+                TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()));
+        loader.RegisterFunction(std::move(tsum_set));
+    }
 }
 
 } // namespace duckdb
