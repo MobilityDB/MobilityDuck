@@ -16,6 +16,7 @@
 #include "duckdb/main/extension/extension_loader.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include "spatial/spatial_types.hpp"
+#include "mobilityduck/meos_exec_serial.hpp"
 
 namespace duckdb {
 
@@ -61,7 +62,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
      * In/out functions
      ****************************************************/
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "asText",
             {TGEOMPOINT()},
@@ -70,7 +71,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "asEWKT",
             {TGEOMPOINT()},
@@ -81,7 +82,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     const auto varchar_list = LogicalType::LIST(LogicalType::VARCHAR);
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "asText",
             {LogicalType::LIST(TGEOMPOINT())},
@@ -89,7 +90,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Spatialarr_as_text
         )
     );
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "asText",
             {LogicalType::LIST(TGEOMPOINT()), LogicalType::INTEGER},
@@ -97,7 +98,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Spatialarr_as_text
         )
     );
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "asText",
             {LogicalType::LIST(GeoTypes::GEOMETRY())},
@@ -105,7 +106,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Spatialarr_as_text
         )
     );
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "asText",
             {LogicalType::LIST(GeoTypes::GEOMETRY()), LogicalType::INTEGER},
@@ -114,7 +115,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "asEWKT",
             {LogicalType::LIST(TGEOMPOINT())},
@@ -122,7 +123,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Spatialarr_as_ewkt
         )
     );
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "asEWKT",
             {LogicalType::LIST(TGEOMPOINT()), LogicalType::INTEGER},
@@ -130,7 +131,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Spatialarr_as_ewkt
         )
     );
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "asEWKT",
             {LogicalType::LIST(GeoTypes::GEOMETRY())},
@@ -138,7 +139,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Spatialarr_as_ewkt
         )
     );
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "asEWKT",
             {LogicalType::LIST(GeoTypes::GEOMETRY()), LogicalType::INTEGER},
@@ -150,7 +151,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
     * Constructor functions
     ****************************************************/
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "TGEOMPOINT",
             {GeoTypes::GEOMETRY(), LogicalType::TIMESTAMP_TZ},
@@ -159,7 +160,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "TGEOMPOINT",
             {GeoTypes::GEOMETRY(), LogicalType::TIMESTAMP_TZ, LogicalType::INTEGER}, // with SRID
@@ -168,7 +169,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tgeompoint",
             {GeoTypes::GEOMETRY(), SetTypes::tstzset()},
@@ -177,7 +178,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tgeompoint",
             {GeoTypes::GEOMETRY(), SpanTypes::TSTZSPAN()},
@@ -186,7 +187,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-     loader.RegisterFunction(
+     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tgeompoint",
             {GeoTypes::GEOMETRY(), SpanTypes::TSTZSPAN(), LogicalType::VARCHAR},
@@ -195,7 +196,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tgeompoint",
             {GeoTypes::GEOMETRY(), SpansetTypes::tstzspanset()},
@@ -204,7 +205,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tgeompoint",
             {GeoTypes::GEOMETRY(), SpansetTypes::tstzspanset(), LogicalType::VARCHAR},
@@ -213,7 +214,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tgeompointSeq",
             {LogicalType::LIST(TGEOMPOINT())},
@@ -223,7 +224,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tgeompointSeqSet",
             {LogicalType::LIST(TGEOMPOINT())},
@@ -232,7 +233,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "stbox",
             {TGEOMPOINT()},
@@ -244,7 +245,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Conversion functions
      ****************************************************/
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "timeSpan",
             {TGEOMPOINT()},
@@ -257,7 +258,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
      * Transformation functions
      ****************************************************/
     
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tgeompointInst",
             {TGEOMPOINT()},
@@ -266,7 +267,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tgeompointSeq",
             {TGEOMPOINT(), LogicalType::VARCHAR},
@@ -275,7 +276,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tgeompointSeq",
             {TGEOMPOINT()},
@@ -284,7 +285,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tgeompointSeqSet",
             {TGEOMPOINT(), LogicalType::VARCHAR},
@@ -293,7 +294,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tgeompointSeqSet",
             {TGEOMPOINT()},
@@ -302,7 +303,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "setInterp",
             {TGEOMPOINT(), LogicalType::VARCHAR},
@@ -311,7 +312,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "appendInstant",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -320,7 +321,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "appendSequence",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -329,7 +330,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "merge",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -338,7 +339,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
      );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "merge",
             {LogicalType::LIST(TGEOMPOINT())},
@@ -350,7 +351,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
     * Accessor functions
     ****************************************************/
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tempSubtype",
             {TGEOMPOINT()},
@@ -359,7 +360,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "interp",
             {TGEOMPOINT()},
@@ -368,7 +369,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "getValue",
             {TGEOMPOINT()},
@@ -377,7 +378,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "getTimestamp",
             {TGEOMPOINT()},
@@ -386,7 +387,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "valueSet",
             {TGEOMPOINT()},
@@ -395,7 +396,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "valueN",
             // BIGINT to match the sibling `valueN(<other temporal>, BIGINT)`
@@ -409,7 +410,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "getTime",
             {TGEOMPOINT()},
@@ -418,7 +419,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "startValue",
             {TGEOMPOINT()},
@@ -427,7 +428,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "endValue",
             {TGEOMPOINT()},
@@ -435,7 +436,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Tgeompoint_end_value
         )
     );
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "duration",
             {TGEOMPOINT()},
@@ -444,7 +445,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "duration",
             {TGEOMPOINT(), LogicalType::BOOLEAN},
@@ -453,7 +454,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "memSize",
             {TGEOMPOINT()},
@@ -462,7 +463,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "lowerInc",
             {TGEOMPOINT()},
@@ -471,7 +472,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "upperInc",
             {TGEOMPOINT()},
@@ -480,7 +481,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "numInstants",
             {TGEOMPOINT()},
@@ -489,7 +490,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "startInstant",
             {TGEOMPOINT()},
@@ -498,7 +499,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "endInstant",
             {TGEOMPOINT()},
@@ -507,7 +508,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "instantN",
             {TGEOMPOINT(), LogicalType::INTEGER},
@@ -516,7 +517,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "instants",
             {TGEOMPOINT()},
@@ -525,7 +526,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "numTimestamps",
             {TGEOMPOINT()},
@@ -533,7 +534,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TemporalFunctions::Temporal_num_timestamps
         )
     );
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "startTimestamp",
             {TGEOMPOINT()},
@@ -542,7 +543,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "endTimestamp",
             {TGEOMPOINT()},
@@ -551,7 +552,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "timestampN",
             {TGEOMPOINT(), LogicalType::INTEGER},
@@ -560,7 +561,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "timestamps",
             {TGEOMPOINT()},
@@ -569,7 +570,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "numSequences",
             {TGEOMPOINT()},
@@ -578,7 +579,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "startSequence",
             {TGEOMPOINT()},
@@ -587,7 +588,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "endSequence",
             {TGEOMPOINT()},
@@ -596,7 +597,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
     
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "sequenceN",
             {TGEOMPOINT(), LogicalType::INTEGER},
@@ -605,7 +606,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "sequences",
             {TGEOMPOINT()},
@@ -614,7 +615,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "segments",
             {TGEOMPOINT()},
@@ -626,7 +627,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Shift and Scale functions
      ****************************************************/
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "shiftTime",
             {TGEOMPOINT(), LogicalType::INTERVAL},
@@ -635,7 +636,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "scaleTime",
             {TGEOMPOINT(), LogicalType::INTERVAL},
@@ -644,7 +645,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "shiftScaleTime",
             {TGEOMPOINT(), LogicalType::INTERVAL, LogicalType::INTERVAL},
@@ -659,7 +660,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
      * Restriction functions
      ****************************************************/
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "atValues",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -668,7 +669,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "minusValues",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -677,7 +678,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "atValues",
             {TGEOMPOINT(), SpatialSetType::geomset()},
@@ -686,7 +687,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "minusValues",
             {TGEOMPOINT(), SpatialSetType::geomset()},
@@ -695,7 +696,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "atTime",
             {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
@@ -704,7 +705,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "minusTime",
             {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
@@ -713,7 +714,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "valueAtTimestamp",
             {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
@@ -722,7 +723,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
     
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "atTime",
             {TGEOMPOINT(), SetTypes::tstzset()},
@@ -731,7 +732,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "minusTime",
             {TGEOMPOINT(), SetTypes::tstzset()},
@@ -740,7 +741,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "atTime",
             {TGEOMPOINT(), SpanTypes::TSTZSPAN()},
@@ -749,7 +750,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "minusTime",
             {TGEOMPOINT(), SpanTypes::TSTZSPAN()},
@@ -758,7 +759,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "atTime",
             {TGEOMPOINT(), SpansetTypes::tstzspanset()},
@@ -767,7 +768,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "minusTime",
             {TGEOMPOINT(), SpansetTypes::tstzspanset()},
@@ -776,7 +777,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "beforeTimestamp",
             {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
@@ -785,7 +786,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "afterTimestamp",
             {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
@@ -797,7 +798,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Modification function
      ****************************************************/
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "insert",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -806,7 +807,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "insert",
             {TGEOMPOINT(), TGEOMPOINT(), LogicalType::BOOLEAN},
@@ -815,7 +816,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "update",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -824,7 +825,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "update",
             {TGEOMPOINT(), TGEOMPOINT(), LogicalType::BOOLEAN},
@@ -833,7 +834,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "deleteTime",
             {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ},
@@ -841,7 +842,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TemporalFunctions::Temporal_delete_timestamptz
         )
     );
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "deleteTime",
             {TGEOMPOINT(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN},
@@ -850,7 +851,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "deleteTime",
             {TGEOMPOINT(), SetTypes::tstzset()},
@@ -858,7 +859,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TemporalFunctions::Temporal_delete_tstzset
         )
     );
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "deleteTime",
             {TGEOMPOINT(), SetTypes::tstzset(), LogicalType::BOOLEAN},
@@ -867,7 +868,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "deleteTime",
             {TGEOMPOINT(), SpanTypes::TSTZSPAN()},
@@ -876,7 +877,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "deleteTime",
             {TGEOMPOINT(), SpanTypes::TSTZSPAN(), LogicalType::BOOLEAN},
@@ -885,7 +886,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "deleteTime",
             {TGEOMPOINT(), SpansetTypes::tstzspanset()},
@@ -894,7 +895,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "deleteTime",
             {TGEOMPOINT(), SpansetTypes::tstzspanset(), LogicalType::BOOLEAN},
@@ -908,7 +909,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
      * Stops function
      ****************************************************/
     
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "stops",
             {TGEOMPOINT(), LogicalType::DOUBLE, LogicalType::INTERVAL},
@@ -920,7 +921,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Comparison functions
      ****************************************************/
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "temporal_eq",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -929,7 +930,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "temporal_ne",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -938,7 +939,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "temporal_lt",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -947,7 +948,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "temporal_le",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -956,7 +957,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "temporal_gt",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -965,7 +966,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "temporal_ge",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -974,7 +975,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "temporal_cmp",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -983,7 +984,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-        loader.RegisterFunction(
+        duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "=",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -992,7 +993,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "<>",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1001,7 +1002,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "<",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1010,7 +1011,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "<=",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1019,7 +1020,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             ">",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1028,7 +1029,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             ">=",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1040,7 +1041,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Spatial functions
      ****************************************************/
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "getX",
             {TGEOMPOINT()},
@@ -1049,7 +1050,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "getY",
             {TGEOMPOINT()},
@@ -1058,7 +1059,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "getZ",
             {TGEOMPOINT()},
@@ -1067,7 +1068,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "length",
             {TGEOMPOINT()},
@@ -1076,7 +1077,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "cumulativeLength",
             {TGEOMPOINT()},
@@ -1085,7 +1086,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "speed",
             {TGEOMPOINT()},
@@ -1094,7 +1095,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "twCentroid",
             {TGEOMPOINT()},
@@ -1103,7 +1104,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "direction",
             {TGEOMPOINT()},
@@ -1112,7 +1113,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "azimuth",
             {TGEOMPOINT()},
@@ -1121,7 +1122,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "angularDifference",
             {TGEOMPOINT()},
@@ -1130,7 +1131,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "isSimple",
             {TGEOMPOINT()},
@@ -1139,7 +1140,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "makeSimple",
             {TGEOMPOINT()},
@@ -1148,7 +1149,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "trajectory",
             {TGEOMPOINT()},
@@ -1157,7 +1158,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "trajectory_gs",
             {TGEOMPOINT()},
@@ -1166,7 +1167,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "atGeometry",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1175,7 +1176,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "minusGeometry",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1184,7 +1185,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "minusGeometry",
             {TGEOMPOINT(), GeoTypes::GEOMETRY(), SpanTypes::FLOATSPAN()},
@@ -1193,7 +1194,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "atStbox",
             {TGEOMPOINT(), StboxType::STBOX()},
@@ -1202,7 +1203,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "atStbox",
             {TGEOMPOINT(), StboxType::STBOX(), LogicalType::BOOLEAN},
@@ -1211,7 +1212,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "minusStbox",
             {TGEOMPOINT(), StboxType::STBOX()},
@@ -1220,7 +1221,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "minusStbox",
             {TGEOMPOINT(), StboxType::STBOX(), LogicalType::BOOLEAN},
@@ -1229,7 +1230,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "transform",
             {TGEOMPOINT(), LogicalType::INTEGER},
@@ -1238,7 +1239,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "round",
             {TGEOMPOINT(), LogicalType::INTEGER},
@@ -1247,7 +1248,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "round",
             {TGEOMPOINT()},
@@ -1259,7 +1260,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Spatial relationships
      ****************************************************/
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "eContains",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1267,7 +1268,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Econtains_geo_tgeo
         )
     );
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "aContains",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1276,7 +1277,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
     
-     loader.RegisterFunction(
+     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "eDisjoint",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1285,7 +1286,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "eDisjoint",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1294,7 +1295,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "eDisjoint",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1303,7 +1304,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "aDisjoint",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1312,7 +1313,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "aDisjoint",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1321,7 +1322,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "aDisjoint",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1330,7 +1331,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "eIntersects",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1338,7 +1339,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Eintersects_tgeo_geo  
         )
     );
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "eIntersects",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1347,7 +1348,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "eIntersects",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1356,7 +1357,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "aIntersects",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1364,7 +1365,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Aintersects_tgeo_geo  
         )
     );
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "aIntersects",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1373,7 +1374,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "aIntersects",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1382,7 +1383,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "eTouches",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1391,7 +1392,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "eTouches",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1400,7 +1401,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "aTouches",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1409,7 +1410,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "aTouches",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1418,7 +1419,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "eDwithin",
             {TGEOMPOINT(), TGEOMPOINT(), LogicalType::DOUBLE},
@@ -1427,7 +1428,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "eDwithin",
             {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::DOUBLE},
@@ -1436,7 +1437,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "eDwithin",
             {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE},
@@ -1445,7 +1446,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "aDwithin",
             {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::DOUBLE},
@@ -1454,7 +1455,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "aDwithin",
             {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE},
@@ -1463,7 +1464,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-     loader.RegisterFunction(
+     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "aDwithin",
             {TGEOMPOINT(), TGEOMPOINT(), LogicalType::DOUBLE},
@@ -1475,7 +1476,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Temporal-spatial relationships
      ****************************************************/
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tContains",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1484,7 +1485,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
     
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tContains",
             {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::BOOLEAN},
@@ -1493,7 +1494,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tDisjoint",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1502,7 +1503,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tDisjoint",
             {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::BOOLEAN},
@@ -1511,7 +1512,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tDisjoint",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1520,7 +1521,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tDisjoint",
             {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::BOOLEAN},
@@ -1529,7 +1530,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tDisjoint",
             {TGEOMPOINT(), TGEOMPOINT(), LogicalType::BOOLEAN},
@@ -1538,7 +1539,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tDisjoint",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1547,7 +1548,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tIntersects",
             {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::BOOLEAN},
@@ -1556,7 +1557,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tIntersects",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1565,7 +1566,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tIntersects",
             {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::BOOLEAN},
@@ -1574,7 +1575,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tIntersects",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1583,7 +1584,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tIntersects",
             {TGEOMPOINT(), TGEOMPOINT(), LogicalType::BOOLEAN},
@@ -1591,7 +1592,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Tintersects_tgeo_tgeo
         )
     );
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tIntersects",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1600,7 +1601,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tTouches",
             {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::BOOLEAN},
@@ -1608,7 +1609,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Ttouches_geo_tgeo
         )
     );
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tTouches",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1616,7 +1617,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Ttouches_geo_tgeo
         )
     );
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tTouches",
             {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::BOOLEAN},
@@ -1624,7 +1625,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Ttouches_tgeo_geo
         )
     );
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tTouches",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1632,7 +1633,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Ttouches_tgeo_geo
         )
     );
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tDwithin",
             {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::DOUBLE},
@@ -1641,7 +1642,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tDwithin",
             {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::DOUBLE, LogicalType::BOOLEAN},
@@ -1650,7 +1651,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tDwithin",
             {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE, LogicalType::BOOLEAN},
@@ -1659,7 +1660,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tDwithin",
             {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE},
@@ -1668,7 +1669,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tDwithin",
             {TGEOMPOINT(), TGEOMPOINT(), LogicalType::DOUBLE},
@@ -1677,7 +1678,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tDwithin",
             {TGEOMPOINT(), TGEOMPOINT(), LogicalType::DOUBLE, LogicalType::BOOLEAN},
@@ -1691,7 +1692,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
      * Operators (workaround as functions)
      ****************************************************/
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "&&", // overlaps
             {TGEOMPOINT(), StboxType::STBOX()},
@@ -1700,7 +1701,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "&&", // overlaps
             {TGEOMPOINT(), SpanTypes::TSTZSPAN()},
@@ -1709,7 +1710,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "@>", // contains
             {TGEOMPOINT(), StboxType::STBOX()},
@@ -1722,7 +1723,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
      * Distance functions
      ****************************************************/
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "<->",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1731,7 +1732,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "shortestLine",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1751,7 +1752,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     //     )
     // );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "collect_gs",
             {LogicalType::LIST(LogicalType::BLOB)},
@@ -1760,7 +1761,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "distance_gs",
             {LogicalType::BLOB, LogicalType::BLOB},

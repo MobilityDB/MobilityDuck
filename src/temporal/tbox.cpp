@@ -11,6 +11,7 @@
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
+#include "mobilityduck/meos_exec_serial.hpp"
 // #include "duckdb/common/extension_type_info.hpp"
 
 namespace duckdb {
@@ -130,7 +131,7 @@ void TboxType::RegisterCastFunctions(ExtensionLoader &loader) {
 }
 
 void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox",
             {LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ},
@@ -139,7 +140,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox",
             {LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ},
@@ -148,7 +149,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox",
             {SpanTypes::INTSPAN(), LogicalType::TIMESTAMP_TZ},
@@ -157,7 +158,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox",
             {SpanTypes::FLOATSPAN(), LogicalType::TIMESTAMP_TZ},
@@ -166,7 +167,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox",
             {LogicalType::INTEGER, SpanTypes::TSTZSPAN()},
@@ -175,7 +176,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox",
             {LogicalType::DOUBLE, SpanTypes::TSTZSPAN()},
@@ -184,7 +185,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox",
             {SpanTypes::INTSPAN(), SpanTypes::TSTZSPAN()},
@@ -193,7 +194,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox",
             {SpanTypes::FLOATSPAN(), SpanTypes::TSTZSPAN()},
@@ -202,7 +203,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox",
             {LogicalType::INTEGER},
@@ -211,7 +212,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox",
             {LogicalType::DOUBLE},
@@ -220,7 +221,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox",
             {LogicalType::TIMESTAMP_TZ},
@@ -229,7 +230,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox",
             {SetTypes::intset()},
@@ -238,7 +239,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox",
             {SetTypes::floatset()},
@@ -247,7 +248,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox",
             {SetTypes::tstzset()},
@@ -256,7 +257,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox",
             {SpanTypes::INTSPAN()},
@@ -265,7 +266,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox",
             {SpanTypes::FLOATSPAN()},
@@ -274,7 +275,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox",
             {SpanTypes::TSTZSPAN()},
@@ -283,7 +284,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "intspan",
             {TBOX()},
@@ -292,7 +293,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "floatspan",
             {TBOX()},
@@ -301,7 +302,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "timeSpan",
             {TBOX()},
@@ -310,7 +311,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox",
             {SpansetTypes::intspanset()},
@@ -319,7 +320,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox",
             {SpansetTypes::floatspanset()},
@@ -328,7 +329,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox",
             {SpansetTypes::tstzspanset()},
@@ -337,7 +338,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "hasX",
             {TBOX()},
@@ -346,7 +347,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "hasT",
             {TBOX()},
@@ -355,7 +356,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "Xmin",
             {TBOX()},
@@ -364,7 +365,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "XminInc",
             {TBOX()},
@@ -373,7 +374,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "Xmax",
             {TBOX()},
@@ -382,7 +383,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "XmaxInc",
             {TBOX()},
@@ -391,7 +392,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "Tmin",
             {TBOX()},
@@ -400,7 +401,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "TminInc",
             {TBOX()},
@@ -409,7 +410,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "Tmax",
             {TBOX()},
@@ -418,7 +419,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "TmaxInc",
             {TBOX()},
@@ -427,7 +428,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "shiftValue",
             {TBOX(), LogicalType::INTEGER},
@@ -436,7 +437,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "shiftValue",
             {TBOX(), LogicalType::DOUBLE},
@@ -445,7 +446,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "shiftTime",
             {TBOX(), LogicalType::INTERVAL},
@@ -454,7 +455,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "scaleValue",
             {TBOX(), LogicalType::INTEGER},
@@ -463,7 +464,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "scaleValue",
             {TBOX(), LogicalType::DOUBLE},
@@ -472,7 +473,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "scaleTime",
             {TBOX(), LogicalType::INTERVAL},
@@ -481,7 +482,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "shiftScaleValue",
             {TBOX(), LogicalType::INTEGER, LogicalType::INTEGER},
@@ -490,7 +491,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "shiftScaleValue",
             {TBOX(), LogicalType::DOUBLE, LogicalType::DOUBLE},
@@ -499,7 +500,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "shiftScaleTime",
             {TBOX(), LogicalType::INTERVAL, LogicalType::INTERVAL},
@@ -508,7 +509,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "expandValue",
             {TBOX(), LogicalType::INTEGER},
@@ -517,7 +518,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "expandValue",
             {TBOX(), LogicalType::DOUBLE},
@@ -526,7 +527,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "expandTime",
             {TBOX(), LogicalType::INTERVAL},
@@ -535,7 +536,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "round",
             {TBOX()},
@@ -544,7 +545,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "round",
             {TBOX(), LogicalType::INTEGER},
@@ -553,7 +554,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_contains",
             {TBOX(), TBOX()},
@@ -562,7 +563,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "@>",
             {TBOX(), TBOX()},
@@ -571,7 +572,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_contained",
             {TBOX(), TBOX()},
@@ -580,7 +581,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "<@",
             {TBOX(), TBOX()},
@@ -589,7 +590,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_overlaps",
             {TBOX(), TBOX()},
@@ -598,7 +599,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "&&",
             {TBOX(), TBOX()},
@@ -607,7 +608,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_same",
             {TBOX(), TBOX()},
@@ -616,7 +617,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "~=",
             {TBOX(), TBOX()},
@@ -625,7 +626,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_adjacent",
             {TBOX(), TBOX()},
@@ -634,7 +635,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "-|-",
             {TBOX(), TBOX()},
@@ -643,7 +644,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_left",
             {TBOX(), TBOX()},
@@ -652,7 +653,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "<<",
             {TBOX(), TBOX()},
@@ -661,7 +662,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_overleft",
             {TBOX(), TBOX()},
@@ -670,7 +671,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "&<",
             {TBOX(), TBOX()},
@@ -679,7 +680,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_right",
             {TBOX(), TBOX()},
@@ -688,7 +689,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             ">>",
             {TBOX(), TBOX()},
@@ -697,7 +698,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_overright",
             {TBOX(), TBOX()},
@@ -706,7 +707,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "&>",
             {TBOX(), TBOX()},
@@ -715,7 +716,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_before",
             {TBOX(), TBOX()},
@@ -724,7 +725,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "<<#",
             {TBOX(), TBOX()},
@@ -733,7 +734,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_overbefore",
             {TBOX(), TBOX()},
@@ -744,7 +745,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     // Error with #, DuckDB's lexer defines op_chars without #
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "&<#",
             {TBOX(), TBOX()},
@@ -753,7 +754,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_after",
             {TBOX(), TBOX()},
@@ -762,7 +763,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "#>>",
             {TBOX(), TBOX()},
@@ -771,7 +772,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_overafter",
             {TBOX(), TBOX()},
@@ -780,7 +781,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "#&>",
             {TBOX(), TBOX()},
@@ -789,7 +790,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_union",
             {TBOX(), TBOX()},
@@ -798,7 +799,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_intersection",
             {TBOX(), TBOX()},
@@ -807,7 +808,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "+",
             {TBOX(), TBOX()},
@@ -816,7 +817,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "*",
             {TBOX(), TBOX()},
@@ -825,7 +826,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_eq",
             {TBOX(), TBOX()},
@@ -834,7 +835,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_ne",
             {TBOX(), TBOX()},
@@ -843,7 +844,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_lt",
             {TBOX(), TBOX()},
@@ -852,7 +853,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_le",
             {TBOX(), TBOX()},
@@ -861,7 +862,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_ge",
             {TBOX(), TBOX()},
@@ -869,7 +870,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TboxFunctions::Tbox_ge
         )
     );
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_gt",
             {TBOX(), TBOX()},
@@ -878,7 +879,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "tbox_cmp",
             {TBOX(), TBOX()},
@@ -887,7 +888,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "=",
             {TBOX(), TBOX()},
@@ -896,7 +897,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "<>",
             {TBOX(), TBOX()},
@@ -905,7 +906,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "<",
             {TBOX(), TBOX()},
@@ -914,7 +915,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "<=",
             {TBOX(), TBOX()},
@@ -923,7 +924,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             ">=",
             {TBOX(), TBOX()},
@@ -931,7 +932,7 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TboxFunctions::Tbox_ge
         )
     );
-    loader.RegisterFunction(
+    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             ">",
             {TBOX(), TBOX()},

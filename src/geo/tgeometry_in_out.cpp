@@ -4,6 +4,7 @@
 #include <regex>
 #include <string>
 #include <temporal/span.hpp>
+#include "mobilityduck/meos_exec_serial.hpp"
 
 extern "C" {
     #include <meos.h>
@@ -201,7 +202,7 @@ void TGeometryTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
             LogicalType::VARCHAR,
             Tspatial_as_text
         );
-        loader.RegisterFunction( TgeometryAsText);
+        duckdb::RegisterSerializedScalarFunction(loader,  TgeometryAsText);
 
     auto TgeometryAsEWKT = ScalarFunction(
         "asEWKT",
@@ -209,7 +210,7 @@ void TGeometryTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
         LogicalType::VARCHAR,
         Tspatial_as_ewkt
     );
-    loader.RegisterFunction( TgeometryAsEWKT);
+    duckdb::RegisterSerializedScalarFunction(loader,  TgeometryAsEWKT);
 }
 
 

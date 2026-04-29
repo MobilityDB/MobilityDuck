@@ -7,6 +7,7 @@
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "spatial/spatial_types.hpp"
+#include "mobilityduck/meos_exec_serial.hpp"
 
 extern "C" {    
     #include "meos.h"    
@@ -49,95 +50,95 @@ void SpatialSetType::RegisterCastFunctions(ExtensionLoader &loader) {
 }
 
 void SpatialSetType::RegisterScalarFunctions(ExtensionLoader &loader) {	    
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
 		"asText", 
         {SpatialSetType::geomset()}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_text));
     
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
 		"asText", 
         {SpatialSetType::geogset()}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_text));
 
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
 		"asText", 
         {SpatialSetType::geomset(), LogicalType::INTEGER}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_text));
     
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
 		"asText", 
         {SpatialSetType::geogset(), LogicalType::INTEGER}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_text));
 
-        loader.RegisterFunction( ScalarFunction(
+        duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
 		"asEWKT", 
         {SpatialSetType::geomset()}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_ewkt));
     
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
 		"asEWKT", 
         {SpatialSetType::geogset()}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_ewkt));
 
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
 		"asEWKT", 
         {SpatialSetType::geomset(), LogicalType::INTEGER}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_ewkt));
     
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
 		"asEWKT", 
         {SpatialSetType::geogset(), LogicalType::INTEGER}, LogicalType::VARCHAR, SpatialSetFunctions::Spatialset_as_ewkt));    
 
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
         "memSize", 
         {SpatialSetType::geomset()}, LogicalType::INTEGER, SpatialSetFunctions::Set_mem_size));
     
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
         "memSize", 
         {SpatialSetType::geogset()}, LogicalType::INTEGER, SpatialSetFunctions::Set_mem_size));
 
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
         "SRID", 
         {SpatialSetType::geomset()}, LogicalType::INTEGER, SpatialSetFunctions::Spatialset_srid));
     
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
         "SRID", 
         {SpatialSetType::geogset()}, LogicalType::INTEGER, SpatialSetFunctions::Spatialset_srid));
 
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
 		"setSRID", 
         {SpatialSetType::geomset(), LogicalType::INTEGER}, SpatialSetType::geomset(), SpatialSetFunctions::Spatialset_set_srid));
 
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
 		"setSRID", 
         {SpatialSetType::geogset(), LogicalType::INTEGER}, SpatialSetType::geogset(), SpatialSetFunctions::Spatialset_set_srid));
 
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
 		"transform", 
         {SpatialSetType::geomset(), LogicalType::INTEGER}, SpatialSetType::geomset(), SpatialSetFunctions::Spatialset_transform));
     
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
 		"transform", 
         {SpatialSetType::geogset(), LogicalType::INTEGER}, SpatialSetType::geogset(), SpatialSetFunctions::Spatialset_transform));
 
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
 		"startValue", {SpatialSetType::geomset()},  
 		GeoTypes::GEOMETRY(),
 		SpatialSetFunctions::Set_start_value
 	));    
 
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
         "endValue", 
         {SpatialSetType::geomset()}, GeoTypes::GEOMETRY(), SpatialSetFunctions::Set_end_value));
 
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
         "numValues",
         {SpatialSetType::geomset()}, LogicalType::INTEGER, SpatialSetFunctions::Set_num_values));
     
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
         "numValues",
         {SpatialSetType::geogset()}, LogicalType::INTEGER, SpatialSetFunctions::Set_num_values));
 
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
         "valueN", {SpatialSetType::geomset(), LogicalType::INTEGER},
         GeoTypes::GEOMETRY(),
         SpatialSetFunctions::Set_value_n
     ));
 
-    loader.RegisterFunction( ScalarFunction(
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
         "set", {LogicalType::LIST(GeoTypes::GEOMETRY())},
         SpatialSetType::geomset(),
         SpatialSetFunctions::Geomset_constructor
