@@ -5,8 +5,8 @@
 
 namespace duckdb {
 
-struct SpanAggregates {
-    // Add span / spanset / set overloads of extent() to the given set.
+struct TemporalAggregates {
+    // Add tnumber overloads of extent() to the given set.
     static void AddExtentOverloads(AggregateFunctionSet &extent_set);
 };
 

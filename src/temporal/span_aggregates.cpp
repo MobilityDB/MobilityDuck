@@ -131,9 +131,7 @@ static AggregateFunction MakeExtentAggregate(const LogicalType &input_type, cons
 
 } // namespace
 
-void SpanAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
-    AggregateFunctionSet extent_set("extent");
-
+void SpanAggregates::AddExtentOverloads(AggregateFunctionSet &extent_set) {
     // extent(<span>) -> <span>
     extent_set.AddFunction(MakeExtentAggregate<SpanExtentFunction>(SpanTypes::INTSPAN(), SpanTypes::INTSPAN()));
     extent_set.AddFunction(MakeExtentAggregate<SpanExtentFunction>(SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()));
@@ -154,8 +152,6 @@ void SpanAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
     extent_set.AddFunction(MakeExtentAggregate<SetExtentFunction>(SetTypes::floatset(), SpanTypes::FLOATSPAN()));
     extent_set.AddFunction(MakeExtentAggregate<SetExtentFunction>(SetTypes::dateset(), SpanTypes::DATESPAN()));
     extent_set.AddFunction(MakeExtentAggregate<SetExtentFunction>(SetTypes::tstzset(), SpanTypes::TSTZSPAN()));
-
-    loader.RegisterFunction(std::move(extent_set));
 }
 
 } // namespace duckdb
