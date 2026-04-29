@@ -5536,7 +5536,13 @@ void TemporalFunctions::Temporal_round(DataChunk &args, ExpressionState &state, 
     }
 }
 
-void TemporalFunctions::Temporal_derivative(DataChunk &args, ExpressionState &state, Vector &result) {
+// Shared core for temporal_derivative-backed scalar functions. When
+// `scale_to_per_day` is true the MEOS per-second result is scaled by
+// 86400 — that matches MobilityDB's derivative() SQL wrapper. When
+// false the raw per-second result is returned — that matches MobilityDB's
+// speed() SQL wrapper, which the regression suite (test/sql/tgeompoint.test)
+// expects unchanged.
+static void TemporalDerivativeCore(DataChunk &args, Vector &result, bool scale_to_per_day) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t temp_str) -> string_t {
@@ -5553,12 +5559,11 @@ void TemporalFunctions::Temporal_derivative(DataChunk &args, ExpressionState &st
                 throw InternalException("Failure in Temporal_derivative: unable to cast string to temporal");
             }
 
-            // MEOS temporal_derivative returns slope in value/second.
-            // MobilityDB exposes derivative in value/day, so we scale by
-            // 86400 to match upstream semantics.
             Temporal *raw = temporal_derivative(temp);
-            Temporal *ret = mult_tfloat_float(raw, 86400.0);
-            free(raw);
+            Temporal *ret = scale_to_per_day ? mult_tfloat_float(raw, 86400.0) : raw;
+            if (scale_to_per_day) {
+                free(raw);
+            }
 
             size_t temp_size = temporal_mem_size((Temporal*)ret);
             uint8_t *temp_data = (uint8_t*)malloc(temp_size);
@@ -5572,6 +5577,22 @@ void TemporalFunctions::Temporal_derivative(DataChunk &args, ExpressionState &st
             return stored_data;
         }
     );
+}
+
+void TemporalFunctions::Temporal_derivative(DataChunk &args, ExpressionState &state, Vector &result) {
+    // derivative(): MobilityDB returns value/day. Scale the per-second
+    // MEOS result by 86400 to match.
+    TemporalDerivativeCore(args, result, /*scale_to_per_day=*/true);
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Tpoint_speed(DataChunk &args, ExpressionState &state, Vector &result) {
+    // speed(): MobilityDB returns the raw per-second MEOS derivative
+    // (distance/second), without the value/day scaling that derivative()
+    // applies. The regression test (test/sql/tgeompoint.test) expects this.
+    TemporalDerivativeCore(args, result, /*scale_to_per_day=*/false);
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }

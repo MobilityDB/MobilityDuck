@@ -1090,7 +1090,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             "speed",
             {TGEOMPOINT()},
             TemporalTypes::TFLOAT(),
-            TemporalFunctions::Temporal_derivative
+            TemporalFunctions::Tpoint_speed
         )
     );
 
