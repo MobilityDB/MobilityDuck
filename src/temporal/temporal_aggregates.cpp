@@ -243,6 +243,15 @@ static Datum mduck_datum_max_float8(Datum l, Datum r) {
 static Datum mduck_datum_sum_float8(Datum l, Datum r) {
     return float8_to_datum(datum_to_float8(l) + datum_to_float8(r));
 }
+// Text comparison: Datum carries text* (PG varlena). text_cmp is exported
+// from MEOS so we just invoke it on the two pointers and pick whichever
+// Datum we want.
+static Datum mduck_datum_min_text(Datum l, Datum r) {
+    return text_cmp(reinterpret_cast<text *>(l), reinterpret_cast<text *>(r)) < 0 ? l : r;
+}
+static Datum mduck_datum_max_text(Datum l, Datum r) {
+    return text_cmp(reinterpret_cast<text *>(l), reinterpret_cast<text *>(r)) > 0 ? l : r;
+}
 
 template <TempTransfn TRANSFN, Datum (*MERGE_FN)(Datum, Datum), bool CROSSINGS>
 struct SkiplistAggFunction {
@@ -361,7 +370,6 @@ void TemporalAggregates::RegisterTemporalAggregates(ExtensionLoader &loader) {
     // aggregate with the same lowercased name as an existing scalar
     // triggers an ALTER path that CreateAggregateFunctionInfo doesn't
     // support and the extension fails to load.
-    // ttext skipped — text merge needs text_cmp plumbing.
     {
         AggregateFunctionSet tmin_set("tagg_min");
         tmin_set.AddFunction(
@@ -370,6 +378,9 @@ void TemporalAggregates::RegisterTemporalAggregates(ExtensionLoader &loader) {
         tmin_set.AddFunction(
             MakeSkiplistAggregate<&tfloat_tmin_transfn, &mduck_datum_min_float8, true>(
                 TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()));
+        tmin_set.AddFunction(
+            MakeSkiplistAggregate<&ttext_tmin_transfn, &mduck_datum_min_text, false>(
+                TemporalTypes::TTEXT(), TemporalTypes::TTEXT()));
         loader.RegisterFunction(std::move(tmin_set));
 
         AggregateFunctionSet tmax_set("tagg_max");
@@ -379,6 +390,9 @@ void TemporalAggregates::RegisterTemporalAggregates(ExtensionLoader &loader) {
         tmax_set.AddFunction(
             MakeSkiplistAggregate<&tfloat_tmax_transfn, &mduck_datum_max_float8, true>(
                 TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()));
+        tmax_set.AddFunction(
+            MakeSkiplistAggregate<&ttext_tmax_transfn, &mduck_datum_max_text, false>(
+                TemporalTypes::TTEXT(), TemporalTypes::TTEXT()));
         loader.RegisterFunction(std::move(tmax_set));
 
         AggregateFunctionSet tsum_set("tagg_sum");
