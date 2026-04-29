@@ -7,6 +7,7 @@
 #include<time_util.hpp>
 #include "geo_util.hpp"
 #include "spatial/spatial_types.hpp"
+#include "mobilityduck/meos_exec_serial.hpp"
 
 extern "C" {
     #include <meos.h>
@@ -1089,14 +1090,14 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeometryTypes::TGEOMETRY(),
         Tgeo_constructor
     );
-    loader.RegisterFunction( tgeometry_function);
+    duckdb::RegisterSerializedScalarFunction(loader,  tgeometry_function);
         
     auto tgeometry_from_timestamp_function = ScalarFunction(
         "TGEOMETRY",
         {LogicalType::VARCHAR, LogicalType::TIMESTAMP_TZ}, 
         TGeometryTypes::TGEOMETRY(), 
         Tgeoinst_constructor);
-    loader.RegisterFunction( tgeometry_from_timestamp_function);
+    duckdb::RegisterSerializedScalarFunction(loader,  tgeometry_from_timestamp_function);
 
      auto tgeometry_from_tstzspan_function = ScalarFunction(
         "TGEOMETRY", 
@@ -1104,7 +1105,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeometryTypes::TGEOMETRY(),  
         Tsequence_from_base_tstzspan
     );
-    loader.RegisterFunction( tgeometry_from_tstzspan_function);
+    duckdb::RegisterSerializedScalarFunction(loader,  tgeometry_from_tstzspan_function);
 
     auto tgeometry_from_tstzspan_default = ScalarFunction(
         "TGEOMETRY", 
@@ -1112,7 +1113,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeometryTypes::TGEOMETRY(),  
         Tsequence_from_base_tstzspan
     );
-    loader.RegisterFunction( tgeometry_from_tstzspan_default);
+    duckdb::RegisterSerializedScalarFunction(loader,  tgeometry_from_tstzspan_default);
 
      auto tgeometryseqarr_1param= ScalarFunction(
         "tgeometrySeq", 
@@ -1120,7 +1121,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeometryTypes::TGEOMETRY(),
         Tsequence_constructor
     );
-    loader.RegisterFunction( tgeometryseqarr_1param);
+    duckdb::RegisterSerializedScalarFunction(loader,  tgeometryseqarr_1param);
 
     auto tgeometryseqarr_2params = ScalarFunction(
         "tgeometrySeq", 
@@ -1128,7 +1129,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeometryTypes::TGEOMETRY(),
         Tsequence_constructor
     );
-    loader.RegisterFunction( tgeometryseqarr_2params);
+    duckdb::RegisterSerializedScalarFunction(loader,  tgeometryseqarr_2params);
 
     auto tgeometryseqarr_3params = ScalarFunction(
         "tgeometrySeq", 
@@ -1136,7 +1137,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeometryTypes::TGEOMETRY(),
         Tsequence_constructor
     );
-    loader.RegisterFunction( tgeometryseqarr_3params);
+    duckdb::RegisterSerializedScalarFunction(loader,  tgeometryseqarr_3params);
 
     auto tgeometryseqarr_4params = ScalarFunction(
         "tgeometrySeq", 
@@ -1144,21 +1145,21 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeometryTypes::TGEOMETRY(),
         Tsequence_constructor
     );
-    loader.RegisterFunction( tgeometryseqarr_4params);
+    duckdb::RegisterSerializedScalarFunction(loader,  tgeometryseqarr_4params);
 
     auto tgeometry_to_timespan_function = ScalarFunction(
         "timeSpan",
         {TGeometryTypes::TGEOMETRY()},     
         SpanTypes::TSTZSPAN(),               
         Temporal_to_tstzspan);
-    loader.RegisterFunction( tgeometry_to_timespan_function);
+    duckdb::RegisterSerializedScalarFunction(loader,  tgeometry_to_timespan_function);
 
     auto tgeometry_to_tinstant_function = ScalarFunction(
         "tgeometryInst",
         {TGeometryTypes::TGEOMETRY()},
         TGeometryTypes::TGEOMETRY(),  
         Temporal_to_tinstant);
-    loader.RegisterFunction( tgeometry_to_tinstant_function);
+    duckdb::RegisterSerializedScalarFunction(loader,  tgeometry_to_tinstant_function);
 
 
     auto setInterp_function = ScalarFunction(
@@ -1167,7 +1168,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeometryTypes::TGEOMETRY(),
         Temporal_set_interp
     );
-    loader.RegisterFunction( setInterp_function);
+    duckdb::RegisterSerializedScalarFunction(loader,  setInterp_function);
 
 
     auto merge_function = ScalarFunction(
@@ -1176,7 +1177,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeometryTypes::TGEOMETRY(),
         Temporal_merge
     );
-    loader.RegisterFunction( merge_function);
+    duckdb::RegisterSerializedScalarFunction(loader,  merge_function);
 
     auto tempSubtype_function = ScalarFunction(
         "tempSubtype",
@@ -1184,7 +1185,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         LogicalType::VARCHAR,
         Temporal_subtype
     );
-    loader.RegisterFunction( tempSubtype_function);
+    duckdb::RegisterSerializedScalarFunction(loader,  tempSubtype_function);
 
     auto interp_function = ScalarFunction(
         "interp",
@@ -1192,7 +1193,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         LogicalType::VARCHAR,
         Temporal_interp
     );
-    loader.RegisterFunction( interp_function);
+    duckdb::RegisterSerializedScalarFunction(loader,  interp_function);
 
     auto memSize_function = ScalarFunction(
         "memSize",
@@ -1200,7 +1201,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         LogicalType::INTEGER,
         Temporal_mem_size
     );
-    loader.RegisterFunction( memSize_function);
+    duckdb::RegisterSerializedScalarFunction(loader,  memSize_function);
 
     auto getValue_function = ScalarFunction(
         "getValue",
@@ -1208,7 +1209,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         GeoTypes::GEOMETRY(),
         Tinstant_value
     );
-    loader.RegisterFunction( getValue_function);
+    duckdb::RegisterSerializedScalarFunction(loader,  getValue_function);
     
 
     auto tgeometry_start_value_function = ScalarFunction(
@@ -1217,7 +1218,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         GeoTypes::GEOMETRY(),
         Temporal_start_value
     );
-    loader.RegisterFunction( tgeometry_start_value_function);
+    duckdb::RegisterSerializedScalarFunction(loader,  tgeometry_start_value_function);
 
     auto tgeometry_end_value_function = ScalarFunction(
         "endValue", 
@@ -1225,7 +1226,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         GeoTypes::GEOMETRY(),
         Temporal_end_value
     );
-    loader.RegisterFunction( tgeometry_end_value_function);
+    duckdb::RegisterSerializedScalarFunction(loader,  tgeometry_end_value_function);
 
     auto startInstant_function = ScalarFunction(
         "startInstant",
@@ -1233,7 +1234,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeometryTypes::TGEOMETRY(), 
         Temporal_start_instant
     );
-    loader.RegisterFunction( startInstant_function);
+    duckdb::RegisterSerializedScalarFunction(loader,  startInstant_function);
 
     auto endInstant_function = ScalarFunction(
         "endInstant",
@@ -1241,7 +1242,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeometryTypes::TGEOMETRY(), 
         Temporal_end_instant
     );
-    loader.RegisterFunction( endInstant_function);
+    duckdb::RegisterSerializedScalarFunction(loader,  endInstant_function);
 
     auto instantN_function = ScalarFunction(
         "instantN",
@@ -1249,7 +1250,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeometryTypes::TGEOMETRY(),  
         Temporal_instant_n
     );
-    loader.RegisterFunction( instantN_function);
+    duckdb::RegisterSerializedScalarFunction(loader,  instantN_function);
 
 
     auto tgeometry_gettimestamptz_function = ScalarFunction(
@@ -1257,7 +1258,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         {TGeometryTypes::TGEOMETRY()},
         LogicalType::TIMESTAMP_TZ,  
         Tinstant_timestamptz);
-    loader.RegisterFunction( tgeometry_gettimestamptz_function);
+    duckdb::RegisterSerializedScalarFunction(loader,  tgeometry_gettimestamptz_function);
     
 
 }

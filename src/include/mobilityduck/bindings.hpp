@@ -35,6 +35,8 @@
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/planner/expression.hpp"
 
+#include "mobilityduck/meos_exec_serial.hpp"
+
 extern "C" {
 #include <meos.h>
 }
@@ -165,11 +167,13 @@ inline void RegisterTemporalDatumAccessor(duckdb::ExtensionLoader &loader,
                                           const duckdb::LogicalType &input_type,
                                           const duckdb::LogicalType &return_type,
                                           uintptr_t (*meos_fn)(const Temporal *)) {
-	loader.RegisterFunction(duckdb::ScalarFunction(
-	    name,
-	    {input_type},
-	    return_type,
-	    MakeTemporalDatumAccessor<CppResult>(meos_fn, name.c_str())));
+	duckdb::RegisterSerializedScalarFunction(
+	    loader,
+	    duckdb::ScalarFunction(
+	        name,
+	        {input_type},
+	        return_type,
+	        MakeTemporalDatumAccessor<CppResult>(meos_fn, name.c_str())));
 }
 
 } // namespace mobilityduck

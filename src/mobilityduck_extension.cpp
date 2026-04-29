@@ -47,6 +47,8 @@ extern "C" {
 // OpenSSL linked through vcpkg
 #include <openssl/opensslv.h>
 
+#include "mobilityduck/meos_exec_serial.hpp"
+
 namespace duckdb {
 #include "spatial_ref_sys_csv.inc"
 
@@ -217,12 +219,12 @@ static void LoadInternal(ExtensionLoader &loader) {
 	        LogicalType::VARCHAR,
 	        MobilityduckOpenSSLVersionScalarFun
 	    );
-	loader.RegisterFunction( mobilityduck_openssl_version_scalar_function);
+	duckdb::RegisterSerializedScalarFunction(loader,  mobilityduck_openssl_version_scalar_function);
 
-	loader.RegisterFunction(ScalarFunction(
+	duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
 		"mobilityduck_version", {}, LogicalType::VARCHAR,
 		MobilityduckVersionScalarFun));
-	loader.RegisterFunction(ScalarFunction(
+	duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
 		"mobilityduck_full_version", {}, LogicalType::VARCHAR,
 		MobilityduckFullVersionScalarFun));
 
