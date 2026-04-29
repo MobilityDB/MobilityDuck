@@ -5553,7 +5553,13 @@ void TemporalFunctions::Temporal_derivative(DataChunk &args, ExpressionState &st
                 throw InternalException("Failure in Temporal_derivative: unable to cast string to temporal");
             }
 
-            Temporal *ret = temporal_derivative(temp);
+            // MEOS temporal_derivative returns slope in value/second.
+            // MobilityDB exposes derivative in value/day, so we scale by
+            // 86400 to match upstream semantics.
+            Temporal *raw = temporal_derivative(temp);
+            Temporal *ret = mult_tfloat_float(raw, 86400.0);
+            free(raw);
+
             size_t temp_size = temporal_mem_size((Temporal*)ret);
             uint8_t *temp_data = (uint8_t*)malloc(temp_size);
             memcpy(temp_data, ret, temp_size);
