@@ -1,0 +1,71 @@
+# name: test/sql/parity/034_temporal_posops.test
+# description: Named-function aliases for the temporal position predicates —
+#              temporal_before/after/overbefore/overafter (time axis) and
+#              temporal_left/right/overleft/overright (numeric axis on
+#              tnumber × {numspan, tbox, tnumber}).
+# group: [sql]
+
+require mobilityduck
+
+# Time axis aliases agree with the existing named forms
+
+query I
+SELECT temporal_before(tint '[1@2000-01-01]', tint '[1@2000-01-02]')
+     = before(tint '[1@2000-01-01]', tint '[1@2000-01-02]');
+----
+true
+
+query I
+SELECT temporal_after(tint '[1@2000-01-02]', tint '[1@2000-01-01]');
+----
+true
+
+query I
+SELECT temporal_overbefore(tstzspan '[2000-01-01, 2000-01-02]', tint '[1@2000-01-02]');
+----
+true
+
+query I
+SELECT temporal_overafter(tint '[1@2000-01-02]', tstzspan '[2000-01-01, 2000-01-02]');
+----
+true
+
+# Numeric axis on tnumber × numspan
+
+query I
+SELECT temporal_left(tint '[1@2000-01-01]', intspan '[5, 10)');
+----
+true
+
+query I
+SELECT temporal_right(tfloat '[10@2000-01-01]', floatspan '[1, 5)');
+----
+true
+
+# Aliases agree with the operator forms
+
+query I
+SELECT temporal_left(tint '[1@2000-01-01]', intspan '[5, 10)')
+     = (tint '[1@2000-01-01]' << intspan '[5, 10)');
+----
+true
+
+query I
+SELECT temporal_overleft(tint '[1@2000-01-01]', intspan '[5, 10)')
+     = (tint '[1@2000-01-01]' &< intspan '[5, 10)');
+----
+true
+
+# Numeric axis on tnumber × tbox
+
+query I
+SELECT temporal_left(tint '[1@2000-01-01]', tbox 'TBOXINT XT([5, 10),[2000-01-01, 2000-01-02])');
+----
+true
+
+# Numeric axis on tnumber × tnumber
+
+query I
+SELECT temporal_left(tint '[1@2000-01-01]', tint '[5@2000-01-01, 10@2000-01-02]');
+----
+true
