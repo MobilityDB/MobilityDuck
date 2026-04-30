@@ -5536,6 +5536,101 @@ void TemporalFunctions::Temporal_round(DataChunk &args, ExpressionState &state, 
     }
 }
 
+void TemporalFunctions::Temporal_tprecision(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto row_count = args.size();
+    auto &temp_vec = args.data[0];
+    auto &dur_vec = args.data[1];
+    auto &origin_vec = args.data[2];
+    temp_vec.Flatten(row_count);
+    dur_vec.Flatten(row_count);
+    origin_vec.Flatten(row_count);
+
+    auto *temp_data = FlatVector::GetData<string_t>(temp_vec);
+    auto *dur_data = FlatVector::GetData<interval_t>(dur_vec);
+    auto *origin_data = FlatVector::GetData<timestamp_t>(origin_vec);
+    auto &result_validity = FlatVector::Validity(result);
+    auto *result_data = FlatVector::GetData<string_t>(result);
+
+    for (idx_t i = 0; i < row_count; i++) {
+        if (FlatVector::IsNull(temp_vec, i) || FlatVector::IsNull(dur_vec, i) || FlatVector::IsNull(origin_vec, i)) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        const string_t &blob = temp_data[i];
+        size_t size = blob.GetSize();
+        Temporal *temp = reinterpret_cast<Temporal *>(malloc(size));
+        memcpy(temp, blob.GetData(), size);
+
+        MeosInterval duration = IntervaltToInterval(dur_data[i]);
+        timestamp_tz_t in_ts;
+        in_ts.value = origin_data[i].value;
+        timestamp_tz_t meos_origin = DuckDBToMeosTimestamp(in_ts);
+
+        Temporal *ret = temporal_tprecision(temp, &duration, meos_origin.value);
+        free(temp);
+        if (!ret) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        size_t out_size = temporal_mem_size(ret);
+        result_data[i] = StringVector::AddStringOrBlob(result, (const char *)ret, out_size);
+        free(ret);
+    }
+}
+
+void TemporalFunctions::Temporal_tsample(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto row_count = args.size();
+    auto arg_count = args.ColumnCount();
+    auto &temp_vec = args.data[0];
+    auto &dur_vec = args.data[1];
+    auto &origin_vec = args.data[2];
+    temp_vec.Flatten(row_count);
+    dur_vec.Flatten(row_count);
+    origin_vec.Flatten(row_count);
+
+    Vector *interp_vec = nullptr;
+    if (arg_count > 3) {
+        args.data[3].Flatten(row_count);
+        interp_vec = &args.data[3];
+    }
+
+    auto *temp_data = FlatVector::GetData<string_t>(temp_vec);
+    auto *dur_data = FlatVector::GetData<interval_t>(dur_vec);
+    auto *origin_data = FlatVector::GetData<timestamp_t>(origin_vec);
+    auto &result_validity = FlatVector::Validity(result);
+    auto *result_data = FlatVector::GetData<string_t>(result);
+
+    for (idx_t i = 0; i < row_count; i++) {
+        if (FlatVector::IsNull(temp_vec, i) || FlatVector::IsNull(dur_vec, i) || FlatVector::IsNull(origin_vec, i) ||
+            (interp_vec && FlatVector::IsNull(*interp_vec, i))) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        const string_t &blob = temp_data[i];
+        size_t size = blob.GetSize();
+        Temporal *temp = reinterpret_cast<Temporal *>(malloc(size));
+        memcpy(temp, blob.GetData(), size);
+
+        MeosInterval duration = IntervaltToInterval(dur_data[i]);
+        timestamp_tz_t in_ts;
+        in_ts.value = origin_data[i].value;
+        timestamp_tz_t meos_origin = DuckDBToMeosTimestamp(in_ts);
+
+        interpType interp = interptype_from_string(
+            interp_vec ? FlatVector::GetData<string_t>(*interp_vec)[i].GetString().c_str() : "linear");
+
+        Temporal *ret = temporal_tsample(temp, &duration, meos_origin.value, interp);
+        free(temp);
+        if (!ret) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        size_t out_size = temporal_mem_size(ret);
+        result_data[i] = StringVector::AddStringOrBlob(result, (const char *)ret, out_size);
+        free(ret);
+    }
+}
+
 void TemporalFunctions::Temporal_derivative(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),

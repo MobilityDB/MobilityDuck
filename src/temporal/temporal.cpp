@@ -1348,6 +1348,28 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction("abs", {TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Tnumber_abs));
     loader.RegisterFunction(ScalarFunction("abs", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tnumber_abs));
     loader.RegisterFunction(ScalarFunction("derivative", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Temporal_derivative));
+
+    // tprecision / tsample: round each instant's timestamp down to the
+    // nearest bin (tprecision) or resample the value at fixed intervals
+    // (tsample). 3-arg signature: (temp, duration, origin). tsample also
+    // has a 4-arg variant taking an interpolation hint as VARCHAR.
+    for (auto &t : TemporalTypes::AllTypes()) {
+        loader.RegisterFunction(ScalarFunction(
+            "tprecision",
+            {t, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ},
+            t,
+            TemporalFunctions::Temporal_tprecision));
+        loader.RegisterFunction(ScalarFunction(
+            "tsample",
+            {t, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ},
+            t,
+            TemporalFunctions::Temporal_tsample));
+        loader.RegisterFunction(ScalarFunction(
+            "tsample",
+            {t, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::VARCHAR},
+            t,
+            TemporalFunctions::Temporal_tsample));
+    }
     loader.RegisterFunction(ScalarFunction("degrees", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_degrees));
     loader.RegisterFunction(ScalarFunction("degrees", {TemporalTypes::TFLOAT(), LogicalType::BOOLEAN}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_degrees));
     loader.RegisterFunction(ScalarFunction("radians", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_radians));
