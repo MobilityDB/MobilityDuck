@@ -519,6 +519,81 @@ static AggregateFunction MakeWindowAggregate(const LogicalType &input_type, cons
     return fn;
 }
 
+// wavg uses tnumber_tavg_finalfn instead of temporal_tagg_finalfn so it
+// has its own functor parametrised on the window transfn only.
+template <TempWindowTransfn TRANSFN>
+struct WavgFunction {
+    template <class STATE>
+    static void Initialize(STATE &state) {
+        state.skiplist = nullptr;
+    }
+
+    static bool IgnoreNull() {
+        return true;
+    }
+
+    template <class A_TYPE, class B_TYPE, class STATE, class OP>
+    static void Operation(STATE &state, const A_TYPE &a_input, const B_TYPE &b_input,
+                          AggregateBinaryInput &) {
+        const uint8_t *bytes = reinterpret_cast<const uint8_t *>(a_input.GetData());
+        size_t size = a_input.GetSize();
+        Temporal *temp = reinterpret_cast<Temporal *>(malloc(size));
+        memcpy(temp, bytes, size);
+        MeosInterval interv = IntervaltToInterval(b_input);
+        state.skiplist = TRANSFN(state.skiplist, temp, &interv);
+        free(temp);
+    }
+
+    template <class STATE, class OP>
+    static void Combine(const STATE &source, STATE &target, AggregateInputData &) {
+        if (!source.skiplist || source.skiplist->length == 0) {
+            return;
+        }
+        if (!target.skiplist) {
+            const_cast<STATE &>(target).skiplist = temporal_skiplist_make();
+        }
+        void **values = skiplist_values(source.skiplist);
+        int count = source.skiplist->length;
+        temporal_skiplist_splice(target.skiplist, values, count, &mduck_datum_sum_double2, false);
+        free(values);
+    }
+
+    template <class T, class STATE>
+    static void Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data) {
+        if (!state.skiplist || state.skiplist->length == 0) {
+            finalize_data.ReturnNull();
+            return;
+        }
+        Temporal *result = tnumber_tavg_finalfn(state.skiplist);
+        state.skiplist = nullptr;
+        if (!result) {
+            finalize_data.ReturnNull();
+            return;
+        }
+        size_t out_size = temporal_mem_size(result);
+        target = finalize_data.ReturnString(
+            string_t(reinterpret_cast<const char *>(result), out_size));
+        free(result);
+    }
+
+    template <class STATE>
+    static void Destroy(STATE &state, AggregateInputData &) {
+        if (state.skiplist) {
+            skiplist_free(state.skiplist);
+            state.skiplist = nullptr;
+        }
+    }
+};
+
+template <TempWindowTransfn TRANSFN>
+static AggregateFunction MakeWavgAggregate(const LogicalType &input_type) {
+    using OPS = WavgFunction<TRANSFN>;
+    AggregateFunction fn = AggregateFunction::BinaryAggregate<TCountState, string_t, interval_t, string_t, OPS>(
+        input_type, LogicalType::INTERVAL, TemporalTypes::TFLOAT());
+    fn.destructor = AggregateFunction::StateDestroy<TCountState, OPS>;
+    return fn;
+}
+
 } // namespace
 
 void TemporalAggregates::AddExtentOverloads(AggregateFunctionSet &extent_set) {
@@ -631,7 +706,13 @@ void TemporalAggregates::RegisterWindowAggregates(ExtensionLoader &loader) {
                 TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()));
         loader.RegisterFunction(std::move(wsum_set));
     }
-    // wavg deferred — needs datum_sum_double2 (MEOS internal struct).
+    // wavg: tnumber (output is tfloat).
+    {
+        AggregateFunctionSet wavg_set("wavg");
+        wavg_set.AddFunction(MakeWavgAggregate<&tnumber_wavg_transfn>(TemporalTypes::TINT()));
+        wavg_set.AddFunction(MakeWavgAggregate<&tnumber_wavg_transfn>(TemporalTypes::TFLOAT()));
+        loader.RegisterFunction(std::move(wavg_set));
+    }
 }
 
 void TemporalAggregates::RegisterTAvg(ExtensionLoader &loader) {
