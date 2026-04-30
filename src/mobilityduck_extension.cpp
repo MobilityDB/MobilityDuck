@@ -247,6 +247,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TgeompointType::RegisterType(loader);
 	TgeompointType::RegisterCastFunctions(loader);
 	TgeompointType::RegisterScalarFunctions(loader);
+	TgeompointType::RegisterTpointSplit(loader);
 
 	TGeometryTypes::RegisterScalarFunctions(loader);
 	TGeometryTypes::RegisterTypes(loader);
