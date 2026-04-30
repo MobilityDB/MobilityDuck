@@ -248,14 +248,17 @@ struct TemporalFunctions {
     static void Contained_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
     static void Overlaps_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adjacent_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Same_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contains_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contained_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Overlaps_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adjacent_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Same_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contains_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contained_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result);
     static void Overlaps_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adjacent_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Same_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Temporal time-position predicates (<<#, #>>, &<#, #&>)
@@ -377,18 +380,22 @@ struct TemporalFunctions {
     static void Contained_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Overlaps_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adjacent_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Same_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contains_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contained_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
     static void Overlaps_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adjacent_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Same_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contains_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contained_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Overlaps_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adjacent_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Same_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contains_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contained_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
     static void Overlaps_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adjacent_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Same_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * tnumber × {numspan, tbox} position predicates
