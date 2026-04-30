@@ -14,6 +14,9 @@ struct TemporalAggregates {
 
     // Register tAnd / tOr / tMin / tMax / tSum aggregates.
     static void RegisterTemporalAggregates(ExtensionLoader &loader);
+
+    // Register wmin / wmax / wsum window aggregates.
+    static void RegisterWindowAggregates(ExtensionLoader &loader);
 };
 
 } // namespace duckdb

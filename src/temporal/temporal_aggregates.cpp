@@ -3,6 +3,7 @@
 #include "temporal/tbox.hpp"
 #include "temporal/temporal.hpp"
 #include "temporal/temporal_aggregates.hpp"
+#include "time_util.hpp"
 
 #include "duckdb/common/exception.hpp"
 #include "duckdb/function/aggregate_function.hpp"
@@ -328,6 +329,94 @@ static AggregateFunction MakeSkiplistAggregate(const LogicalType &input_type, co
         input_type, output_type);
 }
 
+// ============================================================================
+// Window aggregates (wmin / wmax / wsum) — Binary input: (Temporal, Interval)
+//
+// Same skiplist state shape as TCountFunction. Difference: Operation takes
+// the window-width interval as second arg and forwards it to the MEOS
+// w*_transfn function. Combine reuses the same merge function as the
+// non-windowed counterpart since the per-instant value layout is identical.
+// ============================================================================
+
+using TempWindowTransfn = SkipList *(*)(SkipList *, const Temporal *, const ::Interval *);
+
+template <TempWindowTransfn TRANSFN, Datum (*MERGE_FN)(Datum, Datum), bool CROSSINGS>
+struct WindowAggFunction {
+    template <class STATE>
+    static void Initialize(STATE &state) {
+        state.skiplist = nullptr;
+    }
+
+    static bool IgnoreNull() {
+        return true;
+    }
+
+    template <class A_TYPE, class B_TYPE, class STATE, class OP>
+    static void Operation(STATE &state, const A_TYPE &a_input, const B_TYPE &b_input,
+                          AggregateBinaryInput &) {
+        // a_input is string_t holding a Temporal blob.
+        const uint8_t *bytes = reinterpret_cast<const uint8_t *>(a_input.GetData());
+        size_t size = a_input.GetSize();
+        Temporal *temp = reinterpret_cast<Temporal *>(malloc(size));
+        memcpy(temp, bytes, size);
+
+        // b_input is duckdb::interval_t; convert to MEOS Interval.
+        MeosInterval interv = IntervaltToInterval(b_input);
+
+        state.skiplist = TRANSFN(state.skiplist, temp, &interv);
+        free(temp);
+    }
+
+    template <class STATE, class OP>
+    static void Combine(const STATE &source, STATE &target, AggregateInputData &) {
+        if (!source.skiplist || source.skiplist->length == 0) {
+            return;
+        }
+        if (!target.skiplist) {
+            const_cast<STATE &>(target).skiplist = temporal_skiplist_make();
+        }
+        void **values = skiplist_values(source.skiplist);
+        int count = source.skiplist->length;
+        temporal_skiplist_splice(target.skiplist, values, count, MERGE_FN, CROSSINGS);
+        free(values);
+    }
+
+    template <class T, class STATE>
+    static void Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data) {
+        if (!state.skiplist || state.skiplist->length == 0) {
+            finalize_data.ReturnNull();
+            return;
+        }
+        Temporal *result = temporal_tagg_finalfn(state.skiplist);
+        state.skiplist = nullptr;
+        if (!result) {
+            finalize_data.ReturnNull();
+            return;
+        }
+        size_t out_size = temporal_mem_size(result);
+        target = finalize_data.ReturnString(
+            string_t(reinterpret_cast<const char *>(result), out_size));
+        free(result);
+    }
+
+    template <class STATE>
+    static void Destroy(STATE &state, AggregateInputData &) {
+        if (state.skiplist) {
+            skiplist_free(state.skiplist);
+            state.skiplist = nullptr;
+        }
+    }
+};
+
+template <TempWindowTransfn TRANSFN, Datum (*MERGE_FN)(Datum, Datum), bool CROSSINGS>
+static AggregateFunction MakeWindowAggregate(const LogicalType &input_type, const LogicalType &output_type) {
+    using OPS = WindowAggFunction<TRANSFN, MERGE_FN, CROSSINGS>;
+    AggregateFunction fn = AggregateFunction::BinaryAggregate<TCountState, string_t, interval_t, string_t, OPS>(
+        input_type, LogicalType::INTERVAL, output_type);
+    fn.destructor = AggregateFunction::StateDestroy<TCountState, OPS>;
+    return fn;
+}
+
 } // namespace
 
 void TemporalAggregates::AddExtentOverloads(AggregateFunctionSet &extent_set) {
@@ -404,6 +493,43 @@ void TemporalAggregates::RegisterTemporalAggregates(ExtensionLoader &loader) {
                 TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()));
         loader.RegisterFunction(std::move(tsum_set));
     }
+}
+
+void TemporalAggregates::RegisterWindowAggregates(ExtensionLoader &loader) {
+    // wmin: tint, tfloat
+    {
+        AggregateFunctionSet wmin_set("wmin");
+        wmin_set.AddFunction(
+            MakeWindowAggregate<&tint_wmin_transfn, &mduck_datum_min_int32, false>(
+                TemporalTypes::TINT(), TemporalTypes::TINT()));
+        wmin_set.AddFunction(
+            MakeWindowAggregate<&tfloat_wmin_transfn, &mduck_datum_min_float8, true>(
+                TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()));
+        loader.RegisterFunction(std::move(wmin_set));
+    }
+    // wmax: tint, tfloat
+    {
+        AggregateFunctionSet wmax_set("wmax");
+        wmax_set.AddFunction(
+            MakeWindowAggregate<&tint_wmax_transfn, &mduck_datum_max_int32, false>(
+                TemporalTypes::TINT(), TemporalTypes::TINT()));
+        wmax_set.AddFunction(
+            MakeWindowAggregate<&tfloat_wmax_transfn, &mduck_datum_max_float8, true>(
+                TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()));
+        loader.RegisterFunction(std::move(wmax_set));
+    }
+    // wsum: tint, tfloat
+    {
+        AggregateFunctionSet wsum_set("wsum");
+        wsum_set.AddFunction(
+            MakeWindowAggregate<&tint_wsum_transfn, &mduck_datum_sum_int32, false>(
+                TemporalTypes::TINT(), TemporalTypes::TINT()));
+        wsum_set.AddFunction(
+            MakeWindowAggregate<&tfloat_wsum_transfn, &mduck_datum_sum_float8, true>(
+                TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()));
+        loader.RegisterFunction(std::move(wsum_set));
+    }
+    // wavg deferred — needs datum_sum_double2 (MEOS internal struct).
 }
 
 } // namespace duckdb
