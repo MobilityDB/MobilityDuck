@@ -1449,6 +1449,45 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TINT(),   TemporalTypes::TINT()},   LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal)); \
     loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal));
 
+    // temporal_teq / tne — temporal comparison functions returning Temporal.
+    // MobilityDB exposes them as `?=`, `?<>` operators plus the named forms;
+    // DuckDB rejects multi-char operator tokens, so only the named forms are
+    // registered here.
+#define REG_TCMP_EQ(NAME, FN)                                                                                                                                                          \
+    loader.RegisterFunction(ScalarFunction(NAME, {LogicalType::BOOLEAN,        TemporalTypes::TBOOL()},   TemporalTypes::TBOOL(), TemporalFunctions::FN##_bool_tbool));                  \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TBOOL(),      LogicalType::BOOLEAN},     TemporalTypes::TBOOL(), TemporalFunctions::FN##_tbool_bool));                  \
+    loader.RegisterFunction(ScalarFunction(NAME, {LogicalType::INTEGER,        TemporalTypes::TINT()},    TemporalTypes::TBOOL(), TemporalFunctions::FN##_int_tint));                    \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TINT(),       LogicalType::INTEGER},     TemporalTypes::TBOOL(), TemporalFunctions::FN##_tint_int));                    \
+    loader.RegisterFunction(ScalarFunction(NAME, {LogicalType::DOUBLE,         TemporalTypes::TFLOAT()},  TemporalTypes::TBOOL(), TemporalFunctions::FN##_float_tfloat));                \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TFLOAT(),     LogicalType::DOUBLE},      TemporalTypes::TBOOL(), TemporalFunctions::FN##_tfloat_float));                \
+    loader.RegisterFunction(ScalarFunction(NAME, {LogicalType::VARCHAR,        TemporalTypes::TTEXT()},   TemporalTypes::TBOOL(), TemporalFunctions::FN##_text_ttext));                  \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TTEXT(),      LogicalType::VARCHAR},     TemporalTypes::TBOOL(), TemporalFunctions::FN##_ttext_text));                  \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TBOOL(),      TemporalTypes::TBOOL()},   TemporalTypes::TBOOL(), TemporalFunctions::FN##_temporal_temporal));           \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TINT(),       TemporalTypes::TINT()},    TemporalTypes::TBOOL(), TemporalFunctions::FN##_temporal_temporal));           \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TFLOAT(),     TemporalTypes::TFLOAT()},  TemporalTypes::TBOOL(), TemporalFunctions::FN##_temporal_temporal));           \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TTEXT(),      TemporalTypes::TTEXT()},   TemporalTypes::TBOOL(), TemporalFunctions::FN##_temporal_temporal));
+
+    REG_TCMP_EQ("temporal_teq", Teq)
+    REG_TCMP_EQ("temporal_tne", Tne)
+#undef REG_TCMP_EQ
+
+#define REG_TCMP_ORD(NAME, FN)                                                                                                                                                         \
+    loader.RegisterFunction(ScalarFunction(NAME, {LogicalType::INTEGER,        TemporalTypes::TINT()},    TemporalTypes::TBOOL(), TemporalFunctions::FN##_int_tint));                    \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TINT(),       LogicalType::INTEGER},     TemporalTypes::TBOOL(), TemporalFunctions::FN##_tint_int));                    \
+    loader.RegisterFunction(ScalarFunction(NAME, {LogicalType::DOUBLE,         TemporalTypes::TFLOAT()},  TemporalTypes::TBOOL(), TemporalFunctions::FN##_float_tfloat));                \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TFLOAT(),     LogicalType::DOUBLE},      TemporalTypes::TBOOL(), TemporalFunctions::FN##_tfloat_float));                \
+    loader.RegisterFunction(ScalarFunction(NAME, {LogicalType::VARCHAR,        TemporalTypes::TTEXT()},   TemporalTypes::TBOOL(), TemporalFunctions::FN##_text_ttext));                  \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TTEXT(),      LogicalType::VARCHAR},     TemporalTypes::TBOOL(), TemporalFunctions::FN##_ttext_text));                  \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TINT(),       TemporalTypes::TINT()},    TemporalTypes::TBOOL(), TemporalFunctions::FN##_temporal_temporal));           \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TFLOAT(),     TemporalTypes::TFLOAT()},  TemporalTypes::TBOOL(), TemporalFunctions::FN##_temporal_temporal));           \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TTEXT(),      TemporalTypes::TTEXT()},   TemporalTypes::TBOOL(), TemporalFunctions::FN##_temporal_temporal));
+
+    REG_TCMP_ORD("temporal_tlt", Tlt)
+    REG_TCMP_ORD("temporal_tle", Tle)
+    REG_TCMP_ORD("temporal_tgt", Tgt)
+    REG_TCMP_ORD("temporal_tge", Tge)
+#undef REG_TCMP_ORD
+
     REG_EA_ORD("ever_lt",   Ever_lt)
     REG_EA_ORD("always_lt", Always_lt)
     REG_EA_ORD("ever_le",   Ever_le)

@@ -5355,6 +5355,76 @@ void TemporalFunctions::Textcat_ttext_ttext(DataChunk &args, ExpressionState &st
 }
 
 /* ***************************************************
+ * Temporal comparison predicates returning Temporal
+ * (temporal_teq / tne / tlt / tle / tgt / tge)
+ *
+ * Each op routes value × t / t × value through TemporalBinaryV1/V; the
+ * temporal × temporal form goes through TemporalBinaryTT. ttext × text
+ * variants need text* allocation and use a manual BinaryExecutor block.
+ ****************************************************/
+
+#define DEFINE_TCMP_NUMERIC(OP, MEOS)                                                                                                       \
+void TemporalFunctions::OP##_int_tint(DataChunk &args, ExpressionState &state, Vector &result) {                                            \
+    TemporalBinaryV1<int32_t>(args, result, [](int32_t v, Temporal *t) { return MEOS##_int_tint(v, t); });                                  \
+}                                                                                                                                            \
+void TemporalFunctions::OP##_tint_int(DataChunk &args, ExpressionState &state, Vector &result) {                                            \
+    TemporalBinaryV<int32_t>(args, result, [](Temporal *t, int32_t v) { return MEOS##_tint_int(t, v); });                                   \
+}                                                                                                                                            \
+void TemporalFunctions::OP##_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result) {                                        \
+    TemporalBinaryV1<double>(args, result, [](double v, Temporal *t) { return MEOS##_float_tfloat(v, t); });                                \
+}                                                                                                                                            \
+void TemporalFunctions::OP##_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result) {                                        \
+    TemporalBinaryV<double>(args, result, [](Temporal *t, double v) { return MEOS##_tfloat_float(t, v); });                                 \
+}                                                                                                                                            \
+void TemporalFunctions::OP##_text_ttext(DataChunk &args, ExpressionState &state, Vector &result) {                                          \
+    BinaryExecutor::Execute<string_t, string_t, string_t>(                                                                                  \
+        args.data[0], args.data[1], result, args.size(),                                                                                    \
+        [&](string_t txt_str, string_t blob) -> string_t {                                                                                  \
+            text *txt = TextFromBlob(txt_str);                                                                                              \
+            Temporal *t = BlobToTemporal(blob);                                                                                             \
+            Temporal *r = MEOS##_text_ttext(txt, t);                                                                                        \
+            free(txt); free(t);                                                                                                             \
+            if (!r) throw InvalidInputException("MEOS " #MEOS "_text_ttext returned null");                                                 \
+            return TemporalToBlob(result, r);                                                                                               \
+        });                                                                                                                                  \
+}                                                                                                                                            \
+void TemporalFunctions::OP##_ttext_text(DataChunk &args, ExpressionState &state, Vector &result) {                                          \
+    BinaryExecutor::Execute<string_t, string_t, string_t>(                                                                                  \
+        args.data[0], args.data[1], result, args.size(),                                                                                    \
+        [&](string_t blob, string_t txt_str) -> string_t {                                                                                  \
+            Temporal *t = BlobToTemporal(blob);                                                                                             \
+            text *txt = TextFromBlob(txt_str);                                                                                              \
+            Temporal *r = MEOS##_ttext_text(t, txt);                                                                                        \
+            free(t); free(txt);                                                                                                             \
+            if (!r) throw InvalidInputException("MEOS " #MEOS "_ttext_text returned null");                                                 \
+            return TemporalToBlob(result, r);                                                                                               \
+        });                                                                                                                                  \
+}                                                                                                                                            \
+void TemporalFunctions::OP##_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result) {                                   \
+    TemporalBinaryTT(args, result, [](Temporal *a, Temporal *b) { return MEOS##_temporal_temporal(a, b); });                                \
+}
+
+#define DEFINE_TCMP_BOOL(OP, MEOS)                                                                                                          \
+void TemporalFunctions::OP##_bool_tbool(DataChunk &args, ExpressionState &state, Vector &result) {                                          \
+    TemporalBinaryV1<bool>(args, result, [](bool v, Temporal *t) { return MEOS##_bool_tbool(v, t); });                                      \
+}                                                                                                                                            \
+void TemporalFunctions::OP##_tbool_bool(DataChunk &args, ExpressionState &state, Vector &result) {                                          \
+    TemporalBinaryV<bool>(args, result, [](Temporal *t, bool v) { return MEOS##_tbool_bool(t, v); });                                       \
+}
+
+DEFINE_TCMP_BOOL(Teq, teq)
+DEFINE_TCMP_BOOL(Tne, tne)
+DEFINE_TCMP_NUMERIC(Teq, teq)
+DEFINE_TCMP_NUMERIC(Tne, tne)
+DEFINE_TCMP_NUMERIC(Tlt, tlt)
+DEFINE_TCMP_NUMERIC(Tle, tle)
+DEFINE_TCMP_NUMERIC(Tgt, tgt)
+DEFINE_TCMP_NUMERIC(Tge, tge)
+
+#undef DEFINE_TCMP_NUMERIC
+#undef DEFINE_TCMP_BOOL
+
+/* ***************************************************
  * Workaround functions
  ****************************************************/
 

@@ -229,6 +229,40 @@ struct TemporalFunctions {
     static void Tfloat_radians(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
+     * Temporal comparison predicates returning Temporal
+     * (temporal_teq / tne / tlt / tle / tgt / tge)
+     ****************************************************/
+#define DECL_TCMP(OP)                                                                              \
+    static void OP##_bool_tbool(DataChunk &args, ExpressionState &state, Vector &result);          \
+    static void OP##_tbool_bool(DataChunk &args, ExpressionState &state, Vector &result);          \
+    static void OP##_int_tint(DataChunk &args, ExpressionState &state, Vector &result);            \
+    static void OP##_tint_int(DataChunk &args, ExpressionState &state, Vector &result);            \
+    static void OP##_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);        \
+    static void OP##_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);        \
+    static void OP##_text_ttext(DataChunk &args, ExpressionState &state, Vector &result);          \
+    static void OP##_ttext_text(DataChunk &args, ExpressionState &state, Vector &result);          \
+    static void OP##_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+
+    DECL_TCMP(Teq)
+    DECL_TCMP(Tne)
+#undef DECL_TCMP
+
+#define DECL_TCMP_ORD(OP)                                                                          \
+    static void OP##_int_tint(DataChunk &args, ExpressionState &state, Vector &result);            \
+    static void OP##_tint_int(DataChunk &args, ExpressionState &state, Vector &result);            \
+    static void OP##_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);        \
+    static void OP##_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);        \
+    static void OP##_text_ttext(DataChunk &args, ExpressionState &state, Vector &result);          \
+    static void OP##_ttext_text(DataChunk &args, ExpressionState &state, Vector &result);          \
+    static void OP##_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+
+    DECL_TCMP_ORD(Tlt)
+    DECL_TCMP_ORD(Tle)
+    DECL_TCMP_ORD(Tgt)
+    DECL_TCMP_ORD(Tge)
+#undef DECL_TCMP_ORD
+
+    /* ***************************************************
      * Distance operator on tnumber
      ****************************************************/
     static void Tdistance_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
