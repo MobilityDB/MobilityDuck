@@ -41,6 +41,7 @@ struct TemporalTypes {
     static void RegisterCastFunctions(ExtensionLoader &loader);
     static void RegisterScalarFunctions(ExtensionLoader &loader);
     static void RegisterTemporalUnnestFunction(ExtensionLoader &loader);
+    static void RegisterTemporalTileSplit(ExtensionLoader &loader);
 };
 
 } // namespace duckdb

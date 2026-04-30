@@ -21,6 +21,7 @@
 #include "duckdb/common/types/data_chunk.hpp"
 
 #include "mobilityduck/bindings.hpp"
+#include "time_util.hpp"
 
 namespace duckdb {
 
@@ -1720,6 +1721,282 @@ void TemporalTypes::RegisterTemporalUnnestFunction(ExtensionLoader &loader) {
             loader.RegisterFunction( fn);
         }
     }
+}
+
+/* ***************************************************
+ * valueSplit / timeSplit / valueTimeSplit — TableFunctions that bucket a
+ * temporal into one row per value (and/or time) bin, mirroring MobilityDB's
+ *
+ *   valueSplit(tnumber, vsize[, vorigin])
+ *     RETURNS TABLE(value <bigint|double>, <tnumber>)
+ *
+ *   timeSplit(temporal, duration[, torigin])
+ *     RETURNS TABLE(time timestamptz, <temporal>)
+ *
+ *   valueTimeSplit(tnumber, vsize, duration[, vorigin[, torigin]])
+ *     RETURNS TABLE(value <bigint|double>, time timestamptz, <tnumber>)
+ *
+ * Implementation pattern mirrors PR #79's spaceSplit / spaceTimeSplit:
+ * Bind captures the input blob + scalar args; Init calls the matching MEOS
+ * export and buffers the parallel arrays as Value triples; Exec drains.
+ ****************************************************/
+
+namespace {
+
+enum class TileKind { ValueSplit, TimeSplit, ValueTimeSplit };
+
+struct TileBindData : public TableFunctionData {
+    string_t blob;
+    LogicalType base_type;     // INTEGER for tint, DOUBLE for tfloat, etc.
+    LogicalType return_temp;   // The Tnumber/Temporal logical type to return
+    TileKind kind;
+    bool is_int;               // tint → true; tfloat → false (only for value/valueTime)
+
+    /* Scalar args present only when kind requires them: */
+    bool has_vsize = false;
+    int64_t vsize_int = 0;
+    double  vsize_dbl = 0.0;
+    bool has_duration = false;
+    interval_t duration;
+    bool has_vorigin = false;
+    int64_t vorigin_int = 0;
+    double  vorigin_dbl = 0.0;
+    bool has_torigin = false;
+    timestamp_tz_t torigin;
+};
+
+struct TileGlobalState : public GlobalTableFunctionState {
+    idx_t idx = 0;
+    std::vector<Value> col_value;   // value bin (only for kind != TimeSplit)
+    std::vector<Value> col_time;    // time bin (only for kind != ValueSplit)
+    std::vector<Value> col_temp;    // sub-temporal
+};
+
+LogicalType TempAliasFromInput(const LogicalType &t) {
+    return t;  // alias preserved
+}
+
+unique_ptr<FunctionData> ValueSplitBind(ClientContext &context, TableFunctionBindInput &input,
+                                        vector<LogicalType> &return_types, vector<string> &names) {
+    if (input.inputs.empty() || input.inputs[0].IsNull()) {
+        throw BinderException("valueSplit: input must be non-null");
+    }
+    auto bd = make_uniq<TileBindData>();
+    bd->blob = StringValue::Get(input.inputs[0]);
+    bd->return_temp = input.inputs[0].type();
+    bd->kind = TileKind::ValueSplit;
+    auto alias = bd->return_temp.GetAlias();
+    bd->is_int = (alias == "TINT");
+    bd->base_type = bd->is_int ? LogicalType::BIGINT : LogicalType::DOUBLE;
+
+    if (bd->is_int) bd->vsize_int = input.inputs[1].GetValue<int64_t>();
+    else            bd->vsize_dbl = input.inputs[1].GetValue<double>();
+    bd->has_vsize = true;
+
+    if (input.inputs.size() > 2) {
+        if (bd->is_int) bd->vorigin_int = input.inputs[2].GetValue<int64_t>();
+        else            bd->vorigin_dbl = input.inputs[2].GetValue<double>();
+        bd->has_vorigin = true;
+    }
+
+    return_types = {bd->base_type, bd->return_temp};
+    names = {"value", StringUtil::Lower(alias)};
+    return std::move(bd);
+}
+
+unique_ptr<FunctionData> TimeSplitBind(ClientContext &context, TableFunctionBindInput &input,
+                                       vector<LogicalType> &return_types, vector<string> &names) {
+    if (input.inputs.empty() || input.inputs[0].IsNull()) {
+        throw BinderException("timeSplit: input must be non-null");
+    }
+    auto bd = make_uniq<TileBindData>();
+    bd->blob = StringValue::Get(input.inputs[0]);
+    bd->return_temp = input.inputs[0].type();
+    bd->kind = TileKind::TimeSplit;
+    auto alias = bd->return_temp.GetAlias();
+    bd->is_int = (alias == "TINT");
+    bd->base_type = LogicalType::TIMESTAMP_TZ;
+
+    bd->duration = input.inputs[1].GetValue<interval_t>();
+    bd->has_duration = true;
+
+    if (input.inputs.size() > 2) {
+        bd->torigin = input.inputs[2].GetValue<timestamp_tz_t>();
+        bd->has_torigin = true;
+    }
+
+    return_types = {LogicalType::TIMESTAMP_TZ, bd->return_temp};
+    names = {"time", StringUtil::Lower(alias)};
+    return std::move(bd);
+}
+
+unique_ptr<FunctionData> ValueTimeSplitBind(ClientContext &context, TableFunctionBindInput &input,
+                                            vector<LogicalType> &return_types, vector<string> &names) {
+    if (input.inputs.empty() || input.inputs[0].IsNull()) {
+        throw BinderException("valueTimeSplit: input must be non-null");
+    }
+    auto bd = make_uniq<TileBindData>();
+    bd->blob = StringValue::Get(input.inputs[0]);
+    bd->return_temp = input.inputs[0].type();
+    bd->kind = TileKind::ValueTimeSplit;
+    auto alias = bd->return_temp.GetAlias();
+    bd->is_int = (alias == "TINT");
+    bd->base_type = bd->is_int ? LogicalType::BIGINT : LogicalType::DOUBLE;
+
+    if (bd->is_int) bd->vsize_int = input.inputs[1].GetValue<int64_t>();
+    else            bd->vsize_dbl = input.inputs[1].GetValue<double>();
+    bd->has_vsize = true;
+
+    bd->duration = input.inputs[2].GetValue<interval_t>();
+    bd->has_duration = true;
+
+    if (input.inputs.size() > 3) {
+        if (bd->is_int) bd->vorigin_int = input.inputs[3].GetValue<int64_t>();
+        else            bd->vorigin_dbl = input.inputs[3].GetValue<double>();
+        bd->has_vorigin = true;
+    }
+    if (input.inputs.size() > 4) {
+        bd->torigin = input.inputs[4].GetValue<timestamp_tz_t>();
+        bd->has_torigin = true;
+    }
+
+    return_types = {bd->base_type, LogicalType::TIMESTAMP_TZ, bd->return_temp};
+    names = {"value", "time", StringUtil::Lower(alias)};
+    return std::move(bd);
+}
+
+unique_ptr<GlobalTableFunctionState> TileInit(ClientContext &context, TableFunctionInitInput &input) {
+    auto &bind = input.bind_data->Cast<TileBindData>();
+    auto state = make_uniq<TileGlobalState>();
+
+    size_t in_size = bind.blob.GetSize();
+    Temporal *temp = (Temporal *)malloc(in_size);
+    memcpy(temp, bind.blob.GetData(), in_size);
+
+    int count = 0;
+    Temporal **trajs = nullptr;
+    int *value_bins_int = nullptr;
+    double *value_bins_dbl = nullptr;
+    TimestampTz *time_bins = nullptr;
+
+    if (bind.kind == TileKind::ValueSplit) {
+        if (bind.is_int) {
+            int vorigin = (int) bind.vorigin_int;
+            trajs = tint_value_split(temp, (int) bind.vsize_int, vorigin, &value_bins_int, &count);
+        } else {
+            trajs = tfloat_value_split(temp, bind.vsize_dbl, bind.vorigin_dbl, &value_bins_dbl, &count);
+        }
+    } else if (bind.kind == TileKind::TimeSplit) {
+        MeosInterval mi = IntervaltToInterval(bind.duration);
+        TimestampTz torigin = 0;
+        if (bind.has_torigin) torigin = (TimestampTz) DuckDBToMeosTimestamp(bind.torigin).value;
+        trajs = temporal_time_split(temp, &mi, torigin, &time_bins, &count);
+    } else {  // ValueTimeSplit
+        MeosInterval mi = IntervaltToInterval(bind.duration);
+        TimestampTz torigin = 0;
+        if (bind.has_torigin) torigin = (TimestampTz) DuckDBToMeosTimestamp(bind.torigin).value;
+        if (bind.is_int) {
+            int vorigin = (int) bind.vorigin_int;
+            trajs = tint_value_time_split(temp, (int) bind.vsize_int, &mi, vorigin, torigin,
+                                          &value_bins_int, &time_bins, &count);
+        } else {
+            trajs = tfloat_value_time_split(temp, bind.vsize_dbl, &mi,
+                                            bind.vorigin_dbl, torigin,
+                                            &value_bins_dbl, &time_bins, &count);
+        }
+    }
+    free(temp);
+
+    if (!trajs || count <= 0) {
+        if (trajs) free(trajs);
+        if (value_bins_int) free(value_bins_int);
+        if (value_bins_dbl) free(value_bins_dbl);
+        if (time_bins) free(time_bins);
+        return std::move(state);
+    }
+
+    state->col_value.reserve(count);
+    state->col_time.reserve(count);
+    state->col_temp.reserve(count);
+
+    for (int i = 0; i < count; i++) {
+        if (bind.kind != TileKind::TimeSplit) {
+            if (bind.is_int) state->col_value.emplace_back(Value::BIGINT(value_bins_int[i]));
+            else             state->col_value.emplace_back(Value::DOUBLE(value_bins_dbl[i]));
+        }
+        if (bind.kind != TileKind::ValueSplit) {
+            timestamp_tz_t t = MeosToDuckDBTimestamp(timestamp_tz_t((int64_t) time_bins[i]));
+            state->col_time.emplace_back(Value::TIMESTAMPTZ(t));
+        }
+        size_t sz = temporal_mem_size(trajs[i]);
+        Value tblob = Value::BLOB(reinterpret_cast<const_data_ptr_t>(trajs[i]), sz);
+        tblob.Reinterpret(bind.return_temp);
+        state->col_temp.push_back(std::move(tblob));
+        free(trajs[i]);
+    }
+    free(trajs);
+    if (value_bins_int) free(value_bins_int);
+    if (value_bins_dbl) free(value_bins_dbl);
+    if (time_bins) free(time_bins);
+    return std::move(state);
+}
+
+void TileExec(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &state = input.global_state->Cast<TileGlobalState>();
+    auto &bind = input.bind_data->Cast<TileBindData>();
+    idx_t remaining = state.col_temp.size() - state.idx;
+    idx_t emit = MinValue<idx_t>(STANDARD_VECTOR_SIZE, remaining);
+
+    for (idx_t i = 0; i < emit; i++) {
+        switch (bind.kind) {
+            case TileKind::ValueSplit:
+                output.SetValue(0, i, state.col_value[state.idx]);
+                output.SetValue(1, i, state.col_temp[state.idx]);
+                break;
+            case TileKind::TimeSplit:
+                output.SetValue(0, i, state.col_time[state.idx]);
+                output.SetValue(1, i, state.col_temp[state.idx]);
+                break;
+            case TileKind::ValueTimeSplit:
+                output.SetValue(0, i, state.col_value[state.idx]);
+                output.SetValue(1, i, state.col_time[state.idx]);
+                output.SetValue(2, i, state.col_temp[state.idx]);
+                break;
+        }
+        state.idx++;
+    }
+    output.SetCardinality(emit);
+}
+
+} // namespace
+
+void TemporalTypes::RegisterTemporalTileSplit(ExtensionLoader &loader) {
+    const auto TI = TINT();
+    const auto TF = TFLOAT();
+    const auto INT = LogicalType::INTEGER;
+    const auto DBL = LogicalType::DOUBLE;
+    const auto INTERVAL = LogicalType::INTERVAL;
+    const auto TS = LogicalType::TIMESTAMP_TZ;
+
+    /* valueSplit overloads */
+    loader.RegisterFunction(TableFunction("valueSplit", {TI, INT},      TileExec, ValueSplitBind, TileInit));
+    loader.RegisterFunction(TableFunction("valueSplit", {TI, INT, INT}, TileExec, ValueSplitBind, TileInit));
+    loader.RegisterFunction(TableFunction("valueSplit", {TF, DBL},      TileExec, ValueSplitBind, TileInit));
+    loader.RegisterFunction(TableFunction("valueSplit", {TF, DBL, DBL}, TileExec, ValueSplitBind, TileInit));
+
+    /* timeSplit overloads — all temporal types except TBOOL (per MobilityDB) */
+    for (auto &t : TemporalTypes::AllTypes()) {
+        loader.RegisterFunction(TableFunction("timeSplit", {t, INTERVAL},     TileExec, TimeSplitBind, TileInit));
+        loader.RegisterFunction(TableFunction("timeSplit", {t, INTERVAL, TS}, TileExec, TimeSplitBind, TileInit));
+    }
+
+    /* valueTimeSplit overloads */
+    loader.RegisterFunction(TableFunction("valueTimeSplit", {TI, INT, INTERVAL},                TileExec, ValueTimeSplitBind, TileInit));
+    loader.RegisterFunction(TableFunction("valueTimeSplit", {TI, INT, INTERVAL, INT},           TileExec, ValueTimeSplitBind, TileInit));
+    loader.RegisterFunction(TableFunction("valueTimeSplit", {TI, INT, INTERVAL, INT, TS},       TileExec, ValueTimeSplitBind, TileInit));
+    loader.RegisterFunction(TableFunction("valueTimeSplit", {TF, DBL, INTERVAL},                TileExec, ValueTimeSplitBind, TileInit));
+    loader.RegisterFunction(TableFunction("valueTimeSplit", {TF, DBL, INTERVAL, DBL},           TileExec, ValueTimeSplitBind, TileInit));
+    loader.RegisterFunction(TableFunction("valueTimeSplit", {TF, DBL, INTERVAL, DBL, TS},       TileExec, ValueTimeSplitBind, TileInit));
 }
 
 } // namespace duckdb
