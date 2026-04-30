@@ -244,6 +244,25 @@ static Datum mduck_datum_max_float8(Datum l, Datum r) {
 static Datum mduck_datum_sum_float8(Datum l, Datum r) {
     return float8_to_datum(datum_to_float8(l) + datum_to_float8(r));
 }
+// double2 — internal MEOS struct for {sum, count} pairs used by tavg.
+// Layout per meos/include/temporal/doublen.h: { double a; double b; }
+// MEOS internal (not in public install). We replicate the layout here
+// and provide a sum function for use as the merge function in tavg
+// combine. Allocation matches the palloc path used internally so the
+// MEOS skiplist's free path interoperates with our state.
+struct mduck_double2 {
+    double a;
+    double b;
+};
+static Datum mduck_datum_sum_double2(Datum l, Datum r) {
+    auto *lp = reinterpret_cast<mduck_double2 *>(l);
+    auto *rp = reinterpret_cast<mduck_double2 *>(r);
+    auto *out = reinterpret_cast<mduck_double2 *>(malloc(sizeof(mduck_double2)));
+    out->a = lp->a + rp->a;
+    out->b = lp->b + rp->b;
+    return reinterpret_cast<Datum>(out);
+}
+
 // Text comparison: Datum carries text* (PG varlena). text_cmp is exported
 // from MEOS so we just invoke it on the two pointers and pick whichever
 // Datum we want.
@@ -327,6 +346,89 @@ static AggregateFunction MakeSkiplistAggregate(const LogicalType &input_type, co
     using OPS = SkiplistAggFunction<TRANSFN, MERGE_FN, CROSSINGS>;
     return AggregateFunction::UnaryAggregateDestructor<TCountState, string_t, string_t, OPS>(
         input_type, output_type);
+}
+
+// ============================================================================
+// tAvg(tnumber) -> tfloat — Skiplist of {sum, count} pairs.
+//
+// Differs from the generic skiplist pattern in two places:
+//   1. Combine uses mduck_datum_sum_double2 (sum-of-pair merge).
+//   2. Finalize uses tnumber_tavg_finalfn (computes sum/count per
+//      instant) instead of the generic temporal_tagg_finalfn.
+// ============================================================================
+
+struct TAvgFunction {
+    template <class STATE>
+    static void Initialize(STATE &state) {
+        state.skiplist = nullptr;
+    }
+
+    static bool IgnoreNull() {
+        return true;
+    }
+
+    template <class INPUT_TYPE, class STATE, class OP>
+    static void Operation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &) {
+        const uint8_t *bytes = reinterpret_cast<const uint8_t *>(input.GetData());
+        size_t size = input.GetSize();
+        Temporal *temp = reinterpret_cast<Temporal *>(malloc(size));
+        memcpy(temp, bytes, size);
+        state.skiplist = tnumber_tavg_transfn(state.skiplist, temp);
+        free(temp);
+    }
+
+    template <class INPUT_TYPE, class STATE, class OP>
+    static void ConstantOperation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &unary_input,
+                                  idx_t /*count*/) {
+        Operation<INPUT_TYPE, STATE, OP>(state, input, unary_input);
+    }
+
+    template <class STATE, class OP>
+    static void Combine(const STATE &source, STATE &target, AggregateInputData &) {
+        if (!source.skiplist || source.skiplist->length == 0) {
+            return;
+        }
+        if (!target.skiplist) {
+            const_cast<STATE &>(target).skiplist = temporal_skiplist_make();
+        }
+        void **values = skiplist_values(source.skiplist);
+        int count = source.skiplist->length;
+        temporal_skiplist_splice(target.skiplist, values, count, &mduck_datum_sum_double2, false);
+        free(values);
+    }
+
+    template <class T, class STATE>
+    static void Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data) {
+        if (!state.skiplist || state.skiplist->length == 0) {
+            finalize_data.ReturnNull();
+            return;
+        }
+        Temporal *result = tnumber_tavg_finalfn(state.skiplist);
+        // tnumber_tavg_finalfn calls skiplist_free internally — same
+        // contract as temporal_tagg_finalfn.
+        state.skiplist = nullptr;
+        if (!result) {
+            finalize_data.ReturnNull();
+            return;
+        }
+        size_t out_size = temporal_mem_size(result);
+        target = finalize_data.ReturnString(
+            string_t(reinterpret_cast<const char *>(result), out_size));
+        free(result);
+    }
+
+    template <class STATE>
+    static void Destroy(STATE &state, AggregateInputData &) {
+        if (state.skiplist) {
+            skiplist_free(state.skiplist);
+            state.skiplist = nullptr;
+        }
+    }
+};
+
+static AggregateFunction MakeTavgAggregate(const LogicalType &input_type) {
+    return AggregateFunction::UnaryAggregateDestructor<TCountState, string_t, string_t, TAvgFunction>(
+        input_type, TemporalTypes::TFLOAT());
 }
 
 // ============================================================================
@@ -530,6 +632,13 @@ void TemporalAggregates::RegisterWindowAggregates(ExtensionLoader &loader) {
         loader.RegisterFunction(std::move(wsum_set));
     }
     // wavg deferred — needs datum_sum_double2 (MEOS internal struct).
+}
+
+void TemporalAggregates::RegisterTAvg(ExtensionLoader &loader) {
+    AggregateFunctionSet tavg_set("tAvg");
+    tavg_set.AddFunction(MakeTavgAggregate(TemporalTypes::TINT()));
+    tavg_set.AddFunction(MakeTavgAggregate(TemporalTypes::TFLOAT()));
+    loader.RegisterFunction(std::move(tavg_set));
 }
 
 } // namespace duckdb

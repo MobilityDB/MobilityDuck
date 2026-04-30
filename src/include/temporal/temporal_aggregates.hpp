@@ -17,6 +17,9 @@ struct TemporalAggregates {
 
     // Register wmin / wmax / wsum window aggregates.
     static void RegisterWindowAggregates(ExtensionLoader &loader);
+
+    // Register tAvg(tnumber) -> tfloat aggregate.
+    static void RegisterTAvg(ExtensionLoader &loader);
 };
 
 } // namespace duckdb
