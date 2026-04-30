@@ -161,6 +161,13 @@ struct TgeompointFunctions {
     // static void gs_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void collect_gs(DataChunk &args, ExpressionState &state, Vector &result);
     static void distance_geo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * Affine-derived spatial-transform stragglers
+     ****************************************************/
+    static void Tgeo_rotate_geom(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_scale_xy(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_scale_xyz(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

@@ -1768,6 +1768,25 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::distance_geo_geo
         )
     );
+
+    /* ***************************************************
+     * Affine-derived spatial-transform stragglers
+     ****************************************************/
+    {
+        const auto T = TGEOMPOINT();
+        const auto D = LogicalType::DOUBLE;
+
+        loader.RegisterFunction(ScalarFunction(
+            "rotate", {T, D, GeoTypes::GEOMETRY()}, T,
+            TgeompointFunctions::Tgeo_rotate_geom));
+
+        loader.RegisterFunction(ScalarFunction(
+            "scale", {T, D, D}, T,
+            TgeompointFunctions::Tgeo_scale_xy));
+        loader.RegisterFunction(ScalarFunction(
+            "scale", {T, D, D, D}, T,
+            TgeompointFunctions::Tgeo_scale_xyz));
+    }
 }
 
 } // namespace duckdb
