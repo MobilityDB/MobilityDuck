@@ -5308,6 +5308,15 @@ DEFINE_TSPATIAL_STBOX_POS(Overabove,  overabove)
 DEFINE_TSPATIAL_STBOX_POS(Overfront,  overfront)
 DEFINE_TSPATIAL_STBOX_POS(Overback,   overback)
 
+/* Time-axis position predicates on tspatial reuse the same macro: MEOS exports
+ * `before_tspatial_stbox`, `before_stbox_tspatial`, `before_tspatial_tspatial`
+ * (and the after / overbefore / overafter equivalents) follow the
+ * (Temporal*, STBox*) / (STBox*, Temporal*) / (Temporal*, Temporal*) shape. */
+DEFINE_TSPATIAL_STBOX_POS(Before,     before)
+DEFINE_TSPATIAL_STBOX_POS(After,      after)
+DEFINE_TSPATIAL_STBOX_POS(Overbefore, overbefore)
+DEFINE_TSPATIAL_STBOX_POS(Overafter,  overafter)
+
 #undef DEFINE_TSPATIAL_STBOX_POS
 
 /* ***************************************************

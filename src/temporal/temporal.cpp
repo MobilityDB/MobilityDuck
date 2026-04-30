@@ -1543,50 +1543,50 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         loader.RegisterFunction(ScalarFunction("&>", {tflt, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Overright_tnumber_tnumber));
     }
 
-    // tspatial × {stbox, tspatial} position predicates
+    // tspatial × {stbox, tspatial} position predicates.
+    //
+    // For each direction (left/right/below/above/front/back and the over*
+    // variants, plus the time-axis before/after/overbefore/overafter), the
+    // predicate is registered both as the operator form (where DuckDB's
+    // parser accepts the token, only L/R for now: <<, >>, &<, &>) and as
+    // both the bare named form (left/right/below/above/front/back/before/
+    // after/overbelow/overabove/overfront/overback/overbefore/overafter)
+    // and the MobilityDB-canonical `temporal_*` alias.
     {
         auto tg    = TgeompointType::TGEOMPOINT();
         auto stbox = StboxType::STBOX();
 
-        // L/R operators (DuckDB parser-friendly)
-        loader.RegisterFunction(ScalarFunction("<<", {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Left_tspatial_stbox));
-        loader.RegisterFunction(ScalarFunction(">>", {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Right_tspatial_stbox));
-        loader.RegisterFunction(ScalarFunction("&<", {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Overleft_tspatial_stbox));
-        loader.RegisterFunction(ScalarFunction("&>", {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Overright_tspatial_stbox));
-        loader.RegisterFunction(ScalarFunction("<<", {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Left_stbox_tspatial));
-        loader.RegisterFunction(ScalarFunction(">>", {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Right_stbox_tspatial));
-        loader.RegisterFunction(ScalarFunction("&<", {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Overleft_stbox_tspatial));
-        loader.RegisterFunction(ScalarFunction("&>", {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Overright_stbox_tspatial));
-        loader.RegisterFunction(ScalarFunction("<<", {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Left_tspatial_tspatial));
-        loader.RegisterFunction(ScalarFunction(">>", {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Right_tspatial_tspatial));
-        loader.RegisterFunction(ScalarFunction("&<", {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Overleft_tspatial_tspatial));
-        loader.RegisterFunction(ScalarFunction("&>", {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Overright_tspatial_tspatial));
+#define REG_TSPATIAL_OP(SQL_NAME, ALIAS, FN)                                                                                       \
+        loader.RegisterFunction(ScalarFunction(SQL_NAME, {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::FN##_tspatial_stbox));   \
+        loader.RegisterFunction(ScalarFunction(ALIAS,    {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::FN##_tspatial_stbox));   \
+        loader.RegisterFunction(ScalarFunction(SQL_NAME, {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::FN##_stbox_tspatial));   \
+        loader.RegisterFunction(ScalarFunction(ALIAS,    {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::FN##_stbox_tspatial));   \
+        loader.RegisterFunction(ScalarFunction(SQL_NAME, {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::FN##_tspatial_tspatial));\
+        loader.RegisterFunction(ScalarFunction(ALIAS,    {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::FN##_tspatial_tspatial));
 
-        // Above/below/front/back as named functions (DuckDB parser rejects |>>, <<|, etc.)
-        loader.RegisterFunction(ScalarFunction("below",     {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Below_tspatial_stbox));
-        loader.RegisterFunction(ScalarFunction("above",     {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Above_tspatial_stbox));
-        loader.RegisterFunction(ScalarFunction("front",     {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Front_tspatial_stbox));
-        loader.RegisterFunction(ScalarFunction("back",      {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Back_tspatial_stbox));
-        loader.RegisterFunction(ScalarFunction("overbelow", {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Overbelow_tspatial_stbox));
-        loader.RegisterFunction(ScalarFunction("overabove", {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Overabove_tspatial_stbox));
-        loader.RegisterFunction(ScalarFunction("overfront", {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Overfront_tspatial_stbox));
-        loader.RegisterFunction(ScalarFunction("overback",  {tg, stbox}, LogicalType::BOOLEAN, TemporalFunctions::Overback_tspatial_stbox));
-        loader.RegisterFunction(ScalarFunction("below",     {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Below_stbox_tspatial));
-        loader.RegisterFunction(ScalarFunction("above",     {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Above_stbox_tspatial));
-        loader.RegisterFunction(ScalarFunction("front",     {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Front_stbox_tspatial));
-        loader.RegisterFunction(ScalarFunction("back",      {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Back_stbox_tspatial));
-        loader.RegisterFunction(ScalarFunction("overbelow", {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Overbelow_stbox_tspatial));
-        loader.RegisterFunction(ScalarFunction("overabove", {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Overabove_stbox_tspatial));
-        loader.RegisterFunction(ScalarFunction("overfront", {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Overfront_stbox_tspatial));
-        loader.RegisterFunction(ScalarFunction("overback",  {stbox, tg}, LogicalType::BOOLEAN, TemporalFunctions::Overback_stbox_tspatial));
-        loader.RegisterFunction(ScalarFunction("below",     {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Below_tspatial_tspatial));
-        loader.RegisterFunction(ScalarFunction("above",     {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Above_tspatial_tspatial));
-        loader.RegisterFunction(ScalarFunction("front",     {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Front_tspatial_tspatial));
-        loader.RegisterFunction(ScalarFunction("back",      {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Back_tspatial_tspatial));
-        loader.RegisterFunction(ScalarFunction("overbelow", {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Overbelow_tspatial_tspatial));
-        loader.RegisterFunction(ScalarFunction("overabove", {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Overabove_tspatial_tspatial));
-        loader.RegisterFunction(ScalarFunction("overfront", {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Overfront_tspatial_tspatial));
-        loader.RegisterFunction(ScalarFunction("overback",  {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Overback_tspatial_tspatial));
+        // L/R as both operator and named alias (DuckDB accepts <<, >>, &<, &> tokens)
+        REG_TSPATIAL_OP("<<", "temporal_left",      Left)
+        REG_TSPATIAL_OP(">>", "temporal_right",     Right)
+        REG_TSPATIAL_OP("&<", "temporal_overleft",  Overleft)
+        REG_TSPATIAL_OP("&>", "temporal_overright", Overright)
+
+        // Vertical / Z-axis as named only (DuckDB rejects <<|, |>>, /<<, >>/, etc.)
+        REG_TSPATIAL_OP("below",     "temporal_below",     Below)
+        REG_TSPATIAL_OP("above",     "temporal_above",     Above)
+        REG_TSPATIAL_OP("front",     "temporal_front",     Front)
+        REG_TSPATIAL_OP("back",      "temporal_back",      Back)
+        REG_TSPATIAL_OP("overbelow", "temporal_overbelow", Overbelow)
+        REG_TSPATIAL_OP("overabove", "temporal_overabove", Overabove)
+        REG_TSPATIAL_OP("overfront", "temporal_overfront", Overfront)
+        REG_TSPATIAL_OP("overback",  "temporal_overback",  Overback)
+
+        // Time-axis on tspatial as named only (DuckDB rejects <<#, #>>, &<#, #&>)
+        REG_TSPATIAL_OP("before",     "temporal_before",     Before)
+        REG_TSPATIAL_OP("after",      "temporal_after",      After)
+        REG_TSPATIAL_OP("overbefore", "temporal_overbefore", Overbefore)
+        REG_TSPATIAL_OP("overafter",  "temporal_overafter",  Overafter)
+
+#undef REG_TSPATIAL_OP
     }
 
     // ttext text functions
