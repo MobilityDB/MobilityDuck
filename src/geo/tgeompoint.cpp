@@ -147,6 +147,48 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
+    loader.RegisterFunction(
+        ScalarFunction(
+            "asMFJSON",
+            {TGEOMPOINT()},
+            LogicalType::VARCHAR,
+            TgeompointFunctions::Tspatial_as_mfjson
+        )
+    );
+    loader.RegisterFunction(
+        ScalarFunction(
+            "asMFJSON",
+            {TGEOMPOINT(), LogicalType::INTEGER},
+            LogicalType::VARCHAR,
+            TgeompointFunctions::Tspatial_as_mfjson
+        )
+    );
+    loader.RegisterFunction(
+        ScalarFunction(
+            "asMFJSON",
+            {TGEOMPOINT(), LogicalType::INTEGER, LogicalType::INTEGER},
+            LogicalType::VARCHAR,
+            TgeompointFunctions::Tspatial_as_mfjson
+        )
+    );
+    loader.RegisterFunction(
+        ScalarFunction(
+            "asMFJSON",
+            {TGEOMPOINT(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::INTEGER},
+            LogicalType::VARCHAR,
+            TgeompointFunctions::Tspatial_as_mfjson
+        )
+    );
+
+    loader.RegisterFunction(
+        ScalarFunction(
+            "setSRID",
+            {TGEOMPOINT(), LogicalType::INTEGER},
+            TGEOMPOINT(),
+            TgeompointFunctions::Tspatial_set_srid
+        )
+    );
+
     /* ***************************************************
     * Constructor functions
     ****************************************************/
@@ -1730,6 +1772,27 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Tdistance_tgeo_tgeo
         )
     );
+    // Named form of the same function for SQL portability (MobilityDB exposes
+    // both `<->` and `tdistance(...)`).
+    loader.RegisterFunction(
+        ScalarFunction(
+            "tdistance",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            TemporalTypes::TFLOAT(),
+            TgeompointFunctions::Tdistance_tgeo_tgeo
+        )
+    );
+
+    // tdistance(tgeompoint, geometry) and (geometry, tgeompoint), plus the `<->` operator forms.
+    {
+        const auto tg = TGEOMPOINT();
+        const auto geom = GeoTypes::GEOMETRY();
+        const auto tfl = TemporalTypes::TFLOAT();
+        loader.RegisterFunction(ScalarFunction("tdistance", {tg, geom}, tfl, TgeompointFunctions::Tdistance_tgeo_geo));
+        loader.RegisterFunction(ScalarFunction("tdistance", {geom, tg}, tfl, TgeompointFunctions::Tdistance_geo_tgeo));
+        loader.RegisterFunction(ScalarFunction("<->",       {tg, geom}, tfl, TgeompointFunctions::Tdistance_tgeo_geo));
+        loader.RegisterFunction(ScalarFunction("<->",       {geom, tg}, tfl, TgeompointFunctions::Tdistance_geo_tgeo));
+    }
 
     loader.RegisterFunction(
         ScalarFunction(
@@ -1739,6 +1802,49 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::ShortestLine_tgeo_tgeo
         )
     );
+
+    /* ***************************************************
+     * stboxes / splitNStboxes / splitEachNStboxes
+     ****************************************************/
+    {
+        const auto tg = TGEOMPOINT();
+        const auto stbox = StboxType::STBOX();
+        const auto stbox_list = LogicalType::LIST(stbox);
+        loader.RegisterFunction(ScalarFunction("stboxes", {tg}, stbox_list, TgeompointFunctions::Tgeo_stboxes));
+        loader.RegisterFunction(ScalarFunction("splitNStboxes", {tg, LogicalType::INTEGER}, stbox_list, TgeompointFunctions::Tgeo_split_n_stboxes));
+        loader.RegisterFunction(ScalarFunction("splitEachNStboxes", {tg, LogicalType::INTEGER}, stbox_list, TgeompointFunctions::Tgeo_split_each_n_stboxes));
+    }
+
+    /* ***************************************************
+     * nearestApproachInstant (NAI)
+     ****************************************************/
+    {
+        const auto tg = TGEOMPOINT();
+        const auto geom = GeoTypes::GEOMETRY();
+        loader.RegisterFunction(ScalarFunction("nearestApproachInstant", {tg, geom}, tg, TgeompointFunctions::Nai_tgeo_geo));
+        loader.RegisterFunction(ScalarFunction("nearestApproachInstant", {geom, tg}, tg, TgeompointFunctions::Nai_geo_tgeo));
+        loader.RegisterFunction(ScalarFunction("nearestApproachInstant", {tg, tg},   tg, TgeompointFunctions::Nai_tgeo_tgeo));
+    }
+
+    /* ***************************************************
+     * nearestApproachDistance (NAD) on tgeompoint
+     ****************************************************/
+    {
+        const auto tg = TGEOMPOINT();
+        const auto geom = GeoTypes::GEOMETRY();
+        const auto stbox = StboxType::STBOX();
+        loader.RegisterFunction(ScalarFunction("nearestApproachDistance", {tg, geom},  LogicalType::DOUBLE, TgeompointFunctions::Nad_tgeo_geo));
+        loader.RegisterFunction(ScalarFunction("nearestApproachDistance", {geom, tg},  LogicalType::DOUBLE, TgeompointFunctions::Nad_geo_tgeo));
+        loader.RegisterFunction(ScalarFunction("nearestApproachDistance", {tg, tg},    LogicalType::DOUBLE, TgeompointFunctions::Nad_tgeo_tgeo));
+        loader.RegisterFunction(ScalarFunction("nearestApproachDistance", {tg, stbox}, LogicalType::DOUBLE, TgeompointFunctions::Nad_tgeo_stbox));
+        loader.RegisterFunction(ScalarFunction("nearestApproachDistance", {stbox, tg}, LogicalType::DOUBLE, TgeompointFunctions::Nad_stbox_tgeo));
+        // also wire the short alias
+        loader.RegisterFunction(ScalarFunction("nad", {tg, geom},  LogicalType::DOUBLE, TgeompointFunctions::Nad_tgeo_geo));
+        loader.RegisterFunction(ScalarFunction("nad", {geom, tg},  LogicalType::DOUBLE, TgeompointFunctions::Nad_geo_tgeo));
+        loader.RegisterFunction(ScalarFunction("nad", {tg, tg},    LogicalType::DOUBLE, TgeompointFunctions::Nad_tgeo_tgeo));
+        loader.RegisterFunction(ScalarFunction("nad", {tg, stbox}, LogicalType::DOUBLE, TgeompointFunctions::Nad_tgeo_stbox));
+        loader.RegisterFunction(ScalarFunction("nad", {stbox, tg}, LogicalType::DOUBLE, TgeompointFunctions::Nad_stbox_tgeo));
+    }
 
 
     // ExtensionUtil::RegisterFunction(

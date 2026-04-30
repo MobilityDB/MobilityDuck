@@ -1,0 +1,49 @@
+# name: test/sql/parity/038_temporal_similarity.test
+# description: MobilityDB regression files 038_temporal_similarity / 066_tpoint_similarity adapted
+# group: [sql]
+#
+# Covers similarity distance scalars and the path table functions for
+# tnumber × tnumber and tgeompoint × tgeompoint.
+
+require mobilityduck
+
+# =============================================================================
+# Distance scalars
+# =============================================================================
+
+query I
+SELECT round(frechetDistance(tfloat '[1@2000-01-01, 4@2000-01-04]', tfloat '[2@2000-01-01, 3@2000-01-03, 5@2000-01-04]')::numeric, 6);
+----
+1.000000
+
+query I
+SELECT round(dynTimeWarp(tint '[1@2000-01-01, 5@2000-01-05]', tint '[2@2000-01-01, 3@2000-01-03, 4@2000-01-05]')::numeric, 6);
+----
+4.000000
+
+query I
+SELECT round(frechetDistance(tgeompoint '[POINT(0 0)@2000-01-01, POINT(2 2)@2000-01-02]', tgeompoint '[POINT(1 1)@2000-01-01, POINT(3 3)@2000-01-02]')::numeric, 6);
+----
+1.414214
+
+# =============================================================================
+# frechetDistancePath
+# =============================================================================
+
+query II
+SELECT i, j FROM frechetDistancePath(tfloat '[1@2000-01-01, 4@2000-01-04]', tfloat '[2@2000-01-01, 3@2000-01-03, 5@2000-01-04]') ORDER BY i, j;
+----
+0	0
+1	1
+2	1
+
+# =============================================================================
+# dynTimeWarpPath
+# =============================================================================
+
+query II
+SELECT i, j FROM dynTimeWarpPath(tint '[1@2000-01-01, 5@2000-01-05]', tint '[2@2000-01-01, 3@2000-01-03, 4@2000-01-05]') ORDER BY i, j;
+----
+0	0
+1	0
+2	1

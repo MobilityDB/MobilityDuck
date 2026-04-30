@@ -22,6 +22,8 @@ struct TgeompointFunctions {
     static void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spatialarr_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spatialarr_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tspatial_as_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tspatial_set_srid(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
     * Constructor functions
     ****************************************************/
@@ -158,9 +160,30 @@ struct TgeompointFunctions {
      * Distance function
      ****************************************************/
     static void Tdistance_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tdistance_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tdistance_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     // static void gs_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void collect_gs(DataChunk &args, ExpressionState &state, Vector &result);
     static void distance_geo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * Nearest-approach functions
+     ****************************************************/
+    static void Nai_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nai_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nai_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nad_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nad_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nad_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nad_tgeo_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nad_stbox_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * stboxes / splitNStboxes / splitEachNStboxes (tgeompoint → LIST(stbox))
+     ****************************************************/
+    static void Tgeo_stboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_split_n_stboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_split_each_n_stboxes(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

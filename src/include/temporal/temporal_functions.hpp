@@ -492,6 +492,12 @@ struct TemporalFunctions {
      ****************************************************/
     static void Temporal_round(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_derivative(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * Serialization
+     ****************************************************/
+    static void Temporal_as_wkb(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

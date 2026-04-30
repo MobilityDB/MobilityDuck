@@ -14,7 +14,12 @@ The MobilityDB project is developed by the Computer & Decision Engineering Depar
 
 This repository is based on https://github.com/duckdb/extension-template.
 
-With MobilityDuck, users can use these data types and functions directly in DuckDB queries. 
+With MobilityDuck, users can use these data types and functions directly in DuckDB queries.
+
+A small number of MobilityDB SQL surface elements have no direct equivalent in
+MobilityDuck because of properties of DuckDB's parser, type system, or
+extension model. These cases — and the named-function workarounds where one
+exists — are documented in [`docs/DuckDB-Parity-Gaps.md`](docs/DuckDB-Parity-Gaps.md).
 
 ---
 ## 1. Requirements

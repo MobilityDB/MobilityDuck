@@ -102,7 +102,7 @@ void SpatialSetType::RegisterScalarFunctions(ExtensionLoader &loader) {
         {SpatialSetType::geomset(), LogicalType::INTEGER}, SpatialSetType::geomset(), SpatialSetFunctions::Spatialset_set_srid));
 
     loader.RegisterFunction( ScalarFunction(
-		"setSRID", 
+		"setSRID",
         {SpatialSetType::geogset(), LogicalType::INTEGER}, SpatialSetType::geogset(), SpatialSetFunctions::Spatialset_set_srid));
 
     loader.RegisterFunction( ScalarFunction(
