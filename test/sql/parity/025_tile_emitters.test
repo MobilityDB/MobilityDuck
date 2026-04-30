@@ -1,0 +1,83 @@
+# name: test/sql/parity/025_tile_emitters.test
+# description: Scalar LIST-returning tile emitters in temporal/025_temporal_tile —
+#              bins(span, ...), valueBins, timeBins, valueBoxes, valueTimeBoxes.
+# group: [sql]
+
+require mobilityduck
+
+# bins(intspan, size) — uniform integer-span bins
+
+query I
+SELECT len(bins(intspan '[1, 10)', 3));
+----
+4
+
+# bins(floatspan, size) — uniform float-span bins
+
+query I
+SELECT len(bins(floatspan '[0.0, 5.0)', 1.5));
+----
+4
+
+# bins(tstzspan, duration) — uniform tstz-span bins
+
+query I
+SELECT len(bins(tstzspan '[2000-01-01, 2000-01-05]', INTERVAL '1 day'));
+----
+5
+
+# bins with explicit origin
+
+query I
+SELECT len(bins(intspan '[1, 10)', 3, 1));
+----
+4
+
+# valueBins(tint, size) — value-domain bins from a tnumber
+
+query I
+SELECT len(valueBins(tint '[1@2000-01-01, 5@2000-01-05]', 2));
+----
+2
+
+# valueBins(tfloat, size, origin)
+
+query I
+SELECT len(valueBins(tfloat '[1@2000-01-01, 5@2000-01-05]', 2.0, 0.0));
+----
+3
+
+# timeBins(tnumber, duration) — time-domain bins from a temporal
+
+query I
+SELECT len(timeBins(tfloat '[1@2000-01-01, 5@2000-01-05]', INTERVAL '1 day'));
+----
+5
+
+# timeBins on tbool / tint / ttext
+
+query I
+SELECT len(timeBins(tbool '[t@2000-01-01, f@2000-01-05]', INTERVAL '2 days'));
+----
+3
+
+# valueBoxes(tnumber, vsize) — list of stbox-shaped value tiles
+
+query I
+SELECT len(valueBoxes(tint '[1@2000-01-01, 5@2000-01-05]', 2)) >= 1;
+----
+true
+
+# valueTimeBoxes — value × time tile cross-product
+
+query I
+SELECT len(valueTimeBoxes(tfloat '[1@2000-01-01, 5@2000-01-05]', 2.0, INTERVAL '2 days')) >= 1;
+----
+true
+
+# valueTimeBoxes with explicit vorigin and torigin
+
+query I
+SELECT len(valueTimeBoxes(tfloat '[1@2000-01-01, 5@2000-01-05]', 2.0, INTERVAL '2 days', 0.0, TIMESTAMP '2000-01-01')) >= 1;
+----
+true

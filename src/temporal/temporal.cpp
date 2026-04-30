@@ -21,6 +21,7 @@
 #include "duckdb/common/types/data_chunk.hpp"
 
 #include "mobilityduck/bindings.hpp"
+#include "time_util.hpp"
 
 namespace duckdb {
 
@@ -1720,6 +1721,324 @@ void TemporalTypes::RegisterTemporalUnnestFunction(ExtensionLoader &loader) {
             loader.RegisterFunction( fn);
         }
     }
+}
+
+/* ***************************************************
+ * temporal/025_temporal_tile — LIST-returning tile emitters and
+ * single-bin/tile getters.
+ *
+ * This complements the TableFunction split surface (valueSplit/
+ * timeSplit/valueTimeSplit, registered separately) with the scalar
+ * LIST(span) / LIST(tbox) emitters and the single-tile getters.
+ ****************************************************/
+
+namespace {
+
+inline Temporal *BlobToTempForTile(string_t b) {
+    size_t sz = b.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, b.GetData(), sz);
+    return reinterpret_cast<Temporal *>(copy);
+}
+
+inline Span *BlobToSpanForTile(string_t b) {
+    size_t sz = b.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, b.GetData(), sz);
+    return reinterpret_cast<Span *>(copy);
+}
+
+template <typename T>
+void EmitFlatList(Vector &result, idx_t row, list_entry_t *list_entries,
+                  T *items, int count, idx_t &total, size_t item_size) {
+    if (!items || count <= 0) {
+        list_entries[row] = list_entry_t{total, 0};
+        if (items) free(items);
+        return;
+    }
+    ListVector::Reserve(result, total + count);
+    ListVector::SetListSize(result, total + count);
+    list_entries[row] = list_entry_t{total, static_cast<uint64_t>(count)};
+    auto &child = ListVector::GetEntry(result);
+    auto child_data = FlatVector::GetData<string_t>(child);
+    for (int k = 0; k < count; k++) {
+        string_t one(reinterpret_cast<const char *>(&items[k]), item_size);
+        child_data[total + k] = StringVector::AddStringOrBlob(child, one);
+    }
+    total += count;
+    free(items);
+}
+
+void TimeBinsExec(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_temp = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_dur  = FlatVector::GetData<interval_t>(args.data[1]);
+    const bool has_origin = cc > 2;
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        Temporal *t = BlobToTempForTile(in_temp[row]);
+        MeosInterval mi = IntervaltToInterval(in_dur[row]);
+        TimestampTz origin = 0;
+        if (has_origin) {
+            timestamp_tz_t tt = FlatVector::GetData<timestamp_tz_t>(args.data[2])[row];
+            origin = (TimestampTz) DuckDBToMeosTimestamp(tt).value;
+        }
+        int count = 0;
+        Span *spans = temporal_time_bins(t, &mi, origin, &count);
+        free(t);
+        EmitFlatList<Span>(result, row, list_entries, spans, count, total, sizeof(Span));
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void ValueBinsExec(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_temp = FlatVector::GetData<string_t>(args.data[0]);
+    const bool is_int = (args.data[0].GetType().GetAlias() == "TINT");
+    const bool has_origin = cc > 2;
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        Temporal *t = BlobToTempForTile(in_temp[row]);
+        int count = 0;
+        Span *spans = nullptr;
+        if (is_int) {
+            int vsize = FlatVector::GetData<int32_t>(args.data[1])[row];
+            int vorigin = has_origin ? FlatVector::GetData<int32_t>(args.data[2])[row] : 0;
+            spans = tint_value_bins(t, vsize, vorigin, &count);
+        } else {
+            double vsize = FlatVector::GetData<double>(args.data[1])[row];
+            double vorigin = has_origin ? FlatVector::GetData<double>(args.data[2])[row] : 0.0;
+            spans = tfloat_value_bins(t, vsize, vorigin, &count);
+        }
+        free(t);
+        EmitFlatList<Span>(result, row, list_entries, spans, count, total, sizeof(Span));
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void ValueBoxesExec(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_temp = FlatVector::GetData<string_t>(args.data[0]);
+    const bool is_int = (args.data[0].GetType().GetAlias() == "TINT");
+    const bool has_origin = cc > 2;
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        Temporal *t = BlobToTempForTile(in_temp[row]);
+        int count = 0;
+        TBox *boxes = nullptr;
+        if (is_int) {
+            int vsize = FlatVector::GetData<int32_t>(args.data[1])[row];
+            int vorigin = has_origin ? FlatVector::GetData<int32_t>(args.data[2])[row] : 0;
+            boxes = tint_value_boxes(t, vsize, vorigin, &count);
+        } else {
+            double vsize = FlatVector::GetData<double>(args.data[1])[row];
+            double vorigin = has_origin ? FlatVector::GetData<double>(args.data[2])[row] : 0.0;
+            boxes = tfloat_value_boxes(t, vsize, vorigin, &count);
+        }
+        free(t);
+        EmitFlatList<TBox>(result, row, list_entries, boxes, count, total, sizeof(TBox));
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void ValueTimeBoxesExec(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_temp = FlatVector::GetData<string_t>(args.data[0]);
+    const bool is_int = (args.data[0].GetType().GetAlias() == "TINT");
+    const bool has_vorigin = cc > 3;
+    const bool has_torigin = cc > 4;
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        Temporal *t = BlobToTempForTile(in_temp[row]);
+        MeosInterval mi = IntervaltToInterval(FlatVector::GetData<interval_t>(args.data[2])[row]);
+        TimestampTz torigin = 0;
+        if (has_torigin) {
+            timestamp_tz_t tt = FlatVector::GetData<timestamp_tz_t>(args.data[4])[row];
+            torigin = (TimestampTz) DuckDBToMeosTimestamp(tt).value;
+        }
+        int count = 0;
+        TBox *boxes = nullptr;
+        if (is_int) {
+            int vsize = FlatVector::GetData<int32_t>(args.data[1])[row];
+            int vorigin = has_vorigin ? FlatVector::GetData<int32_t>(args.data[3])[row] : 0;
+            boxes = tint_value_time_boxes(t, vsize, &mi, vorigin, torigin, &count);
+        } else {
+            double vsize = FlatVector::GetData<double>(args.data[1])[row];
+            double vorigin = has_vorigin ? FlatVector::GetData<double>(args.data[3])[row] : 0.0;
+            boxes = tfloat_value_time_boxes(t, vsize, &mi, vorigin, torigin, &count);
+        }
+        free(t);
+        EmitFlatList<TBox>(result, row, list_entries, boxes, count, total, sizeof(TBox));
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void IntspanBinsExec(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_span = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_size = FlatVector::GetData<int32_t>(args.data[1]);
+    const bool has_origin = cc > 2;
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        Span *s = BlobToSpanForTile(in_span[row]);
+        int origin = has_origin ? FlatVector::GetData<int32_t>(args.data[2])[row] : 0;
+        int count = 0;
+        Span *spans = intspan_bins(s, in_size[row], origin, &count);
+        free(s);
+        EmitFlatList<Span>(result, row, list_entries, spans, count, total, sizeof(Span));
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void FloatspanBinsExec(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_span = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_size = FlatVector::GetData<double>(args.data[1]);
+    const bool has_origin = cc > 2;
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        Span *s = BlobToSpanForTile(in_span[row]);
+        double origin = has_origin ? FlatVector::GetData<double>(args.data[2])[row] : 0.0;
+        int count = 0;
+        Span *spans = floatspan_bins(s, in_size[row], origin, &count);
+        free(s);
+        EmitFlatList<Span>(result, row, list_entries, spans, count, total, sizeof(Span));
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void TstzspanBinsExec(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_span = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_dur = FlatVector::GetData<interval_t>(args.data[1]);
+    const bool has_origin = cc > 2;
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        Span *s = BlobToSpanForTile(in_span[row]);
+        MeosInterval mi = IntervaltToInterval(in_dur[row]);
+        TimestampTz origin = 0;
+        if (has_origin) {
+            timestamp_tz_t tt = FlatVector::GetData<timestamp_tz_t>(args.data[2])[row];
+            origin = (TimestampTz) DuckDBToMeosTimestamp(tt).value;
+        }
+        int count = 0;
+        Span *spans = tstzspan_bins(s, &mi, origin, &count);
+        free(s);
+        EmitFlatList<Span>(result, row, list_entries, spans, count, total, sizeof(Span));
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+} // namespace
+
+void TemporalTypes::RegisterTileEmitters(ExtensionLoader &loader) {
+    const auto TI  = TINT();
+    const auto TF  = TFLOAT();
+    const auto INT = LogicalType::INTEGER;
+    const auto DBL = LogicalType::DOUBLE;
+    const auto INTERVAL = LogicalType::INTERVAL;
+    const auto TS = LogicalType::TIMESTAMP_TZ;
+    const auto SPAN_LIST = LogicalType::LIST(SpanTypes::INTSPAN());  // we use generic LIST(BLOB)-like span
+    const auto FLOATSPAN_LIST = LogicalType::LIST(SpanTypes::FLOATSPAN());
+    const auto TSTZSPAN_LIST = LogicalType::LIST(SpanTypes::TSTZSPAN());
+    const auto TBOX_LIST = LogicalType::LIST(TboxType::TBOX());
+
+    /* timeBins(temporal, duration[, origin]) */
+    for (auto &t : TemporalTypes::AllTypes()) {
+        loader.RegisterFunction(ScalarFunction("timeBins", {t, INTERVAL},     TSTZSPAN_LIST, TimeBinsExec));
+        loader.RegisterFunction(ScalarFunction("timeBins", {t, INTERVAL, TS}, TSTZSPAN_LIST, TimeBinsExec));
+    }
+
+    /* valueBins(tnumber, vsize[, vorigin]) */
+    loader.RegisterFunction(ScalarFunction("valueBins", {TI, INT},      SPAN_LIST,      ValueBinsExec));
+    loader.RegisterFunction(ScalarFunction("valueBins", {TI, INT, INT}, SPAN_LIST,      ValueBinsExec));
+    loader.RegisterFunction(ScalarFunction("valueBins", {TF, DBL},      FLOATSPAN_LIST, ValueBinsExec));
+    loader.RegisterFunction(ScalarFunction("valueBins", {TF, DBL, DBL}, FLOATSPAN_LIST, ValueBinsExec));
+
+    /* valueBoxes(tnumber, vsize[, vorigin]) */
+    loader.RegisterFunction(ScalarFunction("valueBoxes", {TI, INT},      TBOX_LIST, ValueBoxesExec));
+    loader.RegisterFunction(ScalarFunction("valueBoxes", {TI, INT, INT}, TBOX_LIST, ValueBoxesExec));
+    loader.RegisterFunction(ScalarFunction("valueBoxes", {TF, DBL},      TBOX_LIST, ValueBoxesExec));
+    loader.RegisterFunction(ScalarFunction("valueBoxes", {TF, DBL, DBL}, TBOX_LIST, ValueBoxesExec));
+
+    /* valueTimeBoxes(tnumber, vsize, duration[, vorigin[, torigin]]) */
+    loader.RegisterFunction(ScalarFunction("valueTimeBoxes", {TI, INT, INTERVAL},               TBOX_LIST, ValueTimeBoxesExec));
+    loader.RegisterFunction(ScalarFunction("valueTimeBoxes", {TI, INT, INTERVAL, INT},          TBOX_LIST, ValueTimeBoxesExec));
+    loader.RegisterFunction(ScalarFunction("valueTimeBoxes", {TI, INT, INTERVAL, INT, TS},      TBOX_LIST, ValueTimeBoxesExec));
+    loader.RegisterFunction(ScalarFunction("valueTimeBoxes", {TF, DBL, INTERVAL},               TBOX_LIST, ValueTimeBoxesExec));
+    loader.RegisterFunction(ScalarFunction("valueTimeBoxes", {TF, DBL, INTERVAL, DBL},          TBOX_LIST, ValueTimeBoxesExec));
+    loader.RegisterFunction(ScalarFunction("valueTimeBoxes", {TF, DBL, INTERVAL, DBL, TS},      TBOX_LIST, ValueTimeBoxesExec));
+
+    /* bins(span, size[, origin]) — split a span into uniform bins */
+    loader.RegisterFunction(ScalarFunction("bins", {SpanTypes::INTSPAN(),   INT},          SPAN_LIST,      IntspanBinsExec));
+    loader.RegisterFunction(ScalarFunction("bins", {SpanTypes::INTSPAN(),   INT, INT},     SPAN_LIST,      IntspanBinsExec));
+    loader.RegisterFunction(ScalarFunction("bins", {SpanTypes::FLOATSPAN(), DBL},          FLOATSPAN_LIST, FloatspanBinsExec));
+    loader.RegisterFunction(ScalarFunction("bins", {SpanTypes::FLOATSPAN(), DBL, DBL},     FLOATSPAN_LIST, FloatspanBinsExec));
+    loader.RegisterFunction(ScalarFunction("bins", {SpanTypes::TSTZSPAN(),  INTERVAL},     TSTZSPAN_LIST,  TstzspanBinsExec));
+    loader.RegisterFunction(ScalarFunction("bins", {SpanTypes::TSTZSPAN(),  INTERVAL, TS}, TSTZSPAN_LIST,  TstzspanBinsExec));
 }
 
 } // namespace duckdb
