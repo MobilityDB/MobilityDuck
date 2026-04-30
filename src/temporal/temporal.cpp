@@ -1459,12 +1459,25 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     REG_EA_ORD("always_ge", Always_ge)
 #undef REG_EA_ORD
 
-    // Similarity measures (tnumber × tnumber)
-    for (auto &t : {TemporalTypes::TINT(), TemporalTypes::TFLOAT()}) {
-        loader.RegisterFunction(ScalarFunction("frechetDistance", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
-        loader.RegisterFunction(ScalarFunction("discreteFrechet", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
-        loader.RegisterFunction(ScalarFunction("dynTimeWarp",     {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_dyntimewarp_distance));
-        loader.RegisterFunction(ScalarFunction("hausdorffDistance", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_hausdorff_distance));
+    // Similarity measures (tnumber × tnumber and tgeompoint × tgeompoint)
+    {
+        const auto match_struct = LogicalType::STRUCT({
+            {"i", LogicalType::INTEGER},
+            {"j", LogicalType::INTEGER},
+        });
+        const auto match_list = LogicalType::LIST(match_struct);
+
+        for (auto &t : {TemporalTypes::TINT(), TemporalTypes::TFLOAT(),
+                        TgeompointType::TGEOMPOINT()}) {
+            loader.RegisterFunction(ScalarFunction("frechetDistance",     {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
+            loader.RegisterFunction(ScalarFunction("discreteFrechet",     {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
+            loader.RegisterFunction(ScalarFunction("dynTimeWarp",         {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_dyntimewarp_distance));
+            loader.RegisterFunction(ScalarFunction("dynTimeWarpDistance", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_dyntimewarp_distance));
+            loader.RegisterFunction(ScalarFunction("hausdorffDistance",   {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_hausdorff_distance));
+
+            loader.RegisterFunction(ScalarFunction("frechetDistancePath", {t, t}, match_list, TemporalFunctions::Temporal_frechet_path));
+            loader.RegisterFunction(ScalarFunction("dynTimeWarpPath",     {t, t}, match_list, TemporalFunctions::Temporal_dyntimewarp_path));
+        }
     }
 
     // tnumber × {numspan, tbox} topological predicates (4 ops × 8 shape pairs)

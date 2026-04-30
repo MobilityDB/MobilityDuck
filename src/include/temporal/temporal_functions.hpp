@@ -368,6 +368,8 @@ struct TemporalFunctions {
     static void Temporal_frechet_distance(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_dyntimewarp_distance(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_hausdorff_distance(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_frechet_path(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_dyntimewarp_path(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * tnumber × {numspan, tbox} topological predicates
