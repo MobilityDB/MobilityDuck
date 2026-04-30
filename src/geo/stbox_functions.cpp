@@ -2834,6 +2834,69 @@ void StboxFunctions::Stbox_cmp(DataChunk &args, ExpressionState &state, Vector &
     }
 }
 
+/* ***************************************************
+ * Tspatial topological predicates against stbox / tspatial
+ ****************************************************/
 
+namespace {
+
+inline Temporal *BlobToTemp(string_t b) {
+    size_t sz = b.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, b.GetData(), sz);
+    return reinterpret_cast<Temporal *>(copy);
+}
+
+inline STBox *BlobToStbox(string_t b) {
+    size_t sz = b.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, b.GetData(), sz);
+    return reinterpret_cast<STBox *>(copy);
+}
+
+} // namespace
+
+#define DEFINE_TSPATIAL_TOPO(OP, MEOS)                                                                                                       \
+void StboxFunctions::OP##_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result) {                                          \
+    BinaryExecutor::Execute<string_t, string_t, bool>(                                                                                       \
+        args.data[0], args.data[1], result, args.size(),                                                                                     \
+        [](string_t bt, string_t bs) -> bool {                                                                                               \
+            Temporal *t = BlobToTemp(bt);                                                                                                    \
+            STBox    *s = BlobToStbox(bs);                                                                                                   \
+            bool r = MEOS##_tspatial_stbox(t, s);                                                                                            \
+            free(t); free(s);                                                                                                                \
+            return r;                                                                                                                        \
+        });                                                                                                                                   \
+}                                                                                                                                             \
+void StboxFunctions::OP##_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result) {                                          \
+    BinaryExecutor::Execute<string_t, string_t, bool>(                                                                                       \
+        args.data[0], args.data[1], result, args.size(),                                                                                     \
+        [](string_t bs, string_t bt) -> bool {                                                                                               \
+            STBox    *s = BlobToStbox(bs);                                                                                                   \
+            Temporal *t = BlobToTemp(bt);                                                                                                    \
+            bool r = MEOS##_stbox_tspatial(s, t);                                                                                            \
+            free(s); free(t);                                                                                                                \
+            return r;                                                                                                                        \
+        });                                                                                                                                   \
+}                                                                                                                                             \
+void StboxFunctions::OP##_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result) {                                       \
+    BinaryExecutor::Execute<string_t, string_t, bool>(                                                                                       \
+        args.data[0], args.data[1], result, args.size(),                                                                                     \
+        [](string_t b1, string_t b2) -> bool {                                                                                               \
+            Temporal *t1 = BlobToTemp(b1);                                                                                                   \
+            Temporal *t2 = BlobToTemp(b2);                                                                                                   \
+            bool r = MEOS##_tspatial_tspatial(t1, t2);                                                                                       \
+            free(t1); free(t2);                                                                                                              \
+            return r;                                                                                                                        \
+        });                                                                                                                                   \
+}
+
+DEFINE_TSPATIAL_TOPO(Contains,  contains)
+DEFINE_TSPATIAL_TOPO(Contained, contained)
+DEFINE_TSPATIAL_TOPO(Overlaps,  overlaps)
+DEFINE_TSPATIAL_TOPO(Same,      same)
+DEFINE_TSPATIAL_TOPO(Adjacent,  adjacent)
+
+#undef DEFINE_TSPATIAL_TOPO
 
 } // namespace duckdb
