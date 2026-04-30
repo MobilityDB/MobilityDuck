@@ -12,6 +12,7 @@
 #include "duckdb.hpp"
 #include "geo/tgeometry.hpp"
 #include "temporal/span.hpp"
+#include "temporal/span_table_functions.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
@@ -243,6 +244,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 	SpanTypes::RegisterScalarFunctions(loader);
 	SpanTypes::RegisterTypes(loader);
 	SpanTypes::RegisterCastFunctions(loader);
+	SpanTableFunctions::RegisterBins(loader);
 
 	TgeompointType::RegisterType(loader);
 	TgeompointType::RegisterCastFunctions(loader);
