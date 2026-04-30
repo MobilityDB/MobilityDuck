@@ -939,6 +939,28 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TboxFunctions::Tbox_gt
         )
     );
+
+    /* ***************************************************
+     * WKB / hex-WKB serialization + hashing
+     ****************************************************/
+    loader.RegisterFunction(ScalarFunction(
+        "asBinary", {TBOX()}, LogicalType::BLOB,
+        TboxFunctions::Tbox_as_wkb));
+    loader.RegisterFunction(ScalarFunction(
+        "asHexWKB", {TBOX()}, LogicalType::VARCHAR,
+        TboxFunctions::Tbox_as_hexwkb));
+    loader.RegisterFunction(ScalarFunction(
+        "tboxFromBinary", {LogicalType::BLOB}, TBOX(),
+        TboxFunctions::Tbox_from_wkb));
+    loader.RegisterFunction(ScalarFunction(
+        "tboxFromHexWKB", {LogicalType::VARCHAR}, TBOX(),
+        TboxFunctions::Tbox_from_hexwkb));
+    loader.RegisterFunction(ScalarFunction(
+        "tbox_hash", {TBOX()}, LogicalType::INTEGER,
+        TboxFunctions::Tbox_hash));
+    loader.RegisterFunction(ScalarFunction(
+        "tbox_hash_extended", {TBOX(), LogicalType::BIGINT}, LogicalType::BIGINT,
+        TboxFunctions::Tbox_hash_extended));
 }
 
 } // namespace duckdb
