@@ -53,13 +53,7 @@ SELECT abs(tfloat '[-1@2000-01-01, 2@2000-01-02]');
 ----
 [1@2000-01-01 00:00:00+00, 0@2000-01-01 08:00:00+00, 2@2000-01-02 00:00:00+00]
 
-mode skip
-# Unit divergence: MEOS computes derivative as value/second
-# (0.000011574... = 1/86400 here), MobilityDB reports value/day
-# (1.0 here). Same MEOS symbol (tfloat_derivative), different display
-# units.
 query I
-SELECT derivative(tfloat '[1@2000-01-01, 4@2000-01-04]');
+SELECT round(derivative(tfloat '[1@2000-01-01, 4@2000-01-04]'), 6);
 ----
-{[1@2000-01-01 00:00:00+00, 1@2000-01-04 00:00:00+00]}
-mode unskip
+Interp=Step;[0.000012@2000-01-01 00:00:00+00, 0.000012@2000-01-04 00:00:00+00]
