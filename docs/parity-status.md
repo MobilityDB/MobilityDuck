@@ -1,6 +1,6 @@
 # MobilityDuck parity status — surface-level audit
 
-Generated 2026-04-30 against MobilityDB SQL surface (104 section files, 1032 unique function names) and MobilityDuck registered surface (359 unique names, 1653 total registrations).
+Generated 2026-04-30. **Active scope** (temporal + geo): 597/1261 names covered (47.3%). Deferred families (cbuffer, npoint, pose, rgeo) listed in an appendix and not counted in headline coverage.
 
 **Methodology**: parsed `CREATE FUNCTION` from `mobilitydb/sql/**/*.in.sql` and `RegisterFunction(ScalarFunction("name",...))` (plus aggregate / table-function variants) from `MobilityDuck/src/**/*.cpp`. Match is by **function name only**, case-insensitive. A name registered in MobilityDuck is treated as covering all its overloads; per-overload signature parity is not verified at this granularity.
 
@@ -9,24 +9,12 @@ Generated 2026-04-30 against MobilityDB SQL surface (104 section files, 1032 uni
 - Some MobilityDB names are internal helpers (gist/spgist support functions, transition functions for aggregates) — these never need user-facing SQL registration but they show as 'missing' here. Sections dominated by these are flagged in the per-section detail.
 - DuckDB rejects multi-character operator tokens (`<<#`, `|>>`, `<#>`, `|=|`, `~=`); equivalent named functions are registered. See `docs/DuckDB-Parity-Gaps.md` for the catalogue.
 
-Regenerate this file with `python3 scripts/parity-audit.py --mdb ../MobilityDB --mduck . --out docs/parity-status.md`.
+Regenerate with `python3 scripts/parity-audit.py --mdb ../MobilityDB --mduck . --out docs/parity-status.md`. Deferred families are configured at the top of that script.
 
-## Section-by-section coverage summary
+## Active-scope coverage summary
 
 | Section | MDB names | Covered | Missing | Coverage | MDB operators |
 |---|---:|---:|---:|---:|---:|
-| `cbuffer/150_cbuffer.in.sql` | 31 | 7 | 24 | 23% | 7 |
-| `cbuffer/151_cbufferset.in.sql` | 42 | 32 | 10 | 76% | 23 |
-| `cbuffer/152_tcbuffer.in.sql` | 84 | 62 | 22 | 74% | 6 |
-| `cbuffer/154_tcbuffer_compops.in.sql` | 6 | 0 | 6 | 0% | 18 |
-| `cbuffer/155_tcbuffer_spatialfuncs.in.sql` | 11 | 7 | 4 | 64% | 0 |
-| `cbuffer/158_tcbuffer_topops.in.sql` | 7 | 2 | 5 | 29% | 25 |
-| `cbuffer/159_tcbuffer_posops.in.sql` | 12 | 0 | 12 | 0% | 44 |
-| `cbuffer/160_tcbuffer_distance.in.sql` | 5 | 2 | 3 | 40% | 17 |
-| `cbuffer/161_tcbuffer_aggfuncs.in.sql` | 7 | 0 | 7 | 0% | 0 |
-| `cbuffer/162_tcbuffer_spatialrels.in.sql` | 13 | 11 | 2 | 85% | 0 |
-| `cbuffer/164_tcbuffer_tempspatialrels.in.sql` | 6 | 5 | 1 | 83% | 0 |
-| `cbuffer/166_tcbuffer_indexes.in.sql` | 1 | 0 | 1 | 0% | 0 |
 | `geo/050_geoset.in.sql` | 56 | 31 | 25 | 55% | 46 |
 | `geo/051_stbox.in.sql` | 83 | 59 | 24 | 71% | 29 |
 | `geo/052_tgeo.in.sql` | 80 | 58 | 22 | 72% | 12 |
@@ -58,37 +46,6 @@ Regenerate this file with `python3 scripts/parity-audit.py --mdb ../MobilityDB -
 | `geo/076_tgeo_analytics.in.sql` | 13 | 1 | 12 | 8% | 0 |
 | `geo/076_tpoint_analytics.in.sql` | 18 | 3 | 15 | 17% | 0 |
 | `geo/078_tpoint_datagen.in.sql` | 1 | 0 | 1 | 0% | 0 |
-| `npoint/081_npoint.in.sql` | 41 | 6 | 35 | 15% | 12 |
-| `npoint/082_npointset.in.sql` | 43 | 29 | 14 | 67% | 23 |
-| `npoint/083_tnpoint.in.sql` | 77 | 60 | 17 | 78% | 6 |
-| `npoint/085_tnpoint_compops.in.sql` | 6 | 0 | 6 | 0% | 18 |
-| `npoint/087_tnpoint_spatialfuncs.in.sql` | 12 | 11 | 1 | 92% | 0 |
-| `npoint/089_tnpoint_topops.in.sql` | 7 | 2 | 5 | 29% | 25 |
-| `npoint/090_tnpoint_posops.in.sql` | 12 | 0 | 12 | 0% | 44 |
-| `npoint/091_tnpoint_routeops.in.sql` | 4 | 0 | 4 | 0% | 20 |
-| `npoint/092_tnpoint_gin.in.sql` | 3 | 0 | 3 | 0% | 0 |
-| `npoint/093_tnpoint_distance.in.sql` | 4 | 2 | 2 | 50% | 12 |
-| `npoint/095_tnpoint_aggfuncs.in.sql` | 8 | 0 | 8 | 0% | 0 |
-| `npoint/098_tnpoint_indexes.in.sql` | 1 | 0 | 1 | 0% | 0 |
-| `pose/100_pose.in.sql` | 34 | 8 | 26 | 24% | 7 |
-| `pose/101_poseset.in.sql` | 46 | 32 | 14 | 70% | 23 |
-| `pose/102_tpose.in.sql` | 85 | 60 | 25 | 71% | 6 |
-| `pose/104_tpose_compops.in.sql` | 6 | 0 | 6 | 0% | 18 |
-| `pose/105_tpose_spatialfuncs.in.sql` | 8 | 7 | 1 | 88% | 0 |
-| `pose/108_tpose_topops.in.sql` | 7 | 2 | 5 | 29% | 25 |
-| `pose/109_tpose_posops.in.sql` | 16 | 0 | 16 | 0% | 56 |
-| `pose/111_tpose_aggfuncs.in.sql` | 7 | 0 | 7 | 0% | 0 |
-| `pose/113_tpose_distance.in.sql` | 4 | 2 | 2 | 50% | 12 |
-| `pose/114_tpose_indexes.in.sql` | 1 | 0 | 1 | 0% | 0 |
-| `rgeo/122_trgeo.in.sql` | 87 | 62 | 25 | 71% | 6 |
-| `rgeo/124_trgeo_compops.in.sql` | 6 | 0 | 6 | 0% | 18 |
-| `rgeo/125_trgeo_spatialfuncs.in.sql` | 8 | 7 | 1 | 88% | 0 |
-| `rgeo/128_trgeo_topops.in.sql` | 5 | 0 | 5 | 0% | 25 |
-| `rgeo/129_trgeo_posops.in.sql` | 12 | 0 | 12 | 0% | 44 |
-| `rgeo/131_trgeo_aggfuncs.in.sql` | 7 | 0 | 7 | 0% | 0 |
-| `rgeo/133_trgeo_distance.in.sql` | 4 | 2 | 2 | 50% | 12 |
-| `rgeo/133_trgeo_vclip.in.sql` | 6 | 0 | 6 | 0% | 0 |
-| `rgeo/134_trgeo_indexes.in.sql` | 1 | 0 | 1 | 0% | 0 |
 | `temporal/001_set.in.sql` | 82 | 35 | 47 | 43% | 38 |
 | `temporal/002_set_ops.in.sql` | 11 | 11 | 0 | 100% | 176 |
 | `temporal/003_span.in.sql` | 68 | 35 | 33 | 51% | 30 |
@@ -118,142 +75,9 @@ Regenerate this file with `python3 scripts/parity-audit.py --mdb ../MobilityDB -
 | `temporal/044_temporal_spgist.in.sql` | 10 | 0 | 10 | 0% | 0 |
 | `temporal/046_temporal_analytics.in.sql` | 4 | 0 | 4 | 0% | 0 |
 | `temporal/999_oid_cache.in.sql` | 1 | 0 | 1 | 0% | 0 |
-| **TOTAL** | **2054** | **1017** | **1037** | **50%** | — |
+| **TOTAL (active)** | **1261** | **597** | **664** | **47%** | — |
 
-## Missing function names per section
-
-### `cbuffer/150_cbuffer.in.sql` — 24 missing of 31 (23% covered)
-
-- `cbuffer` (2 overloads)
-- `cbuffer_cmp`
-- `cbuffer_contains`
-- `cbuffer_covers`
-- `cbuffer_disjoint`
-- `cbuffer_dwithin`
-- `cbuffer_eq`
-- `cbuffer_ge`
-- `cbuffer_gt`
-- `cbuffer_hash`
-- `cbuffer_hash_extended`
-- `cbuffer_in`
-- `cbuffer_intersects`
-- `cbuffer_le`
-- `cbuffer_lt`
-- `cbuffer_ne`
-- `cbuffer_out`
-- `cbuffer_recv`
-- `cbuffer_same`
-- `cbuffer_send`
-- `cbuffer_touches`
-- `point`
-- `radius`
-- `transformPipeline`
-
-### `cbuffer/151_cbufferset.in.sql` — 10 missing of 42 (76% covered)
-
-- `cbuffersetFromBinary`
-- `cbuffersetFromHexWKB`
-- `cbufferset_in`
-- `cbufferset_out`
-- `cbufferset_recv`
-- `cbufferset_send`
-- `cbufferset_union_finalfn`
-- `set_union_transfn` (2 overloads)
-- `transformPipeline`
-- `unnest`
-
-### `cbuffer/152_tcbuffer.in.sql` — 22 missing of 84 (74% covered)
-
-- `Temporal_out`
-- `asEWKB`
-- `asHexEWKB`
-- `points`
-- `radius`
-- `tcbuffer` (8 overloads)
-- `tcbufferFromBinary`
-- `tcbufferFromEWKB`
-- `tcbufferFromEWKT`
-- `tcbufferFromHexEWKB`
-- `tcbufferFromText`
-- `tcbufferInst`
-- `tcbufferSeq` (2 overloads)
-- `tcbufferSeqSet` (2 overloads)
-- `tcbufferSeqSetGaps`
-- `tcbuffer_in`
-- `tcbuffer_recv`
-- `tcbuffer_typmod_in`
-- `temporal_hash`
-- `temporal_send`
-- `timeSplit`
-- `unnest`
-
-### `cbuffer/154_tcbuffer_compops.in.sql` — 6 missing of 6 (0% covered)
-
-- `always_eq` (3 overloads)
-- `always_ne` (3 overloads)
-- `ever_eq` (3 overloads)
-- `ever_ne` (3 overloads)
-- `temporal_teq` (3 overloads)
-- `temporal_tne` (3 overloads)
-
-### `cbuffer/155_tcbuffer_spatialfuncs.in.sql` — 4 missing of 11 (64% covered)
-
-- `atValue`
-- `minusValue`
-- `transformPipeline`
-- `traversedArea`
-
-### `cbuffer/158_tcbuffer_topops.in.sql` — 5 missing of 7 (29% covered)
-
-- `temporal_adjacent` (5 overloads)
-- `temporal_contained` (5 overloads)
-- `temporal_contains` (5 overloads)
-- `temporal_overlaps` (5 overloads)
-- `temporal_same` (5 overloads)
-
-### `cbuffer/159_tcbuffer_posops.in.sql` — 12 missing of 12 (0% covered)
-
-- `temporal_above` (3 overloads)
-- `temporal_after` (5 overloads)
-- `temporal_before` (5 overloads)
-- `temporal_below` (3 overloads)
-- `temporal_left` (3 overloads)
-- `temporal_overabove` (3 overloads)
-- `temporal_overafter` (5 overloads)
-- `temporal_overbefore` (5 overloads)
-- `temporal_overbelow` (3 overloads)
-- `temporal_overleft` (3 overloads)
-- `temporal_overright` (3 overloads)
-- `temporal_right` (3 overloads)
-
-### `cbuffer/160_tcbuffer_distance.in.sql` — 3 missing of 5 (40% covered)
-
-- `distance` (5 overloads)
-- `nearestApproachInstant` (7 overloads)
-- `tdistance` (5 overloads)
-
-### `cbuffer/161_tcbuffer_aggfuncs.in.sql` — 7 missing of 7 (0% covered)
-
-- `tcbuffer_tagg_finalfn`
-- `tcount_transfn`
-- `temporal_app_tinst_transfn` (3 overloads)
-- `temporal_app_tseq_transfn`
-- `temporal_append_finalfn`
-- `temporal_merge_transfn`
-- `wcount_transfn`
-
-### `cbuffer/162_tcbuffer_spatialrels.in.sql` — 2 missing of 13 (85% covered)
-
-- `aCovers` (4 overloads)
-- `eCovers` (3 overloads)
-
-### `cbuffer/164_tcbuffer_tempspatialrels.in.sql` — 1 missing of 6 (83% covered)
-
-- `tCovers` (5 overloads)
-
-### `cbuffer/166_tcbuffer_indexes.in.sql` — 1 missing of 1 (0% covered)
-
-- `tcbuffer_gist_consistent`
+## Missing function names per active section
 
 ### `geo/050_geoset.in.sql` — 25 missing of 56 (55% covered)
 
@@ -635,375 +459,6 @@ Regenerate this file with `python3 scripts/parity-audit.py --mdb ../MobilityDB -
 ### `geo/078_tpoint_datagen.in.sql` — 1 missing of 1 (0% covered)
 
 - `create_trip`
-
-### `npoint/081_npoint.in.sql` — 35 missing of 41 (15% covered)
-
-- `asEWKB`
-- `asHexEWKB`
-- `endPosition`
-- `getPosition`
-- `npoint` (2 overloads)
-- `npointFromBinary`
-- `npointFromEWKB`
-- `npointFromEWKT`
-- `npointFromHexEWKB`
-- `npointFromText`
-- `npoint_cmp`
-- `npoint_eq`
-- `npoint_ge`
-- `npoint_gt`
-- `npoint_in`
-- `npoint_le`
-- `npoint_lt`
-- `npoint_ne`
-- `npoint_out`
-- `npoint_recv`
-- `npoint_send`
-- `nsegment` (3 overloads)
-- `nsegment_cmp`
-- `nsegment_eq`
-- `nsegment_ge`
-- `nsegment_gt`
-- `nsegment_in`
-- `nsegment_le`
-- `nsegment_lt`
-- `nsegment_ne`
-- `nsegment_out`
-- `nsegment_recv`
-- `nsegment_send`
-- `route` (2 overloads)
-- `startPosition`
-
-### `npoint/082_npointset.in.sql` — 14 missing of 43 (67% covered)
-
-- `asEWKB`
-- `npointsetFromBinary`
-- `npointsetFromEWKB`
-- `npointsetFromEWKT`
-- `npointsetFromHexWKB`
-- `npointsetFromText`
-- `npointset_in`
-- `npointset_out`
-- `npointset_recv`
-- `npointset_send`
-- `npointset_union_finalfn`
-- `routes`
-- `set_union_transfn` (2 overloads)
-- `unnest`
-
-### `npoint/083_tnpoint.in.sql` — 17 missing of 77 (78% covered)
-
-- `Temporal_out`
-- `positions`
-- `route`
-- `routes`
-- `temporal_hash`
-- `temporal_send`
-- `timeSplit`
-- `tnpoint` (6 overloads)
-- `tnpointFromBinary`
-- `tnpointFromHexWKB`
-- `tnpointInst`
-- `tnpointSeq` (3 overloads)
-- `tnpointSeqSet` (3 overloads)
-- `tnpointSeqSetGaps`
-- `tnpoint_in`
-- `tnpoint_recv`
-- `unnest`
-
-### `npoint/085_tnpoint_compops.in.sql` — 6 missing of 6 (0% covered)
-
-- `always_eq` (3 overloads)
-- `always_ne` (3 overloads)
-- `ever_eq` (3 overloads)
-- `ever_ne` (3 overloads)
-- `temporal_teq` (3 overloads)
-- `temporal_tne` (3 overloads)
-
-### `npoint/087_tnpoint_spatialfuncs.in.sql` — 1 missing of 12 (92% covered)
-
-- `same`
-
-### `npoint/089_tnpoint_topops.in.sql` — 5 missing of 7 (29% covered)
-
-- `temporal_adjacent` (5 overloads)
-- `temporal_contained` (5 overloads)
-- `temporal_contains` (5 overloads)
-- `temporal_overlaps` (5 overloads)
-- `temporal_same` (5 overloads)
-
-### `npoint/090_tnpoint_posops.in.sql` — 12 missing of 12 (0% covered)
-
-- `temporal_above` (3 overloads)
-- `temporal_after` (5 overloads)
-- `temporal_before` (5 overloads)
-- `temporal_below` (3 overloads)
-- `temporal_left` (3 overloads)
-- `temporal_overabove` (3 overloads)
-- `temporal_overafter` (5 overloads)
-- `temporal_overbefore` (5 overloads)
-- `temporal_overbelow` (3 overloads)
-- `temporal_overleft` (3 overloads)
-- `temporal_overright` (3 overloads)
-- `temporal_right` (3 overloads)
-
-### `npoint/091_tnpoint_routeops.in.sql` — 4 missing of 4 (0% covered)
-
-- `contained_rid` (5 overloads)
-- `contains_rid` (5 overloads)
-- `overlaps_rid` (3 overloads)
-- `same_rid` (7 overloads)
-
-### `npoint/092_tnpoint_gin.in.sql` — 3 missing of 3 (0% covered)
-
-- `tnpoint_gin_extract_query`
-- `tnpoint_gin_extract_value`
-- `tnpoint_gin_triconsistent`
-
-### `npoint/093_tnpoint_distance.in.sql` — 2 missing of 4 (50% covered)
-
-- `NearestApproachInstant` (5 overloads)
-- `tDistance` (5 overloads)
-
-### `npoint/095_tnpoint_aggfuncs.in.sql` — 8 missing of 8 (0% covered)
-
-- `tcentroid_transfn`
-- `tcount_transfn`
-- `temporal_app_tinst_transfn` (3 overloads)
-- `temporal_app_tseq_transfn`
-- `temporal_append_finalfn`
-- `temporal_merge_transfn`
-- `tnpoint_tagg_finalfn`
-- `wcount_transfn`
-
-### `npoint/098_tnpoint_indexes.in.sql` — 1 missing of 1 (0% covered)
-
-- `tnpoint_gist_consistent`
-
-### `pose/100_pose.in.sql` — 26 missing of 34 (24% covered)
-
-- `asEWKB`
-- `asHexEWKB`
-- `orientation`
-- `point`
-- `pose` (4 overloads)
-- `poseFromBinary`
-- `poseFromEWKB`
-- `poseFromEWKT`
-- `poseFromHexEWKB`
-- `poseFromText`
-- `pose_cmp`
-- `pose_eq`
-- `pose_ge`
-- `pose_gt`
-- `pose_hash`
-- `pose_hash_extended`
-- `pose_in`
-- `pose_le`
-- `pose_lt`
-- `pose_ne`
-- `pose_out`
-- `pose_recv`
-- `pose_same`
-- `pose_send`
-- `rotation`
-- `transformPipeline`
-
-### `pose/101_poseset.in.sql` — 14 missing of 46 (70% covered)
-
-- `asEWKB`
-- `posesetFromBinary`
-- `posesetFromEWKB`
-- `posesetFromEWKT`
-- `posesetFromHexWKB`
-- `posesetFromText`
-- `poseset_in`
-- `poseset_out`
-- `poseset_recv`
-- `poseset_send`
-- `poseset_union_finalfn`
-- `set_union_transfn` (2 overloads)
-- `transformPipeline`
-- `unnest`
-
-### `pose/102_tpose.in.sql` — 25 missing of 85 (71% covered)
-
-- `asEWKB`
-- `asHexEWKB`
-- `asMFJSON`
-- `orientation`
-- `points`
-- `rotation`
-- `temporal_hash`
-- `timeSplit`
-- `tpose` (5 overloads)
-- `tposeFromBinary`
-- `tposeFromEWKB`
-- `tposeFromEWKT`
-- `tposeFromHexEWKB`
-- `tposeFromMFJSON`
-- `tposeFromText`
-- `tposeInst`
-- `tposeSeq` (2 overloads)
-- `tposeSeqSet` (2 overloads)
-- `tposeSeqSetGaps`
-- `tpose_in`
-- `tpose_out`
-- `tpose_recv`
-- `tpose_send`
-- `tpose_typmod_in`
-- `unnest`
-
-### `pose/104_tpose_compops.in.sql` — 6 missing of 6 (0% covered)
-
-- `always_eq` (3 overloads)
-- `always_ne` (3 overloads)
-- `ever_eq` (3 overloads)
-- `ever_ne` (3 overloads)
-- `temporal_teq` (3 overloads)
-- `temporal_tne` (3 overloads)
-
-### `pose/105_tpose_spatialfuncs.in.sql` — 1 missing of 8 (88% covered)
-
-- `transformPipeline`
-
-### `pose/108_tpose_topops.in.sql` — 5 missing of 7 (29% covered)
-
-- `temporal_adjacent` (5 overloads)
-- `temporal_contained` (5 overloads)
-- `temporal_contains` (5 overloads)
-- `temporal_overlaps` (5 overloads)
-- `temporal_same` (5 overloads)
-
-### `pose/109_tpose_posops.in.sql` — 16 missing of 16 (0% covered)
-
-- `temporal_above` (3 overloads)
-- `temporal_after` (5 overloads)
-- `temporal_back` (3 overloads)
-- `temporal_before` (5 overloads)
-- `temporal_below` (3 overloads)
-- `temporal_front` (3 overloads)
-- `temporal_left` (3 overloads)
-- `temporal_overabove` (3 overloads)
-- `temporal_overafter` (5 overloads)
-- `temporal_overback` (3 overloads)
-- `temporal_overbefore` (5 overloads)
-- `temporal_overbelow` (3 overloads)
-- `temporal_overfront` (3 overloads)
-- `temporal_overleft` (3 overloads)
-- `temporal_overright` (3 overloads)
-- `temporal_right` (3 overloads)
-
-### `pose/111_tpose_aggfuncs.in.sql` — 7 missing of 7 (0% covered)
-
-- `tcount_transfn`
-- `temporal_app_tinst_transfn` (3 overloads)
-- `temporal_app_tseq_transfn`
-- `temporal_append_finalfn`
-- `temporal_merge_transfn`
-- `tpose_tagg_finalfn`
-- `wcount_transfn`
-
-### `pose/113_tpose_distance.in.sql` — 2 missing of 4 (50% covered)
-
-- `nearestApproachInstant` (7 overloads)
-- `tDistance` (5 overloads)
-
-### `pose/114_tpose_indexes.in.sql` — 1 missing of 1 (0% covered)
-
-- `tpose_gist_consistent`
-
-### `rgeo/122_trgeo.in.sql` — 25 missing of 87 (71% covered)
-
-- `asEWKB`
-- `asHexEWKB`
-- `asMFJSON`
-- `temporal_hash`
-- `timeSplit`
-- `tpose`
-- `tprecision`
-- `trgeo_typmod_in`
-- `trgeometry` (3 overloads)
-- `trgeometryFromBinary`
-- `trgeometryFromEWKB`
-- `trgeometryFromEWKT`
-- `trgeometryFromHexEWKB`
-- `trgeometryFromMFJSON`
-- `trgeometryFromText`
-- `trgeometryInst`
-- `trgeometrySeq` (2 overloads)
-- `trgeometrySeqSet` (2 overloads)
-- `trgeometrySeqSetGaps`
-- `trgeometry_in`
-- `trgeometry_out`
-- `trgeometry_recv`
-- `trgeometry_send`
-- `tsample`
-- `unnest`
-
-### `rgeo/124_trgeo_compops.in.sql` — 6 missing of 6 (0% covered)
-
-- `always_eq` (3 overloads)
-- `always_ne` (3 overloads)
-- `ever_eq` (3 overloads)
-- `ever_ne` (3 overloads)
-- `temporal_teq` (3 overloads)
-- `temporal_tne` (3 overloads)
-
-### `rgeo/125_trgeo_spatialfuncs.in.sql` — 1 missing of 8 (88% covered)
-
-- `transformPipeline`
-
-### `rgeo/128_trgeo_topops.in.sql` — 5 missing of 5 (0% covered)
-
-- `temporal_adjacent` (5 overloads)
-- `temporal_contained` (5 overloads)
-- `temporal_contains` (5 overloads)
-- `temporal_overlaps` (5 overloads)
-- `temporal_same` (5 overloads)
-
-### `rgeo/129_trgeo_posops.in.sql` — 12 missing of 12 (0% covered)
-
-- `temporal_above` (3 overloads)
-- `temporal_after` (5 overloads)
-- `temporal_before` (5 overloads)
-- `temporal_below` (3 overloads)
-- `temporal_left` (3 overloads)
-- `temporal_overabove` (3 overloads)
-- `temporal_overafter` (5 overloads)
-- `temporal_overbefore` (5 overloads)
-- `temporal_overbelow` (3 overloads)
-- `temporal_overleft` (3 overloads)
-- `temporal_overright` (3 overloads)
-- `temporal_right` (3 overloads)
-
-### `rgeo/131_trgeo_aggfuncs.in.sql` — 7 missing of 7 (0% covered)
-
-- `tcount_transfn`
-- `temporal_app_tinst_transfn` (3 overloads)
-- `temporal_app_tseq_transfn`
-- `temporal_append_finalfn`
-- `temporal_merge_transfn`
-- `trgeometry_tagg_finalfn`
-- `wcount_transfn`
-
-### `rgeo/133_trgeo_distance.in.sql` — 2 missing of 4 (50% covered)
-
-- `nearestApproachInstant` (5 overloads)
-- `tdistance` (5 overloads)
-
-### `rgeo/133_trgeo_vclip.in.sql` — 6 missing of 6 (0% covered)
-
-- `v_clip_poly_point`
-- `v_clip_poly_poly`
-- `v_clip_tpoly_point`
-- `v_clip_tpoly_poly`
-- `v_clip_tpoly_tpoint`
-- `v_clip_tpoly_tpoly`
-
-### `rgeo/134_trgeo_indexes.in.sql` — 1 missing of 1 (0% covered)
-
-- `trgeometry_gist_consistent`
 
 ### `temporal/001_set.in.sql` — 47 missing of 82 (43% covered)
 
@@ -1458,4 +913,55 @@ Regenerate this file with `python3 scripts/parity-audit.py --mdb ../MobilityDB -
 ### `temporal/999_oid_cache.in.sql` — 1 missing of 1 (0% covered)
 
 - `fill_oid_cache`
+
+## Deferred families (out of scope for current sweep)
+
+These families (cbuffer, npoint, pose, rgeo) are deferred until the active temporal + geo surface stabilises. Re-include by editing `DEFERRED_FAMILIES` at the top of `scripts/parity-audit.py`. Listed here so the picture stays complete; not counted in headline coverage.
+
+| Section | MDB names | Covered | Missing | Coverage |
+|---|---:|---:|---:|---:|
+| `cbuffer/150_cbuffer.in.sql` | 31 | 7 | 24 | 23% |
+| `cbuffer/151_cbufferset.in.sql` | 42 | 32 | 10 | 76% |
+| `cbuffer/152_tcbuffer.in.sql` | 84 | 62 | 22 | 74% |
+| `cbuffer/154_tcbuffer_compops.in.sql` | 6 | 0 | 6 | 0% |
+| `cbuffer/155_tcbuffer_spatialfuncs.in.sql` | 11 | 7 | 4 | 64% |
+| `cbuffer/158_tcbuffer_topops.in.sql` | 7 | 2 | 5 | 29% |
+| `cbuffer/159_tcbuffer_posops.in.sql` | 12 | 0 | 12 | 0% |
+| `cbuffer/160_tcbuffer_distance.in.sql` | 5 | 2 | 3 | 40% |
+| `cbuffer/161_tcbuffer_aggfuncs.in.sql` | 7 | 0 | 7 | 0% |
+| `cbuffer/162_tcbuffer_spatialrels.in.sql` | 13 | 11 | 2 | 85% |
+| `cbuffer/164_tcbuffer_tempspatialrels.in.sql` | 6 | 5 | 1 | 83% |
+| `cbuffer/166_tcbuffer_indexes.in.sql` | 1 | 0 | 1 | 0% |
+| `npoint/081_npoint.in.sql` | 41 | 6 | 35 | 15% |
+| `npoint/082_npointset.in.sql` | 43 | 29 | 14 | 67% |
+| `npoint/083_tnpoint.in.sql` | 77 | 60 | 17 | 78% |
+| `npoint/085_tnpoint_compops.in.sql` | 6 | 0 | 6 | 0% |
+| `npoint/087_tnpoint_spatialfuncs.in.sql` | 12 | 11 | 1 | 92% |
+| `npoint/089_tnpoint_topops.in.sql` | 7 | 2 | 5 | 29% |
+| `npoint/090_tnpoint_posops.in.sql` | 12 | 0 | 12 | 0% |
+| `npoint/091_tnpoint_routeops.in.sql` | 4 | 0 | 4 | 0% |
+| `npoint/092_tnpoint_gin.in.sql` | 3 | 0 | 3 | 0% |
+| `npoint/093_tnpoint_distance.in.sql` | 4 | 2 | 2 | 50% |
+| `npoint/095_tnpoint_aggfuncs.in.sql` | 8 | 0 | 8 | 0% |
+| `npoint/098_tnpoint_indexes.in.sql` | 1 | 0 | 1 | 0% |
+| `pose/100_pose.in.sql` | 34 | 8 | 26 | 24% |
+| `pose/101_poseset.in.sql` | 46 | 32 | 14 | 70% |
+| `pose/102_tpose.in.sql` | 85 | 60 | 25 | 71% |
+| `pose/104_tpose_compops.in.sql` | 6 | 0 | 6 | 0% |
+| `pose/105_tpose_spatialfuncs.in.sql` | 8 | 7 | 1 | 88% |
+| `pose/108_tpose_topops.in.sql` | 7 | 2 | 5 | 29% |
+| `pose/109_tpose_posops.in.sql` | 16 | 0 | 16 | 0% |
+| `pose/111_tpose_aggfuncs.in.sql` | 7 | 0 | 7 | 0% |
+| `pose/113_tpose_distance.in.sql` | 4 | 2 | 2 | 50% |
+| `pose/114_tpose_indexes.in.sql` | 1 | 0 | 1 | 0% |
+| `rgeo/122_trgeo.in.sql` | 87 | 62 | 25 | 71% |
+| `rgeo/124_trgeo_compops.in.sql` | 6 | 0 | 6 | 0% |
+| `rgeo/125_trgeo_spatialfuncs.in.sql` | 8 | 7 | 1 | 88% |
+| `rgeo/128_trgeo_topops.in.sql` | 5 | 0 | 5 | 0% |
+| `rgeo/129_trgeo_posops.in.sql` | 12 | 0 | 12 | 0% |
+| `rgeo/131_trgeo_aggfuncs.in.sql` | 7 | 0 | 7 | 0% |
+| `rgeo/133_trgeo_distance.in.sql` | 4 | 2 | 2 | 50% |
+| `rgeo/133_trgeo_vclip.in.sql` | 6 | 0 | 6 | 0% |
+| `rgeo/134_trgeo_indexes.in.sql` | 1 | 0 | 1 | 0% |
+| **TOTAL (deferred)** | **793** | **420** | **373** | **53%** |
 

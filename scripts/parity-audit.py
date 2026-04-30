@@ -10,6 +10,11 @@ Usage:
 The audit matches by **function name only** (case-insensitive). A name
 registered in MobilityDuck is treated as covering all its overloads;
 per-overload signature parity is *not* verified at this granularity.
+
+Sections under SQL subdirectories listed in DEFERRED_FAMILIES are out
+of scope for the active sweep. They still appear in the report (in a
+deferred appendix) but do not contribute to the headline coverage
+percentage. Re-include by removing the entry from DEFERRED_FAMILIES.
 """
 
 import argparse
@@ -19,6 +24,16 @@ import os
 import re
 import sys
 from datetime import date
+
+
+# Type families currently deferred from the active parity sweep.
+# Re-included once the temporal/geo surface stabilises.
+DEFERRED_FAMILIES = {
+    "npoint",
+    "cbuffer",
+    "pose",
+    "rgeo",
+}
 
 
 CREATE_FUNC_RE = re.compile(
@@ -77,11 +92,17 @@ def collect_mobilityduck(mduck_root):
     return funcs, files_for_func
 
 
+def is_deferred(section_relpath):
+    family = section_relpath.split("/", 1)[0]
+    return family in DEFERRED_FAMILIES
+
+
 def write_report(out_path, mdb_section_funcs, mdb_section_op_count,
                  all_mdb_funcs, mduck_funcs):
     mduck_funcs_lower = {k.lower(): k for k in mduck_funcs}
 
-    sec_results = []
+    active_results = []
+    deferred_results = []
     for sec, funcs in mdb_section_funcs.items():
         if not funcs:
             continue
@@ -92,25 +113,32 @@ def write_report(out_path, mdb_section_funcs, mdb_section_op_count,
             else:
                 missing.append((fname, count))
         pct = (len(covered) / len(funcs)) * 100 if funcs else 0
-        sec_results.append(
-            (sec, len(funcs), len(covered), len(missing), pct,
-             missing, covered, mdb_section_op_count[sec])
-        )
+        row = (sec, len(funcs), len(covered), len(missing), pct,
+               missing, covered, mdb_section_op_count[sec])
+        if is_deferred(sec):
+            deferred_results.append(row)
+        else:
+            active_results.append(row)
 
-    total_names = sum(r[1] for r in sec_results)
-    total_covered = sum(r[2] for r in sec_results)
-    total_missing = sum(r[3] for r in sec_results)
-    total_pct = (total_covered / total_names * 100) if total_names else 0
+    def totals(results):
+        n = sum(r[1] for r in results)
+        cov = sum(r[2] for r in results)
+        miss = sum(r[3] for r in results)
+        pct = (cov / n * 100) if n else 0
+        return n, cov, miss, pct
+
+    a_total, a_cov, a_miss, a_pct = totals(active_results)
+    d_total, d_cov, d_miss, d_pct = totals(deferred_results)
 
     lines = []
     lines.append("# MobilityDuck parity status — surface-level audit")
     lines.append("")
     lines.append(
-        f"Generated {date.today().isoformat()} against MobilityDB SQL surface "
-        f"({len(mdb_section_funcs)} section files, {len(all_mdb_funcs)} unique "
-        f"function names) and MobilityDuck registered surface "
-        f"({len(mduck_funcs)} unique names, {sum(mduck_funcs.values())} total "
-        f"registrations)."
+        f"Generated {date.today().isoformat()}. **Active scope** "
+        f"(temporal + geo): {a_cov}/{a_total} names covered "
+        f"({a_pct:.1f}%). Deferred families "
+        f"({', '.join(sorted(DEFERRED_FAMILIES))}) listed in an "
+        f"appendix and not counted in headline coverage."
     )
     lines.append("")
     lines.append(
@@ -143,26 +171,27 @@ def write_report(out_path, mdb_section_funcs, mdb_section_op_count,
     )
     lines.append("")
     lines.append(
-        "Regenerate this file with `python3 scripts/parity-audit.py --mdb "
-        "../MobilityDB --mduck . --out docs/parity-status.md`."
+        "Regenerate with `python3 scripts/parity-audit.py --mdb "
+        "../MobilityDB --mduck . --out docs/parity-status.md`. Deferred "
+        "families are configured at the top of that script."
     )
     lines.append("")
 
-    lines.append("## Section-by-section coverage summary")
+    lines.append("## Active-scope coverage summary")
     lines.append("")
     lines.append("| Section | MDB names | Covered | Missing | Coverage | MDB operators |")
     lines.append("|---|---:|---:|---:|---:|---:|")
-    for sec, total, cov, miss, pct, _, _, ops in sec_results:
+    for sec, total, cov, miss, pct, _, _, ops in active_results:
         lines.append(f"| `{sec}` | {total} | {cov} | {miss} | {pct:.0f}% | {ops} |")
     lines.append(
-        f"| **TOTAL** | **{total_names}** | **{total_covered}** | "
-        f"**{total_missing}** | **{total_pct:.0f}%** | — |"
+        f"| **TOTAL (active)** | **{a_total}** | **{a_cov}** | "
+        f"**{a_miss}** | **{a_pct:.0f}%** | — |"
     )
     lines.append("")
 
-    lines.append("## Missing function names per section")
+    lines.append("## Missing function names per active section")
     lines.append("")
-    for sec, total, cov, miss, pct, missing, _, _ in sec_results:
+    for sec, total, cov, miss, pct, missing, _, _ in active_results:
         if not missing:
             continue
         lines.append(f"### `{sec}` — {miss} missing of {total} ({pct:.0f}% covered)")
@@ -172,8 +201,31 @@ def write_report(out_path, mdb_section_funcs, mdb_section_op_count,
             lines.append(f"- `{fname}`{tag}")
         lines.append("")
 
+    if deferred_results:
+        lines.append("## Deferred families (out of scope for current sweep)")
+        lines.append("")
+        lines.append(
+            f"These families ({', '.join(sorted(DEFERRED_FAMILIES))}) are "
+            "deferred until the active temporal + geo surface stabilises. "
+            "Re-include by editing `DEFERRED_FAMILIES` at the top of "
+            "`scripts/parity-audit.py`. Listed here so the picture stays "
+            "complete; not counted in headline coverage."
+        )
+        lines.append("")
+        lines.append("| Section | MDB names | Covered | Missing | Coverage |")
+        lines.append("|---|---:|---:|---:|---:|")
+        for sec, total, cov, miss, pct, _, _, _ in deferred_results:
+            lines.append(f"| `{sec}` | {total} | {cov} | {miss} | {pct:.0f}% |")
+        lines.append(
+            f"| **TOTAL (deferred)** | **{d_total}** | **{d_cov}** | "
+            f"**{d_miss}** | **{d_pct:.0f}%** |"
+        )
+        lines.append("")
+
     with open(out_path, "w") as f:
         f.write("\n".join(lines) + "\n")
+
+    return a_total, a_cov, a_pct
 
 
 def main():
@@ -189,15 +241,12 @@ def main():
     mdb_section_funcs, mdb_section_op_count, all_mdb_funcs = collect_mobilitydb(args.mdb)
     mduck_funcs, _files = collect_mobilityduck(args.mduck)
 
-    write_report(args.out, mdb_section_funcs, mdb_section_op_count,
-                 all_mdb_funcs, mduck_funcs)
-    total_names = sum(len(f) for f in mdb_section_funcs.values())
-    mduck_lower = {k.lower() for k in mduck_funcs}
-    total_covered = sum(
-        1 for funcs in mdb_section_funcs.values()
-        for fname in funcs
-        if fname.lower() in mduck_lower
+    a_total, a_cov, a_pct = write_report(
+        args.out, mdb_section_funcs, mdb_section_op_count,
+        all_mdb_funcs, mduck_funcs,
     )
+    total_names = a_total
+    total_covered = a_cov
     print(f"Wrote {args.out}")
     print(f"Coverage: {total_covered}/{total_names} "
           f"({(total_covered/total_names*100):.1f}%)")
