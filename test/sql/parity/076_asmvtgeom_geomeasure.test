@@ -1,0 +1,57 @@
+# name: test/sql/parity/076_asmvtgeom_geomeasure.test
+# description: asMVTGeom (Mapbox Vector Tile encoder) and geoMeasure
+#              (linear-referencing M-coord adder) for tgeompoint.  These
+#              are the visualization-essential analytics functions in
+#              geo/076_tpoint_analytics.
+# group: [sql]
+
+require mobilityduck
+
+# asMVTGeom returns a STRUCT(geom GEOMETRY, times BIGINT[])
+
+query I
+SELECT typeof(asMVTGeom(tgeompoint '[POINT(0 0)@2000-01-01, POINT(10 10)@2000-01-05]',
+                        stbox 'STBOX X((0, 0), (10, 10))'));
+----
+STRUCT(geom GEOMETRY, times BIGINT[])
+
+# Default tile encodes the trajectory at the configured extent (4096)
+
+query I
+SELECT ST_AsText((asMVTGeom(tgeompoint '[POINT(0 0)@2000-01-01, POINT(10 10)@2000-01-05]',
+                              stbox 'STBOX X((0, 0), (10, 10))')).geom);
+----
+LINESTRING (0 4096, 4096 0)
+
+# times array has one entry per vertex (Unix-epoch seconds)
+
+query I
+SELECT len((asMVTGeom(tgeompoint '[POINT(0 0)@2000-01-01, POINT(10 10)@2000-01-05]',
+                       stbox 'STBOX X((0, 0), (10, 10))')).times);
+----
+2
+
+# Custom extent
+
+query I
+SELECT ST_AsText((asMVTGeom(tgeompoint '[POINT(0 0)@2000-01-01, POINT(10 10)@2000-01-05]',
+                              stbox 'STBOX X((0, 0), (10, 10))', 100)).geom);
+----
+LINESTRING (0 100, 100 0)
+
+# geoMeasure adds the M coordinate from the measure tfloat
+
+query I
+SELECT ST_AsText(geoMeasure(tgeompoint '[POINT(0 0)@2000-01-01, POINT(10 10)@2000-01-05]',
+                             tfloat   '[0@2000-01-01, 100@2000-01-05]'));
+----
+LINESTRING M (0 0 0, 10 10 100)
+
+# geoMeasure with explicit segmentize=FALSE
+
+query I
+SELECT ST_AsText(geoMeasure(tgeompoint '[POINT(0 0)@2000-01-01, POINT(10 10)@2000-01-05]',
+                             tfloat   '[0@2000-01-01, 100@2000-01-05]',
+                             FALSE));
+----
+LINESTRING M (0 0 0, 10 10 100)
