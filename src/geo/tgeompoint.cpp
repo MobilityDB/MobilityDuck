@@ -1768,6 +1768,49 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::distance_geo_geo
         )
     );
+
+    /* ***************************************************
+     * Affine and derived spatial transforms
+     ****************************************************/
+    {
+        const auto T = TGEOMPOINT();
+        const auto D = LogicalType::DOUBLE;
+        const auto B = LogicalType::BLOB;
+
+        loader.RegisterFunction(ScalarFunction(
+            "affine",
+            {T, D, D, D, D, D, D, D, D, D, D, D, D},
+            T, TgeompointFunctions::Tgeo_affine));
+        loader.RegisterFunction(ScalarFunction(
+            "affine",
+            {T, D, D, D, D, D, D},
+            T, TgeompointFunctions::Tgeo_affine_2d));
+
+        loader.RegisterFunction(ScalarFunction(
+            "translate", {T, D, D}, T, TgeompointFunctions::Tgeo_translate_2d));
+        loader.RegisterFunction(ScalarFunction(
+            "translate", {T, D, D, D}, T, TgeompointFunctions::Tgeo_translate_3d));
+
+        loader.RegisterFunction(ScalarFunction(
+            "rotate", {T, D}, T, TgeompointFunctions::Tgeo_rotate));
+        loader.RegisterFunction(ScalarFunction(
+            "rotate", {T, D, D, D}, T, TgeompointFunctions::Tgeo_rotate_xy));
+        loader.RegisterFunction(ScalarFunction(
+            "rotateZ", {T, D}, T, TgeompointFunctions::Tgeo_rotate));
+        loader.RegisterFunction(ScalarFunction(
+            "rotateX", {T, D}, T, TgeompointFunctions::Tgeo_rotate_x));
+        loader.RegisterFunction(ScalarFunction(
+            "rotateY", {T, D}, T, TgeompointFunctions::Tgeo_rotate_y));
+
+        loader.RegisterFunction(ScalarFunction(
+            "transscale", {T, D, D, D, D}, T, TgeompointFunctions::Tgeo_transscale));
+
+        loader.RegisterFunction(ScalarFunction(
+            "scale", {T, GeoTypes::GEOMETRY()}, T, TgeompointFunctions::Tgeo_scale_geom));
+        loader.RegisterFunction(ScalarFunction(
+            "scale", {T, GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, T,
+            TgeompointFunctions::Tgeo_scale_geom_origin));
+    }
 }
 
 } // namespace duckdb

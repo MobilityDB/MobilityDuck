@@ -161,6 +161,21 @@ struct TgeompointFunctions {
     // static void gs_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void collect_gs(DataChunk &args, ExpressionState &state, Vector &result);
     static void distance_geo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * Affine and derived spatial transforms
+     ****************************************************/
+    static void Tgeo_affine(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_affine_2d(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_translate_2d(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_translate_3d(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_rotate(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_rotate_xy(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_rotate_x(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_rotate_y(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_transscale(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_scale_geom(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_scale_geom_origin(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

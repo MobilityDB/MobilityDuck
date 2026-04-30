@@ -16,6 +16,9 @@
 
 #include "duckdb/common/types.hpp"
 
+#include <cmath>
+#include <functional>
+
 namespace duckdb {
 
 namespace {
@@ -3312,6 +3315,273 @@ void TgeompointFunctions::distance_geo_geo(DataChunk &args, ExpressionState &sta
             free(gs1);
             free(gs2);
             return distance;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+/* ***************************************************
+ * Affine and derived spatial transforms
+ ****************************************************/
+
+namespace {
+
+string_t ApplyAffineToTgeo(Vector &result, string_t input_blob, const AFFINE &m) {
+    const uint8_t *data = reinterpret_cast<const uint8_t *>(input_blob.GetData());
+    size_t data_size = input_blob.GetSize();
+    if (data_size < sizeof(void *)) {
+        throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
+    }
+    uint8_t *data_copy = (uint8_t *)malloc(data_size);
+    memcpy(data_copy, data, data_size);
+    Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
+    Temporal *ret = tgeo_affine(temp, &m);
+    free(temp);
+    if (!ret) {
+        throw InternalException("tgeo_affine returned null");
+    }
+    size_t ret_size = temporal_mem_size(ret);
+    uint8_t *ret_data = (uint8_t *)malloc(ret_size);
+    memcpy(ret_data, ret, ret_size);
+    string_t ret_string(reinterpret_cast<const char *>(ret_data), ret_size);
+    string_t stored = StringVector::AddStringOrBlob(result, ret_string);
+    free(ret_data);
+    free(ret);
+    return stored;
+}
+
+inline AFFINE IdentityAffine() {
+    AFFINE m{};
+    m.afac = 1.0;
+    m.efac = 1.0;
+    m.ifac = 1.0;
+    return m;
+}
+
+void RunAffineFromMatrixBuilder(DataChunk &args, Vector &result,
+                                std::function<AFFINE(idx_t)> build_matrix) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) {
+        args.data[i].Flatten(row_count);
+    }
+    auto in_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto &in_validity = FlatVector::Validity(args.data[0]);
+    auto out_data = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    for (idx_t row = 0; row < row_count; row++) {
+        bool any_null = !in_validity.RowIsValid(row);
+        for (idx_t col = 1; !any_null && col < args.ColumnCount(); col++) {
+            if (!FlatVector::Validity(args.data[col]).RowIsValid(row)) {
+                any_null = true;
+            }
+        }
+        if (any_null) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        AFFINE m = build_matrix(row);
+        out_data[row] = ApplyAffineToTgeo(result, in_data[row], m);
+    }
+    if (row_count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+inline double GetDouble(Vector &v, idx_t row) {
+    return FlatVector::GetData<double>(v)[row];
+}
+
+} // namespace
+
+void TgeompointFunctions::Tgeo_affine(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunAffineFromMatrixBuilder(args, result, [&](idx_t row) {
+        AFFINE m;
+        m.afac = GetDouble(args.data[1], row);
+        m.bfac = GetDouble(args.data[2], row);
+        m.cfac = GetDouble(args.data[3], row);
+        m.dfac = GetDouble(args.data[4], row);
+        m.efac = GetDouble(args.data[5], row);
+        m.ffac = GetDouble(args.data[6], row);
+        m.gfac = GetDouble(args.data[7], row);
+        m.hfac = GetDouble(args.data[8], row);
+        m.ifac = GetDouble(args.data[9], row);
+        m.xoff = GetDouble(args.data[10], row);
+        m.yoff = GetDouble(args.data[11], row);
+        m.zoff = GetDouble(args.data[12], row);
+        return m;
+    });
+}
+
+void TgeompointFunctions::Tgeo_affine_2d(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunAffineFromMatrixBuilder(args, result, [&](idx_t row) {
+        AFFINE m = IdentityAffine();
+        m.afac = GetDouble(args.data[1], row);
+        m.bfac = GetDouble(args.data[2], row);
+        m.dfac = GetDouble(args.data[3], row);
+        m.efac = GetDouble(args.data[4], row);
+        m.xoff = GetDouble(args.data[5], row);
+        m.yoff = GetDouble(args.data[6], row);
+        return m;
+    });
+}
+
+void TgeompointFunctions::Tgeo_translate_2d(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunAffineFromMatrixBuilder(args, result, [&](idx_t row) {
+        AFFINE m = IdentityAffine();
+        m.xoff = GetDouble(args.data[1], row);
+        m.yoff = GetDouble(args.data[2], row);
+        return m;
+    });
+}
+
+void TgeompointFunctions::Tgeo_translate_3d(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunAffineFromMatrixBuilder(args, result, [&](idx_t row) {
+        AFFINE m = IdentityAffine();
+        m.xoff = GetDouble(args.data[1], row);
+        m.yoff = GetDouble(args.data[2], row);
+        m.zoff = GetDouble(args.data[3], row);
+        return m;
+    });
+}
+
+void TgeompointFunctions::Tgeo_rotate(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunAffineFromMatrixBuilder(args, result, [&](idx_t row) {
+        const double theta = GetDouble(args.data[1], row);
+        const double c = std::cos(theta);
+        const double s = std::sin(theta);
+        AFFINE m = IdentityAffine();
+        m.afac =  c; m.bfac = -s;
+        m.dfac =  s; m.efac =  c;
+        return m;
+    });
+}
+
+void TgeompointFunctions::Tgeo_rotate_xy(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunAffineFromMatrixBuilder(args, result, [&](idx_t row) {
+        const double theta = GetDouble(args.data[1], row);
+        const double cx = GetDouble(args.data[2], row);
+        const double cy = GetDouble(args.data[3], row);
+        const double c = std::cos(theta);
+        const double s = std::sin(theta);
+        AFFINE m = IdentityAffine();
+        m.afac =  c; m.bfac = -s;
+        m.dfac =  s; m.efac =  c;
+        m.xoff = cx - c * cx + s * cy;
+        m.yoff = cy - s * cx - c * cy;
+        return m;
+    });
+}
+
+void TgeompointFunctions::Tgeo_rotate_x(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunAffineFromMatrixBuilder(args, result, [&](idx_t row) {
+        const double theta = GetDouble(args.data[1], row);
+        const double c = std::cos(theta);
+        const double s = std::sin(theta);
+        AFFINE m = IdentityAffine();
+        m.efac =  c; m.ffac = -s;
+        m.hfac =  s; m.ifac =  c;
+        return m;
+    });
+}
+
+void TgeompointFunctions::Tgeo_rotate_y(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunAffineFromMatrixBuilder(args, result, [&](idx_t row) {
+        const double theta = GetDouble(args.data[1], row);
+        const double c = std::cos(theta);
+        const double s = std::sin(theta);
+        AFFINE m = IdentityAffine();
+        m.afac =  c; m.cfac =  s;
+        m.gfac = -s; m.ifac =  c;
+        return m;
+    });
+}
+
+void TgeompointFunctions::Tgeo_transscale(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunAffineFromMatrixBuilder(args, result, [&](idx_t row) {
+        const double dx = GetDouble(args.data[1], row);
+        const double dy = GetDouble(args.data[2], row);
+        const double sx = GetDouble(args.data[3], row);
+        const double sy = GetDouble(args.data[4], row);
+        AFFINE m = IdentityAffine();
+        m.afac = sx;
+        m.efac = sy;
+        m.xoff = dx * sx;
+        m.yoff = dy * sy;
+        return m;
+    });
+}
+
+void TgeompointFunctions::Tgeo_scale_geom(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t tgeom_blob, string_t geometry_blob) -> string_t {
+            const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
+            size_t tgeom_data_size = tgeom_blob.GetSize();
+            uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
+            memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
+            Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
+            int32 srid = tspatial_srid(tgeom);
+            GSERIALIZED *gs_scale = GeometryToGSerialized(geometry_blob, srid);
+            if (!gs_scale) {
+                free(tgeom);
+                throw InvalidInputException("Invalid scale geometry: " + geometry_blob.GetString());
+            }
+            Temporal *ret = tgeo_scale(tgeom, gs_scale, nullptr);
+            free(tgeom);
+            free(gs_scale);
+            if (!ret) {
+                throw InternalException("tgeo_scale returned null");
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            uint8_t *ret_data = (uint8_t *)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            string_t ret_string(reinterpret_cast<const char *>(ret_data), ret_size);
+            string_t stored = StringVector::AddStringOrBlob(result, ret_string);
+            free(ret_data);
+            free(ret);
+            return stored;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TgeompointFunctions::Tgeo_scale_geom_origin(DataChunk &args, ExpressionState &state, Vector &result) {
+    TernaryExecutor::Execute<string_t, string_t, string_t, string_t>(
+        args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t tgeom_blob, string_t scale_blob, string_t origin_blob) -> string_t {
+            const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
+            size_t tgeom_data_size = tgeom_blob.GetSize();
+            uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
+            memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
+            Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
+            int32 srid = tspatial_srid(tgeom);
+            GSERIALIZED *gs_scale = GeometryToGSerialized(scale_blob, srid);
+            GSERIALIZED *gs_origin = GeometryToGSerialized(origin_blob, srid);
+            if (!gs_scale || !gs_origin) {
+                free(tgeom);
+                if (gs_scale) free(gs_scale);
+                if (gs_origin) free(gs_origin);
+                throw InvalidInputException("Invalid scale or origin geometry");
+            }
+            Temporal *ret = tgeo_scale(tgeom, gs_scale, gs_origin);
+            free(tgeom);
+            free(gs_scale);
+            free(gs_origin);
+            if (!ret) {
+                throw InternalException("tgeo_scale returned null");
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            uint8_t *ret_data = (uint8_t *)malloc(ret_size);
+            memcpy(ret_data, ret, ret_size);
+            string_t ret_string(reinterpret_cast<const char *>(ret_data), ret_size);
+            string_t stored = StringVector::AddStringOrBlob(result, ret_string);
+            free(ret_data);
+            free(ret);
+            return stored;
         }
     );
     if (args.size() == 1) {
