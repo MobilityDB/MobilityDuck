@@ -5311,6 +5311,115 @@ DEFINE_TSPATIAL_STBOX_POS(Overback,   overback)
 #undef DEFINE_TSPATIAL_STBOX_POS
 
 /* ***************************************************
+ * tprecision / tsample — time-domain rebinning
+ ****************************************************/
+
+namespace {
+
+interpType ParseInterpString(const string_t &s) {
+    std::string str(s.GetData(), s.GetSize());
+    for (auto &c : str) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    if (str == "none" || str.empty())  return INTERP_NONE;
+    if (str == "discrete")             return DISCRETE;
+    if (str == "step")                 return STEP;
+    if (str == "linear")               return LINEAR;
+    throw InvalidInputException("Invalid interpolation: '" + str +
+        "' (expected one of: none, discrete, step, linear)");
+}
+
+constexpr TimestampTz DEFAULT_T_ORIGIN = 0;  // 2000-01-03 in MEOS internal repr
+
+} // namespace
+
+void TemporalFunctions::Temporal_tprecision(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    auto in_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto dur_data = FlatVector::GetData<interval_t>(args.data[1]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto &v1 = FlatVector::Validity(args.data[1]);
+    const bool has_origin = args.ColumnCount() > 2;
+    auto out_data = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row) || !v1.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        TimestampTz origin = DEFAULT_T_ORIGIN;
+        if (has_origin) {
+            auto &ov = args.data[2];
+            if (!FlatVector::Validity(ov).RowIsValid(row)) {
+                out_validity.SetInvalid(row);
+                continue;
+            }
+            timestamp_tz_t t = FlatVector::GetData<timestamp_tz_t>(ov)[row];
+            origin = (TimestampTz) DuckDBToMeosTimestamp(t).value;
+        }
+        Temporal *temp = BlobToTemporal(in_data[row]);
+        MeosInterval mi = IntervaltToInterval(dur_data[row]);
+        Temporal *r = temporal_tprecision(temp, &mi, origin);
+        free(temp);
+        if (!r) { out_validity.SetInvalid(row); continue; }
+        size_t sz = temporal_mem_size(r);
+        string_t blob(reinterpret_cast<const char *>(r), sz);
+        out_data[row] = StringVector::AddStringOrBlob(result, blob);
+        free(r);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void TemporalFunctions::Temporal_tsample(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    auto in_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto dur_data = FlatVector::GetData<interval_t>(args.data[1]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto &v1 = FlatVector::Validity(args.data[1]);
+    const bool has_origin = args.ColumnCount() > 2;
+    const bool has_interp = args.ColumnCount() > 3;
+    auto out_data = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row) || !v1.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        TimestampTz origin = DEFAULT_T_ORIGIN;
+        if (has_origin) {
+            auto &ov = args.data[2];
+            if (!FlatVector::Validity(ov).RowIsValid(row)) {
+                out_validity.SetInvalid(row);
+                continue;
+            }
+            timestamp_tz_t t = FlatVector::GetData<timestamp_tz_t>(ov)[row];
+            origin = (TimestampTz) DuckDBToMeosTimestamp(t).value;
+        }
+        interpType interp = DISCRETE;
+        if (has_interp) {
+            auto &iv = args.data[3];
+            if (!FlatVector::Validity(iv).RowIsValid(row)) {
+                out_validity.SetInvalid(row);
+                continue;
+            }
+            interp = ParseInterpString(FlatVector::GetData<string_t>(iv)[row]);
+        }
+        Temporal *temp = BlobToTemporal(in_data[row]);
+        MeosInterval mi = IntervaltToInterval(dur_data[row]);
+        Temporal *r = temporal_tsample(temp, &mi, origin, interp);
+        free(temp);
+        if (!r) { out_validity.SetInvalid(row); continue; }
+        size_t sz = temporal_mem_size(r);
+        string_t blob(reinterpret_cast<const char *>(r), sz);
+        out_data[row] = StringVector::AddStringOrBlob(result, blob);
+        free(r);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+/* ***************************************************
  * Text functions on ttext
  ****************************************************/
 

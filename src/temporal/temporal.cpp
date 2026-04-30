@@ -1347,6 +1347,25 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // Unary tnumber functions
     loader.RegisterFunction(ScalarFunction("abs", {TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Tnumber_abs));
     loader.RegisterFunction(ScalarFunction("abs", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tnumber_abs));
+
+    // tprecision / tsample — time-domain rebinning
+    {
+        const auto I = LogicalType::INTERVAL;
+        const auto TS = LogicalType::TIMESTAMP_TZ;
+        const auto V = LogicalType::VARCHAR;
+
+        for (auto &t : {TemporalTypes::TINT(), TemporalTypes::TFLOAT()}) {
+            loader.RegisterFunction(ScalarFunction("tprecision", {t, I},     t, TemporalFunctions::Temporal_tprecision));
+            loader.RegisterFunction(ScalarFunction("tprecision", {t, I, TS}, t, TemporalFunctions::Temporal_tprecision));
+        }
+
+        for (auto &t : {TemporalTypes::TBOOL(), TemporalTypes::TINT(),
+                        TemporalTypes::TFLOAT(), TemporalTypes::TTEXT()}) {
+            loader.RegisterFunction(ScalarFunction("tsample", {t, I},        t, TemporalFunctions::Temporal_tsample));
+            loader.RegisterFunction(ScalarFunction("tsample", {t, I, TS},    t, TemporalFunctions::Temporal_tsample));
+            loader.RegisterFunction(ScalarFunction("tsample", {t, I, TS, V}, t, TemporalFunctions::Temporal_tsample));
+        }
+    }
     loader.RegisterFunction(ScalarFunction("derivative", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Temporal_derivative));
     loader.RegisterFunction(ScalarFunction("degrees", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_degrees));
     loader.RegisterFunction(ScalarFunction("degrees", {TemporalTypes::TFLOAT(), LogicalType::BOOLEAN}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_degrees));
