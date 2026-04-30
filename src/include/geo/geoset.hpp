@@ -23,6 +23,7 @@ struct SpatialSetFunctions{
 
     //constructor
     static void Geomset_constructor(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Geomset_constructor_with_srid(DataChunk &args, ExpressionState &state, Vector &result);
 
     //other
     static void Spatialset_as_text(DataChunk &args, ExpressionState &state, Vector &result);

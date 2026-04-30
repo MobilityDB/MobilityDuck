@@ -142,45 +142,74 @@ void SpatialSetType::RegisterScalarFunctions(ExtensionLoader &loader) {
         SpatialSetType::geomset(),
         SpatialSetFunctions::Geomset_constructor
     ));
+
+    // Two-arg overload that lets callers attach a SRID at construction
+    // time. Necessary because duckdb-spatial's GEOMETRY blob does not
+    // preserve SRID through the WKB round-trip.
+    loader.RegisterFunction( ScalarFunction(
+        "set", {LogicalType::LIST(GeoTypes::GEOMETRY()), LogicalType::INTEGER},
+        SpatialSetType::geomset(),
+        SpatialSetFunctions::Geomset_constructor_with_srid
+    ));
+}
+
+// Shared core for both geomset constructors.
+static string_t BuildGeomsetFromList(Vector &list_input, idx_t row_count, list_entry_t list_entry,
+                                     int32_t srid, Vector &result) {
+    auto &child = ListVector::GetEntry(list_input);
+    child.Flatten(row_count);
+
+    idx_t offset = list_entry.offset;
+    idx_t length = list_entry.length;
+
+    if (length == 0) {
+        throw InvalidInputException("The input array cannot be empty");
+    }
+
+    GSERIALIZED **values = (GSERIALIZED **)malloc(sizeof(GSERIALIZED *) * length);
+    for (idx_t i = 0; i < length; ++i) {
+        idx_t idx = offset + i;
+        string_t blob = FlatVector::GetData<string_t>(child)[idx];
+        values[i] = GeometryToGSerialized(blob, srid);
+    }
+
+    Set *s = geoset_make(values, (int)length);
+    for (idx_t i = 0; i < length; ++i) {
+        free(values[i]);
+    }
+    free(values);
+
+    if (!s) {
+        throw InvalidInputException("Failed to construct geomset");
+    }
+    size_t size = set_mem_size(s);
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)s, size);
+    free(s);
+    return out;
 }
 
 // --- Constructor: set(LIST(GEOMETRY)) -> geomset ---
 void SpatialSetFunctions::Geomset_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &list_input = args.data[0];
+    idx_t row_count = args.size();
 
     UnaryExecutor::Execute<list_entry_t, string_t>(
-        list_input, result, args.size(),
+        list_input, result, row_count,
         [&](list_entry_t list_entry) -> string_t {
-            auto &child = ListVector::GetEntry(list_input);
-            child.Flatten(args.size());
+            return BuildGeomsetFromList(list_input, row_count, list_entry, 0, result);
+        });
+}
 
-            idx_t offset = list_entry.offset;
-            idx_t length = list_entry.length;
+// --- Constructor: set(LIST(GEOMETRY), INTEGER) -> geomset ---
+void SpatialSetFunctions::Geomset_constructor_with_srid(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &list_input = args.data[0];
+    auto &srid_input = args.data[1];
+    idx_t row_count = args.size();
 
-            if (length == 0) {
-                throw InvalidInputException("The input array cannot be empty");
-            }
-
-            GSERIALIZED **values = (GSERIALIZED **)malloc(sizeof(GSERIALIZED *) * length);
-            for (idx_t i = 0; i < length; ++i) {
-                idx_t idx = offset + i;
-                string_t blob = FlatVector::GetData<string_t>(child)[idx];
-                values[i] = GeometryToGSerialized(blob, 0);
-            }
-
-            Set *s = geoset_make(values, (int)length);
-            for (idx_t i = 0; i < length; ++i) {
-                free(values[i]);
-            }
-            free(values);
-
-            if (!s) {
-                throw InvalidInputException("Failed to construct geomset");
-            }
-            size_t size = set_mem_size(s);
-            string_t blob = StringVector::AddStringOrBlob(result, (const char *)s, size);
-            free(s);
-            return blob;
+    BinaryExecutor::Execute<list_entry_t, int32_t, string_t>(
+        list_input, srid_input, result, row_count,
+        [&](list_entry_t list_entry, int32_t srid) -> string_t {
+            return BuildGeomsetFromList(list_input, row_count, list_entry, srid, result);
         });
 }
 
