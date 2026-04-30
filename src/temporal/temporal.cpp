@@ -1376,25 +1376,42 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction("nearestApproachDistance", {TemporalTypes::TFLOAT(), LogicalType::DOUBLE}, LogicalType::DOUBLE, TemporalFunctions::Nad_tfloat_float));
     loader.RegisterFunction(ScalarFunction("nearestApproachDistance", {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, LogicalType::DOUBLE, TemporalFunctions::Nad_tfloat_tfloat));
 
-    // Temporal topological predicates: temporal × temporal (4 ops × 4 type pairs)
+    // Temporal topological predicates: temporal × temporal (4 ops × 4 type pairs).
+    // Each operator is also exposed under its MobilityDB-canonical named-function
+    // form (`temporal_contains`, `temporal_contained`, `temporal_overlaps`,
+    // `temporal_adjacent`) for compatibility with code that does not use the
+    // operator syntax.
     for (auto &t1 : TemporalTypes::AllTypes()) {
         for (auto &t2 : TemporalTypes::AllTypes()) {
-            loader.RegisterFunction(ScalarFunction("@>", {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Contains_temporal_temporal));
-            loader.RegisterFunction(ScalarFunction("<@", {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Contained_temporal_temporal));
-            loader.RegisterFunction(ScalarFunction("&&", {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_temporal_temporal));
-            loader.RegisterFunction(ScalarFunction("-|-", {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_temporal_temporal));
+            loader.RegisterFunction(ScalarFunction("@>",                {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Contains_temporal_temporal));
+            loader.RegisterFunction(ScalarFunction("temporal_contains", {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Contains_temporal_temporal));
+            loader.RegisterFunction(ScalarFunction("<@",                 {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Contained_temporal_temporal));
+            loader.RegisterFunction(ScalarFunction("temporal_contained", {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Contained_temporal_temporal));
+            loader.RegisterFunction(ScalarFunction("&&",                {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_temporal_temporal));
+            loader.RegisterFunction(ScalarFunction("temporal_overlaps", {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_temporal_temporal));
+            loader.RegisterFunction(ScalarFunction("-|-",                {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_temporal_temporal));
+            loader.RegisterFunction(ScalarFunction("temporal_adjacent", {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_temporal_temporal));
         }
     }
     // Temporal × tstzspan (and the reverse direction)
     for (auto &t : TemporalTypes::AllTypes()) {
-        loader.RegisterFunction(ScalarFunction("@>", {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Contains_temporal_tstzspan));
-        loader.RegisterFunction(ScalarFunction("<@", {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Contained_temporal_tstzspan));
-        loader.RegisterFunction(ScalarFunction("&&", {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_temporal_tstzspan));
-        loader.RegisterFunction(ScalarFunction("-|-", {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_temporal_tstzspan));
-        loader.RegisterFunction(ScalarFunction("@>", {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tstzspan_temporal));
-        loader.RegisterFunction(ScalarFunction("<@", {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tstzspan_temporal));
-        loader.RegisterFunction(ScalarFunction("&&", {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tstzspan_temporal));
-        loader.RegisterFunction(ScalarFunction("-|-", {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tstzspan_temporal));
+        loader.RegisterFunction(ScalarFunction("@>",                {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Contains_temporal_tstzspan));
+        loader.RegisterFunction(ScalarFunction("temporal_contains", {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Contains_temporal_tstzspan));
+        loader.RegisterFunction(ScalarFunction("<@",                 {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Contained_temporal_tstzspan));
+        loader.RegisterFunction(ScalarFunction("temporal_contained", {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Contained_temporal_tstzspan));
+        loader.RegisterFunction(ScalarFunction("&&",                {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_temporal_tstzspan));
+        loader.RegisterFunction(ScalarFunction("temporal_overlaps", {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_temporal_tstzspan));
+        loader.RegisterFunction(ScalarFunction("-|-",                {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_temporal_tstzspan));
+        loader.RegisterFunction(ScalarFunction("temporal_adjacent", {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_temporal_tstzspan));
+
+        loader.RegisterFunction(ScalarFunction("@>",                {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tstzspan_temporal));
+        loader.RegisterFunction(ScalarFunction("temporal_contains", {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tstzspan_temporal));
+        loader.RegisterFunction(ScalarFunction("<@",                 {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tstzspan_temporal));
+        loader.RegisterFunction(ScalarFunction("temporal_contained", {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tstzspan_temporal));
+        loader.RegisterFunction(ScalarFunction("&&",                {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tstzspan_temporal));
+        loader.RegisterFunction(ScalarFunction("temporal_overlaps", {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tstzspan_temporal));
+        loader.RegisterFunction(ScalarFunction("-|-",                {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tstzspan_temporal));
+        loader.RegisterFunction(ScalarFunction("temporal_adjacent", {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tstzspan_temporal));
     }
 
     // Temporal time-position predicates registered as named functions:
@@ -1475,34 +1492,39 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         auto fspan = SpanTypes::FLOATSPAN();
         auto tbox  = TboxType::TBOX();
 
-        // tnumber × numspan
-        loader.RegisterFunction(ScalarFunction("@>",  {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tnumber_numspan));
-        loader.RegisterFunction(ScalarFunction("<@",  {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tnumber_numspan));
-        loader.RegisterFunction(ScalarFunction("&&",  {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tnumber_numspan));
-        loader.RegisterFunction(ScalarFunction("-|-", {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tnumber_numspan));
-        loader.RegisterFunction(ScalarFunction("@>",  {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tnumber_numspan));
-        loader.RegisterFunction(ScalarFunction("<@",  {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tnumber_numspan));
-        loader.RegisterFunction(ScalarFunction("&&",  {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tnumber_numspan));
-        loader.RegisterFunction(ScalarFunction("-|-", {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tnumber_numspan));
-        // numspan × tnumber
-        loader.RegisterFunction(ScalarFunction("@>",  {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Contains_numspan_tnumber));
-        loader.RegisterFunction(ScalarFunction("<@",  {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Contained_numspan_tnumber));
-        loader.RegisterFunction(ScalarFunction("&&",  {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_numspan_tnumber));
-        loader.RegisterFunction(ScalarFunction("-|-", {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_numspan_tnumber));
-        loader.RegisterFunction(ScalarFunction("@>",  {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Contains_numspan_tnumber));
-        loader.RegisterFunction(ScalarFunction("<@",  {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Contained_numspan_tnumber));
-        loader.RegisterFunction(ScalarFunction("&&",  {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_numspan_tnumber));
-        loader.RegisterFunction(ScalarFunction("-|-", {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_numspan_tnumber));
-        // tnumber × tbox
+#define REG_TOP4(L, R, FN_SUFFIX) \
+    loader.RegisterFunction(ScalarFunction("@>",                {L, R}, LogicalType::BOOLEAN, TemporalFunctions::Contains_##FN_SUFFIX)); \
+    loader.RegisterFunction(ScalarFunction("temporal_contains", {L, R}, LogicalType::BOOLEAN, TemporalFunctions::Contains_##FN_SUFFIX)); \
+    loader.RegisterFunction(ScalarFunction("<@",                 {L, R}, LogicalType::BOOLEAN, TemporalFunctions::Contained_##FN_SUFFIX)); \
+    loader.RegisterFunction(ScalarFunction("temporal_contained", {L, R}, LogicalType::BOOLEAN, TemporalFunctions::Contained_##FN_SUFFIX)); \
+    loader.RegisterFunction(ScalarFunction("&&",                {L, R}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_##FN_SUFFIX)); \
+    loader.RegisterFunction(ScalarFunction("temporal_overlaps", {L, R}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_##FN_SUFFIX)); \
+    loader.RegisterFunction(ScalarFunction("-|-",                {L, R}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_##FN_SUFFIX)); \
+    loader.RegisterFunction(ScalarFunction("temporal_adjacent", {L, R}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_##FN_SUFFIX));
+
+        // tnumber × numspan / numspan × tnumber
+        REG_TOP4(tint, ispan, tnumber_numspan)
+        REG_TOP4(tflt, fspan, tnumber_numspan)
+        REG_TOP4(ispan, tint, numspan_tnumber)
+        REG_TOP4(fspan, tflt, numspan_tnumber)
+        // tnumber × tbox / tbox × tnumber
         for (auto &t : {tint, tflt}) {
-            loader.RegisterFunction(ScalarFunction("@>",  {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tnumber_tbox));
-            loader.RegisterFunction(ScalarFunction("<@",  {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tnumber_tbox));
-            loader.RegisterFunction(ScalarFunction("&&",  {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tnumber_tbox));
-            loader.RegisterFunction(ScalarFunction("-|-", {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tnumber_tbox));
-            loader.RegisterFunction(ScalarFunction("@>",  {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tbox_tnumber));
-            loader.RegisterFunction(ScalarFunction("<@",  {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tbox_tnumber));
-            loader.RegisterFunction(ScalarFunction("&&",  {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tbox_tnumber));
-            loader.RegisterFunction(ScalarFunction("-|-", {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tbox_tnumber));
+            REG_TOP4(t, tbox, tnumber_tbox)
+            REG_TOP4(tbox, t, tbox_tnumber)
+        }
+#undef REG_TOP4
+
+        // tboxes / splitNTboxes / splitEachNTboxes — temporal number to LIST(tbox)
+        const auto tbox_list = LogicalType::LIST(TboxType::TBOX());
+        for (auto &t : {tint, tflt}) {
+            loader.RegisterFunction(ScalarFunction(
+                "tboxes", {t}, tbox_list, TemporalFunctions::Tnumber_tboxes));
+            loader.RegisterFunction(ScalarFunction(
+                "splitNTboxes", {t, LogicalType::INTEGER}, tbox_list,
+                TemporalFunctions::Tnumber_split_n_tboxes));
+            loader.RegisterFunction(ScalarFunction(
+                "splitEachNTboxes", {t, LogicalType::INTEGER}, tbox_list,
+                TemporalFunctions::Tnumber_split_each_n_tboxes));
         }
 
         // Position ops (<<, >>, &<, &>) — same surface

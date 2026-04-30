@@ -224,6 +224,9 @@ struct TemporalFunctions {
      * Unary tnumber functions
      ****************************************************/
     static void Tnumber_abs(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_tboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_split_n_tboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_split_each_n_tboxes(DataChunk &args, ExpressionState &state, Vector &result);
     // Temporal_derivative declared in the math-functions block below.
     static void Tfloat_degrees(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tfloat_radians(DataChunk &args, ExpressionState &state, Vector &result);

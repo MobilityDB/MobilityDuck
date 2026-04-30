@@ -4796,6 +4796,82 @@ void TemporalFunctions::Tnumber_abs(DataChunk &args, ExpressionState &state, Vec
     TemporalUnary(args, result, [](Temporal *t) { return tnumber_abs(t); });
 }
 
+namespace {
+
+template <typename Producer>
+void RunTboxesEmit(DataChunk &args, Vector &result, Producer produce, bool has_n_arg) {
+    const idx_t row_count = args.size();
+    args.data[0].Flatten(row_count);
+    if (has_n_arg) args.data[1].Flatten(row_count);
+    auto in_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto &valid_in = FlatVector::Validity(args.data[0]);
+
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!valid_in.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        int n = 0;
+        if (has_n_arg) {
+            auto &nv = args.data[1];
+            if (!FlatVector::Validity(nv).RowIsValid(row)) {
+                out_validity.SetInvalid(row);
+                list_entries[row] = list_entry_t{total, 0};
+                continue;
+            }
+            n = FlatVector::GetData<int32_t>(nv)[row];
+        }
+        Temporal *t = BlobToTemporal(in_data[row]);
+        int count = 0;
+        TBox *boxes = produce(t, n, &count);
+        free(t);
+        if (!boxes || count <= 0) {
+            list_entries[row] = list_entry_t{total, 0};
+            if (boxes) free(boxes);
+            continue;
+        }
+        ListVector::Reserve(result, total + count);
+        ListVector::SetListSize(result, total + count);
+        list_entries[row] = list_entry_t{total, static_cast<uint64_t>(count)};
+        auto &child = ListVector::GetEntry(result);
+        auto child_data = FlatVector::GetData<string_t>(child);
+        for (int k = 0; k < count; k++) {
+            string_t one(reinterpret_cast<const char *>(&boxes[k]), sizeof(TBox));
+            child_data[total + k] = StringVector::AddStringOrBlob(child, one);
+        }
+        total += count;
+        free(boxes);
+    }
+    if (row_count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+} // namespace
+
+void TemporalFunctions::Tnumber_tboxes(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunTboxesEmit(args, result,
+        [](const Temporal *t, int /*unused*/, int *count) { return tnumber_tboxes(t, count); },
+        /*has_n_arg=*/false);
+}
+
+void TemporalFunctions::Tnumber_split_n_tboxes(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunTboxesEmit(args, result,
+        [](const Temporal *t, int n, int *count) { return tnumber_split_n_tboxes(t, n, count); },
+        /*has_n_arg=*/true);
+}
+
+void TemporalFunctions::Tnumber_split_each_n_tboxes(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunTboxesEmit(args, result,
+        [](const Temporal *t, int n, int *count) { return tnumber_split_each_n_tboxes(t, n, count); },
+        /*has_n_arg=*/true);
+}
+
 // Temporal_derivative is implemented later in this file in the Math
 // functions block (existed before the unary-tnumber additions).
 
