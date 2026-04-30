@@ -1352,6 +1352,47 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction("degrees", {TemporalTypes::TFLOAT(), LogicalType::BOOLEAN}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_degrees));
     loader.RegisterFunction(ScalarFunction("radians", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_radians));
 
+    // Unary tfloat math functions
+    loader.RegisterFunction(ScalarFunction("exp",   {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_exp));
+    loader.RegisterFunction(ScalarFunction("ln",    {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_ln));
+    loader.RegisterFunction(ScalarFunction("log10", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_log10));
+
+    // deltaValue / trend on tnumber
+    loader.RegisterFunction(ScalarFunction("deltaValue", {TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Tnumber_delta_value));
+    loader.RegisterFunction(ScalarFunction("deltaValue", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tnumber_delta_value));
+    loader.RegisterFunction(ScalarFunction("trend",      {TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Tnumber_trend));
+    loader.RegisterFunction(ScalarFunction("trend",      {TemporalTypes::TFLOAT()}, TemporalTypes::TINT(),   TemporalFunctions::Tnumber_trend));
+
+    // Named-function aliases for the arithmetic operators (MobilityDB exposes
+    // both `+`/`-`/`*`/`/` and `tnumber_add`/`sub`/`mult`/`div`).
+    loader.RegisterFunction(ScalarFunction("tnumber_add",  {LogicalType::INTEGER,    TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Add_int_tint));
+    loader.RegisterFunction(ScalarFunction("tnumber_add",  {TemporalTypes::TINT(),   LogicalType::INTEGER},    TemporalTypes::TINT(),   TemporalFunctions::Add_tint_int));
+    loader.RegisterFunction(ScalarFunction("tnumber_add",  {LogicalType::DOUBLE,     TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Add_float_tfloat));
+    loader.RegisterFunction(ScalarFunction("tnumber_add",  {TemporalTypes::TFLOAT(), LogicalType::DOUBLE},     TemporalTypes::TFLOAT(), TemporalFunctions::Add_tfloat_float));
+    loader.RegisterFunction(ScalarFunction("tnumber_add",  {TemporalTypes::TINT(),   TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Add_tnumber_tnumber));
+    loader.RegisterFunction(ScalarFunction("tnumber_add",  {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Add_tnumber_tnumber));
+
+    loader.RegisterFunction(ScalarFunction("tnumber_sub",  {LogicalType::INTEGER,    TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Sub_int_tint));
+    loader.RegisterFunction(ScalarFunction("tnumber_sub",  {TemporalTypes::TINT(),   LogicalType::INTEGER},    TemporalTypes::TINT(),   TemporalFunctions::Sub_tint_int));
+    loader.RegisterFunction(ScalarFunction("tnumber_sub",  {LogicalType::DOUBLE,     TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Sub_float_tfloat));
+    loader.RegisterFunction(ScalarFunction("tnumber_sub",  {TemporalTypes::TFLOAT(), LogicalType::DOUBLE},     TemporalTypes::TFLOAT(), TemporalFunctions::Sub_tfloat_float));
+    loader.RegisterFunction(ScalarFunction("tnumber_sub",  {TemporalTypes::TINT(),   TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Sub_tnumber_tnumber));
+    loader.RegisterFunction(ScalarFunction("tnumber_sub",  {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Sub_tnumber_tnumber));
+
+    loader.RegisterFunction(ScalarFunction("tnumber_mult", {LogicalType::INTEGER,    TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Mult_int_tint));
+    loader.RegisterFunction(ScalarFunction("tnumber_mult", {TemporalTypes::TINT(),   LogicalType::INTEGER},    TemporalTypes::TINT(),   TemporalFunctions::Mult_tint_int));
+    loader.RegisterFunction(ScalarFunction("tnumber_mult", {LogicalType::DOUBLE,     TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Mult_float_tfloat));
+    loader.RegisterFunction(ScalarFunction("tnumber_mult", {TemporalTypes::TFLOAT(), LogicalType::DOUBLE},     TemporalTypes::TFLOAT(), TemporalFunctions::Mult_tfloat_float));
+    loader.RegisterFunction(ScalarFunction("tnumber_mult", {TemporalTypes::TINT(),   TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Mult_tnumber_tnumber));
+    loader.RegisterFunction(ScalarFunction("tnumber_mult", {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Mult_tnumber_tnumber));
+
+    loader.RegisterFunction(ScalarFunction("tnumber_div",  {LogicalType::INTEGER,    TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Div_int_tint));
+    loader.RegisterFunction(ScalarFunction("tnumber_div",  {TemporalTypes::TINT(),   LogicalType::INTEGER},    TemporalTypes::TINT(),   TemporalFunctions::Div_tint_int));
+    loader.RegisterFunction(ScalarFunction("tnumber_div",  {LogicalType::DOUBLE,     TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Div_float_tfloat));
+    loader.RegisterFunction(ScalarFunction("tnumber_div",  {TemporalTypes::TFLOAT(), LogicalType::DOUBLE},     TemporalTypes::TFLOAT(), TemporalFunctions::Div_tfloat_float));
+    loader.RegisterFunction(ScalarFunction("tnumber_div",  {TemporalTypes::TINT(),   TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Div_tnumber_tnumber));
+    loader.RegisterFunction(ScalarFunction("tnumber_div",  {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Div_tnumber_tnumber));
+
     // tnumber distance and nearest-approach-distance.
     //
     // Value-distance variants `<-> ` for (tint, INTEGER), (INTEGER, tint),
