@@ -330,18 +330,18 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("spans", {spanset_type}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_spans)
         );
         loader.RegisterFunction(
-            ScalarFunction("splitNSpans", {spanset_type, LogicalType::INTEGER}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_split_n_spans)
+            ScalarFunction("splitNSpans", {spanset_type, LogicalType::INTEGER}, spanset_type, SpansetFunctions::Spanset_split_n_spans)
         );
         loader.RegisterFunction(
-            ScalarFunction("splitEachNSpans", {spanset_type, LogicalType::INTEGER}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_split_each_n_spans)
+            ScalarFunction("splitEachNSpans", {spanset_type, LogicalType::INTEGER}, spanset_type, SpansetFunctions::Spanset_split_each_n_spans)
         );
 
         // Lowercase aliases matching MobilityDB's SQL surface
         loader.RegisterFunction(
-            ScalarFunction("splitNspans", {spanset_type, LogicalType::INTEGER}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_split_n_spans)
+            ScalarFunction("splitNspans", {spanset_type, LogicalType::INTEGER}, spanset_type, SpansetFunctions::Spanset_split_n_spans)
         );
         loader.RegisterFunction(
-            ScalarFunction("splitEachNspans", {spanset_type, LogicalType::INTEGER}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_split_each_n_spans)
+            ScalarFunction("splitEachNspans", {spanset_type, LogicalType::INTEGER}, spanset_type, SpansetFunctions::Spanset_split_each_n_spans)
         );
 
         // Hash
