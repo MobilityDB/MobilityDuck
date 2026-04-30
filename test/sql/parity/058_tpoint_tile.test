@@ -1,0 +1,60 @@
+# name: test/sql/parity/058_tpoint_tile.test
+# description: Spatial tile and box emitters — spaceTiles / timeTiles /
+#              spaceTimeTiles / spaceBoxes / spaceTimeBoxes (LIST(stbox)
+#              return) and the single-tile getSpaceTile / getStboxTimeTile
+#              / getSpaceTimeTile.
+# group: [sql]
+
+require mobilityduck
+
+# spaceTiles tiles a 10x10 stbox into 5x5 cells -> 3x3 = 9 tiles with border-inc default
+
+query I
+SELECT len(spaceTiles(stbox 'STBOX X((0, 0), (10, 10))', 5.0, 5.0, 5.0));
+----
+9
+
+# timeTiles on an 4-day span with 1-day duration -> 5 tiles (border-inc)
+
+query I
+SELECT len(timeTiles(stbox 'STBOX XT(((0, 0), (10, 10)), [2000-01-01, 2000-01-05])', INTERVAL '1 day'));
+----
+5
+
+# spaceTimeTiles cross-product
+
+query I
+SELECT len(spaceTimeTiles(stbox 'STBOX XT(((0, 0), (10, 10)), [2000-01-01, 2000-01-03])', 5.0, 5.0, 5.0, INTERVAL '1 day'));
+----
+27
+
+# spaceBoxes on a tgeompoint trajectory -> at least 1 covering box
+
+query I
+SELECT len(spaceBoxes(tgeompoint '[POINT(0 0)@2000-01-01, POINT(10 10)@2000-01-05]', 5.0, 5.0, 5.0)) >= 1;
+----
+true
+
+# spaceTimeBoxes adds time-axis covering boxes
+
+query I
+SELECT len(spaceTimeBoxes(tgeompoint '[POINT(0 0)@2000-01-01, POINT(10 10)@2000-01-05]', 5.0, 5.0, 5.0, INTERVAL '2 days')) >= 1;
+----
+true
+
+# Single-tile getters
+
+query I
+SELECT asText(getSpaceTile(ST_GeomFromText('POINT(7 3)'), 5.0, 5.0, 5.0));
+----
+STBOX X((5,0),(10,5))
+
+query I
+SELECT asText(getStboxTimeTile(TIMESTAMP '2000-01-05', INTERVAL '2 days'));
+----
+STBOX T([2000-01-05 00:00:00+00, 2000-01-07 00:00:00+00))
+
+query I
+SELECT asText(getSpaceTimeTile(ST_GeomFromText('POINT(7 3)'), TIMESTAMP '2000-01-05', 5.0, 5.0, 5.0, INTERVAL '2 days'));
+----
+STBOX XT(((5,0),(10,5)),[2000-01-05 00:00:00+00, 2000-01-07 00:00:00+00))

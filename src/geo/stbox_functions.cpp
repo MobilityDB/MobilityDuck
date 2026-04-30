@@ -2834,6 +2834,373 @@ void StboxFunctions::Stbox_cmp(DataChunk &args, ExpressionState &state, Vector &
     }
 }
 
+/* ***************************************************
+ * Tile / box emitters and single-tile getters
+ ****************************************************/
 
+namespace {
+
+inline STBox *BlobToStboxTile(string_t b) {
+    size_t sz = b.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, b.GetData(), sz);
+    return reinterpret_cast<STBox *>(copy);
+}
+
+inline Temporal *BlobToTempTile(string_t b) {
+    size_t sz = b.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, b.GetData(), sz);
+    return reinterpret_cast<Temporal *>(copy);
+}
+
+string_t StboxToResultBlob(Vector &result, const STBox *box) {
+    string_t blob(reinterpret_cast<const char *>(box), sizeof(STBox));
+    return StringVector::AddStringOrBlob(result, blob);
+}
+
+void EmitStboxList(Vector &result, idx_t row, list_entry_t *list_entries,
+                   STBox *boxes, int count, idx_t &total) {
+    if (!boxes || count <= 0) {
+        list_entries[row] = list_entry_t{total, 0};
+        if (boxes) free(boxes);
+        return;
+    }
+    ListVector::Reserve(result, total + count);
+    ListVector::SetListSize(result, total + count);
+    list_entries[row] = list_entry_t{total, static_cast<uint64_t>(count)};
+    auto &child = ListVector::GetEntry(result);
+    auto child_data = FlatVector::GetData<string_t>(child);
+    for (int k = 0; k < count; k++) {
+        string_t one(reinterpret_cast<const char *>(&boxes[k]), sizeof(STBox));
+        child_data[total + k] = StringVector::AddStringOrBlob(child, one);
+    }
+    total += count;
+    free(boxes);
+}
+
+GSERIALIZED *DefaultOriginPoint() {
+    /* MEOS exports geompoint_make3dz; the SRID 0 / (0,0,0) origin matches
+     * MobilityDB's `Point(0 0 0)` SQL DEFAULT for sorigin. */
+    return geompoint_make3dz(0, 0.0, 0.0, 0.0);
+}
+
+} // namespace
+
+void StboxFunctions::Stbox_space_tiles(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_box = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_xsz = FlatVector::GetData<double>(args.data[1]);
+    auto in_ysz = FlatVector::GetData<double>(args.data[2]);
+    auto in_zsz = FlatVector::GetData<double>(args.data[3]);
+    const bool has_origin = cc > 4;
+    const bool has_border = cc > 5;
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        STBox *bounds = BlobToStboxTile(in_box[row]);
+        GSERIALIZED *origin = nullptr;
+        if (has_origin) {
+            origin = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[row], bounds->srid);
+        }
+        if (!origin) origin = DefaultOriginPoint();
+        bool border = has_border ? FlatVector::GetData<bool>(args.data[5])[row] : true;
+        int count = 0;
+        STBox *boxes = stbox_space_tiles(bounds, in_xsz[row], in_ysz[row], in_zsz[row],
+                                          origin, border, &count);
+        free(bounds); free(origin);
+        EmitStboxList(result, row, list_entries, boxes, count, total);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void StboxFunctions::Stbox_time_tiles(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_box = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_dur = FlatVector::GetData<interval_t>(args.data[1]);
+    const bool has_torigin = cc > 2;
+    const bool has_border  = cc > 3;
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        STBox *bounds = BlobToStboxTile(in_box[row]);
+        MeosInterval mi = IntervaltToInterval(in_dur[row]);
+        TimestampTz torigin = 0;
+        if (has_torigin) {
+            timestamp_tz_t t = FlatVector::GetData<timestamp_tz_t>(args.data[2])[row];
+            torigin = (TimestampTz) DuckDBToMeosTimestamp(t).value;
+        }
+        bool border = has_border ? FlatVector::GetData<bool>(args.data[3])[row] : true;
+        int count = 0;
+        STBox *boxes = stbox_time_tiles(bounds, &mi, torigin, border, &count);
+        free(bounds);
+        EmitStboxList(result, row, list_entries, boxes, count, total);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void StboxFunctions::Stbox_space_time_tiles(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_box = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_xsz = FlatVector::GetData<double>(args.data[1]);
+    auto in_ysz = FlatVector::GetData<double>(args.data[2]);
+    auto in_zsz = FlatVector::GetData<double>(args.data[3]);
+    auto in_dur = FlatVector::GetData<interval_t>(args.data[4]);
+    const bool has_origin  = cc > 5;
+    const bool has_torigin = cc > 6;
+    const bool has_border  = cc > 7;
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        STBox *bounds = BlobToStboxTile(in_box[row]);
+        MeosInterval mi = IntervaltToInterval(in_dur[row]);
+        GSERIALIZED *origin = nullptr;
+        if (has_origin) {
+            origin = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[5])[row], bounds->srid);
+        }
+        if (!origin) origin = DefaultOriginPoint();
+        TimestampTz torigin = 0;
+        if (has_torigin) {
+            timestamp_tz_t t = FlatVector::GetData<timestamp_tz_t>(args.data[6])[row];
+            torigin = (TimestampTz) DuckDBToMeosTimestamp(t).value;
+        }
+        bool border = has_border ? FlatVector::GetData<bool>(args.data[7])[row] : true;
+        int count = 0;
+        STBox *boxes = stbox_space_time_tiles(bounds, in_xsz[row], in_ysz[row], in_zsz[row],
+                                               &mi, origin, torigin, border, &count);
+        free(bounds); free(origin);
+        EmitStboxList(result, row, list_entries, boxes, count, total);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void StboxFunctions::Tgeo_space_boxes(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_temp = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_xsz  = FlatVector::GetData<double>(args.data[1]);
+    auto in_ysz  = FlatVector::GetData<double>(args.data[2]);
+    auto in_zsz  = FlatVector::GetData<double>(args.data[3]);
+    const bool has_origin = cc > 4;
+    const bool has_border = cc > 5;
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        Temporal *temp = BlobToTempTile(in_temp[row]);
+        int32 srid = tspatial_srid(temp);
+        GSERIALIZED *origin = nullptr;
+        if (has_origin) {
+            origin = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[row], srid);
+        }
+        if (!origin) origin = DefaultOriginPoint();
+        bool border = has_border ? FlatVector::GetData<bool>(args.data[5])[row] : true;
+        int count = 0;
+        STBox *boxes = tgeo_space_boxes(temp, in_xsz[row], in_ysz[row], in_zsz[row],
+                                         origin, false, border, &count);
+        free(temp); free(origin);
+        EmitStboxList(result, row, list_entries, boxes, count, total);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void StboxFunctions::Tgeo_space_time_boxes(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_temp = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_xsz  = FlatVector::GetData<double>(args.data[1]);
+    auto in_ysz  = FlatVector::GetData<double>(args.data[2]);
+    auto in_zsz  = FlatVector::GetData<double>(args.data[3]);
+    auto in_dur  = FlatVector::GetData<interval_t>(args.data[4]);
+    const bool has_origin  = cc > 5;
+    const bool has_torigin = cc > 6;
+    const bool has_border  = cc > 7;
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        Temporal *temp = BlobToTempTile(in_temp[row]);
+        int32 srid = tspatial_srid(temp);
+        MeosInterval mi = IntervaltToInterval(in_dur[row]);
+        GSERIALIZED *origin = nullptr;
+        if (has_origin) {
+            origin = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[5])[row], srid);
+        }
+        if (!origin) origin = DefaultOriginPoint();
+        TimestampTz torigin = 0;
+        if (has_torigin) {
+            timestamp_tz_t t = FlatVector::GetData<timestamp_tz_t>(args.data[6])[row];
+            torigin = (TimestampTz) DuckDBToMeosTimestamp(t).value;
+        }
+        bool border = has_border ? FlatVector::GetData<bool>(args.data[7])[row] : true;
+        int count = 0;
+        STBox *boxes = tgeo_space_time_boxes(temp, in_xsz[row], in_ysz[row], in_zsz[row],
+                                              &mi, origin, torigin, false, border, &count);
+        free(temp); free(origin);
+        EmitStboxList(result, row, list_entries, boxes, count, total);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void StboxFunctions::Stbox_get_space_tile(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_pt  = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_xsz = FlatVector::GetData<double>(args.data[1]);
+    auto in_ysz = FlatVector::GetData<double>(args.data[2]);
+    auto in_zsz = FlatVector::GetData<double>(args.data[3]);
+    const bool has_origin = cc > 4;
+    auto out_data = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        GSERIALIZED *pt = GeometryToGSerialized(in_pt[row], 0);
+        if (!pt) {
+            throw InvalidInputException("getSpaceTile: invalid point geometry");
+        }
+        GSERIALIZED *origin = nullptr;
+        if (has_origin) {
+            origin = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[row], 0);
+        }
+        if (!origin) origin = DefaultOriginPoint();
+        STBox *box = stbox_get_space_tile(pt, in_xsz[row], in_ysz[row], in_zsz[row], origin);
+        free(pt); free(origin);
+        if (!box) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        out_data[row] = StboxToResultBlob(result, box);
+        free(box);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void StboxFunctions::Stbox_get_time_tile(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_t   = FlatVector::GetData<timestamp_tz_t>(args.data[0]);
+    auto in_dur = FlatVector::GetData<interval_t>(args.data[1]);
+    const bool has_torigin = cc > 2;
+    auto out_data = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        TimestampTz t = (TimestampTz) DuckDBToMeosTimestamp(in_t[row]).value;
+        MeosInterval mi = IntervaltToInterval(in_dur[row]);
+        TimestampTz torigin = 0;
+        if (has_torigin) {
+            timestamp_tz_t to = FlatVector::GetData<timestamp_tz_t>(args.data[2])[row];
+            torigin = (TimestampTz) DuckDBToMeosTimestamp(to).value;
+        }
+        STBox *box = stbox_get_time_tile(t, &mi, torigin);
+        if (!box) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        out_data[row] = StboxToResultBlob(result, box);
+        free(box);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void StboxFunctions::Stbox_get_space_time_tile(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_pt  = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_t   = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in_xsz = FlatVector::GetData<double>(args.data[2]);
+    auto in_ysz = FlatVector::GetData<double>(args.data[3]);
+    auto in_zsz = FlatVector::GetData<double>(args.data[4]);
+    auto in_dur = FlatVector::GetData<interval_t>(args.data[5]);
+    const bool has_origin  = cc > 6;
+    const bool has_torigin = cc > 7;
+    auto out_data = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        GSERIALIZED *pt = GeometryToGSerialized(in_pt[row], 0);
+        if (!pt) {
+            throw InvalidInputException("getSpaceTimeTile: invalid point geometry");
+        }
+        TimestampTz t = (TimestampTz) DuckDBToMeosTimestamp(in_t[row]).value;
+        MeosInterval mi = IntervaltToInterval(in_dur[row]);
+        GSERIALIZED *origin = nullptr;
+        if (has_origin) {
+            origin = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[6])[row], 0);
+        }
+        if (!origin) origin = DefaultOriginPoint();
+        TimestampTz torigin = 0;
+        if (has_torigin) {
+            timestamp_tz_t to = FlatVector::GetData<timestamp_tz_t>(args.data[7])[row];
+            torigin = (TimestampTz) DuckDBToMeosTimestamp(to).value;
+        }
+        STBox *box = stbox_get_space_time_tile(pt, t, in_xsz[row], in_ysz[row], in_zsz[row],
+                                                &mi, origin, torigin);
+        free(pt); free(origin);
+        if (!box) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        out_data[row] = StboxToResultBlob(result, box);
+        free(box);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
 
 } // namespace duckdb

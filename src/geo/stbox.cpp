@@ -3,6 +3,7 @@
 #include "common.hpp"
 #include "geo/stbox.hpp"
 #include "geo/stbox_functions.hpp"
+#include "geo/tgeompoint.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/function/function.hpp"
@@ -888,6 +889,60 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_gt
         )
     );
+
+    /* ***************************************************
+     * Tile / box emitters and single-tile getters
+     ****************************************************/
+    {
+        const auto B  = STBOX();
+        const auto P  = TgeompointType::TGEOMPOINT();
+        const auto G  = GeoTypes::GEOMETRY();
+        const auto D  = LogicalType::DOUBLE;
+        const auto I  = LogicalType::INTERVAL;
+        const auto TS = LogicalType::TIMESTAMP_TZ;
+        const auto BB = LogicalType::BOOLEAN;
+        const auto LB = LogicalType::LIST(B);
+
+        // spaceTiles(stbox, xsz, ysz, zsz[, sorigin geom[, borderInc bool]])
+        loader.RegisterFunction(ScalarFunction("spaceTiles", {B, D, D, D},          LB, StboxFunctions::Stbox_space_tiles));
+        loader.RegisterFunction(ScalarFunction("spaceTiles", {B, D, D, D, G},       LB, StboxFunctions::Stbox_space_tiles));
+        loader.RegisterFunction(ScalarFunction("spaceTiles", {B, D, D, D, G, BB},   LB, StboxFunctions::Stbox_space_tiles));
+
+        // timeTiles(stbox, duration[, torigin tstz[, borderInc bool]])
+        loader.RegisterFunction(ScalarFunction("timeTiles", {B, I},          LB, StboxFunctions::Stbox_time_tiles));
+        loader.RegisterFunction(ScalarFunction("timeTiles", {B, I, TS},      LB, StboxFunctions::Stbox_time_tiles));
+        loader.RegisterFunction(ScalarFunction("timeTiles", {B, I, TS, BB},  LB, StboxFunctions::Stbox_time_tiles));
+
+        // spaceTimeTiles(stbox, xsz, ysz, zsz, duration[, sorigin[, torigin[, borderInc]]])
+        loader.RegisterFunction(ScalarFunction("spaceTimeTiles", {B, D, D, D, I},                LB, StboxFunctions::Stbox_space_time_tiles));
+        loader.RegisterFunction(ScalarFunction("spaceTimeTiles", {B, D, D, D, I, G},             LB, StboxFunctions::Stbox_space_time_tiles));
+        loader.RegisterFunction(ScalarFunction("spaceTimeTiles", {B, D, D, D, I, G, TS},         LB, StboxFunctions::Stbox_space_time_tiles));
+        loader.RegisterFunction(ScalarFunction("spaceTimeTiles", {B, D, D, D, I, G, TS, BB},     LB, StboxFunctions::Stbox_space_time_tiles));
+
+        // spaceBoxes(tgeompoint, xsz, ysz, zsz[, sorigin[, borderInc]])
+        loader.RegisterFunction(ScalarFunction("spaceBoxes", {P, D, D, D},          LB, StboxFunctions::Tgeo_space_boxes));
+        loader.RegisterFunction(ScalarFunction("spaceBoxes", {P, D, D, D, G},       LB, StboxFunctions::Tgeo_space_boxes));
+        loader.RegisterFunction(ScalarFunction("spaceBoxes", {P, D, D, D, G, BB},   LB, StboxFunctions::Tgeo_space_boxes));
+
+        // spaceTimeBoxes(tgeompoint, xsz, ysz, zsz, duration[, sorigin[, torigin[, borderInc]]])
+        loader.RegisterFunction(ScalarFunction("spaceTimeBoxes", {P, D, D, D, I},                LB, StboxFunctions::Tgeo_space_time_boxes));
+        loader.RegisterFunction(ScalarFunction("spaceTimeBoxes", {P, D, D, D, I, G},             LB, StboxFunctions::Tgeo_space_time_boxes));
+        loader.RegisterFunction(ScalarFunction("spaceTimeBoxes", {P, D, D, D, I, G, TS},         LB, StboxFunctions::Tgeo_space_time_boxes));
+        loader.RegisterFunction(ScalarFunction("spaceTimeBoxes", {P, D, D, D, I, G, TS, BB},     LB, StboxFunctions::Tgeo_space_time_boxes));
+
+        // getSpaceTile(point geometry, xsz, ysz, zsz[, sorigin])
+        loader.RegisterFunction(ScalarFunction("getSpaceTile", {G, D, D, D},     B, StboxFunctions::Stbox_get_space_tile));
+        loader.RegisterFunction(ScalarFunction("getSpaceTile", {G, D, D, D, G},  B, StboxFunctions::Stbox_get_space_tile));
+
+        // getStboxTimeTile(t timestamptz, duration[, torigin])
+        loader.RegisterFunction(ScalarFunction("getStboxTimeTile", {TS, I},      B, StboxFunctions::Stbox_get_time_tile));
+        loader.RegisterFunction(ScalarFunction("getStboxTimeTile", {TS, I, TS},  B, StboxFunctions::Stbox_get_time_tile));
+
+        // getSpaceTimeTile(point, t, xsz, ysz, zsz, duration[, sorigin[, torigin]])
+        loader.RegisterFunction(ScalarFunction("getSpaceTimeTile", {G, TS, D, D, D, I},          B, StboxFunctions::Stbox_get_space_time_tile));
+        loader.RegisterFunction(ScalarFunction("getSpaceTimeTile", {G, TS, D, D, D, I, G},       B, StboxFunctions::Stbox_get_space_time_tile));
+        loader.RegisterFunction(ScalarFunction("getSpaceTimeTile", {G, TS, D, D, D, I, G, TS},   B, StboxFunctions::Stbox_get_space_time_tile));
+    }
 }
 
 } // namespace duckdb
