@@ -1352,6 +1352,45 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction("degrees", {TemporalTypes::TFLOAT(), LogicalType::BOOLEAN}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_degrees));
     loader.RegisterFunction(ScalarFunction("radians", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_radians));
 
+    /* ***************************************************
+     * Analytics — trajectory/temporal simplification
+     ****************************************************/
+    {
+        const auto F = TemporalTypes::TFLOAT();
+        const auto P = TgeompointType::TGEOMPOINT();
+        const auto D = LogicalType::DOUBLE;
+        const auto I = LogicalType::INTERVAL;
+        const auto B = LogicalType::BOOLEAN;
+
+        loader.RegisterFunction(ScalarFunction("minDistSimplify", {F, D}, F,
+            TemporalFunctions::Temporal_simplify_min_dist));
+        loader.RegisterFunction(ScalarFunction("minDistSimplify", {P, D}, P,
+            TemporalFunctions::Temporal_simplify_min_dist));
+
+        loader.RegisterFunction(ScalarFunction("minTimeDeltaSimplify", {F, I}, F,
+            TemporalFunctions::Temporal_simplify_min_tdelta));
+        loader.RegisterFunction(ScalarFunction("minTimeDeltaSimplify", {P, I}, P,
+            TemporalFunctions::Temporal_simplify_min_tdelta));
+
+        loader.RegisterFunction(ScalarFunction("maxDistSimplify", {F, D}, F,
+            TemporalFunctions::Temporal_simplify_max_dist));
+        loader.RegisterFunction(ScalarFunction("maxDistSimplify", {F, D, B}, F,
+            TemporalFunctions::Temporal_simplify_max_dist));
+        loader.RegisterFunction(ScalarFunction("maxDistSimplify", {P, D}, P,
+            TemporalFunctions::Temporal_simplify_max_dist));
+        loader.RegisterFunction(ScalarFunction("maxDistSimplify", {P, D, B}, P,
+            TemporalFunctions::Temporal_simplify_max_dist));
+
+        loader.RegisterFunction(ScalarFunction("douglasPeuckerSimplify", {F, D}, F,
+            TemporalFunctions::Temporal_simplify_dp));
+        loader.RegisterFunction(ScalarFunction("douglasPeuckerSimplify", {F, D, B}, F,
+            TemporalFunctions::Temporal_simplify_dp));
+        loader.RegisterFunction(ScalarFunction("douglasPeuckerSimplify", {P, D}, P,
+            TemporalFunctions::Temporal_simplify_dp));
+        loader.RegisterFunction(ScalarFunction("douglasPeuckerSimplify", {P, D, B}, P,
+            TemporalFunctions::Temporal_simplify_dp));
+    }
+
     // tnumber distance and nearest-approach-distance.
     //
     // Value-distance variants `<-> ` for (tint, INTEGER), (INTEGER, tint),

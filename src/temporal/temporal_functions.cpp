@@ -5571,4 +5571,134 @@ void TemporalFunctions::Temporal_derivative(DataChunk &args, ExpressionState &st
     }
 }
 
+/* ***************************************************
+ * Analytics — trajectory/temporal simplification
+ ****************************************************/
+
+void TemporalFunctions::Temporal_simplify_min_dist(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t temp_str, double dist, ValidityMask &mask, idx_t idx) -> string_t {
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void *)) {
+                throw InvalidInputException("[minDistSimplify] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t *)malloc(data_size);
+            memcpy(data_copy, temp_str.GetData(), data_size);
+            Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
+            Temporal *ret = temporal_simplify_min_dist(temp, dist);
+            free(temp);
+            if (!ret) {
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t ret_str(reinterpret_cast<const char *>(ret), ret_size);
+            string_t stored = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            return stored;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Temporal_simplify_min_tdelta(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t temp_str, interval_t interval, ValidityMask &mask, idx_t idx) -> string_t {
+            size_t data_size = temp_str.GetSize();
+            if (data_size < sizeof(void *)) {
+                throw InvalidInputException("[minTimeDeltaSimplify] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t *)malloc(data_size);
+            memcpy(data_copy, temp_str.GetData(), data_size);
+            Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
+            MeosInterval mint = IntervaltToInterval(interval);
+            Temporal *ret = temporal_simplify_min_tdelta(temp, &mint);
+            free(temp);
+            if (!ret) {
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t ret_str(reinterpret_cast<const char *>(ret), ret_size);
+            string_t stored = StringVector::AddStringOrBlob(result, ret_str);
+            free(ret);
+            return stored;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+namespace {
+
+void RunSimplifyDistBool(DataChunk &args, Vector &result,
+                         Temporal *(*simplify)(const Temporal *, double, bool),
+                         const char *fn_name) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) {
+        args.data[i].Flatten(row_count);
+    }
+    auto in_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto &in_validity = FlatVector::Validity(args.data[0]);
+    auto dist_data = FlatVector::GetData<double>(args.data[1]);
+    auto &dist_validity = FlatVector::Validity(args.data[1]);
+    const bool has_sync = args.ColumnCount() > 2;
+    auto out_data = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!in_validity.RowIsValid(row) || !dist_validity.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        bool sync = true;
+        if (has_sync) {
+            auto &sync_vec = args.data[2];
+            if (!FlatVector::Validity(sync_vec).RowIsValid(row)) {
+                out_validity.SetInvalid(row);
+                continue;
+            }
+            sync = FlatVector::GetData<bool>(sync_vec)[row];
+        }
+
+        const string_t &temp_str = in_data[row];
+        size_t data_size = temp_str.GetSize();
+        if (data_size < sizeof(void *)) {
+            throw InvalidInputException(std::string("[") + fn_name +
+                "] Invalid Temporal data: insufficient size");
+        }
+        uint8_t *data_copy = (uint8_t *)malloc(data_size);
+        memcpy(data_copy, temp_str.GetData(), data_size);
+        Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
+        Temporal *ret = simplify(temp, dist_data[row], sync);
+        free(temp);
+        if (!ret) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        size_t ret_size = temporal_mem_size(ret);
+        string_t ret_str(reinterpret_cast<const char *>(ret), ret_size);
+        out_data[row] = StringVector::AddStringOrBlob(result, ret_str);
+        free(ret);
+    }
+    if (row_count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+} // namespace
+
+void TemporalFunctions::Temporal_simplify_max_dist(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunSimplifyDistBool(args, result, &temporal_simplify_max_dist, "maxDistSimplify");
+}
+
+void TemporalFunctions::Temporal_simplify_dp(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunSimplifyDistBool(args, result, &temporal_simplify_dp, "douglasPeuckerSimplify");
+}
+
 } // namespace duckdb
