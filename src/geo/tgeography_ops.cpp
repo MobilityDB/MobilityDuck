@@ -25,6 +25,12 @@ extern "C" {
     #include <meos_geo.h>
     #include <meos_internal.h>
     #include <meos_internal_geo.h>
+
+    // acovers_geo_tgeo / acovers_tgeo_geo — see tgeometry_ops.cpp for
+    // the rationale; both are linkable from the current vcpkg-shipped
+    // libmeos but missing from meos_geo.h until upstream PR #837 lands.
+    extern int acovers_geo_tgeo(const GSERIALIZED *gs, const Temporal *temp);
+    extern int acovers_tgeo_geo(const Temporal *temp, const GSERIALIZED *gs);
 }
 
 namespace duckdb {
@@ -1098,6 +1104,16 @@ void TGeographyOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction("eCovers", {TGEOM, TGEOM}, BOOL,
         TgeoTgeoIntExec<ecovers_tgeo_tgeo>));
 
+    // aCovers — see tgeometry_ops.cpp for the rationale; the
+    // tgeo/tgeo variant is deferred until upstream PR #837 propagates
+    // through vcpkg. Note these can be called against tgeography
+    // values too because MEOS dispatches on the temporal subtype's
+    // geodetic flag rather than the SQL type alias.
+    loader.RegisterFunction(ScalarFunction("aCovers", {GEOM, TGEOM}, BOOL,
+        GeoTgeoIntExec<acovers_geo_tgeo>));
+    loader.RegisterFunction(ScalarFunction("aCovers", {TGEOM, GEOM}, BOOL,
+        TgeoGeoIntExec<acovers_tgeo_geo>));
+
     // Same registrations for tgeogpoint.
     {
         const auto TGP = TGeogpointType::TGEOGPOINT();
@@ -1113,6 +1129,10 @@ void TGeographyOps::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeoGeoIntExec<ecovers_tgeo_geo>));
         loader.RegisterFunction(ScalarFunction("eCovers", {TGP, TGP}, BOOL,
             TgeoTgeoIntExec<ecovers_tgeo_tgeo>));
+        loader.RegisterFunction(ScalarFunction("aCovers", {GEOM, TGP}, BOOL,
+            GeoTgeoIntExec<acovers_geo_tgeo>));
+        loader.RegisterFunction(ScalarFunction("aCovers", {TGP, GEOM}, BOOL,
+            TgeoGeoIntExec<acovers_tgeo_geo>));
     }
 
     // tDwithin takes the extra distance argument.

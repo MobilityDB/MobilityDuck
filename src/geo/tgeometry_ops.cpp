@@ -24,6 +24,14 @@ extern "C" {
     #include <meos_geo.h>
     #include <meos_internal.h>
     #include <meos_internal_geo.h>
+
+    // acovers_geo_tgeo / acovers_tgeo_geo are defined in libmeos but not
+    // yet declared in meos_geo.h (upstream PR #837 adds the decls).
+    // Forward-declare here so the eCovers/aCovers registrations below
+    // compile against the current vcpkg-shipped libmeos snapshot. Drop
+    // these once the vcpkg snapshot picks up #837.
+    extern int acovers_geo_tgeo(const GSERIALIZED *gs, const Temporal *temp);
+    extern int acovers_tgeo_geo(const Temporal *temp, const GSERIALIZED *gs);
 }
 
 namespace duckdb {
@@ -1122,6 +1130,18 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction("eCovers", {TGEOM, TGEOM}, BOOL,
         TgeoTgeoIntExec<ecovers_tgeo_tgeo>));
 
+    // aCovers — always-covers. Two of three variants are linkable
+    // today (the geo/tgeo and tgeo/geo entry points are non-inline
+    // C definitions in libmeos); the tgeo/tgeo variant is declared
+    // `inline` in tgeo_spatialrels.c and only emits an external
+    // symbol once an `extern int acovers_tgeo_tgeo(...)` decl is
+    // present in meos_geo.h (MobilityDB PR #837). It's deferred
+    // until the vcpkg-shipped libmeos snapshot picks that up.
+    loader.RegisterFunction(ScalarFunction("aCovers", {GEOM, TGEOM}, BOOL,
+        GeoTgeoIntExec<acovers_geo_tgeo>));
+    loader.RegisterFunction(ScalarFunction("aCovers", {TGEOM, GEOM}, BOOL,
+        TgeoGeoIntExec<acovers_tgeo_geo>));
+
     // Same registrations for tgeompoint — MEOS dispatches by subtype.
     {
         const auto TGP = TgeompointType::TGEOMPOINT();
@@ -1137,16 +1157,11 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeoGeoIntExec<ecovers_tgeo_geo>));
         loader.RegisterFunction(ScalarFunction("eCovers", {TGP, TGP}, BOOL,
             TgeoTgeoIntExec<ecovers_tgeo_tgeo>));
+        loader.RegisterFunction(ScalarFunction("aCovers", {GEOM, TGP}, BOOL,
+            GeoTgeoIntExec<acovers_geo_tgeo>));
+        loader.RegisterFunction(ScalarFunction("aCovers", {TGP, GEOM}, BOOL,
+            TgeoGeoIntExec<acovers_tgeo_geo>));
     }
-
-    // aCovers (always-covers) is intentionally NOT registered:
-    // MEOS' public API exposes only `ecovers_*` and `tcovers_*`.
-    // MobilityDB's `Acovers_*` PG wrappers call the MEOS-internal
-    // `ea_covers_*` family with the ALWAYS flag — those aren't in
-    // the public meos_geo.h surface yet. Pinging the MEOS side to
-    // publicize them is a one-line followup; until then, an
-    // explicit `aCovers` would have to duplicate the temporal
-    // walk MEOS already does inside `ecovers_*`.
 
     // tDwithin takes the extra distance argument.
     loader.RegisterFunction(ScalarFunction("tDwithin",

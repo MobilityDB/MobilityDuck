@@ -83,3 +83,31 @@ query I
 SELECT typeof(tCovers('Point(0 0)@2000-01-01'::tgeometry, 'POINT(0 0)'::geometry));
 ----
 TBOOL
+
+# =============================================================================
+# aCovers — bool-returning always-covers. Only the (geometry, tspatial)
+# and (tspatial, geometry) variants are linkable today; the
+# (tspatial, tspatial) variant waits for upstream PR #837 to propagate
+# through the vcpkg-shipped libmeos.
+# =============================================================================
+
+query I
+SELECT aCovers(
+  'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))'::geometry,
+  '[Point(1 1)@2000-01-01, Point(5 5)@2000-01-05]'::tgeometry);
+----
+true
+
+query I
+SELECT aCovers(
+  '[Point(1 1)@2000-01-01, Point(5 5)@2000-01-05]'::tgeometry,
+  'POINT(2 2)'::geometry);
+----
+false
+
+query I
+SELECT aCovers(
+  'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))'::geometry,
+  '[Point(1 1)@2000-01-01, Point(5 5)@2000-01-05]'::tgeompoint);
+----
+true

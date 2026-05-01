@@ -1,58 +1,92 @@
 # MobilityDB ↔ MobilityDuck SQL parity
 
-This document is the answer to *"can MobilityDuck do X for me?"* It maps
-the MobilityDB SQL surface onto MobilityDuck and explains what's
+This document is the answer to *"can MobilityDuck do X for me?"* It
+maps the MobilityDB SQL surface onto MobilityDuck and explains what's
 covered, what's covered under a different name, and what's deliberately
 not covered.
 
-For the contributor-facing list of remaining gaps and how they map onto
-shippable PRs, see [`PARITY-INVENTORY.md`](PARITY-INVENTORY.md).
+For the full per-function inventory of remaining gaps, see
+[`PARITY-INVENTORY.md`](PARITY-INVENTORY.md).
 
 ## At a glance
 
 MobilityDuck implements **~97% of MobilityDB's user-facing SQL surface**
-across temporal types (`tint`, `tfloat`, `tbool`, `ttext`),
+across the temporal types (`tint`, `tfloat`, `tbool`, `ttext`),
 spatial-temporal types (`tgeompoint`, `tgeogpoint`, `tgeometry`,
 `tgeography`), spans / sets / spansets, and the `stbox` / `tbox`
-bounding-box types. The remaining 8% is split between
+bounding-box types.
 
-  - architectural choices DuckDB makes differently (no `geography` type,
-    no SP-GiST or GiST access methods),
-  - PG-extension implementation surface that has no DuckDB counterpart
-    (selectivity helpers, GIN extract callbacks, aggregate transition
-    functions, etc.),
-  - a tracked tail of named functions that need future MEOS-side or
-    DuckDB-side work — see `PARITY-INVENTORY.md`.
+If you've used MobilityDB before, you can lift most of your queries
+unchanged. The differences fall into three buckets:
 
-Workloads that work today: temporal value access and modifiers
-(at/minus/atValues/...), boxop and posop predicates, distance
-(temporal and scalar nearest-approach, plus the kNN-shaped `|=|`
-operator), trajectory analytics (`length`, `speed`, `azimuth`,
-`direction`, `cumulativeLength`, `bearing`), aggregates (`tcountAgg`,
-`tavgAgg`, `tcentroidAgg`, `extent`, `mergeAgg`, `appendInstantAgg`,
-the windowed `wavgAgg`/`wcountAgg`/`wmin/max/sumAgg` family,
-`spanUnionAgg`, `setUnionAgg`), MFJSON / Hex(E)WKB / EWKT I/O including
-type-specific FromMFJSON parsers, R-tree indexing across all 13
-bbox-bearing types, simplification (Douglas-Peucker / max-dist /
-min-dist / min-time-delta), bins / tile / split list emitters
-(`bins`, `timeBins`, `valueBins`, `spaceTiles`, `spaceTimeTiles`,
-`splitNTboxes`, `splitNStboxes`), similarity paths (Frechet / DTW),
-typed STBox / TBox constructors, gap-aware sequence-set constructors
-(`*SeqSetGaps`).
+  - DuckDB makes a few architectural choices differently (no separate
+    `geography` SQL type, no SP-GiST or GiST access methods),
+  - some MobilityDB-internal plumbing has no DuckDB counterpart and is
+    deliberately not exposed,
+  - a handful of named functions are still being wired up — see
+    [Tracked gaps](#tracked-gaps).
+
+### Workloads that work today
+
+- **Temporal value access and modifiers** — `at`, `minus`, `atValues`,
+  `atTime`, `minusTime`, `atTbox`, `atStbox`, etc.
+- **Boxop and posop predicates** — `&&`, `@>`, `<@`, `-|-`, `<<`,
+  `>>`, `&<`, `&>`, `<<#`, `#>>`, … plus their named-function forms
+  for the operators DuckDB's parser can't accept (e.g. `before`,
+  `overBefore`).
+- **Distance** — temporal distance (`<->`), nearest-approach
+  (`nearestApproachDistance` / `nearestApproachInstant`), and the
+  kNN-shaped `|=|` operator. `shortestLine` returns a geometry segment.
+- **Trajectory analytics** — `length`, `speed`, `azimuth`,
+  `direction`, `cumulativeLength`, `bearing`, `angularDifference`,
+  `isSimple`, `makeSimple`.
+- **Aggregates** — `tcountAgg`, `tavgAgg`, `tcentroidAgg`,
+  `tminAgg` / `tmaxAgg` / `tsumAgg`, the windowed
+  `wavgAgg` / `wcountAgg` / `wmin` / `wmax` / `wsumAgg` family,
+  `extent`, `mergeAgg`, `appendInstantAgg`, `appendSequenceAgg`,
+  `spanUnionAgg`, `setUnionAgg`. (See
+  [Naming conventions](#naming-conventions) for why `Agg` is suffixed.)
+- **Format I/O** — `asText` / `asEWKT`, MFJSON in/out
+  (`asMFJSON`, `tintFromMFJSON`, etc.), Hex(E)WKB
+  (`asHexWKB`, `asHexEWKB`), binary EWKB (`asEWKB`).
+- **R-tree indexing** — across all 13 bbox-bearing types
+  (`stbox`, `tbox`, the five spans, and all eight temporal types),
+  with `WHERE col && q` predicates rewriting into index scans.
+- **Simplification** — Douglas-Peucker, max-dist, min-dist,
+  min-time-delta variants.
+- **Bins / tile / split list emitters** — `bins`, `timeBins`,
+  `valueBins`, `spaceTiles`, `spaceTimeTiles`, `splitNTboxes`,
+  `splitNStboxes`, `timeSplit`, `valueSplit`, `quadSplit`, `tboxes`,
+  `stboxes`, `valueBoxes`, `timeBoxes`, `valueTimeBoxes`.
+- **Similarity paths** — Frechet and DTW (with the path-emitter
+  variants returning `LIST<STRUCT(i, j)>`; see
+  [Composite-row return types](#composite-row-return-types)).
+- **Typed STBox / TBox constructors** — `stbox`, `geodstbox`, `tbox`,
+  WKB / hex parsing.
+- **Gap-aware sequence-set constructors** — `*SeqSet`, `*SeqSetGaps`
+  for all 8 temporal types.
+- **Resampling and snapping** — `tsample`, `tprecision`.
+- **Coordinate transformation** — `transform`, `transformPipeline`
+  (PROJ pipeline strings) for tspatial values and `stbox`.
+- **Topology** — `eContains`, `tContains`, `eCovers`, `tCovers`,
+  `eDisjoint`, `aDisjoint`, `eIntersects`, `aIntersects`, `eTouches`,
+  `aTouches`, `eDwithin`, `aDwithin`.
+- **Misc** — `geoMeasure(tgeompoint, tfloat)`,
+  `time_distance(tstzspan/spanset/ts)`, `trend(tnumber)`.
 
 ## How to read this document
 
 Skip to the section that matches your question:
 
-- **"Is *function `X`* available?"** → check
-  [Direct equivalents](#direct-equivalents) and [Naming
+- **"Is *function `X`* available?"** → check [Direct
+  equivalents](#direct-equivalents) and [Naming
   conventions](#naming-conventions). Many MobilityDB names are
   reachable via DuckDB operators (`=`, `<>`, `+`, `&`, `||`, ...) or
   under a slightly different name.
-- **"Why isn't *type `Y`* there?"** → see
-  [Type-system differences](#duckdb-vs-mobilitydb-type-system).
-- **"What about indexes?"** → [Index and access-method
-  choices](#index-and-access-method-choices).
+- **"Why isn't *type `Y`* there?"** →
+  [DuckDB vs MobilityDB type-system](#duckdb-vs-mobilitydb-type-system).
+- **"What about indexes?"** →
+  [Index and access-method choices](#index-and-access-method-choices).
 - **"What's *deliberately* excluded?"** →
   [PG-internal surface excluded](#pg-internal-surface-excluded).
 - **"What's still missing that I might want?"** →
@@ -76,7 +110,6 @@ function is what you'd see if you were transliterating MobilityDB SQL.
 | `tbool_not(t)` | `~t` | |
 | `ttext_cat(t1, t2)` | `t1 \|\| t2` | |
 | `*_hash`, `*_hash_extended` | `hash(value)` | DuckDB has its own hash family for the BLOB-backed types. |
-| `*_supportfn` | _(no DuckDB peer)_ | PG planner-support callbacks; MobilityDuck does its index pushdown via the `TRTreeIndexScanOptimizer`. |
 
 ## Naming conventions
 
@@ -88,8 +121,8 @@ reasons:
 DuckDB function name resolution is case-insensitive, which means
 `Tmin(tbox) → tbox` (MobilityDB scalar) and `tmin(tfloat) → tfloat`
 (MobilityDB aggregate) collapse to the same identifier and conflict at
-extension load time with a `GetAlterInfo not implemented` error.
-Resolved by giving MobilityDuck's aggregates the `*Agg` suffix:
+extension load time. Resolved by giving MobilityDuck's aggregates the
+`*Agg` suffix:
 
 | MobilityDB aggregate | MobilityDuck name |
 |---|---|
@@ -104,17 +137,16 @@ Resolved by giving MobilityDuck's aggregates the `*Agg` suffix:
 | `extent(...)` | `extent(...)` *(unchanged — no scalar collision)* |
 
 Internally the aggregate's transition / final / combine functions
-delegate to the same MEOS C calls MobilityDB uses
-(`temporal_tcount_transfn`, `temporal_wagg_transform_transfn`,
-`tnumber_extent_transfn`, etc.), so semantics match exactly.
+delegate to the same MEOS C calls MobilityDB uses, so semantics match
+exactly.
 
 ### `mobilitydb_*` aliases for the version-stamp functions
 
 `mobilitydb_version()` and `mobilitydb_full_version()` are registered
 as aliases for `mobilityduck_version()` /
 `mobilityduck_full_version()`, returning the same MobilityDuck-stamped
-output. Cross-engine query portability without lying about which
-engine is talking.
+output. This gives you cross-engine query portability without lying
+about which engine is talking.
 
 ## DuckDB vs MobilityDB type-system
 
@@ -138,9 +170,9 @@ PostGIS-derived type distinct from `geometry`. MobilityDuck doesn't:
   the check fires is just shifted.
 
 The single MobilityDB aggregate signature this affects is
-`setUnion(geography) → geogset`. The corresponding `setUnionAgg(geomset) → geomset`
-and `setUnionAgg(geogset) → geogset` set-input variants both work; only
-the geometry-scalar-to-geogset path is unreachable.
+`setUnion(geography) → geogset`. The corresponding
+`setUnionAgg(geomset)` and `setUnionAgg(geogset)` set-input variants
+both work; only the geometry-scalar-to-geogset path is unreachable.
 
 ### Composite-row return types
 
@@ -148,8 +180,8 @@ MobilityDB's similarity-path family (`frechetDistancePath`,
 `dynTimeWarpPath`) returns `SETOF warp` where `warp` is the
 `CREATE TYPE warp AS (i integer, j integer)` row shape. DuckDB scalar
 functions can't return a SET; MobilityDuck wraps the result in
-`LIST<STRUCT(i INTEGER, j INTEGER)>`. The user recovers row semantics
-with `unnest()`:
+`LIST<STRUCT(i INTEGER, j INTEGER)>`. You recover row semantics with
+`unnest()`:
 
 ```sql
 SELECT u.i, u.j FROM (
@@ -169,8 +201,8 @@ MobilityDuck builds on this:
   in-memory `RTree`. Supports every bbox-bearing column type:
   `stbox`, `tbox`, all five spans (`intspan`, `bigintspan`,
   `floatspan`, `datespan`, `tstzspan`), and all eight temporal types.
-  Wired through DuckDB's optimizer-extension hook so `WHERE col && q`
-  predicates rewrite into index scans.
+  Wired through DuckDB's optimizer-extension hook so
+  `WHERE col && q` predicates rewrite into index scans.
 - **kNN scan via `|=|`** — `ORDER BY col |=| q LIMIT k` works
   syntactically, but the underlying MEOS `RTree` doesn't currently
   expose a priority-queue scan, so the planner falls back to seq-scan
@@ -179,7 +211,7 @@ MobilityDuck builds on this:
   forms are wired; only the index-driven fast path waits on a MEOS
   follow-up.
 
-### Out-of-scope: SP-GiST and GiST opclass support
+### SP-GiST and GiST opclass support — structural mismatch
 
 MobilityDB exposes ~50 named functions like `tnumber_quadtree_choose`,
 `stbox_kdtree_inner_consistent`, `span_gist_picksplit`,
@@ -187,20 +219,13 @@ MobilityDB exposes ~50 named functions like `tnumber_quadtree_choose`,
 support functions: they exist only to be registered with
 `CREATE OPERATOR CLASS … USING SPGIST` / `USING GIST`. **DuckDB has
 no SP-GiST or GiST access method**, so these names have no integration
-point.
+point and aren't exposed. The same applies to GIN extract callbacks
+(`set_gin_extract_value` and friends).
 
-The MEOS-side hoist of the SP-GiST primitives ([MobilityDB
-PR #740](https://github.com/MobilityDB/MobilityDB/pull/740)) makes the
-underlying primitives (`getQuadrant8D`, `stboxnode_init`,
-`distance_stbox_nodebox`, etc.) callable from libmeos. Once a
-follow-up MEOS PR publicizes those headers via `meos_index.h` (drafted
-on `meos_spgist-publish` on the fork), MobilityDuck can build a
-custom `TSPGTREE` `BoundIndex` using them — but registering an
-opclass remains structurally impossible.
-
-The GiST `*_consistent` / `*_compress` / `*_picksplit` / `*_distance`
-/ `*_penalty` / `*_same` / `*_union` / `*_fetch` family is in the
-same bucket: PG-opclass-only.
+The end-user effect is none of these functions appear, but you
+generally don't call them directly anyway — they exist to feed PG's
+index machinery. The user-visible thing they enable (a working spatial
+index) is provided by `TRTREE`.
 
 ## PG-internal surface excluded
 
@@ -210,13 +235,13 @@ deliberately not registered:
 
 | Surface | Examples | Why excluded |
 |---|---|---|
-| Type I/O (text / binary) | `*_in`, `*_out`, `*_recv`, `*_send` | PG-internal `pg_type` callback shape; DuckDB uses `LogicalType::CAST` registration. |
+| Type I/O (text / binary) | `*_in`, `*_out`, `*_recv`, `*_send` | PG-internal `pg_type` callback shape; DuckDB uses cast registration. |
 | Type-modifier dispatch | `*_typmod_in`, `*_typmod_out`, `*_typmod` | PG type-modifier machinery; DuckDB has no equivalent. |
 | Statistics target | `*_analyze`, `*_canonicalize` | PG `analyze` hook + range canonicalisation. |
-| Aggregate state | `*_transfn`, `*_finalfn`, `*_combinefn`, `*_serialfn`, `*_deserialfn` | PG aggregate `sfunc/ffunc` etc.; visible to PG's `CREATE AGGREGATE` only. MobilityDuck wires the aggregates directly via DuckDB's `AggregateFunction::*Aggregate*` templates so users only see the aggregate name, not its sfunc. |
+| Aggregate state | `*_transfn`, `*_finalfn`, `*_combinefn`, `*_serialfn`, `*_deserialfn` | PG `CREATE AGGREGATE` `sfunc/ffunc`. MobilityDuck wires aggregates directly via DuckDB's `AggregateFunction` so you only see the aggregate name, not its sfunc. |
 | Selectivity / planner cost | `*_sel`, `*_joinsel`, `*_supportfn` | PG planner cost hooks; MobilityDuck pushes index decisions through DuckDB's optimizer-extension. |
 | GIN index callbacks | `set_gin_extract_value`, `set_gin_extract_query`, `set_gin_triconsistent` | DuckDB has no GIN. |
-| GiST / SP-GiST opclass support | `*_gist_*`, `*_spgist_*`, `*_quadtree_*`, `*_kdtree_*` | DuckDB has no GIST or SP-GiST. See [Out-of-scope: SP-GiST and GiST](#out-of-scope-sp-gist-and-gist-opclass-support). |
+| GiST / SP-GiST opclass support | `*_gist_*`, `*_spgist_*`, `*_quadtree_*`, `*_kdtree_*` | DuckDB has no GIST or SP-GiST. |
 | `fill_oid_cache` | `fill_oid_cache()` | PG OID-bootstrap helper. |
 
 These exclusions account for ~250 MobilityDB names. None of them
@@ -243,7 +268,7 @@ The remaining residual gaps live in
 
 - ✓ — shipped.
 - ◯ — open, MEOS APIs available.
-- ⊘ — blocked on MEOS-side API exposure.
+- ⊘ — needs an MEOS-side change to land first.
 - ✗ — architectural mismatch; not planned.
 
 Run `mobilityduck_full_version()` from the SQL shell to see the
