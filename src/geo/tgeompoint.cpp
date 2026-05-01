@@ -1293,6 +1293,20 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
+    // atElevation / minusElevation — restrict a 3D tgeompoint to / from
+    // a floatspan-bounded elevation range. Composes the public MEOS
+    // primitives that upstream's tgeo_restrict_elevation uses, so the
+    // function is callable today without waiting for the vcpkg snapshot
+    // to bump.
+    loader.RegisterFunction(
+        ScalarFunction("atElevation",
+            {TGEOMPOINT(), SpanTypes::FLOATSPAN()}, TGEOMPOINT(),
+            TgeompointFunctions::Tgeo_at_elevation));
+    loader.RegisterFunction(
+        ScalarFunction("minusElevation",
+            {TGEOMPOINT(), SpanTypes::FLOATSPAN()}, TGEOMPOINT(),
+            TgeompointFunctions::Tgeo_minus_elevation));
+
     loader.RegisterFunction(
         ScalarFunction(
             "round",

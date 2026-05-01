@@ -1,0 +1,74 @@
+# name: test/sql/parity/067_elevation_restrict.test
+# description: atElevation / minusElevation parity. Restricts a 3D
+# tgeompoint to / from a floatspan-bounded elevation range.
+#
+# Implementation note: composes the public MEOS primitives
+# (tspatial_set_stbox, span_set, overlaps_span_span, tpoint_get_coord,
+# tnumber_restrict_span, temporal_time, temporal_restrict_tstzspanset)
+# rather than calling the dedicated tgeo_restrict_elevation symbol —
+# the dedicated symbol isn't in the current vcpkg-shipped libmeos
+# snapshot, but the primitives that compose it are. Semantics match
+# upstream MobilityDB's atElevation / minusElevation.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# atElevation: trajectory crosses z=100..150 → restricted segment is non-NULL
+# =============================================================================
+
+query I
+SELECT atElevation(
+  '[Point(0 0 50)@2000-01-01 00:00:00+00, Point(10 10 200)@2000-01-05 00:00:00+00]'::tgeompoint,
+  '[100, 150]'::floatspan) IS NOT NULL;
+----
+true
+
+query I
+SELECT typeof(atElevation(
+  '[Point(0 0 50)@2000-01-01 00:00:00+00, Point(10 10 200)@2000-01-05 00:00:00+00]'::tgeompoint,
+  '[100, 150]'::floatspan));
+----
+TGEOMPOINT
+
+# =============================================================================
+# minusElevation: complement of the at-restricted segment.
+# =============================================================================
+
+query I
+SELECT minusElevation(
+  '[Point(0 0 50)@2000-01-01 00:00:00+00, Point(10 10 200)@2000-01-05 00:00:00+00]'::tgeompoint,
+  '[100, 150]'::floatspan) IS NOT NULL;
+----
+true
+
+# =============================================================================
+# Non-overlapping span: atElevation returns NULL, minusElevation returns
+# the original trajectory unchanged.
+# =============================================================================
+
+query I
+SELECT atElevation(
+  '[Point(0 0 50)@2000-01-01 00:00:00+00, Point(10 10 200)@2000-01-05 00:00:00+00]'::tgeompoint,
+  '[1000, 2000]'::floatspan) IS NULL;
+----
+true
+
+query I
+SELECT minusElevation(
+  '[Point(0 0 50)@2000-01-01 00:00:00+00, Point(10 10 200)@2000-01-05 00:00:00+00]'::tgeompoint,
+  '[1000, 2000]'::floatspan) IS NOT NULL;
+----
+true
+
+# =============================================================================
+# 2D tgeompoint (no Z) — the underlying ensure_has_Z check fails and the
+# call returns NULL, matching MobilityDB.
+# =============================================================================
+
+query I
+SELECT atElevation(
+  '[Point(0 0)@2000-01-01 00:00:00+00, Point(10 10)@2000-01-05 00:00:00+00]'::tgeompoint,
+  '[100, 150]'::floatspan) IS NULL;
+----
+true

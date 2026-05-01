@@ -1539,6 +1539,75 @@ void TgeompointFunctions::Tspatial_transform(DataChunk &args, ExpressionState &s
     }
 }
 
+// atElevation(tgeompoint, floatspan) / minusElevation(tgeompoint, floatspan)
+//
+// Composes the same MEOS primitives that upstream's tgeo_restrict_elevation
+// uses internally — extract the Z coordinate as a tfloat, restrict that
+// tfloat to the elevation span, lift the surviving timestamps back into a
+// SpanSet, and atTime() the original temporal value with that SpanSet.
+//
+// (We do this composition here so MobilityDuck doesn't need to wait for
+// the vcpkg-shipped libmeos snapshot to expose tgeo_restrict_elevation
+// directly; the underlying primitives are already public.)
+namespace {
+
+inline Temporal *RestrictElevationCompose(const Temporal *temp, const Span *s,
+                                          bool atfunc) {
+    // Bounding-box short-circuit: if the temporal value's Z range doesn't
+    // overlap `s`, atfunc=true returns NULL and atfunc=false returns a copy.
+    STBox box;
+    tspatial_set_stbox(temp, &box);
+    Span zbox;
+    span_set(Float8GetDatum(box.zmin), Float8GetDatum(box.zmax),
+             true, true, T_FLOAT8, T_FLOATSPAN, &zbox);
+    if (!overlaps_span_span(&zbox, s)) {
+        return atfunc ? nullptr : temporal_copy(temp);
+    }
+    Temporal *zcoord = tpoint_get_coord(temp, 2);
+    if (!zcoord) return nullptr;
+    Temporal *zrestricted = tnumber_restrict_span(zcoord, s, atfunc);
+    free(zcoord);
+    if (!zrestricted) return nullptr;
+    SpanSet *ss = temporal_time(zrestricted);
+    free(zrestricted);
+    if (!ss) return nullptr;
+    Temporal *result = temporal_restrict_tstzspanset(temp, ss, true);
+    free(ss);
+    return result;
+}
+
+void TgeoRestrictElevationExec(DataChunk &args, Vector &result, bool atfunc) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t t_blob, string_t s_blob,
+            ValidityMask &mask, idx_t idx) -> string_t {
+            size_t t_sz = t_blob.GetSize();
+            Temporal *t = (Temporal *) malloc(t_sz);
+            memcpy(t, t_blob.GetData(), t_sz);
+            size_t s_sz = s_blob.GetSize();
+            Span *s = (Span *) malloc(s_sz);
+            memcpy(s, s_blob.GetData(), s_sz);
+
+            Temporal *r = RestrictElevationCompose(t, s, atfunc);
+            free(t); free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            size_t r_sz = temporal_mem_size(r);
+            string_t out = StringVector::AddStringOrBlob(
+                result, reinterpret_cast<const char *>(r), r_sz);
+            free(r);
+            return out;
+        });
+}
+
+}  // namespace
+
+void TgeompointFunctions::Tgeo_at_elevation(DataChunk &args, ExpressionState &, Vector &result) {
+    TgeoRestrictElevationExec(args, result, true);
+}
+void TgeompointFunctions::Tgeo_minus_elevation(DataChunk &args, ExpressionState &, Vector &result) {
+    TgeoRestrictElevationExec(args, result, false);
+}
+
 /* ***************************************************
  * Spatial relationships
  ****************************************************/
