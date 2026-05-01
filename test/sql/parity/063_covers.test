@@ -47,10 +47,12 @@ SELECT eCovers(
 ----
 true
 
-# tgeography side
+# tgeography side: same constraint as the rest of the geographic
+# surface — MobilityDuck has no `geography` SQL type, so a
+# `::geometry` literal is planar. tgeography × tgeography works.
 query I
 SELECT eCovers(
-  'SRID=4326;POLYGON((-1 -1, 2 -1, 2 2, -1 2, -1 -1))'::geometry,
+  'SRID=4326;Point(0 0)@2000-01-01'::tgeography,
   'SRID=4326;Point(0 0)@2000-01-01'::tgeography);
 ----
 true
