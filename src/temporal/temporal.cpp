@@ -1896,6 +1896,245 @@ void GetBinDateExec(DataChunk &args, ExpressionState &, Vector &result) {
         });
 }
 
+// ----- span list emitter (LIST(SPAN) outputs for *bins / timeBins) -----
+
+inline void EmitSpanList(Vector &result, idx_t row_idx, Span *bins, int count,
+                         idx_t &total_offset, list_entry_t *list_entries,
+                         Vector &child_vector, ValidityMask &result_validity) {
+    if (!bins || count <= 0) {
+        if (bins) free(bins);
+        result_validity.SetInvalid(row_idx);
+        return;
+    }
+    ListVector::SetListSize(result, total_offset + count);
+    list_entries[row_idx] = list_entry_t{total_offset, static_cast<uint64_t>(count)};
+    auto *child_data = FlatVector::GetData<string_t>(child_vector);
+    const size_t span_bytes = sizeof(Span);
+    for (int j = 0; j < count; ++j) {
+        child_data[total_offset + j] = StringVector::AddStringOrBlob(
+            child_vector, reinterpret_cast<const char *>(&bins[j]), span_bytes);
+    }
+    free(bins);
+    total_offset += count;
+}
+
+// Datum shims local to this translation unit. Kept narrow on purpose —
+// when cluster G expands to splitN* and tnumber_value_time_split, the
+// Wasm-portability variant of Float8ToDatum from temporal_aggregates.cpp
+// should be extracted into a shared header.
+inline Datum SpanBinInt32ToDatum(int32_t v)  { return (Datum) (int64_t) v; }
+inline Datum SpanBinInt64ToDatum(int64_t v)  { return (Datum) v; }
+inline Datum SpanBinFloat8ToDatum(double v)  {
+    if (sizeof(Datum) >= sizeof(double)) {
+        Datum d = 0;
+        memcpy(&d, &v, sizeof(double));
+        return d;
+    }
+    double *p = (double *) malloc(sizeof(double));
+    *p = v;
+    return (Datum) (uintptr_t) p;
+}
+
+// Generic LIST(SPAN) execs over span_bins / tnumber_value_bins. The
+// span_bins MEOS entry takes Datum arguments; the input span itself
+// encodes the basetype, so the same C call works for int / bigint /
+// float / date span families with the right Datum wrappers.
+
+template <Datum (*TO_DATUM)(int32_t)>
+void SpanBinsIntExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t c = 0; c < args.ColumnCount(); ++c) args.data[c].Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+    idx_t total_offset = 0;
+
+    auto span_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto size_data = FlatVector::GetData<int32_t>(args.data[1]);
+    auto origin_data = FlatVector::GetData<int32_t>(args.data[2]);
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (FlatVector::IsNull(args.data[0], i) || FlatVector::IsNull(args.data[1], i) ||
+            FlatVector::IsNull(args.data[2], i)) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        Span s;
+        memcpy(&s, span_data[i].GetData(), sizeof(Span));
+        int count = 0;
+        Span *bins = span_bins(&s, TO_DATUM(size_data[i]), TO_DATUM(origin_data[i]), &count);
+        EmitSpanList(result, i, bins, count, total_offset, list_entries, child_vector,
+                     result_validity);
+    }
+}
+
+void SpanBinsBigintExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t c = 0; c < args.ColumnCount(); ++c) args.data[c].Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+    idx_t total_offset = 0;
+
+    auto span_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto size_data = FlatVector::GetData<int64_t>(args.data[1]);
+    auto origin_data = FlatVector::GetData<int64_t>(args.data[2]);
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (FlatVector::IsNull(args.data[0], i) || FlatVector::IsNull(args.data[1], i) ||
+            FlatVector::IsNull(args.data[2], i)) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        Span s;
+        memcpy(&s, span_data[i].GetData(), sizeof(Span));
+        int count = 0;
+        Span *bins = span_bins(&s, SpanBinInt64ToDatum(size_data[i]),
+                               SpanBinInt64ToDatum(origin_data[i]), &count);
+        EmitSpanList(result, i, bins, count, total_offset, list_entries, child_vector,
+                     result_validity);
+    }
+}
+
+void SpanBinsFloatExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t c = 0; c < args.ColumnCount(); ++c) args.data[c].Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+    idx_t total_offset = 0;
+
+    auto span_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto size_data = FlatVector::GetData<double>(args.data[1]);
+    auto origin_data = FlatVector::GetData<double>(args.data[2]);
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (FlatVector::IsNull(args.data[0], i) || FlatVector::IsNull(args.data[1], i) ||
+            FlatVector::IsNull(args.data[2], i)) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        Span s;
+        memcpy(&s, span_data[i].GetData(), sizeof(Span));
+        int count = 0;
+        Span *bins = span_bins(&s, SpanBinFloat8ToDatum(size_data[i]),
+                               SpanBinFloat8ToDatum(origin_data[i]), &count);
+        EmitSpanList(result, i, bins, count, total_offset, list_entries, child_vector,
+                     result_validity);
+    }
+}
+
+// bins(tstzspan, interval, timestamptz) → LIST(tstzspan).
+void SpanBinsTstzExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t c = 0; c < args.ColumnCount(); ++c) args.data[c].Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+    idx_t total_offset = 0;
+
+    auto span_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto iv_data = FlatVector::GetData<interval_t>(args.data[1]);
+    auto torigin_data = FlatVector::GetData<timestamp_tz_t>(args.data[2]);
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (FlatVector::IsNull(args.data[0], i) || FlatVector::IsNull(args.data[1], i) ||
+            FlatVector::IsNull(args.data[2], i)) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        Span s;
+        memcpy(&s, span_data[i].GetData(), sizeof(Span));
+        MeosInterval iv = IntervaltToInterval(iv_data[i]);
+        timestamp_tz_t tor = DuckDBToMeosTimestamp(torigin_data[i]);
+        // span_bins for tstzspan expects size as Datum-encoded Interval pointer
+        // and origin as timestamptz Datum.
+        int count = 0;
+        Span *bins = span_bins(&s, (Datum)(uintptr_t)&iv, (Datum)(int64_t)tor.value, &count);
+        EmitSpanList(result, i, bins, count, total_offset, list_entries, child_vector,
+                     result_validity);
+    }
+}
+
+// timeBins(temporal, interval, timestamptz) → LIST(tstzspan).
+void TemporalTimeBinsExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t c = 0; c < args.ColumnCount(); ++c) args.data[c].Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+    idx_t total_offset = 0;
+
+    auto temp_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto iv_data = FlatVector::GetData<interval_t>(args.data[1]);
+    auto torigin_data = FlatVector::GetData<timestamp_tz_t>(args.data[2]);
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (FlatVector::IsNull(args.data[0], i) || FlatVector::IsNull(args.data[1], i) ||
+            FlatVector::IsNull(args.data[2], i)) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        Temporal *t = (Temporal *) malloc(temp_data[i].GetSize());
+        memcpy(t, temp_data[i].GetData(), temp_data[i].GetSize());
+        MeosInterval iv = IntervaltToInterval(iv_data[i]);
+        timestamp_tz_t tor = DuckDBToMeosTimestamp(torigin_data[i]);
+        int count = 0;
+        Span *bins = temporal_time_bins(t, &iv, (TimestampTz) tor.value, &count);
+        free(t);
+        EmitSpanList(result, i, bins, count, total_offset, list_entries, child_vector,
+                     result_validity);
+    }
+}
+
+// valueBins(tnumber, size, origin) → LIST(numspan). Dispatches on the
+// declared input type (tint vs tfloat) at registration time so the
+// Datum encoding is correct.
+template <bool IS_INT>
+void TnumberValueBinsExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t c = 0; c < args.ColumnCount(); ++c) args.data[c].Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+    idx_t total_offset = 0;
+
+    auto temp_data = FlatVector::GetData<string_t>(args.data[0]);
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (FlatVector::IsNull(args.data[0], i) || FlatVector::IsNull(args.data[1], i) ||
+            FlatVector::IsNull(args.data[2], i)) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        Temporal *t = (Temporal *) malloc(temp_data[i].GetSize());
+        memcpy(t, temp_data[i].GetData(), temp_data[i].GetSize());
+        Datum size_d, origin_d;
+        if (IS_INT) {
+            int32_t s = FlatVector::GetData<int32_t>(args.data[1])[i];
+            int32_t o = FlatVector::GetData<int32_t>(args.data[2])[i];
+            size_d = SpanBinInt32ToDatum(s);
+            origin_d = SpanBinInt32ToDatum(o);
+        } else {
+            double s = FlatVector::GetData<double>(args.data[1])[i];
+            double o = FlatVector::GetData<double>(args.data[2])[i];
+            size_d = SpanBinFloat8ToDatum(s);
+            origin_d = SpanBinFloat8ToDatum(o);
+        }
+        int count = 0;
+        Span *bins = tnumber_value_bins(t, size_d, origin_d, &count);
+        free(t);
+        EmitSpanList(result, i, bins, count, total_offset, list_entries, child_vector,
+                     result_validity);
+    }
+}
+
 // ----- tbox tile emitters: LIST(TBOX) outputs -----
 
 inline void EmitTboxList(Vector &result, idx_t row_idx, TBox *tiles, int count,
@@ -2149,6 +2388,69 @@ void TemporalTypes::RegisterTileGetters(ExtensionLoader &loader) {
         {TboxType::TBOX(), LogicalType::DOUBLE, LogicalType::INTERVAL,
          LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ},
         list_tbox, TboxValueTimeTilesExec));
+
+    // -----------------------------------------------------------------
+    // bins(span, size, origin) — list-of-spans emitters covering all
+    // five span families. timeBins(temporal, interval, ts) and
+    // valueBins(tnumber, size, origin) are the temporal-value
+    // counterparts.
+    // -----------------------------------------------------------------
+    {
+        const auto INT  = LogicalType::INTEGER;
+        const auto BIG  = LogicalType::BIGINT;
+        const auto DBL  = LogicalType::DOUBLE;
+        const auto TS   = LogicalType::TIMESTAMP_TZ;
+        const auto IVAL = LogicalType::INTERVAL;
+        const auto INTSPAN  = SpanTypes::INTSPAN();
+        const auto BIGSPAN  = SpanTypes::BIGINTSPAN();
+        const auto FLTSPAN  = SpanTypes::FLOATSPAN();
+        const auto TSTZSPAN = SpanTypes::TSTZSPAN();
+        LogicalType list_intspan  = LogicalType::LIST(INTSPAN);
+        LogicalType list_bigspan  = LogicalType::LIST(BIGSPAN);
+        LogicalType list_fltspan  = LogicalType::LIST(FLTSPAN);
+        LogicalType list_tstzspan = LogicalType::LIST(TSTZSPAN);
+
+        // bins(intspan, int, int)
+        loader.RegisterFunction(ScalarFunction("bins",
+            {INTSPAN, INT, INT}, list_intspan,
+            SpanBinsIntExec<SpanBinInt32ToDatum>));
+        // bins(bigintspan, bigint, bigint)
+        loader.RegisterFunction(ScalarFunction("bins",
+            {BIGSPAN, BIG, BIG}, list_bigspan, SpanBinsBigintExec));
+        // bins(floatspan, double, double)
+        loader.RegisterFunction(ScalarFunction("bins",
+            {FLTSPAN, DBL, DBL}, list_fltspan, SpanBinsFloatExec));
+        // bins(tstzspan, interval, timestamptz)
+        loader.RegisterFunction(ScalarFunction("bins",
+            {TSTZSPAN, IVAL, TS}, list_tstzspan, SpanBinsTstzExec));
+
+        // timeBins(temporal, interval, timestamptz) for every temporal type.
+        for (const auto &type : TemporalTypes::AllTypes()) {
+            loader.RegisterFunction(ScalarFunction("timeBins",
+                {type, IVAL, TS}, list_tstzspan, TemporalTimeBinsExec));
+        }
+        loader.RegisterFunction(ScalarFunction("timeBins",
+            {TgeompointType::TGEOMPOINT(), IVAL, TS}, list_tstzspan,
+            TemporalTimeBinsExec));
+        loader.RegisterFunction(ScalarFunction("timeBins",
+            {TGeometryTypes::TGEOMETRY(), IVAL, TS}, list_tstzspan,
+            TemporalTimeBinsExec));
+        loader.RegisterFunction(ScalarFunction("timeBins",
+            {TGeographyTypes::TGEOGRAPHY(), IVAL, TS}, list_tstzspan,
+            TemporalTimeBinsExec));
+        loader.RegisterFunction(ScalarFunction("timeBins",
+            {TGeogpointType::TGEOGPOINT(), IVAL, TS}, list_tstzspan,
+            TemporalTimeBinsExec));
+
+        // valueBins(tnumber, size, origin) — separate template
+        // instantiations because the Datum encoding differs.
+        loader.RegisterFunction(ScalarFunction("valueBins",
+            {TemporalTypes::TINT(), INT, INT}, list_intspan,
+            TnumberValueBinsExec<true>));
+        loader.RegisterFunction(ScalarFunction("valueBins",
+            {TemporalTypes::TFLOAT(), DBL, DBL}, list_fltspan,
+            TnumberValueBinsExec<false>));
+    }
 }
 
 } // namespace duckdb

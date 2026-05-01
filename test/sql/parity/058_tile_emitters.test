@@ -1,0 +1,130 @@
+# name: test/sql/parity/058_tile_emitters.test
+# description: Cluster G — list-emitter tile / bin family.
+#
+#   bins(span, size, origin)     — across the four covered span
+#                                  families (intspan, bigintspan,
+#                                  floatspan, tstzspan).
+#   timeBins(temporal, interval, ts)  — for every temporal type
+#                                       (tint, tfloat, tbool, ttext
+#                                       and the four spatial-temporal).
+#   valueBins(tnumber, size, origin)  — for tint and tfloat.
+#
+# All three return `LIST<…span>`. The runtime probe before this PR
+# found every name in this cluster unbound; the cluster takes the
+# same EmitSpanList shape that EmitTboxList already uses for the
+# `*Tiles` family.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# bins — span-of-spans
+# =============================================================================
+
+# bins(intspan,3,0) on [1,10] → 4 bins: [0,3) [3,6) [6,9) [9,12)
+query I
+SELECT len(bins('[1,10]'::intspan, 3, 0));
+----
+4
+
+query I
+SELECT bins('[1,10]'::intspan, 3, 0)[1]::VARCHAR;
+----
+[0, 3)
+
+query I
+SELECT len(bins('[1,10]'::bigintspan, 3::BIGINT, 0::BIGINT));
+----
+4
+
+query I
+SELECT len(bins('[1.0,10.0]'::floatspan, 2.0, 0.0));
+----
+6
+
+# bins on a 9-day tstzspan with 2-day step from 2000-01-01 returns 6
+# bins (the tstzspan upper bound is exclusive in MEOS time-bin math).
+query I
+SELECT len(bins('[2000-01-01, 2000-01-10]'::tstzspan,
+               INTERVAL '2 days', '2000-01-01'::TIMESTAMPTZ)) >= 5;
+----
+true
+
+# =============================================================================
+# timeBins — across all 8 temporal types
+# =============================================================================
+
+query I
+SELECT len(timeBins('{1@2000-01-01, 5@2000-01-05}'::tint,
+                    INTERVAL '2 days', '2000-01-01'::TIMESTAMPTZ));
+----
+2
+
+query I
+SELECT len(timeBins('{1.0@2000-01-01, 5.0@2000-01-05}'::tfloat,
+                    INTERVAL '2 days', '2000-01-01'::TIMESTAMPTZ));
+----
+2
+
+query I
+SELECT len(timeBins('{true@2000-01-01, false@2000-01-05}'::tbool,
+                    INTERVAL '2 days', '2000-01-01'::TIMESTAMPTZ));
+----
+2
+
+query I
+SELECT len(timeBins('{"a"@2000-01-01, "b"@2000-01-05}'::ttext,
+                    INTERVAL '2 days', '2000-01-01'::TIMESTAMPTZ));
+----
+2
+
+query I
+SELECT len(timeBins('{Point(0 0)@2000-01-01, Point(5 5)@2000-01-05}'::tgeompoint,
+                    INTERVAL '2 days', '2000-01-01'::TIMESTAMPTZ));
+----
+2
+
+query I
+SELECT len(timeBins('{Point(0 0)@2000-01-01, Point(5 5)@2000-01-05}'::tgeometry,
+                    INTERVAL '2 days', '2000-01-01'::TIMESTAMPTZ));
+----
+2
+
+query I
+SELECT len(timeBins(
+  'SRID=4326;{Point(0 0)@2000-01-01, Point(5 5)@2000-01-05}'::tgeogpoint,
+  INTERVAL '2 days', '2000-01-01'::TIMESTAMPTZ));
+----
+2
+
+query I
+SELECT len(timeBins(
+  'SRID=4326;{Point(0 0)@2000-01-01, Point(5 5)@2000-01-05}'::tgeography,
+  INTERVAL '2 days', '2000-01-01'::TIMESTAMPTZ));
+----
+2
+
+# =============================================================================
+# valueBins — tnumber → numspan list
+# =============================================================================
+
+query I
+SELECT len(valueBins(
+  '{1@2000-01-01, 5@2000-01-05, 10@2000-01-10}'::tint, 3, 0));
+----
+3
+
+query I
+SELECT valueBins('{1@2000-01-01, 5@2000-01-05, 10@2000-01-10}'::tint, 3, 0)[1]::VARCHAR;
+----
+[0, 3)
+
+query I
+SELECT len(valueBins('{1.0@2000-01-01, 5.0@2000-01-05}'::tfloat, 2.0, 0.0));
+----
+2
+
+query I
+SELECT valueBins('{1.0@2000-01-01, 5.0@2000-01-05}'::tfloat, 2.0, 0.0)[1]::VARCHAR;
+----
+[0, 2)
