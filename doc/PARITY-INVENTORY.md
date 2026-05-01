@@ -22,6 +22,7 @@ PostgreSQL).
 |---|---:|---|
 | Available under the same name | ~310 | ✓ |
 | Available under their named-function form *and* via the equivalent operator (`tbool_and(t1,t2)` ↔ `t1 & t2`, `temporal_teq(t1,t2)` ↔ `t1 = t2`, `tnumber_add` ↔ `+`, `ttext_cat` ↔ `\|\|`, …) — both spellings work on both engines | ~23 | ✓ |
+| Reachable only via the named-function form because DuckDB's parser rejects the operator (the `#` time-axis operators `<<#`/`&<#`/`#>>`/`#&>` and the `\|`-bearing Y/Z-axis operators) — call `before`, `overBefore`, `after`, `overAfter`, `above`, `below`, `front`, `back`, etc. | 12 | ✓ via named form |
 | Renamed in MobilityDuck with the `*Agg` suffix on aggregate functions | 12 | ✓ |
 | Architectural blocks (no separate `geography` SQL type, no MVT) | 2 | ✗ |
 | Not yet shipped | ~3 | mix of ◯ and ✗ — see sections below |

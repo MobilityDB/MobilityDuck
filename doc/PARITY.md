@@ -112,6 +112,35 @@ The operator form is what most queries use; the named-function
 form is what shows up if you transliterate MobilityDB SQL
 verbatim. Either reads on either engine.
 
+### Operators that DuckDB's parser rejects
+
+DuckDB's lexer doesn't allow `#` or `|` adjacent to angle brackets in
+operator names, so the MobilityDB position operators along the time
+axis (anything with `#`) and along the Y-axis / Z-axis (anything
+with `|`/`/`) can't be registered as operators in MobilityDuck. The
+underlying *named* functions are wired up on both engines, so you
+can keep the same query as long as you write the named form.
+
+| Axis | MobilityDB operator | Named function (works on both engines) | Meaning |
+|---|---|---|---|
+| Time | `<<#` | `before(a, b)` | strictly before |
+| Time | `&<#` | `overBefore(a, b)` | not after (overlap-before) |
+| Time | `#>>` | `after(a, b)` | strictly after |
+| Time | `#&>` | `overAfter(a, b)` | not before (overlap-after) |
+| Y-axis (vertical) | `<<\|` | `below(a, b)` | strictly below |
+| Y-axis | `&<\|` | `overBelow(a, b)` | not above |
+| Y-axis | `\|>>` | `above(a, b)` | strictly above |
+| Y-axis | `\|&>` | `overAbove(a, b)` | not below |
+| Z-axis (depth, 3D) | `<</` | `front(a, b)` | strictly in front |
+| Z-axis | `&</` | `overFront(a, b)` | not behind |
+| Z-axis | `/>>` | `back(a, b)` | strictly behind |
+| Z-axis | `/&>` | `overBack(a, b)` | not in front |
+
+The X-axis operators (`<<`, `>>`, `&<`, `&>` — strictly-left,
+strictly-right, overlap-left, overlap-right) **are** valid in
+DuckDB and work as operators in both engines, alongside the named
+forms `temporal_left`, `temporal_right`, etc.
+
 ## Things that are spelled differently in MobilityDuck
 
 These are the actual MobilityDB → MobilityDuck *renames*. Calling a
