@@ -3,6 +3,8 @@
 #include "common.hpp"
 #include "geo/stbox.hpp"
 #include "geo/stbox_functions.hpp"
+#include "geo_util.hpp"
+#include "time_util.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/function/function.hpp"
@@ -413,6 +415,156 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_area
         )
     );
+
+    // spaceTiles(stbox, xsize, ysize, zsize, [sorigin geometry,
+    //            [borderInc bool]]) -> LIST<stbox>
+    // spaceTimeTiles(stbox, xsize, ysize, zsize, duration interval,
+    //                [sorigin geometry, [torigin timestamptz,
+    //                 [borderInc bool]]]) -> LIST<stbox>
+    // Both wrap MEOS' `stbox_space_tiles` / `stbox_space_time_tiles`.
+    auto emit_stbox_list_local = [](Vector &result, idx_t row_idx, STBox *boxes,
+                                    int count, idx_t &total_offset,
+                                    list_entry_t *list_entries, Vector &child_vec,
+                                    ValidityMask &result_validity) {
+        if (!boxes || count <= 0) {
+            if (boxes) free(boxes);
+            result_validity.SetInvalid(row_idx);
+            return;
+        }
+        ListVector::SetListSize(result, total_offset + count);
+        list_entries[row_idx] = list_entry_t{total_offset, (uint64_t) count};
+        auto *child_data = FlatVector::GetData<string_t>(child_vec);
+        for (int j = 0; j < count; ++j) {
+            child_data[total_offset + j] = StringVector::AddStringOrBlob(
+                child_vec, reinterpret_cast<const char *>(&boxes[j]), sizeof(STBox));
+        }
+        free(boxes);
+        total_offset += count;
+    };
+
+    auto space_tiles_exec = [emit_stbox_list_local](
+        DataChunk &args, ExpressionState &, Vector &result) {
+        const idx_t cnt = args.size();
+        for (idx_t c = 0; c < args.ColumnCount(); ++c) args.data[c].Flatten(cnt);
+        auto &result_validity = FlatVector::Validity(result);
+        auto list_entries = FlatVector::GetData<list_entry_t>(result);
+        auto &child_vec = ListVector::GetEntry(result);
+        child_vec.SetVectorType(VectorType::FLAT_VECTOR);
+        ListVector::Reserve(result, cnt);
+        idx_t total_offset = 0;
+
+        auto box_data = FlatVector::GetData<string_t>(args.data[0]);
+        auto x_data = FlatVector::GetData<double>(args.data[1]);
+        auto y_data = FlatVector::GetData<double>(args.data[2]);
+        auto z_data = FlatVector::GetData<double>(args.data[3]);
+        const bool with_origin = args.ColumnCount() >= 5;
+        const bool with_border = args.ColumnCount() >= 6;
+        for (idx_t i = 0; i < cnt; ++i) {
+            if (FlatVector::IsNull(args.data[0], i)) {
+                result_validity.SetInvalid(i);
+                continue;
+            }
+            STBox box;
+            memcpy(&box, box_data[i].GetData(), sizeof(STBox));
+            GSERIALIZED *origin = nullptr;
+            if (with_origin && !FlatVector::IsNull(args.data[4], i)) {
+                string_t g = FlatVector::GetData<string_t>(args.data[4])[i];
+                origin = GeometryToGSerialized(g, 0);
+            } else {
+                origin = geompoint_make3dz(0, 0.0, 0.0, 0.0);
+            }
+            bool border_inc = true;
+            if (with_border && !FlatVector::IsNull(args.data[5], i)) {
+                border_inc = FlatVector::GetData<bool>(args.data[5])[i];
+            }
+            int count = 0;
+            STBox *tiles = stbox_space_tiles(&box, x_data[i], y_data[i],
+                                              z_data[i], origin, border_inc, &count);
+            if (origin) free(origin);
+            emit_stbox_list_local(result, i, tiles, count, total_offset,
+                                  list_entries, child_vec, result_validity);
+        }
+    };
+
+    auto space_time_tiles_exec = [emit_stbox_list_local](
+        DataChunk &args, ExpressionState &, Vector &result) {
+        const idx_t cnt = args.size();
+        for (idx_t c = 0; c < args.ColumnCount(); ++c) args.data[c].Flatten(cnt);
+        auto &result_validity = FlatVector::Validity(result);
+        auto list_entries = FlatVector::GetData<list_entry_t>(result);
+        auto &child_vec = ListVector::GetEntry(result);
+        child_vec.SetVectorType(VectorType::FLAT_VECTOR);
+        ListVector::Reserve(result, cnt);
+        idx_t total_offset = 0;
+
+        auto box_data = FlatVector::GetData<string_t>(args.data[0]);
+        auto x_data = FlatVector::GetData<double>(args.data[1]);
+        auto y_data = FlatVector::GetData<double>(args.data[2]);
+        auto z_data = FlatVector::GetData<double>(args.data[3]);
+        auto dur_data = FlatVector::GetData<interval_t>(args.data[4]);
+        const bool with_origin = args.ColumnCount() >= 6;
+        const bool with_torigin = args.ColumnCount() >= 7;
+        const bool with_border = args.ColumnCount() >= 8;
+        for (idx_t i = 0; i < cnt; ++i) {
+            if (FlatVector::IsNull(args.data[0], i)) {
+                result_validity.SetInvalid(i);
+                continue;
+            }
+            STBox box;
+            memcpy(&box, box_data[i].GetData(), sizeof(STBox));
+            MeosInterval iv = IntervaltToInterval(dur_data[i]);
+            GSERIALIZED *origin = nullptr;
+            if (with_origin && !FlatVector::IsNull(args.data[5], i)) {
+                string_t g = FlatVector::GetData<string_t>(args.data[5])[i];
+                origin = GeometryToGSerialized(g, 0);
+            } else {
+                origin = geompoint_make3dz(0, 0.0, 0.0, 0.0);
+            }
+            // MobilityDB defaults torigin to '2000-01-03 00:00:00+00';
+            // MEOS interprets that timestamp as the "PG epoch + 2 days"
+            // anchor. Use the same constant the cluster G code uses.
+            constexpr int64_t DEFAULT_TIME_ORIGIN_MEOS = 2LL * 86400LL * 1000000LL;
+            TimestampTz torigin = (TimestampTz) DEFAULT_TIME_ORIGIN_MEOS;
+            if (with_torigin && !FlatVector::IsNull(args.data[6], i)) {
+                timestamp_tz_t in = FlatVector::GetData<timestamp_tz_t>(args.data[6])[i];
+                torigin = (TimestampTz) DuckDBToMeosTimestamp(in).value;
+            }
+            bool border_inc = true;
+            if (with_border && !FlatVector::IsNull(args.data[7], i)) {
+                border_inc = FlatVector::GetData<bool>(args.data[7])[i];
+            }
+            int count = 0;
+            STBox *tiles = stbox_space_time_tiles(&box, x_data[i], y_data[i],
+                                                   z_data[i], &iv, origin,
+                                                   torigin, border_inc, &count);
+            if (origin) free(origin);
+            emit_stbox_list_local(result, i, tiles, count, total_offset,
+                                  list_entries, child_vec, result_validity);
+        }
+    };
+
+    LogicalType list_stbox = LogicalType::LIST(STBOX());
+    const auto DBL = LogicalType::DOUBLE;
+    const auto IVAL = LogicalType::INTERVAL;
+    const auto TS = LogicalType::TIMESTAMP_TZ;
+    const auto BOOL = LogicalType::BOOLEAN;
+    const auto GEOM = GeoTypes::GEOMETRY();
+
+    loader.RegisterFunction(ScalarFunction("spaceTiles",
+        {STBOX(), DBL, DBL, DBL}, list_stbox, space_tiles_exec));
+    loader.RegisterFunction(ScalarFunction("spaceTiles",
+        {STBOX(), DBL, DBL, DBL, GEOM}, list_stbox, space_tiles_exec));
+    loader.RegisterFunction(ScalarFunction("spaceTiles",
+        {STBOX(), DBL, DBL, DBL, GEOM, BOOL}, list_stbox, space_tiles_exec));
+
+    loader.RegisterFunction(ScalarFunction("spaceTimeTiles",
+        {STBOX(), DBL, DBL, DBL, IVAL}, list_stbox, space_time_tiles_exec));
+    loader.RegisterFunction(ScalarFunction("spaceTimeTiles",
+        {STBOX(), DBL, DBL, DBL, IVAL, GEOM}, list_stbox, space_time_tiles_exec));
+    loader.RegisterFunction(ScalarFunction("spaceTimeTiles",
+        {STBOX(), DBL, DBL, DBL, IVAL, GEOM, TS}, list_stbox, space_time_tiles_exec));
+    loader.RegisterFunction(ScalarFunction("spaceTimeTiles",
+        {STBOX(), DBL, DBL, DBL, IVAL, GEOM, TS, BOOL}, list_stbox, space_time_tiles_exec));
 
     loader.RegisterFunction(
         ScalarFunction(

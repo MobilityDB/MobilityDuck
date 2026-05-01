@@ -1,0 +1,104 @@
+# name: test/sql/parity/064_alt_tile_emitters.test
+# description: Alt-name tile / box emitters that the gap audit
+# flagged as unresolved:
+#
+#   tboxes(tnumber)              — bounding tbox per sequence.
+#   stboxes(tspatial)            — bounding stbox per sequence,
+#                                   for all 4 spatial-temporal types.
+#   spaceTiles(stbox, …)         — partition an stbox into spatial
+#                                   tiles. Wraps MEOS' stbox_space_tiles.
+#   spaceTimeTiles(stbox, …)     — same with time partitioning.
+#                                   Wraps MEOS' stbox_space_time_tiles.
+#
+# Deferred (MEOS public API doesn't expose them):
+#   valueBoxes / timeBoxes / valueTimeBoxes — only
+#   tnumber_value_time_boxes is public; the value-only / time-only
+#   variants are MEOS-internal.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# tboxes — one tbox per sequence in the input tnumber.
+# =============================================================================
+
+query I
+SELECT len(tboxes(
+  '{[1@2000-01-01,2@2000-01-02], [3@2000-01-03,4@2000-01-04]}'::tint));
+----
+2
+
+query I
+SELECT len(tboxes(
+  '{[1.0@2000-01-01,2.0@2000-01-02], [3.0@2000-01-03,4.0@2000-01-04]}'::tfloat));
+----
+2
+
+# =============================================================================
+# stboxes — one stbox per sequence in the input tspatial.
+# =============================================================================
+
+query I
+SELECT len(stboxes(
+  '{[Point(0 0)@2000-01-01,Point(1 1)@2000-01-02],
+    [Point(2 2)@2000-01-03,Point(3 3)@2000-01-04]}'::tgeompoint));
+----
+2
+
+query I
+SELECT len(stboxes(
+  '{[Point(0 0)@2000-01-01,Point(1 1)@2000-01-02],
+    [Point(2 2)@2000-01-03,Point(3 3)@2000-01-04]}'::tgeometry));
+----
+2
+
+query I
+SELECT len(stboxes(
+  'SRID=4326;{[Point(0 0)@2000-01-01,Point(1 1)@2000-01-02],
+              [Point(2 2)@2000-01-03,Point(3 3)@2000-01-04]}'::tgeogpoint));
+----
+2
+
+# =============================================================================
+# spaceTiles — partition a 2D stbox into 5x5 spatial tiles.
+# 10x10 box, 5-step on x and y → 4 tiles (the z dim is 0 / unused).
+# (MEOS may include a border tile depending on inclusivity; verify
+# the count is at least 4 and the result is non-null.)
+# =============================================================================
+
+query I
+SELECT len(spaceTiles('STBOX X((0,0),(10,10))'::stbox, 5, 5, 0)) >= 4;
+----
+true
+
+query I
+SELECT (len(spaceTiles('STBOX X((0,0),(10,10))'::stbox, 5, 5, 0,
+                        'POINT(0 0)'::geometry)) >= 4);
+----
+true
+
+query I
+SELECT (len(spaceTiles('STBOX X((0,0),(10,10))'::stbox, 5, 5, 0,
+                        'POINT(0 0)'::geometry, false)) >= 1);
+----
+true
+
+# =============================================================================
+# spaceTimeTiles — 2D space + time. 4-day window with 1-day duration
+# adds a temporal axis to the spatial partition.
+# =============================================================================
+
+query I
+SELECT (len(spaceTimeTiles(
+  'STBOX XT(((0,0),(10,10)),[2000-01-01,2000-01-05])'::stbox,
+  5, 5, 0, INTERVAL '1 day')) > 0);
+----
+true
+
+query I
+SELECT (len(spaceTimeTiles(
+  'STBOX XT(((0,0),(10,10)),[2000-01-01,2000-01-05])'::stbox,
+  5, 5, 0, INTERVAL '1 day', 'POINT(0 0)'::geometry,
+  '2000-01-03'::TIMESTAMPTZ, true)) > 0);
+----
+true

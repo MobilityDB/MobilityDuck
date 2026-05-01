@@ -1499,6 +1499,39 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
         "splitEachNStboxes", {TgeompointType::TGEOMPOINT(), LogicalType::INTEGER},
         list_stbox, split_stboxes_factory(tgeo_split_each_n_stboxes)));
 
+    // stboxes(tspatial) — bounding stbox per sequence. Wraps MEOS'
+    // `tgeo_stboxes`. Subtype-agnostic, so the same exec covers
+    // tgeometry and tgeompoint here (tgeography / tgeogpoint are in
+    // tgeography_ops.cpp).
+    auto tgeo_stboxes_exec = [emit_stbox_list]
+        (DataChunk &args, ExpressionState &, Vector &result) {
+        const idx_t row_count = args.size();
+        args.data[0].Flatten(row_count);
+        auto &result_validity = FlatVector::Validity(result);
+        auto list_entries = FlatVector::GetData<list_entry_t>(result);
+        auto &child_vector = ListVector::GetEntry(result);
+        child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+        ListVector::Reserve(result, row_count);
+        idx_t total_offset = 0;
+        auto t_data = FlatVector::GetData<string_t>(args.data[0]);
+        for (idx_t i = 0; i < row_count; ++i) {
+            if (FlatVector::IsNull(args.data[0], i)) {
+                result_validity.SetInvalid(i);
+                continue;
+            }
+            Temporal *t = DecodeTemporalCopy(t_data[i]);
+            int count = 0;
+            STBox *boxes = tgeo_stboxes(t, &count);
+            free(t);
+            emit_stbox_list(result, i, boxes, count, total_offset, list_entries,
+                            child_vector, result_validity);
+        }
+    };
+    loader.RegisterFunction(ScalarFunction("stboxes", {TGEOM}, list_stbox,
+        tgeo_stboxes_exec));
+    loader.RegisterFunction(ScalarFunction("stboxes",
+        {TgeompointType::TGEOMPOINT()}, list_stbox, tgeo_stboxes_exec));
+
     // -----------------------------------------------------------------
     // Analytics — Douglas-Peucker / max-distance / min-distance / min
     // time-delta simplification. All produce a thinned tgeometry.

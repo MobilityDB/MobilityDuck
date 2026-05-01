@@ -2236,6 +2236,32 @@ void TemporalPathExec(DataChunk &args, ExpressionState &, Vector &result) {
     }
 }
 
+// tboxes(tnumber) — emits the bounding tbox per sequence.
+void TnumberTboxesExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t row_count = args.size();
+    args.data[0].Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+    idx_t total_offset = 0;
+    auto temp_data = FlatVector::GetData<string_t>(args.data[0]);
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (FlatVector::IsNull(args.data[0], i)) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        Temporal *t = (Temporal *) malloc(temp_data[i].GetSize());
+        memcpy(t, temp_data[i].GetData(), temp_data[i].GetSize());
+        int count = 0;
+        TBox *tiles = tnumber_tboxes(t, &count);
+        free(t);
+        EmitTboxList(result, i, tiles, count, total_offset, list_entries, child_vector,
+                     result_validity);
+    }
+}
+
 // splitNTboxes(tnumber, int) — partitions a tnumber into the given
 // box-count and returns the bounding tbox of each partition.
 // splitEachNTboxes(tnumber, int) — same shape but partition by
@@ -2561,6 +2587,12 @@ void TemporalTypes::RegisterTileGetters(ExtensionLoader &loader) {
         loader.RegisterFunction(ScalarFunction("valueBins",
             {TemporalTypes::TFLOAT(), DBL, DBL}, list_fltspan,
             TnumberValueBinsExec<false>));
+
+        // tboxes(tnumber) — bounding tbox per sequence.
+        loader.RegisterFunction(ScalarFunction("tboxes",
+            {TemporalTypes::TINT()}, list_tbox, TnumberTboxesExec));
+        loader.RegisterFunction(ScalarFunction("tboxes",
+            {TemporalTypes::TFLOAT()}, list_tbox, TnumberTboxesExec));
 
         // splitNTboxes / splitEachNTboxes — partition a tnumber into N
         // boxes (or N elements per box). Both return LIST<tbox>.
