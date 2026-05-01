@@ -7,6 +7,7 @@
 #include "common.hpp"
 #include "geo/tgeography.hpp"
 #include "geo/tgeography_ops.hpp"
+#include "geo/tgeogpoint.hpp"
 #include "geo/tgeometry.hpp"
 #include "geo/stbox.hpp"
 #include "temporal/span.hpp"
@@ -671,6 +672,105 @@ void TgeoConvexHullExec(DataChunk &args, ExpressionState &state, Vector &result)
         });
 }
 
+// ====================================================================
+// Trajectory analytics for moving points — geographic side. Mirrors
+// the tgeometry_ops counterpart; backed by the same `tpoint_*` and
+// `bearing_*` MEOS functions, which dispatch on the temporal value's
+// geodetic flag.
+// ====================================================================
+
+void TpointTrajectoryExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t cnt = args.size();
+    if (args.ColumnCount() >= 2) {
+        BinaryExecutor::ExecuteWithNulls<string_t, bool, string_t>(
+            args.data[0], args.data[1], result, cnt,
+            [&](string_t blob, bool unary_union, ValidityMask &mask, idx_t idx) -> string_t {
+                Temporal *t = DecodeTemporalCopy(blob);
+                GSERIALIZED *gs = tpoint_trajectory(t, unary_union);
+                free(t);
+                if (!gs) { mask.SetInvalid(idx); return string_t(); }
+                return GeoToBlobAsHex(result, gs);
+            });
+    } else {
+        UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
+            args.data[0], result, cnt,
+            [&](string_t blob, ValidityMask &mask, idx_t idx) -> string_t {
+                Temporal *t = DecodeTemporalCopy(blob);
+                GSERIALIZED *gs = tpoint_trajectory(t, false);
+                free(t);
+                if (!gs) { mask.SetInvalid(idx); return string_t(); }
+                return GeoToBlobAsHex(result, gs);
+            });
+    }
+}
+
+void TpointLengthExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, double>(
+        args.data[0], result, args.size(),
+        [&](string_t blob) -> double {
+            Temporal *t = DecodeTemporalCopy(blob);
+            double r = tpoint_length(t);
+            free(t);
+            return r;
+        });
+}
+
+template <Temporal *(*FN)(const Temporal *)>
+void TpointTfloatExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t blob, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = DecodeTemporalCopy(blob);
+            Temporal *r = FN(t);
+            free(t);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TemporalToBlob(result, r);
+        });
+}
+
+void TpointDirectionExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, double>(
+        args.data[0], result, args.size(),
+        [&](string_t blob, ValidityMask &mask, idx_t idx) -> double {
+            Temporal *t = DecodeTemporalCopy(blob);
+            double out = 0;
+            bool ok = tpoint_direction(t, &out);
+            free(t);
+            if (!ok) { mask.SetInvalid(idx); return 0; }
+            return out;
+        });
+}
+
+template <bool INVERT>
+void BearingTpointGeoExec(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            string_t t_blob = INVERT ? b : a;
+            string_t g_blob = INVERT ? a : b;
+            Temporal *t = DecodeTemporalCopy(t_blob);
+            int32 srid = tspatial_srid(t);
+            GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
+            Temporal *r = bearing_tpoint_point(t, gs, INVERT);
+            free(t); free(gs);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TemporalToBlob(result, r);
+        });
+}
+
+void BearingTpointTpointExec(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t1 = DecodeTemporalCopy(a);
+            Temporal *t2 = DecodeTemporalCopy(b);
+            Temporal *r = bearing_tpoint_tpoint(t1, t2);
+            free(t1); free(t2);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TemporalToBlob(result, r);
+        });
+}
+
 void TgeoTraversedAreaExec(DataChunk &args, ExpressionState &, Vector &result) {
     const idx_t cnt = args.size();
     if (args.ColumnCount() >= 2) {
@@ -1007,6 +1107,49 @@ void TGeographyOps::RegisterScalarFunctions(ExtensionLoader &loader) {
         "traversedArea", {TGEOM}, GEOM, TgeoTraversedAreaExec));
     loader.RegisterFunction(ScalarFunction(
         "traversedArea", {TGEOM, LogicalType::BOOLEAN}, GEOM, TgeoTraversedAreaExec));
+
+    // -----------------------------------------------------------------
+    // Trajectory analytics — geographic counterpart to the tgeometry
+    // block, mirroring `056_tpoint_spatialfuncs.in.sql`.
+    // -----------------------------------------------------------------
+    auto register_motion = [&](const LogicalType &TPT) {
+        loader.RegisterFunction(ScalarFunction(
+            "trajectory", {TPT}, GEOM, TpointTrajectoryExec));
+        loader.RegisterFunction(ScalarFunction(
+            "trajectory", {TPT, LogicalType::BOOLEAN}, GEOM, TpointTrajectoryExec));
+        loader.RegisterFunction(ScalarFunction(
+            "length", {TPT}, DBL, TpointLengthExec));
+        loader.RegisterFunction(ScalarFunction(
+            "cumulativeLength", {TPT}, TFLOAT, TpointTfloatExec<tpoint_cumulative_length>));
+        loader.RegisterFunction(ScalarFunction(
+            "speed", {TPT}, TFLOAT, TpointTfloatExec<tpoint_speed>));
+        loader.RegisterFunction(ScalarFunction(
+            "direction", {TPT}, DBL, TpointDirectionExec));
+        loader.RegisterFunction(ScalarFunction(
+            "azimuth", {TPT}, TFLOAT, TpointTfloatExec<tpoint_azimuth>));
+        loader.RegisterFunction(ScalarFunction(
+            "angularDifference", {TPT}, TFLOAT,
+            TpointTfloatExec<tpoint_angular_difference>));
+    };
+    register_motion(TGEOM);
+    register_motion(TGeogpointType::TGEOGPOINT());
+
+    loader.RegisterFunction(ScalarFunction(
+        "bearing", {TGEOM, GEOM}, TFLOAT, BearingTpointGeoExec<false>));
+    loader.RegisterFunction(ScalarFunction(
+        "bearing", {GEOM, TGEOM}, TFLOAT, BearingTpointGeoExec<true>));
+    loader.RegisterFunction(ScalarFunction(
+        "bearing", {TGEOM, TGEOM}, TFLOAT, BearingTpointTpointExec));
+    loader.RegisterFunction(ScalarFunction(
+        "bearing", {TGeogpointType::TGEOGPOINT(), GEOM}, TFLOAT,
+        BearingTpointGeoExec<false>));
+    loader.RegisterFunction(ScalarFunction(
+        "bearing", {GEOM, TGeogpointType::TGEOGPOINT()}, TFLOAT,
+        BearingTpointGeoExec<true>));
+    loader.RegisterFunction(ScalarFunction(
+        "bearing",
+        {TGeogpointType::TGEOGPOINT(), TGeogpointType::TGEOGPOINT()},
+        TFLOAT, BearingTpointTpointExec));
 
     // -----------------------------------------------------------------
     // Tile / box emitters — spaceBoxes(tgeography, x, y, z) and

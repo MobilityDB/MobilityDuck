@@ -1103,32 +1103,11 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
-        ScalarFunction(
-            "direction",
-            {TGEOMPOINT()},
-            TemporalTypes::TFLOAT(),
-            TgeompointFunctions::Tpoint_direction
-        )
-    );
-
-    loader.RegisterFunction(
-        ScalarFunction(
-            "azimuth",
-            {TGEOMPOINT()},
-            TemporalTypes::TFLOAT(),
-            TgeompointFunctions::Tpoint_azimuth
-        )
-    );
-
-    loader.RegisterFunction(
-        ScalarFunction(
-            "angularDifference",
-            {TGEOMPOINT()},
-            GeoTypes::GEOMETRY(),
-            TgeompointFunctions::Tpoint_angular_difference
-        )
-    );
+    // direction / azimuth / angularDifference are registered together
+    // with the rest of the trajectory-analytics surface in
+    // tgeometry_ops.cpp so the per-type return-type stays in sync with
+    // MobilityDB's `056_tpoint_spatialfuncs.in.sql` (direction → float,
+    // azimuth → tfloat, angularDifference → tfloat).
 
     loader.RegisterFunction(
         ScalarFunction(
@@ -1148,14 +1127,10 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    loader.RegisterFunction(
-        ScalarFunction(
-            "trajectory",
-            {TGEOMPOINT()},
-            GeoTypes::GEOMETRY(),
-            TgeompointFunctions::Tpoint_trajectory
-        )
-    );
+    // trajectory(tgeompoint) / trajectory(tgeompoint, bool) are
+    // registered in tgeometry_ops.cpp alongside the rest of the
+    // trajectory-analytics surface (length, cumulativeLength, speed,
+    // direction, azimuth, angularDifference, bearing).
 
     loader.RegisterFunction(
         ScalarFunction(

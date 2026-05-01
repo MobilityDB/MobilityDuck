@@ -668,6 +668,130 @@ void TgeoConvexHullExec(DataChunk &args, ExpressionState &state, Vector &result)
         });
 }
 
+// ====================================================================
+// Trajectory analytics for moving points: trajectory, length,
+// cumulativeLength, speed, direction, azimuth, angularDifference, and
+// the bearing family. These dispatch to MEOS' subtype-agnostic
+// `tpoint_*` and `bearing_*` C functions; MobilityDB SQL exposes the
+// same surface in `056_tpoint_spatialfuncs.in.sql`.
+// ====================================================================
+
+void TpointTrajectoryExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t cnt = args.size();
+    if (args.ColumnCount() >= 2) {
+        BinaryExecutor::ExecuteWithNulls<string_t, bool, string_t>(
+            args.data[0], args.data[1], result, cnt,
+            [&](string_t blob, bool unary_union, ValidityMask &mask, idx_t idx) -> string_t {
+                Temporal *t = DecodeTemporalCopy(blob);
+                GSERIALIZED *gs = tpoint_trajectory(t, unary_union);
+                free(t);
+                if (!gs) { mask.SetInvalid(idx); return string_t(); }
+                return GeoToBlobAsHex(result, gs);
+            });
+    } else {
+        UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
+            args.data[0], result, cnt,
+            [&](string_t blob, ValidityMask &mask, idx_t idx) -> string_t {
+                Temporal *t = DecodeTemporalCopy(blob);
+                GSERIALIZED *gs = tpoint_trajectory(t, false);
+                free(t);
+                if (!gs) { mask.SetInvalid(idx); return string_t(); }
+                return GeoToBlobAsHex(result, gs);
+            });
+    }
+}
+
+void TpointLengthExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, double>(
+        args.data[0], result, args.size(),
+        [&](string_t blob) -> double {
+            Temporal *t = DecodeTemporalCopy(blob);
+            double r = tpoint_length(t);
+            free(t);
+            return r;
+        });
+}
+
+template <Temporal *(*FN)(const Temporal *)>
+void TpointTfloatExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t blob, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = DecodeTemporalCopy(blob);
+            Temporal *r = FN(t);
+            free(t);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TemporalToBlob(result, r);
+        });
+}
+
+void TpointDirectionExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, double>(
+        args.data[0], result, args.size(),
+        [&](string_t blob, ValidityMask &mask, idx_t idx) -> double {
+            Temporal *t = DecodeTemporalCopy(blob);
+            double out = 0;
+            bool ok = tpoint_direction(t, &out);
+            free(t);
+            if (!ok) { mask.SetInvalid(idx); return 0; }
+            return out;
+        });
+}
+
+// bearing(geometry, geometry) — scalar. MEOS returns false for the
+// degenerate same-point case (no defined bearing); we surface that as
+// SQL NULL rather than 0.
+void BearingGeoGeoExec(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> double {
+            // SRID 0 — for plain geometry the bearing depends only on
+            // coordinate values; non-matching SRIDs would surface as a
+            // MEOS error, which is the existing MobilityDB behaviour.
+            GSERIALIZED *gs1 = GeometryToGSerialized(a, 0);
+            GSERIALIZED *gs2 = GeometryToGSerialized(b, 0);
+            double out = 0;
+            bool ok = bearing_point_point(gs1, gs2, &out);
+            free(gs1); free(gs2);
+            if (!ok) { mask.SetInvalid(idx); return 0; }
+            return out;
+        });
+}
+
+template <bool INVERT>
+void BearingTpointGeoExec(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            // The temporal value is always args[0] regardless of INVERT
+            // because MobilityDB's SQL definitions thread the temporal
+            // through the same TPOINT slot — `bearing(geometry, tpoint)`
+            // calls bearing_tpoint_point(temp=args[1], gs=args[0], invert=true).
+            string_t t_blob = INVERT ? b : a;
+            string_t g_blob = INVERT ? a : b;
+            Temporal *t = DecodeTemporalCopy(t_blob);
+            int32 srid = tspatial_srid(t);
+            GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
+            Temporal *r = bearing_tpoint_point(t, gs, INVERT);
+            free(t); free(gs);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TemporalToBlob(result, r);
+        });
+}
+
+void BearingTpointTpointExec(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t1 = DecodeTemporalCopy(a);
+            Temporal *t2 = DecodeTemporalCopy(b);
+            Temporal *r = bearing_tpoint_tpoint(t1, t2);
+            free(t1); free(t2);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TemporalToBlob(result, r);
+        });
+}
+
 void TgeoTraversedAreaExec(DataChunk &args, ExpressionState &, Vector &result) {
     const idx_t cnt = args.size();
     if (args.ColumnCount() >= 2) {
@@ -1051,6 +1175,56 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
         "traversedArea", {TGEOM}, GEOM, TgeoTraversedAreaExec));
     loader.RegisterFunction(ScalarFunction(
         "traversedArea", {TGEOM, LogicalType::BOOLEAN}, GEOM, TgeoTraversedAreaExec));
+
+    // -----------------------------------------------------------------
+    // Trajectory analytics for moving points — `trajectory`, `length`,
+    // `cumulativeLength`, `speed`, `direction`, `azimuth`,
+    // `angularDifference`, and the `bearing` family. Mirrors
+    // MobilityDB's `056_tpoint_spatialfuncs.in.sql`. The MEOS
+    // `tpoint_*` and `bearing_*` functions are subtype-agnostic, so
+    // the same exec template serves both tgeompoint and (when called
+    // on a point-typed value) tgeometry.
+    // -----------------------------------------------------------------
+    auto register_motion = [&](const LogicalType &TPT) {
+        loader.RegisterFunction(ScalarFunction(
+            "trajectory", {TPT}, GEOM, TpointTrajectoryExec));
+        loader.RegisterFunction(ScalarFunction(
+            "trajectory", {TPT, LogicalType::BOOLEAN}, GEOM, TpointTrajectoryExec));
+        loader.RegisterFunction(ScalarFunction(
+            "length", {TPT}, DBL, TpointLengthExec));
+        loader.RegisterFunction(ScalarFunction(
+            "cumulativeLength", {TPT}, TFLOAT, TpointTfloatExec<tpoint_cumulative_length>));
+        loader.RegisterFunction(ScalarFunction(
+            "speed", {TPT}, TFLOAT, TpointTfloatExec<tpoint_speed>));
+        loader.RegisterFunction(ScalarFunction(
+            "direction", {TPT}, DBL, TpointDirectionExec));
+        loader.RegisterFunction(ScalarFunction(
+            "azimuth", {TPT}, TFLOAT, TpointTfloatExec<tpoint_azimuth>));
+        loader.RegisterFunction(ScalarFunction(
+            "angularDifference", {TPT}, TFLOAT,
+            TpointTfloatExec<tpoint_angular_difference>));
+    };
+    register_motion(TGEOM);
+    register_motion(TgeompointType::TGEOMPOINT());
+
+    loader.RegisterFunction(ScalarFunction(
+        "bearing", {GEOM, GEOM}, DBL, BearingGeoGeoExec));
+    loader.RegisterFunction(ScalarFunction(
+        "bearing", {TGEOM, GEOM}, TFLOAT, BearingTpointGeoExec<false>));
+    loader.RegisterFunction(ScalarFunction(
+        "bearing", {GEOM, TGEOM}, TFLOAT, BearingTpointGeoExec<true>));
+    loader.RegisterFunction(ScalarFunction(
+        "bearing", {TGEOM, TGEOM}, TFLOAT, BearingTpointTpointExec));
+    loader.RegisterFunction(ScalarFunction(
+        "bearing", {TgeompointType::TGEOMPOINT(), GEOM}, TFLOAT,
+        BearingTpointGeoExec<false>));
+    loader.RegisterFunction(ScalarFunction(
+        "bearing", {GEOM, TgeompointType::TGEOMPOINT()}, TFLOAT,
+        BearingTpointGeoExec<true>));
+    loader.RegisterFunction(ScalarFunction(
+        "bearing",
+        {TgeompointType::TGEOMPOINT(), TgeompointType::TGEOMPOINT()},
+        TFLOAT, BearingTpointTpointExec));
 
     // -----------------------------------------------------------------
     // Tile / box emitters — spaceBoxes(tgeometry, x, y, z) and
