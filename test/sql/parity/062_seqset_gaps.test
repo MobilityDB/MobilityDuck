@@ -1,7 +1,7 @@
 # name: test/sql/parity/062_seqset_gaps.test
 # description: `*SeqSetGaps` constructors. MobilityDB exposes one
 # tSeqSetGaps per temporal type (tbool/tint/tfloat/ttext + the four
-# spatial-temporal types) for partitioning a list of TInstants into
+# spatio-temporal types) for partitioning a list of TInstants into
 # sequences with optional `maxt` (time-delta) and `maxdist` (Euclidean)
 # gap thresholds, with a sticky `interp` text argument. The runtime
 # probe before this PR found all 11 names unbound; this PR registers

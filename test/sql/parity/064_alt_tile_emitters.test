@@ -4,7 +4,7 @@
 #
 #   tboxes(tnumber)              — bounding tbox per sequence.
 #   stboxes(tspatial)            — bounding stbox per sequence,
-#                                   for all 4 spatial-temporal types.
+#                                   for all 4 spatio-temporal types.
 #   spaceTiles(stbox, …)         — partition an stbox into spatial
 #                                   tiles. Wraps MEOS' stbox_space_tiles.
 #   spaceTimeTiles(stbox, …)     — same with time partitioning.

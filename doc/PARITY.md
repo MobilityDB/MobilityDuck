@@ -10,9 +10,9 @@ For the full per-function inventory of remaining gaps, see
 
 ## At a glance
 
-MobilityDuck implements **~97% of MobilityDB's user-facing SQL surface**
+MobilityDuck implements **~98% of MobilityDB's user-facing SQL surface**
 across the temporal types (`tint`, `tfloat`, `tbool`, `ttext`),
-spatial-temporal types (`tgeompoint`, `tgeogpoint`, `tgeometry`,
+spatio-temporal types (`tgeompoint`, `tgeogpoint`, `tgeometry`,
 `tgeography`), spans / sets / spansets, and the `stbox` / `tbox`
 bounding-box types.
 
@@ -56,7 +56,8 @@ unchanged. The differences fall into three buckets:
   min-time-delta variants.
 - **Bins / tile / split list emitters** — `bins`, `timeBins`,
   `valueBins`, `spaceTiles`, `spaceTimeTiles`, `splitNTboxes`,
-  `splitNStboxes`, `timeSplit`, `valueSplit`, `quadSplit`, `tboxes`,
+  `splitNStboxes`, `timeSplit`, `valueSplit`, `quadSplit`,
+  `valueTimeSplit`, `spaceSplit`, `spaceTimeSplit`, `tboxes`,
   `stboxes`, `valueBoxes`, `timeBoxes`, `valueTimeBoxes`.
 - **Similarity paths** — Frechet and DTW (with the path-emitter
   variants returning `LIST<STRUCT(i, j)>`; see
@@ -94,9 +95,23 @@ Skip to the section that matches your question:
 
 ## Direct equivalents
 
-The following named MobilityDB functions are reachable in MobilityDuck
-through a DuckDB operator. The DuckDB form is more idiomatic; the named
-function is what you'd see if you were transliterating MobilityDB SQL.
+### Identical names
+
+Most MobilityDB functions are also available in MobilityDuck **under
+the exact same name and signature**. If you read a MobilityDB query
+that calls (for example) `tbool_and(t1, t2)`, `tnumber_abs(t)`,
+`atTime(temp, ts)`, `length(tgeompoint)`, `eContains(geom, tgeo)`,
+or `speed(tgeompoint)` — these all work as-is in MobilityDuck.
+Assume same-name unless the inventory or a section in this document
+tells you otherwise; the "under a different name" cases below are
+the exceptions, not the rule.
+
+### Reachable via DuckDB operators
+
+A few MobilityDB *named functions* are spelled as DuckDB operators
+instead. Both forms work in MobilityDuck — the DuckDB operator form
+is more idiomatic; the named function is what you'd see if you were
+transliterating MobilityDB SQL verbatim.
 
 | MobilityDB | MobilityDuck | Notes |
 |---|---|---|
@@ -140,13 +155,23 @@ Internally the aggregate's transition / final / combine functions
 delegate to the same MEOS C calls MobilityDB uses, so semantics match
 exactly.
 
-### `mobilitydb_*` aliases for the version-stamp functions
+### Version-stamp functions (`mobilitydb_*` ↔ `mobilityduck_*`)
 
-`mobilitydb_version()` and `mobilitydb_full_version()` are registered
-as aliases for `mobilityduck_version()` /
-`mobilityduck_full_version()`, returning the same MobilityDuck-stamped
-output. This gives you cross-engine query portability without lying
-about which engine is talking.
+The `mobilitydb_version()` and `mobilitydb_full_version()` MobilityDB
+functions have **direct MobilityDuck equivalents** under a renamed
+prefix:
+
+| MobilityDB | MobilityDuck equivalent |
+|---|---|
+| `mobilitydb_version()` | `mobilityduck_version()` |
+| `mobilitydb_full_version()` | `mobilityduck_full_version()` |
+
+For cross-engine query portability the original MobilityDB names
+(`mobilitydb_version()` / `mobilitydb_full_version()`) are also
+registered as aliases — they return the same MobilityDuck-stamped
+output, so the same query text works against either engine without
+lying about which one is talking. Use whichever spelling reads better
+in your code.
 
 ## DuckDB vs MobilityDB type-system
 
@@ -247,19 +272,6 @@ deliberately not registered:
 These exclusions account for ~250 MobilityDB names. None of them
 represent capability MobilityDuck *can't* offer; they're simply the
 plumbing layer of a different host database.
-
-## PG SQL row-shape constructors
-
-PostgreSQL ships several geometric types that MobilityDB redefines for
-symmetry with PostGIS:
-
-| MobilityDB | MobilityDuck equivalent |
-|---|---|
-| `point(x, y)` | `ST_Point(x, y)` (DuckDB-spatial) |
-| `box(p1, p2)` | `ST_MakeBox2D(p1, p2)` (DuckDB-spatial) |
-| `line`, `lseg`, `path`, `polygon`, `circle` | `ST_GeomFromText('LINESTRING ...' / 'POLYGON ...')` (DuckDB-spatial) |
-
-The capabilities are equivalent; the namespace differs.
 
 ## Tracked gaps
 

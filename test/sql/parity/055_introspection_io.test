@@ -133,7 +133,7 @@ SELECT length(asHexWKB('Point(0 0)@2000-01-01'::tgeompoint)) > 0;
 ----
 true
 
-# asHexEWKB is an alias for asHexWKB on the spatial-temporal types.
+# asHexEWKB is an alias for asHexWKB on the spatio-temporal types.
 query I
 SELECT length(asHexEWKB('Point(0 0)@2000-01-01'::tgeompoint)) > 0;
 ----

@@ -24,7 +24,9 @@
 #include "duckdb/common/types/data_chunk.hpp"
 
 #include "time_util.hpp"
+#include "geo_util.hpp"
 #include "mobilityduck/bindings.hpp"
+#include "spatial/spatial_types.hpp"
 
 namespace duckdb {
 
@@ -283,7 +285,7 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         );
 
         // sequenceN(temporal, int) — returns the n-th sequence as a temporal.
-        // Already wired for the four spatial-temporal types via their own
+        // Already wired for the four spatio-temporal types via their own
         // _ops files; here we extend coverage to tint / tfloat / tbool / ttext.
         loader.RegisterFunction(
             ScalarFunction(
@@ -1395,7 +1397,7 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // -----------------------------------------------------------------
     // MFJSON / Hex(E)WKB I/O — `asMFJSON`, `asHexWKB`, plus the
     // type-specific `tIntFromMFJSON` / etc. parse constructors. The
-    // spatial-temporal types also expose `asHexEWKB` as an alias for
+    // spatio-temporal types also expose `asHexEWKB` as an alias for
     // asHexWKB; that registration is in the per-type _ops file.
     // -----------------------------------------------------------------
     {
@@ -1460,7 +1462,7 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         };
         // tsample: all 8 temporal types (incl. tbool/ttext).
         for (auto &t : TemporalTypes::AllTypes()) register_tsample(t);
-        // tprecision: tint/tfloat only here; the spatial-temporal types
+        // tprecision: tint/tfloat only here; the spatio-temporal types
         // get their tprecision registration in the per-type _ops file
         // alongside the other tnumber-shaped operators.
         register_tprecision(TemporalTypes::TINT());
@@ -1597,7 +1599,7 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     // Temporal simplification — Douglas-Peucker, max-dist, min-dist,
     // min-time-delta. MobilityDB SQL exposes these for tfloat plus the
-    // four spatial-temporal types; the MEOS C functions are subtype-
+    // four spatio-temporal types; the MEOS C functions are subtype-
     // agnostic, so the registration is just per-type plumbing.
     {
         const std::vector<LogicalType> simplify_types = {
@@ -2387,6 +2389,190 @@ void TnumberValueSplitExec(DataChunk &args, ExpressionState &, Vector &result) {
     }
 }
 
+// valueTimeSplit(tnumber, vsize, duration, vorigin, torigin)
+//   -> LIST<STRUCT(value <T>, time TIMESTAMPTZ, tnumber TINT|TFLOAT)>
+// MobilityDB ships this as a SETOF row with value/time/tnumber fields.
+// We follow the same shape as frechetDistancePath: a single LIST of
+// STRUCTs that the user can `unnest()` if they want row semantics.
+template <bool IS_INT>
+void TnumberValueTimeSplitExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t c = 0; c < args.ColumnCount(); ++c) args.data[c].Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+    idx_t total_offset = 0;
+
+    auto temp_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto iv_data   = FlatVector::GetData<interval_t>(args.data[2]);
+    auto &child_entries = StructVector::GetEntries(child_vector);
+    for (idx_t i = 0; i < row_count; ++i) {
+        bool any_null = false;
+        for (idx_t c = 0; c < args.ColumnCount(); ++c)
+            any_null |= FlatVector::IsNull(args.data[c], i);
+        if (any_null) { result_validity.SetInvalid(i); continue; }
+
+        Temporal *t = (Temporal *) malloc(temp_data[i].GetSize());
+        memcpy(t, temp_data[i].GetData(), temp_data[i].GetSize());
+        MeosInterval mi = IntervaltToInterval(iv_data[i]);
+        Datum size_d, vorigin_d;
+        if (IS_INT) {
+            int32_t s = FlatVector::GetData<int32_t>(args.data[1])[i];
+            int32_t o = FlatVector::GetData<int32_t>(args.data[3])[i];
+            size_d = SpanBinInt32ToDatum(s);
+            vorigin_d = SpanBinInt32ToDatum(o);
+        } else {
+            double s = FlatVector::GetData<double>(args.data[1])[i];
+            double o = FlatVector::GetData<double>(args.data[3])[i];
+            size_d = SpanBinFloat8ToDatum(s);
+            vorigin_d = SpanBinFloat8ToDatum(o);
+        }
+        TimestampTz torigin = DuckDBToMeosTimestamp(
+            FlatVector::GetData<timestamp_tz_t>(args.data[4])[i]).value;
+
+        Datum *value_bins = nullptr;
+        TimestampTz *time_bins = nullptr;
+        int count = 0;
+        Temporal **parts = tnumber_value_time_split(t, size_d, &mi,
+            vorigin_d, torigin, &value_bins, &time_bins, &count);
+        free(t);
+
+        if (!parts || count <= 0) {
+            if (parts) free(parts);
+            if (value_bins) free(value_bins);
+            if (time_bins) free(time_bins);
+            result_validity.SetInvalid(i);
+            continue;
+        }
+
+        ListVector::SetListSize(result, total_offset + count);
+        list_entries[i] = list_entry_t{total_offset, (uint64_t) count};
+        // Re-fetch struct child pointers — Reserve/SetListSize may
+        // re-allocate, invalidating any earlier ones.
+        auto &c0 = *child_entries[0];  // value
+        auto &c1 = *child_entries[1];  // time
+        auto &c2 = *child_entries[2];  // tnumber
+
+        for (int k = 0; k < count; ++k) {
+            if (IS_INT) {
+                FlatVector::GetData<int32_t>(c0)[total_offset + k] =
+                    DatumGetInt32(value_bins[k]);
+            } else {
+                FlatVector::GetData<double>(c0)[total_offset + k] =
+                    DatumGetFloat8(value_bins[k]);
+            }
+            FlatVector::GetData<timestamp_tz_t>(c1)[total_offset + k] =
+                MeosToDuckDBTimestamp((timestamp_tz_t) {time_bins[k]});
+            size_t sz = temporal_mem_size(parts[k]);
+            FlatVector::GetData<string_t>(c2)[total_offset + k] =
+                StringVector::AddStringOrBlob(c2,
+                    reinterpret_cast<const char *>(parts[k]), sz);
+            free(parts[k]);
+        }
+        free(parts);
+        if (value_bins) free(value_bins);
+        if (time_bins) free(time_bins);
+        total_offset += count;
+    }
+}
+
+// spaceSplit(tspatial, xsize, ysize, zsize, sorigin, bitmatrix, border_inc)
+//   -> LIST<STRUCT(part TGEO, space GEOMETRY)>
+// spaceTimeSplit(tspatial, xsize, ysize, zsize, duration, sorigin, torigin,
+//                bitmatrix, border_inc)
+//   -> LIST<STRUCT(part TGEO, space GEOMETRY, time TIMESTAMPTZ)>
+//
+// Both wrap MEOS' tgeo_space_split / tgeo_space_time_split.
+// `WITH_TIME=true` switches to the spaceTime variant.
+template <bool WITH_TIME>
+void TgeoSpaceSplitExec(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t c = 0; c < args.ColumnCount(); ++c) args.data[c].Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+    idx_t total_offset = 0;
+
+    auto temp_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto xs   = FlatVector::GetData<double>(args.data[1]);
+    auto ys   = FlatVector::GetData<double>(args.data[2]);
+    auto zs   = FlatVector::GetData<double>(args.data[3]);
+    // For spaceSplit:    args = [t, xs, ys, zs, sorigin, bitmatrix, border_inc]
+    // For spaceTimeSplit:args = [t, xs, ys, zs, duration, sorigin, torigin, bitmatrix, border_inc]
+    const idx_t sorigin_idx  = WITH_TIME ? 5 : 4;
+    const idx_t bitmatrix_idx = WITH_TIME ? 7 : 5;
+    const idx_t border_idx    = WITH_TIME ? 8 : 6;
+    auto sorig = FlatVector::GetData<string_t>(args.data[sorigin_idx]);
+    auto bm    = FlatVector::GetData<bool>(args.data[bitmatrix_idx]);
+    auto bi    = FlatVector::GetData<bool>(args.data[border_idx]);
+
+    auto &child_entries = StructVector::GetEntries(child_vector);
+    for (idx_t i = 0; i < row_count; ++i) {
+        bool any_null = false;
+        for (idx_t c = 0; c < args.ColumnCount(); ++c)
+            any_null |= FlatVector::IsNull(args.data[c], i);
+        if (any_null) { result_validity.SetInvalid(i); continue; }
+
+        Temporal *t = (Temporal *) malloc(temp_data[i].GetSize());
+        memcpy(t, temp_data[i].GetData(), temp_data[i].GetSize());
+        GSERIALIZED *gs_origin = GeometryToGSerialized(sorig[i], 0);
+
+        GSERIALIZED **space_bins = nullptr;
+        TimestampTz *time_bins = nullptr;
+        int count = 0;
+        Temporal **parts;
+        if (WITH_TIME) {
+            interval_t iv = FlatVector::GetData<interval_t>(args.data[4])[i];
+            MeosInterval mi = IntervaltToInterval(iv);
+            TimestampTz torigin = DuckDBToMeosTimestamp(
+                FlatVector::GetData<timestamp_tz_t>(args.data[6])[i]).value;
+            parts = tgeo_space_time_split(t, xs[i], ys[i], zs[i], &mi,
+                gs_origin, torigin, bm[i], bi[i], &space_bins, &time_bins, &count);
+        } else {
+            parts = tgeo_space_split(t, xs[i], ys[i], zs[i],
+                gs_origin, bm[i], bi[i], &space_bins, &count);
+        }
+        free(t); free(gs_origin);
+
+        if (!parts || count <= 0) {
+            if (parts) free(parts);
+            if (space_bins) free(space_bins);
+            if (time_bins) free(time_bins);
+            result_validity.SetInvalid(i);
+            continue;
+        }
+
+        ListVector::SetListSize(result, total_offset + count);
+        list_entries[i] = list_entry_t{total_offset, (uint64_t) count};
+        auto &c_part  = *child_entries[0];  // tspatial
+        auto &c_space = *child_entries[1];  // geometry
+        Vector *c_time = WITH_TIME ? child_entries[2].get() : nullptr;
+
+        for (int k = 0; k < count; ++k) {
+            size_t sz = temporal_mem_size(parts[k]);
+            FlatVector::GetData<string_t>(c_part)[total_offset + k] =
+                StringVector::AddStringOrBlob(c_part,
+                    reinterpret_cast<const char *>(parts[k]), sz);
+            FlatVector::GetData<string_t>(c_space)[total_offset + k] =
+                GSerializedToGeometry(space_bins[k], state, c_space);
+            if (WITH_TIME && c_time) {
+                FlatVector::GetData<timestamp_tz_t>(*c_time)[total_offset + k] =
+                    MeosToDuckDBTimestamp((timestamp_tz_t) {time_bins[k]});
+            }
+            free(parts[k]);
+            if (space_bins[k]) free(space_bins[k]);
+        }
+        free(parts);
+        if (space_bins) free(space_bins);
+        if (time_bins) free(time_bins);
+        total_offset += count;
+    }
+}
+
 // quadSplit(stbox) -> LIST<stbox>. Wraps stbox_quad_split.
 void StboxQuadSplitExec(DataChunk &args, ExpressionState &, Vector &result) {
     const idx_t row_count = args.size();
@@ -2972,6 +3158,50 @@ void TemporalTypes::RegisterTileGetters(ExtensionLoader &loader) {
         loader.RegisterFunction(ScalarFunction("quadSplit",
             {StboxType::STBOX()}, list_stbox, StboxQuadSplitExec));
 
+        // valueTimeSplit(tnumber, vsize, duration, vorigin, torigin)
+        //   -> LIST<STRUCT(value, time, tnumber)>
+        // Mirrors MobilityDB's `SETOF number_time_t<num>`. Use unnest()
+        // on the outer LIST to recover row semantics.
+        auto vts_struct_int = LogicalType::STRUCT({
+            {"value",   INT},
+            {"time",    TS},
+            {"tnumber", TemporalTypes::TINT()}});
+        auto vts_struct_flt = LogicalType::STRUCT({
+            {"value",   DBL},
+            {"time",    TS},
+            {"tnumber", TemporalTypes::TFLOAT()}});
+        loader.RegisterFunction(ScalarFunction("valueTimeSplit",
+            {TemporalTypes::TINT(), INT, IVAL, INT, TS},
+            LogicalType::LIST(vts_struct_int),
+            TnumberValueTimeSplitExec<true>));
+        loader.RegisterFunction(ScalarFunction("valueTimeSplit",
+            {TemporalTypes::TFLOAT(), DBL, IVAL, DBL, TS},
+            LogicalType::LIST(vts_struct_flt),
+            TnumberValueTimeSplitExec<false>));
+
+        // spaceSplit / spaceTimeSplit — partition a tspatial value
+        // along the spatial (and optionally time) axis. Output STRUCT
+        // mirrors MobilityDB's `space_t<...>` / `space_time_t<...>`
+        // row shapes.
+        const auto GEOM = GeoTypes::GEOMETRY();
+        const auto BOOL = LogicalType::BOOLEAN;
+        for (const auto &ttype : {TgeompointType::TGEOMPOINT(),
+                                  TGeometryTypes::TGEOMETRY()}) {
+            auto ss_struct  = LogicalType::STRUCT({{"part", ttype},
+                                                   {"space", GEOM}});
+            auto sts_struct = LogicalType::STRUCT({{"part", ttype},
+                                                   {"space", GEOM},
+                                                   {"time", TS}});
+            loader.RegisterFunction(ScalarFunction("spaceSplit",
+                {ttype, DBL, DBL, DBL, GEOM, BOOL, BOOL},
+                LogicalType::LIST(ss_struct),
+                TgeoSpaceSplitExec<false>));
+            loader.RegisterFunction(ScalarFunction("spaceTimeSplit",
+                {ttype, DBL, DBL, DBL, IVAL, GEOM, TS, BOOL, BOOL},
+                LogicalType::LIST(sts_struct),
+                TgeoSpaceSplitExec<true>));
+        }
+
         // splitNTboxes / splitEachNTboxes — partition a tnumber into N
         // boxes (or N elements per box). Both return LIST<tbox>.
         loader.RegisterFunction(ScalarFunction("splitNTboxes",
@@ -2989,7 +3219,7 @@ void TemporalTypes::RegisterTileGetters(ExtensionLoader &loader) {
 
         // frechetDistancePath / dynTimeWarpPath — emit
         // LIST<STRUCT(i INTEGER, j INTEGER)>. Wired for tnumber and
-        // for the four spatial-temporal types (the MEOS function
+        // for the four spatio-temporal types (the MEOS function
         // dispatches on subtype internally).
         const auto warp_struct = LogicalType::STRUCT({
             {"i", LogicalType::INTEGER},

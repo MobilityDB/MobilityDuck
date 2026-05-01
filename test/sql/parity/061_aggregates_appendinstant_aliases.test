@@ -60,7 +60,7 @@ SELECT (AppendInstantAgg(t::tfloat, 'unrecognised') IS NOT NULL) FROM (VALUES
 ----
 true
 
-# All four spatial-temporal types
+# All four spatio-temporal types
 query I
 SELECT (AppendInstantAgg(t::tgeompoint, 'linear') IS NOT NULL) FROM (VALUES
   ('Point(0 0)@2000-01-01'), ('Point(1 1)@2000-01-02')) AS t(t);

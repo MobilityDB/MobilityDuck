@@ -234,7 +234,7 @@ void TGeometryTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
     loader.RegisterFunction(ScalarFunction("tgeometryFromMFJSON",
         {LogicalType::VARCHAR}, TGEOM, TemporalFunctions::Tgeometry_from_mfjson));
 
-    // tprecision / tsample — spatial-temporal default origin matches the
+    // tprecision / tsample — spatio-temporal default origin matches the
     // upstream MobilityDB SQL surface (2000-01-03).
     loader.RegisterFunction(ScalarFunction("tprecision",
         {TGEOM, LogicalType::INTERVAL}, TGEOM,

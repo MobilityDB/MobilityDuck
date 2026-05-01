@@ -226,7 +226,7 @@ struct TemporalFunctions {
     static void Tnumber_abs(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_delta_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_trend(DataChunk &args, ExpressionState &state, Vector &result);
-    // PROJ pipeline projection — works on any spatial-temporal type.
+    // PROJ pipeline projection — works on any spatio-temporal type.
     // Signature: transformPipeline(temp, pipeline text, srid int, is_forward bool).
     static void Tspatial_transform_pipeline(DataChunk &args, ExpressionState &state, Vector &result);
     // Temporal_derivative declared in the math-functions block below.

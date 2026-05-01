@@ -12,11 +12,18 @@
 #                                            octants (3D). Wraps
 #                                            stbox_quad_split.
 #
-# Deferred to a follow-up:
-#   spaceSplit / spaceTimeSplit / valueTimeSplit — these need a
-#   second emission channel for the per-bin side-array (geometry
-#   list / Datum list); the existing single-LIST<temporal> shape
-#   would drop that information silently.
+#   valueTimeSplit(tnumber, vsize, dur, vorigin, torigin)
+#                                       — emits LIST<STRUCT(value, time,
+#                                          tnumber)>. Wraps
+#                                          tnumber_value_time_split.
+#   spaceSplit(tspatial, xsize, ysize, zsize, sorigin, bitmatrix, border)
+#                                       — emits LIST<STRUCT(part, space)>.
+#                                          Wraps tgeo_space_split.
+#   spaceTimeSplit(tspatial, xsize, ysize, zsize, dur, sorigin, torigin,
+#                  bitmatrix, border)
+#                                       — emits LIST<STRUCT(part, space,
+#                                          time)>. Wraps
+#                                          tgeo_space_time_split.
 #
 # MobilityDB returns these as `SETOF (temporal, bin)`; MobilityDuck's
 # scalar funcs return `LIST<temporal>` — drop the bins (users can
@@ -142,3 +149,40 @@ query I
 SELECT typeof(quadSplit('STBOX X((0,0),(4,4))'::stbox));
 ----
 STBOX[]
+
+# =============================================================================
+# valueTimeSplit / spaceSplit / spaceTimeSplit — split with a parallel
+# emit channel for the per-bin labels. Output STRUCT mirrors
+# MobilityDB's number_time_t<num> / space_t<spatial> / space_time_t<spatial>
+# row shapes; recover row semantics with `unnest()`.
+# =============================================================================
+
+query I
+SELECT len(valueTimeSplit(
+  '{1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00, 10@2000-01-10 00:00:00+00}'::tint,
+  3, INTERVAL '2 days', 0, '2000-01-01 00:00:00+00'::TIMESTAMPTZ)) > 0;
+----
+true
+
+query I
+SELECT len(valueTimeSplit(
+  '{1.0@2000-01-01 00:00:00+00, 5.0@2000-01-05 00:00:00+00}'::tfloat,
+  2.0, INTERVAL '2 days', 0.0, '2000-01-01 00:00:00+00'::TIMESTAMPTZ)) > 0;
+----
+true
+
+query I
+SELECT len(spaceSplit(
+  '[Point(0 0)@2000-01-01 00:00:00+00, Point(5 5)@2000-01-05 00:00:00+00]'::tgeompoint,
+  5.0, 5.0, 1.0, 'POINT(0 0)'::geometry, false, true)) > 0;
+----
+true
+
+query I
+SELECT len(spaceTimeSplit(
+  '[Point(0 0)@2000-01-01 00:00:00+00, Point(5 5)@2000-01-05 00:00:00+00]'::tgeompoint,
+  5.0, 5.0, 1.0, INTERVAL '2 days',
+  'POINT(0 0)'::geometry, '2000-01-01 00:00:00+00'::TIMESTAMPTZ,
+  false, true)) > 0;
+----
+true

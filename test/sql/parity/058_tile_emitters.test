@@ -6,7 +6,7 @@
 #                                  floatspan, tstzspan).
 #   timeBins(temporal, interval, ts)  — for every temporal type
 #                                       (tint, tfloat, tbool, ttext
-#                                       and the four spatial-temporal).
+#                                       and the four spatio-temporal).
 #   valueBins(tnumber, size, origin)  — for tint and tfloat.
 #
 # All three return `LIST<…span>`. The runtime probe before this PR

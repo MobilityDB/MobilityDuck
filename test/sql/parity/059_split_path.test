@@ -3,7 +3,7 @@
 #
 #   splitNTboxes / splitEachNTboxes      — partition a tnumber into
 #                                           N (or N-element) tboxes.
-#   splitNStboxes / splitEachNStboxes    — same for spatial-temporal
+#   splitNStboxes / splitEachNStboxes    — same for spatio-temporal
 #                                           types.
 #   frechetDistancePath / dynTimeWarpPath — emit the Frechet / DTW
 #                                           warp path as
@@ -37,7 +37,7 @@ SELECT len(splitEachNTboxes('{1@2000-01-01, 5@2000-01-05, 10@2000-01-10}'::tint,
 2
 
 # =============================================================================
-# splitNStboxes / splitEachNStboxes — all 4 spatial-temporal types
+# splitNStboxes / splitEachNStboxes — all 4 spatio-temporal types
 # =============================================================================
 
 query I

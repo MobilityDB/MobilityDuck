@@ -2,7 +2,7 @@
 # description: Aggregate-side parity gaps closed.
 #
 #   WcountAgg(t…, interval) — extends from tnumber to the four
-#                              spatial-temporal types
+#                              spatio-temporal types
 #                              (tgeompoint / tgeogpoint /
 #                              tgeometry / tgeography). MobilityDB
 #                              SQL exposes wcount over tspatial in
@@ -26,7 +26,7 @@
 require mobilityduck
 
 # =============================================================================
-# WcountAgg over the spatial-temporal types — counts events per window.
+# WcountAgg over the spatio-temporal types — counts events per window.
 # =============================================================================
 
 query I

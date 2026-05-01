@@ -6,7 +6,7 @@
 # `Acovers_*` PG wrappers go through MobilityDB-internal
 # `ea_covers_*` which isn't in the public meos_geo.h surface yet —
 # documented in the source). This PR closes the eCovers/tCovers
-# pair across all four spatial-temporal types.
+# pair across all four spatio-temporal types.
 # group: [sql]
 
 require mobilityduck

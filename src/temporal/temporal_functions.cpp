@@ -4897,7 +4897,7 @@ void TemporalFunctions::Tnumber_trend(DataChunk &args, ExpressionState &state, V
 }
 
 // transformPipeline(tspatial, pipeline text, srid int, is_forward bool)
-// — applies a PROJ pipeline string to a spatial-temporal value. Wraps
+// — applies a PROJ pipeline string to a spatio-temporal value. Wraps
 // MEOS' tspatial_transform_pipeline.
 void TemporalFunctions::Tspatial_transform_pipeline(DataChunk &args, ExpressionState &, Vector &result) {
     const idx_t count = args.size();
@@ -5884,7 +5884,7 @@ void TemporalAsMfjsonExecBboxPrec(DataChunk &args, ExpressionState &, Vector &re
 }
 
 // asHexWKB / asHexEWKB — both call temporal_as_hexwkb. variant=0 uses
-// MEOS' default (NDR, EWKB-flavoured for spatial-temporal types).
+// MEOS' default (NDR, EWKB-flavoured for spatio-temporal types).
 void TemporalAsHexWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
         args.data[0], result, args.size(),
