@@ -262,19 +262,15 @@ extension version, the linked MEOS commit, the DuckDB version, and the
 full toolchain. That output is the single source of truth for *which*
 MobilityDuck you're talking to.
 
-## Out-of-scope type families (deferred until temporal+geo stabilises)
+## Out-of-scope type families
 
-The following MobilityDB type families are explicitly deferred:
+The following MobilityDB type families will be tackled in a future PR:
 
 - **`tcbuffer`** — temporal circular buffers.
 - **`tnpoint`** — temporal network points (graph-based).
 - **`tpose`** — temporal poses.
 - **`trgeo`** — temporal rigid geometries.
 - **`th3index`** — temporal Uber H3 cells.
-
-These are tracked separately in the project memory; lifting will
-happen once the temporal+geo surface stabilises and as user demand
-surfaces.
 
 ---
 

@@ -35,12 +35,11 @@ the host environment.
 |---|---|
 | `geography` | DuckDB-spatial has no separate geography SQL type; all geometric storage is `geometry` carrying SRID + geodetic flag. |
 | `multirange` | PG-only type primitive. |
-| `asMVTGeom` | Mapbox Vector Tile rendering. Specialised; ships only on user demand. |
+| `asMVTGeom` | Mapbox Vector Tile rendering. Specialised renderer; tackled in a future PR. |
 
-## Out-of-scope per scope memo (✗ until surfaces stabilise)
+## Out-of-scope type families (✗)
 
-Tracked separately in `project_mobilityduck_parity_scope.md`; lifting
-deferred until the temporal+geo surface stabilises.
+Tackled in a future PR:
 
 - `tcbuffer` family
 - `tnpoint` family
@@ -156,5 +155,4 @@ arrays — needs a `LIST<temporal>` emitter mirror to the existing
    `IS NOT NULL` / `len()` / numeric-tolerance forms — avoid
    embedding timestamp output in goldens (the harness's local-TZ
    default makes those flaky).
-6. Push to a `feat/parity-<topic>` branch on the fork. Don't add
-   reviewers or mark ready-for-review until stabilised.
+6. Push to a `feat/parity-<topic>` branch on the fork.
