@@ -133,11 +133,15 @@ Test 066.
 
 ### Z-axis (elevation) restrict  ◯
 
-`atElevation`, `minusElevation` — these will land automatically when
-the vcpkg-shipped libmeos snapshot bumps to a revision that already
-exports `tgeo_restrict_elevation` (the function is in upstream
-`meos/include/meos_internal_geo.h` today; the MobilityDuck-side
-wiring is one line per signature).
+`atElevation`, `minusElevation` — wraps `tgeo_restrict_elevation`,
+which exists in upstream MEOS but is bundled with the
+`meosType` → `MeosType` rename ([MobilityDB
+PR #790](https://github.com/MobilityDB/MobilityDB/pull/790))
+and the simplified spatiotemporal-relationships API
+([PR #778](https://github.com/MobilityDB/MobilityDB/pull/778)).
+Lifting the vcpkg pin to pick up elevation therefore requires a
+coordinated MobilityDuck adoption pass for those two breaking
+changes. Tracked together as one task.
 
 ### Aggregate residual  ✓ partial
 
