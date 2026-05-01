@@ -23,8 +23,8 @@ excluding ~250 PG-extension implementation helpers — see PARITY.md
 | Resolved via `*Agg` suffix (RFC #827) | 12 | ✓ |
 | Resolved via DuckDB-spatial native (`point`, `line`, `box`, ...) | 7 | ✓ |
 | Architectural blocks (no `geography`, no MVT) | 2 | ✗ |
-| Tracked residual user-visible gaps | ~12 | mix of ◯ and ⊘ — see sections below |
-| **Effective coverage** | ~95% | |
+| Tracked residual user-visible gaps | ~10 | mix of ◯ and ⊘ — see sections below |
+| **Effective coverage** | ~96% | |
 
 ## Architectural blocks (✗)
 
@@ -75,15 +75,17 @@ plain-SeqSet aliases. Test 062.
 
 `aCovers` ⊘ — MEOS public surface exposes only `ecovers_*` and
 `tcovers_*`; the always-covers path goes through MobilityDB-internal
-`ea_covers_*` (with `ALWAYS` flag) which isn't on `meos_geo.h` yet.
-A one-line MEOS publicize change would unblock this.
+`ea_covers_*` (with `ALWAYS` flag). The MobilityDB-side header export
+is being added (estebanzimanyi/MobilityDB:`feat/expose-acovers-meos`);
+once the vcpkg-shipped libmeos snapshot picks it up, MobilityDuck can
+register `aCovers` alongside `eCovers` / `tCovers`.
 
 ### Z-axis (elevation) restrict  ⊘
 
-`atElevation`, `minusElevation`. MEOS' `tgeo_restrict_elevation` is in
-the upstream `meos/include/meos_internal_geo.h` but not in the
-vcpkg-shipped libmeos used by MobilityDuck. Needs MEOS-side exposure
-plus a vcpkg bump.
+`atElevation`, `minusElevation`. MEOS' `tgeo_restrict_elevation` is
+already in upstream `meos/include/meos_internal_geo.h`, but the
+vcpkg-shipped libmeos snapshot used by MobilityDuck is older and
+doesn't carry it yet. Unblocked by a vcpkg-port version bump.
 
 ### Alt-name tile / box emitters  ✓
 
@@ -121,9 +123,9 @@ channel (or a `STRUCT(parts, bins)` return shape). Test 065.
 | `tprecision(temp, interval, ts)` | ✓ | sample-and-snap to a coarser grid; tnumber + tspatial. |
 | `tsample(temp, interval, ts [, interp])` | ✓ | regular-interval resampling for any temporal type. |
 | `time_distance(...)` | ✓ | distance in seconds between tstzspan / tstzspanset / timestamptz arguments. |
+| `trend(tint\|tfloat) → tint` | ✓ | sign of the derivative at each instant. Wraps `tnumber_trend`. Requires linear interpolation. |
 | `geomeasure(tpoint, tfloat)` | ◯ | wraps `tpoint_tfloat_to_geomeas`. Builds a geometry tagged with M values. |
 | `transformpipeline(geometry, str)` | ◯ | wraps PROJ's transform-pipeline string. MEOS has `stbox_transform_pipeline`; the geometry-side is `ST_Transform` in DuckDB-spatial. |
-| `trend(temporal)` | ⊘ | not in MEOS public surface. |
 | `transform_gk(geometry)` | ⊘ | German Gauss-Krüger projection helper; PG-only utility. |
 | `create_trip(...)` | ⊘ | trip-synthesis helper; lives in MobilityDB's `mobilitydb-tools`, not in MEOS. Out of scope. |
 

@@ -225,6 +225,7 @@ struct TemporalFunctions {
      ****************************************************/
     static void Tnumber_abs(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_delta_value(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_trend(DataChunk &args, ExpressionState &state, Vector &result);
     // Temporal_derivative declared in the math-functions block below.
 
     /* ***************************************************

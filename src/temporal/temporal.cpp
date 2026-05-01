@@ -1388,6 +1388,9 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction("abs", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tnumber_abs));
     loader.RegisterFunction(ScalarFunction("deltaValue", {TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Tnumber_delta_value));
     loader.RegisterFunction(ScalarFunction("deltaValue", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tnumber_delta_value));
+    // trend — sign of the derivative; both tint and tfloat return tint.
+    loader.RegisterFunction(ScalarFunction("trend", {TemporalTypes::TINT()},   TemporalTypes::TINT(), TemporalFunctions::Tnumber_trend));
+    loader.RegisterFunction(ScalarFunction("trend", {TemporalTypes::TFLOAT()}, TemporalTypes::TINT(), TemporalFunctions::Tnumber_trend));
 
     // -----------------------------------------------------------------
     // MFJSON / Hex(E)WKB I/O — `asMFJSON`, `asHexWKB`, plus the

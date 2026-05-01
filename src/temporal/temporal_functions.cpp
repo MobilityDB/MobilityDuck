@@ -4890,6 +4890,12 @@ void TemporalFunctions::Tnumber_delta_value(DataChunk &args, ExpressionState &st
     TemporalUnary(args, result, [](Temporal *t) { return tnumber_delta_value(t); });
 }
 
+// trend(tint|tfloat) — sign-of-derivative at each instant. Wraps
+// MEOS' tnumber_trend; the result temptype is always tint (-1/0/+1).
+void TemporalFunctions::Tnumber_trend(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return tnumber_trend(t); });
+}
+
 // Temporal_derivative is implemented later in this file in the Math
 // functions block (existed before the unary-tnumber additions).
 
