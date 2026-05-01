@@ -11,6 +11,7 @@
 #include "geo/tgeompoint.hpp"
 #include "duckdb.hpp"
 #include "geo/tgeometry.hpp"
+#include "geo/tgeometry_ops.hpp"
 #include "temporal/span.hpp"
 #include "temporal/span_aggregates.hpp"
 #include "duckdb/common/exception.hpp"
@@ -254,6 +255,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TGeometryTypes::RegisterTypes(loader);
 	TGeometryTypes::RegisterCastFunctions(loader);
 	TGeometryTypes::RegisterScalarInOutFunctions(loader);
+	TGeometryOps::RegisterScalarFunctions(loader);
 
 	SetTypes::RegisterTypes(loader);
 	SetTypes::RegisterCastFunctions(loader);

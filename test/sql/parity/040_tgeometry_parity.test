@@ -1,13 +1,19 @@
-# name: test/sql/parity/040_tgeometry_foundations.test
-# description: Foundational tgeometry surface — accessors, time/value
-#              restrict, modifiers, and comparison. Mirrors the analogous
-#              tgeompoint surface registered in src/geo/tgeompoint.cpp,
-#              reusing the same generic Temporal handlers from
-#              src/temporal/temporal_functions.cpp where the C MEOS
-#              functions are subtype-agnostic.
+# name: test/sql/parity/040_tgeometry_parity.test
+# description: tgeometry parity — foundational accessors / time/value
+#              restrict / modifiers / comparison, plus the cross-type
+#              predicate surface (boxops, posops, spatial-relationships,
+#              temporal-spatial-relationships, and the tdistance / <->
+#              distance family).
 #
-#              Geometry values are emitted in EWKB-hex display rather than
-#              WKT, so the expected outputs encode the input coordinates
+#              Most MEOS C functions reached here are subtype-agnostic —
+#              the registrations reuse the generic TemporalFunctions::*
+#              handlers from src/temporal/temporal_functions.cpp where
+#              they exist, and src/geo/tgeometry_ops.cpp adds templated
+#              wrappers around the tspatial_* / tgeo_* MEOS exports for
+#              the cross-type surface.
+#
+#              Geometry values are emitted in EWKB-hex display rather
+#              than WKT, so expected outputs encode input coordinates
 #              verbatim.
 # group: [sql]
 
@@ -152,3 +158,116 @@ SELECT tempSubtype(t::tgeometry) FROM (VALUES
   ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
 ----
 Sequence
+
+# =============================================================================
+# Box predicates: temporal_overlaps / contains / contained / same / adjacent
+# (named functions + the matching &&, @>, <@, ~=, -|- operators)
+# =============================================================================
+
+query I
+SELECT t1::tgeometry && t2::tgeometry FROM (VALUES
+  ('Point(0 0)@2000-01-01', 'Point(0 0)@2000-01-01')) t(t1, t2);
+----
+true
+
+query I
+SELECT temporal_contains(t::tgeometry, '[2000-01-01, 2000-01-02]'::tstzspan) FROM
+  (VALUES ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+true
+
+query I
+SELECT temporal_same(t::tgeometry, t::tgeometry) FROM (VALUES
+  ('Point(0 0)@2000-01-01')) t(t);
+----
+true
+
+# =============================================================================
+# Position predicates
+# =============================================================================
+
+query I
+SELECT temporal_left(t1::tgeometry, t2::tgeometry) FROM (VALUES
+  ('Point(0 0)@2000-01-01', 'Point(5 5)@2000-01-01')) t(t1, t2);
+----
+true
+
+query I
+SELECT temporal_below(t1::tgeometry, t2::tgeometry) FROM (VALUES
+  ('Point(0 0)@2000-01-01', 'Point(0 5)@2000-01-01')) t(t1, t2);
+----
+true
+
+query I
+SELECT temporal_before(t::tgeometry, '[2000-01-05, 2000-01-06]'::tstzspan) FROM
+  (VALUES ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+true
+
+# =============================================================================
+# Spatial relationships (ever / always)
+# =============================================================================
+
+query I
+SELECT eContains(
+  ST_GeomFromText('POLYGON((0 0, 0 5, 5 5, 5 0, 0 0))'),
+  t::tgeometry)
+FROM (VALUES ('Point(2 2)@2000-01-01')) t(t);
+----
+true
+
+query I
+SELECT eIntersects(
+  t::tgeometry,
+  ST_GeomFromText('POLYGON((0 0, 0 5, 5 5, 5 0, 0 0))'))
+FROM (VALUES ('Point(2 2)@2000-01-01')) t(t);
+----
+true
+
+query I
+SELECT eDwithin(t::tgeometry, ST_Point(0, 0), 5.0)
+FROM (VALUES ('Point(2 2)@2000-01-01')) t(t);
+----
+true
+
+# eDwithin is symmetric in its first two arguments — geo, tgeo and
+# tgeo, geo both reach the same MEOS tgeo_geo function.
+query I
+SELECT eDwithin(ST_Point(0, 0), t::tgeometry, 5.0)
+FROM (VALUES ('Point(2 2)@2000-01-01')) t(t);
+----
+true
+
+# =============================================================================
+# Temporal spatial relationships (return tbool)
+# =============================================================================
+
+query I
+SELECT tIntersects(
+  t::tgeometry,
+  ST_GeomFromText('POLYGON((0 0, 0 5, 5 5, 5 0, 0 0))'))::VARCHAR
+FROM (VALUES ('Point(2 2)@2000-01-01')) t(t);
+----
+t@2000-01-01 00:00:00+00
+
+query I
+SELECT tDwithin(t::tgeometry, ST_Point(10, 0), 5.0)::VARCHAR
+FROM (VALUES ('Point(2 2)@2000-01-01')) t(t);
+----
+f@2000-01-01 00:00:00+00
+
+# =============================================================================
+# Distance — tdistance + <->
+# =============================================================================
+
+query I
+SELECT tdistance(t1::tgeometry, t2::tgeometry)::VARCHAR
+FROM (VALUES ('Point(0 0)@2000-01-01', 'Point(3 4)@2000-01-01')) t(t1, t2);
+----
+5@2000-01-01 00:00:00+00
+
+query I
+SELECT (t1::tgeometry <-> t2::tgeometry)::VARCHAR
+FROM (VALUES ('Point(0 0)@2000-01-01', 'Point(3 4)@2000-01-01')) t(t1, t2);
+----
+5@2000-01-01 00:00:00+00
