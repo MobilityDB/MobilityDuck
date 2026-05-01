@@ -2158,6 +2158,91 @@ inline void EmitTboxList(Vector &result, idx_t row_idx, TBox *tiles, int count,
 }
 
 // valueTiles(tbox, vsize [, vorigin]) — int branch uses int xsize/xorigin, float uses double
+// frechetDistancePath / dynTimeWarpPath — emit
+// `LIST<STRUCT(i INTEGER, j INTEGER)>`. MobilityDB's PG surface uses
+// `SETOF warp` (table-valued); DuckDB scalar funcs return scalars, so
+// we wrap the list and let the user `unnest()` if they want rows.
+template <Match *(*FN)(const Temporal *, const Temporal *, int *)>
+void TemporalPathExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t c = 0; c < args.ColumnCount(); ++c) args.data[c].Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+    idx_t total_offset = 0;
+
+    auto a_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto b_data = FlatVector::GetData<string_t>(args.data[1]);
+    auto &child_entries = StructVector::GetEntries(child_vector);
+    auto i_data = FlatVector::GetData<int32_t>(*child_entries[0]);
+    auto j_data = FlatVector::GetData<int32_t>(*child_entries[1]);
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (FlatVector::IsNull(args.data[0], i) || FlatVector::IsNull(args.data[1], i)) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        Temporal *a = (Temporal *) malloc(a_data[i].GetSize());
+        memcpy(a, a_data[i].GetData(), a_data[i].GetSize());
+        Temporal *b = (Temporal *) malloc(b_data[i].GetSize());
+        memcpy(b, b_data[i].GetData(), b_data[i].GetSize());
+        int count = 0;
+        Match *path = FN(a, b, &count);
+        free(a); free(b);
+        if (!path || count <= 0) {
+            if (path) free(path);
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        ListVector::SetListSize(result, total_offset + count);
+        list_entries[i] = list_entry_t{total_offset, static_cast<uint64_t>(count)};
+        // Re-fetch child data pointers — SetListSize / Reserve may
+        // re-allocate the child vector, invalidating earlier ones.
+        i_data = FlatVector::GetData<int32_t>(*child_entries[0]);
+        j_data = FlatVector::GetData<int32_t>(*child_entries[1]);
+        for (int k = 0; k < count; ++k) {
+            i_data[total_offset + k] = path[k].i;
+            j_data[total_offset + k] = path[k].j;
+        }
+        free(path);
+        total_offset += count;
+    }
+}
+
+// splitNTboxes(tnumber, int) — partitions a tnumber into the given
+// box-count and returns the bounding tbox of each partition.
+// splitEachNTboxes(tnumber, int) — same shape but partition by
+// element-count instead of total-box-count. Both wrap the
+// subtype-agnostic `tnumber_*_tboxes` MEOS exports.
+template <TBox *(*FN)(const Temporal *, int, int *)>
+void TnumberSplitTboxesExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t c = 0; c < args.ColumnCount(); ++c) args.data[c].Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+    idx_t total_offset = 0;
+
+    auto temp_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto n_data = FlatVector::GetData<int32_t>(args.data[1]);
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (FlatVector::IsNull(args.data[0], i) || FlatVector::IsNull(args.data[1], i)) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        Temporal *t = (Temporal *) malloc(temp_data[i].GetSize());
+        memcpy(t, temp_data[i].GetData(), temp_data[i].GetSize());
+        int count = 0;
+        TBox *tiles = FN(t, n_data[i], &count);
+        free(t);
+        EmitTboxList(result, i, tiles, count, total_offset, list_entries, child_vector,
+                     result_validity);
+    }
+}
+
 void TboxValueTilesExec(DataChunk &args, ExpressionState &, Vector &result) {
     auto &tbox_vec = args.data[0];
     auto &vsize_vec = args.data[1];
@@ -2450,6 +2535,39 @@ void TemporalTypes::RegisterTileGetters(ExtensionLoader &loader) {
         loader.RegisterFunction(ScalarFunction("valueBins",
             {TemporalTypes::TFLOAT(), DBL, DBL}, list_fltspan,
             TnumberValueBinsExec<false>));
+
+        // splitNTboxes / splitEachNTboxes — partition a tnumber into N
+        // boxes (or N elements per box). Both return LIST<tbox>.
+        loader.RegisterFunction(ScalarFunction("splitNTboxes",
+            {TemporalTypes::TINT(), INT}, list_tbox,
+            TnumberSplitTboxesExec<tnumber_split_n_tboxes>));
+        loader.RegisterFunction(ScalarFunction("splitNTboxes",
+            {TemporalTypes::TFLOAT(), INT}, list_tbox,
+            TnumberSplitTboxesExec<tnumber_split_n_tboxes>));
+        loader.RegisterFunction(ScalarFunction("splitEachNTboxes",
+            {TemporalTypes::TINT(), INT}, list_tbox,
+            TnumberSplitTboxesExec<tnumber_split_each_n_tboxes>));
+        loader.RegisterFunction(ScalarFunction("splitEachNTboxes",
+            {TemporalTypes::TFLOAT(), INT}, list_tbox,
+            TnumberSplitTboxesExec<tnumber_split_each_n_tboxes>));
+
+        // frechetDistancePath / dynTimeWarpPath — emit
+        // LIST<STRUCT(i INTEGER, j INTEGER)>. Wired for tnumber and
+        // for the four spatial-temporal types (the MEOS function
+        // dispatches on subtype internally).
+        const auto warp_struct = LogicalType::STRUCT({
+            {"i", LogicalType::INTEGER},
+            {"j", LogicalType::INTEGER},
+        });
+        const auto list_warp = LogicalType::LIST(warp_struct);
+        for (const auto &t : {TemporalTypes::TINT(), TemporalTypes::TFLOAT(),
+                               TgeompointType::TGEOMPOINT(), TGeogpointType::TGEOGPOINT(),
+                               TGeometryTypes::TGEOMETRY(), TGeographyTypes::TGEOGRAPHY()}) {
+            loader.RegisterFunction(ScalarFunction("frechetDistancePath",
+                {t, t}, list_warp, TemporalPathExec<temporal_frechet_path>));
+            loader.RegisterFunction(ScalarFunction("dynTimeWarpPath",
+                {t, t}, list_warp, TemporalPathExec<temporal_dyntimewarp_path>));
+        }
     }
 }
 

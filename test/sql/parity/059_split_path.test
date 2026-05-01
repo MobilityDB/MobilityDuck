@@ -1,0 +1,142 @@
+# name: test/sql/parity/059_split_path.test
+# description: Cluster G2 — list-emitter follow-ons.
+#
+#   splitNTboxes / splitEachNTboxes      — partition a tnumber into
+#                                           N (or N-element) tboxes.
+#   splitNStboxes / splitEachNStboxes    — same for spatial-temporal
+#                                           types.
+#   frechetDistancePath / dynTimeWarpPath — emit the Frechet / DTW
+#                                           warp path as
+#                                           LIST<STRUCT(i INTEGER,
+#                                                        j INTEGER)>.
+#
+# MobilityDB exposes the path family as `SETOF warp`; DuckDB scalar
+# functions return scalars, so we wrap into a LIST that the user can
+# `unnest()` to recover row semantics.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# splitNTboxes / splitEachNTboxes
+# =============================================================================
+
+query I
+SELECT len(splitNTboxes('{1@2000-01-01, 5@2000-01-05, 10@2000-01-10}'::tint, 2));
+----
+2
+
+query I
+SELECT len(splitNTboxes('{1.0@2000-01-01, 5.0@2000-01-05, 10.0@2000-01-10}'::tfloat, 3));
+----
+3
+
+query I
+SELECT len(splitEachNTboxes('{1@2000-01-01, 5@2000-01-05, 10@2000-01-10}'::tint, 2));
+----
+2
+
+# =============================================================================
+# splitNStboxes / splitEachNStboxes — all 4 spatial-temporal types
+# =============================================================================
+
+query I
+SELECT len(splitNStboxes(
+  '{Point(0 0)@2000-01-01, Point(5 5)@2000-01-05, Point(10 10)@2000-01-10}'::tgeompoint, 2));
+----
+2
+
+query I
+SELECT len(splitNStboxes(
+  '{Point(0 0)@2000-01-01, Point(5 5)@2000-01-05, Point(10 10)@2000-01-10}'::tgeometry, 2));
+----
+2
+
+query I
+SELECT len(splitNStboxes(
+  'SRID=4326;{Point(0 0)@2000-01-01, Point(1 1)@2000-01-05}'::tgeogpoint, 2));
+----
+2
+
+query I
+SELECT len(splitNStboxes(
+  'SRID=4326;{Point(0 0)@2000-01-01, Point(1 1)@2000-01-05}'::tgeography, 2));
+----
+2
+
+query I
+SELECT len(splitEachNStboxes(
+  '{Point(0 0)@2000-01-01, Point(5 5)@2000-01-05}'::tgeompoint, 1));
+----
+2
+
+# =============================================================================
+# frechetDistancePath — LIST<STRUCT(i, j)>
+# =============================================================================
+
+query I
+SELECT len(frechetDistancePath(
+  '{1@2000-01-01, 2@2000-01-02, 3@2000-01-03}'::tint,
+  '{1@2000-01-01, 4@2000-01-02, 6@2000-01-03}'::tint)) > 0;
+----
+true
+
+# Element-typed access through the LIST → STRUCT chain.
+query I
+SELECT typeof(frechetDistancePath(
+  '{1@2000-01-01, 2@2000-01-02}'::tint,
+  '{1@2000-01-01, 3@2000-01-02}'::tint));
+----
+STRUCT(i INTEGER, j INTEGER)[]
+
+query I
+SELECT (frechetDistancePath(
+  '{1@2000-01-01, 2@2000-01-02}'::tint,
+  '{1@2000-01-01, 3@2000-01-02}'::tint)[1].i IS NOT NULL);
+----
+true
+
+# tfloat side
+query I
+SELECT len(frechetDistancePath(
+  '{1.0@2000-01-01, 2.0@2000-01-02}'::tfloat,
+  '{2.0@2000-01-01, 4.0@2000-01-02}'::tfloat)) > 0;
+----
+true
+
+# Spatial side — tgeompoint
+query I
+SELECT len(frechetDistancePath(
+  '{Point(0 0)@2000-01-01, Point(1 1)@2000-01-02}'::tgeompoint,
+  '{Point(0 0)@2000-01-01, Point(2 2)@2000-01-02}'::tgeompoint)) > 0;
+----
+true
+
+# =============================================================================
+# dynTimeWarpPath — same shape, different similarity measure.
+# =============================================================================
+
+query I
+SELECT len(dynTimeWarpPath(
+  '{Point(0 0)@2000-01-01, Point(1 0)@2000-01-02, Point(2 0)@2000-01-03}'::tgeompoint,
+  '{Point(0 0)@2000-01-01, Point(2 0)@2000-01-02, Point(4 0)@2000-01-03}'::tgeompoint)) > 0;
+----
+true
+
+query I
+SELECT len(dynTimeWarpPath(
+  '{1@2000-01-01, 5@2000-01-02, 3@2000-01-03}'::tint,
+  '{2@2000-01-01, 6@2000-01-02, 4@2000-01-03}'::tint)) > 0;
+----
+true
+
+# unnest() recovers MobilityDB's `SETOF warp` row semantics.
+query II
+SELECT u.i AS i, u.j AS j FROM (
+  SELECT unnest(frechetDistancePath(
+    '{1@2000-01-01, 2@2000-01-02}'::tint,
+    '{1@2000-01-01, 3@2000-01-02}'::tint)) AS u
+) t ORDER BY i, j;
+----
+0	0
+1	1

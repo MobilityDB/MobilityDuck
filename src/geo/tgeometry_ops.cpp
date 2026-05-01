@@ -1371,6 +1371,52 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
         {TGEOM, DBL, DBL, DBL, LogicalType::INTERVAL},
         list_stbox, space_time_boxes_exec));
 
+    // splitNStboxes / splitEachNStboxes — partition a tspatial value
+    // into N stboxes (or N elements per box). Subtype-agnostic MEOS
+    // call — same exec works for tgeometry, tgeompoint, tgeography,
+    // tgeogpoint. The latter two are registered in tgeography_ops.cpp.
+    auto split_stboxes_factory = [emit_stbox_list](
+        STBox *(*FN)(const Temporal *, int, int *)) {
+        return [emit_stbox_list, FN](DataChunk &args, ExpressionState &, Vector &result) {
+            const idx_t row_count = args.size();
+            for (idx_t c = 0; c < args.ColumnCount(); ++c) args.data[c].Flatten(row_count);
+            auto &result_validity = FlatVector::Validity(result);
+            auto list_entries = FlatVector::GetData<list_entry_t>(result);
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            ListVector::Reserve(result, row_count);
+            idx_t total_offset = 0;
+
+            auto t_data = FlatVector::GetData<string_t>(args.data[0]);
+            auto n_data = FlatVector::GetData<int32_t>(args.data[1]);
+            for (idx_t i = 0; i < row_count; ++i) {
+                if (FlatVector::IsNull(args.data[0], i) || FlatVector::IsNull(args.data[1], i)) {
+                    result_validity.SetInvalid(i);
+                    continue;
+                }
+                Temporal *t = DecodeTemporalCopy(t_data[i]);
+                int count = 0;
+                STBox *boxes = FN(t, n_data[i], &count);
+                free(t);
+                emit_stbox_list(result, i, boxes, count, total_offset, list_entries,
+                                child_vector, result_validity);
+            }
+        };
+    };
+    loader.RegisterFunction(ScalarFunction(
+        "splitNStboxes", {TGEOM, LogicalType::INTEGER}, list_stbox,
+        split_stboxes_factory(tgeo_split_n_stboxes)));
+    loader.RegisterFunction(ScalarFunction(
+        "splitEachNStboxes", {TGEOM, LogicalType::INTEGER}, list_stbox,
+        split_stboxes_factory(tgeo_split_each_n_stboxes)));
+    // Same registrations for tgeompoint — MEOS dispatches by subtype.
+    loader.RegisterFunction(ScalarFunction(
+        "splitNStboxes", {TgeompointType::TGEOMPOINT(), LogicalType::INTEGER},
+        list_stbox, split_stboxes_factory(tgeo_split_n_stboxes)));
+    loader.RegisterFunction(ScalarFunction(
+        "splitEachNStboxes", {TgeompointType::TGEOMPOINT(), LogicalType::INTEGER},
+        list_stbox, split_stboxes_factory(tgeo_split_each_n_stboxes)));
+
     // -----------------------------------------------------------------
     // Analytics — Douglas-Peucker / max-distance / min-distance / min
     // time-delta simplification. All produce a thinned tgeometry.
