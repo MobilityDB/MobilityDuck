@@ -2878,6 +2878,162 @@ void StboxFunctions::Stbox_cmp(DataChunk &args, ExpressionState &state, Vector &
     }
 }
 
+/* ***************************************************
+ * Typed constructors — stboxX/stboxXT/stboxZ/stboxZT/
+ * stboxT and the geodstbox* variants. All wrap MEOS'
+ * single core constructor `stbox_make`.
+ ****************************************************/
 
+namespace {
+
+inline string_t StboxBlobFromMake(Vector &result, bool hasx, bool hasz, bool geodetic,
+                                  int32_t srid, double xmin, double xmax,
+                                  double ymin, double ymax, double zmin, double zmax,
+                                  Span *period) {
+    STBox *box = stbox_make(hasx, hasz, geodetic, srid, xmin, xmax, ymin, ymax,
+                            zmin, zmax, period);
+    if (!box) throw InternalException("stbox_make returned NULL");
+    string_t out = StringVector::AddStringOrBlob(
+        result, reinterpret_cast<const char *>(box), sizeof(STBox));
+    free(box);
+    return out;
+}
+
+inline Span SpanFromTimestamp(timestamp_tz_t duck_ts) {
+    timestamp_tz_t meos = DuckDBToMeosTimestamp(duck_ts);
+    Span s;
+    span_set((Datum) meos.value, (Datum) meos.value, true, true,
+             T_TIMESTAMPTZ, T_TSTZSPAN, &s);
+    return s;
+}
+
+template <bool HASZ, bool GEODETIC>
+void StboxConstructorXorZExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t cnt = args.size();
+    const int N = HASZ ? 6 : 4;
+    const bool with_srid = args.ColumnCount() > (idx_t) N;
+    auto *out = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < cnt; i++) {
+        double v[6] = {0,0,0,0,0,0};
+        for (int j = 0; j < N; j++) {
+            v[j] = args.data[j].GetValue(i).GetValue<double>();
+        }
+        int32_t srid = with_srid ? args.data[N].GetValue(i).GetValue<int32_t>() : 0;
+        double xmin, ymin, zmin = 0, xmax, ymax, zmax = 0;
+        if (!HASZ) {
+            xmin = v[0]; ymin = v[1]; xmax = v[2]; ymax = v[3];
+        } else {
+            xmin = v[0]; ymin = v[1]; zmin = v[2];
+            xmax = v[3]; ymax = v[4]; zmax = v[5];
+        }
+        out[i] = StboxBlobFromMake(result, true, HASZ, GEODETIC, srid,
+                                   xmin, xmax, ymin, ymax, zmin, zmax, nullptr);
+    }
+    if (cnt == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+template <bool GEODETIC>
+void StboxConstructorTimestampExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<timestamp_tz_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](timestamp_tz_t ts) -> string_t {
+            Span s = SpanFromTimestamp(ts);
+            return StboxBlobFromMake(result, false, false, GEODETIC, 0,
+                                     0, 0, 0, 0, 0, 0, &s);
+        });
+}
+
+template <bool GEODETIC>
+void StboxConstructorSpanExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t blob) -> string_t {
+            Span s;
+            memcpy(&s, blob.GetData(), sizeof(Span));
+            return StboxBlobFromMake(result, false, false, GEODETIC, 0,
+                                     0, 0, 0, 0, 0, 0, &s);
+        });
+}
+
+template <bool HASZ, bool TS_IS_SPAN, bool GEODETIC>
+void StboxConstructorXTorZTExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t cnt = args.size();
+    const int Nspatial = HASZ ? 6 : 4;
+    const idx_t time_idx = (idx_t) Nspatial;
+    const bool with_srid = args.ColumnCount() > time_idx + 1;
+    auto *out = FlatVector::GetData<string_t>(result);
+
+    for (idx_t i = 0; i < cnt; i++) {
+        double v[6] = {0,0,0,0,0,0};
+        for (int j = 0; j < Nspatial; j++) {
+            v[j] = args.data[j].GetValue(i).GetValue<double>();
+        }
+        Span s;
+        if (TS_IS_SPAN) {
+            args.data[time_idx].Flatten(cnt);
+            string_t span_blob = FlatVector::GetData<string_t>(args.data[time_idx])[i];
+            memcpy(&s, span_blob.GetData(), sizeof(Span));
+        } else {
+            args.data[time_idx].Flatten(cnt);
+            timestamp_tz_t ts = FlatVector::GetData<timestamp_tz_t>(args.data[time_idx])[i];
+            s = SpanFromTimestamp(ts);
+        }
+        int32_t srid = with_srid
+            ? args.data[time_idx + 1].GetValue(i).GetValue<int32_t>()
+            : 0;
+        double xmin, ymin, zmin = 0, xmax, ymax, zmax = 0;
+        if (!HASZ) {
+            xmin = v[0]; ymin = v[1]; xmax = v[2]; ymax = v[3];
+        } else {
+            xmin = v[0]; ymin = v[1]; zmin = v[2];
+            xmax = v[3]; ymax = v[4]; zmax = v[5];
+        }
+        out[i] = StboxBlobFromMake(result, true, HASZ, GEODETIC, srid,
+                                   xmin, xmax, ymin, ymax, zmin, zmax, &s);
+    }
+    if (cnt == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+}  // namespace
+
+void StboxFunctions::Stbox_constructor_x(DataChunk &args, ExpressionState &state, Vector &result) {
+    StboxConstructorXorZExec<false, false>(args, state, result);
+}
+void StboxFunctions::Stbox_constructor_z(DataChunk &args, ExpressionState &state, Vector &result) {
+    StboxConstructorXorZExec<true, false>(args, state, result);
+}
+void StboxFunctions::Stbox_constructor_t_timestamp(DataChunk &args, ExpressionState &state, Vector &result) {
+    StboxConstructorTimestampExec<false>(args, state, result);
+}
+void StboxFunctions::Stbox_constructor_t_span(DataChunk &args, ExpressionState &state, Vector &result) {
+    StboxConstructorSpanExec<false>(args, state, result);
+}
+void StboxFunctions::Stbox_constructor_xt_timestamp(DataChunk &args, ExpressionState &state, Vector &result) {
+    StboxConstructorXTorZTExec<false, false, false>(args, state, result);
+}
+void StboxFunctions::Stbox_constructor_xt_span(DataChunk &args, ExpressionState &state, Vector &result) {
+    StboxConstructorXTorZTExec<false, true, false>(args, state, result);
+}
+void StboxFunctions::Stbox_constructor_zt_timestamp(DataChunk &args, ExpressionState &state, Vector &result) {
+    StboxConstructorXTorZTExec<true, false, false>(args, state, result);
+}
+void StboxFunctions::Stbox_constructor_zt_span(DataChunk &args, ExpressionState &state, Vector &result) {
+    StboxConstructorXTorZTExec<true, true, false>(args, state, result);
+}
+void StboxFunctions::Geodstbox_constructor_z(DataChunk &args, ExpressionState &state, Vector &result) {
+    StboxConstructorXorZExec<true, true>(args, state, result);
+}
+void StboxFunctions::Geodstbox_constructor_t_timestamp(DataChunk &args, ExpressionState &state, Vector &result) {
+    StboxConstructorTimestampExec<true>(args, state, result);
+}
+void StboxFunctions::Geodstbox_constructor_t_span(DataChunk &args, ExpressionState &state, Vector &result) {
+    StboxConstructorSpanExec<true>(args, state, result);
+}
+void StboxFunctions::Geodstbox_constructor_zt_timestamp(DataChunk &args, ExpressionState &state, Vector &result) {
+    StboxConstructorXTorZTExec<true, false, true>(args, state, result);
+}
+void StboxFunctions::Geodstbox_constructor_zt_span(DataChunk &args, ExpressionState &state, Vector &result) {
+    StboxConstructorXTorZTExec<true, true, true>(args, state, result);
+}
 
 } // namespace duckdb

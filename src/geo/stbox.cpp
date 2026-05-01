@@ -184,6 +184,89 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
+    // -----------------------------------------------------------------
+    // Typed STBox constructors — stboxX/Z/T/XT/ZT and the geodstbox*
+    // variants. Mirrors MobilityDB's `051_stbox.in.sql` surface; all
+    // funnel through MEOS' single `stbox_make` constructor.
+    // -----------------------------------------------------------------
+    {
+        const auto STB = StboxType::STBOX();
+        const auto DBL = LogicalType::DOUBLE;
+        const auto INT = LogicalType::INTEGER;
+        const auto TS  = LogicalType::TIMESTAMP_TZ;
+        const auto SP  = SpanTypes::TSTZSPAN();
+
+        // stboxX(xmin, ymin, xmax, ymax, [srid])
+        loader.RegisterFunction(ScalarFunction("stboxX",
+            {DBL, DBL, DBL, DBL}, STB, StboxFunctions::Stbox_constructor_x));
+        loader.RegisterFunction(ScalarFunction("stboxX",
+            {DBL, DBL, DBL, DBL, INT}, STB, StboxFunctions::Stbox_constructor_x));
+
+        // stboxZ(xmin, ymin, zmin, xmax, ymax, zmax, [srid])
+        loader.RegisterFunction(ScalarFunction("stboxZ",
+            {DBL, DBL, DBL, DBL, DBL, DBL}, STB, StboxFunctions::Stbox_constructor_z));
+        loader.RegisterFunction(ScalarFunction("stboxZ",
+            {DBL, DBL, DBL, DBL, DBL, DBL, INT}, STB, StboxFunctions::Stbox_constructor_z));
+
+        // stboxT(timestamptz | tstzspan)
+        loader.RegisterFunction(ScalarFunction("stboxT", {TS}, STB,
+            StboxFunctions::Stbox_constructor_t_timestamp));
+        loader.RegisterFunction(ScalarFunction("stboxT", {SP}, STB,
+            StboxFunctions::Stbox_constructor_t_span));
+
+        // stboxXT(xmin, ymin, xmax, ymax, ts | span, [srid])
+        loader.RegisterFunction(ScalarFunction("stboxXT",
+            {DBL, DBL, DBL, DBL, TS}, STB,
+            StboxFunctions::Stbox_constructor_xt_timestamp));
+        loader.RegisterFunction(ScalarFunction("stboxXT",
+            {DBL, DBL, DBL, DBL, TS, INT}, STB,
+            StboxFunctions::Stbox_constructor_xt_timestamp));
+        loader.RegisterFunction(ScalarFunction("stboxXT",
+            {DBL, DBL, DBL, DBL, SP}, STB,
+            StboxFunctions::Stbox_constructor_xt_span));
+        loader.RegisterFunction(ScalarFunction("stboxXT",
+            {DBL, DBL, DBL, DBL, SP, INT}, STB,
+            StboxFunctions::Stbox_constructor_xt_span));
+
+        // stboxZT(xmin, ymin, zmin, xmax, ymax, zmax, ts | span, [srid])
+        loader.RegisterFunction(ScalarFunction("stboxZT",
+            {DBL, DBL, DBL, DBL, DBL, DBL, TS}, STB,
+            StboxFunctions::Stbox_constructor_zt_timestamp));
+        loader.RegisterFunction(ScalarFunction("stboxZT",
+            {DBL, DBL, DBL, DBL, DBL, DBL, TS, INT}, STB,
+            StboxFunctions::Stbox_constructor_zt_timestamp));
+        loader.RegisterFunction(ScalarFunction("stboxZT",
+            {DBL, DBL, DBL, DBL, DBL, DBL, SP}, STB,
+            StboxFunctions::Stbox_constructor_zt_span));
+        loader.RegisterFunction(ScalarFunction("stboxZT",
+            {DBL, DBL, DBL, DBL, DBL, DBL, SP, INT}, STB,
+            StboxFunctions::Stbox_constructor_zt_span));
+
+        // Geodetic variants — same shapes but geodetic flag set.
+        loader.RegisterFunction(ScalarFunction("geodstboxZ",
+            {DBL, DBL, DBL, DBL, DBL, DBL}, STB,
+            StboxFunctions::Geodstbox_constructor_z));
+        loader.RegisterFunction(ScalarFunction("geodstboxZ",
+            {DBL, DBL, DBL, DBL, DBL, DBL, INT}, STB,
+            StboxFunctions::Geodstbox_constructor_z));
+        loader.RegisterFunction(ScalarFunction("geodstboxT", {TS}, STB,
+            StboxFunctions::Geodstbox_constructor_t_timestamp));
+        loader.RegisterFunction(ScalarFunction("geodstboxT", {SP}, STB,
+            StboxFunctions::Geodstbox_constructor_t_span));
+        loader.RegisterFunction(ScalarFunction("geodstboxZT",
+            {DBL, DBL, DBL, DBL, DBL, DBL, TS}, STB,
+            StboxFunctions::Geodstbox_constructor_zt_timestamp));
+        loader.RegisterFunction(ScalarFunction("geodstboxZT",
+            {DBL, DBL, DBL, DBL, DBL, DBL, TS, INT}, STB,
+            StboxFunctions::Geodstbox_constructor_zt_timestamp));
+        loader.RegisterFunction(ScalarFunction("geodstboxZT",
+            {DBL, DBL, DBL, DBL, DBL, DBL, SP}, STB,
+            StboxFunctions::Geodstbox_constructor_zt_span));
+        loader.RegisterFunction(ScalarFunction("geodstboxZT",
+            {DBL, DBL, DBL, DBL, DBL, DBL, SP, INT}, STB,
+            StboxFunctions::Geodstbox_constructor_zt_span));
+    }
+
     loader.RegisterFunction(
         ScalarFunction(
             "geometry",

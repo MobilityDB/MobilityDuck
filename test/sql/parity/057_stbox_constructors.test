@@ -1,0 +1,128 @@
+# name: test/sql/parity/057_stbox_constructors.test
+# description: Cluster F — typed STBox constructors. MobilityDB SQL
+# exposes a family of `stbox{X,Z,T,XT,ZT}(...)` plus geodetic
+# `geodstbox{Z,T,ZT}(...)` shorthand constructors that all funnel
+# through MEOS' single `stbox_make`. The runtime probe before this
+# PR found all eight names unbound; this PR registers them with the
+# same shapes MobilityDB ships in `051_stbox.in.sql`.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# stboxX — 2D, no T
+# =============================================================================
+
+query I
+SELECT stboxX(0, 0, 1, 1)::VARCHAR;
+----
+STBOX X((0,0),(1,1))
+
+query I
+SELECT stboxX(0, 0, 1, 1, 4326)::VARCHAR;
+----
+SRID=4326;STBOX X((0,0),(1,1))
+
+# =============================================================================
+# stboxZ — 3D, no T
+# =============================================================================
+
+query I
+SELECT stboxZ(0, 0, 0, 1, 1, 1)::VARCHAR;
+----
+STBOX Z((0,0,0),(1,1,1))
+
+query I
+SELECT stboxZ(0, 0, 0, 1, 1, 1, 4326)::VARCHAR;
+----
+SRID=4326;STBOX Z((0,0,0),(1,1,1))
+
+# =============================================================================
+# stboxT — T-only (timestamptz / tstzspan)
+# =============================================================================
+
+query I
+SELECT stboxT('[2000-01-01, 2000-01-02]'::tstzspan) IS NOT NULL;
+----
+true
+
+query I
+SELECT stboxT('2000-01-01'::TIMESTAMPTZ) IS NOT NULL;
+----
+true
+
+# =============================================================================
+# stboxXT — 2D + T (both timestamp and span shapes, with optional SRID)
+# =============================================================================
+
+query I
+SELECT stboxXT(0, 0, 1, 1, '2000-01-01'::TIMESTAMPTZ) IS NOT NULL;
+----
+true
+
+query I
+SELECT stboxXT(0, 0, 1, 1, '[2000-01-01, 2000-01-02]'::tstzspan) IS NOT NULL;
+----
+true
+
+query I
+SELECT stboxXT(0, 0, 1, 1, '[2000-01-01, 2000-01-02]'::tstzspan, 4326) IS NOT NULL;
+----
+true
+
+# =============================================================================
+# stboxZT — 3D + T
+# =============================================================================
+
+query I
+SELECT stboxZT(0, 0, 0, 1, 1, 1, '2000-01-01'::TIMESTAMPTZ) IS NOT NULL;
+----
+true
+
+query I
+SELECT stboxZT(0, 0, 0, 1, 1, 1, '[2000-01-01, 2000-01-02]'::tstzspan, 4326) IS NOT NULL;
+----
+true
+
+# =============================================================================
+# Geodetic variants — geodstboxZ / geodstboxT / geodstboxZT
+# =============================================================================
+
+query I
+SELECT (geodstboxZ(0, 0, 0, 1, 1, 1) IS NOT NULL);
+----
+true
+
+query I
+SELECT (geodstboxT('2000-01-01'::TIMESTAMPTZ) IS NOT NULL);
+----
+true
+
+query I
+SELECT (geodstboxT('[2000-01-01, 2000-01-02]'::tstzspan) IS NOT NULL);
+----
+true
+
+query I
+SELECT (geodstboxZT(0, 0, 0, 1, 1, 1, '2000-01-01'::TIMESTAMPTZ) IS NOT NULL);
+----
+true
+
+query I
+SELECT (geodstboxZT(0, 0, 0, 1, 1, 1, '[2000-01-01, 2000-01-02]'::tstzspan, 4326) IS NOT NULL);
+----
+true
+
+# =============================================================================
+# isGeodetic discriminates the planar vs geodetic constructions.
+# =============================================================================
+
+query I
+SELECT isGeodetic(stboxX(0, 0, 1, 1));
+----
+false
+
+query I
+SELECT isGeodetic(geodstboxZ(0, 0, 0, 1, 1, 1));
+----
+true
