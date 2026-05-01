@@ -77,6 +77,7 @@ set(EXTENSION_SOURCES
     src/geo/tgeometry.cpp
     src/geo/tgeometry_in_out.cpp
     src/index/rtree_module.cpp
+    src/single_tile_getters.cpp
     src/index/rtree_index_create_physical.cpp
     src/index/rtree_index_scan.cpp
     src/index/rtree_optimize_scan.cpp
