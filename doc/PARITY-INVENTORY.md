@@ -1,16 +1,16 @@
 # MobilityDuck parity inventory
 
-Contributor-facing tracker of remaining MobilityDB ↔ MobilityDuck
-parity gaps. For the user-facing "what's covered and how" map, see
-[`PARITY.md`](PARITY.md).
+The full per-function inventory of MobilityDuck against MobilityDB's
+SQL surface. For the high-level "what's covered, what's different",
+see [`PARITY.md`](PARITY.md).
 
-Symbols:
-- ✓ shipped
-- ◯ open, MEOS APIs available, ready-to-pick-up
-- ⊘ blocked on a MEOS-side API exposure
-- ✗ architectural; not planned
+Status flags:
+- ✓ — shipped, callable today.
+- ◯ — open; can be added on demand.
+- ✗ — architectural mismatch with DuckDB, or PG-only utility; not
+  planned.
 
-## Counted vs. excluded names
+## Coverage at a glance
 
 The MobilityDB SQL surface is **487 user-facing names** (after
 excluding ~250 PG-extension implementation helpers — see PARITY.md
@@ -21,36 +21,43 @@ excluding ~250 PG-extension implementation helpers — see PARITY.md
 | Resolved directly by name | ~310 | ✓ |
 | Resolved via DuckDB operator (`=`, `<>`, `+`, `&`, `\|\|`, ...) | ~23 | ✓ |
 | Resolved via `*Agg` suffix (RFC #827) | 12 | ✓ |
-| Resolved via DuckDB-spatial native (`point`, `line`, `box`, ...) | 7 | ✓ |
 | Architectural blocks (no `geography`, no MVT) | 2 | ✗ |
-| Tracked residual user-visible gaps | 27 | mix of ◯ and ⊘ — see sections below |
-| **Effective coverage** | ~92% | |
+| Tracked residual user-visible gaps | ~3 | see sections below |
+| **Effective coverage** | ~99% | |
 
 ## Architectural blocks (✗)
 
-Not on a roadmap; would need new SQL types or specialised renderers in
-the host environment.
+DuckDB makes a different design choice for these; they're not on a
+roadmap and would need new SQL types or specialised renderers in the
+host environment.
 
 | Name | Why blocked |
 |---|---|
-| `geography` | DuckDB-spatial has no separate geography SQL type; all geometric storage is `geometry` carrying SRID + geodetic flag. |
+| `geography` (separate SQL type) | DuckDB-spatial has no separate geography SQL type; all geometric storage is `geometry` carrying SRID + a geodetic flag. The geographic *temporal* types `tgeography` / `tgeogpoint` work fine. |
 | `asMVTGeom` | Mapbox Vector Tile rendering. Specialised renderer; not currently included. |
 
 ## Out-of-scope type families (✗)
 
-Not currently included:
+These MobilityDB type families are not currently included:
 
-- `tcbuffer` family
-- `tnpoint` family
-- `tpose` family
-- `trgeo` family
-- `th3index` family
+- `tcbuffer` — temporal circular buffers.
+- `tnpoint` — temporal network points.
+- `tpose` — temporal poses.
+- `trgeo` — temporal rigid geometries.
+- `th3index` — temporal Uber H3 cells.
 
 ## SP-GiST / GiST / GIN access-method support (✗ structural)
 
 ~50 MobilityDB names matching `*_spgist_*`, `*_kdtree_*`,
-`*_quadtree_*`, `*_gist_*`, `set_gin_*`. DuckDB has none of those AMs.
-Not counted in the coverage figures above.
+`*_quadtree_*`, `*_gist_*`, `set_gin_*`. These are PG opclass support
+functions: they only exist to be registered with `CREATE OPERATOR
+CLASS … USING SPGIST` / `USING GIST`. **DuckDB has no SP-GiST or GiST
+access method**, so these names have no integration point and aren't
+exposed. They're not counted in the coverage figures above.
+
+The user-visible thing they enable on the PG side (a working spatial
+index) is provided by `TRTREE` on the DuckDB side; you generally don't
+call any of these names directly in user SQL anyway.
 
 The MEOS-side primitives that underlie SP-GiST are being exposed via
 [MobilityDB PR #740](https://github.com/MobilityDB/MobilityDB/pull/740).
@@ -58,7 +65,7 @@ Once those primitives are public on MEOS, MobilityDuck can register
 a custom `TSPGTREE` `BoundIndex` using them — but it can't register
 an opclass.
 
-## Residual gaps
+## Shipped surfaces
 
 ### `*SeqSetGaps` constructors  ✓
 
@@ -70,84 +77,84 @@ plain-SeqSet aliases. Test 062.
 
 ### Covers predicates  ✓
 
-`eCovers(geometry|tgeo, …)`, `tCovers(…)` for tgeometry / tgeompoint
-/ tgeography / tgeogpoint. Test 063.
+`eCovers` / `tCovers` / `aCovers` across all 3 signature shapes
+(`geometry`/`tspatial`, `tspatial`/`geometry`, `tspatial`/`tspatial`)
+for tgeometry / tgeompoint / tgeography / tgeogpoint. Test 063.
 
-`aCovers` ⊘ — MEOS public surface exposes only `ecovers_*` and
-`tcovers_*`; the always-covers path goes through MobilityDB-internal
-`ea_covers_*` (with `ALWAYS` flag) which isn't on `meos_geo.h` yet.
-A one-line MEOS publicize change would unblock this.
+### Tile / box list emitters  ✓
 
-### Z-axis (elevation) restrict  ⊘
+| Name | Notes |
+|---|---|
+| `tboxes(tnumber)` | one bounding tbox per sequence |
+| `stboxes(tspatial)` for all 4 spatial types | one bounding stbox per sequence |
+| `spaceTiles(stbox, …)` | spatial partitioning |
+| `spaceTimeTiles(stbox, …)` | spatial + time partitioning |
+| `valueBoxes(tnumber, …)` | per-value-bin bounding tbox |
+| `timeBoxes(tnumber, …)` | per-time-bin bounding tbox |
+| `valueTimeBoxes(tnumber, …)` | per (value-bin, time-bin) bounding tbox |
 
-`atElevation`, `minusElevation`. MEOS' `tgeo_restrict_elevation` is in
-the upstream `meos/include/meos_internal_geo.h` but not in the
-vcpkg-shipped libmeos used by MobilityDuck. Needs MEOS-side exposure
-plus a vcpkg bump.
+Tests 064, 066.
 
-### Alt-name tile / box emitters  ✓ partial
+### Split emitters  ✓
 
-| Name | Status | Notes |
-|---|---|---|
-| `tboxes(tnumber)` | ✓ | wraps `tnumber_tboxes` |
-| `stboxes(tspatial)` for all 4 spatial types | ✓ | wraps `tgeo_stboxes` |
-| `spaceTiles(stbox, …)` | ✓ | wraps `stbox_space_tiles` |
-| `spaceTimeTiles(stbox, …)` | ✓ | wraps `stbox_space_time_tiles` |
-| `valueBoxes(tnumber, …)` | ⊘ | only `tnumber_value_time_boxes` is public |
-| `timeBoxes(tnumber, …)` | ⊘ | same |
-| `valueTimeBoxes(tnumber, …)` | ⊘ | same |
+| Name | Notes |
+|---|---|
+| `timeSplit(temp, interval, ts)` | wraps `temporal_time_split`; all 8 temporal types. |
+| `valueSplit(tint\|tfloat, size, origin)` | wraps `tnumber_value_split`. |
+| `quadSplit(stbox)` | wraps `stbox_quad_split`; 4 quadrants 2D / 8 octants 3D. |
+| `valueTimeSplit(tnumber, vsize, dur, vorigin, torigin)` | wraps `tnumber_value_time_split`; emits `LIST<STRUCT(value, time, tnumber)>`. |
+| `spaceSplit(tgeompoint\|tgeometry, …)` | wraps `tgeo_space_split`; emits `LIST<STRUCT(part, space)>`. |
+| `spaceTimeSplit(tgeompoint\|tgeometry, …)` | wraps `tgeo_space_time_split`; emits `LIST<STRUCT(part, space, time)>`. |
 
-Test 064.
+The split-with-bins variants follow the same `LIST<STRUCT(...)>`
+shape as `frechetDistancePath`/`dynTimeWarpPath`: use `unnest()` if
+you want row-shaped output. Test 065.
 
-### Split-emitter complement  ◯
-
-`valueSplit`, `timeSplit`, `valueTimeSplit`, `spaceSplit`,
-`spaceTimeSplit`, `quadSplit`. MEOS exports
-`tnumber_value_split` / `tnumber_value_time_split` (in
-`meos_internal.h`) and `tgeo_space_split` /
-`tgeo_space_time_split` (in `meos_geo.h`). All return `Temporal **`
-arrays — needs a `LIST<temporal>` emitter mirror to the existing
-`LIST<stbox>` / `LIST<tbox>` ones.
-
-### Misc analytics  ◯
+### Misc analytics  ✓
 
 | Name | Status | Notes |
 |---|---|---|
-| `geomeasure(tpoint, tfloat)` | ◯ | wraps `tpoint_tfloat_to_geomeas` (already in MEOS public). Builds a geometry tagged with M values. |
-| `tprecision(temp, interval, ts)` | ◯ | sample-and-snap to a coarser grid. MEOS has `temporal_tprecision` (public). |
-| `tsample(temp, interval, ts)` | ◯ | regular-interval resampling. MEOS has `temporal_tsample`. |
-| `trend(temporal)` | ⊘ | not in MEOS public surface. |
-| `time_distance(span, span)` | ◯ | trivial wrapper over MEOS' `temporal_time_distance`. |
-| `asEWKB(tspatial)` | ◯ | binary form of the existing `asHexEWKB`; one extra exec wrapping `temporal_as_wkb` returning `BLOB` instead of `VARCHAR`. |
-| `transform_gk(geometry)` | ⊘ | German Gauss-Krüger projection helper; PG-only utility. |
-| `transformpipeline(geometry, str)` | ◯ | wraps PROJ's transform-pipeline string. MEOS has `stbox_transform_pipeline`; the geometry-side is in DuckDB-spatial as `ST_Transform` with PROJ args. |
-| `create_trip(...)` | ⊘ | trip-synthesis helper; lives in MobilityDB's `mobilitydb-tools` not in MEOS. Out of scope. |
+| `asEWKB(tspatial)` | ✓ | binary form of `asHexEWKB`; wraps `temporal_as_wkb` returning `BLOB`. |
+| `tprecision(temp, interval, ts)` | ✓ | sample-and-snap to a coarser time grid; tnumber + tspatial. |
+| `tsample(temp, interval, ts [, interp])` | ✓ | regular-interval resampling for any temporal type. |
+| `time_distance(...)` | ✓ | distance in seconds between tstzspan / tstzspanset / timestamptz arguments. |
+| `trend(tint\|tfloat) → tint` | ✓ | sign of the derivative at each instant. Wraps `tnumber_trend`. Requires linear interpolation. |
+| `transformPipeline(temp\|stbox, pipeline, srid, is_forward)` | ✓ | applies a PROJ pipeline string. Wraps `tspatial_transform_pipeline` / `stbox_transform_pipeline`. All 4 spatio-temporal types + stbox. |
+| `geoMeasure(tgeompoint, tfloat [, segmentize])` | ✓ | wraps `tpoint_tfloat_to_geomeas`. Builds a geometry whose vertices carry the tfloat measure as the M coordinate. |
+| `create_trip(...)` | ✗ | trip-synthesis helper from MobilityDB's `mobilitydb-tools`; out of scope. |
+
+`transform_gk(...)` (Gauss-Krüger projection) is intentionally not
+in the parity scope: it's a helper kept in MobilityDB's PG layer to
+connect with [Secondo](https://github.com/secondo-database/secondo).
+For general-purpose projection in MobilityDuck use
+`transformPipeline(...)` (PROJ pipeline strings).
+
+Test 066.
+
+### Z-axis (elevation) restrict  ◯
+
+`atElevation`, `minusElevation` — wraps `tgeo_restrict_elevation`,
+which exists in upstream MEOS but is bundled with the
+`meosType` → `MeosType` rename ([MobilityDB
+PR #790](https://github.com/MobilityDB/MobilityDB/pull/790))
+and the simplified spatiotemporal-relationships API
+([PR #778](https://github.com/MobilityDB/MobilityDB/pull/778)).
+Lifting the vcpkg pin to pick up elevation therefore requires a
+coordinated MobilityDuck adoption pass for those two breaking
+changes. Tracked together as one task.
 
 ### Aggregate residual  ✓ partial
 
 | Name | Status | Notes |
 |---|---|---|
 | `appendInstantAgg(temp, interp text)` | ✓ | 2-arg variant for all 8 temporal types. |
-| `appendInstantAgg(temp, interp text, maxdist float, maxt interval)` | ⊘ | DuckDB stock aggregate templates don't cover 4-ary cleanly; needs custom dispatch. |
-| `setUnion(geography) → geogset` | ✗ | blocked on `geography` SQL type. |
+| `appendInstantAgg(temp, interp text, maxdist float, maxt interval)` | ◯ | needs a custom DuckDB aggregate dispatch — the stock `UnaryAggregate` / `TernaryAggregate` templates don't cover the 4-ary shape cleanly. The underlying MEOS API (`temporal_app_tinst_transfn`) is already public. |
+| `setUnion(geography) → geogset` | ✗ | blocked on the `geography` SQL type (architectural). |
 
-## How to pick up an open item
+## Reporting a gap
 
-1. Check the MEOS API exists in the vcpkg-shipped headers
-   (`build/release/vcpkg_installed/x64-linux-release/include/meos*.h`).
-   If yes, proceed. If no, the item belongs to the ⊘ bucket and needs
-   MEOS-side work first.
-2. Add the executor — most fit the existing template patterns
-   (`UnaryExecutor::ExecuteWithNulls`, `BinaryExecutor::Execute`,
-   list-vector emitters via `EmitTboxList` / `EmitSpanList` /
-   inline stbox-list helpers).
-3. Register in the appropriate `temporal.cpp` /
-   `tgeometry_ops.cpp` / `tgeography_ops.cpp` / `stbox.cpp`
-   block. Mirror MobilityDB's SQL signature shape (default args,
-   return type) — see `mobilitydb/sql/{temporal,geo}/*.in.sql` for
-   the reference.
-4. Add a parity test in `test/sql/parity/0XX_<topic>.test`. Use
-   `IS NOT NULL` / `len()` / numeric-tolerance forms — avoid
-   embedding timestamp output in goldens (the harness's local-TZ
-   default makes those flaky); pin timestamps with `+00` if the
-   test depends on instant alignment.
+Run `mobilityduck_full_version()` from the SQL shell to see the
+extension version, the linked MEOS commit, the DuckDB version, and the
+full toolchain. If you spot a missing function or unexpected
+behaviour, please open an issue with that version line and the
+function signature you tried to call.
