@@ -148,8 +148,4 @@ shape MobilityDuck uses for `frechetDistancePath` /
 
 ## Reporting a gap
 
-Run `mobilityduck_full_version()` from the SQL shell to get the
-extension version, the linked MEOS commit, the DuckDB version, and
-the full toolchain. If you spot a missing function or unexpected
-behaviour, please open an issue with that version line and the
-function signature you tried to call.
+See [`CONTRIBUTING.md`](../CONTRIBUTING.md) for how to file an issue, including the version-line capture step.

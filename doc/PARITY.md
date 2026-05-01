@@ -257,6 +257,5 @@ These MobilityDB type families aren't part of MobilityDuck today:
 
 ---
 
-*Spotted something that should work but doesn't? Please open an
-issue with the function signature you tried to call and the version
-line from `mobilityduck_full_version()`.*
+*Spotted something that should work but doesn't? See
+[`CONTRIBUTING.md`](../CONTRIBUTING.md) for how to report a gap.*
