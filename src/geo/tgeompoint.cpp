@@ -79,6 +79,24 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
+    {
+        const auto TGP = TGEOMPOINT();
+        loader.RegisterFunction(ScalarFunction("asMFJSON",
+            {TGP}, LogicalType::VARCHAR, TemporalFunctions::Temporal_as_mfjson));
+        loader.RegisterFunction(ScalarFunction("asMFJSON",
+            {TGP, LogicalType::BOOLEAN}, LogicalType::VARCHAR,
+            TemporalFunctions::Temporal_as_mfjson));
+        loader.RegisterFunction(ScalarFunction("asMFJSON",
+            {TGP, LogicalType::BOOLEAN, LogicalType::INTEGER},
+            LogicalType::VARCHAR, TemporalFunctions::Temporal_as_mfjson));
+        loader.RegisterFunction(ScalarFunction("asHexWKB",
+            {TGP}, LogicalType::VARCHAR, TemporalFunctions::Temporal_as_hexwkb));
+        loader.RegisterFunction(ScalarFunction("asHexEWKB",
+            {TGP}, LogicalType::VARCHAR, TemporalFunctions::Temporal_as_hexwkb));
+        loader.RegisterFunction(ScalarFunction("tgeompointFromMFJSON",
+            {LogicalType::VARCHAR}, TGP, TemporalFunctions::Tgeompoint_from_mfjson));
+    }
+
     const auto varchar_list = LogicalType::LIST(LogicalType::VARCHAR);
 
     loader.RegisterFunction(

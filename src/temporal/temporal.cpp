@@ -279,6 +279,18 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
+        // sequenceN(temporal, int) — returns the n-th sequence as a temporal.
+        // Already wired for the four spatial-temporal types via their own
+        // _ops files; here we extend coverage to tint / tfloat / tbool / ttext.
+        loader.RegisterFunction(
+            ScalarFunction(
+                "sequenceN",
+                {type, LogicalType::INTEGER},
+                type,
+                TemporalFunctions::Temporal_sequence_n
+            )
+        );
+
         loader.RegisterFunction(
             ScalarFunction(
                 "getTimestamp",
@@ -1348,6 +1360,43 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // Unary tnumber functions
     loader.RegisterFunction(ScalarFunction("abs", {TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Tnumber_abs));
     loader.RegisterFunction(ScalarFunction("abs", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tnumber_abs));
+    loader.RegisterFunction(ScalarFunction("deltaValue", {TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Tnumber_delta_value));
+    loader.RegisterFunction(ScalarFunction("deltaValue", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tnumber_delta_value));
+
+    // -----------------------------------------------------------------
+    // MFJSON / Hex(E)WKB I/O — `asMFJSON`, `asHexWKB`, plus the
+    // type-specific `tIntFromMFJSON` / etc. parse constructors. The
+    // spatial-temporal types also expose `asHexEWKB` as an alias for
+    // asHexWKB; that registration is in the per-type _ops file.
+    // -----------------------------------------------------------------
+    {
+        using ScalarFn = void (*)(DataChunk &, ExpressionState &, Vector &);
+        auto register_mfjson_io = [&](const LogicalType &type, ScalarFn from_fn) {
+            // asMFJSON — 1/2/3-arg shapes mirroring MobilityDB SQL.
+            loader.RegisterFunction(ScalarFunction("asMFJSON",
+                {type}, LogicalType::VARCHAR, TemporalFunctions::Temporal_as_mfjson));
+            loader.RegisterFunction(ScalarFunction("asMFJSON",
+                {type, LogicalType::BOOLEAN}, LogicalType::VARCHAR,
+                TemporalFunctions::Temporal_as_mfjson));
+            loader.RegisterFunction(ScalarFunction("asMFJSON",
+                {type, LogicalType::BOOLEAN, LogicalType::INTEGER},
+                LogicalType::VARCHAR, TemporalFunctions::Temporal_as_mfjson));
+
+            // asHexWKB — single-argument scalar form.
+            loader.RegisterFunction(ScalarFunction("asHexWKB",
+                {type}, LogicalType::VARCHAR, TemporalFunctions::Temporal_as_hexwkb));
+
+            // typeFromMFJSON parser — type-specific because temptype
+            // has to be picked at registration time.
+            loader.RegisterFunction(ScalarFunction(
+                StringUtil::Lower(type.GetAlias()) + "FromMFJSON",
+                {LogicalType::VARCHAR}, type, from_fn));
+        };
+        register_mfjson_io(TemporalTypes::TINT(),    TemporalFunctions::Tint_from_mfjson);
+        register_mfjson_io(TemporalTypes::TFLOAT(),  TemporalFunctions::Tfloat_from_mfjson);
+        register_mfjson_io(TemporalTypes::TBOOL(),   TemporalFunctions::Tbool_from_mfjson);
+        register_mfjson_io(TemporalTypes::TTEXT(),   TemporalFunctions::Ttext_from_mfjson);
+    }
     loader.RegisterFunction(ScalarFunction("derivative", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Temporal_derivative));
     loader.RegisterFunction(ScalarFunction("degrees", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_degrees));
     loader.RegisterFunction(ScalarFunction("degrees", {TemporalTypes::TFLOAT(), LogicalType::BOOLEAN}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_degrees));

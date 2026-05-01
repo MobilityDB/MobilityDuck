@@ -4,6 +4,7 @@
 #include <regex>
 #include <string>
 #include <temporal/span.hpp>
+#include "temporal/temporal_functions.hpp"
 
 extern "C" {
     #include <meos.h>
@@ -210,6 +211,22 @@ void TGeographyTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
         Tspatial_as_ewkt
     );
     loader.RegisterFunction( TgeographyAsEWKT);
+
+    const auto TGEOG = TGeographyTypes::TGEOGRAPHY();
+    loader.RegisterFunction(ScalarFunction("asMFJSON",
+        {TGEOG}, LogicalType::VARCHAR, TemporalFunctions::Temporal_as_mfjson));
+    loader.RegisterFunction(ScalarFunction("asMFJSON",
+        {TGEOG, LogicalType::BOOLEAN}, LogicalType::VARCHAR,
+        TemporalFunctions::Temporal_as_mfjson));
+    loader.RegisterFunction(ScalarFunction("asMFJSON",
+        {TGEOG, LogicalType::BOOLEAN, LogicalType::INTEGER},
+        LogicalType::VARCHAR, TemporalFunctions::Temporal_as_mfjson));
+    loader.RegisterFunction(ScalarFunction("asHexWKB",
+        {TGEOG}, LogicalType::VARCHAR, TemporalFunctions::Temporal_as_hexwkb));
+    loader.RegisterFunction(ScalarFunction("asHexEWKB",
+        {TGEOG}, LogicalType::VARCHAR, TemporalFunctions::Temporal_as_hexwkb));
+    loader.RegisterFunction(ScalarFunction("tgeographyFromMFJSON",
+        {LogicalType::VARCHAR}, TGEOG, TemporalFunctions::Tgeography_from_mfjson));
 }
 
 

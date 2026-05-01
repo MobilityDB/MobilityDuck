@@ -4796,6 +4796,10 @@ void TemporalFunctions::Tnumber_abs(DataChunk &args, ExpressionState &state, Vec
     TemporalUnary(args, result, [](Temporal *t) { return tnumber_abs(t); });
 }
 
+void TemporalFunctions::Tnumber_delta_value(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return tnumber_delta_value(t); });
+}
+
 // Temporal_derivative is implemented later in this file in the Math
 // functions block (existed before the unary-tnumber additions).
 
@@ -5610,6 +5614,126 @@ void TemporalFunctions::Temporal_derivative(DataChunk &args, ExpressionState &st
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
+}
+
+/* ***************************************************
+ * MFJSON / Hex(E)WKB I/O — temporal_as_mfjson,
+ * temporal_from_mfjson, temporal_as_hexwkb, plus the
+ * tFooFromMFJSON parse-by-temptype constructors that
+ * the SQL surface expects.
+ ****************************************************/
+
+namespace {
+
+// asMFJSON: 1-arg form (defaults: with_bbox=false, precision=15).
+void TemporalAsMfjsonExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t blob, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(blob);
+            char *out = temporal_as_mfjson(t, false, 0, 15, NULL);
+            free(t);
+            if (!out) { mask.SetInvalid(idx); return string_t(); }
+            string_t r = StringVector::AddString(result, out);
+            free(out);
+            return r;
+        });
+}
+
+// asMFJSON: 2-arg form with explicit with_bbox.
+void TemporalAsMfjsonExecBbox(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, bool, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t blob, bool with_bbox, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(blob);
+            char *out = temporal_as_mfjson(t, with_bbox, 0, 15, NULL);
+            free(t);
+            if (!out) { mask.SetInvalid(idx); return string_t(); }
+            string_t r = StringVector::AddString(result, out);
+            free(out);
+            return r;
+        });
+}
+
+// asMFJSON: 3-arg form with with_bbox + precision.
+void TemporalAsMfjsonExecBboxPrec(DataChunk &args, ExpressionState &, Vector &result) {
+    TernaryExecutor::ExecuteWithNulls<string_t, bool, int32_t, string_t>(
+        args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t blob, bool with_bbox, int32_t precision, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(blob);
+            char *out = temporal_as_mfjson(t, with_bbox, 0, precision, NULL);
+            free(t);
+            if (!out) { mask.SetInvalid(idx); return string_t(); }
+            string_t r = StringVector::AddString(result, out);
+            free(out);
+            return r;
+        });
+}
+
+// asHexWKB / asHexEWKB — both call temporal_as_hexwkb. variant=0 uses
+// MEOS' default (NDR, EWKB-flavoured for spatial-temporal types).
+void TemporalAsHexWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t blob, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(blob);
+            size_t out_size = 0;
+            char *out = temporal_as_hexwkb(t, 0, &out_size);
+            free(t);
+            if (!out) { mask.SetInvalid(idx); return string_t(); }
+            string_t r = StringVector::AddString(result, out);
+            free(out);
+            return r;
+        });
+}
+
+// FromMFJSON: temptype is supplied as a template parameter.
+template <meosType TT>
+void TemporalFromMfjsonExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t s, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = temporal_from_mfjson(s.GetString().c_str(), TT);
+            if (!t) { mask.SetInvalid(idx); return string_t(); }
+            return TemporalToBlob(result, t);
+        });
+}
+
+}  // namespace
+
+void TemporalFunctions::Temporal_as_mfjson(DataChunk &args, ExpressionState &state, Vector &result) {
+    if (args.ColumnCount() >= 3)      TemporalAsMfjsonExecBboxPrec(args, state, result);
+    else if (args.ColumnCount() == 2) TemporalAsMfjsonExecBbox(args, state, result);
+    else                              TemporalAsMfjsonExec(args, state, result);
+}
+
+void TemporalFunctions::Temporal_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalAsHexWkbExec(args, state, result);
+}
+
+void TemporalFunctions::Tint_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalFromMfjsonExec<T_TINT>(args, state, result);
+}
+void TemporalFunctions::Tfloat_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalFromMfjsonExec<T_TFLOAT>(args, state, result);
+}
+void TemporalFunctions::Tbool_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalFromMfjsonExec<T_TBOOL>(args, state, result);
+}
+void TemporalFunctions::Ttext_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalFromMfjsonExec<T_TTEXT>(args, state, result);
+}
+void TemporalFunctions::Tgeompoint_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalFromMfjsonExec<T_TGEOMPOINT>(args, state, result);
+}
+void TemporalFunctions::Tgeogpoint_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalFromMfjsonExec<T_TGEOGPOINT>(args, state, result);
+}
+void TemporalFunctions::Tgeometry_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalFromMfjsonExec<T_TGEOMETRY>(args, state, result);
+}
+void TemporalFunctions::Tgeography_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalFromMfjsonExec<T_TGEOGRAPHY>(args, state, result);
 }
 
 } // namespace duckdb

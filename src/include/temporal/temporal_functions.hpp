@@ -224,7 +224,22 @@ struct TemporalFunctions {
      * Unary tnumber functions
      ****************************************************/
     static void Tnumber_abs(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_delta_value(DataChunk &args, ExpressionState &state, Vector &result);
     // Temporal_derivative declared in the math-functions block below.
+
+    /* ***************************************************
+     * MFJSON / Hex(E)WKB I/O
+     ****************************************************/
+    static void Temporal_as_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tint_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tfloat_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tbool_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ttext_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeompoint_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeogpoint_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeometry_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeography_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tfloat_degrees(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tfloat_radians(DataChunk &args, ExpressionState &state, Vector &result);
 

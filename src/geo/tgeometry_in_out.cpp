@@ -4,6 +4,7 @@
 #include <regex>
 #include <string>
 #include <temporal/span.hpp>
+#include "temporal/temporal_functions.hpp"
 
 extern "C" {
     #include <meos.h>
@@ -210,6 +211,26 @@ void TGeometryTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
         Tspatial_as_ewkt
     );
     loader.RegisterFunction( TgeometryAsEWKT);
+
+    // MFJSON / Hex(E)WKB I/O — same MEOS calls (`temporal_as_mfjson`,
+    // `temporal_as_hexwkb`, `temporal_from_mfjson(T_TGEOMETRY)`) as the
+    // non-spatial side; registered here so the spatial type alias
+    // `TGEOMETRY` matches.
+    const auto TGEOM = TGeometryTypes::TGEOMETRY();
+    loader.RegisterFunction(ScalarFunction("asMFJSON",
+        {TGEOM}, LogicalType::VARCHAR, TemporalFunctions::Temporal_as_mfjson));
+    loader.RegisterFunction(ScalarFunction("asMFJSON",
+        {TGEOM, LogicalType::BOOLEAN}, LogicalType::VARCHAR,
+        TemporalFunctions::Temporal_as_mfjson));
+    loader.RegisterFunction(ScalarFunction("asMFJSON",
+        {TGEOM, LogicalType::BOOLEAN, LogicalType::INTEGER},
+        LogicalType::VARCHAR, TemporalFunctions::Temporal_as_mfjson));
+    loader.RegisterFunction(ScalarFunction("asHexWKB",
+        {TGEOM}, LogicalType::VARCHAR, TemporalFunctions::Temporal_as_hexwkb));
+    loader.RegisterFunction(ScalarFunction("asHexEWKB",
+        {TGEOM}, LogicalType::VARCHAR, TemporalFunctions::Temporal_as_hexwkb));
+    loader.RegisterFunction(ScalarFunction("tgeometryFromMFJSON",
+        {LogicalType::VARCHAR}, TGEOM, TemporalFunctions::Tgeometry_from_mfjson));
 }
 
 
