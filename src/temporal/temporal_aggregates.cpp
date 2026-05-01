@@ -700,6 +700,102 @@ static AggregateFunction MakeTemporalStateAggregateBinary(const LogicalType &typ
 }
 
 // =====================================================================
+// 4-arg AppendInstantAgg(temp, interp text, maxdist float, maxt interval)
+//
+// DuckDB's stock UnaryAggregate / BinaryAggregate templates only cover 1
+// and 2 args; for 4 args we register the AggregateFunction with a hand-
+// written update function. State + combine + finalize + destroy reuse
+// the existing TemporalState / TemporalStateCombineBase<> machinery, so
+// the only new code is the per-row dispatch over the 4 input vectors.
+// =====================================================================
+
+inline void AppendInstantAgg4ary_OnRow(TemporalState &state, string_t t_blob,
+                                       string_t interp_text, double maxdist,
+                                       interval_t maxt) {
+    const Temporal *temp = reinterpret_cast<const Temporal *>(t_blob.GetData());
+    const TInstant *inst = reinterpret_cast<const TInstant *>(temp);
+    MeosInterval mi = IntervaltToInterval(maxt);
+    state.value = temporal_app_tinst_transfn(
+        state.value, inst, InterpFromText(interp_text), maxdist, &mi);
+}
+
+static void AppendInstantAgg4ary_Update(Vector inputs[], AggregateInputData &,
+                                        idx_t input_count, Vector &states, idx_t count) {
+    D_ASSERT(input_count == 4);
+    UnifiedVectorFormat tdata, idata, ddata, mdata, sdata;
+    inputs[0].ToUnifiedFormat(count, tdata);
+    inputs[1].ToUnifiedFormat(count, idata);
+    inputs[2].ToUnifiedFormat(count, ddata);
+    inputs[3].ToUnifiedFormat(count, mdata);
+    states.ToUnifiedFormat(count, sdata);
+
+    auto t = UnifiedVectorFormat::GetData<string_t>(tdata);
+    auto i_ = UnifiedVectorFormat::GetData<string_t>(idata);
+    auto d = UnifiedVectorFormat::GetData<double>(ddata);
+    auto m = UnifiedVectorFormat::GetData<interval_t>(mdata);
+    auto state_ptrs = reinterpret_cast<TemporalState **>(sdata.data);
+
+    for (idx_t r = 0; r < count; ++r) {
+        auto ti = tdata.sel->get_index(r);
+        auto ii = idata.sel->get_index(r);
+        auto di = ddata.sel->get_index(r);
+        auto mi_idx = mdata.sel->get_index(r);
+        auto si = sdata.sel->get_index(r);
+        if (!tdata.validity.RowIsValid(ti) || !idata.validity.RowIsValid(ii) ||
+            !ddata.validity.RowIsValid(di) || !mdata.validity.RowIsValid(mi_idx)) {
+            continue;
+        }
+        AppendInstantAgg4ary_OnRow(*state_ptrs[si], t[ti], i_[ii], d[di], m[mi_idx]);
+    }
+}
+
+static void AppendInstantAgg4ary_SimpleUpdate(Vector inputs[], AggregateInputData &,
+                                              idx_t input_count, data_ptr_t state_ptr,
+                                              idx_t count) {
+    D_ASSERT(input_count == 4);
+    UnifiedVectorFormat tdata, idata, ddata, mdata;
+    inputs[0].ToUnifiedFormat(count, tdata);
+    inputs[1].ToUnifiedFormat(count, idata);
+    inputs[2].ToUnifiedFormat(count, ddata);
+    inputs[3].ToUnifiedFormat(count, mdata);
+
+    auto t = UnifiedVectorFormat::GetData<string_t>(tdata);
+    auto i_ = UnifiedVectorFormat::GetData<string_t>(idata);
+    auto d = UnifiedVectorFormat::GetData<double>(ddata);
+    auto m = UnifiedVectorFormat::GetData<interval_t>(mdata);
+    auto &state = *reinterpret_cast<TemporalState *>(state_ptr);
+
+    for (idx_t r = 0; r < count; ++r) {
+        auto ti = tdata.sel->get_index(r);
+        auto ii = idata.sel->get_index(r);
+        auto di = ddata.sel->get_index(r);
+        auto mi_idx = mdata.sel->get_index(r);
+        if (!tdata.validity.RowIsValid(ti) || !idata.validity.RowIsValid(ii) ||
+            !ddata.validity.RowIsValid(di) || !mdata.validity.RowIsValid(mi_idx)) {
+            continue;
+        }
+        AppendInstantAgg4ary_OnRow(state, t[ti], i_[ii], d[di], m[mi_idx]);
+    }
+}
+
+// Reuses AppendInstantAggFn's Initialize / Combine / Finalize / Destroy
+// (they're driven by the TemporalState struct, not the input shape).
+template <class OP>
+static AggregateFunction MakeAppendInstantAgg4ary(const LogicalType &t_type) {
+    return AggregateFunction(
+        {t_type, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::INTERVAL},
+        t_type,
+        AggregateFunction::StateSize<TemporalState>,
+        AggregateFunction::StateInitialize<TemporalState, OP, AggregateDestructorType::LEGACY>,
+        AppendInstantAgg4ary_Update,
+        AggregateFunction::StateCombine<TemporalState, OP>,
+        AggregateFunction::StateFinalize<TemporalState, string_t, OP>,
+        AppendInstantAgg4ary_SimpleUpdate,
+        /* bind */ nullptr,
+        /* destructor */ AggregateFunction::StateDestroy<TemporalState, OP>);
+}
+
+// =====================================================================
 // SpanUnionAgg: state shape is `SpanSet *`. Each input span/spanset is
 // folded into the state via MEOS's union transfns. Final state is the
 // state itself (no separate finalfn — `spanset_union_finalfn` is a
@@ -1143,6 +1239,8 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
             set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(t));
             set.AddFunction(MakeTemporalStateAggregateBinary<AppendInstantAggFnInterp>(
                 t, LogicalType::VARCHAR));
+            // 4-arg form: (temp, interp text, maxdist double, maxt interval).
+            set.AddFunction(MakeAppendInstantAgg4ary<AppendInstantAggFnInterp>(t));
         }
         loader.RegisterFunction(std::move(set));
     }

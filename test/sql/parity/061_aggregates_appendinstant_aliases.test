@@ -95,6 +95,25 @@ SELECT (AppendInstantAgg(t::tint) IS NOT NULL) FROM (VALUES
 ----
 true
 
+# 4-arg variant: AppendInstantAgg(temp, interp, maxdist, maxt). Wraps
+# MEOS' temporal_app_tinst_transfn with the gap thresholds; folds new
+# instants into a sequence-set boundary whenever the distance from the
+# previous instant exceeds maxdist or the time gap exceeds maxt.
+query I
+SELECT (AppendInstantAgg(t::tgeompoint, 'linear', 10.0, INTERVAL '1 day') IS NOT NULL) FROM (VALUES
+  ('Point(0 0)@2000-01-01 00:00:00+00'),
+  ('Point(1 1)@2000-01-02 00:00:00+00'),
+  ('Point(2 2)@2000-01-03 00:00:00+00')) AS t(t);
+----
+true
+
+query I
+SELECT (AppendInstantAgg(t::tfloat, 'linear', 5.0, INTERVAL '6 hours') IS NOT NULL) FROM (VALUES
+  ('1.0@2000-01-01 00:00:00+00'),
+  ('2.0@2000-01-02 00:00:00+00')) AS t(t);
+----
+true
+
 # =============================================================================
 # Naming aliases — `dynTimeWarpDistance` is MobilityDB's longer name
 # for the function MobilityDuck already exposes as `dynTimeWarp`.
