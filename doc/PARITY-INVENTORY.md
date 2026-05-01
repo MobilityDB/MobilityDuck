@@ -22,7 +22,7 @@ excluding ~250 PG-extension implementation helpers — see PARITY.md
 | Resolved via DuckDB operator (`=`, `<>`, `+`, `&`, `\|\|`, ...) | ~23 | ✓ |
 | Resolved via `*Agg` suffix (RFC #827) | 12 | ✓ |
 | Resolved via DuckDB-spatial native (`point`, `line`, `box`, ...) | 7 | ✓ |
-| Architectural blocks (no `geography`, no `multirange`, no MVT) | 3 | ✗ |
+| Architectural blocks (no `geography`, no MVT) | 2 | ✗ |
 | Tracked residual user-visible gaps | 27 | mix of ◯ and ⊘ — see clusters below |
 | **Effective coverage** | ~92% | |
 
@@ -34,7 +34,6 @@ the host environment.
 | Name | Why blocked |
 |---|---|
 | `geography` | DuckDB-spatial has no separate geography SQL type; all geometric storage is `geometry` carrying SRID + geodetic flag. |
-| `multirange` | PG-only type primitive. |
 | `asMVTGeom` | Mapbox Vector Tile rendering. Specialised renderer; tackled in a future PR. |
 
 ## Out-of-scope type families (✗)

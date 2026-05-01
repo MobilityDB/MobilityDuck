@@ -17,7 +17,7 @@ spatial-temporal types (`tgeompoint`, `tgeogpoint`, `tgeometry`,
 bounding-box types. The remaining 8% is split between
 
   - architectural choices DuckDB makes differently (no `geography` type,
-    no SP-GiST or GiST access methods, no `multirange`),
+    no SP-GiST or GiST access methods),
   - PG-extension implementation surface that has no DuckDB counterpart
     (selectivity helpers, GIN extract callbacks, aggregate transition
     functions, etc.),
@@ -141,16 +141,6 @@ The single MobilityDB aggregate signature this affects is
 `setUnion(geography) → geogset`. The corresponding `setUnionAgg(geomset) → geomset`
 and `setUnionAgg(geogset) → geogset` set-input variants both work; only
 the geometry-scalar-to-geogset path is unreachable.
-
-### `multirange` is a PG-only type
-
-PostgreSQL 14+ ships `multirange` as a primitive range type built into
-the catalog. DuckDB has no equivalent. The MobilityDB `multirange`
-constructor is therefore not registered.
-
-MobilityDB's `intspanset` / `floatspanset` / `tstzspanset` / `datespanset`
-/ `bigintspanset` cover the practical use case (a range-of-ranges
-container with set-union semantics) and are fully wired in MobilityDuck.
 
 ### Composite-row return types
 
