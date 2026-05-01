@@ -9,7 +9,7 @@ For the per-function checklist of what's not yet shipped, see
 
 ## TL;DR
 
-MobilityDuck implements **~99% of MobilityDB's user-facing SQL surface**
+MobilityDuck implements **~100% of MobilityDB's in-scope user-facing SQL surface**
 across the temporal types (`tint`, `tfloat`, `tbool`, `ttext`),
 spatio-temporal types (`tgeompoint`, `tgeogpoint`, `tgeometry`,
 `tgeography`), spans / sets / spansets, and the `stbox` / `tbox`
@@ -244,14 +244,6 @@ The MobilityDB SP-GiST / GiST opclass support functions (`*_spgist_*`,
 callbacks (`set_gin_extract_*`) aren't exposed in MobilityDuck —
 they're PostgreSQL planner-machinery glue with no DuckDB counterpart.
 You wouldn't normally call them by name anyway.
-
-## What's not yet shipped
-
-A very short list — the [inventory](PARITY-INVENTORY.md) has the
-full detail. None of these block typical workloads:
-
-- `atElevation` / `minusElevation` — waiting on a coordinated
-  upstream-MEOS adoption pass.
 
 ## Type families that aren't included
 

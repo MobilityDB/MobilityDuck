@@ -25,8 +25,8 @@ PostgreSQL).
 | Reachable only via the named-function form because DuckDB's parser rejects the operator (the `#` time-axis operators `<<#`/`&<#`/`#>>`/`#&>` and the `\|`-bearing Y/Z-axis operators) — call `before`, `overBefore`, `after`, `overAfter`, `above`, `below`, `front`, `back`, etc. | 12 | ✓ via named form |
 | Renamed in MobilityDuck with the `*Agg` suffix on aggregate functions | 12 | ✓ |
 | Architectural blocks (no separate `geography` SQL type, no MVT) | 2 | ✗ |
-| Not yet shipped | ~2 | mix of ◯ and ✗ — see sections below |
-| **Effective coverage** | ~99% | |
+| Not yet shipped | 0 — all parity items shipped | — |
+| **Effective coverage** | ~100% of the in-scope surface | |
 
 ## What's intentionally not here
 
@@ -135,6 +135,7 @@ shape MobilityDuck uses for `frechetDistancePath` /
 | `trend(tint\|tfloat) → tint` | sign of the derivative at each instant; requires linear interpolation |
 | `transformPipeline(temp\|stbox, pipeline, srid, is_forward)` | PROJ pipeline projection for all 4 spatio-temporal types and `stbox` |
 | `geoMeasure(tgeompoint, tfloat [, segmentize])` | geometry whose vertices carry the `tfloat` measure as the M coordinate |
+| `atElevation(tgeompoint, floatspan)` / `minusElevation(...)` | restrict a 3D tgeompoint to / from a floatspan-bounded elevation range |
 
 ### Aggregates  ✓
 
@@ -144,20 +145,6 @@ shape MobilityDuck uses for `frechetDistancePath` /
 | `appendInstantAgg(temp, interp text)` | 2-arg form, all 8 temporal types |
 | `appendInstantAgg(temp, interp text, maxdist float, maxt interval)` | 4-arg form with gap thresholds; all 8 temporal types |
 | Everything else from MobilityDB's aggregate surface | with the `Agg` suffix — see PARITY.md |
-
-## What's not yet shipped
-
-### `atElevation` / `minusElevation`  ◯
-
-Restricts a 3D `tgeompoint` to or from a `floatspan`-bounded
-elevation range. The MEOS function `tgeo_restrict_elevation` exists
-upstream but isn't yet in the vcpkg-shipped libmeos snapshot.
-Bumping the snapshot pulls in two upstream breaking changes
-([MobilityDB
-#790](https://github.com/MobilityDB/MobilityDB/pull/790),
-[#778](https://github.com/MobilityDB/MobilityDB/pull/778)) that
-MobilityDuck must adopt at the same time, so this is tracked as a
-single follow-up task.
 
 ## Reporting a gap
 
