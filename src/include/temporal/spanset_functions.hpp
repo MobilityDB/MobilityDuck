@@ -92,6 +92,15 @@ struct SpansetFunctions{
     static void Spanset_gt(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spanset_ge(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spanset_cmp(DataChunk &args, ExpressionState &state, Vector &result);
+
+    // time_distance — wraps MEOS' distance_tstzspan*_tstzspan*. Returns
+    // the time-axis distance in seconds; commutative variants are
+    // resolved by argument shape.
+    static void Time_distance_ts_spanset(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Time_distance_span_spanset(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Time_distance_spanset_ts(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Time_distance_spanset_span(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Time_distance_spanset_spanset(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 

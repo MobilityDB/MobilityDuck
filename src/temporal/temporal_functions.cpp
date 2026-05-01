@@ -5905,4 +5905,149 @@ void TemporalFunctions::Tgeography_from_mfjson(DataChunk &args, ExpressionState 
     TemporalFromMfjsonExec<T_TGEOGRAPHY>(args, state, result);
 }
 
+/* ***************************************************
+ * Misc analytics: asEWKB, tprecision, tsample.
+ *
+ * asEWKB returns the binary EWKB form (BLOB) — companion
+ * to the existing asHexEWKB which returns the hex string.
+ *
+ * tprecision and tsample resample a temporal value onto a
+ * regular grid; default origin is 2000-01-03 to match
+ * MobilityDB's SQL default. tsample additionally takes an
+ * interpolation argument (defaults to 'discrete').
+ ****************************************************/
+
+#ifndef WKB_EXTENDED
+#define WKB_EXTENDED ((uint8_t)0x04)
+#endif
+#ifndef WKB_NDR
+#define WKB_NDR ((uint8_t)0x08)
+#endif
+
+namespace {
+
+void TemporalAsEwkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t blob, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(blob);
+            size_t out_size = 0;
+            uint8_t *wkb = temporal_as_wkb(t, WKB_EXTENDED | WKB_NDR, &out_size);
+            free(t);
+            if (!wkb || out_size == 0) {
+                if (wkb) free(wkb);
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            string_t r = StringVector::AddStringOrBlob(
+                result, reinterpret_cast<const char *>(wkb), out_size);
+            free(wkb);
+            return r;
+        });
+}
+
+// MobilityDB's tprecision/tsample default origin is 2000-01-03 (PG epoch + 2 days).
+// In MEOS units: epoch is 2000-01-01, so 2000-01-03 = 2 days = 172800 * 1e6 micros.
+constexpr int64_t MEOS_TS_2000_01_03 = static_cast<int64_t>(2) * 86400 * 1000000;
+
+template <typename Fn>
+void RunWithTemporalIntervalTs(DataChunk &args, Vector &result, Fn run) {
+    const idx_t count = args.size();
+    bool has_origin = (args.ColumnCount() >= 3);
+    if (has_origin) {
+        TernaryExecutor::ExecuteWithNulls<string_t, interval_t, timestamp_tz_t, string_t>(
+            args.data[0], args.data[1], args.data[2], result, count,
+            [&](string_t blob, interval_t iv, timestamp_tz_t ts,
+                ValidityMask &mask, idx_t idx) -> string_t {
+                Temporal *t = BlobToTemporal(blob);
+                MeosInterval mi = IntervaltToInterval(iv);
+                TimestampTz origin = DuckDBToMeosTimestamp(ts).value;
+                Temporal *r = run(t, &mi, origin);
+                free(t);
+                if (!r) { mask.SetInvalid(idx); return string_t(); }
+                return TemporalToBlob(result, r);
+            });
+    } else {
+        BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(
+            args.data[0], args.data[1], result, count,
+            [&](string_t blob, interval_t iv,
+                ValidityMask &mask, idx_t idx) -> string_t {
+                Temporal *t = BlobToTemporal(blob);
+                MeosInterval mi = IntervaltToInterval(iv);
+                Temporal *r = run(t, &mi, MEOS_TS_2000_01_03);
+                free(t);
+                if (!r) { mask.SetInvalid(idx); return string_t(); }
+                return TemporalToBlob(result, r);
+            });
+    }
+}
+
+void TemporalTprecisionExec(DataChunk &args, ExpressionState &, Vector &result) {
+    RunWithTemporalIntervalTs(args, result,
+        [](Temporal *t, MeosInterval *iv, TimestampTz origin) {
+            return temporal_tprecision(t, iv, origin);
+        });
+}
+
+// tsample with default DISCRETE interp.
+void TemporalTsampleExec(DataChunk &args, ExpressionState &, Vector &result) {
+    RunWithTemporalIntervalTs(args, result,
+        [](Temporal *t, MeosInterval *iv, TimestampTz origin) {
+            return temporal_tsample(t, iv, origin, DISCRETE);
+        });
+}
+
+// tsample with explicit interp string (4-arg form).
+void TemporalTsampleExecInterp(DataChunk &args, ExpressionState &, Vector &result) {
+    using namespace duckdb;
+    const idx_t count = args.size();
+    args.data[0].Flatten(count);
+    args.data[1].Flatten(count);
+    args.data[2].Flatten(count);
+    args.data[3].Flatten(count);
+
+    auto in_blob   = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_iv     = FlatVector::GetData<interval_t>(args.data[1]);
+    auto in_ts     = FlatVector::GetData<timestamp_tz_t>(args.data[2]);
+    auto in_interp = FlatVector::GetData<string_t>(args.data[3]);
+    auto out_data  = FlatVector::GetData<string_t>(result);
+    auto &out_mask = FlatVector::Validity(result);
+
+    auto &mask0 = FlatVector::Validity(args.data[0]);
+    auto &mask1 = FlatVector::Validity(args.data[1]);
+    auto &mask2 = FlatVector::Validity(args.data[2]);
+    auto &mask3 = FlatVector::Validity(args.data[3]);
+
+    for (idx_t i = 0; i < count; ++i) {
+        if (!mask0.RowIsValid(i) || !mask1.RowIsValid(i) ||
+            !mask2.RowIsValid(i) || !mask3.RowIsValid(i)) {
+            out_mask.SetInvalid(i);
+            continue;
+        }
+        Temporal *t = BlobToTemporal(in_blob[i]);
+        MeosInterval mi = IntervaltToInterval(in_iv[i]);
+        TimestampTz origin = DuckDBToMeosTimestamp(in_ts[i]).value;
+        interpType interp = interptype_from_string(in_interp[i].GetString().c_str());
+        Temporal *r = temporal_tsample(t, &mi, origin, interp);
+        free(t);
+        if (!r) { out_mask.SetInvalid(i); continue; }
+        out_data[i] = TemporalToBlob(result, r);
+    }
+}
+
+}  // namespace
+
+void TemporalFunctions::Temporal_as_ewkb(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalAsEwkbExec(args, state, result);
+}
+
+void TemporalFunctions::Temporal_tprecision(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalTprecisionExec(args, state, result);
+}
+
+void TemporalFunctions::Temporal_tsample(DataChunk &args, ExpressionState &state, Vector &result) {
+    if (args.ColumnCount() == 4) TemporalTsampleExecInterp(args, state, result);
+    else TemporalTsampleExec(args, state, result);
+}
+
 } // namespace duckdb

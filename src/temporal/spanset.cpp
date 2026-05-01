@@ -451,6 +451,23 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         ScalarFunction("timestamps", {SpansetTypes::tstzspanset()}, SetTypes::tstzset(), SpansetFunctions::Tstzspanset_timestamps)
     );
 
+    // time_distance — five overloads, all involving at least one
+    // tstzspanset. Returns the time-axis distance in seconds.
+    loader.RegisterFunction(ScalarFunction("time_distance",
+        {LogicalType::TIMESTAMP_TZ, SpansetTypes::tstzspanset()}, LogicalType::DOUBLE,
+        SpansetFunctions::Time_distance_ts_spanset));
+    loader.RegisterFunction(ScalarFunction("time_distance",
+        {SpanTypes::TSTZSPAN(), SpansetTypes::tstzspanset()}, LogicalType::DOUBLE,
+        SpansetFunctions::Time_distance_span_spanset));
+    loader.RegisterFunction(ScalarFunction("time_distance",
+        {SpansetTypes::tstzspanset(), LogicalType::TIMESTAMP_TZ}, LogicalType::DOUBLE,
+        SpansetFunctions::Time_distance_spanset_ts));
+    loader.RegisterFunction(ScalarFunction("time_distance",
+        {SpansetTypes::tstzspanset(), SpanTypes::TSTZSPAN()}, LogicalType::DOUBLE,
+        SpansetFunctions::Time_distance_spanset_span));
+    loader.RegisterFunction(ScalarFunction("time_distance",
+        {SpansetTypes::tstzspanset(), SpansetTypes::tstzspanset()}, LogicalType::DOUBLE,
+        SpansetFunctions::Time_distance_spanset_spanset));
 }
 
 } // namespace duckdb   

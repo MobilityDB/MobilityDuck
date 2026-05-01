@@ -23,8 +23,8 @@ excluding ~250 PG-extension implementation helpers — see PARITY.md
 | Resolved via `*Agg` suffix (RFC #827) | 12 | ✓ |
 | Resolved via DuckDB-spatial native (`point`, `line`, `box`, ...) | 7 | ✓ |
 | Architectural blocks (no `geography`, no MVT) | 2 | ✗ |
-| Tracked residual user-visible gaps | 27 | mix of ◯ and ⊘ — see sections below |
-| **Effective coverage** | ~92% | |
+| Tracked residual user-visible gaps | ~12 | mix of ◯ and ⊘ — see sections below |
+| **Effective coverage** | ~95% | |
 
 ## Architectural blocks (✗)
 
@@ -85,7 +85,7 @@ the upstream `meos/include/meos_internal_geo.h` but not in the
 vcpkg-shipped libmeos used by MobilityDuck. Needs MEOS-side exposure
 plus a vcpkg bump.
 
-### Alt-name tile / box emitters  ✓ partial
+### Alt-name tile / box emitters  ✓
 
 | Name | Status | Notes |
 |---|---|---|
@@ -93,11 +93,11 @@ plus a vcpkg bump.
 | `stboxes(tspatial)` for all 4 spatial types | ✓ | wraps `tgeo_stboxes` |
 | `spaceTiles(stbox, …)` | ✓ | wraps `stbox_space_tiles` |
 | `spaceTimeTiles(stbox, …)` | ✓ | wraps `stbox_space_time_tiles` |
-| `valueBoxes(tnumber, …)` | ⊘ | only `tnumber_value_time_boxes` is public |
-| `timeBoxes(tnumber, …)` | ⊘ | same |
-| `valueTimeBoxes(tnumber, …)` | ⊘ | same |
+| `valueBoxes(tnumber, …)` | ✓ | wraps `tint_value_boxes` / `tfloat_value_boxes` |
+| `timeBoxes(tnumber, …)` | ✓ | wraps `tint_time_boxes` / `tfloat_time_boxes` |
+| `valueTimeBoxes(tnumber, …)` | ✓ | wraps `tint_value_time_boxes` / `tfloat_value_time_boxes` |
 
-Test 064.
+Tests 064, 066.
 
 ### Split-emitter complement  ✓ partial
 
@@ -113,19 +113,21 @@ Test 064.
 The 3 ⊘ ones need a parallel `LIST<geometry>` / `LIST<bigint>` emit
 channel (or a `STRUCT(parts, bins)` return shape). Test 065.
 
-### Misc analytics  ◯
+### Misc analytics  ✓ partial
 
 | Name | Status | Notes |
 |---|---|---|
-| `geomeasure(tpoint, tfloat)` | ◯ | wraps `tpoint_tfloat_to_geomeas` (already in MEOS public). Builds a geometry tagged with M values. |
-| `tprecision(temp, interval, ts)` | ◯ | sample-and-snap to a coarser grid. MEOS has `temporal_tprecision` (public). |
-| `tsample(temp, interval, ts)` | ◯ | regular-interval resampling. MEOS has `temporal_tsample`. |
+| `asEWKB(tspatial)` | ✓ | binary form of `asHexEWKB`; wraps `temporal_as_wkb` returning `BLOB`. |
+| `tprecision(temp, interval, ts)` | ✓ | sample-and-snap to a coarser grid; tnumber + tspatial. |
+| `tsample(temp, interval, ts [, interp])` | ✓ | regular-interval resampling for any temporal type. |
+| `time_distance(...)` | ✓ | distance in seconds between tstzspan / tstzspanset / timestamptz arguments. |
+| `geomeasure(tpoint, tfloat)` | ◯ | wraps `tpoint_tfloat_to_geomeas`. Builds a geometry tagged with M values. |
+| `transformpipeline(geometry, str)` | ◯ | wraps PROJ's transform-pipeline string. MEOS has `stbox_transform_pipeline`; the geometry-side is `ST_Transform` in DuckDB-spatial. |
 | `trend(temporal)` | ⊘ | not in MEOS public surface. |
-| `time_distance(span, span)` | ◯ | trivial wrapper over MEOS' `temporal_time_distance`. |
-| `asEWKB(tspatial)` | ◯ | binary form of the existing `asHexEWKB`; one extra exec wrapping `temporal_as_wkb` returning `BLOB` instead of `VARCHAR`. |
 | `transform_gk(geometry)` | ⊘ | German Gauss-Krüger projection helper; PG-only utility. |
-| `transformpipeline(geometry, str)` | ◯ | wraps PROJ's transform-pipeline string. MEOS has `stbox_transform_pipeline`; the geometry-side is in DuckDB-spatial as `ST_Transform` with PROJ args. |
-| `create_trip(...)` | ⊘ | trip-synthesis helper; lives in MobilityDB's `mobilitydb-tools` not in MEOS. Out of scope. |
+| `create_trip(...)` | ⊘ | trip-synthesis helper; lives in MobilityDB's `mobilitydb-tools`, not in MEOS. Out of scope. |
+
+Test 066.
 
 ### Aggregate residual  ✓ partial
 

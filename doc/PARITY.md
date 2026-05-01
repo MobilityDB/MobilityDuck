@@ -10,7 +10,7 @@ shippable PRs, see [`PARITY-INVENTORY.md`](PARITY-INVENTORY.md).
 
 ## At a glance
 
-MobilityDuck implements **~92% of MobilityDB's user-facing SQL surface**
+MobilityDuck implements **~95% of MobilityDB's user-facing SQL surface**
 across temporal types (`tint`, `tfloat`, `tbool`, `ttext`),
 spatial-temporal types (`tgeompoint`, `tgeogpoint`, `tgeometry`,
 `tgeography`), spans / sets / spansets, and the `stbox` / `tbox`

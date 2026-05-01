@@ -232,6 +232,9 @@ struct TemporalFunctions {
      ****************************************************/
     static void Temporal_as_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_as_ewkb(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_tprecision(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_tsample(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tint_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tfloat_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tbool_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result);

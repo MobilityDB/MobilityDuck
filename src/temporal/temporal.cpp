@@ -1423,6 +1423,46 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         register_mfjson_io(TemporalTypes::TBOOL(),   TemporalFunctions::Tbool_from_mfjson);
         register_mfjson_io(TemporalTypes::TTEXT(),   TemporalFunctions::Ttext_from_mfjson);
     }
+
+    // -----------------------------------------------------------------
+    // tprecision / tsample — resample a temporal value onto a regular
+    // grid. tprecision works on tnumber + tspatial only; tsample works
+    // on every temporal type (with an optional interp string).
+    //
+    //   tprecision(temp, interval [, ts])
+    //   tsample(temp, interval [, ts [, interp text]])
+    //
+    // Default origin is 2000-01-03 to match MobilityDB.
+    // -----------------------------------------------------------------
+    {
+        auto register_tsample = [&](const LogicalType &type) {
+            loader.RegisterFunction(ScalarFunction("tsample",
+                {type, LogicalType::INTERVAL}, type,
+                TemporalFunctions::Temporal_tsample));
+            loader.RegisterFunction(ScalarFunction("tsample",
+                {type, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, type,
+                TemporalFunctions::Temporal_tsample));
+            loader.RegisterFunction(ScalarFunction("tsample",
+                {type, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ,
+                 LogicalType::VARCHAR}, type,
+                TemporalFunctions::Temporal_tsample));
+        };
+        auto register_tprecision = [&](const LogicalType &type) {
+            loader.RegisterFunction(ScalarFunction("tprecision",
+                {type, LogicalType::INTERVAL}, type,
+                TemporalFunctions::Temporal_tprecision));
+            loader.RegisterFunction(ScalarFunction("tprecision",
+                {type, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, type,
+                TemporalFunctions::Temporal_tprecision));
+        };
+        // tsample: all 8 temporal types (incl. tbool/ttext).
+        for (auto &t : TemporalTypes::AllTypes()) register_tsample(t);
+        // tprecision: tint/tfloat only here; the spatial-temporal types
+        // get their tprecision registration in the per-type _ops file
+        // alongside the other tnumber-shaped operators.
+        register_tprecision(TemporalTypes::TINT());
+        register_tprecision(TemporalTypes::TFLOAT());
+    }
     loader.RegisterFunction(ScalarFunction("derivative", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Temporal_derivative));
     loader.RegisterFunction(ScalarFunction("degrees", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_degrees));
     loader.RegisterFunction(ScalarFunction("degrees", {TemporalTypes::TFLOAT(), LogicalType::BOOLEAN}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_degrees));
@@ -2407,6 +2447,133 @@ void TnumberTboxesExec(DataChunk &args, ExpressionState &, Vector &result) {
     }
 }
 
+// valueBoxes / timeBoxes / valueTimeBoxes — partition a tnumber along
+// the value axis, the time axis, or both. tint and tfloat have separate
+// MEOS entry points (typed args), hence the IS_INT template param.
+
+template <bool IS_INT>
+void TnumberValueBoxesExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t row_count = args.size();
+    const bool has_origin = (args.ColumnCount() >= 3);
+    for (idx_t c = 0; c < args.ColumnCount(); ++c) args.data[c].Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+    idx_t total_offset = 0;
+
+    auto temp_data = FlatVector::GetData<string_t>(args.data[0]);
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (FlatVector::IsNull(args.data[0], i) ||
+            FlatVector::IsNull(args.data[1], i) ||
+            (has_origin && FlatVector::IsNull(args.data[2], i))) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        Temporal *t = (Temporal *) malloc(temp_data[i].GetSize());
+        memcpy(t, temp_data[i].GetData(), temp_data[i].GetSize());
+        int count = 0;
+        TBox *tiles;
+        if (IS_INT) {
+            int32_t vsize = FlatVector::GetData<int32_t>(args.data[1])[i];
+            int32_t vorigin = has_origin ? FlatVector::GetData<int32_t>(args.data[2])[i] : 0;
+            tiles = tint_value_boxes(t, vsize, vorigin, &count);
+        } else {
+            double vsize = FlatVector::GetData<double>(args.data[1])[i];
+            double vorigin = has_origin ? FlatVector::GetData<double>(args.data[2])[i] : 0.0;
+            tiles = tfloat_value_boxes(t, vsize, vorigin, &count);
+        }
+        free(t);
+        EmitTboxList(result, i, tiles, count, total_offset, list_entries, child_vector,
+                     result_validity);
+    }
+}
+
+template <bool IS_INT>
+void TnumberTimeBoxesExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t row_count = args.size();
+    const bool has_origin = (args.ColumnCount() >= 3);
+    for (idx_t c = 0; c < args.ColumnCount(); ++c) args.data[c].Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+    idx_t total_offset = 0;
+
+    auto temp_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto iv_data = FlatVector::GetData<interval_t>(args.data[1]);
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (FlatVector::IsNull(args.data[0], i) ||
+            FlatVector::IsNull(args.data[1], i) ||
+            (has_origin && FlatVector::IsNull(args.data[2], i))) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        Temporal *t = (Temporal *) malloc(temp_data[i].GetSize());
+        memcpy(t, temp_data[i].GetData(), temp_data[i].GetSize());
+        MeosInterval mi = IntervaltToInterval(iv_data[i]);
+        TimestampTz torigin = has_origin
+            ? DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[2])[i]).value
+            : (int64_t) 2 * 86400 * 1000000;  // default 2000-01-03
+        int count = 0;
+        TBox *tiles = IS_INT
+            ? tint_time_boxes(t, &mi, torigin, &count)
+            : tfloat_time_boxes(t, &mi, torigin, &count);
+        free(t);
+        EmitTboxList(result, i, tiles, count, total_offset, list_entries, child_vector,
+                     result_validity);
+    }
+}
+
+template <bool IS_INT>
+void TnumberValueTimeBoxesExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t row_count = args.size();
+    const bool has_vorigin = (args.ColumnCount() >= 4);
+    const bool has_torigin = (args.ColumnCount() >= 5);
+    for (idx_t c = 0; c < args.ColumnCount(); ++c) args.data[c].Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+    idx_t total_offset = 0;
+
+    auto temp_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto iv_data = FlatVector::GetData<interval_t>(args.data[2]);
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (FlatVector::IsNull(args.data[0], i) ||
+            FlatVector::IsNull(args.data[1], i) ||
+            FlatVector::IsNull(args.data[2], i) ||
+            (has_vorigin && FlatVector::IsNull(args.data[3], i)) ||
+            (has_torigin && FlatVector::IsNull(args.data[4], i))) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        Temporal *t = (Temporal *) malloc(temp_data[i].GetSize());
+        memcpy(t, temp_data[i].GetData(), temp_data[i].GetSize());
+        MeosInterval mi = IntervaltToInterval(iv_data[i]);
+        TimestampTz torigin = has_torigin
+            ? DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[4])[i]).value
+            : (int64_t) 2 * 86400 * 1000000;
+        int count = 0;
+        TBox *tiles;
+        if (IS_INT) {
+            int32_t vsize = FlatVector::GetData<int32_t>(args.data[1])[i];
+            int32_t vorigin = has_vorigin ? FlatVector::GetData<int32_t>(args.data[3])[i] : 0;
+            tiles = tint_value_time_boxes(t, vsize, &mi, vorigin, torigin, &count);
+        } else {
+            double vsize = FlatVector::GetData<double>(args.data[1])[i];
+            double vorigin = has_vorigin ? FlatVector::GetData<double>(args.data[3])[i] : 0.0;
+            tiles = tfloat_value_time_boxes(t, vsize, &mi, vorigin, torigin, &count);
+        }
+        free(t);
+        EmitTboxList(result, i, tiles, count, total_offset, list_entries, child_vector,
+                     result_validity);
+    }
+}
+
 // splitNTboxes(tnumber, int) — partitions a tnumber into the given
 // box-count and returns the bounding tbox of each partition.
 // splitEachNTboxes(tnumber, int) — same shape but partition by
@@ -2738,6 +2905,40 @@ void TemporalTypes::RegisterTileGetters(ExtensionLoader &loader) {
             {TemporalTypes::TINT()}, list_tbox, TnumberTboxesExec));
         loader.RegisterFunction(ScalarFunction("tboxes",
             {TemporalTypes::TFLOAT()}, list_tbox, TnumberTboxesExec));
+
+        // valueBoxes / timeBoxes / valueTimeBoxes — partition along the
+        // value axis, the time axis, or both, and emit one bounding tbox
+        // per partition. tint and tfloat have separate MEOS entry points.
+        loader.RegisterFunction(ScalarFunction("valueBoxes",
+            {TemporalTypes::TINT(), INT}, list_tbox, TnumberValueBoxesExec<true>));
+        loader.RegisterFunction(ScalarFunction("valueBoxes",
+            {TemporalTypes::TINT(), INT, INT}, list_tbox, TnumberValueBoxesExec<true>));
+        loader.RegisterFunction(ScalarFunction("valueBoxes",
+            {TemporalTypes::TFLOAT(), DBL}, list_tbox, TnumberValueBoxesExec<false>));
+        loader.RegisterFunction(ScalarFunction("valueBoxes",
+            {TemporalTypes::TFLOAT(), DBL, DBL}, list_tbox, TnumberValueBoxesExec<false>));
+
+        loader.RegisterFunction(ScalarFunction("timeBoxes",
+            {TemporalTypes::TINT(), IVAL}, list_tbox, TnumberTimeBoxesExec<true>));
+        loader.RegisterFunction(ScalarFunction("timeBoxes",
+            {TemporalTypes::TINT(), IVAL, TS}, list_tbox, TnumberTimeBoxesExec<true>));
+        loader.RegisterFunction(ScalarFunction("timeBoxes",
+            {TemporalTypes::TFLOAT(), IVAL}, list_tbox, TnumberTimeBoxesExec<false>));
+        loader.RegisterFunction(ScalarFunction("timeBoxes",
+            {TemporalTypes::TFLOAT(), IVAL, TS}, list_tbox, TnumberTimeBoxesExec<false>));
+
+        loader.RegisterFunction(ScalarFunction("valueTimeBoxes",
+            {TemporalTypes::TINT(), INT, IVAL}, list_tbox, TnumberValueTimeBoxesExec<true>));
+        loader.RegisterFunction(ScalarFunction("valueTimeBoxes",
+            {TemporalTypes::TINT(), INT, IVAL, INT}, list_tbox, TnumberValueTimeBoxesExec<true>));
+        loader.RegisterFunction(ScalarFunction("valueTimeBoxes",
+            {TemporalTypes::TINT(), INT, IVAL, INT, TS}, list_tbox, TnumberValueTimeBoxesExec<true>));
+        loader.RegisterFunction(ScalarFunction("valueTimeBoxes",
+            {TemporalTypes::TFLOAT(), DBL, IVAL}, list_tbox, TnumberValueTimeBoxesExec<false>));
+        loader.RegisterFunction(ScalarFunction("valueTimeBoxes",
+            {TemporalTypes::TFLOAT(), DBL, IVAL, DBL}, list_tbox, TnumberValueTimeBoxesExec<false>));
+        loader.RegisterFunction(ScalarFunction("valueTimeBoxes",
+            {TemporalTypes::TFLOAT(), DBL, IVAL, DBL, TS}, list_tbox, TnumberValueTimeBoxesExec<false>));
 
         // timeSplit(temporal, interval, timestamptz) -> LIST<temporal>.
         // Result element type matches the input.

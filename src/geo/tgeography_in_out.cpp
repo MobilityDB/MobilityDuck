@@ -225,8 +225,29 @@ void TGeographyTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
         {TGEOG}, LogicalType::VARCHAR, TemporalFunctions::Temporal_as_hexwkb));
     loader.RegisterFunction(ScalarFunction("asHexEWKB",
         {TGEOG}, LogicalType::VARCHAR, TemporalFunctions::Temporal_as_hexwkb));
+    loader.RegisterFunction(ScalarFunction("asEWKB",
+        {TGEOG}, LogicalType::BLOB, TemporalFunctions::Temporal_as_ewkb));
     loader.RegisterFunction(ScalarFunction("tgeographyFromMFJSON",
         {LogicalType::VARCHAR}, TGEOG, TemporalFunctions::Tgeography_from_mfjson));
+
+    // tprecision / tsample for tgeography. tsample takes an optional
+    // interp string (defaults to 'discrete' to match MobilityDB).
+    loader.RegisterFunction(ScalarFunction("tprecision",
+        {TGEOG, LogicalType::INTERVAL}, TGEOG,
+        TemporalFunctions::Temporal_tprecision));
+    loader.RegisterFunction(ScalarFunction("tprecision",
+        {TGEOG, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, TGEOG,
+        TemporalFunctions::Temporal_tprecision));
+    loader.RegisterFunction(ScalarFunction("tsample",
+        {TGEOG, LogicalType::INTERVAL}, TGEOG,
+        TemporalFunctions::Temporal_tsample));
+    loader.RegisterFunction(ScalarFunction("tsample",
+        {TGEOG, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, TGEOG,
+        TemporalFunctions::Temporal_tsample));
+    loader.RegisterFunction(ScalarFunction("tsample",
+        {TGEOG, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ,
+         LogicalType::VARCHAR}, TGEOG,
+        TemporalFunctions::Temporal_tsample));
 }
 
 

@@ -1,0 +1,193 @@
+# name: test/sql/parity/066_misc_analytics.test
+# description: Misc analytics gap-fillers:
+#
+#   asEWKB(tspatial)                       — binary EWKB form (BLOB).
+#                                              Companion to asHexEWKB.
+#   tprecision(temp, interval [, ts])      — sample-and-snap to a coarser
+#                                              time grid. tnumber + tspatial.
+#   tsample(temp, interval [, ts [, interp]]) — regular-interval resampling
+#                                                 of any temporal type.
+#   time_distance(span/spanset/ts pair)    — distance in seconds along
+#                                              the time axis between two
+#                                              tstzspan / tstzspanset /
+#                                              timestamptz arguments.
+#   valueBoxes / timeBoxes / valueTimeBoxes — bounding tboxes per
+#                                              partition along the value
+#                                              and/or time axis. tint /
+#                                              tfloat.
+# group: [sql]
+
+require mobilityduck
+
+# All temporal-value timestamps and TIMESTAMPTZ literals carry an
+# explicit `+00` suffix so the test result doesn't depend on the
+# harness session timezone. Without it, MEOS parses the bare timestamp
+# in localtime, DuckDB parses '2000-01-01'::TIMESTAMPTZ in UTC, the
+# two UTC instants differ by the TZ offset, and tsample / tprecision
+# bin alignment falls through.
+
+# =============================================================================
+# asEWKB — binary EWKB body. Each Point(1 1) Temporal returns 33 bytes
+# (1 type-flag + 4 srid + 4 length + 8+8 coords + 8 tsstamp).
+# =============================================================================
+
+query I
+SELECT octet_length(asEWKB('Point(1 1)@2000-01-01 00:00:00+00'::tgeompoint)) > 0;
+----
+true
+
+query I
+SELECT octet_length(asEWKB('Point(1 1)@2000-01-01 00:00:00+00'::tgeometry)) > 0;
+----
+true
+
+query I
+SELECT octet_length(asEWKB('SRID=4326;Point(1 1)@2000-01-01 00:00:00+00'::tgeogpoint)) > 0;
+----
+true
+
+query I
+SELECT octet_length(asEWKB('SRID=4326;Point(1 1)@2000-01-01 00:00:00+00'::tgeography)) > 0;
+----
+true
+
+# =============================================================================
+# tprecision — round timestamps onto a regular grid. Tests pass an
+# explicit origin to make them session-TZ independent (the default
+# origin is the upstream MobilityDB default '2000-01-03' but evaluating
+# it in the local session TZ is what makes alignment fragile).
+# =============================================================================
+
+query I
+SELECT tprecision(
+  '{1@2000-01-01 00:00:00+00,5@2000-01-05 00:00:00+00}'::tint,
+  INTERVAL '1 day', '2000-01-01 00:00:00+00'::TIMESTAMPTZ) IS NOT NULL;
+----
+true
+
+query I
+SELECT tprecision(
+  '{1.0@2000-01-01 00:00:00+00,5.0@2000-01-05 00:00:00+00}'::tfloat,
+  INTERVAL '1 day', '2000-01-01 00:00:00+00'::TIMESTAMPTZ) IS NOT NULL;
+----
+true
+
+query I
+SELECT tprecision(
+  '{Point(0 0)@2000-01-01 00:00:00+00,Point(5 5)@2000-01-05 00:00:00+00}'::tgeompoint,
+  INTERVAL '1 day', '2000-01-01 00:00:00+00'::TIMESTAMPTZ) IS NOT NULL;
+----
+true
+
+# =============================================================================
+# tsample — resample at regular intervals. interp string defaults to
+# 'discrete' when omitted; the 4-arg form lets the caller request linear.
+# =============================================================================
+
+query I
+SELECT tsample('{true@2000-01-01 00:00:00+00,false@2000-01-05 00:00:00+00}'::tbool,
+                INTERVAL '1 day', '2000-01-01 00:00:00+00'::TIMESTAMPTZ) IS NOT NULL;
+----
+true
+
+query I
+SELECT tsample('{1@2000-01-01 00:00:00+00,5@2000-01-05 00:00:00+00}'::tint,
+                INTERVAL '1 day', '2000-01-01 00:00:00+00'::TIMESTAMPTZ) IS NOT NULL;
+----
+true
+
+query I
+SELECT tsample(
+  '{Point(0 0)@2000-01-01 00:00:00+00,Point(5 5)@2000-01-05 00:00:00+00}'::tgeompoint,
+  INTERVAL '1 day', '2000-01-01 00:00:00+00'::TIMESTAMPTZ, 'linear') IS NOT NULL;
+----
+true
+
+query I
+SELECT tsample('{"a"@2000-01-01 00:00:00+00,"b"@2000-01-05 00:00:00+00}'::ttext,
+                INTERVAL '2 days', '2000-01-01 00:00:00+00'::TIMESTAMPTZ) IS NOT NULL;
+----
+true
+
+# =============================================================================
+# time_distance — seconds between time-axis arguments.
+# Jan 1 → Jan 5 is 4 days = 345600 s.
+# =============================================================================
+
+query I
+SELECT time_distance('2000-01-01 00:00:00+00'::TIMESTAMPTZ,
+                      '{[2000-01-05 00:00:00+00,2000-01-10 00:00:00+00]}'::tstzspanset);
+----
+345600.0
+
+query I
+SELECT time_distance('{[2000-01-05 00:00:00+00,2000-01-10 00:00:00+00]}'::tstzspanset,
+                      '2000-01-01 00:00:00+00'::TIMESTAMPTZ);
+----
+345600.0
+
+query I
+SELECT time_distance('[2000-01-01 00:00:00+00,2000-01-02 00:00:00+00]'::tstzspan,
+                      '{[2000-01-05 00:00:00+00,2000-01-10 00:00:00+00]}'::tstzspanset);
+----
+259200.0
+
+query I
+SELECT time_distance('{[2000-01-05 00:00:00+00,2000-01-10 00:00:00+00]}'::tstzspanset,
+                      '[2000-01-01 00:00:00+00,2000-01-02 00:00:00+00]'::tstzspan);
+----
+259200.0
+
+query I
+SELECT time_distance('{[2000-01-01 00:00:00+00,2000-01-02 00:00:00+00]}'::tstzspanset,
+                      '{[2000-01-05 00:00:00+00,2000-01-06 00:00:00+00]}'::tstzspanset);
+----
+259200.0
+
+# =============================================================================
+# valueBoxes / timeBoxes / valueTimeBoxes — partition-and-bound emitters.
+# =============================================================================
+
+query I
+SELECT len(valueBoxes(
+  '{1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00, 10@2000-01-10 00:00:00+00}'::tint, 3, 0)) > 0;
+----
+true
+
+query I
+SELECT len(valueBoxes(
+  '{1.0@2000-01-01 00:00:00+00, 5.0@2000-01-05 00:00:00+00}'::tfloat, 2.0, 0.0)) > 0;
+----
+true
+
+query I
+SELECT len(timeBoxes(
+  '{1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00}'::tint, INTERVAL '1 day')) > 0;
+----
+true
+
+query I
+SELECT len(timeBoxes(
+  '{1.0@2000-01-01 00:00:00+00, 5.0@2000-01-05 00:00:00+00}'::tfloat,
+  INTERVAL '1 day', '2000-01-01 00:00:00+00'::TIMESTAMPTZ)) > 0;
+----
+true
+
+query I
+SELECT len(valueTimeBoxes(
+  '{1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00}'::tint, 3, INTERVAL '1 day')) > 0;
+----
+true
+
+query I
+SELECT len(valueTimeBoxes(
+  '{1.0@2000-01-01 00:00:00+00, 5.0@2000-01-05 00:00:00+00}'::tfloat,
+  2.0, INTERVAL '1 day', 0.0, '2000-01-01 00:00:00+00'::TIMESTAMPTZ)) > 0;
+----
+true
+
+# Result element type matches input.
+query I
+SELECT typeof(valueBoxes('{1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00}'::tint, 3, 0));
+----
+TBOX[]

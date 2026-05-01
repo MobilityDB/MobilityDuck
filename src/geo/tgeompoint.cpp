@@ -93,8 +93,28 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             {TGP}, LogicalType::VARCHAR, TemporalFunctions::Temporal_as_hexwkb));
         loader.RegisterFunction(ScalarFunction("asHexEWKB",
             {TGP}, LogicalType::VARCHAR, TemporalFunctions::Temporal_as_hexwkb));
+        loader.RegisterFunction(ScalarFunction("asEWKB",
+            {TGP}, LogicalType::BLOB, TemporalFunctions::Temporal_as_ewkb));
         loader.RegisterFunction(ScalarFunction("tgeompointFromMFJSON",
             {LogicalType::VARCHAR}, TGP, TemporalFunctions::Tgeompoint_from_mfjson));
+
+        // tprecision / tsample for tgeompoint.
+        loader.RegisterFunction(ScalarFunction("tprecision",
+            {TGP, LogicalType::INTERVAL}, TGP,
+            TemporalFunctions::Temporal_tprecision));
+        loader.RegisterFunction(ScalarFunction("tprecision",
+            {TGP, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, TGP,
+            TemporalFunctions::Temporal_tprecision));
+        loader.RegisterFunction(ScalarFunction("tsample",
+            {TGP, LogicalType::INTERVAL}, TGP,
+            TemporalFunctions::Temporal_tsample));
+        loader.RegisterFunction(ScalarFunction("tsample",
+            {TGP, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, TGP,
+            TemporalFunctions::Temporal_tsample));
+        loader.RegisterFunction(ScalarFunction("tsample",
+            {TGP, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ,
+             LogicalType::VARCHAR}, TGP,
+            TemporalFunctions::Temporal_tsample));
     }
 
     const auto varchar_list = LogicalType::LIST(LogicalType::VARCHAR);

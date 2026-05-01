@@ -1917,4 +1917,98 @@ void SpansetFunctions::Spanset_cmp(DataChunk &args, ExpressionState &state, Vect
     }
 }
 
-} // namespace duckdb   
+/* ***************************************************
+ * time_distance — distance in seconds along the time axis between
+ * tstzspan / tstzspanset / timestamptz arguments. Wraps MEOS'
+ * distance_*_tstz* with timestamp arguments converted from DuckDB's
+ * unix-epoch microseconds to MEOS' Postgres-epoch microseconds.
+ *
+ * MobilityDB defines five `time_distance(...)` overloads — all
+ * involving at least one tstzspanset. Span-vs-span and timestamp-vs-span
+ * are already covered by the existing `span_distance` family.
+ ****************************************************/
+
+namespace {
+
+inline SpanSet *SpansetFromBlob(string_t blob) {
+    size_t sz = blob.GetSize();
+    SpanSet *ss = (SpanSet *) malloc(sz);
+    memcpy(ss, blob.GetData(), sz);
+    return ss;
+}
+
+inline Span *SpanFromBlob(string_t blob) {
+    size_t sz = blob.GetSize();
+    Span *s = (Span *) malloc(sz);
+    memcpy(s, blob.GetData(), sz);
+    return s;
+}
+
+}  // namespace
+
+// time_distance(timestamptz, tstzspanset)
+void SpansetFunctions::Time_distance_ts_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<timestamp_tz_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](timestamp_tz_t ts, string_t ss_blob, ValidityMask &, idx_t) -> double {
+            SpanSet *ss = SpansetFromBlob(ss_blob);
+            TimestampTz meos_ts = DuckDBToMeosTimestamp(ts).value;
+            double d = distance_spanset_timestamptz(ss, meos_ts);
+            free(ss);
+            return d;
+        });
+}
+
+// time_distance(tstzspan, tstzspanset)
+void SpansetFunctions::Time_distance_span_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t s_blob, string_t ss_blob, ValidityMask &, idx_t) -> double {
+            Span *s = SpanFromBlob(s_blob);
+            SpanSet *ss = SpansetFromBlob(ss_blob);
+            double d = distance_tstzspanset_tstzspan(ss, s);
+            free(s); free(ss);
+            return d;
+        });
+}
+
+// time_distance(tstzspanset, timestamptz)
+void SpansetFunctions::Time_distance_spanset_ts(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t ss_blob, timestamp_tz_t ts, ValidityMask &, idx_t) -> double {
+            SpanSet *ss = SpansetFromBlob(ss_blob);
+            TimestampTz meos_ts = DuckDBToMeosTimestamp(ts).value;
+            double d = distance_spanset_timestamptz(ss, meos_ts);
+            free(ss);
+            return d;
+        });
+}
+
+// time_distance(tstzspanset, tstzspan)
+void SpansetFunctions::Time_distance_spanset_span(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t ss_blob, string_t s_blob, ValidityMask &, idx_t) -> double {
+            SpanSet *ss = SpansetFromBlob(ss_blob);
+            Span *s = SpanFromBlob(s_blob);
+            double d = distance_tstzspanset_tstzspan(ss, s);
+            free(ss); free(s);
+            return d;
+        });
+}
+
+// time_distance(tstzspanset, tstzspanset)
+void SpansetFunctions::Time_distance_spanset_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a_blob, string_t b_blob, ValidityMask &, idx_t) -> double {
+            SpanSet *a = SpansetFromBlob(a_blob);
+            SpanSet *b = SpansetFromBlob(b_blob);
+            double d = distance_tstzspanset_tstzspanset(a, b);
+            free(a); free(b);
+            return d;
+        });
+}
+
+} // namespace duckdb

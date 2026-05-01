@@ -229,8 +229,29 @@ void TGeometryTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
         {TGEOM}, LogicalType::VARCHAR, TemporalFunctions::Temporal_as_hexwkb));
     loader.RegisterFunction(ScalarFunction("asHexEWKB",
         {TGEOM}, LogicalType::VARCHAR, TemporalFunctions::Temporal_as_hexwkb));
+    loader.RegisterFunction(ScalarFunction("asEWKB",
+        {TGEOM}, LogicalType::BLOB, TemporalFunctions::Temporal_as_ewkb));
     loader.RegisterFunction(ScalarFunction("tgeometryFromMFJSON",
         {LogicalType::VARCHAR}, TGEOM, TemporalFunctions::Tgeometry_from_mfjson));
+
+    // tprecision / tsample — spatial-temporal default origin matches the
+    // upstream MobilityDB SQL surface (2000-01-03).
+    loader.RegisterFunction(ScalarFunction("tprecision",
+        {TGEOM, LogicalType::INTERVAL}, TGEOM,
+        TemporalFunctions::Temporal_tprecision));
+    loader.RegisterFunction(ScalarFunction("tprecision",
+        {TGEOM, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, TGEOM,
+        TemporalFunctions::Temporal_tprecision));
+    loader.RegisterFunction(ScalarFunction("tsample",
+        {TGEOM, LogicalType::INTERVAL}, TGEOM,
+        TemporalFunctions::Temporal_tsample));
+    loader.RegisterFunction(ScalarFunction("tsample",
+        {TGEOM, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, TGEOM,
+        TemporalFunctions::Temporal_tsample));
+    loader.RegisterFunction(ScalarFunction("tsample",
+        {TGEOM, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ,
+         LogicalType::VARCHAR}, TGEOM,
+        TemporalFunctions::Temporal_tsample));
 }
 
 
