@@ -322,6 +322,31 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_area
         )
     );
+    loader.RegisterFunction(
+        ScalarFunction(
+            "area",
+            {STBOX(), LogicalType::BOOLEAN},
+            LogicalType::DOUBLE,
+            StboxFunctions::Stbox_area
+        )
+    );
+
+    loader.RegisterFunction(
+        ScalarFunction(
+            "perimeter",
+            {STBOX()},
+            LogicalType::DOUBLE,
+            StboxFunctions::Stbox_perimeter
+        )
+    );
+    loader.RegisterFunction(
+        ScalarFunction(
+            "perimeter",
+            {STBOX(), LogicalType::BOOLEAN},
+            LogicalType::DOUBLE,
+            StboxFunctions::Stbox_perimeter
+        )
+    );
 
     loader.RegisterFunction(
         ScalarFunction(

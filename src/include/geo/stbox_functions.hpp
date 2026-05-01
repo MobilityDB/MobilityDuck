@@ -80,7 +80,7 @@ struct StboxFunctions {
     static void Stbox_tmax_inc(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_area(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_volume(DataChunk &args, ExpressionState &state, Vector &result);
-    // TODO static void Stbox_perimeter(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_perimeter(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
      * Transformation functions
      ****************************************************/

@@ -1,0 +1,135 @@
+# name: test/sql/parity/056_spatial_scalar.test
+# description: Cluster E — temporal simplification family
+# (`douglasPeuckerSimplify`, `maxDistSimplify`, `minDistSimplify`,
+# `minTimeDeltaSimplify`) and the stbox area/perimeter scalar
+# accumulators (1- and 2-arg shapes; the 2-arg form takes a
+# `spheroid bool` matching MobilityDB's SQL signature).
+#
+# MEOS' simplify family rejects non-point/non-number temporals at
+# runtime ("The temporal value must be a temporal number or a
+# temporal point"); we mirror MobilityDB's surface — the registration
+# is per type, and the runtime check fires the way it does in
+# MobilityDB. The test exercises tgeompoint and tfloat, which always
+# satisfy the predicate.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# Douglas-Peucker simplify
+# =============================================================================
+
+# 4-point trajectory; with eps 0.4 the redundant midpoint is dropped.
+query I
+SELECT (douglasPeuckerSimplify(
+  '[Point(0 0)@2000-01-01, Point(0.5 0.5)@2000-01-02, Point(1 0)@2000-01-03, Point(2 0)@2000-01-04]'::tgeompoint,
+  0.4) IS NOT NULL);
+----
+true
+
+query I
+SELECT (douglasPeuckerSimplify(
+  '[Point(0 0)@2000-01-01, Point(0.5 0.5)@2000-01-02, Point(1 0)@2000-01-03, Point(2 0)@2000-01-04]'::tgeompoint,
+  0.4, false) IS NOT NULL);
+----
+true
+
+# tfloat side: piecewise-linear interp; eps drops near-flat samples.
+query I
+SELECT (douglasPeuckerSimplify(
+  '[1.0@2000-01-01, 1.5@2000-01-02, 1.0@2000-01-03, 5.0@2000-01-04]'::tfloat,
+  0.4) IS NOT NULL);
+----
+true
+
+# =============================================================================
+# minDistSimplify — 2-arg only
+# =============================================================================
+
+query I
+SELECT (minDistSimplify(
+  '[Point(0 0)@2000-01-01, Point(0.1 0)@2000-01-02, Point(1 0)@2000-01-03]'::tgeompoint,
+  0.5) IS NOT NULL);
+----
+true
+
+query I
+SELECT (minDistSimplify(
+  '[1.0@2000-01-01, 1.05@2000-01-02, 5.0@2000-01-03]'::tfloat, 0.5)
+  IS NOT NULL);
+----
+true
+
+# =============================================================================
+# maxDistSimplify — 2- and 3-arg
+# =============================================================================
+
+query I
+SELECT (maxDistSimplify(
+  '[Point(0 0)@2000-01-01, Point(0.1 0)@2000-01-02, Point(1 0)@2000-01-03]'::tgeompoint,
+  0.5) IS NOT NULL);
+----
+true
+
+query I
+SELECT (maxDistSimplify(
+  '[Point(0 0)@2000-01-01, Point(0.1 0)@2000-01-02, Point(1 0)@2000-01-03]'::tgeompoint,
+  0.5, false) IS NOT NULL);
+----
+true
+
+# =============================================================================
+# minTimeDeltaSimplify — 2-arg with INTERVAL
+# =============================================================================
+
+query I
+SELECT (minTimeDeltaSimplify(
+  '[Point(0 0)@2000-01-01, Point(1 0)@2000-01-01 00:01:00, Point(2 0)@2000-01-02]'::tgeompoint,
+  INTERVAL '1 hour') IS NOT NULL);
+----
+true
+
+query I
+SELECT (minTimeDeltaSimplify(
+  '[1.0@2000-01-01, 2.0@2000-01-01 00:01:00, 3.0@2000-01-02]'::tfloat,
+  INTERVAL '1 hour') IS NOT NULL);
+----
+true
+
+# =============================================================================
+# Geographic side. tgeogpoint can be simplified by Douglas-Peucker too;
+# the call dispatches into MEOS' `tpoint_*` simplifier.
+# =============================================================================
+
+query I
+SELECT (douglasPeuckerSimplify(
+  'SRID=4326;[Point(0 0)@2000-01-01, Point(0.001 0)@2000-01-02, Point(0.002 0)@2000-01-03]'::tgeogpoint,
+  0.0001) IS NOT NULL);
+----
+true
+
+# =============================================================================
+# stbox area / perimeter — 1-arg and 2-arg (spheroid bool)
+# =============================================================================
+
+# 2 × 3 = 6.
+query I
+SELECT area('STBOX X((0,0),(2,3))'::stbox);
+----
+6
+
+query I
+SELECT area('STBOX X((0,0),(2,3))'::stbox, false);
+----
+6
+
+# 2(2+3) = 10.
+query I
+SELECT perimeter('STBOX X((0,0),(2,3))'::stbox);
+----
+10
+
+query I
+SELECT perimeter('STBOX X((0,0),(2,3))'::stbox, false);
+----
+10

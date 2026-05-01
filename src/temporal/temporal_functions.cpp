@@ -5195,6 +5195,85 @@ void TemporalFunctions::Temporal_hausdorff_distance(DataChunk &args, ExpressionS
 }
 
 /* ***************************************************
+ * Temporal simplification — Douglas-Peucker, min/max-dist,
+ * min-time-delta. MEOS APIs all take (Temporal *, …) and return
+ * Temporal *.
+ ****************************************************/
+
+void TemporalFunctions::Temporal_simplify_dp(DataChunk &args, ExpressionState &state, Vector &result) {
+    if (args.ColumnCount() >= 3) {
+        TernaryExecutor::ExecuteWithNulls<string_t, double, bool, string_t>(
+            args.data[0], args.data[1], args.data[2], result, args.size(),
+            [&](string_t blob, double eps, bool sync, ValidityMask &mask, idx_t idx) -> string_t {
+                Temporal *t = BlobToTemporal(blob);
+                Temporal *r = temporal_simplify_dp(t, eps, sync);
+                free(t);
+                if (!r) { mask.SetInvalid(idx); return string_t(); }
+                return TemporalToBlob(result, r);
+            });
+    } else {
+        BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(
+            args.data[0], args.data[1], result, args.size(),
+            [&](string_t blob, double eps, ValidityMask &mask, idx_t idx) -> string_t {
+                Temporal *t = BlobToTemporal(blob);
+                Temporal *r = temporal_simplify_dp(t, eps, true);
+                free(t);
+                if (!r) { mask.SetInvalid(idx); return string_t(); }
+                return TemporalToBlob(result, r);
+            });
+    }
+}
+
+void TemporalFunctions::Temporal_simplify_max_dist(DataChunk &args, ExpressionState &state, Vector &result) {
+    if (args.ColumnCount() >= 3) {
+        TernaryExecutor::ExecuteWithNulls<string_t, double, bool, string_t>(
+            args.data[0], args.data[1], args.data[2], result, args.size(),
+            [&](string_t blob, double eps, bool sync, ValidityMask &mask, idx_t idx) -> string_t {
+                Temporal *t = BlobToTemporal(blob);
+                Temporal *r = temporal_simplify_max_dist(t, eps, sync);
+                free(t);
+                if (!r) { mask.SetInvalid(idx); return string_t(); }
+                return TemporalToBlob(result, r);
+            });
+    } else {
+        BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(
+            args.data[0], args.data[1], result, args.size(),
+            [&](string_t blob, double eps, ValidityMask &mask, idx_t idx) -> string_t {
+                Temporal *t = BlobToTemporal(blob);
+                Temporal *r = temporal_simplify_max_dist(t, eps, true);
+                free(t);
+                if (!r) { mask.SetInvalid(idx); return string_t(); }
+                return TemporalToBlob(result, r);
+            });
+    }
+}
+
+void TemporalFunctions::Temporal_simplify_min_dist(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t blob, double dist, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(blob);
+            Temporal *r = temporal_simplify_min_dist(t, dist);
+            free(t);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TemporalToBlob(result, r);
+        });
+}
+
+void TemporalFunctions::Temporal_simplify_min_tdelta(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t blob, interval_t iv, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(blob);
+            MeosInterval interv = IntervaltToInterval(iv);
+            Temporal *r = temporal_simplify_min_tdelta(t, &interv);
+            free(t);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TemporalToBlob(result, r);
+        });
+}
+
+/* ***************************************************
  * tnumber × {numspan, tbox} topological predicates
  ****************************************************/
 

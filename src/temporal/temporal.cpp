@@ -9,6 +9,9 @@
 #include "temporal/span.hpp"
 #include "geo/stbox.hpp"
 #include "geo/tgeompoint.hpp"
+#include "geo/tgeometry.hpp"
+#include "geo/tgeography.hpp"
+#include "geo/tgeogpoint.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/common/exception.hpp"
@@ -1521,6 +1524,37 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         loader.RegisterFunction(ScalarFunction("discreteFrechet", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
         loader.RegisterFunction(ScalarFunction("dynTimeWarp",     {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_dyntimewarp_distance));
         loader.RegisterFunction(ScalarFunction("hausdorffDistance", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_hausdorff_distance));
+    }
+
+    // Temporal simplification — Douglas-Peucker, max-dist, min-dist,
+    // min-time-delta. MobilityDB SQL exposes these for tfloat plus the
+    // four spatial-temporal types; the MEOS C functions are subtype-
+    // agnostic, so the registration is just per-type plumbing.
+    {
+        const std::vector<LogicalType> simplify_types = {
+            TemporalTypes::TFLOAT(),
+            TgeompointType::TGEOMPOINT(),
+            TGeometryTypes::TGEOMETRY(),
+            TGeographyTypes::TGEOGRAPHY(),
+            TGeogpointType::TGEOGPOINT(),
+        };
+        for (const auto &t : simplify_types) {
+            loader.RegisterFunction(ScalarFunction("douglasPeuckerSimplify",
+                {t, LogicalType::DOUBLE}, t, TemporalFunctions::Temporal_simplify_dp));
+            loader.RegisterFunction(ScalarFunction("douglasPeuckerSimplify",
+                {t, LogicalType::DOUBLE, LogicalType::BOOLEAN}, t,
+                TemporalFunctions::Temporal_simplify_dp));
+            loader.RegisterFunction(ScalarFunction("maxDistSimplify",
+                {t, LogicalType::DOUBLE}, t, TemporalFunctions::Temporal_simplify_max_dist));
+            loader.RegisterFunction(ScalarFunction("maxDistSimplify",
+                {t, LogicalType::DOUBLE, LogicalType::BOOLEAN}, t,
+                TemporalFunctions::Temporal_simplify_max_dist));
+            loader.RegisterFunction(ScalarFunction("minDistSimplify",
+                {t, LogicalType::DOUBLE}, t, TemporalFunctions::Temporal_simplify_min_dist));
+            loader.RegisterFunction(ScalarFunction("minTimeDeltaSimplify",
+                {t, LogicalType::INTERVAL}, t,
+                TemporalFunctions::Temporal_simplify_min_tdelta));
+        }
     }
 
     // tnumber × {numspan, tbox} topological predicates (4 ops × 8 shape pairs)

@@ -1126,40 +1126,84 @@ void StboxFunctions::Stbox_tmax_inc(DataChunk &args, ExpressionState &state, Vec
 }
 
 void StboxFunctions::Stbox_area(DataChunk &args, ExpressionState &state, Vector &result) {
-    UnaryExecutor::ExecuteWithNulls<string_t, double>(
-        args.data[0], result, args.size(),
-        [&](string_t input_stbox, ValidityMask &mask, idx_t idx) -> double {
-            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
-            size_t data_size = input_stbox.GetSize();
-            if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
-            }
-            uint8_t *data_copy = (uint8_t*)malloc(data_size);
-            memcpy(data_copy, data, data_size);
-            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
-            if (!stbox) {
-                free(data_copy);
-                throw InternalException("Failure in Stbox_area: unable to cast binary to stbox");
-            }
-            bool spheroid = true; // default value, TODO: handle argument
-            double ret;
-            /* MEOS stbox_area() can SIGSEGV on geodetic boxes; use spherical lon/lat footprint. */
-            const bool geodetic = stbox_isgeodetic(stbox) || MEOS_FLAGS_GET_GEODETIC(stbox->flags);
-            if (geodetic) {
-                ret = Geodetic_stbox_footprint_area(stbox, spheroid);
-            } else {
-                ret = stbox_area(stbox, spheroid);
-            }
-            free(stbox);
-            if (ret == DBL_MAX) {
-                mask.SetInvalid(idx);
-                return double();
-            }
-            return ret;
+    auto compute_area = [](string_t input_stbox, bool spheroid,
+                           ValidityMask &mask, idx_t idx) -> double {
+        const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
+        size_t data_size = input_stbox.GetSize();
+        if (data_size != sizeof(STBox)) {
+            throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
         }
-    );
+        uint8_t *data_copy = (uint8_t*)malloc(data_size);
+        memcpy(data_copy, data, data_size);
+        STBox *stbox = reinterpret_cast<STBox*>(data_copy);
+        if (!stbox) {
+            free(data_copy);
+            throw InternalException("Failure in Stbox_area: unable to cast binary to stbox");
+        }
+        double ret;
+        /* MEOS stbox_area() can SIGSEGV on geodetic boxes; use spherical lon/lat footprint. */
+        const bool geodetic = stbox_isgeodetic(stbox) || MEOS_FLAGS_GET_GEODETIC(stbox->flags);
+        if (geodetic) {
+            ret = Geodetic_stbox_footprint_area(stbox, spheroid);
+        } else {
+            ret = stbox_area(stbox, spheroid);
+        }
+        free(stbox);
+        if (ret == DBL_MAX) {
+            mask.SetInvalid(idx);
+            return double();
+        }
+        return ret;
+    };
+
+    if (args.ColumnCount() >= 2) {
+        BinaryExecutor::ExecuteWithNulls<string_t, bool, double>(
+            args.data[0], args.data[1], result, args.size(),
+            [&](string_t blob, bool sph, ValidityMask &mask, idx_t idx) -> double {
+                return compute_area(blob, sph, mask, idx);
+            });
+    } else {
+        UnaryExecutor::ExecuteWithNulls<string_t, double>(
+            args.data[0], result, args.size(),
+            [&](string_t blob, ValidityMask &mask, idx_t idx) -> double {
+                return compute_area(blob, true, mask, idx);
+            });
+    }
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+// Stbox_perimeter — wraps MEOS' stbox_perimeter(box, spheroid). Mirrors
+// the Stbox_area shape (1-arg defaults spheroid=true; 2-arg honours the
+// caller's choice).
+void StboxFunctions::Stbox_perimeter(DataChunk &args, ExpressionState &state, Vector &result) {
+    if (args.ColumnCount() >= 2) {
+        BinaryExecutor::ExecuteWithNulls<string_t, bool, double>(
+            args.data[0], args.data[1], result, args.size(),
+            [&](string_t blob, bool spheroid, ValidityMask &mask, idx_t idx) -> double {
+                if (blob.GetSize() != sizeof(STBox)) {
+                    throw InvalidInputException("Invalid STBOX value size");
+                }
+                STBox box;
+                memcpy(&box, blob.GetData(), sizeof(STBox));
+                double ret = stbox_perimeter(&box, spheroid);
+                if (ret == DBL_MAX) { mask.SetInvalid(idx); return 0.0; }
+                return ret;
+            });
+    } else {
+        UnaryExecutor::ExecuteWithNulls<string_t, double>(
+            args.data[0], result, args.size(),
+            [&](string_t blob, ValidityMask &mask, idx_t idx) -> double {
+                if (blob.GetSize() != sizeof(STBox)) {
+                    throw InvalidInputException("Invalid STBOX value size");
+                }
+                STBox box;
+                memcpy(&box, blob.GetData(), sizeof(STBox));
+                double ret = stbox_perimeter(&box, true);
+                if (ret == DBL_MAX) { mask.SetInvalid(idx); return 0.0; }
+                return ret;
+            });
     }
 }
 

@@ -409,6 +409,14 @@ struct TemporalFunctions {
     static void Temporal_hausdorff_distance(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
+     * Temporal simplification — Douglas-Peucker and friends
+     ****************************************************/
+    static void Temporal_simplify_dp(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_simplify_min_dist(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_simplify_max_dist(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_simplify_min_tdelta(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
      * tnumber × {numspan, tbox} topological predicates
      * (4 ops × 4 type-pair shapes = 16 wrappers)
      ****************************************************/
