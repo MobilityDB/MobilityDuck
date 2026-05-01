@@ -460,6 +460,11 @@ void SpanAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
         tgeometry_type.SetAlias("TGEOMETRY");
         extent_set.AddFunction(
             MakeExtentStboxAggregate<StboxExtentFromTSpatial>(tgeometry_type));
+
+        LogicalType tgeography_type(LogicalTypeId::BLOB);
+        tgeography_type.SetAlias("TGEOGRAPHY");
+        extent_set.AddFunction(
+            MakeExtentStboxAggregate<StboxExtentFromTSpatial>(tgeography_type));
     }
 
     // ---- extent(tbool/ttext) -> tstzspan ----

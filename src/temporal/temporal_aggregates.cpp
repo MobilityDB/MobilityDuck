@@ -32,6 +32,7 @@
 #include "time_util.hpp"
 #include "geo/tgeompoint.hpp"
 #include "geo/tgeometry.hpp"
+#include "geo/tgeography.hpp"
 
 #include "duckdb/common/exception.hpp"
 #include "duckdb/function/aggregate_function.hpp"
@@ -924,6 +925,7 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
         }
         set.AddFunction(MakeTaggAggregate<TcountTempFn>(TgeompointType::TGEOMPOINT(), TemporalTypes::TINT()));
         set.AddFunction(MakeTaggAggregate<TcountTempFn>(TGeometryTypes::TGEOMETRY(), TemporalTypes::TINT()));
+        set.AddFunction(MakeTaggAggregate<TcountTempFn>(TGeographyTypes::TGEOGRAPHY(), TemporalTypes::TINT()));
 
         // Time-only inputs.
         set.AddFunction(AggregateFunction::UnaryAggregateDestructor<
@@ -988,6 +990,8 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
             TgeompointType::TGEOMPOINT(), TgeompointType::TGEOMPOINT()));
         set.AddFunction(MakeTaggAggregate<MergeAggFn>(
             TGeometryTypes::TGEOMETRY(), TGeometryTypes::TGEOMETRY()));
+        set.AddFunction(MakeTaggAggregate<MergeAggFn>(
+            TGeographyTypes::TGEOGRAPHY(), TGeographyTypes::TGEOGRAPHY()));
         loader.RegisterFunction(std::move(set));
     }
 
@@ -1000,6 +1004,7 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
         }
         set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TgeompointType::TGEOMPOINT()));
         set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TGeometryTypes::TGEOMETRY()));
+        set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TGeographyTypes::TGEOGRAPHY()));
         loader.RegisterFunction(std::move(set));
     }
 
@@ -1012,6 +1017,7 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
         }
         set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(TgeompointType::TGEOMPOINT()));
         set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(TGeometryTypes::TGEOMETRY()));
+        set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(TGeographyTypes::TGEOGRAPHY()));
         loader.RegisterFunction(std::move(set));
     }
 
