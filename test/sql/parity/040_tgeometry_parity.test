@@ -310,3 +310,48 @@ SELECT (traversedArea(t::tgeometry) IS NOT NULL) FROM (VALUES
   ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
 ----
 true
+
+# =============================================================================
+# Aggregate wiring — extent / TcountAgg / MergeAgg / AppendInstantAgg over
+# tgeometry inputs.
+# =============================================================================
+
+query I
+SELECT extent(t::tgeometry)::VARCHAR FROM (VALUES
+  ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
+----
+STBOX XT(((0,0),(2,2)),[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
+
+query I
+SELECT TcountAgg(t::tgeometry)::VARCHAR FROM (VALUES
+  ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
+----
+{1@2000-01-01 00:00:00+00, 1@2000-01-02 00:00:00+00}
+
+query I
+SELECT (MergeAgg(t::tgeometry) IS NOT NULL) FROM (VALUES
+  ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
+----
+true
+
+query I
+SELECT (AppendInstantAgg(t::tgeometry) IS NOT NULL) FROM (VALUES
+  ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
+----
+true
+
+# =============================================================================
+# Tile / box emitters — spaceBoxes, spaceTimeBoxes.
+# =============================================================================
+
+query I
+SELECT (len(spaceBoxes(t::tgeometry, 1.0, 1.0, 1.0)) >= 1) FROM (VALUES
+  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+true
+
+query I
+SELECT (len(spaceTimeBoxes(t::tgeometry, 1.0, 1.0, 1.0, INTERVAL '1 day')) >= 1) FROM (VALUES
+  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+true

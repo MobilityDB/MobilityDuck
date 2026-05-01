@@ -31,6 +31,7 @@
 #include "temporal/set.hpp"
 #include "time_util.hpp"
 #include "geo/tgeompoint.hpp"
+#include "geo/tgeometry.hpp"
 
 #include "duckdb/common/exception.hpp"
 #include "duckdb/function/aggregate_function.hpp"
@@ -922,6 +923,7 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
             set.AddFunction(MakeTaggAggregate<TcountTempFn>(t, TemporalTypes::TINT()));
         }
         set.AddFunction(MakeTaggAggregate<TcountTempFn>(TgeompointType::TGEOMPOINT(), TemporalTypes::TINT()));
+        set.AddFunction(MakeTaggAggregate<TcountTempFn>(TGeometryTypes::TGEOMETRY(), TemporalTypes::TINT()));
 
         // Time-only inputs.
         set.AddFunction(AggregateFunction::UnaryAggregateDestructor<
@@ -984,6 +986,8 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
         }
         set.AddFunction(MakeTaggAggregate<MergeAggFn>(
             TgeompointType::TGEOMPOINT(), TgeompointType::TGEOMPOINT()));
+        set.AddFunction(MakeTaggAggregate<MergeAggFn>(
+            TGeometryTypes::TGEOMETRY(), TGeometryTypes::TGEOMETRY()));
         loader.RegisterFunction(std::move(set));
     }
 
@@ -995,6 +999,7 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
             set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(t));
         }
         set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TgeompointType::TGEOMPOINT()));
+        set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TGeometryTypes::TGEOMETRY()));
         loader.RegisterFunction(std::move(set));
     }
 
@@ -1006,6 +1011,7 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
             set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(t));
         }
         set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(TgeompointType::TGEOMPOINT()));
+        set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(TGeometryTypes::TGEOMETRY()));
         loader.RegisterFunction(std::move(set));
     }
 

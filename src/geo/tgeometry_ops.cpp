@@ -12,6 +12,7 @@
 #include "temporal/span.hpp"
 #include "temporal/temporal.hpp"
 #include "geo_util.hpp"
+#include "time_util.hpp"
 
 #include "duckdb/common/exception.hpp"
 #include "duckdb/function/scalar_function.hpp"
@@ -785,6 +786,192 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
         "traversedArea", {TGEOM}, GEOM, TgeoTraversedAreaExec));
     loader.RegisterFunction(ScalarFunction(
         "traversedArea", {TGEOM, LogicalType::BOOLEAN}, GEOM, TgeoTraversedAreaExec));
+
+    // -----------------------------------------------------------------
+    // Tile / box emitters — spaceBoxes(tgeometry, x, y, z) and
+    // spaceTimeBoxes(tgeometry, x, y, z, interval). Both return
+    // LIST<stbox> with the bounding boxes that cover the input.
+    // -----------------------------------------------------------------
+    auto emit_stbox_list = [](Vector &result, idx_t row_idx, STBox *boxes, int count,
+                              idx_t &total_offset, list_entry_t *list_entries,
+                              Vector &child_vector, ValidityMask &result_validity) {
+        if (!boxes || count <= 0) {
+            if (boxes) free(boxes);
+            result_validity.SetInvalid(row_idx);
+            return;
+        }
+        ListVector::SetListSize(result, total_offset + count);
+        list_entries[row_idx] = list_entry_t{total_offset, static_cast<uint64_t>(count)};
+        auto *child_data = FlatVector::GetData<string_t>(child_vector);
+        const size_t stbox_bytes = sizeof(STBox);
+        for (int j = 0; j < count; ++j) {
+            child_data[total_offset + j] = StringVector::AddStringOrBlob(
+                child_vector, reinterpret_cast<const char *>(&boxes[j]), stbox_bytes);
+        }
+        free(boxes);
+        total_offset += count;
+    };
+
+    auto space_boxes_exec = [emit_stbox_list]
+        (DataChunk &args, ExpressionState &, Vector &result) {
+        const idx_t row_count = args.size();
+        for (idx_t c = 0; c < args.ColumnCount(); ++c) args.data[c].Flatten(row_count);
+
+        auto &result_validity = FlatVector::Validity(result);
+        auto list_entries = FlatVector::GetData<list_entry_t>(result);
+        auto &child_vector = ListVector::GetEntry(result);
+        child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+        ListVector::Reserve(result, row_count);
+        idx_t total_offset = 0;
+
+        auto t_data = FlatVector::GetData<string_t>(args.data[0]);
+        auto x_data = FlatVector::GetData<double>(args.data[1]);
+        auto y_data = FlatVector::GetData<double>(args.data[2]);
+        auto z_data = FlatVector::GetData<double>(args.data[3]);
+        for (idx_t i = 0; i < row_count; ++i) {
+            if (FlatVector::IsNull(args.data[0], i) || FlatVector::IsNull(args.data[1], i) ||
+                FlatVector::IsNull(args.data[2], i) || FlatVector::IsNull(args.data[3], i)) {
+                result_validity.SetInvalid(i);
+                continue;
+            }
+            Temporal *t = DecodeTemporalCopy(t_data[i]);
+            GSERIALIZED *origin = geompoint_make3dz(0, 0.0, 0.0, 0.0);
+            int count = 0;
+            STBox *boxes = tgeo_space_boxes(
+                t, x_data[i], y_data[i], z_data[i], origin,
+                /*bitmatrix=*/true, /*border_inc=*/true, &count);
+            free(t); free(origin);
+            emit_stbox_list(result, i, boxes, count, total_offset, list_entries,
+                            child_vector, result_validity);
+        }
+    };
+
+    LogicalType list_stbox = LogicalType::LIST(STBOX);
+    loader.RegisterFunction(ScalarFunction(
+        "spaceBoxes", {TGEOM, DBL, DBL, DBL}, list_stbox, space_boxes_exec));
+
+    auto space_time_boxes_exec = [emit_stbox_list]
+        (DataChunk &args, ExpressionState &, Vector &result) {
+        const idx_t row_count = args.size();
+        for (idx_t c = 0; c < args.ColumnCount(); ++c) args.data[c].Flatten(row_count);
+
+        auto &result_validity = FlatVector::Validity(result);
+        auto list_entries = FlatVector::GetData<list_entry_t>(result);
+        auto &child_vector = ListVector::GetEntry(result);
+        child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+        ListVector::Reserve(result, row_count);
+        idx_t total_offset = 0;
+
+        auto t_data = FlatVector::GetData<string_t>(args.data[0]);
+        auto x_data = FlatVector::GetData<double>(args.data[1]);
+        auto y_data = FlatVector::GetData<double>(args.data[2]);
+        auto z_data = FlatVector::GetData<double>(args.data[3]);
+        auto dur_data = FlatVector::GetData<interval_t>(args.data[4]);
+        for (idx_t i = 0; i < row_count; ++i) {
+            if (FlatVector::IsNull(args.data[0], i) || FlatVector::IsNull(args.data[1], i) ||
+                FlatVector::IsNull(args.data[2], i) || FlatVector::IsNull(args.data[3], i) ||
+                FlatVector::IsNull(args.data[4], i)) {
+                result_validity.SetInvalid(i);
+                continue;
+            }
+            Temporal *t = DecodeTemporalCopy(t_data[i]);
+            GSERIALIZED *origin = geompoint_make3dz(0, 0.0, 0.0, 0.0);
+            MeosInterval iv = IntervaltToInterval(dur_data[i]);
+            constexpr int64_t DEFAULT_TIME_ORIGIN_MEOS = 2LL * 86400LL * 1000000LL;
+            int count = 0;
+            STBox *boxes = tgeo_space_time_boxes(
+                t, x_data[i], y_data[i], z_data[i], &iv, origin,
+                (TimestampTz) DEFAULT_TIME_ORIGIN_MEOS,
+                /*bitmatrix=*/true, /*border_inc=*/true, &count);
+            free(t); free(origin);
+            emit_stbox_list(result, i, boxes, count, total_offset, list_entries,
+                            child_vector, result_validity);
+        }
+    };
+
+    loader.RegisterFunction(ScalarFunction(
+        "spaceTimeBoxes",
+        {TGEOM, DBL, DBL, DBL, LogicalType::INTERVAL},
+        list_stbox, space_time_boxes_exec));
+
+    // -----------------------------------------------------------------
+    // Analytics — Douglas-Peucker / max-distance / min-distance / min
+    // time-delta simplification. All produce a thinned tgeometry.
+    // -----------------------------------------------------------------
+    auto simplify_double_exec_factory = [](
+        Temporal *(*FN)(const Temporal *, double)) {
+        return [FN](DataChunk &args, ExpressionState &, Vector &result) {
+            BinaryExecutor::Execute<string_t, double, string_t>(
+                args.data[0], args.data[1], result, args.size(),
+                [&](string_t blob, double eps) {
+                    Temporal *t = DecodeTemporalCopy(blob);
+                    Temporal *r = FN(t, eps);
+                    free(t);
+                    if (!r) throw InvalidInputException("simplify failed");
+                    return TemporalToBlob(result, r);
+                });
+        };
+    };
+
+    auto simplify_double_bool_exec_factory = [](
+        Temporal *(*FN)(const Temporal *, double, bool)) {
+        return [FN](DataChunk &args, ExpressionState &, Vector &result) {
+            const idx_t cnt = args.size();
+            args.data[0].Flatten(cnt); args.data[1].Flatten(cnt);
+            const bool has_third = args.ColumnCount() >= 3;
+            if (has_third) args.data[2].Flatten(cnt);
+            auto blob_data = FlatVector::GetData<string_t>(args.data[0]);
+            auto eps_data  = FlatVector::GetData<double>(args.data[1]);
+            for (idx_t i = 0; i < cnt; ++i) {
+                if (FlatVector::IsNull(args.data[0], i) || FlatVector::IsNull(args.data[1], i)) {
+                    FlatVector::Validity(result).SetInvalid(i);
+                    continue;
+                }
+                bool sync = has_third ? FlatVector::GetData<bool>(args.data[2])[i] : true;
+                Temporal *t = DecodeTemporalCopy(blob_data[i]);
+                Temporal *r = FN(t, eps_data[i], sync);
+                free(t);
+                if (!r) {
+                    FlatVector::Validity(result).SetInvalid(i);
+                    continue;
+                }
+                FlatVector::GetData<string_t>(result)[i] = TemporalToBlob(result, r);
+            }
+        };
+    };
+
+    loader.RegisterFunction(ScalarFunction(
+        "minDistSimplify", {TGEOM, DBL}, TGEOM,
+        simplify_double_exec_factory(temporal_simplify_min_dist)));
+
+    loader.RegisterFunction(ScalarFunction(
+        "minTimeDeltaSimplify", {TGEOM, LogicalType::INTERVAL}, TGEOM,
+        [](DataChunk &args, ExpressionState &, Vector &result) {
+            BinaryExecutor::Execute<string_t, interval_t, string_t>(
+                args.data[0], args.data[1], result, args.size(),
+                [&](string_t blob, interval_t iv) {
+                    Temporal *t = DecodeTemporalCopy(blob);
+                    MeosInterval miv = IntervaltToInterval(iv);
+                    Temporal *r = temporal_simplify_min_tdelta(t, &miv);
+                    free(t);
+                    if (!r) throw InvalidInputException("minTimeDeltaSimplify failed");
+                    return TemporalToBlob(result, r);
+                });
+        }));
+
+    loader.RegisterFunction(ScalarFunction(
+        "maxDistSimplify", {TGEOM, DBL}, TGEOM,
+        simplify_double_bool_exec_factory(temporal_simplify_max_dist)));
+    loader.RegisterFunction(ScalarFunction(
+        "maxDistSimplify", {TGEOM, DBL, LogicalType::BOOLEAN}, TGEOM,
+        simplify_double_bool_exec_factory(temporal_simplify_max_dist)));
+
+    loader.RegisterFunction(ScalarFunction(
+        "douglasPeuckerSimplify", {TGEOM, DBL}, TGEOM,
+        simplify_double_bool_exec_factory(temporal_simplify_dp)));
+    loader.RegisterFunction(ScalarFunction(
+        "douglasPeuckerSimplify", {TGEOM, DBL, LogicalType::BOOLEAN}, TGEOM,
+        simplify_double_bool_exec_factory(temporal_simplify_dp)));
 }
 
 } // namespace duckdb

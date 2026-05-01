@@ -444,15 +444,22 @@ void SpanAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
     extent_set.AddFunction(MakeExtentTboxAggregate<TboxExtentFromTNumber>(TemporalTypes::TINT()));
     extent_set.AddFunction(MakeExtentTboxAggregate<TboxExtentFromTNumber>(TemporalTypes::TFLOAT()));
 
-    // ---- extent(stbox) -> stbox; extent(tgeompoint) -> stbox ----
+    // ---- extent(stbox | tgeompoint | tgeometry) -> stbox ----
     extent_set.AddFunction(MakeExtentStboxAggregate<StboxExtentFromSTBox>(StboxType::STBOX()));
     {
-        // tgeompoint is registered via TgeompointType::TGEOMPOINT().
-        // Avoid pulling in the header here by using a BLOB-aliased clone.
+        // tgeompoint / tgeometry are registered via their respective Type
+        // helpers; we avoid pulling those headers here by using a
+        // BLOB-aliased clone since the underlying MEOS extent transition
+        // function (`tspatial_extent_transfn`) is subtype-agnostic.
         LogicalType tgeompoint_type(LogicalTypeId::BLOB);
         tgeompoint_type.SetAlias("TGEOMPOINT");
         extent_set.AddFunction(
             MakeExtentStboxAggregate<StboxExtentFromTSpatial>(tgeompoint_type));
+
+        LogicalType tgeometry_type(LogicalTypeId::BLOB);
+        tgeometry_type.SetAlias("TGEOMETRY");
+        extent_set.AddFunction(
+            MakeExtentStboxAggregate<StboxExtentFromTSpatial>(tgeometry_type));
     }
 
     // ---- extent(tbool/ttext) -> tstzspan ----
