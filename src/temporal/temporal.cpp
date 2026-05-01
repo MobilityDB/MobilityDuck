@@ -410,6 +410,29 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
+        // SeqSetGaps — partition a list of TInstant values into
+        // sequences with optional maxt / maxdist gap thresholds and a
+        // sticky interp keyword. tbool / ttext only carry the
+        // (list, maxt) shape (no metric, no interp); tint / tfloat
+        // get the full 4-arg surface.
+        const std::string seqset_gaps_name =
+            StringUtil::Lower(type.GetAlias()) + "SeqSetGaps";
+        loader.RegisterFunction(ScalarFunction(seqset_gaps_name,
+            {LogicalType::LIST(type)}, type,
+            TemporalFunctions::Tsequenceset_constructor_gaps));
+        loader.RegisterFunction(ScalarFunction(seqset_gaps_name,
+            {LogicalType::LIST(type), LogicalType::INTERVAL}, type,
+            TemporalFunctions::Tsequenceset_constructor_gaps));
+        if (type.GetAlias() == "TINT" || type.GetAlias() == "TFLOAT") {
+            loader.RegisterFunction(ScalarFunction(seqset_gaps_name,
+                {LogicalType::LIST(type), LogicalType::INTERVAL, LogicalType::DOUBLE},
+                type, TemporalFunctions::Tsequenceset_constructor_gaps));
+            loader.RegisterFunction(ScalarFunction(seqset_gaps_name,
+                {LogicalType::LIST(type), LogicalType::INTERVAL, LogicalType::DOUBLE,
+                 LogicalType::VARCHAR},
+                type, TemporalFunctions::Tsequenceset_constructor_gaps));
+        }
+
         if (type.GetAlias() == "TFLOAT") {
             loader.RegisterFunction(
                 ScalarFunction(

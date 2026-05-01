@@ -410,6 +410,96 @@ void TemporalFunctions::Tsequenceset_constructor(DataChunk &args, ExpressionStat
     }
 }
 
+// SeqSetGaps constructors — partition a list of TInstant values into
+// sequences, splitting wherever the gap to the next instant exceeds
+// `maxt` (time delta) or `maxdist` (Euclidean distance). The interp
+// argument is sticky across the call. MobilityDB's
+// `t<type>SeqSetGaps(temp[], maxt, maxdist, text DEFAULT 'linear')`
+// shape — interp omitted for tbool/ttext (no metric / no interp).
+void TemporalFunctions::Tsequenceset_constructor_gaps(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t count = args.size();
+    auto &array_vec = args.data[0];
+    array_vec.Flatten(count);
+    auto &child_vec = ListVector::GetEntry(array_vec);
+    child_vec.Flatten(ListVector::GetListSize(array_vec));
+    auto child_data = FlatVector::GetData<string_t>(child_vec);
+
+    // Per-row per-arg null tracking; MobilityDB SQL marks the function
+    // non-strict so that `maxt = NULL` / `maxdist = NULL` mean "no
+    // threshold". DuckDB's UnaryExecutor doesn't surface nulls cleanly
+    // for the side args; we use FlatVector::IsNull() per row instead.
+    Vector *maxt_vec = args.ColumnCount() >= 2 ? &args.data[1] : nullptr;
+    Vector *maxdist_vec = args.ColumnCount() >= 3 ? &args.data[2] : nullptr;
+    Vector *interp_vec = args.ColumnCount() >= 4 ? &args.data[3] : nullptr;
+    if (maxt_vec) maxt_vec->Flatten(count);
+    if (maxdist_vec) maxdist_vec->Flatten(count);
+    if (interp_vec) interp_vec->Flatten(count);
+
+    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(
+        array_vec, result, count,
+        [&](const list_entry_t &list, ValidityMask &mask, idx_t row) {
+            const idx_t offset = list.offset;
+            const idx_t length = list.length;
+            if (length == 0) { mask.SetInvalid(row); return string_t(); }
+
+            TInstant **instants = (TInstant **)malloc(length * sizeof(TInstant *));
+            if (!instants) throw InternalException("Memory allocation failed");
+            for (idx_t i = 0; i < length; i++) {
+                string_t blob = child_data[offset + i];
+                size_t sz = blob.GetSize();
+                uint8_t *copy = (uint8_t *)malloc(sz);
+                memcpy(copy, blob.GetData(), sz);
+                instants[i] = (TInstant *)copy;
+            }
+
+            interpType interp = LINEAR;
+            if (interp_vec && !FlatVector::IsNull(*interp_vec, row)) {
+                string_t s = FlatVector::GetData<string_t>(*interp_vec)[row];
+                const std::string str = s.GetString();
+                if (str == "step" || str == "Step" || str == "STEP") interp = STEP;
+                else if (str == "discrete" || str == "Discrete" || str == "DISCRETE") interp = DISCRETE;
+                else if (str == "none" || str == "None" || str == "NONE") interp = INTERP_NONE;
+            }
+            // The default LINEAR isn't accepted on every base type —
+            // tbool / ttext / tint reject it (no metric, or step-only
+            // semantics on integers). Fall back to STEP for those by
+            // inspecting the first instant's temptype. tgeometry /
+            // tgeography (generic geometry) also reject LINEAR; their
+            // tspatial-point siblings (tgeompoint / tgeogpoint) accept
+            // it. Caller can always override by passing an explicit
+            // interp keyword.
+            if (length > 0 && interp == LINEAR) {
+                meosType tt = static_cast<meosType>(((Temporal *)instants[0])->temptype);
+                if (tt == T_TBOOL || tt == T_TTEXT || tt == T_TINT ||
+                    tt == T_TGEOMETRY || tt == T_TGEOGRAPHY) {
+                    interp = STEP;
+                }
+            }
+
+            MeosInterval iv_storage;
+            const MeosInterval *iv = nullptr;
+            if (maxt_vec && !FlatVector::IsNull(*maxt_vec, row)) {
+                iv_storage = IntervaltToInterval(FlatVector::GetData<interval_t>(*maxt_vec)[row]);
+                iv = &iv_storage;
+            }
+            double maxdist = 0.0;
+            if (maxdist_vec && !FlatVector::IsNull(*maxdist_vec, row)) {
+                maxdist = FlatVector::GetData<double>(*maxdist_vec)[row];
+            }
+
+            TSequenceSet *ss = tsequenceset_make_gaps(instants, (int)length, interp, iv, maxdist);
+            for (idx_t j = 0; j < length; j++) free(instants[j]);
+            free(instants);
+            if (!ss) { mask.SetInvalid(row); return string_t(); }
+            size_t sz = temporal_mem_size((Temporal *)ss);
+            string_t out = StringVector::AddStringOrBlob(
+                result, reinterpret_cast<const char *>(ss), sz);
+            free(ss);
+            return out;
+        });
+    if (count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static string_t Tsequence_from_base_tstzset_impl(Datum datum, string_t set_blob, meosType temptype, Vector &result) {
     size_t data_size = set_blob.GetSize();
     if (data_size < sizeof(void*)) {

@@ -1152,6 +1152,27 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
     loader.RegisterFunction( tgeometryseqarr_4params);
 
+    // tgeometrySeqSet(temp[]) constructor + tgeometrySeqSetGaps with
+    // optional (maxt, maxdist, interp_text) tail. Mirrors MobilityDB's
+    // surface in `022_temporal.in.sql` / `052_tpoint.in.sql`.
+    {
+        const auto T = TGeometryTypes::TGEOMETRY();
+        const auto LT = LogicalType::LIST(T);
+        loader.RegisterFunction(ScalarFunction("tgeometrySeqSet",
+            {LT}, T, TemporalFunctions::Tsequenceset_constructor));
+        loader.RegisterFunction(ScalarFunction("tgeometrySeqSetGaps",
+            {LT}, T, TemporalFunctions::Tsequenceset_constructor_gaps));
+        loader.RegisterFunction(ScalarFunction("tgeometrySeqSetGaps",
+            {LT, LogicalType::INTERVAL}, T,
+            TemporalFunctions::Tsequenceset_constructor_gaps));
+        loader.RegisterFunction(ScalarFunction("tgeometrySeqSetGaps",
+            {LT, LogicalType::INTERVAL, LogicalType::DOUBLE}, T,
+            TemporalFunctions::Tsequenceset_constructor_gaps));
+        loader.RegisterFunction(ScalarFunction("tgeometrySeqSetGaps",
+            {LT, LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::VARCHAR},
+            T, TemporalFunctions::Tsequenceset_constructor_gaps));
+    }
+
     auto tgeometry_to_timespan_function = ScalarFunction(
         "timeSpan",
         {TGeometryTypes::TGEOMETRY()},     

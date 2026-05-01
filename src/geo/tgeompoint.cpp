@@ -250,6 +250,23 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
+    // tgeompointSeqSetGaps(temp[], maxt interval, maxdist float, text)
+    {
+        const auto T = TGEOMPOINT();
+        const auto LT = LogicalType::LIST(T);
+        loader.RegisterFunction(ScalarFunction("tgeompointSeqSetGaps",
+            {LT}, T, TemporalFunctions::Tsequenceset_constructor_gaps));
+        loader.RegisterFunction(ScalarFunction("tgeompointSeqSetGaps",
+            {LT, LogicalType::INTERVAL}, T,
+            TemporalFunctions::Tsequenceset_constructor_gaps));
+        loader.RegisterFunction(ScalarFunction("tgeompointSeqSetGaps",
+            {LT, LogicalType::INTERVAL, LogicalType::DOUBLE}, T,
+            TemporalFunctions::Tsequenceset_constructor_gaps));
+        loader.RegisterFunction(ScalarFunction("tgeompointSeqSetGaps",
+            {LT, LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::VARCHAR},
+            T, TemporalFunctions::Tsequenceset_constructor_gaps));
+    }
+
     loader.RegisterFunction(
         ScalarFunction(
             "stbox",

@@ -1152,6 +1152,25 @@ void TGeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
     loader.RegisterFunction( tgeogpointseqarr_4params);
 
+    // tgeogpointSeqSet + tgeogpointSeqSetGaps
+    {
+        const auto T = TGeogpointType::TGEOGPOINT();
+        const auto LT = LogicalType::LIST(T);
+        loader.RegisterFunction(ScalarFunction("tgeogpointSeqSet",
+            {LT}, T, TemporalFunctions::Tsequenceset_constructor));
+        loader.RegisterFunction(ScalarFunction("tgeogpointSeqSetGaps",
+            {LT}, T, TemporalFunctions::Tsequenceset_constructor_gaps));
+        loader.RegisterFunction(ScalarFunction("tgeogpointSeqSetGaps",
+            {LT, LogicalType::INTERVAL}, T,
+            TemporalFunctions::Tsequenceset_constructor_gaps));
+        loader.RegisterFunction(ScalarFunction("tgeogpointSeqSetGaps",
+            {LT, LogicalType::INTERVAL, LogicalType::DOUBLE}, T,
+            TemporalFunctions::Tsequenceset_constructor_gaps));
+        loader.RegisterFunction(ScalarFunction("tgeogpointSeqSetGaps",
+            {LT, LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::VARCHAR},
+            T, TemporalFunctions::Tsequenceset_constructor_gaps));
+    }
+
     auto tgeogpoint_to_timespan_function = ScalarFunction(
         "timeSpan",
         {TGeogpointType::TGEOGPOINT()},     

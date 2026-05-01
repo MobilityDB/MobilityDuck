@@ -1,0 +1,137 @@
+# name: test/sql/parity/062_seqset_gaps.test
+# description: `*SeqSetGaps` constructors. MobilityDB exposes one
+# tSeqSetGaps per temporal type (tbool/tint/tfloat/ttext + the four
+# spatial-temporal types) for partitioning a list of TInstants into
+# sequences with optional `maxt` (time-delta) and `maxdist` (Euclidean)
+# gap thresholds, with a sticky `interp` text argument. The runtime
+# probe before this PR found all 11 names unbound; this PR registers
+# every shape MobilityDB ships in `022_temporal.in.sql` and
+# `052_tpoint.in.sql` (plus the parallel `tgeometry`/`tgeography`/
+# `tgeogpoint` variants from the cross-type tspatial surface).
+#
+# Also fills in the missing `tgeometrySeqSet` / `tgeographySeqSet` /
+# `tgeogpointSeqSet` constructors (`tgeompointSeqSet` was already
+# wired); these were the three SeqSet names left in the gap report.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# Non-spatial: tint / tfloat have the full 4-arg shape
+#   (list, maxt interval, maxdist float, interp text).
+# tbool / ttext have only the 1- and 2-arg shapes (no metric, no
+# linear interp).
+# =============================================================================
+
+query I
+SELECT (tintSeqSetGaps(LIST_VALUE('1@2000-01-01'::tint, '5@2000-01-05'::tint))
+        IS NOT NULL);
+----
+true
+
+query I
+SELECT (tintSeqSetGaps(
+   LIST_VALUE('1@2000-01-01'::tint, '5@2000-01-02'::tint),
+   INTERVAL '1 day', 2.0, 'step') IS NOT NULL);
+----
+true
+
+query I
+SELECT (tfloatSeqSetGaps(
+   LIST_VALUE('1.0@2000-01-01'::tfloat, '2.0@2000-01-02'::tfloat,
+              '5.0@2000-01-05'::tfloat),
+   INTERVAL '1 day') IS NOT NULL);
+----
+true
+
+query I
+SELECT (tfloatSeqSetGaps(
+   LIST_VALUE('1.0@2000-01-01'::tfloat, '2.0@2000-01-02'::tfloat),
+   INTERVAL '1 day', 2.0, 'linear') IS NOT NULL);
+----
+true
+
+query I
+SELECT (tboolSeqSetGaps(
+   LIST_VALUE('true@2000-01-01'::tbool, 'false@2000-01-02'::tbool),
+   INTERVAL '1 day') IS NOT NULL);
+----
+true
+
+query I
+SELECT (ttextSeqSetGaps(
+   LIST_VALUE('"a"@2000-01-01'::ttext, '"b"@2000-01-02'::ttext))
+   IS NOT NULL);
+----
+true
+
+# =============================================================================
+# Spatial side — tgeompoint / tgeogpoint / tgeometry / tgeography all
+# expose the full 4-arg shape. tgeometry / tgeography reject 'linear'
+# at MEOS level (same as MobilityDB) — 'step' or unspecified works.
+# =============================================================================
+
+query I
+SELECT (tgeompointSeqSetGaps(
+   LIST_VALUE('Point(0 0)@2000-01-01'::tgeompoint,
+              'Point(1 1)@2000-01-02'::tgeompoint),
+   INTERVAL '1 day', 2.0) IS NOT NULL);
+----
+true
+
+query I
+SELECT (tgeompointSeqSetGaps(
+   LIST_VALUE('Point(0 0)@2000-01-01'::tgeompoint,
+              'Point(1 1)@2000-01-02'::tgeompoint),
+   INTERVAL '1 day', 2.0, 'step') IS NOT NULL);
+----
+true
+
+query I
+SELECT (tgeogpointSeqSetGaps(
+   LIST_VALUE('SRID=4326;Point(0 0)@2000-01-01'::tgeogpoint,
+              'SRID=4326;Point(1 1)@2000-01-02'::tgeogpoint),
+   INTERVAL '1 day') IS NOT NULL);
+----
+true
+
+query I
+SELECT (tgeometrySeqSetGaps(
+   LIST_VALUE('Point(0 0)@2000-01-01'::tgeometry,
+              'Point(1 1)@2000-01-02'::tgeometry),
+   INTERVAL '1 day', 2.0, 'step') IS NOT NULL);
+----
+true
+
+query I
+SELECT (tgeographySeqSetGaps(
+   LIST_VALUE('SRID=4326;Point(0 0)@2000-01-01'::tgeography,
+              'SRID=4326;Point(1 1)@2000-01-02'::tgeography),
+   INTERVAL '1 day', 2.0, 'step') IS NOT NULL);
+----
+true
+
+# =============================================================================
+# Plain SeqSet — the three previously-missing spatial-side aliases.
+# =============================================================================
+
+query I
+SELECT (tgeometrySeqSet(
+   LIST_VALUE('[Point(0 0)@2000-01-01, Point(1 1)@2000-01-02]'::tgeometry))
+   IS NOT NULL);
+----
+true
+
+query I
+SELECT (tgeographySeqSet(
+   LIST_VALUE('SRID=4326;[Point(0 0)@2000-01-01, Point(1 1)@2000-01-02]'::tgeography))
+   IS NOT NULL);
+----
+true
+
+query I
+SELECT (tgeogpointSeqSet(
+   LIST_VALUE('SRID=4326;[Point(0 0)@2000-01-01, Point(1 1)@2000-01-02]'::tgeogpoint))
+   IS NOT NULL);
+----
+true

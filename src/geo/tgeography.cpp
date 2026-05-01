@@ -1152,6 +1152,25 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
     loader.RegisterFunction( tgeographyseqarr_4params);
 
+    // tgeographySeqSet + tgeographySeqSetGaps
+    {
+        const auto T = TGeographyTypes::TGEOGRAPHY();
+        const auto LT = LogicalType::LIST(T);
+        loader.RegisterFunction(ScalarFunction("tgeographySeqSet",
+            {LT}, T, TemporalFunctions::Tsequenceset_constructor));
+        loader.RegisterFunction(ScalarFunction("tgeographySeqSetGaps",
+            {LT}, T, TemporalFunctions::Tsequenceset_constructor_gaps));
+        loader.RegisterFunction(ScalarFunction("tgeographySeqSetGaps",
+            {LT, LogicalType::INTERVAL}, T,
+            TemporalFunctions::Tsequenceset_constructor_gaps));
+        loader.RegisterFunction(ScalarFunction("tgeographySeqSetGaps",
+            {LT, LogicalType::INTERVAL, LogicalType::DOUBLE}, T,
+            TemporalFunctions::Tsequenceset_constructor_gaps));
+        loader.RegisterFunction(ScalarFunction("tgeographySeqSetGaps",
+            {LT, LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::VARCHAR},
+            T, TemporalFunctions::Tsequenceset_constructor_gaps));
+    }
+
     auto tgeography_to_timespan_function = ScalarFunction(
         "timeSpan",
         {TGeographyTypes::TGEOGRAPHY()},     
