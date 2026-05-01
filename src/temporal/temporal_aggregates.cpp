@@ -33,6 +33,7 @@
 #include "geo/tgeompoint.hpp"
 #include "geo/tgeometry.hpp"
 #include "geo/tgeography.hpp"
+#include "geo/tgeogpoint.hpp"
 
 #include "duckdb/common/exception.hpp"
 #include "duckdb/function/aggregate_function.hpp"
@@ -926,6 +927,7 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
         set.AddFunction(MakeTaggAggregate<TcountTempFn>(TgeompointType::TGEOMPOINT(), TemporalTypes::TINT()));
         set.AddFunction(MakeTaggAggregate<TcountTempFn>(TGeometryTypes::TGEOMETRY(), TemporalTypes::TINT()));
         set.AddFunction(MakeTaggAggregate<TcountTempFn>(TGeographyTypes::TGEOGRAPHY(), TemporalTypes::TINT()));
+        set.AddFunction(MakeTaggAggregate<TcountTempFn>(TGeogpointType::TGEOGPOINT(), TemporalTypes::TINT()));
 
         // Time-only inputs.
         set.AddFunction(AggregateFunction::UnaryAggregateDestructor<
@@ -971,11 +973,13 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
         loader.RegisterFunction(std::move(set));
     }
 
-    // ---- TcentroidAgg on tgeompoint → tgeompoint ----
+    // ---- TcentroidAgg on tgeompoint / tgeogpoint → same type ----
     {
         AggregateFunctionSet set("TcentroidAgg");
         set.AddFunction(MakeTaggAggregate<TcentroidFn>(
             TgeompointType::TGEOMPOINT(), TgeompointType::TGEOMPOINT()));
+        set.AddFunction(MakeTaggAggregate<TcentroidFn>(
+            TGeogpointType::TGEOGPOINT(), TGeogpointType::TGEOGPOINT()));
         loader.RegisterFunction(std::move(set));
     }
 
@@ -992,6 +996,8 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
             TGeometryTypes::TGEOMETRY(), TGeometryTypes::TGEOMETRY()));
         set.AddFunction(MakeTaggAggregate<MergeAggFn>(
             TGeographyTypes::TGEOGRAPHY(), TGeographyTypes::TGEOGRAPHY()));
+        set.AddFunction(MakeTaggAggregate<MergeAggFn>(
+            TGeogpointType::TGEOGPOINT(), TGeogpointType::TGEOGPOINT()));
         loader.RegisterFunction(std::move(set));
     }
 
@@ -1005,6 +1011,7 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
         set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TgeompointType::TGEOMPOINT()));
         set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TGeometryTypes::TGEOMETRY()));
         set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TGeographyTypes::TGEOGRAPHY()));
+        set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TGeogpointType::TGEOGPOINT()));
         loader.RegisterFunction(std::move(set));
     }
 
@@ -1018,6 +1025,7 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
         set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(TgeompointType::TGEOMPOINT()));
         set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(TGeometryTypes::TGEOMETRY()));
         set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(TGeographyTypes::TGEOGRAPHY()));
+        set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(TGeogpointType::TGEOGPOINT()));
         loader.RegisterFunction(std::move(set));
     }
 
