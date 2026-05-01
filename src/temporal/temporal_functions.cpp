@@ -5057,6 +5057,35 @@ void EverAlwaysTempTemp(DataChunk &args, Vector &result, Fn fn) {
         });
 }
 
+// MEOS' ever/always *_text_ttext signatures take a `text *` (PG-style
+// length-prefixed string). The DuckDB side hands us a string_t; we
+// convert via cstring2text and free the resulting text after the call.
+template <typename Fn>
+void EverAlwaysTextTemp(DataChunk &args, Vector &result, Fn fn) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t s, string_t blob) -> bool {
+            text *txt = cstring2text(s.GetString().c_str());
+            Temporal *t = BlobToTemporal(blob);
+            int r = fn(txt, t);
+            free(txt); free(t);
+            return r > 0;
+        });
+}
+
+template <typename Fn>
+void EverAlwaysTempText(DataChunk &args, Vector &result, Fn fn) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t blob, string_t s) -> bool {
+            Temporal *t = BlobToTemporal(blob);
+            text *txt = cstring2text(s.GetString().c_str());
+            int r = fn(t, txt);
+            free(t); free(txt);
+            return r > 0;
+        });
+}
+
 } // namespace
 
 #define DEFINE_EA_OP(NAME, MEOS_NAME)                                                                  \
@@ -5077,6 +5106,12 @@ void TemporalFunctions::NAME##_float_tfloat(DataChunk &args, ExpressionState &st
 }                                                                                                      \
 void TemporalFunctions::NAME##_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result) { \
     EverAlwaysTempVal<double>(args, result, [](Temporal *t, double d) { return MEOS_NAME##_tfloat_float(t, d); }); \
+}                                                                                                      \
+void TemporalFunctions::NAME##_text_ttext(DataChunk &args, ExpressionState &state, Vector &result) {   \
+    EverAlwaysTextTemp(args, result, [](text *txt, Temporal *t) { return MEOS_NAME##_text_ttext(txt, t); }); \
+}                                                                                                      \
+void TemporalFunctions::NAME##_ttext_text(DataChunk &args, ExpressionState &state, Vector &result) {   \
+    EverAlwaysTempText(args, result, [](Temporal *t, text *txt) { return MEOS_NAME##_ttext_text(t, txt); }); \
 }                                                                                                      \
 void TemporalFunctions::NAME##_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result) { \
     EverAlwaysTempTemp(args, result, [](Temporal *a, Temporal *b) { return MEOS_NAME##_temporal_temporal(a, b); }); \
@@ -5102,6 +5137,12 @@ void TemporalFunctions::NAME##_float_tfloat(DataChunk &args, ExpressionState &st
 }                                                                                                      \
 void TemporalFunctions::NAME##_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result) { \
     EverAlwaysTempVal<double>(args, result, [](Temporal *t, double d) { return MEOS_NAME##_tfloat_float(t, d); }); \
+}                                                                                                      \
+void TemporalFunctions::NAME##_text_ttext(DataChunk &args, ExpressionState &state, Vector &result) {   \
+    EverAlwaysTextTemp(args, result, [](text *txt, Temporal *t) { return MEOS_NAME##_text_ttext(txt, t); }); \
+}                                                                                                      \
+void TemporalFunctions::NAME##_ttext_text(DataChunk &args, ExpressionState &state, Vector &result) {   \
+    EverAlwaysTempText(args, result, [](Temporal *t, text *txt) { return MEOS_NAME##_ttext_text(t, txt); }); \
 }                                                                                                      \
 void TemporalFunctions::NAME##_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result) { \
     EverAlwaysTempTemp(args, result, [](Temporal *a, Temporal *b) { return MEOS_NAME##_temporal_temporal(a, b); }); \

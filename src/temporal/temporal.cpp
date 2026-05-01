@@ -1431,9 +1431,12 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TINT(),       LogicalType::INTEGER},     LogicalType::BOOLEAN, TemporalFunctions::FN##_tint_int));               \
     loader.RegisterFunction(ScalarFunction(NAME, {LogicalType::DOUBLE,         TemporalTypes::TFLOAT()},  LogicalType::BOOLEAN, TemporalFunctions::FN##_float_tfloat));           \
     loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TFLOAT(),     LogicalType::DOUBLE},      LogicalType::BOOLEAN, TemporalFunctions::FN##_tfloat_float));           \
+    loader.RegisterFunction(ScalarFunction(NAME, {LogicalType::VARCHAR,        TemporalTypes::TTEXT()},   LogicalType::BOOLEAN, TemporalFunctions::FN##_text_ttext));             \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TTEXT(),      LogicalType::VARCHAR},     LogicalType::BOOLEAN, TemporalFunctions::FN##_ttext_text));             \
     loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TINT(),       TemporalTypes::TINT()},    LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal));      \
     loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TFLOAT(),     TemporalTypes::TFLOAT()},  LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal));      \
-    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TBOOL(),      TemporalTypes::TBOOL()},   LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal));
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TBOOL(),      TemporalTypes::TBOOL()},   LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal));      \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TTEXT(),      TemporalTypes::TTEXT()},   LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal));
 
     REG_EA("ever_eq",   Ever_eq)
     REG_EA("always_eq", Always_eq)
@@ -1447,8 +1450,11 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TINT(),   LogicalType::INTEGER},    LogicalType::BOOLEAN, TemporalFunctions::FN##_tint_int));        \
     loader.RegisterFunction(ScalarFunction(NAME, {LogicalType::DOUBLE,     TemporalTypes::TFLOAT()}, LogicalType::BOOLEAN, TemporalFunctions::FN##_float_tfloat));    \
     loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TFLOAT(), LogicalType::DOUBLE},     LogicalType::BOOLEAN, TemporalFunctions::FN##_tfloat_float));    \
+    loader.RegisterFunction(ScalarFunction(NAME, {LogicalType::VARCHAR,    TemporalTypes::TTEXT()},  LogicalType::BOOLEAN, TemporalFunctions::FN##_text_ttext));      \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TTEXT(),  LogicalType::VARCHAR},    LogicalType::BOOLEAN, TemporalFunctions::FN##_ttext_text));      \
     loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TINT(),   TemporalTypes::TINT()},   LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal)); \
-    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal));
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal)); \
+    loader.RegisterFunction(ScalarFunction(NAME, {TemporalTypes::TTEXT(),  TemporalTypes::TTEXT()},  LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal));
 
     REG_EA_ORD("ever_lt",   Ever_lt)
     REG_EA_ORD("always_lt", Always_lt)

@@ -988,6 +988,44 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     EA_REG_2_COMMUT("aIntersects", aintersects_tgeo_geo, aintersects_tgeo_tgeo);
     EA_REG_2_COMMUT("eTouches",    etouches_tgeo_geo,    etouches_tgeo_tgeo);
     EA_REG_2_COMMUT("aTouches",    atouches_tgeo_geo,    atouches_tgeo_tgeo);
+
+    // Always_eq / ever_eq / always_ne / ever_ne for tspatial × geometry
+    // and tspatial × tspatial. Mirrors MobilityDB's e/a naming on the
+    // SQL side (always_eq, ever_eq, etc., not aEq/eEq). Re-uses the
+    // EA_REG_2 macro and registers the same signatures for tgeompoint
+    // so users don't need an explicit cast to tgeometry first.
+    EA_REG_2("always_eq", always_eq_tgeo_geo, always_eq_geo_tgeo, always_eq_tgeo_tgeo);
+    EA_REG_2("ever_eq",   ever_eq_tgeo_geo,   ever_eq_geo_tgeo,   ever_eq_tgeo_tgeo);
+    EA_REG_2("always_ne", always_ne_tgeo_geo, always_ne_geo_tgeo, always_ne_tgeo_tgeo);
+    EA_REG_2("ever_ne",   ever_ne_tgeo_geo,   ever_ne_geo_tgeo,   ever_ne_tgeo_tgeo);
+
+    {
+        const LogicalType TGP = TgeompointType::TGEOMPOINT();
+        loader.RegisterFunction(ScalarFunction("always_eq", {GEOM, TGP}, BOOL,
+            GeoTgeoIntExec<always_eq_geo_tgeo>));
+        loader.RegisterFunction(ScalarFunction("always_eq", {TGP, GEOM}, BOOL,
+            TgeoGeoIntExec<always_eq_tgeo_geo>));
+        loader.RegisterFunction(ScalarFunction("always_eq", {TGP, TGP}, BOOL,
+            TgeoTgeoIntExec<always_eq_tgeo_tgeo>));
+        loader.RegisterFunction(ScalarFunction("ever_eq", {GEOM, TGP}, BOOL,
+            GeoTgeoIntExec<ever_eq_geo_tgeo>));
+        loader.RegisterFunction(ScalarFunction("ever_eq", {TGP, GEOM}, BOOL,
+            TgeoGeoIntExec<ever_eq_tgeo_geo>));
+        loader.RegisterFunction(ScalarFunction("ever_eq", {TGP, TGP}, BOOL,
+            TgeoTgeoIntExec<ever_eq_tgeo_tgeo>));
+        loader.RegisterFunction(ScalarFunction("always_ne", {GEOM, TGP}, BOOL,
+            GeoTgeoIntExec<always_ne_geo_tgeo>));
+        loader.RegisterFunction(ScalarFunction("always_ne", {TGP, GEOM}, BOOL,
+            TgeoGeoIntExec<always_ne_tgeo_geo>));
+        loader.RegisterFunction(ScalarFunction("always_ne", {TGP, TGP}, BOOL,
+            TgeoTgeoIntExec<always_ne_tgeo_tgeo>));
+        loader.RegisterFunction(ScalarFunction("ever_ne", {GEOM, TGP}, BOOL,
+            GeoTgeoIntExec<ever_ne_geo_tgeo>));
+        loader.RegisterFunction(ScalarFunction("ever_ne", {TGP, GEOM}, BOOL,
+            TgeoGeoIntExec<ever_ne_tgeo_geo>));
+        loader.RegisterFunction(ScalarFunction("ever_ne", {TGP, TGP}, BOOL,
+            TgeoTgeoIntExec<ever_ne_tgeo_tgeo>));
+    }
 #undef EA_REG_2
 #undef EA_REG_2_COMMUT
 

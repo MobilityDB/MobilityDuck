@@ -1,0 +1,192 @@
+# name: test/sql/parity/053_always_ever.test
+# description: always_* / ever_* predicate quantifiers — extends the
+#              pre-existing tnumber/tbool surface to ttext (text↔ttext,
+#              ttext↔text, ttext↔ttext) and registers the spatial
+#              variants for tgeometry / tgeompoint (Cartesian) and
+#              tgeography / tgeogpoint (geographic). MobilityDB's
+#              SQL definitions live in `mobilitydb/sql/temporal/*.in.sql`
+#              and `mobilitydb/sql/geo/*.in.sql`; MEOS C-side functions
+#              are `{always,ever}_{eq,ne,lt,le,gt,ge}_{...}_t...`.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# ttext side — equality / inequality
+# =============================================================================
+
+query I
+SELECT always_eq('"a"@2000-01-01'::ttext, 'a');
+----
+true
+
+query I
+SELECT always_eq('a', '"a"@2000-01-01'::ttext);
+----
+true
+
+query I
+SELECT always_eq('"a"@2000-01-01'::ttext, 'b');
+----
+false
+
+query I
+SELECT ever_eq('{"a"@2000-01-01, "b"@2000-01-02}'::ttext, '"a"@2000-01-01'::ttext);
+----
+true
+
+query I
+SELECT ever_eq('{"a"@2000-01-01, "b"@2000-01-02}'::ttext, 'a');
+----
+true
+
+query I
+SELECT always_ne('"a"@2000-01-01'::ttext, 'b');
+----
+true
+
+query I
+SELECT ever_ne('{"a"@2000-01-01, "b"@2000-01-02}'::ttext, 'a');
+----
+true
+
+# =============================================================================
+# ttext ordering — text/ttext, ttext/text, ttext/ttext for lt/le/gt/ge.
+# =============================================================================
+
+query I
+SELECT always_lt('"a"@2000-01-01'::ttext, 'z');
+----
+true
+
+query I
+SELECT always_le('"a"@2000-01-01'::ttext, 'a');
+----
+true
+
+query I
+SELECT always_ge('"z"@2000-01-01'::ttext, 'a');
+----
+true
+
+query I
+SELECT always_gt('"z"@2000-01-01'::ttext, 'a');
+----
+true
+
+query I
+SELECT ever_lt('{"a"@2000-01-01, "z"@2000-01-02}'::ttext, 'b');
+----
+true
+
+query I
+SELECT ever_gt('{"a"@2000-01-01, "z"@2000-01-02}'::ttext, 'b');
+----
+true
+
+# =============================================================================
+# Spatial — tgeompoint × geometry / × tgeompoint (Cartesian).
+# =============================================================================
+
+query I
+SELECT always_eq(
+  'Point(0 0)@2000-01-01'::tgeompoint, 'Point(0 0)'::geometry);
+----
+true
+
+query I
+SELECT always_eq(
+  'Point(0 0)'::geometry, 'Point(0 0)@2000-01-01'::tgeompoint);
+----
+true
+
+query I
+SELECT ever_eq(
+  '{Point(0 0)@2000-01-01, Point(1 1)@2000-01-02}'::tgeompoint,
+  'Point(0 0)'::geometry);
+----
+true
+
+query I
+SELECT always_ne(
+  'Point(0 0)@2000-01-01'::tgeompoint, 'Point(5 5)'::geometry);
+----
+true
+
+query I
+SELECT ever_ne(
+  '{Point(0 0)@2000-01-01, Point(1 1)@2000-01-02}'::tgeompoint,
+  'Point(0 0)'::geometry);
+----
+true
+
+query I
+SELECT always_eq(
+  'Point(0 0)@2000-01-01'::tgeompoint,
+  'Point(0 0)@2000-01-01'::tgeompoint);
+----
+true
+
+query I
+SELECT ever_eq(
+  '{Point(0 0)@2000-01-01, Point(1 1)@2000-01-02}'::tgeompoint,
+  '{Point(0 0)@2000-01-01, Point(2 2)@2000-01-02}'::tgeompoint);
+----
+true
+
+# =============================================================================
+# Spatial — tgeometry × geometry. tgeometry hosts non-point shapes too,
+# but the always_eq value comparison on point-typed values matches
+# the tgeompoint behaviour exactly.
+# =============================================================================
+
+query I
+SELECT always_eq(
+  'Point(0 0)@2000-01-01'::tgeometry, 'Point(0 0)'::geometry);
+----
+true
+
+query I
+SELECT ever_ne(
+  '{Point(0 0)@2000-01-01, Point(1 1)@2000-01-02}'::tgeometry,
+  'Point(0 0)'::geometry);
+----
+true
+
+# =============================================================================
+# Spatial — geographic. The (tgeogpoint × geometry) and (tgeogpoint ×
+# tgeography) overloads exist, but MobilityDuck has no `geography` SQL
+# type — a `::geometry` literal carries no geodetic flag, so MEOS
+# surfaces "mixed planar and geodetic coordinates" if you mix the two.
+# That's the same constraint MobilityDB enforces. We exercise the
+# tgeogpoint × tgeogpoint and tgeography × tgeography pairs, which
+# don't require a geometry literal.
+# =============================================================================
+
+query I
+SELECT always_eq(
+  'SRID=4326;Point(0 0)@2000-01-01'::tgeogpoint,
+  'SRID=4326;Point(0 0)@2000-01-01'::tgeogpoint);
+----
+true
+
+query I
+SELECT ever_eq(
+  'SRID=4326;{Point(0 0)@2000-01-01, Point(1 1)@2000-01-02}'::tgeogpoint,
+  'SRID=4326;{Point(0 0)@2000-01-01, Point(2 2)@2000-01-02}'::tgeogpoint);
+----
+true
+
+query I
+SELECT always_ne(
+  'SRID=4326;Point(0 0)@2000-01-01'::tgeogpoint,
+  'SRID=4326;Point(5 5)@2000-01-01'::tgeogpoint);
+----
+true
+
+query I
+SELECT always_eq(
+  'SRID=4326;Point(0 0)@2000-01-01'::tgeography,
+  'SRID=4326;Point(0 0)@2000-01-01'::tgeography);
+----
+true
