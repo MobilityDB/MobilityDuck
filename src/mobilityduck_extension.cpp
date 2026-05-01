@@ -246,6 +246,10 @@ static void LoadInternal(ExtensionLoader &loader) {
 	SpanTypes::RegisterCastFunctions(loader);
 	SpanAggregates::RegisterAggregateFunctions(loader);
 
+	// Tile getters return SpanTypes blobs and consume TBOX, so all those
+	// types must already be registered.
+	TemporalTypes::RegisterTileGetters(loader);
+
 	TgeompointType::RegisterType(loader);
 	TgeompointType::RegisterCastFunctions(loader);
 	TgeompointType::RegisterScalarFunctions(loader);
