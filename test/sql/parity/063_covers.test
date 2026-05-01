@@ -1,0 +1,87 @@
+# name: test/sql/parity/063_covers.test
+# description: eCovers / tCovers parity. MobilityDB ships
+# `aCovers` / `eCovers` / `tCovers` as the always / ever / temporal
+# variants of "geometry covers temporal-geometry". MEOS' public API
+# only exposes `ecovers_*` and `tcovers_*` (the always-covers
+# `Acovers_*` PG wrappers go through MobilityDB-internal
+# `ea_covers_*` which isn't in the public meos_geo.h surface yet —
+# documented in the source). This PR closes the eCovers/tCovers
+# pair across all four spatial-temporal types.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# eCovers — int-returning ever-covers across all 4 sig shapes per type.
+# =============================================================================
+
+# tgeometry side: a polygon covers a point inside it.
+query I
+SELECT eCovers(
+  'POLYGON((-1 -1, 2 -1, 2 2, -1 2, -1 -1))'::geometry,
+  'Point(0 0)@2000-01-01'::tgeometry);
+----
+true
+
+query I
+SELECT eCovers('Point(0 0)@2000-01-01'::tgeometry, 'POINT(0 0)'::geometry);
+----
+true
+
+query I
+SELECT eCovers(
+  'Point(0 0)@2000-01-01'::tgeometry, 'Point(0 0)@2000-01-01'::tgeometry);
+----
+true
+
+# tgeompoint side
+query I
+SELECT eCovers('Point(0 0)@2000-01-01'::tgeompoint, 'POINT(0 0)'::geometry);
+----
+true
+
+query I
+SELECT eCovers(
+  'POLYGON((-1 -1, 2 -1, 2 2, -1 2, -1 -1))'::geometry,
+  'Point(0 0)@2000-01-01'::tgeompoint);
+----
+true
+
+# tgeography side
+query I
+SELECT eCovers(
+  'SRID=4326;POLYGON((-1 -1, 2 -1, 2 2, -1 2, -1 -1))'::geometry,
+  'SRID=4326;Point(0 0)@2000-01-01'::tgeography);
+----
+true
+
+# =============================================================================
+# tCovers — temporal-bool result.
+# =============================================================================
+
+query I
+SELECT (tCovers('Point(0 0)@2000-01-01'::tgeometry, 'POINT(0 0)'::geometry) IS NOT NULL);
+----
+true
+
+query I
+SELECT (tCovers('Point(0 0)@2000-01-01'::tgeometry, 'Point(0 0)@2000-01-01'::tgeometry) IS NOT NULL);
+----
+true
+
+query I
+SELECT (tCovers('Point(0 0)@2000-01-01'::tgeompoint, 'POINT(0 0)'::geometry) IS NOT NULL);
+----
+true
+
+query I
+SELECT (tCovers(
+  'POLYGON((-1 -1, 2 -1, 2 2, -1 2, -1 -1))'::geometry,
+  '{Point(0 0)@2000-01-01, Point(1 1)@2000-01-02}'::tgeompoint) IS NOT NULL);
+----
+true
+
+query I
+SELECT typeof(tCovers('Point(0 0)@2000-01-01'::tgeometry, 'POINT(0 0)'::geometry));
+----
+TBOOL

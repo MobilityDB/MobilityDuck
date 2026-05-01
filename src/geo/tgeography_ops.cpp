@@ -1042,6 +1042,79 @@ void TGeographyOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     TREL_REG("tTouches",    ttouches_tgeo_geo,    ttouches_geo_tgeo,    ttouches_tgeo_tgeo);
 #undef TREL_REG
 
+    // tCovers + eCovers — geographic side. Same shapes as tgeometry's
+    // covers registration block. tCovers takes an extra (restr,
+    // atvalue) pair we set to (false, false). aCovers is deferred —
+    // see the note in tgeometry_ops.cpp for the MEOS-side blocker.
+    auto tcovers_geo_tgeo_exec = [](DataChunk &args, ExpressionState &, Vector &result) {
+        BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+            args.data[0], args.data[1], result, args.size(),
+            [&](string_t g_blob, string_t t_blob, ValidityMask &mask, idx_t idx) -> string_t {
+                Temporal *t = DecodeTemporalCopy(t_blob);
+                int32 srid = tspatial_srid(t);
+                GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
+                Temporal *r = tcovers_geo_tgeo(gs, t, false, false);
+                free(t); free(gs);
+                if (!r) { mask.SetInvalid(idx); return string_t(); }
+                return TemporalToBlob(result, r);
+            });
+    };
+    auto tcovers_tgeo_geo_exec = [](DataChunk &args, ExpressionState &, Vector &result) {
+        BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+            args.data[0], args.data[1], result, args.size(),
+            [&](string_t t_blob, string_t g_blob, ValidityMask &mask, idx_t idx) -> string_t {
+                Temporal *t = DecodeTemporalCopy(t_blob);
+                int32 srid = tspatial_srid(t);
+                GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
+                Temporal *r = tcovers_tgeo_geo(t, gs, false, false);
+                free(t); free(gs);
+                if (!r) { mask.SetInvalid(idx); return string_t(); }
+                return TemporalToBlob(result, r);
+            });
+    };
+    auto tcovers_tgeo_tgeo_exec = [](DataChunk &args, ExpressionState &, Vector &result) {
+        BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+            args.data[0], args.data[1], result, args.size(),
+            [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+                Temporal *t1 = DecodeTemporalCopy(a);
+                Temporal *t2 = DecodeTemporalCopy(b);
+                Temporal *r = tcovers_tgeo_tgeo(t1, t2, false, false);
+                free(t1); free(t2);
+                if (!r) { mask.SetInvalid(idx); return string_t(); }
+                return TemporalToBlob(result, r);
+            });
+    };
+    loader.RegisterFunction(ScalarFunction("tCovers", {GEOM, TGEOM},
+        TemporalTypes::TBOOL(), tcovers_geo_tgeo_exec));
+    loader.RegisterFunction(ScalarFunction("tCovers", {TGEOM, GEOM},
+        TemporalTypes::TBOOL(), tcovers_tgeo_geo_exec));
+    loader.RegisterFunction(ScalarFunction("tCovers", {TGEOM, TGEOM},
+        TemporalTypes::TBOOL(), tcovers_tgeo_tgeo_exec));
+
+    loader.RegisterFunction(ScalarFunction("eCovers", {GEOM, TGEOM}, BOOL,
+        GeoTgeoIntExec<ecovers_geo_tgeo>));
+    loader.RegisterFunction(ScalarFunction("eCovers", {TGEOM, GEOM}, BOOL,
+        TgeoGeoIntExec<ecovers_tgeo_geo>));
+    loader.RegisterFunction(ScalarFunction("eCovers", {TGEOM, TGEOM}, BOOL,
+        TgeoTgeoIntExec<ecovers_tgeo_tgeo>));
+
+    // Same registrations for tgeogpoint.
+    {
+        const auto TGP = TGeogpointType::TGEOGPOINT();
+        loader.RegisterFunction(ScalarFunction("tCovers", {GEOM, TGP},
+            TemporalTypes::TBOOL(), tcovers_geo_tgeo_exec));
+        loader.RegisterFunction(ScalarFunction("tCovers", {TGP, GEOM},
+            TemporalTypes::TBOOL(), tcovers_tgeo_geo_exec));
+        loader.RegisterFunction(ScalarFunction("tCovers", {TGP, TGP},
+            TemporalTypes::TBOOL(), tcovers_tgeo_tgeo_exec));
+        loader.RegisterFunction(ScalarFunction("eCovers", {GEOM, TGP}, BOOL,
+            GeoTgeoIntExec<ecovers_geo_tgeo>));
+        loader.RegisterFunction(ScalarFunction("eCovers", {TGP, GEOM}, BOOL,
+            TgeoGeoIntExec<ecovers_tgeo_geo>));
+        loader.RegisterFunction(ScalarFunction("eCovers", {TGP, TGP}, BOOL,
+            TgeoTgeoIntExec<ecovers_tgeo_tgeo>));
+    }
+
     // tDwithin takes the extra distance argument.
     loader.RegisterFunction(ScalarFunction("tDwithin",
         {GEOM, TGEOM, DBL}, TemporalTypes::TBOOL(),
