@@ -1,0 +1,154 @@
+# name: test/sql/parity/040_tgeometry_foundations.test
+# description: Foundational tgeometry surface — accessors, time/value
+#              restrict, modifiers, and comparison. Mirrors the analogous
+#              tgeompoint surface registered in src/geo/tgeompoint.cpp,
+#              reusing the same generic Temporal handlers from
+#              src/temporal/temporal_functions.cpp where the C MEOS
+#              functions are subtype-agnostic.
+#
+#              Geometry values are emitted in EWKB-hex display rather than
+#              WKT, so the expected outputs encode the input coordinates
+#              verbatim.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# Accessors
+# =============================================================================
+
+query I
+SELECT numInstants(t::tgeometry) FROM (VALUES ('Point(0 0)@2000-01-01')) t(t);
+----
+1
+
+query I
+SELECT numInstants(t::tgeometry) FROM (VALUES
+  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+2
+
+query I
+SELECT startTimestamp(t::tgeometry)::VARCHAR FROM (VALUES
+  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+2000-01-01 00:00:00+00
+
+query I
+SELECT endTimestamp(t::tgeometry)::VARCHAR FROM (VALUES
+  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+2000-01-03 00:00:00+00
+
+query I
+SELECT duration(t::tgeometry)::VARCHAR FROM (VALUES
+  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+2 days
+
+query I
+SELECT lowerInc(t::tgeometry) FROM (VALUES
+  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+true
+
+# tgeometry defaults to STEP interpolation, which requires both inclusive
+# bounds — so the sequence form `[..., ...)` would be rejected at parse
+# time. Use a closed sequence and assert upperInc = true instead.
+query I
+SELECT upperInc(t::tgeometry) FROM (VALUES
+  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+true
+
+query I
+SELECT len(timestamps(t::tgeometry)) FROM (VALUES
+  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+2
+
+# =============================================================================
+# Time-domain restrict
+# =============================================================================
+
+query I
+SELECT atTime(t::tgeometry, TIMESTAMPTZ '2000-01-01')::VARCHAR FROM (VALUES
+  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+010100000000000000000000000000000000000000@2000-01-01 00:00:00+00
+
+query I
+SELECT beforeTimestamp(t::tgeometry, TIMESTAMPTZ '2000-01-02')::VARCHAR FROM (VALUES
+  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+[010100000000000000000000000000000000000000@2000-01-01 00:00:00+00, 010100000000000000000000000000000000000000@2000-01-02 00:00:00+00)
+
+# =============================================================================
+# Modifiers (shift / scale / shiftScale)
+# =============================================================================
+
+query I
+SELECT shiftTime(t::tgeometry, INTERVAL '1 day')::VARCHAR FROM (VALUES
+  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+[010100000000000000000000000000000000000000@2000-01-02 00:00:00+00, 010100000000000000000000400000000000000040@2000-01-04 00:00:00+00]
+
+query I
+SELECT scaleTime(t::tgeometry, INTERVAL '1 day')::VARCHAR FROM (VALUES
+  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+[010100000000000000000000000000000000000000@2000-01-01 00:00:00+00, 010100000000000000000000400000000000000040@2000-01-02 00:00:00+00]
+
+# =============================================================================
+# Spatial restrict
+# =============================================================================
+
+query I
+SELECT atGeometry(
+  t::tgeometry,
+  ST_GeomFromText('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'))::VARCHAR
+FROM (VALUES ('Point(0.5 0.5)@2000-01-01')) t(t);
+----
+0101000000000000000000E03F000000000000E03F@2000-01-01 00:00:00+00
+
+# =============================================================================
+# Comparison (named functions and operators)
+# =============================================================================
+
+query I
+SELECT temporal_eq(t::tgeometry, t::tgeometry) FROM (VALUES ('Point(0 0)@2000-01-01')) t(t);
+----
+true
+
+query I
+SELECT t1::tgeometry = t2::tgeometry FROM (VALUES
+  ('Point(0 0)@2000-01-01', 'Point(0 0)@2000-01-01')) t(t1, t2);
+----
+true
+
+query I
+SELECT t1::tgeometry <> t2::tgeometry FROM (VALUES
+  ('Point(0 0)@2000-01-01', 'Point(1 1)@2000-01-01')) t(t1, t2);
+----
+true
+
+query I
+SELECT temporal_cmp(t::tgeometry, t::tgeometry) FROM (VALUES
+  ('Point(0 0)@2000-01-01')) t(t);
+----
+0
+
+# =============================================================================
+# tempSubtype + interp + memSize
+# =============================================================================
+
+query I
+SELECT tempSubtype(t::tgeometry) FROM (VALUES ('Point(0 0)@2000-01-01')) t(t);
+----
+Instant
+
+query I
+SELECT tempSubtype(t::tgeometry) FROM (VALUES
+  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+Sequence
