@@ -21,8 +21,8 @@ PostgreSQL).
 | | Names | |
 |---|---:|---|
 | Available under the same name | ~310 | ✓ |
-| Available via a DuckDB operator (`=`, `<>`, `+`, `&`, `\|\|`, …) | ~23 | ✓ |
-| Available with the `*Agg` suffix on aggregate functions | 12 | ✓ |
+| Available under their named-function form *and* via the equivalent operator (`tbool_and(t1,t2)` ↔ `t1 & t2`, `temporal_teq(t1,t2)` ↔ `t1 = t2`, `tnumber_add` ↔ `+`, `ttext_cat` ↔ `\|\|`, …) — both spellings work on both engines | ~23 | ✓ |
+| Renamed in MobilityDuck with the `*Agg` suffix on aggregate functions | 12 | ✓ |
 | Architectural blocks (no separate `geography` SQL type, no MVT) | 2 | ✗ |
 | Not yet shipped | ~3 | mix of ◯ and ✗ — see sections below |
 | **Effective coverage** | ~99% | |

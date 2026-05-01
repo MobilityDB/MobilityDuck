@@ -87,29 +87,36 @@ A few feature areas where MobilityDuck is on parity:
 - **R-tree indexing** across all 13 bbox-bearing types
   (`stbox`, `tbox`, the five spans, and all eight temporal types).
 
-## Things that are spelled differently
+## Operator forms
 
-### Operators
+A handful of MobilityDB named functions are also spelled as
+operators. **Both spellings — the named function and its operator
+form — exist in both engines** and refer to the same operation.
+This isn't a MobilityDuck-vs-MobilityDB difference; it's just
+useful to have the table when you're reading or writing queries.
 
-A handful of MobilityDB *named functions* are also spelled as DuckDB
-operators. **Both spellings exist in both engines** — calling
-`tbool_and(t1, t2)` and writing `t1 & t2` are two ways to write the
-same operation, regardless of which engine you're on. The operator
-form is what most queries use; the named form shows up if you've
-been transliterating MobilityDB SQL verbatim.
-
-| Named function (MobilityDB & MobilityDuck) | Operator form (both engines) | Notes |
+| Named function (both engines) | Operator (both engines) | Notes |
 |---|---|---|
 | `temporal_teq(t1, t2)` | `t1 = t2` | Lifted equality. |
 | `temporal_tne(t1, t2)` | `t1 <> t2` | |
-| `temporal_tlt`, `temporal_tle`, `temporal_tgt`, `temporal_tge` | `<`, `<=`, `>`, `>=` | |
-| `tgeo_teq`, `tgeo_tne` | `=`, `<>` on `tgeo*` types | |
-| `tnumber_add(t1, v)`, `_sub`, `_mult`, `_div` | `+`, `-`, `*`, `/` | Both `(temporal, scalar)` and `(temporal, temporal)` shapes. |
+| `temporal_tlt(t1, t2)`, `temporal_tle`, `temporal_tgt`, `temporal_tge` | `t1 < t2`, `<=`, `>`, `>=` | |
+| `tgeo_teq(t1, t2)`, `tgeo_tne(t1, t2)` | `t1 = t2`, `t1 <> t2` on `tgeo*` types | |
+| `tnumber_add(t1, v)`, `tnumber_sub`, `tnumber_mult`, `tnumber_div` | `t1 + v`, `t1 - v`, `t1 * v`, `t1 / v` | Both `(temporal, scalar)` and `(temporal, temporal)` shapes. |
 | `tbool_and(t1, t2)` | `t1 & t2` | |
 | `tbool_or(t1, t2)` | `t1 \| t2` | |
 | `tbool_not(t)` | `~t` | |
 | `ttext_cat(t1, t2)` | `t1 \|\| t2` | |
-| `*_hash`, `*_hash_extended` | `hash(value)` | DuckDB has its own `hash` family for the BLOB-backed types. |
+| `*_hash(value)`, `*_hash_extended(value, seed)` | `hash(value)` (DuckDB) | DuckDB's stock `hash` family covers the BLOB-backed types. |
+
+The operator form is what most queries use; the named-function
+form is what shows up if you transliterate MobilityDB SQL
+verbatim. Either reads on either engine.
+
+## Things that are spelled differently in MobilityDuck
+
+These are the actual MobilityDB → MobilityDuck *renames*. Calling a
+MobilityDB query verbatim that uses one of these names won't work
+on MobilityDuck; you need the right-hand spelling.
 
 ### Aggregate naming
 
