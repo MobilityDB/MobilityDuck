@@ -1,6 +1,9 @@
-// SkipList-state temporal aggregates: tcount, tand, tor, tmin, tmax, tsum,
-// tavg, tcentroid. These differ from the fixed-state `extent()` aggregates
-// in two ways:
+// SkipList-state temporal aggregates: TcountAgg, TandAgg, TorAgg, TminAgg,
+// TmaxAgg, TsumAgg, TavgAgg, TcentroidAgg. Names follow MobilityDB RFC #827:
+// every SkipList aggregate is exposed under a Pascal-cased *Agg identifier,
+// disambiguating it from the same-stem scalar accessors (Tmin(tbox), etc.)
+// in case-folding catalogs like DuckDB. These differ from the fixed-state
+// `extent()` aggregates in two ways:
 //
 //   1. State holds a `SkipList *` pointer; the skiplist owns variable-size
 //      heap-allocated Temporal* values, so the aggregate needs a destructor.
@@ -257,21 +260,30 @@ static AggregateFunction MakeTaggAggregate(const LogicalType &input_type, const 
 } // namespace
 
 void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
-    // ---- tand / tor on tbool ----
+    // SkipList aggregates are registered under the Pascal-cased *Agg names
+    // proposed in MobilityDB RFC #827. These avoid the case-folding
+    // collision DuckDB's catalog hits when an aggregate and a scalar share
+    // a canonical lowercase name (e.g. previously `tmin` aggregate vs the
+    // existing `Tmin(tbox)` scalar). The MobilityDB upstream PR #828 adds
+    // the matching aliases on the PG side; the original aggregate names
+    // (`tand`, `tcount`, etc.) remain valid in PG for backward compat but
+    // collide in DuckDB and are intentionally not registered here.
+
+    // ---- TandAgg / TorAgg on tbool ----
     {
-        AggregateFunctionSet set("tand");
+        AggregateFunctionSet set("TandAgg");
         set.AddFunction(MakeTaggAggregate<TandFn>(TemporalTypes::TBOOL(), TemporalTypes::TBOOL()));
         loader.RegisterFunction(std::move(set));
     }
     {
-        AggregateFunctionSet set("tor");
+        AggregateFunctionSet set("TorAgg");
         set.AddFunction(MakeTaggAggregate<TorFn>(TemporalTypes::TBOOL(), TemporalTypes::TBOOL()));
         loader.RegisterFunction(std::move(set));
     }
 
-    // ---- tcount over each temporal type → tint ----
+    // ---- TcountAgg over each temporal type → tint ----
     {
-        AggregateFunctionSet set("tcount");
+        AggregateFunctionSet set("TcountAgg");
         for (const auto &t : {TemporalTypes::TBOOL(), TemporalTypes::TINT(),
                               TemporalTypes::TFLOAT(), TemporalTypes::TTEXT()}) {
             set.AddFunction(MakeTaggAggregate<TcountTempFn>(t, TemporalTypes::TINT()));
@@ -280,38 +292,41 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
         loader.RegisterFunction(std::move(set));
     }
 
-    // ---- tmin / tmax — DEFERRED ----
-    //
-    // The MobilityDB SQL surface has two semantically-different functions
-    // sharing a case-insensitive name: scalar `Tmin(tbox|stbox) -> timestamptz`
-    // (already registered in tbox.cpp / stbox.cpp) and aggregate
-    // `tMin(tint|tfloat|ttext) -> Temporal`. PostgreSQL dispatches by the
-    // argument-types tuple, but DuckDB's catalog folds both onto a single
-    // canonical lowercase name `tmin` and rejects mixing scalar + aggregate
-    // overloads on the same name (catalog raises "GetAlterInfo not
-    // implemented for this type"). Resolving this requires either renaming
-    // the existing box scalars or registering the aggregate under a
-    // disambiguated name. Out of scope for this PR.
-
-    // ---- tsum on tint, tfloat ----
+    // ---- TminAgg / TmaxAgg on tint, tfloat, ttext ----
     {
-        AggregateFunctionSet set("tsum");
+        AggregateFunctionSet set("TminAgg");
+        set.AddFunction(MakeTaggAggregate<TminTintFn>(TemporalTypes::TINT(),    TemporalTypes::TINT()));
+        set.AddFunction(MakeTaggAggregate<TminTfloatFn>(TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()));
+        set.AddFunction(MakeTaggAggregate<TminTtextFn>(TemporalTypes::TTEXT(),   TemporalTypes::TTEXT()));
+        loader.RegisterFunction(std::move(set));
+    }
+    {
+        AggregateFunctionSet set("TmaxAgg");
+        set.AddFunction(MakeTaggAggregate<TmaxTintFn>(TemporalTypes::TINT(),    TemporalTypes::TINT()));
+        set.AddFunction(MakeTaggAggregate<TmaxTfloatFn>(TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()));
+        set.AddFunction(MakeTaggAggregate<TmaxTtextFn>(TemporalTypes::TTEXT(),   TemporalTypes::TTEXT()));
+        loader.RegisterFunction(std::move(set));
+    }
+
+    // ---- TsumAgg on tint, tfloat ----
+    {
+        AggregateFunctionSet set("TsumAgg");
         set.AddFunction(MakeTaggAggregate<TsumTintFn>(TemporalTypes::TINT(),    TemporalTypes::TINT()));
         set.AddFunction(MakeTaggAggregate<TsumTfloatFn>(TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()));
         loader.RegisterFunction(std::move(set));
     }
 
-    // ---- tavg on tint, tfloat → tfloat ----
+    // ---- TavgAgg on tint, tfloat → tfloat ----
     {
-        AggregateFunctionSet set("tavg");
+        AggregateFunctionSet set("TavgAgg");
         set.AddFunction(MakeTaggAggregate<TavgFn>(TemporalTypes::TINT(),  TemporalTypes::TFLOAT()));
         set.AddFunction(MakeTaggAggregate<TavgFn>(TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()));
         loader.RegisterFunction(std::move(set));
     }
 
-    // ---- tcentroid on tgeompoint → tgeompoint ----
+    // ---- TcentroidAgg on tgeompoint → tgeompoint ----
     {
-        AggregateFunctionSet set("tcentroid");
+        AggregateFunctionSet set("TcentroidAgg");
         set.AddFunction(MakeTaggAggregate<TcentroidFn>(
             TgeompointType::TGEOMPOINT(), TgeompointType::TGEOMPOINT()));
         loader.RegisterFunction(std::move(set));
