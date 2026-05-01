@@ -13,6 +13,7 @@
 #include "geo/tgeometry.hpp"
 #include "temporal/span.hpp"
 #include "temporal/span_aggregates.hpp"
+#include "temporal/temporal_aggregates.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
@@ -245,6 +246,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 	SpanTypes::RegisterTypes(loader);
 	SpanTypes::RegisterCastFunctions(loader);
 	SpanAggregates::RegisterAggregateFunctions(loader);
+	TemporalAggregates::RegisterAggregateFunctions(loader);
 
 	// Tile getters return SpanTypes blobs and consume TBOX, so all those
 	// types must already be registered.
