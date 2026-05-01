@@ -4,8 +4,8 @@ If you've used MobilityDB on PostgreSQL and are trying out MobilityDuck
 on DuckDB, this document is for you. It tells you what works the same,
 what works under a different name, and what's intentionally missing.
 
-For the per-function checklist of what's not yet shipped, see
-[`PARITY-INVENTORY.md`](PARITY-INVENTORY.md).
+For the per-function reference of MobilityDuck's parity surface,
+see [`PARITY-INVENTORY.md`](PARITY-INVENTORY.md).
 
 ## TL;DR
 

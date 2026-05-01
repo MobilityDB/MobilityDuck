@@ -1,4 +1,4 @@
-# MobilityDuck — what's not yet shipped
+# MobilityDuck — per-function parity reference
 
 This is the per-function detail behind [`PARITY.md`](PARITY.md). If
 you're coming from MobilityDB and want to know whether a specific
@@ -6,7 +6,7 @@ function is callable today, this is the file to grep.
 
 Status flags:
 - ✓ — shipped, callable today.
-- ◯ — not yet shipped; can be added on demand.
+- ◯ — not yet covered; can be added on demand.
 - ✗ — won't be added (architectural mismatch with DuckDB, or a
   PostgreSQL-only utility).
 
@@ -25,7 +25,6 @@ PostgreSQL).
 | Reachable only via the named-function form because DuckDB's parser rejects the operator (the `#` time-axis operators `<<#`/`&<#`/`#>>`/`#&>` and the `\|`-bearing Y/Z-axis operators) — call `before`, `overBefore`, `after`, `overAfter`, `above`, `below`, `front`, `back`, etc. | 12 | ✓ via named form |
 | Renamed in MobilityDuck with the `*Agg` suffix on aggregate functions | 12 | ✓ |
 | Architectural blocks (no separate `geography` SQL type, no MVT) | 2 | ✗ |
-| Not yet shipped | 0 — all parity items shipped | — |
 | **Effective coverage** | ~100% of the in-scope surface | |
 
 ## What's intentionally not here
