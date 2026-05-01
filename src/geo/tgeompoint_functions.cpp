@@ -1142,6 +1142,53 @@ void TgeompointFunctions::Tpoint_make_simple(DataChunk &args, ExpressionState &s
 	}
 }
 
+// geoMeasure(tgeompoint, tfloat [, segmentize bool]) → geometry.
+// Wraps tpoint_tfloat_to_geomeas: builds a geometry whose vertices
+// carry the tfloat measure as the M coordinate.
+void TgeompointFunctions::Tpoint_tfloat_to_geomeas(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t count = args.size();
+    const bool has_segmentize = args.ColumnCount() >= 3;
+    args.data[0].Flatten(count);
+    args.data[1].Flatten(count);
+    if (has_segmentize) args.data[2].Flatten(count);
+
+    auto in_pt   = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_meas = FlatVector::GetData<string_t>(args.data[1]);
+    auto in_seg  = has_segmentize ? FlatVector::GetData<bool>(args.data[2]) : nullptr;
+
+    auto out_data  = FlatVector::GetData<string_t>(result);
+    auto &out_mask = FlatVector::Validity(result);
+
+    auto &m0 = FlatVector::Validity(args.data[0]);
+    auto &m1 = FlatVector::Validity(args.data[1]);
+
+    for (idx_t i = 0; i < count; ++i) {
+        if (!m0.RowIsValid(i) || !m1.RowIsValid(i) ||
+            (has_segmentize && !FlatVector::Validity(args.data[2]).RowIsValid(i))) {
+            out_mask.SetInvalid(i);
+            continue;
+        }
+        size_t pt_sz = in_pt[i].GetSize();
+        Temporal *pt = (Temporal *) malloc(pt_sz);
+        memcpy(pt, in_pt[i].GetData(), pt_sz);
+        size_t mz = in_meas[i].GetSize();
+        Temporal *meas = (Temporal *) malloc(mz);
+        memcpy(meas, in_meas[i].GetData(), mz);
+        bool segmentize = has_segmentize ? in_seg[i] : false;
+
+        GSERIALIZED *gs = nullptr;
+        bool ok = tpoint_tfloat_to_geomeas(pt, meas, segmentize, &gs);
+        free(pt); free(meas);
+        if (!ok || !gs) {
+            if (gs) free(gs);
+            out_mask.SetInvalid(i);
+            continue;
+        }
+        out_data[i] = GSerializedToGeometry(gs, state, result);
+        free(gs);
+    }
+}
+
 void TgeompointFunctions::Tpoint_trajectory(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),

@@ -1201,6 +1201,26 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
+    // geoMeasure(tgeompoint, tfloat [, segmentize bool]) — wraps
+    // tpoint_tfloat_to_geomeas. Builds a geometry whose vertices carry
+    // the tfloat measure as the M coordinate.
+    loader.RegisterFunction(
+        ScalarFunction(
+            "geoMeasure",
+            {TGEOMPOINT(), TemporalTypes::TFLOAT()},
+            GeoTypes::GEOMETRY(),
+            TgeompointFunctions::Tpoint_tfloat_to_geomeas
+        )
+    );
+    loader.RegisterFunction(
+        ScalarFunction(
+            "geoMeasure",
+            {TGEOMPOINT(), TemporalTypes::TFLOAT(), LogicalType::BOOLEAN},
+            GeoTypes::GEOMETRY(),
+            TgeompointFunctions::Tpoint_tfloat_to_geomeas
+        )
+    );
+
     loader.RegisterFunction(
         ScalarFunction(
             "atGeometry",

@@ -249,3 +249,23 @@ SELECT transformPipeline(
   '+proj=noop', 4326, true) IS NOT NULL;
 ----
 true
+
+# =============================================================================
+# geoMeasure(tgeompoint, tfloat [, segmentize bool]) — wraps
+# tpoint_tfloat_to_geomeas. Returns a geometry whose vertices carry
+# the tfloat measure as the M coordinate.
+# =============================================================================
+
+query I
+SELECT geoMeasure(
+  '[Point(0 0)@2000-01-01 00:00:00+00, Point(5 5)@2000-01-05 00:00:00+00]'::tgeompoint,
+  '[1.0@2000-01-01 00:00:00+00, 5.0@2000-01-05 00:00:00+00]'::tfloat) IS NOT NULL;
+----
+true
+
+query I
+SELECT geoMeasure(
+  '[Point(0 0)@2000-01-01 00:00:00+00, Point(5 5)@2000-01-05 00:00:00+00]'::tgeompoint,
+  '[1.0@2000-01-01 00:00:00+00, 5.0@2000-01-05 00:00:00+00]'::tfloat, true) IS NOT NULL;
+----
+true
