@@ -6,10 +6,9 @@ see [`PARITY.md`](PARITY.md).
 
 Status flags:
 - ✓ — shipped, callable today.
-- ◯ — open, MEOS APIs available; can be added on demand.
-- ⊘ — needs an MEOS-side change (header export or function added)
-  before MobilityDuck can wire it up.
-- ✗ — architectural mismatch with DuckDB; not planned.
+- ◯ — open; can be added on demand.
+- ✗ — architectural mismatch with DuckDB, or PG-only utility; not
+  planned.
 
 ## Coverage at a glance
 
@@ -23,8 +22,8 @@ excluding ~250 PG-extension implementation helpers — see PARITY.md
 | Resolved via DuckDB operator (`=`, `<>`, `+`, `&`, `\|\|`, ...) | ~23 | ✓ |
 | Resolved via `*Agg` suffix (RFC #827) | 12 | ✓ |
 | Architectural blocks (no `geography`, no MVT) | 2 | ✗ |
-| Tracked residual user-visible gaps | ~5 | mix of ◯ and ⊘ — see sections below |
-| **Effective coverage** | ~98% | |
+| Tracked residual user-visible gaps | ~3 | see sections below |
+| **Effective coverage** | ~99% | |
 
 ## Architectural blocks (✗)
 
@@ -76,20 +75,11 @@ an opclass.
 missing `tgeometrySeqSet` / `tgeographySeqSet` / `tgeogpointSeqSet`
 plain-SeqSet aliases. Test 062.
 
-### Covers predicates  ✓ partial
+### Covers predicates  ✓
 
-`eCovers(geometry|tgeo, …)` and `tCovers(…)` for tgeometry /
-tgeompoint / tgeography / tgeogpoint. `aCovers(geometry, tspatial)`
-and `aCovers(tspatial, geometry)` are also shipped.
-
-The remaining `aCovers(tspatial, tspatial)` variant ⊘ — its MEOS
-implementation is `inline`-only with no extern declaration, so the
-external symbol isn't generated in libmeos. [MobilityDB PR
-#837](https://github.com/MobilityDB/MobilityDB/pull/837) adds the
-header decl that flips it to a real exported symbol. Unblocked once
-PR #837 merges and the vcpkg-shipped libmeos snapshot picks it up.
-
-Test 063.
+`eCovers` / `tCovers` / `aCovers` across all 3 signature shapes
+(`geometry`/`tspatial`, `tspatial`/`geometry`, `tspatial`/`tspatial`)
+for tgeometry / tgeompoint / tgeography / tgeogpoint. Test 063.
 
 ### Tile / box list emitters  ✓
 
@@ -131,24 +121,30 @@ you want row-shaped output. Test 065.
 | `trend(tint\|tfloat) → tint` | ✓ | sign of the derivative at each instant. Wraps `tnumber_trend`. Requires linear interpolation. |
 | `transformPipeline(temp\|stbox, pipeline, srid, is_forward)` | ✓ | applies a PROJ pipeline string. Wraps `tspatial_transform_pipeline` / `stbox_transform_pipeline`. All 4 spatio-temporal types + stbox. |
 | `geoMeasure(tgeompoint, tfloat [, segmentize])` | ✓ | wraps `tpoint_tfloat_to_geomeas`. Builds a geometry whose vertices carry the tfloat measure as the M coordinate. |
-| `transform_gk(geometry)` | ⊘ | German Gauss-Krüger projection helper. PG-only utility; no MEOS surface. |
-| `create_trip(...)` | ⊘ | trip-synthesis helper; lives in MobilityDB's `mobilitydb-tools`, not in MEOS. Out of scope. |
+| `create_trip(...)` | ✗ | trip-synthesis helper from MobilityDB's `mobilitydb-tools`; out of scope. |
+
+`transform_gk(...)` (Gauss-Krüger projection) is intentionally not
+in the parity scope: it's a helper kept in MobilityDB's PG layer to
+connect with [Secondo](https://github.com/secondo-database/secondo).
+For general-purpose projection in MobilityDuck use
+`transformPipeline(...)` (PROJ pipeline strings).
 
 Test 066.
 
-### Z-axis (elevation) restrict  ⊘
+### Z-axis (elevation) restrict  ◯
 
-`atElevation`, `minusElevation`. MEOS' `tgeo_restrict_elevation` is
-already in upstream `meos/include/meos_internal_geo.h`, but the
-vcpkg-shipped libmeos snapshot used by MobilityDuck is older and
-doesn't carry it yet. Unblocked by a vcpkg-port version bump.
+`atElevation`, `minusElevation` — these will land automatically when
+the vcpkg-shipped libmeos snapshot bumps to a revision that already
+exports `tgeo_restrict_elevation` (the function is in upstream
+`meos/include/meos_internal_geo.h` today; the MobilityDuck-side
+wiring is one line per signature).
 
 ### Aggregate residual  ✓ partial
 
 | Name | Status | Notes |
 |---|---|---|
 | `appendInstantAgg(temp, interp text)` | ✓ | 2-arg variant for all 8 temporal types. |
-| `appendInstantAgg(temp, interp text, maxdist float, maxt interval)` | ⊘ | DuckDB's stock aggregate templates don't cover 4-ary cleanly; needs custom dispatch. |
+| `appendInstantAgg(temp, interp text, maxdist float, maxt interval)` | ◯ | needs a custom DuckDB aggregate dispatch — the stock `UnaryAggregate` / `TernaryAggregate` templates don't cover the 4-ary shape cleanly. The underlying MEOS API (`temporal_app_tinst_transfn`) is already public. |
 | `setUnion(geography) → geogset` | ✗ | blocked on the `geography` SQL type (architectural). |
 
 ## Reporting a gap

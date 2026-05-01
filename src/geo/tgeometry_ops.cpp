@@ -32,6 +32,12 @@ extern "C" {
     // these once the vcpkg snapshot picks up #837.
     extern int acovers_geo_tgeo(const GSERIALIZED *gs, const Temporal *temp);
     extern int acovers_tgeo_geo(const Temporal *temp, const GSERIALIZED *gs);
+    // ea_covers_tgeo_tgeo is the (Temporal, Temporal) variant; with
+    // ever=false this gives always-covers semantics. The dedicated
+    // acovers_tgeo_tgeo wrapper is `inline` upstream so it doesn't
+    // emit an external symbol; calling ea_covers_tgeo_tgeo with the
+    // ALWAYS flag is the equivalent route.
+    extern int ea_covers_tgeo_tgeo(const Temporal *temp1, const Temporal *temp2, bool ever);
 }
 
 namespace duckdb {
@@ -173,6 +179,13 @@ void GeoTgeoIntExec(DataChunk &args, ExpressionState &, Vector &result) {
             if (r < 0) { mask.SetInvalid(idx); return false; }
             return r != 0;
         });
+}
+
+// 2-arg adapter for ea_covers_tgeo_tgeo with the ALWAYS flag —
+// emits aCovers(tspatial, tspatial). Drops once the upstream
+// `inline acovers_tgeo_tgeo` becomes a real exported symbol.
+static int acovers_tgeo_tgeo_via_ea(const Temporal *t1, const Temporal *t2) {
+    return ea_covers_tgeo_tgeo(t1, t2, /* ever = */ false);
 }
 
 template <int (*FN)(const Temporal *, const Temporal *)>
@@ -1130,17 +1143,18 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction("eCovers", {TGEOM, TGEOM}, BOOL,
         TgeoTgeoIntExec<ecovers_tgeo_tgeo>));
 
-    // aCovers — always-covers. Two of three variants are linkable
-    // today (the geo/tgeo and tgeo/geo entry points are non-inline
-    // C definitions in libmeos); the tgeo/tgeo variant is declared
-    // `inline` in tgeo_spatialrels.c and only emits an external
-    // symbol once an `extern int acovers_tgeo_tgeo(...)` decl is
-    // present in meos_geo.h (MobilityDB PR #837). It's deferred
-    // until the vcpkg-shipped libmeos snapshot picks that up.
+    // aCovers — always-covers. The (geo, tgeo) and (tgeo, geo)
+    // entry points are non-inline C definitions in libmeos. The
+    // (tgeo, tgeo) variant goes through ea_covers_tgeo_tgeo with
+    // the ALWAYS flag because the dedicated acovers_tgeo_tgeo
+    // wrapper is `inline` upstream and doesn't emit an external
+    // symbol — the underlying primitive is the same.
     loader.RegisterFunction(ScalarFunction("aCovers", {GEOM, TGEOM}, BOOL,
         GeoTgeoIntExec<acovers_geo_tgeo>));
     loader.RegisterFunction(ScalarFunction("aCovers", {TGEOM, GEOM}, BOOL,
         TgeoGeoIntExec<acovers_tgeo_geo>));
+    loader.RegisterFunction(ScalarFunction("aCovers", {TGEOM, TGEOM}, BOOL,
+        TgeoTgeoIntExec<acovers_tgeo_tgeo_via_ea>));
 
     // Same registrations for tgeompoint — MEOS dispatches by subtype.
     {
@@ -1161,6 +1175,8 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
             GeoTgeoIntExec<acovers_geo_tgeo>));
         loader.RegisterFunction(ScalarFunction("aCovers", {TGP, GEOM}, BOOL,
             TgeoGeoIntExec<acovers_tgeo_geo>));
+        loader.RegisterFunction(ScalarFunction("aCovers", {TGP, TGP}, BOOL,
+            TgeoTgeoIntExec<acovers_tgeo_tgeo_via_ea>));
     }
 
     // tDwithin takes the extra distance argument.

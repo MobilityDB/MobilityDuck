@@ -85,10 +85,7 @@ SELECT typeof(tCovers('Point(0 0)@2000-01-01'::tgeometry, 'POINT(0 0)'::geometry
 TBOOL
 
 # =============================================================================
-# aCovers — bool-returning always-covers. Only the (geometry, tspatial)
-# and (tspatial, geometry) variants are linkable today; the
-# (tspatial, tspatial) variant waits for upstream PR #837 to propagate
-# through the vcpkg-shipped libmeos.
+# aCovers — bool-returning always-covers across all 3 sig shapes.
 # =============================================================================
 
 query I
@@ -111,3 +108,19 @@ SELECT aCovers(
   '[Point(1 1)@2000-01-01, Point(5 5)@2000-01-05]'::tgeompoint);
 ----
 true
+
+# Self-cover is always true.
+query I
+SELECT aCovers(
+  '[Point(1 1)@2000-01-01, Point(5 5)@2000-01-05]'::tgeometry,
+  '[Point(1 1)@2000-01-01, Point(5 5)@2000-01-05]'::tgeometry);
+----
+true
+
+# Larger trajectory always covers a smaller one inside it.
+query I
+SELECT aCovers(
+  '[Point(0 0)@2000-01-01, Point(10 10)@2000-01-05]'::tgeometry,
+  '[Point(2 2)@2000-01-01, Point(7 7)@2000-01-05]'::tgeometry);
+----
+false

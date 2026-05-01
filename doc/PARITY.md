@@ -108,12 +108,14 @@ the exceptions, not the rule.
 
 ### Reachable via DuckDB operators
 
-A few MobilityDB *named functions* are spelled as DuckDB operators
-instead. Both forms work in MobilityDuck — the DuckDB operator form
-is more idiomatic; the named function is what you'd see if you were
-transliterating MobilityDB SQL verbatim.
+A handful of MobilityDB *named functions* are also spelled as DuckDB
+operators. **Both forms exist in both MobilityDB and MobilityDuck** —
+calling `tbool_and(t1, t2)` and writing `t1 & t2` are two alternative
+spellings of the same operation in either engine. The named-function
+form is what shows up if you transliterate MobilityDB SQL verbatim;
+the operator form is more idiomatic and is what most queries use.
 
-| MobilityDB | MobilityDuck | Notes |
+| MobilityDB / MobilityDuck name | Operator form (both engines) | Notes |
 |---|---|---|
 | `temporal_teq(t1, t2)` | `t1 = t2` | Lifted equality. |
 | `temporal_tne(t1, t2)` | `t1 <> t2` | |
@@ -279,9 +281,8 @@ The remaining residual gaps live in
 [`PARITY-INVENTORY.md`](PARITY-INVENTORY.md), with status flags:
 
 - ✓ — shipped.
-- ◯ — open, MEOS APIs available.
-- ⊘ — needs an MEOS-side change to land first.
-- ✗ — architectural mismatch; not planned.
+- ◯ — open, can be added on demand.
+- ✗ — architectural mismatch with DuckDB, or PG-only utility; not planned.
 
 Run `mobilityduck_full_version()` from the SQL shell to see the
 extension version, the linked MEOS commit, the DuckDB version, and the
