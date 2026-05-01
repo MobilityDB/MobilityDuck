@@ -247,11 +247,9 @@ You wouldn't normally call them by name anyway.
 
 ## What's not yet shipped
 
-A short list — the [inventory](PARITY-INVENTORY.md) has the full
-detail. None of these block typical workloads:
+A very short list — the [inventory](PARITY-INVENTORY.md) has the
+full detail. None of these block typical workloads:
 
-- `appendInstantAgg` 4-ary (with `maxdist` / `maxt`) — the 2-arg
-  form is shipped.
 - `atElevation` / `minusElevation` — waiting on a coordinated
   upstream-MEOS adoption pass.
 

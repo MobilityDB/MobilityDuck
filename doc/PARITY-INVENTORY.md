@@ -25,7 +25,7 @@ PostgreSQL).
 | Reachable only via the named-function form because DuckDB's parser rejects the operator (the `#` time-axis operators `<<#`/`&<#`/`#>>`/`#&>` and the `\|`-bearing Y/Z-axis operators) — call `before`, `overBefore`, `after`, `overAfter`, `above`, `below`, `front`, `back`, etc. | 12 | ✓ via named form |
 | Renamed in MobilityDuck with the `*Agg` suffix on aggregate functions | 12 | ✓ |
 | Architectural blocks (no separate `geography` SQL type, no MVT) | 2 | ✗ |
-| Not yet shipped | ~3 | mix of ◯ and ✗ — see sections below |
+| Not yet shipped | ~2 | mix of ◯ and ✗ — see sections below |
 | **Effective coverage** | ~99% | |
 
 ## What's intentionally not here
@@ -140,17 +140,12 @@ shape MobilityDuck uses for `frechetDistancePath` /
 
 | Name | Notes |
 |---|---|
+| `appendInstantAgg(temp)` | 1-arg form, all 8 temporal types |
 | `appendInstantAgg(temp, interp text)` | 2-arg form, all 8 temporal types |
+| `appendInstantAgg(temp, interp text, maxdist float, maxt interval)` | 4-arg form with gap thresholds; all 8 temporal types |
 | Everything else from MobilityDB's aggregate surface | with the `Agg` suffix — see PARITY.md |
 
 ## What's not yet shipped
-
-### `appendInstantAgg` 4-arg form  ◯
-
-`appendInstantAgg(temp, interp text, maxdist float, maxt interval)`.
-DuckDB's stock aggregate templates don't cover 4-ary aggregates
-cleanly; needs a custom dispatch. The underlying MEOS API is
-already public.
 
 ### `atElevation` / `minusElevation`  ◯
 
