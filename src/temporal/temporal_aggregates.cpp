@@ -868,10 +868,19 @@ struct SetUnionFromScalarFn {
 inline Datum Int32ToDatum(int32_t v) { return (Datum) (int64_t) v; }
 inline Datum Int64ToDatum(int64_t v) { return (Datum) v; }
 inline Datum Float8ToDatum(double v) {
-    Datum d;
-    static_assert(sizeof(d) == sizeof(v), "Datum must be 64-bit");
-    memcpy(&d, &v, sizeof(d));
-    return d;
+    // Datum is `uintptr_t`. On native 64-bit builds the double fits by-value
+    // (bit-pattern reinterpret); on 32-bit builds (e.g. wasm32-emscripten)
+    // the Datum is 4 bytes, so we have to pass a pointer the way PG's
+    // Float8GetDatum does under !USE_FLOAT8_BYVAL. The pointed-at storage
+    // becomes part of the MEOS Set on insert and is freed by set_free.
+    if (sizeof(Datum) >= sizeof(double)) {
+        Datum d = 0;
+        memcpy(&d, &v, sizeof(double));
+        return d;
+    }
+    double *p = (double *) malloc(sizeof(double));
+    *p = v;
+    return (Datum) (uintptr_t) p;
 }
 inline Datum DateToDatum(date_t v) { return (Datum) (int64_t) ToMeosDate(v); }
 inline Datum TstzToDatum(timestamp_tz_t v) {
