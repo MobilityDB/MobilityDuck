@@ -1,0 +1,144 @@
+# name: test/sql/parity/065_split_complement.test
+# description: Split-emitter complement to G/G2 — partition a
+# temporal value (or stbox) along the value / time / space axis
+# and emit the resulting LIST<temporal | stbox>.
+#
+#   timeSplit(temp, interval, ts)        — for all 8 temporal types.
+#                                            Wraps temporal_time_split.
+#   valueSplit(tnumber, size, origin)    — for tint and tfloat. Wraps
+#                                            tnumber_value_split.
+#   quadSplit(stbox)                     — splits an stbox into its
+#                                            4 quadrants (2D) or 8
+#                                            octants (3D). Wraps
+#                                            stbox_quad_split.
+#
+# Deferred to a follow-up:
+#   spaceSplit / spaceTimeSplit / valueTimeSplit — these need a
+#   second emission channel for the per-bin side-array (geometry
+#   list / Datum list); the existing single-LIST<temporal> shape
+#   would drop that information silently.
+#
+# MobilityDB returns these as `SETOF (temporal, bin)`; MobilityDuck's
+# scalar funcs return `LIST<temporal>` — drop the bins (users can
+# compute them via the existing `bins` / `timeBins` / `valueBins`
+# emitters from cluster G if they need them).
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# timeSplit — temporal partitioning along the time axis.
+# =============================================================================
+
+query I
+SELECT len(timeSplit(
+  '{1@2000-01-01, 5@2000-01-05, 10@2000-01-10}'::tint,
+  INTERVAL '2 days', '2000-01-01'::TIMESTAMPTZ)) > 0;
+----
+true
+
+query I
+SELECT len(timeSplit(
+  '{1.0@2000-01-01, 5.0@2000-01-05}'::tfloat,
+  INTERVAL '2 days', '2000-01-01'::TIMESTAMPTZ)) > 0;
+----
+true
+
+query I
+SELECT len(timeSplit(
+  '{true@2000-01-01, false@2000-01-05}'::tbool,
+  INTERVAL '2 days', '2000-01-01'::TIMESTAMPTZ)) > 0;
+----
+true
+
+query I
+SELECT len(timeSplit(
+  '{"a"@2000-01-01, "b"@2000-01-05}'::ttext,
+  INTERVAL '2 days', '2000-01-01'::TIMESTAMPTZ)) > 0;
+----
+true
+
+query I
+SELECT len(timeSplit(
+  '{Point(0 0)@2000-01-01, Point(5 5)@2000-01-05}'::tgeompoint,
+  INTERVAL '2 days', '2000-01-01'::TIMESTAMPTZ)) > 0;
+----
+true
+
+query I
+SELECT len(timeSplit(
+  '{Point(0 0)@2000-01-01, Point(5 5)@2000-01-05}'::tgeometry,
+  INTERVAL '2 days', '2000-01-01'::TIMESTAMPTZ)) > 0;
+----
+true
+
+query I
+SELECT len(timeSplit(
+  'SRID=4326;{Point(0 0)@2000-01-01, Point(5 5)@2000-01-05}'::tgeogpoint,
+  INTERVAL '2 days', '2000-01-01'::TIMESTAMPTZ)) > 0;
+----
+true
+
+query I
+SELECT len(timeSplit(
+  'SRID=4326;{Point(0 0)@2000-01-01, Point(5 5)@2000-01-05}'::tgeography,
+  INTERVAL '2 days', '2000-01-01'::TIMESTAMPTZ)) > 0;
+----
+true
+
+# Result element type matches input.
+query I
+SELECT typeof(timeSplit(
+  '{1@2000-01-01, 5@2000-01-05}'::tint,
+  INTERVAL '2 days', '2000-01-01'::TIMESTAMPTZ));
+----
+TINT[]
+
+query I
+SELECT typeof(timeSplit(
+  '{Point(0 0)@2000-01-01, Point(1 1)@2000-01-02}'::tgeompoint,
+  INTERVAL '2 days', '2000-01-01'::TIMESTAMPTZ));
+----
+TGEOMPOINT[]
+
+# =============================================================================
+# valueSplit — partition a tnumber along the value axis.
+# =============================================================================
+
+query I
+SELECT len(valueSplit(
+  '{1@2000-01-01, 5@2000-01-05, 10@2000-01-10}'::tint, 3, 0));
+----
+3
+
+query I
+SELECT len(valueSplit(
+  '{1.0@2000-01-01, 5.0@2000-01-05}'::tfloat, 2.0, 0.0));
+----
+2
+
+query I
+SELECT typeof(valueSplit(
+  '{1@2000-01-01, 5@2000-01-05}'::tint, 3, 0));
+----
+TINT[]
+
+# =============================================================================
+# quadSplit(stbox) — 4 quadrants for 2D, 8 octants for 3D.
+# =============================================================================
+
+query I
+SELECT len(quadSplit('STBOX X((0,0),(4,4))'::stbox));
+----
+4
+
+query I
+SELECT len(quadSplit('STBOX Z((0,0,0),(4,4,4))'::stbox));
+----
+8
+
+# Each quadrant is itself an stbox.
+query I
+SELECT typeof(quadSplit('STBOX X((0,0),(4,4))'::stbox));
+----
+STBOX[]

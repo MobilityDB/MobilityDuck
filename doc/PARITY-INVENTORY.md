@@ -99,15 +99,19 @@ plus a vcpkg bump.
 
 Test 064.
 
-### Split-emitter complement  ◯
+### Split-emitter complement  ✓ partial
 
-`valueSplit`, `timeSplit`, `valueTimeSplit`, `spaceSplit`,
-`spaceTimeSplit`, `quadSplit`. MEOS exports
-`tnumber_value_split` / `tnumber_value_time_split` (in
-`meos_internal.h`) and `tgeo_space_split` /
-`tgeo_space_time_split` (in `meos_geo.h`). All return `Temporal **`
-arrays — needs a `LIST<temporal>` emitter mirror to the existing
-`LIST<stbox>` / `LIST<tbox>` ones.
+| Name | Status | Notes |
+|---|---|---|
+| `timeSplit(temp, interval, ts)` | ✓ | wraps `temporal_time_split`; all 8 temporal types. |
+| `valueSplit(tint\|tfloat, size, origin)` | ✓ | wraps `tnumber_value_split`. |
+| `quadSplit(stbox)` | ✓ | wraps `stbox_quad_split`; 4 quadrants 2D / 8 octants 3D. |
+| `valueTimeSplit(tnumber, …)` | ⊘ | needs second emission channel for the per-bin side-array (Datum list) — single-`LIST<temporal>` shape would silently drop it. |
+| `spaceSplit(tspatial, …)` | ⊘ | same: bin = geometry list. |
+| `spaceTimeSplit(tspatial, …)` | ⊘ | same. |
+
+The 3 ⊘ ones need a parallel `LIST<geometry>` / `LIST<bigint>` emit
+channel (or a `STRUCT(parts, bins)` return shape). Test 065.
 
 ### Misc analytics  ◯
 
