@@ -1,0 +1,206 @@
+# name: test/sql/parity/054_restriction.test
+# description: Restriction surface — atValues/minusValues, atMin/atMax/
+#              minusMin/minusMax, atTbox/minusTbox, atStbox/minusStbox,
+#              atGeometry/minusGeometry. Most of this surface was already
+#              wired up by earlier PRs; this file primarily locks down the
+#              recently-added atStbox / 3-arg minusStbox coverage for
+#              tgeometry / tgeography / tgeogpoint, plus a regression
+#              test for the rest of the cluster.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# atValues / minusValues — single base value
+# =============================================================================
+
+query I
+SELECT atValues('1@2000-01-01'::tint, 1) IS NOT NULL;
+----
+true
+
+query I
+SELECT atValues('1.5@2000-01-01'::tfloat, 1.5) IS NOT NULL;
+----
+true
+
+query I
+SELECT atValues('true@2000-01-01'::tbool, true) IS NOT NULL;
+----
+true
+
+query I
+SELECT atValues('"a"@2000-01-01'::ttext, 'a') IS NOT NULL;
+----
+true
+
+# minusValues drops the matching value.
+query I
+SELECT (minusValues('{1@2000-01-01, 2@2000-01-02}'::tint, 1) IS NOT NULL);
+----
+true
+
+# =============================================================================
+# atValues / minusValues — set, span, spanset
+# =============================================================================
+
+query I
+SELECT atValues(
+  '{1@2000-01-01, 2@2000-01-02, 3@2000-01-03}'::tint,
+  '{1, 3}'::intset) IS NOT NULL;
+----
+true
+
+query I
+SELECT atValues(
+  '{1.0@2000-01-01, 2.0@2000-01-02}'::tfloat,
+  '{1.0}'::floatset) IS NOT NULL;
+----
+true
+
+query I
+SELECT atValues(
+  '{1@2000-01-01, 2@2000-01-02, 3@2000-01-03}'::tint,
+  '[1,2]'::intspan) IS NOT NULL;
+----
+true
+
+query I
+SELECT atValues(
+  '{1.0@2000-01-01, 2.0@2000-01-02}'::tfloat,
+  '[0.0,1.5]'::floatspan) IS NOT NULL;
+----
+true
+
+query I
+SELECT atValues(
+  '{1@2000-01-01, 2@2000-01-02, 3@2000-01-03}'::tint,
+  '{[1,1], [3,3]}'::intspanset) IS NOT NULL;
+----
+true
+
+# =============================================================================
+# atMin / atMax / minusMin / minusMax
+# =============================================================================
+
+query I
+SELECT atMin('{1@2000-01-01, 2@2000-01-02}'::tint) IS NOT NULL;
+----
+true
+
+query I
+SELECT atMax('{1.0@2000-01-01, 2.0@2000-01-02}'::tfloat) IS NOT NULL;
+----
+true
+
+query I
+SELECT atMin('{"a"@2000-01-01, "b"@2000-01-02}'::ttext) IS NOT NULL;
+----
+true
+
+query I
+SELECT minusMin('{1@2000-01-01, 2@2000-01-02}'::tint) IS NOT NULL;
+----
+true
+
+query I
+SELECT minusMax('{1.0@2000-01-01, 2.0@2000-01-02}'::tfloat) IS NOT NULL;
+----
+true
+
+# =============================================================================
+# atTbox / minusTbox
+# =============================================================================
+
+query I
+SELECT atTbox(
+  '{1@2000-01-01, 5@2000-01-02}'::tint,
+  'TBOXINT XT([0,3], [2000-01-01, 2000-01-03])'::tbox) IS NOT NULL;
+----
+true
+
+query I
+SELECT minusTbox(
+  '{1.0@2000-01-01, 5.0@2000-01-02}'::tfloat,
+  'TBOXFLOAT XT([0,3], [2000-01-01, 2000-01-03])'::tbox) IS NOT NULL;
+----
+true
+
+# =============================================================================
+# atStbox / minusStbox — newly wired for tgeometry / tgeography /
+# tgeogpoint, plus the 3-arg borderInc shape on every type.
+# =============================================================================
+
+query I
+SELECT atStbox(
+  '{Point(1 1)@2000-01-01, Point(5 5)@2000-01-02}'::tgeompoint,
+  'STBOX X((0,0),(3,3))'::stbox) IS NOT NULL;
+----
+true
+
+query I
+SELECT atStbox(
+  '{Point(3 3)@2000-01-01, Point(5 5)@2000-01-02}'::tgeompoint,
+  'STBOX X((0,0),(3,3))'::stbox, true) IS NOT NULL;
+----
+true
+
+query I
+SELECT atStbox(
+  '{Point(1 1)@2000-01-01, Point(5 5)@2000-01-02}'::tgeometry,
+  'STBOX X((0,0),(3,3))'::stbox) IS NOT NULL;
+----
+true
+
+query I
+SELECT atStbox(
+  '{Point(1 1)@2000-01-01, Point(5 5)@2000-01-02}'::tgeometry,
+  'STBOX X((0,0),(3,3))'::stbox, false) IS NOT NULL;
+----
+true
+
+query I
+SELECT atStbox(
+  'SRID=4326;{Point(1 1)@2000-01-01, Point(5 5)@2000-01-02}'::tgeogpoint,
+  'SRID=4326;GEODSTBOX X((0,0),(3,3))'::stbox) IS NOT NULL;
+----
+true
+
+query I
+SELECT atStbox(
+  'SRID=4326;{Point(1 1)@2000-01-01, Point(5 5)@2000-01-02}'::tgeography,
+  'SRID=4326;GEODSTBOX X((0,0),(3,3))'::stbox) IS NOT NULL;
+----
+true
+
+query I
+SELECT minusStbox(
+  '{Point(1 1)@2000-01-01, Point(5 5)@2000-01-02}'::tgeometry,
+  'STBOX X((0,0),(3,3))'::stbox, false) IS NOT NULL;
+----
+true
+
+# =============================================================================
+# atGeometry / minusGeometry — Cartesian side
+# =============================================================================
+
+query I
+SELECT atGeometry(
+  '{Point(0 0)@2000-01-01, Point(5 5)@2000-01-02}'::tgeompoint,
+  'POLYGON((-1 -1, 2 -1, 2 2, -1 2, -1 -1))'::geometry) IS NOT NULL;
+----
+true
+
+query I
+SELECT atGeometry(
+  '{Point(0 0)@2000-01-01, Point(5 5)@2000-01-02}'::tgeometry,
+  'POLYGON((-1 -1, 2 -1, 2 2, -1 2, -1 -1))'::geometry) IS NOT NULL;
+----
+true
+
+query I
+SELECT minusGeometry(
+  '{Point(0 0)@2000-01-01, Point(5 5)@2000-01-02}'::tgeompoint,
+  'POLYGON((-1 -1, 2 -1, 2 2, -1 2, -1 -1))'::geometry) IS NOT NULL;
+----
+true

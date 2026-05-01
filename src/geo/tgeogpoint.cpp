@@ -1397,7 +1397,16 @@ void TGeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         "minusGeometry", {TGEOM, GEOM}, TGEOM,
         TgeompointFunctions::Tgeo_minus_geom));
     loader.RegisterFunction(ScalarFunction(
+        "atStbox", {TGEOM, StboxType::STBOX()}, TGEOM,
+        TgeompointFunctions::Tgeo_at_stbox));
+    loader.RegisterFunction(ScalarFunction(
+        "atStbox", {TGEOM, StboxType::STBOX(), LogicalType::BOOLEAN}, TGEOM,
+        TgeompointFunctions::Tgeo_at_stbox));
+    loader.RegisterFunction(ScalarFunction(
         "minusStbox", {TGEOM, StboxType::STBOX()}, TGEOM,
+        TgeompointFunctions::Tgeo_minus_stbox));
+    loader.RegisterFunction(ScalarFunction(
+        "minusStbox", {TGEOM, StboxType::STBOX(), LogicalType::BOOLEAN}, TGEOM,
         TgeompointFunctions::Tgeo_minus_stbox));
 
     // ---- Modifiers (shift / scale / shiftScale / append / insert / update /
