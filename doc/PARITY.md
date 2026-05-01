@@ -239,11 +239,10 @@ The capabilities are equivalent; the namespace differs.
 ## Tracked gaps
 
 The remaining residual gaps live in
-[`PARITY-INVENTORY.md`](PARITY-INVENTORY.md) and are organised into
-small shippable PR-sized clusters with status flags:
+[`PARITY-INVENTORY.md`](PARITY-INVENTORY.md), with status flags:
 
-- ✓ — shipped in this stack.
-- ◯ — concrete remaining work, MEOS APIs available.
+- ✓ — shipped.
+- ◯ — open, MEOS APIs available.
 - ⊘ — blocked on MEOS-side API exposure.
 - ✗ — architectural mismatch; not planned.
 
@@ -254,7 +253,7 @@ MobilityDuck you're talking to.
 
 ## Out-of-scope type families
 
-The following MobilityDB type families will be tackled in a future PR:
+These MobilityDB type families are not currently included:
 
 - **`tcbuffer`** — temporal circular buffers.
 - **`tnpoint`** — temporal network points (graph-based).
@@ -264,7 +263,5 @@ The following MobilityDB type families will be tackled in a future PR:
 
 ---
 
-*This document is generated alongside parity PRs and reflects the
-state of MobilityDuck as of the most recent merge to its parity
-stack. If you spot a gap that's not mentioned here, please open an
-issue with the function signature you tried to call.*
+*If you spot a gap that's not mentioned here, please open an issue
+with the function signature you tried to call.*

@@ -23,7 +23,7 @@ excluding ~250 PG-extension implementation helpers — see PARITY.md
 | Resolved via `*Agg` suffix (RFC #827) | 12 | ✓ |
 | Resolved via DuckDB-spatial native (`point`, `line`, `box`, ...) | 7 | ✓ |
 | Architectural blocks (no `geography`, no MVT) | 2 | ✗ |
-| Tracked residual user-visible gaps | 27 | mix of ◯ and ⊘ — see clusters below |
+| Tracked residual user-visible gaps | 27 | mix of ◯ and ⊘ — see sections below |
 | **Effective coverage** | ~92% | |
 
 ## Architectural blocks (✗)
@@ -34,11 +34,11 @@ the host environment.
 | Name | Why blocked |
 |---|---|
 | `geography` | DuckDB-spatial has no separate geography SQL type; all geometric storage is `geometry` carrying SRID + geodetic flag. |
-| `asMVTGeom` | Mapbox Vector Tile rendering. Specialised renderer; tackled in a future PR. |
+| `asMVTGeom` | Mapbox Vector Tile rendering. Specialised renderer; not currently included. |
 
 ## Out-of-scope type families (✗)
 
-Tackled in a future PR:
+Not currently included:
 
 - `tcbuffer` family
 - `tnpoint` family
@@ -53,16 +53,14 @@ Tackled in a future PR:
 Not counted in the coverage figures above.
 
 The MEOS-side primitives that underlie SP-GiST are being exposed via
-[MobilityDB PR #740](https://github.com/MobilityDB/MobilityDB/pull/740);
-the publicize follow-up sits on `estebanzimanyi/meos_spgist-publish`.
-Once that lands, MobilityDuck can register a custom `TSPGTREE`
-`BoundIndex` using the primitives — but it can't register an opclass.
+[MobilityDB PR #740](https://github.com/MobilityDB/MobilityDB/pull/740).
+Once those primitives are public on MEOS, MobilityDuck can register
+a custom `TSPGTREE` `BoundIndex` using them — but it can't register
+an opclass.
 
-## Residual gaps by cluster
+## Residual gaps
 
-Each row is one PR-sized chunk.
-
-### A. `*SeqSetGaps` constructors  ✓ shipped (PR #1)
+### `*SeqSetGaps` constructors  ✓
 
 `tboolSeqSetGaps`, `tintSeqSetGaps`, `tfloatSeqSetGaps`,
 `ttextSeqSetGaps`, `tgeompointSeqSetGaps`, `tgeogpointSeqSetGaps`,
@@ -70,24 +68,24 @@ Each row is one PR-sized chunk.
 missing `tgeometrySeqSet` / `tgeographySeqSet` / `tgeogpointSeqSet`
 plain-SeqSet aliases. Test 062.
 
-### B. Covers predicates  ✓ shipped (PR #2)
+### Covers predicates  ✓
 
 `eCovers(geometry|tgeo, …)`, `tCovers(…)` for tgeometry / tgeompoint
 / tgeography / tgeogpoint. Test 063.
 
-`aCovers` deferred ⊘ — MEOS public surface exposes only `ecovers_*`
-and `tcovers_*`; the always-covers path goes through MobilityDB-internal
-`ea_covers_*` (with `ALWAYS` flag) which isn't on `meos_geo.h` yet. A
-one-line MEOS publicize PR would unblock this.
+`aCovers` ⊘ — MEOS public surface exposes only `ecovers_*` and
+`tcovers_*`; the always-covers path goes through MobilityDB-internal
+`ea_covers_*` (with `ALWAYS` flag) which isn't on `meos_geo.h` yet.
+A one-line MEOS publicize change would unblock this.
 
-### C. Z-axis (elevation) restrict  ⊘ blocked
+### Z-axis (elevation) restrict  ⊘
 
 `atElevation`, `minusElevation`. MEOS' `tgeo_restrict_elevation` is in
 the upstream `meos/include/meos_internal_geo.h` but not in the
-vcpkg-shipped libmeos used by MobilityDuck. Needs MEOS PR + vcpkg
-bump.
+vcpkg-shipped libmeos used by MobilityDuck. Needs MEOS-side exposure
+plus a vcpkg bump.
 
-### D. Alt-name tile / box emitters  ✓ partial (PR #3)
+### Alt-name tile / box emitters  ✓ partial
 
 | Name | Status | Notes |
 |---|---|---|
@@ -101,7 +99,7 @@ bump.
 
 Test 064.
 
-### E. Split-emitter complement  ◯ open
+### Split-emitter complement  ◯
 
 `valueSplit`, `timeSplit`, `valueTimeSplit`, `spaceSplit`,
 `spaceTimeSplit`, `quadSplit`. MEOS exports
@@ -111,7 +109,7 @@ Test 064.
 arrays — needs a `LIST<temporal>` emitter mirror to the existing
 `LIST<stbox>` / `LIST<tbox>` ones.
 
-### F. Misc analytics  mix
+### Misc analytics  ◯
 
 | Name | Status | Notes |
 |---|---|---|
@@ -125,13 +123,13 @@ arrays — needs a `LIST<temporal>` emitter mirror to the existing
 | `transformpipeline(geometry, str)` | ◯ | wraps PROJ's transform-pipeline string. MEOS has `stbox_transform_pipeline`; the geometry-side is in DuckDB-spatial as `ST_Transform` with PROJ args. |
 | `create_trip(...)` | ⊘ | trip-synthesis helper; lives in MobilityDB's `mobilitydb-tools` not in MEOS. Out of scope. |
 
-### G. Aggregate residual (✓ partially shipped)
+### Aggregate residual  ✓ partial
 
 | Name | Status | Notes |
 |---|---|---|
-| `appendInstantAgg(temp, interp text)` | ✓ shipped | 2-arg variant for all 8 temporal types. |
+| `appendInstantAgg(temp, interp text)` | ✓ | 2-arg variant for all 8 temporal types. |
 | `appendInstantAgg(temp, interp text, maxdist float, maxt interval)` | ⊘ | DuckDB stock aggregate templates don't cover 4-ary cleanly; needs custom dispatch. |
-| `setUnion(geography) → geogset` | ✗ architectural | blocked on `geography` SQL type. |
+| `setUnion(geography) → geogset` | ✗ | blocked on `geography` SQL type. |
 
 ## How to pick up an open item
 
@@ -139,19 +137,17 @@ arrays — needs a `LIST<temporal>` emitter mirror to the existing
    (`build/release/vcpkg_installed/x64-linux-release/include/meos*.h`).
    If yes, proceed. If no, the item belongs to the ⊘ bucket and needs
    MEOS-side work first.
-2. Branch off the head of the parity stack
-   (currently `feat/parity-aliases`).
-3. Add the executor — most fit the existing template patterns
+2. Add the executor — most fit the existing template patterns
    (`UnaryExecutor::ExecuteWithNulls`, `BinaryExecutor::Execute`,
-   list-vector emitters via `EmitTboxList` / `EmitSpanList` / inline
-   stbox-list helpers).
-4. Register in the appropriate `temporal.cpp` /
+   list-vector emitters via `EmitTboxList` / `EmitSpanList` /
+   inline stbox-list helpers).
+3. Register in the appropriate `temporal.cpp` /
    `tgeometry_ops.cpp` / `tgeography_ops.cpp` / `stbox.cpp`
    block. Mirror MobilityDB's SQL signature shape (default args,
-   return type) — see `mobilitydb/sql/{temporal,geo}/*.in.sql` for the
-   reference.
-5. Add a parity test in `test/sql/parity/0XX_<topic>.test`. Use
+   return type) — see `mobilitydb/sql/{temporal,geo}/*.in.sql` for
+   the reference.
+4. Add a parity test in `test/sql/parity/0XX_<topic>.test`. Use
    `IS NOT NULL` / `len()` / numeric-tolerance forms — avoid
    embedding timestamp output in goldens (the harness's local-TZ
-   default makes those flaky).
-6. Push to a `feat/parity-<topic>` branch on the fork.
+   default makes those flaky); pin timestamps with `+00` if the
+   test depends on instant alignment.
