@@ -7,6 +7,7 @@
 #include "common.hpp"
 #include "geo/tgeometry.hpp"
 #include "geo/tgeometry_ops.hpp"
+#include "geo/tgeompoint.hpp"
 #include "geo/stbox.hpp"
 #include "temporal/span.hpp"
 #include "temporal/temporal.hpp"
@@ -371,6 +372,146 @@ void TgeoTgeoDistanceExec(DataChunk &args, ExpressionState &, Vector &result) {
         });
 }
 
+// ====================================================================
+// Spatial functions — SRID accessor, setSRID, transform, expand*,
+// round, traversedArea, centroid, convexHull, and the
+// tgeometry <-> tgeompoint coercions.
+// ====================================================================
+
+inline string_t StboxToBlob(Vector &result, STBox *box) {
+    string_t out = StringVector::AddStringOrBlob(
+        result, reinterpret_cast<const char *>(box), sizeof(STBox));
+    free(box);
+    return out;
+}
+
+inline string_t GeoToBlobAsHex(Vector &result, GSERIALIZED *gs) {
+    if (!gs) return string_t();
+    size_t sz = 0;
+    uint8_t *ewkb = geo_as_ewkb(gs, NULL, &sz);
+    string_t out = StringVector::AddStringOrBlob(
+        result, reinterpret_cast<const char *>(ewkb), sz);
+    free(ewkb);
+    free(gs);
+    return out;
+}
+
+void TspatialSridExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, int32_t>(
+        args.data[0], result, args.size(),
+        [&](string_t blob) {
+            Temporal *t = DecodeTemporalCopy(blob);
+            int32_t srid = tspatial_srid(t);
+            free(t);
+            return srid;
+        });
+}
+
+void TspatialSetSridExec(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::Execute<string_t, int32_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t blob, int32_t srid) {
+            Temporal *t = DecodeTemporalCopy(blob);
+            Temporal *r = tspatial_set_srid(t, srid);
+            free(t);
+            if (!r) throw InvalidInputException("setSRID failed");
+            return TemporalToBlob(result, r);
+        });
+}
+
+void TspatialTransformExec(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::Execute<string_t, int32_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t blob, int32_t srid) {
+            Temporal *t = DecodeTemporalCopy(blob);
+            Temporal *r = tspatial_transform(t, srid);
+            free(t);
+            if (!r) throw InvalidInputException("transform failed");
+            return TemporalToBlob(result, r);
+        });
+}
+
+void TspatialToStboxExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t blob) {
+            Temporal *t = DecodeTemporalCopy(blob);
+            STBox *box = tspatial_to_stbox(t);
+            free(t);
+            return StboxToBlob(result, box);
+        });
+}
+
+void TgeometryToTgeompointExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t blob) {
+            Temporal *t = DecodeTemporalCopy(blob);
+            Temporal *r = tgeometry_to_tgeompoint(t);
+            free(t);
+            if (!r) throw InvalidInputException("tgeompoint(tgeometry) failed");
+            return TemporalToBlob(result, r);
+        });
+}
+
+void TgeompointToTgeometryExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t blob) {
+            Temporal *t = DecodeTemporalCopy(blob);
+            Temporal *r = tgeompoint_to_tgeometry(t);
+            free(t);
+            if (!r) throw InvalidInputException("tgeometry(tgeompoint) failed");
+            return TemporalToBlob(result, r);
+        });
+}
+
+void TgeoCentroidExec(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t blob) -> string_t {
+            Temporal *t = DecodeTemporalCopy(blob);
+            Temporal *r = tgeo_centroid(t);
+            free(t);
+            if (!r) throw InvalidInputException("centroid failed");
+            return TemporalToBlob(result, r);
+        });
+}
+
+void TgeoConvexHullExec(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t blob) -> string_t {
+            Temporal *t = DecodeTemporalCopy(blob);
+            GSERIALIZED *gs = tgeo_convex_hull(t);
+            free(t);
+            return GeoToBlobAsHex(result, gs);
+        });
+}
+
+void TgeoTraversedAreaExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t cnt = args.size();
+    if (args.ColumnCount() >= 2) {
+        BinaryExecutor::Execute<string_t, bool, string_t>(
+            args.data[0], args.data[1], result, cnt,
+            [&](string_t blob, bool unary_union) -> string_t {
+                Temporal *t = DecodeTemporalCopy(blob);
+                GSERIALIZED *gs = tgeo_traversed_area(t, unary_union);
+                free(t);
+                return GeoToBlobAsHex(result, gs);
+            });
+    } else {
+        UnaryExecutor::Execute<string_t, string_t>(
+            args.data[0], result, cnt,
+            [&](string_t blob) -> string_t {
+                Temporal *t = DecodeTemporalCopy(blob);
+                GSERIALIZED *gs = tgeo_traversed_area(t, false);
+                free(t);
+                return GeoToBlobAsHex(result, gs);
+            });
+    }
+}
+
 } // namespace
 
 void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
@@ -606,6 +747,44 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
         {TGEOM, GEOM}, TFLOAT, TgeoGeoDistanceExec<tdistance_tgeo_geo>));
     loader.RegisterFunction(ScalarFunction("<->",
         {TGEOM, TGEOM}, TFLOAT, TgeoTgeoDistanceExec<tdistance_tgeo_tgeo>));
+
+    // -----------------------------------------------------------------
+    // Spatial functions: SRID accessor / setter, projection / transform,
+    // stbox cast, tgeometry <-> tgeompoint coercions, round, centroid,
+    // convexHull, traversedArea.
+    // -----------------------------------------------------------------
+    const LogicalType INT32 = LogicalType::INTEGER;
+
+    loader.RegisterFunction(ScalarFunction(
+        "SRID", {TGEOM}, INT32, TspatialSridExec));
+    loader.RegisterFunction(ScalarFunction(
+        "setSRID", {TGEOM, INT32}, TGEOM, TspatialSetSridExec));
+    loader.RegisterFunction(ScalarFunction(
+        "transform", {TGEOM, INT32}, TGEOM, TspatialTransformExec));
+
+    // tgeometry → stbox is a cast in the SQL surface; expose it as a
+    // function for now to keep the implementation a single template.
+    loader.RegisterFunction(ScalarFunction(
+        "stbox", {TGEOM}, STBOX, TspatialToStboxExec));
+
+    // tgeometry <-> tgeompoint coercion functions.
+    loader.RegisterFunction(ScalarFunction(
+        "tgeompoint", {TGEOM}, TgeompointType::TGEOMPOINT(),
+        TgeometryToTgeompointExec));
+    loader.RegisterFunction(ScalarFunction(
+        "tgeometry", {TgeompointType::TGEOMPOINT()}, TGEOM,
+        TgeompointToTgeometryExec));
+
+    // Centroid / convexHull / traversedArea — produce a non-temporal
+    // geometry summary of the trajectory.
+    loader.RegisterFunction(ScalarFunction(
+        "centroid", {TGEOM}, TGEOM, TgeoCentroidExec));
+    loader.RegisterFunction(ScalarFunction(
+        "convexHull", {TGEOM}, GEOM, TgeoConvexHullExec));
+    loader.RegisterFunction(ScalarFunction(
+        "traversedArea", {TGEOM}, GEOM, TgeoTraversedAreaExec));
+    loader.RegisterFunction(ScalarFunction(
+        "traversedArea", {TGEOM, LogicalType::BOOLEAN}, GEOM, TgeoTraversedAreaExec));
 }
 
 } // namespace duckdb

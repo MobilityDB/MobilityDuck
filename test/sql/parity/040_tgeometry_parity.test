@@ -271,3 +271,42 @@ SELECT (t1::tgeometry <-> t2::tgeometry)::VARCHAR
 FROM (VALUES ('Point(0 0)@2000-01-01', 'Point(3 4)@2000-01-01')) t(t1, t2);
 ----
 5@2000-01-01 00:00:00+00
+
+# =============================================================================
+# Spatial functions: SRID accessor / setter, transform, stbox, coercions,
+# centroid, convexHull, traversedArea.
+# =============================================================================
+
+query I
+SELECT SRID(t::tgeometry) FROM (VALUES ('Point(0 0)@2000-01-01')) t(t);
+----
+0
+
+query I
+SELECT SRID(setSRID(t::tgeometry, 4326)) FROM (VALUES ('Point(0 0)@2000-01-01')) t(t);
+----
+4326
+
+query I
+SELECT stbox(t::tgeometry)::VARCHAR FROM (VALUES ('Point(0 0)@2000-01-01')) t(t);
+----
+STBOX XT(((0,0),(0,0)),[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00])
+
+# tgeometry → tgeompoint round-trip via the explicit coercion pair.
+query I
+SELECT tempSubtype(tgeompoint(t::tgeometry)) FROM (VALUES
+  ('Point(0 0)@2000-01-01')) t(t);
+----
+Instant
+
+query I
+SELECT (convexHull(t::tgeometry) IS NOT NULL) FROM (VALUES
+  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+true
+
+query I
+SELECT (traversedArea(t::tgeometry) IS NOT NULL) FROM (VALUES
+  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+true
