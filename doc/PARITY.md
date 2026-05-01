@@ -235,9 +235,12 @@ the five spans, and all eight temporal types); the `WHERE col && q`
 predicate is rewritten into an index scan automatically.
 
 The kNN operator `|=|` works syntactically (`ORDER BY col |=| q LIMIT k`
-gives correct results), but currently falls back to seq-scan + sort +
-limit because MEOS' R-tree doesn't yet expose a priority-queue scan.
-Output is correct; throughput on large tables isn't.
+gives correct results), but falls back to seq-scan + sort + limit
+because MEOS' R-tree does not yet expose a priority-queue scan.
+Output is correct; throughput on large tables is not. Tracked in
+[MobilityDB#840](https://github.com/MobilityDB/MobilityDB/issues/840),
+which lays out the four-stage plan to add a `RTreeNNCursor` API to
+MEOS and replace the fallback in MobilityDuck once the API lands.
 
 The MobilityDB SP-GiST / GiST opclass support functions (`*_spgist_*`,
 `*_kdtree_*`, `*_quadtree_*`, `*_gist_*`) and the GIN extract
