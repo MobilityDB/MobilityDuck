@@ -1,0 +1,131 @@
+# name: test/sql/parity/061_aggregates_appendinstant_aliases.test
+# description: Aggregate-side parity follow-on.
+#
+#   AppendInstantAgg(temp, interp text)  — 2-arg variant for all 8
+#                                          temporal types. The interp
+#                                          arg is sticky across the
+#                                          aggregate scan, matching
+#                                          MobilityDB's
+#                                          `appendInstant(temp, interp text)`
+#                                          shape. Recognised values:
+#                                          "linear" / "step" /
+#                                          "discrete" (case-insensitive);
+#                                          anything else falls through
+#                                          to MEOS' INTERP_NONE.
+#
+#   dynTimeWarpDistance(t, t)            — alias for the existing
+#                                          dynTimeWarp(t, t). MobilityDB
+#                                          SQL exposes the longer name.
+#
+#   mobilitydb_version()                 — MobilityDB-name aliases for
+#   mobilitydb_full_version()              the existing
+#                                          mobilityduck_*_version()
+#                                          functions, for cross-engine
+#                                          query portability.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# AppendInstantAgg with explicit interp arg.
+# =============================================================================
+
+# 'linear' interp on tfloat — produces a continuous sequence.
+query I
+SELECT (AppendInstantAgg(t::tfloat, 'linear') IS NOT NULL) FROM (VALUES
+  ('1.0@2000-01-01'), ('2.0@2000-01-02'), ('3.0@2000-01-03')) AS t(t);
+----
+true
+
+# 'step' interp emits an Interp=Step;… textual rendering.
+query I
+SELECT (AppendInstantAgg(t::tfloat, 'step') IS NOT NULL) FROM (VALUES
+  ('1.0@2000-01-01'), ('2.0@2000-01-02')) AS t(t);
+----
+true
+
+# 'discrete' interp on tbool — boolean values can't be linearly
+# interpolated, so discrete is the natural choice.
+query I
+SELECT (AppendInstantAgg(t::tbool, 'discrete') IS NOT NULL) FROM (VALUES
+  ('true@2000-01-01'), ('false@2000-01-02')) AS t(t);
+----
+true
+
+# Unknown interp keyword falls through to INTERP_NONE — MEOS chooses
+# the natural interpretation for the base type.
+query I
+SELECT (AppendInstantAgg(t::tfloat, 'unrecognised') IS NOT NULL) FROM (VALUES
+  ('1.0@2000-01-01'), ('2.0@2000-01-02')) AS t(t);
+----
+true
+
+# All four spatial-temporal types
+query I
+SELECT (AppendInstantAgg(t::tgeompoint, 'linear') IS NOT NULL) FROM (VALUES
+  ('Point(0 0)@2000-01-01'), ('Point(1 1)@2000-01-02')) AS t(t);
+----
+true
+
+# tgeometry / tgeography are generic geometry types — MEOS rejects
+# 'linear' interp on them (not all geometries can interpolate
+# linearly). MobilityDB enforces the same constraint. 'step' works.
+query I
+SELECT (AppendInstantAgg(t::tgeometry, 'step') IS NOT NULL) FROM (VALUES
+  ('Point(0 0)@2000-01-01'), ('Point(1 1)@2000-01-02')) AS t(t);
+----
+true
+
+query I
+SELECT (AppendInstantAgg(t::tgeography, 'step') IS NOT NULL) FROM (VALUES
+  ('SRID=4326;Point(0 0)@2000-01-01'), ('SRID=4326;Point(1 1)@2000-01-02')) AS t(t);
+----
+true
+
+query I
+SELECT (AppendInstantAgg(t::tgeogpoint, 'linear') IS NOT NULL) FROM (VALUES
+  ('SRID=4326;Point(0 0)@2000-01-01'), ('SRID=4326;Point(1 1)@2000-01-02')) AS t(t);
+----
+true
+
+# 1-arg variant still works alongside the new 2-arg overload.
+query I
+SELECT (AppendInstantAgg(t::tint) IS NOT NULL) FROM (VALUES
+  ('1@2000-01-01'), ('2@2000-01-02')) AS t(t);
+----
+true
+
+# =============================================================================
+# Naming aliases — `dynTimeWarpDistance` is MobilityDB's longer name
+# for the function MobilityDuck already exposes as `dynTimeWarp`.
+# =============================================================================
+
+query I
+SELECT dynTimeWarpDistance('1@2000-01-01'::tint, '5@2000-01-01'::tint);
+----
+4
+
+query I
+SELECT dynTimeWarpDistance('1@2000-01-01'::tint, '5@2000-01-01'::tint)
+       = dynTimeWarp('1@2000-01-01'::tint, '5@2000-01-01'::tint);
+----
+true
+
+query I
+SELECT abs(dynTimeWarpDistance('1.0@2000-01-01'::tfloat, '4.0@2000-01-01'::tfloat) - 3.0) < 1e-12;
+----
+true
+
+# =============================================================================
+# `mobilitydb_*` aliases for the version-stamp functions.
+# =============================================================================
+
+query I
+SELECT (mobilitydb_version() = mobilityduck_version());
+----
+true
+
+query I
+SELECT (mobilitydb_full_version() = mobilityduck_full_version());
+----
+true

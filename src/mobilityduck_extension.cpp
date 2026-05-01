@@ -234,6 +234,17 @@ static void LoadInternal(ExtensionLoader &loader) {
 		"mobilityduck_full_version", {}, LogicalType::VARCHAR,
 		MobilityduckFullVersionScalarFun));
 
+	// MobilityDB-name aliases for cross-engine query portability —
+	// queries that ask `mobilitydb_version()` / `mobilitydb_full_version()`
+	// resolve to the same MobilityDuck-stamped output rather than failing
+	// with "function does not exist".
+	loader.RegisterFunction(ScalarFunction(
+		"mobilitydb_version", {}, LogicalType::VARCHAR,
+		MobilityduckVersionScalarFun));
+	loader.RegisterFunction(ScalarFunction(
+		"mobilitydb_full_version", {}, LogicalType::VARCHAR,
+		MobilityduckFullVersionScalarFun));
+
 	// Temporal and related types/functions
 	TemporalTypes::RegisterTypes(loader);
 	TemporalTypes::RegisterCastFunctions(loader);

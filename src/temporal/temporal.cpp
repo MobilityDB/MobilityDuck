@@ -1523,6 +1523,9 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         loader.RegisterFunction(ScalarFunction("frechetDistance", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
         loader.RegisterFunction(ScalarFunction("discreteFrechet", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
         loader.RegisterFunction(ScalarFunction("dynTimeWarp",     {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_dyntimewarp_distance));
+        // MobilityDB SQL exposes the same function under the longer
+        // `dynTimeWarpDistance` name; register both for compatibility.
+        loader.RegisterFunction(ScalarFunction("dynTimeWarpDistance", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_dyntimewarp_distance));
         loader.RegisterFunction(ScalarFunction("hausdorffDistance", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_hausdorff_distance));
     }
 

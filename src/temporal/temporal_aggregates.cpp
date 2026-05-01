@@ -631,6 +631,39 @@ struct AppendInstantAggFn : TemporalStateCombineBase<> {
     }
 };
 
+// 2-arg AppendInstantAgg(temp, interp text) — interp is a per-aggregate
+// constant (the MobilityDB SQL form likewise treats it as a sticky
+// argument). The transition function reads interp from the second
+// column on each row; since the value doesn't vary across the scan,
+// the framework re-reads the same constant each time.
+inline interpType InterpFromText(string_t s) {
+    const std::string str = s.GetString();
+    if (str == "linear" || str == "Linear" || str == "LINEAR")        return LINEAR;
+    if (str == "step" || str == "Step" || str == "STEP")              return STEP;
+    if (str == "discrete" || str == "Discrete" || str == "DISCRETE")  return DISCRETE;
+    return INTERP_NONE;
+}
+
+struct AppendInstantAggFnInterp : TemporalStateCombineBase<> {
+    template <class STATE>
+    static void Initialize(STATE &state) { state.value = nullptr; }
+    static bool IgnoreNull() { return true; }
+
+    template <class A_TYPE, class B_TYPE, class STATE, class OP>
+    static void Operation(STATE &state, const A_TYPE &input, const B_TYPE &interp_text,
+                          AggregateBinaryInput &) {
+        const Temporal *t = reinterpret_cast<const Temporal *>(input.GetData());
+        const TInstant *inst = reinterpret_cast<const TInstant *>(t);
+        state.value = temporal_app_tinst_transfn(
+            state.value, inst, InterpFromText(interp_text), 0.0, nullptr);
+    }
+    template <class A_TYPE, class B_TYPE, class STATE, class OP>
+    static void ConstantOperation(STATE &state, const A_TYPE &input, const B_TYPE &b,
+                                  AggregateBinaryInput &u, idx_t) {
+        Operation<A_TYPE, B_TYPE, STATE, OP>(state, input, b, u);
+    }
+};
+
 // AppendSequenceAgg(temporal) — input is already a TSequence.
 struct AppendSequenceAggFn : TemporalStateCombineBase<> {
     template <class STATE>
@@ -653,6 +686,17 @@ template <class OP>
 static AggregateFunction MakeTemporalStateAggregate(const LogicalType &type) {
     return AggregateFunction::UnaryAggregateDestructor<
         TemporalState, string_t, string_t, OP, AggregateDestructorType::LEGACY>(type, type);
+}
+
+// 2-arg variant — second arg is interp text, sticky across the scan.
+template <class OP>
+static AggregateFunction MakeTemporalStateAggregateBinary(const LogicalType &type,
+                                                          const LogicalType &b_type) {
+    auto fn = AggregateFunction::BinaryAggregate<
+        TemporalState, string_t, string_t, string_t, OP, AggregateDestructorType::LEGACY>(
+        type, b_type, type);
+    fn.destructor = AggregateFunction::StateDestroy<TemporalState, OP>;
+    return fn;
 }
 
 // =====================================================================
@@ -1084,16 +1128,22 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
     }
 
     // ---- AppendInstantAgg over each temporal type → same type ----
+    // 1-arg form uses INTERP_NONE (lets MEOS pick); 2-arg form
+    // accepts a sticky `interp text` argument matching MobilityDB's
+    // `appendInstant(temp, interp text)` shape.
     {
         AggregateFunctionSet set("AppendInstantAgg");
-        for (const auto &t : {TemporalTypes::TBOOL(), TemporalTypes::TINT(),
-                              TemporalTypes::TFLOAT(), TemporalTypes::TTEXT()}) {
+        const std::vector<LogicalType> types = {
+            TemporalTypes::TBOOL(), TemporalTypes::TINT(),
+            TemporalTypes::TFLOAT(), TemporalTypes::TTEXT(),
+            TgeompointType::TGEOMPOINT(), TGeometryTypes::TGEOMETRY(),
+            TGeographyTypes::TGEOGRAPHY(), TGeogpointType::TGEOGPOINT(),
+        };
+        for (const auto &t : types) {
             set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(t));
+            set.AddFunction(MakeTemporalStateAggregateBinary<AppendInstantAggFnInterp>(
+                t, LogicalType::VARCHAR));
         }
-        set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TgeompointType::TGEOMPOINT()));
-        set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TGeometryTypes::TGEOMETRY()));
-        set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TGeographyTypes::TGEOGRAPHY()));
-        set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TGeogpointType::TGEOGPOINT()));
         loader.RegisterFunction(std::move(set));
     }
 
