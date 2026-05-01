@@ -34,6 +34,9 @@
 #include "geo/tgeometry.hpp"
 #include "geo/tgeography.hpp"
 #include "geo/tgeogpoint.hpp"
+#include "geo/geoset.hpp"
+#include "geo_util.hpp"
+#include "spatial/spatial_types.hpp"
 
 #include "duckdb/common/exception.hpp"
 #include "duckdb/function/aggregate_function.hpp"
@@ -886,6 +889,76 @@ inline Datum DateToDatum(date_t v) { return (Datum) (int64_t) ToMeosDate(v); }
 inline Datum TstzToDatum(timestamp_tz_t v) {
     return (Datum) (int64_t) DuckDBToMeosTimestamp(v).value;
 }
+// Text Datum: MEOS' set machinery copies the pointed-at text struct
+// into the Set on insert, so we can free the cstring2text-allocated
+// buffer right after the call (handled inside the Operation wrapper).
+inline Datum TextToDatum(string_t v) {
+    text *t = cstring2text(v.GetString().c_str());
+    return (Datum) (uintptr_t) t;
+}
+
+// SetUnionAgg(geometry|geography) — uses geo_union_transfn directly,
+// which takes a GSERIALIZED rather than a Datum. Mirrors
+// SetUnionFromScalarFn's lifecycle methods.
+struct SetUnionFromGeoFn {
+    template <class STATE>
+    static void Initialize(STATE &state) { state.value = nullptr; }
+    static bool IgnoreNull() { return true; }
+
+    template <class INPUT_TYPE, class STATE, class OP>
+    static void Operation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &) {
+        // SRID is irrelevant for set membership — we accept whatever
+        // the input carries.
+        GSERIALIZED *gs = GeometryToGSerialized(input, 0);
+        if (!gs) return;
+        state.value = geo_union_transfn(state.value, gs);
+        free(gs);
+    }
+    template <class INPUT_TYPE, class STATE, class OP>
+    static void ConstantOperation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &u, idx_t) {
+        Operation<INPUT_TYPE, STATE, OP>(state, input, u);
+    }
+    template <class STATE, class OP>
+    static void Combine(const STATE &source_const, STATE &target, AggregateInputData &) {
+        SetCombine(const_cast<STATE &>(source_const), target);
+    }
+    template <class T, class STATE>
+    static void Finalize(STATE &state, T &target, AggregateFinalizeData &fd) {
+        SetFinalize(state, target, fd);
+    }
+    template <class STATE>
+    static void Destroy(STATE &state, AggregateInputData &) { SetDestroy(state); }
+};
+
+// SetUnionAgg(text) — TextToDatum allocates a `text *` per input
+// element. MEOS' set_make copies the pointed-at value when adding to
+// the Set, so freeing right after the transfn returns is safe.
+struct SetUnionFromTextFn {
+    template <class STATE>
+    static void Initialize(STATE &state) { state.value = nullptr; }
+    static bool IgnoreNull() { return true; }
+
+    template <class INPUT_TYPE, class STATE, class OP>
+    static void Operation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &) {
+        text *t = cstring2text(input.GetString().c_str());
+        state.value = value_union_transfn(state.value, (Datum)(uintptr_t)t, T_TEXT);
+        free(t);
+    }
+    template <class INPUT_TYPE, class STATE, class OP>
+    static void ConstantOperation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &u, idx_t) {
+        Operation<INPUT_TYPE, STATE, OP>(state, input, u);
+    }
+    template <class STATE, class OP>
+    static void Combine(const STATE &source_const, STATE &target, AggregateInputData &) {
+        SetCombine(const_cast<STATE &>(source_const), target);
+    }
+    template <class T, class STATE>
+    static void Finalize(STATE &state, T &target, AggregateFinalizeData &fd) {
+        SetFinalize(state, target, fd);
+    }
+    template <class STATE>
+    static void Destroy(STATE &state, AggregateInputData &) { SetDestroy(state); }
+};
 
 template <class OP>
 static AggregateFunction MakeSetAggregate(const LogicalType &input_type, const LogicalType &return_type) {
@@ -1091,6 +1164,14 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
         AggregateFunctionSet set("WcountAgg");
         set.AddFunction(MakeWindowAggregate<WcountAggFn>(TemporalTypes::TINT(),    TemporalTypes::TINT()));
         set.AddFunction(MakeWindowAggregate<WcountAggFn>(TemporalTypes::TFLOAT(),  TemporalTypes::TINT()));
+        // Spatial-temporal types — MobilityDB exposes wcount over the
+        // tspatial family with the same `temporal_wagg_transform_transfn`
+        // + `temporal_transform_wcount` shape (the count value is
+        // subtype-agnostic). The result type is always tint.
+        set.AddFunction(MakeWindowAggregate<WcountAggFn>(TgeompointType::TGEOMPOINT(),   TemporalTypes::TINT()));
+        set.AddFunction(MakeWindowAggregate<WcountAggFn>(TGeogpointType::TGEOGPOINT(),   TemporalTypes::TINT()));
+        set.AddFunction(MakeWindowAggregate<WcountAggFn>(TGeometryTypes::TGEOMETRY(),    TemporalTypes::TINT()));
+        set.AddFunction(MakeWindowAggregate<WcountAggFn>(TGeographyTypes::TGEOGRAPHY(),  TemporalTypes::TINT()));
         loader.RegisterFunction(std::move(set));
     }
     {
@@ -1114,15 +1195,33 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
             LogicalType::DATE, SetTypes::dateset()));
         set.AddFunction(MakeSetUnionScalarAggregate<timestamp_tz_t, TstzToDatum, T_TIMESTAMPTZ>(
             LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()));
+        // Text — uses the dedicated SetUnionFromTextFn that owns the
+        // cstring2text lifecycle.
+        set.AddFunction(AggregateFunction::UnaryAggregateDestructor<
+            SetAggState, string_t, string_t, SetUnionFromTextFn,
+            AggregateDestructorType::LEGACY>(
+            LogicalType::VARCHAR, SetTypes::textset()));
+        // Geometry scalar — uses geo_union_transfn directly.
+        // The MobilityDB `setUnion(geography) → geogset` overload would
+        // need a `geography` SQL type that MobilityDuck doesn't expose;
+        // register only the geomset path here. (The geogset → geogset
+        // set-input variant below still works for users who already
+        // have geogset values.)
+        set.AddFunction(AggregateFunction::UnaryAggregateDestructor<
+            SetAggState, string_t, string_t, SetUnionFromGeoFn,
+            AggregateDestructorType::LEGACY>(
+            GeoTypes::GEOMETRY(), SpatialSetType::geomset()));
 
         // Set inputs.
         const std::vector<SpanInputPair> set_pairs = {
-            {SetTypes::intset(),     SetTypes::intset()},
-            {SetTypes::bigintset(),  SetTypes::bigintset()},
-            {SetTypes::floatset(),   SetTypes::floatset()},
-            {SetTypes::textset(),    SetTypes::textset()},
-            {SetTypes::dateset(),    SetTypes::dateset()},
-            {SetTypes::tstzset(),    SetTypes::tstzset()},
+            {SetTypes::intset(),         SetTypes::intset()},
+            {SetTypes::bigintset(),      SetTypes::bigintset()},
+            {SetTypes::floatset(),       SetTypes::floatset()},
+            {SetTypes::textset(),        SetTypes::textset()},
+            {SetTypes::dateset(),        SetTypes::dateset()},
+            {SetTypes::tstzset(),        SetTypes::tstzset()},
+            {SpatialSetType::geomset(),  SpatialSetType::geomset()},
+            {SpatialSetType::geogset(),  SpatialSetType::geogset()},
         };
         for (const auto &p : set_pairs) {
             set.AddFunction(MakeSetAggregate<SetUnionFromSetFn>(p.in, p.out));

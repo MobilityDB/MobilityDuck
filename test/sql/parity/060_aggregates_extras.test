@@ -1,0 +1,102 @@
+# name: test/sql/parity/060_aggregates_extras.test
+# description: Aggregate-side parity gaps closed.
+#
+#   WcountAgg(t…, interval) — extends from tnumber to the four
+#                              spatial-temporal types
+#                              (tgeompoint / tgeogpoint /
+#                              tgeometry / tgeography). MobilityDB
+#                              SQL exposes wcount over tspatial in
+#                              `068_tpoint_aggfuncs.in.sql`.
+#
+#   SetUnionAgg(text)        — text-scalar input. Uses the same
+#                              `value_union_transfn(state, Datum,
+#                              T_TEXT)` MEOS path as the int/float
+#                              variants but threads a cstring2text-
+#                              allocated `text *` through the Datum.
+#
+#   SetUnionAgg(geometry)    — geometry-scalar input. Uses MEOS'
+#                              `geo_union_transfn(state, GSERIALIZED *)`
+#                              directly (no Datum dance).
+#
+#   SetUnionAgg(geomset),
+#   SetUnionAgg(geogset)     — set-input variants for the spatial
+#                              set types.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# WcountAgg over the spatial-temporal types — counts events per window.
+# =============================================================================
+
+query I
+SELECT (WcountAgg(t::tgeompoint, INTERVAL '1 day') IS NOT NULL)
+FROM (VALUES ('Point(0 0)@2000-01-01'), ('Point(1 1)@2000-01-02')) AS t(t);
+----
+true
+
+query I
+SELECT (WcountAgg(t::tgeogpoint, INTERVAL '1 day') IS NOT NULL)
+FROM (VALUES ('Point(0 0)@2000-01-01'), ('Point(1 1)@2000-01-02')) AS t(t);
+----
+true
+
+query I
+SELECT (WcountAgg(t::tgeometry, INTERVAL '1 day') IS NOT NULL)
+FROM (VALUES ('Point(0 0)@2000-01-01'), ('Point(1 1)@2000-01-02')) AS t(t);
+----
+true
+
+query I
+SELECT (WcountAgg(t::tgeography, INTERVAL '1 day') IS NOT NULL)
+FROM (VALUES ('Point(0 0)@2000-01-01'), ('Point(1 1)@2000-01-02')) AS t(t);
+----
+true
+
+# Result is always tint regardless of input type.
+query I
+SELECT typeof(WcountAgg(t::tgeompoint, INTERVAL '1 day'))
+FROM (VALUES ('Point(0 0)@2000-01-01'), ('Point(1 1)@2000-01-02')) AS t(t);
+----
+TINT
+
+# =============================================================================
+# SetUnionAgg — text scalar, geometry scalar, geomset/geogset set inputs.
+# =============================================================================
+
+query I
+SELECT SetUnionAgg(s)::VARCHAR FROM (VALUES ('a'), ('b'), ('a')) AS t(s);
+----
+{"a", "b"}
+
+query I
+SELECT typeof(SetUnionAgg(s)) FROM (VALUES ('a'), ('b')) AS t(s);
+----
+textset
+
+query I
+SELECT (SetUnionAgg(g) IS NOT NULL)
+FROM (VALUES ('Point(0 0)'::geometry), ('Point(1 1)'::geometry),
+             ('Point(0 0)'::geometry)) AS t(g);
+----
+true
+
+query I
+SELECT typeof(SetUnionAgg(g))
+FROM (VALUES ('Point(0 0)'::geometry)) AS t(g);
+----
+geomset
+
+query I
+SELECT (SetUnionAgg(s) IS NOT NULL)
+FROM (VALUES ('{Point(0 0), Point(1 1)}'::geomset),
+             ('{Point(2 2)}'::geomset)) AS t(s);
+----
+true
+
+# textset → textset set-input form.
+query I
+SELECT SetUnionAgg(s)::VARCHAR
+FROM (VALUES ('{"a","b"}'::textset), ('{"c"}'::textset)) AS t(s);
+----
+{"a", "b", "c"}
