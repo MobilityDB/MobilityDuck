@@ -207,3 +207,45 @@ query I
 SELECT typeof(trend('[1.0@2000-01-01 00:00:00+00, 5.0@2000-01-05 00:00:00+00]'::tfloat));
 ----
 TINT
+
+# =============================================================================
+# transformPipeline(temp/stbox, pipeline text, srid int, is_forward bool)
+# — applies a PROJ pipeline string. Wraps tspatial_transform_pipeline /
+# stbox_transform_pipeline. Tests use the no-op pipeline so they don't
+# depend on a specific PROJ data file being installed.
+# =============================================================================
+
+query I
+SELECT transformPipeline(
+  'SRID=4326;Point(1 1)@2000-01-01 00:00:00+00'::tgeompoint,
+  '+proj=noop', 4326, true) IS NOT NULL;
+----
+true
+
+query I
+SELECT transformPipeline(
+  'SRID=4326;Point(1 1)@2000-01-01 00:00:00+00'::tgeometry,
+  '+proj=noop', 4326, true) IS NOT NULL;
+----
+true
+
+query I
+SELECT transformPipeline(
+  'SRID=4326;Point(1 1)@2000-01-01 00:00:00+00'::tgeogpoint,
+  '+proj=noop', 4326, true) IS NOT NULL;
+----
+true
+
+query I
+SELECT transformPipeline(
+  'SRID=4326;Point(1 1)@2000-01-01 00:00:00+00'::tgeography,
+  '+proj=noop', 4326, true) IS NOT NULL;
+----
+true
+
+query I
+SELECT transformPipeline(
+  'SRID=4326;STBOX X((0,0),(10,10))'::stbox,
+  '+proj=noop', 4326, true) IS NOT NULL;
+----
+true

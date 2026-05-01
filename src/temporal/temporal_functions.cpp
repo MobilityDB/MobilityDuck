@@ -4896,6 +4896,44 @@ void TemporalFunctions::Tnumber_trend(DataChunk &args, ExpressionState &state, V
     TemporalUnary(args, result, [](Temporal *t) { return tnumber_trend(t); });
 }
 
+// transformPipeline(tspatial, pipeline text, srid int, is_forward bool)
+// — applies a PROJ pipeline string to a spatial-temporal value. Wraps
+// MEOS' tspatial_transform_pipeline.
+void TemporalFunctions::Tspatial_transform_pipeline(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t count = args.size();
+    args.data[0].Flatten(count);
+    args.data[1].Flatten(count);
+    args.data[2].Flatten(count);
+    args.data[3].Flatten(count);
+
+    auto in_blob = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_pipe = FlatVector::GetData<string_t>(args.data[1]);
+    auto in_srid = FlatVector::GetData<int32_t>(args.data[2]);
+    auto in_fwd  = FlatVector::GetData<bool>(args.data[3]);
+
+    auto out_data  = FlatVector::GetData<string_t>(result);
+    auto &out_mask = FlatVector::Validity(result);
+
+    auto &m0 = FlatVector::Validity(args.data[0]);
+    auto &m1 = FlatVector::Validity(args.data[1]);
+    auto &m2 = FlatVector::Validity(args.data[2]);
+    auto &m3 = FlatVector::Validity(args.data[3]);
+
+    for (idx_t i = 0; i < count; ++i) {
+        if (!m0.RowIsValid(i) || !m1.RowIsValid(i) ||
+            !m2.RowIsValid(i) || !m3.RowIsValid(i)) {
+            out_mask.SetInvalid(i);
+            continue;
+        }
+        Temporal *t = BlobToTemporal(in_blob[i]);
+        std::string pipe_str = in_pipe[i].GetString();
+        Temporal *r = tspatial_transform_pipeline(t, pipe_str.c_str(), in_srid[i], in_fwd[i]);
+        free(t);
+        if (!r) { out_mask.SetInvalid(i); continue; }
+        out_data[i] = TemporalToBlob(result, r);
+    }
+}
+
 // Temporal_derivative is implemented later in this file in the Math
 // functions block (existed before the unary-tnumber additions).
 

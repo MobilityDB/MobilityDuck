@@ -23,7 +23,7 @@ excluding ~250 PG-extension implementation helpers — see PARITY.md
 | Resolved via `*Agg` suffix (RFC #827) | 12 | ✓ |
 | Resolved via DuckDB-spatial native (`point`, `line`, `box`, ...) | 7 | ✓ |
 | Architectural blocks (no `geography`, no MVT) | 2 | ✗ |
-| Tracked residual user-visible gaps | ~10 | mix of ◯ and ⊘ — see sections below |
+| Tracked residual user-visible gaps | ~9 | mix of ◯ and ⊘ — see sections below |
 | **Effective coverage** | ~96% | |
 
 ## Architectural blocks (✗)
@@ -124,8 +124,8 @@ channel (or a `STRUCT(parts, bins)` return shape). Test 065.
 | `tsample(temp, interval, ts [, interp])` | ✓ | regular-interval resampling for any temporal type. |
 | `time_distance(...)` | ✓ | distance in seconds between tstzspan / tstzspanset / timestamptz arguments. |
 | `trend(tint\|tfloat) → tint` | ✓ | sign of the derivative at each instant. Wraps `tnumber_trend`. Requires linear interpolation. |
+| `transformPipeline(temp\|stbox, pipeline, srid, is_forward)` | ✓ | applies a PROJ pipeline string. Wraps `tspatial_transform_pipeline` / `stbox_transform_pipeline`. All 4 spatial-temporal types + stbox. |
 | `geomeasure(tpoint, tfloat)` | ◯ | wraps `tpoint_tfloat_to_geomeas`. Builds a geometry tagged with M values. |
-| `transformpipeline(geometry, str)` | ◯ | wraps PROJ's transform-pipeline string. MEOS has `stbox_transform_pipeline`; the geometry-side is `ST_Transform` in DuckDB-spatial. |
 | `transform_gk(geometry)` | ⊘ | German Gauss-Krüger projection helper; PG-only utility. |
 | `create_trip(...)` | ⊘ | trip-synthesis helper; lives in MobilityDB's `mobilitydb-tools`, not in MEOS. Out of scope. |
 

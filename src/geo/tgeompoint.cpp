@@ -115,6 +115,11 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             {TGP, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ,
              LogicalType::VARCHAR}, TGP,
             TemporalFunctions::Temporal_tsample));
+
+        // transformPipeline(tgeompoint, pipeline text, srid int, is_forward bool)
+        loader.RegisterFunction(ScalarFunction("transformPipeline",
+            {TGP, LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN},
+            TGP, TemporalFunctions::Tspatial_transform_pipeline));
     }
 
     const auto varchar_list = LogicalType::LIST(LogicalType::VARCHAR);

@@ -247,6 +247,11 @@ void TGeogpointType::RegisterScalarInOutFunctions(ExtensionLoader &loader){
         {TGGP, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ,
          LogicalType::VARCHAR}, TGGP,
         TemporalFunctions::Temporal_tsample));
+
+    // transformPipeline(tgeogpoint, pipeline text, srid int, is_forward bool)
+    loader.RegisterFunction(ScalarFunction("transformPipeline",
+        {TGGP, LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN},
+        TGGP, TemporalFunctions::Tspatial_transform_pipeline));
 }
 
 

@@ -252,6 +252,11 @@ void TGeometryTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
         {TGEOM, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ,
          LogicalType::VARCHAR}, TGEOM,
         TemporalFunctions::Temporal_tsample));
+
+    // transformPipeline(tgeometry, pipeline text, srid int, is_forward bool)
+    loader.RegisterFunction(ScalarFunction("transformPipeline",
+        {TGEOM, LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN},
+        TGEOM, TemporalFunctions::Tspatial_transform_pipeline));
 }
 
 

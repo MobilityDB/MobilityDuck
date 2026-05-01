@@ -248,6 +248,11 @@ void TGeographyTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
         {TGEOG, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ,
          LogicalType::VARCHAR}, TGEOG,
         TemporalFunctions::Temporal_tsample));
+
+    // transformPipeline(tgeography, pipeline text, srid int, is_forward bool)
+    loader.RegisterFunction(ScalarFunction("transformPipeline",
+        {TGEOG, LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN},
+        TGEOG, TemporalFunctions::Tspatial_transform_pipeline));
 }
 
 

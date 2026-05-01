@@ -1148,6 +1148,16 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_gt
         )
     );
+
+    // transformPipeline(stbox, pipeline text, srid int, is_forward bool)
+    loader.RegisterFunction(
+        ScalarFunction(
+            "transformPipeline",
+            {STBOX(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN},
+            STBOX(),
+            StboxFunctions::Stbox_transform_pipeline
+        )
+    );
 }
 
 } // namespace duckdb

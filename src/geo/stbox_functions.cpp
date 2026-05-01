@@ -1463,6 +1463,48 @@ void StboxFunctions::Stbox_expand_space(DataChunk &args, ExpressionState &state,
     }
 }
 
+// transformPipeline(stbox, pipeline text, srid int, is_forward bool)
+// — applies a PROJ pipeline string to an stbox. Wraps MEOS'
+// stbox_transform_pipeline.
+void StboxFunctions::Stbox_transform_pipeline(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t count = args.size();
+    args.data[0].Flatten(count);
+    args.data[1].Flatten(count);
+    args.data[2].Flatten(count);
+    args.data[3].Flatten(count);
+
+    auto in_box  = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_pipe = FlatVector::GetData<string_t>(args.data[1]);
+    auto in_srid = FlatVector::GetData<int32_t>(args.data[2]);
+    auto in_fwd  = FlatVector::GetData<bool>(args.data[3]);
+
+    auto out_data  = FlatVector::GetData<string_t>(result);
+    auto &out_mask = FlatVector::Validity(result);
+
+    auto &m0 = FlatVector::Validity(args.data[0]);
+    auto &m1 = FlatVector::Validity(args.data[1]);
+    auto &m2 = FlatVector::Validity(args.data[2]);
+    auto &m3 = FlatVector::Validity(args.data[3]);
+
+    for (idx_t i = 0; i < count; ++i) {
+        if (!m0.RowIsValid(i) || !m1.RowIsValid(i) ||
+            !m2.RowIsValid(i) || !m3.RowIsValid(i)) {
+            out_mask.SetInvalid(i);
+            continue;
+        }
+        size_t sz = in_box[i].GetSize();
+        STBox *box = (STBox *) malloc(sz);
+        memcpy(box, in_box[i].GetData(), sz);
+        std::string pipe = in_pipe[i].GetString();
+        STBox *r = stbox_transform_pipeline(box, pipe.c_str(), in_srid[i], in_fwd[i]);
+        free(box);
+        if (!r) { out_mask.SetInvalid(i); continue; }
+        out_data[i] = StringVector::AddStringOrBlob(
+            result, reinterpret_cast<const char *>(r), sizeof(STBox));
+        free(r);
+    }
+}
+
 /* ***************************************************
  * Topological operators
  ****************************************************/

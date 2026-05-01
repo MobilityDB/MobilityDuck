@@ -100,6 +100,7 @@ struct StboxFunctions {
     static void Stbox_get_space(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_expand_space(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_expand_time(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_transform_pipeline(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * TODO: Selectively functions for operators 
