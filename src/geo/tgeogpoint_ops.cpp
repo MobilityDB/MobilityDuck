@@ -30,6 +30,11 @@ namespace duckdb {
 
 namespace {
 
+// Forward declaration: defined later in the file alongside the other
+// blob-converters; the kNN templates above need it visible by name at
+// instantiation time.
+inline string_t GeoToBlobAsHex(Vector &result, GSERIALIZED *gs);
+
 // ====================================================================
 // Argument-decoding helpers
 // ====================================================================
@@ -370,6 +375,138 @@ void TgeoTgeoDistanceExec(DataChunk &args, ExpressionState &, Vector &result) {
             free(t1); free(t2);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return TemporalToBlob(result, r);
+        });
+}
+
+// ====================================================================
+// Nearest-approach helpers: NAD (scalar double), NAI (TInstant), and
+// shortestLine (geometry blob). These are the kNN-shaped surface that
+// MobilityDB exposes as `|=|` (NAD), `nearestApproachInstant`, and
+// `shortestLine` over (tgeo, geo|tgeo|stbox) and (stbox, geo|stbox).
+// ====================================================================
+
+template <double (*FN)(const Temporal *, const GSERIALIZED *)>
+void TgeoGeoNadExec(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t t_blob, string_t g_blob) -> double {
+            Temporal *t = DecodeTemporalCopy(t_blob);
+            int32 srid = tspatial_srid(t);
+            GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
+            double r = FN(t, gs);
+            free(t); free(gs);
+            return r;
+        });
+}
+
+template <double (*FN)(const Temporal *, const GSERIALIZED *)>
+void GeoTgeoNadExec(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t g_blob, string_t t_blob) -> double {
+            Temporal *t = DecodeTemporalCopy(t_blob);
+            int32 srid = tspatial_srid(t);
+            GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
+            double r = FN(t, gs);
+            free(t); free(gs);
+            return r;
+        });
+}
+
+template <double (*FN)(const Temporal *, const Temporal *)>
+void TgeoTgeoNadExec(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) -> double {
+            Temporal *t1 = DecodeTemporalCopy(a);
+            Temporal *t2 = DecodeTemporalCopy(b);
+            double r = FN(t1, t2);
+            free(t1); free(t2);
+            return r;
+        });
+}
+
+template <double (*FN)(const Temporal *, const STBox *)>
+void TgeoStboxNadExec(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t t_blob, string_t b_blob) -> double {
+            Temporal *t = DecodeTemporalCopy(t_blob);
+            STBox *b = DecodeStboxCopy(b_blob);
+            double r = FN(t, b);
+            free(t); free(b);
+            return r;
+        });
+}
+
+template <double (*FN)(const Temporal *, const STBox *)>
+void StboxTgeoNadExec(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t b_blob, string_t t_blob) -> double {
+            STBox *b = DecodeStboxCopy(b_blob);
+            Temporal *t = DecodeTemporalCopy(t_blob);
+            double r = FN(t, b);
+            free(t); free(b);
+            return r;
+        });
+}
+
+template <TInstant *(*FN)(const Temporal *, const GSERIALIZED *)>
+void TgeoGeoNaiExec(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t t_blob, string_t g_blob, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = DecodeTemporalCopy(t_blob);
+            int32 srid = tspatial_srid(t);
+            GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
+            TInstant *r = FN(t, gs);
+            free(t); free(gs);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TemporalToBlob(result, (Temporal *) r);
+        });
+}
+
+template <TInstant *(*FN)(const Temporal *, const Temporal *)>
+void TgeoTgeoNaiExec(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t1 = DecodeTemporalCopy(a);
+            Temporal *t2 = DecodeTemporalCopy(b);
+            TInstant *r = FN(t1, t2);
+            free(t1); free(t2);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TemporalToBlob(result, (Temporal *) r);
+        });
+}
+
+template <GSERIALIZED *(*FN)(const Temporal *, const GSERIALIZED *)>
+void TgeoGeoShortestLineExec(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t t_blob, string_t g_blob, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = DecodeTemporalCopy(t_blob);
+            int32 srid = tspatial_srid(t);
+            GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
+            GSERIALIZED *r = FN(t, gs);
+            free(t); free(gs);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return GeoToBlobAsHex(result, r);
+        });
+}
+
+template <GSERIALIZED *(*FN)(const Temporal *, const Temporal *)>
+void TgeoTgeoShortestLineExec(DataChunk &args, ExpressionState &, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t1 = DecodeTemporalCopy(a);
+            Temporal *t2 = DecodeTemporalCopy(b);
+            GSERIALIZED *r = FN(t1, t2);
+            free(t1); free(t2);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return GeoToBlobAsHex(result, r);
         });
 }
 
@@ -750,6 +887,44 @@ void TGeogpointOps::RegisterScalarFunctions(ExtensionLoader &loader) {
         {TGEOM, GEOM}, TFLOAT, TgeoGeoDistanceExec<tdistance_tgeo_geo>));
     loader.RegisterFunction(ScalarFunction("<->",
         {TGEOM, TGEOM}, TFLOAT, TgeoTgeoDistanceExec<tdistance_tgeo_tgeo>));
+
+    // -----------------------------------------------------------------
+    // Nearest-approach surface — `nearestApproachDistance` (scalar
+    // double, NAD), `|=|` operator alias for NAD, `nearestApproachInstant`
+    // (TInstant), and `shortestLine` (geometry). These are the kNN-shaped
+    // counterparts to `<->`/`tdistance`.
+    // -----------------------------------------------------------------
+    loader.RegisterFunction(ScalarFunction("nearestApproachDistance",
+        {TGEOM, GEOM}, DBL, TgeoGeoNadExec<nad_tgeo_geo>));
+    loader.RegisterFunction(ScalarFunction("nearestApproachDistance",
+        {GEOM, TGEOM}, DBL, GeoTgeoNadExec<nad_tgeo_geo>));
+    loader.RegisterFunction(ScalarFunction("nearestApproachDistance",
+        {TGEOM, TGEOM}, DBL, TgeoTgeoNadExec<nad_tgeo_tgeo>));
+    loader.RegisterFunction(ScalarFunction("nearestApproachDistance",
+        {TGEOM, STBOX}, DBL, TgeoStboxNadExec<nad_tgeo_stbox>));
+    loader.RegisterFunction(ScalarFunction("nearestApproachDistance",
+        {STBOX, TGEOM}, DBL, StboxTgeoNadExec<nad_tgeo_stbox>));
+
+    loader.RegisterFunction(ScalarFunction("|=|",
+        {TGEOM, GEOM}, DBL, TgeoGeoNadExec<nad_tgeo_geo>));
+    loader.RegisterFunction(ScalarFunction("|=|",
+        {GEOM, TGEOM}, DBL, GeoTgeoNadExec<nad_tgeo_geo>));
+    loader.RegisterFunction(ScalarFunction("|=|",
+        {TGEOM, TGEOM}, DBL, TgeoTgeoNadExec<nad_tgeo_tgeo>));
+    loader.RegisterFunction(ScalarFunction("|=|",
+        {TGEOM, STBOX}, DBL, TgeoStboxNadExec<nad_tgeo_stbox>));
+    loader.RegisterFunction(ScalarFunction("|=|",
+        {STBOX, TGEOM}, DBL, StboxTgeoNadExec<nad_tgeo_stbox>));
+
+    loader.RegisterFunction(ScalarFunction("nearestApproachInstant",
+        {TGEOM, GEOM}, TGEOM, TgeoGeoNaiExec<nai_tgeo_geo>));
+    loader.RegisterFunction(ScalarFunction("nearestApproachInstant",
+        {TGEOM, TGEOM}, TGEOM, TgeoTgeoNaiExec<nai_tgeo_tgeo>));
+
+    loader.RegisterFunction(ScalarFunction("shortestLine",
+        {TGEOM, GEOM}, GEOM, TgeoGeoShortestLineExec<shortestline_tgeo_geo>));
+    loader.RegisterFunction(ScalarFunction("shortestLine",
+        {TGEOM, TGEOM}, GEOM, TgeoTgeoShortestLineExec<shortestline_tgeo_tgeo>));
 
     // -----------------------------------------------------------------
     // Spatial functions: SRID accessor / setter, projection / transform,

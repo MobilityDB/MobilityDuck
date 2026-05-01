@@ -1,0 +1,180 @@
+# name: test/sql/parity/051_knn_distance.test
+# description: kNN-distance parity surface — `nearestApproachDistance` (NAD)
+#              scalar overloads, the `|=|` operator alias for NAD, plus
+#              `nearestApproachInstant` (NAI) and `shortestLine`. These are
+#              the kNN-shaped counterparts to `<->`/`tdistance`. They are
+#              the procedures MobilityDB binds to its GiST kNN operator
+#              class; on DuckDB the rtree index does not yet expose a
+#              priority-queue scan, so an `ORDER BY t |=| q LIMIT k` query
+#              still falls back to a sequential scan + sort, but the
+#              user-visible function/operator surface matches.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# nearestApproachDistance — tgeometry / tgeompoint / Cartesian stbox
+# =============================================================================
+
+# tgeometry × geometry, geometry × tgeometry — sqrt(3^2 + 4^2) = 5.
+query I
+SELECT nearestApproachDistance(
+  'Point(0 0)@2000-01-01'::tgeometry, 'Point(3 4)'::geometry);
+----
+5
+
+query I
+SELECT nearestApproachDistance(
+  'Point(3 4)'::geometry, 'Point(0 0)@2000-01-01'::tgeometry);
+----
+5
+
+# tgeometry × tgeometry — distance between identical instants.
+query I
+SELECT nearestApproachDistance(
+  'Point(0 0)@2000-01-01'::tgeometry,
+  'Point(3 4)@2000-01-01'::tgeometry);
+----
+5
+
+# tgeometry × stbox — distance to a box at (3..5, 4..6).
+query I
+SELECT nearestApproachDistance(
+  'Point(0 0)@2000-01-01'::tgeometry, 'STBOX X((3,4),(5,6))'::stbox);
+----
+5
+
+# stbox × tgeometry — symmetric to the previous one.
+query I
+SELECT nearestApproachDistance(
+  'STBOX X((3,4),(5,6))'::stbox, 'Point(0 0)@2000-01-01'::tgeometry);
+----
+5
+
+# stbox × geometry — pure box geometry NAD.
+query I
+SELECT nearestApproachDistance(
+  'STBOX X((3,4),(5,6))'::stbox, 'Point(0 0)'::geometry);
+----
+5
+
+query I
+SELECT nearestApproachDistance(
+  'Point(0 0)'::geometry, 'STBOX X((3,4),(5,6))'::stbox);
+----
+5
+
+# stbox × stbox — corner-to-corner distance, sqrt(2^2 + 3^2).
+query I
+SELECT round(nearestApproachDistance(
+  'STBOX X((0,0),(1,1))'::stbox, 'STBOX X((3,4),(5,6))'::stbox)::numeric, 5);
+----
+3.60555
+
+# Same surface registered for tgeompoint.
+query I
+SELECT nearestApproachDistance(
+  'Point(0 0)@2000-01-01'::tgeompoint, 'Point(3 4)'::geometry);
+----
+5
+
+query I
+SELECT nearestApproachDistance(
+  'Point(0 0)@2000-01-01'::tgeompoint, 'STBOX X((3,4),(5,6))'::stbox);
+----
+5
+
+# =============================================================================
+# `|=|` operator alias for NAD
+# =============================================================================
+
+query I
+SELECT 'Point(0 0)@2000-01-01'::tgeometry |=| 'Point(3 4)'::geometry;
+----
+5
+
+query I
+SELECT 'Point(3 4)'::geometry |=| 'Point(0 0)@2000-01-01'::tgeometry;
+----
+5
+
+query I
+SELECT 'Point(0 0)@2000-01-01'::tgeompoint
+       |=| 'STBOX X((3,4),(5,6))'::stbox;
+----
+5
+
+query I
+SELECT 'STBOX X((3,4),(5,6))'::stbox |=| 'Point(0 0)'::geometry;
+----
+5
+
+query I
+SELECT round(('STBOX X((0,0),(1,1))'::stbox
+              |=| 'STBOX X((3,4),(5,6))'::stbox)::numeric, 5);
+----
+3.60555
+
+# =============================================================================
+# kNN-style query: ORDER BY t |=| q LIMIT k. Without an index the planner
+# falls back to seq scan + sort, but the result must still be ordered.
+# =============================================================================
+
+statement ok
+CREATE TABLE knn_pts(i INT, t tgeometry);
+
+statement ok
+INSERT INTO knn_pts VALUES
+  (1, 'Point(0 0)@2000-01-01'::tgeometry),
+  (2, 'Point(5 5)@2000-01-02'::tgeometry),
+  (3, 'Point(20 20)@2000-01-03'::tgeometry);
+
+query I
+SELECT i FROM knn_pts ORDER BY t |=| 'Point(0 0)'::geometry LIMIT 2;
+----
+1
+2
+
+# =============================================================================
+# nearestApproachInstant — returns a TInstant; only verify the subtype.
+# =============================================================================
+
+query I
+SELECT tempSubtype(nearestApproachInstant(
+  '[Point(0 0)@2000-01-01, Point(10 10)@2000-01-02]'::tgeometry,
+  'Point(3 4)'::geometry));
+----
+Instant
+
+query I
+SELECT tempSubtype(nearestApproachInstant(
+  '[Point(0 0)@2000-01-01, Point(10 10)@2000-01-02]'::tgeometry,
+  '[Point(0 0)@2000-01-01, Point(10 10)@2000-01-02]'::tgeometry));
+----
+Instant
+
+query I
+SELECT tempSubtype(nearestApproachInstant(
+  '[Point(0 0)@2000-01-01, Point(10 10)@2000-01-02]'::tgeompoint,
+  'Point(3 4)'::geometry));
+----
+Instant
+
+# =============================================================================
+# shortestLine — returns a non-temporal geometry. Verify the result is
+# non-NULL on a non-degenerate input.
+# =============================================================================
+
+query I
+SELECT (shortestLine(
+  '[Point(0 0)@2000-01-01, Point(10 10)@2000-01-02]'::tgeometry,
+  'Point(3 4)'::geometry) IS NOT NULL);
+----
+true
+
+query I
+SELECT (shortestLine(
+  '[Point(0 0)@2000-01-01, Point(10 10)@2000-01-02]'::tgeometry,
+  '[Point(0 0)@2000-01-01, Point(10 10)@2000-01-02]'::tgeometry) IS NOT NULL);
+----
+true
