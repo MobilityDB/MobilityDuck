@@ -1,12 +1,6 @@
 # name: test/sql/parity/038_temporal_similarity.test
 # description: MobilityDB regression file 038_temporal_similarity.test.sql adapted for MobilityDuck
 # group: [sql]
-#
-# Whole file under `mode skip`: MobilityDuck does not register the
-# similarity-measure family — `frechetDistance`, `discreteFrechet`,
-# `dynTimeWarp` (DTW), `hausdorffDistance`, `similarityPath`. MEOS
-# symbols: temporal_frechet_distance, temporal_dyntimewarp_distance,
-# temporal_hausdorff_distance, temporal_similarity_path.
 
 require mobilityduck
 
