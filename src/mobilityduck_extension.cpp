@@ -12,6 +12,11 @@
 #include "geo/tgeogpoint.hpp"
 #include "duckdb.hpp"
 #include "geo/tgeometry.hpp"
+#include "geo/tgeometry_ops.hpp"
+#include "geo/tgeography.hpp"
+#include "geo/tgeography_ops.hpp"
+#include "geo/tgeogpoint.hpp"
+#include "geo/tgeogpoint_ops.hpp"
 #include "temporal/span.hpp"
 #include "temporal/span_aggregates.hpp"
 #include "temporal/temporal_aggregates.hpp"
@@ -261,21 +266,8 @@ static void LoadInternal(ExtensionLoader &loader) {
 	SpanTypes::RegisterScalarFunctions(loader);
 	SpanTypes::RegisterTypes(loader);
 	SpanTypes::RegisterCastFunctions(loader);
-	{
-		AggregateFunctionSet extent_set("extent");
-		SpanAggregates::AddExtentOverloads(extent_set);
-		TemporalAggregates::AddExtentOverloads(extent_set);
-		SpatialAggregates::AddExtentOverloads(extent_set);
-		loader.RegisterFunction(std::move(extent_set));
-	}
-	TemporalAggregates::RegisterTCount(loader);
-	TemporalAggregates::RegisterTemporalAggregates(loader);
-	TemporalAggregates::RegisterWindowAggregates(loader);
-	TemporalAggregates::RegisterTAvg(loader);
-	TemporalAggregates::RegisterAppendMergeAggregates(loader);
-	SpanAggregates::RegisterSpanUnion(loader);
-	SetTypes::RegisterSetUnionAgg(loader);
-	SpatialAggregates::RegisterTcentroid(loader);
+	SpanAggregates::RegisterAggregateFunctions(loader);
+	TemporalAggregates::RegisterAggregateFunctions(loader);
 
 	// Tile getters return SpanTypes blobs and consume TBOX, so all those
 	// types must already be registered.
@@ -297,6 +289,18 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TGeometryTypes::RegisterTypes(loader);
 	TGeometryTypes::RegisterCastFunctions(loader);
 	TGeometryTypes::RegisterScalarInOutFunctions(loader);
+	TGeometryOps::RegisterScalarFunctions(loader);
+
+	TGeographyTypes::RegisterTypes(loader);
+	TGeographyTypes::RegisterScalarFunctions(loader);
+	TGeographyTypes::RegisterCastFunctions(loader);
+	TGeographyTypes::RegisterScalarInOutFunctions(loader);
+	TGeographyOps::RegisterScalarFunctions(loader);
+
+	TGeogpointType::RegisterScalarFunctions(loader);
+	TGeogpointType::RegisterCastFunctions(loader);
+	TGeogpointType::RegisterScalarInOutFunctions(loader);
+	TGeogpointOps::RegisterScalarFunctions(loader);
 
 	SetTypes::RegisterTypes(loader);
 	SetTypes::RegisterCastFunctions(loader);
