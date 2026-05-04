@@ -208,6 +208,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 	static std::once_flag meos_init_flag;
     std::call_once(meos_init_flag, []() {
         meos_initialize();
+        meos_initialize_timezone("UTC");
         meos_initialize_error_handler(&MobilityduckMeosErrorHandler);
     });
 

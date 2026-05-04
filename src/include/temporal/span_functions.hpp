@@ -111,7 +111,10 @@ struct SpanFunctions {
     static void Distance_span_span(DataChunk &args, ExpressionState &state, Vector &result);
     static void Distance_value_span(DataChunk &args, ExpressionState &state, Vector &result);
     static void Distance_span_value(DataChunk &args, ExpressionState &state, Vector &result);
-    
+        // Bin functions
+    static void Span_bins(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Value_get_bin(DataChunk &args, ExpressionState &state, Vector &result);
+
 };
 
 

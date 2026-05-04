@@ -4747,4 +4747,124 @@ void SpanFunctions::Distance_span_span(DataChunk &args, ExpressionState &state, 
     }
 }
 
+// 2000-01-03 in MEOS epoch (microseconds since 2000-01-01), the Monday-aligned
+// default origin used by MobilityDB for timestamptz/tstzspan bins().
+static constexpr TimestampTz TSTZ_BIN_DEFAULT_ORIGIN = 172800000000LL;
+
+void SpanFunctions::Span_bins(DataChunk &args, ExpressionState &state, Vector &result) {
+    idx_t row_count = args.size();
+    auto &span_vec  = args.data[0];
+    auto &size_vec  = args.data[1];
+    span_vec.Flatten(row_count);
+    size_vec.Flatten(row_count);
+
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto &result_validity = FlatVector::Validity(result);
+    auto *result_data     = FlatVector::GetData<string_t>(result);
+
+    const std::string alias = result.GetType().GetAlias();
+
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (span_vec.GetValue(i).IsNull() || size_vec.GetValue(i).IsNull()) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+
+        string_t span_blob = FlatVector::GetData<string_t>(span_vec)[i];
+        Span *s = reinterpret_cast<Span *>(malloc(span_blob.GetSize()));
+        memcpy(s, span_blob.GetData(), span_blob.GetSize());
+
+        int count = 0;
+        Span *spans = nullptr;
+
+        if (alias == "intspanset") {
+            int32_t vsize = FlatVector::GetData<int32_t>(size_vec)[i];
+            spans = intspan_bins(s, vsize, 0, &count);
+        } else if (alias == "bigintspanset") {
+            int64_t vsize = FlatVector::GetData<int64_t>(size_vec)[i];
+            spans = bigintspan_bins(s, vsize, (int64_t)0, &count);
+        } else if (alias == "floatspanset") {
+            double vsize = FlatVector::GetData<double>(size_vec)[i];
+            spans = floatspan_bins(s, vsize, 0.0, &count);
+        } else if (alias == "tstzspanset") {
+            interval_t iv = FlatVector::GetData<interval_t>(size_vec)[i];
+            MeosInterval meos_iv = IntervaltToInterval(iv);
+            spans = tstzspan_bins(s, &meos_iv, TSTZ_BIN_DEFAULT_ORIGIN, &count);
+        }
+
+        free(s);
+
+        if (!spans || count <= 0) {
+            free(spans);
+            result_validity.SetInvalid(i);
+            continue;
+        }
+
+        SpanSet *out_ss = spanset_make_exp(spans, count, count, false, false);
+        free(spans);
+        size_t out_size = spanset_mem_size(out_ss);
+        result_data[i] = StringVector::AddStringOrBlob(result, (const char *)out_ss, out_size);
+        free(out_ss);
+        result_validity.SetValid(i);
+    }
+}
+
+void SpanFunctions::Value_get_bin(DataChunk &args, ExpressionState &state, Vector &result) {
+    idx_t row_count  = args.size();
+    auto &value_vec  = args.data[0];
+    auto &size_vec   = args.data[1];
+    value_vec.Flatten(row_count);
+    size_vec.Flatten(row_count);
+
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto &result_validity = FlatVector::Validity(result);
+    auto *result_data     = FlatVector::GetData<string_t>(result);
+
+    const LogicalType &val_type = args.data[0].GetType();
+
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (value_vec.GetValue(i).IsNull() || size_vec.GetValue(i).IsNull()) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+
+        Span *span = nullptr;
+
+        if (val_type == LogicalType::INTEGER) {
+            int32_t value = FlatVector::GetData<int32_t>(value_vec)[i];
+            int32_t vsize = FlatVector::GetData<int32_t>(size_vec)[i];
+            int lower = int_get_bin(value, vsize, 0);
+            span = intspan_make(lower, lower + vsize, true, false);
+        } else if (val_type == LogicalType::BIGINT) {
+            int64_t value = FlatVector::GetData<int64_t>(value_vec)[i];
+            int64_t vsize = FlatVector::GetData<int64_t>(size_vec)[i];
+            int64_t lower = bigint_get_bin(value, vsize, (int64_t)0);
+            span = bigintspan_make(lower, lower + vsize, true, false);
+        } else if (val_type == LogicalType::DOUBLE) {
+            double value = FlatVector::GetData<double>(value_vec)[i];
+            double vsize = FlatVector::GetData<double>(size_vec)[i];
+            double lower = float_get_bin(value, vsize, 0.0);
+            span = floatspan_make(lower, lower + vsize, true, false);
+        } else if (val_type == LogicalType::TIMESTAMP_TZ) {
+            timestamp_tz_t duckdb_ts = FlatVector::GetData<timestamp_tz_t>(value_vec)[i];
+            interval_t iv            = FlatVector::GetData<interval_t>(size_vec)[i];
+            MeosInterval meos_iv     = IntervaltToInterval(iv);
+            TimestampTz meos_ts      = DuckDBToMeosTimestamp(duckdb_ts).value;
+            TimestampTz lower        = timestamptz_get_bin(meos_ts, &meos_iv, TSTZ_BIN_DEFAULT_ORIGIN);
+            TimestampTz upper        = add_timestamptz_interval(lower, &meos_iv);
+            span = tstzspan_make(lower, upper, true, false);
+        }
+
+        if (!span) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+
+        size_t span_size = sizeof(Span);
+        result_data[i]   = StringVector::AddStringOrBlob(result, (const char *)span, span_size);
+        free(span);
+        result_validity.SetValid(i);
+    }
+}
+
 }

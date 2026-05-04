@@ -401,6 +401,34 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         ScalarFunction("splitEachNspans", {SetTypes::tstzset(), LogicalType::INTEGER},
                        LogicalType::LIST(SpanTypes::TSTZSPAN()), SpanFunctions::Set_split_each_n_spans));
 
+    // bins(<span>, <size>) → <spanset>
+    loader.RegisterFunction(
+        ScalarFunction("bins", {SpanTypes::INTSPAN(), LogicalType::INTEGER},
+                       SpansetTypes::intspanset(), SpanFunctions::Span_bins));
+    loader.RegisterFunction(
+        ScalarFunction("bins", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT},
+                       SpansetTypes::bigintspanset(), SpanFunctions::Span_bins));
+    loader.RegisterFunction(
+        ScalarFunction("bins", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE},
+                       SpansetTypes::floatspanset(), SpanFunctions::Span_bins));
+    loader.RegisterFunction(
+        ScalarFunction("bins", {SpanTypes::TSTZSPAN(), LogicalType::INTERVAL},
+                       SpansetTypes::tstzspanset(), SpanFunctions::Span_bins));
+
+    // getBin(<value>, <size>) → <span>
+    loader.RegisterFunction(
+        ScalarFunction("getBin", {LogicalType::INTEGER, LogicalType::INTEGER},
+                       SpanTypes::INTSPAN(), SpanFunctions::Value_get_bin));
+    loader.RegisterFunction(
+        ScalarFunction("getBin", {LogicalType::BIGINT, LogicalType::BIGINT},
+                       SpanTypes::BIGINTSPAN(), SpanFunctions::Value_get_bin));
+    loader.RegisterFunction(
+        ScalarFunction("getBin", {LogicalType::DOUBLE, LogicalType::DOUBLE},
+                       SpanTypes::FLOATSPAN(), SpanFunctions::Value_get_bin));
+    loader.RegisterFunction(
+        ScalarFunction("getBin", {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL},
+                       SpanTypes::TSTZSPAN(), SpanFunctions::Value_get_bin));
+
     loader.RegisterFunction(
         ScalarFunction("floor", {SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Floatspan_floor)
     );
