@@ -125,17 +125,10 @@ SELECT TTEXT('hello', '2023-01-01'::TIMESTAMPTZ);
 # Conversion functions (tboolSeq, tintSeq, tfloatSeq, ttextSeq with interp)
 # =============================================================================
 
-mode skip
-
-# `tboolSeq(<temporal>, <interpolation_text>)` 2-arg form parsing;
-# verify discrete/step/linear interpolation arg handling in
-# src/temporal/temporal.cpp.
 query I
 SELECT tboolSeq(tbool '{true@2000-01-01, false@2000-01-02}', 'discrete');
 ----
 {t@2000-01-01 00:00:00+00, f@2000-01-02 00:00:00+00}
-
-mode unskip
 
 # =============================================================================
 # Accessor functions
