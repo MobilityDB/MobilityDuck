@@ -1,0 +1,95 @@
+# name: test/sql/parity/053_tgeompoint_io.test
+# description: Round-trip I/O for tgeompoint — asBinary / asEWKB / asHexWKB /
+#              asHexEWKB / asMFJSON producers and the matching
+#              tgeompointFromText / FromEWKT / FromBinary / FromEWKB /
+#              FromHexWKB / FromHexEWKB / FromMFJSON constructors.
+# group: [sql]
+
+require mobilityduck
+
+# Producers all return non-empty output
+
+query I
+SELECT octet_length(asBinary(tgeompoint '[POINT(0 0)@2000-01-01]')) > 0;
+----
+true
+
+query I
+SELECT octet_length(asEWKB(tgeompoint '[POINT(0 0)@2000-01-01]')) > 0;
+----
+true
+
+query I
+SELECT length(asHexWKB(tgeompoint '[POINT(0 0)@2000-01-01]')) > 0;
+----
+true
+
+query I
+SELECT length(asHexEWKB(tgeompoint '[POINT(0 0)@2000-01-01]')) > 0;
+----
+true
+
+query I
+SELECT length(asMFJSON(tgeompoint '[POINT(0 0)@2000-01-01]')) > 0;
+----
+true
+
+# Round-trips: producer + consumer reconstructs the same value
+
+query I
+SELECT tgeompointFromBinary(asBinary(tgeompoint '[POINT(0 0)@2000-01-01]'))
+     = tgeompoint '[POINT(0 0)@2000-01-01]';
+----
+true
+
+query I
+SELECT tgeompointFromEWKB(asEWKB(tgeompoint '[POINT(0 0)@2000-01-01]'))
+     = tgeompoint '[POINT(0 0)@2000-01-01]';
+----
+true
+
+query I
+SELECT tgeompointFromHexWKB(asHexWKB(tgeompoint '[POINT(0 0)@2000-01-01]'))
+     = tgeompoint '[POINT(0 0)@2000-01-01]';
+----
+true
+
+query I
+SELECT tgeompointFromHexEWKB(asHexEWKB(tgeompoint '[POINT(0 0)@2000-01-01]'))
+     = tgeompoint '[POINT(0 0)@2000-01-01]';
+----
+true
+
+query I
+SELECT tgeompointFromMFJSON(asMFJSON(tgeompoint '[POINT(0 0)@2000-01-01]'))
+     = tgeompoint '[POINT(0 0)@2000-01-01]';
+----
+true
+
+# Text round-trip
+
+query I
+SELECT tgeompointFromText('[POINT(0 0)@2000-01-01]')
+     = tgeompoint '[POINT(0 0)@2000-01-01]';
+----
+true
+
+query I
+SELECT tgeompointFromEWKT(asEWKT(tgeompoint '[POINT(0 0)@2000-01-01]'))
+     = tgeompoint '[POINT(0 0)@2000-01-01]';
+----
+true
+
+# asMFJSON with bbox flag
+
+query I
+SELECT length(asMFJSON(tgeompoint '[POINT(0 0)@2000-01-01]', TRUE)) >= length(asMFJSON(tgeompoint '[POINT(0 0)@2000-01-01]', FALSE));
+----
+true
+
+# asMFJSON with full options (bbox, flags, precision, srs)
+
+query I
+SELECT length(asMFJSON(tgeompoint '[POINT(0 0)@2000-01-01]', FALSE, 0, 6, 'EPSG:4326')) > 0;
+----
+true

@@ -1,0 +1,50 @@
+# name: test/sql/parity/021_tbox_wkb_hash.test
+# description: TBox WKB/hex-WKB serialization round-trip + hash bindings.
+# group: [sql]
+
+require mobilityduck
+
+# asHexWKB produces a non-empty hex string
+
+query I
+SELECT length(asHexWKB(tbox 'TBOXFLOAT XT([1.5, 2.5),[2000-01-01, 2000-01-03])')) > 0;
+----
+true
+
+# tboxFromHexWKB(asHexWKB(x)) round-trips to x
+
+query I
+SELECT tboxFromHexWKB(asHexWKB(tbox 'TBOXFLOAT XT([1.5, 2.5),[2000-01-01, 2000-01-03])'))
+     = tbox 'TBOXFLOAT XT([1.5, 2.5),[2000-01-01, 2000-01-03])';
+----
+true
+
+# tboxFromBinary(asBinary(x)) round-trips to x
+
+query I
+SELECT tboxFromBinary(asBinary(tbox 'TBOXFLOAT XT([1.5, 2.5),[2000-01-01, 2000-01-03])'))
+     = tbox 'TBOXFLOAT XT([1.5, 2.5),[2000-01-01, 2000-01-03])';
+----
+true
+
+# tbox_hash is deterministic and a hash of two distinct values differs
+
+query I
+SELECT tbox_hash(tbox 'TBOXFLOAT XT([1, 2),[2000-01-01, 2000-01-02])')
+     = tbox_hash(tbox 'TBOXFLOAT XT([1, 2),[2000-01-01, 2000-01-02])');
+----
+true
+
+query I
+SELECT tbox_hash(tbox 'TBOXFLOAT XT([1, 2),[2000-01-01, 2000-01-02])')
+    <> tbox_hash(tbox 'TBOXFLOAT XT([3, 4),[2000-01-01, 2000-01-02])');
+----
+true
+
+# tbox_hash_extended changes with seed
+
+query I
+SELECT tbox_hash_extended(tbox 'TBOXFLOAT XT([1, 2),[2000-01-01, 2000-01-02])', 1)
+    <> tbox_hash_extended(tbox 'TBOXFLOAT XT([1, 2),[2000-01-01, 2000-01-02])', 2);
+----
+true

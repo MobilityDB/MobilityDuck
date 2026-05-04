@@ -1770,4 +1770,200 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
 }
 
+/* ***************************************************
+ * Round-trip I/O for tgeompoint: asEWKB / asHexWKB / asHexEWKB /
+ * asMFJSON and the matching tgeompointFromText / FromBinary / FromEWKB /
+ * FromHexWKB / FromHexEWKB / FromMFJSON constructors.
+ ****************************************************/
+
+namespace {
+
+/* MEOS WKB variant flag from meos_geo.h: 0 = base, 0x04 = extended (with SRID). */
+constexpr uint8_t WKB_BASE = 0x00;
+/* WKB_EXTENDED is provided by meos_geo.h as #define WKB_EXTENDED 0x04 */
+
+inline Temporal *BlobToTemp(string_t b) {
+    size_t sz = b.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, b.GetData(), sz);
+    return reinterpret_cast<Temporal *>(copy);
+}
+
+string_t TempToResultBlob(Vector &result, Temporal *t) {
+    size_t sz = temporal_mem_size(t);
+    string_t blob(reinterpret_cast<const char *>(t), sz);
+    return StringVector::AddStringOrBlob(result, blob);
+}
+
+void TgeoAsWkbExec(DataChunk &args, ExpressionState &state, Vector &result, uint8_t variant) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            Temporal *t = BlobToTemp(input);
+            size_t sz = 0;
+            uint8_t *wkb = temporal_as_wkb(t, variant, &sz);
+            free(t);
+            if (!wkb || sz == 0) {
+                if (wkb) free(wkb);
+                throw InternalException("temporal_as_wkb returned null");
+            }
+            string_t blob(reinterpret_cast<const char *>(wkb), sz);
+            string_t stored = StringVector::AddStringOrBlob(result, blob);
+            free(wkb);
+            return stored;
+        });
+}
+
+void TgeoAsHexWkbExec(DataChunk &args, ExpressionState &state, Vector &result, uint8_t variant) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            Temporal *t = BlobToTemp(input);
+            size_t sz = 0;
+            char *hex = temporal_as_hexwkb(t, variant, &sz);
+            (void) sz;
+            free(t);
+            if (!hex) throw InternalException("temporal_as_hexwkb returned null");
+            string_t stored = StringVector::AddString(result, hex);
+            free(hex);
+            return stored;
+        });
+}
+
+void TgeoFromWkbExec(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() == 0) throw InvalidInputException("Empty WKB input");
+            uint8_t *wkb = (uint8_t *)malloc(input.GetSize());
+            memcpy(wkb, input.GetData(), input.GetSize());
+            Temporal *t = temporal_from_wkb(wkb, input.GetSize());
+            free(wkb);
+            if (!t) throw InvalidInputException("temporal_from_wkb: invalid WKB");
+            string_t stored = TempToResultBlob(result, t);
+            free(t);
+            return stored;
+        });
+}
+
+void TgeoFromHexWkbExec(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            std::string hex(input.GetData(), input.GetSize());
+            Temporal *t = temporal_from_hexwkb(hex.c_str());
+            if (!t) throw InvalidInputException("temporal_from_hexwkb: invalid hex-WKB");
+            string_t stored = TempToResultBlob(result, t);
+            free(t);
+            return stored;
+        });
+}
+
+void TgeoAsMfjsonExec(DataChunk &args, ExpressionState &state, Vector &result) {
+    /* asMFJSON(tgeompoint[, with_bbox[, flags[, precision[, srs]]]]).
+     * MobilityDB defaults: with_bbox=false, flags=0, precision=15, srs=NULL. */
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    auto in = FlatVector::GetData<string_t>(args.data[0]);
+    auto out_data = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    const idx_t cc = args.ColumnCount();
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        Temporal *t = BlobToTemp(in[row]);
+        bool with_bbox = (cc > 1) ? FlatVector::GetData<bool>(args.data[1])[row] : false;
+        int flags = (cc > 2) ? FlatVector::GetData<int32_t>(args.data[2])[row] : 0;
+        int precision = (cc > 3) ? FlatVector::GetData<int32_t>(args.data[3])[row] : 15;
+        std::string srs;
+        const char *srs_cstr = nullptr;
+        if (cc > 4) {
+            string_t s = FlatVector::GetData<string_t>(args.data[4])[row];
+            srs.assign(s.GetData(), s.GetSize());
+            srs_cstr = srs.empty() ? nullptr : srs.c_str();
+        }
+        char *json = temporal_as_mfjson(t, with_bbox, flags, precision, srs_cstr);
+        free(t);
+        if (!json) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        out_data[row] = StringVector::AddString(result, json);
+        free(json);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void TgeoFromMfjsonExec(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            std::string s(input.GetData(), input.GetSize());
+            Temporal *t = tgeompoint_from_mfjson(s.c_str());
+            if (!t) throw InvalidInputException("tgeompoint_from_mfjson: invalid MFJSON");
+            string_t stored = TempToResultBlob(result, t);
+            free(t);
+            return stored;
+        });
+}
+
+void TgeoFromTextExec(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            std::string s(input.GetData(), input.GetSize());
+            Temporal *t = tgeompoint_in(s.c_str());
+            if (!t) throw InvalidInputException("tgeompoint_in: invalid text");
+            string_t stored = TempToResultBlob(result, t);
+            free(t);
+            return stored;
+        });
+}
+
+} // namespace
+
+void TgeompointType::RegisterRoundtripIO(ExtensionLoader &loader) {
+    const auto T = TGEOMPOINT();
+    const auto V = LogicalType::VARCHAR;
+    const auto B = LogicalType::BLOB;
+    const auto BL = LogicalType::BOOLEAN;
+    const auto I = LogicalType::INTEGER;
+
+    /* asBinary / asEWKB — base WKB and extended WKB (with SRID) */
+    loader.RegisterFunction(ScalarFunction("asBinary", {T}, B,
+        [](DataChunk &a, ExpressionState &s, Vector &r) { TgeoAsWkbExec(a, s, r, WKB_BASE); }));
+    loader.RegisterFunction(ScalarFunction("asEWKB",   {T}, B,
+        [](DataChunk &a, ExpressionState &s, Vector &r) { TgeoAsWkbExec(a, s, r, WKB_EXTENDED); }));
+
+    /* asHexWKB / asHexEWKB */
+    loader.RegisterFunction(ScalarFunction("asHexWKB",  {T}, V,
+        [](DataChunk &a, ExpressionState &s, Vector &r) { TgeoAsHexWkbExec(a, s, r, WKB_BASE); }));
+    loader.RegisterFunction(ScalarFunction("asHexEWKB", {T}, V,
+        [](DataChunk &a, ExpressionState &s, Vector &r) { TgeoAsHexWkbExec(a, s, r, WKB_EXTENDED); }));
+
+    /* asMFJSON: 1..5 arg overloads */
+    loader.RegisterFunction(ScalarFunction("asMFJSON", {T},                     V, TgeoAsMfjsonExec));
+    loader.RegisterFunction(ScalarFunction("asMFJSON", {T, BL},                 V, TgeoAsMfjsonExec));
+    loader.RegisterFunction(ScalarFunction("asMFJSON", {T, BL, I},              V, TgeoAsMfjsonExec));
+    loader.RegisterFunction(ScalarFunction("asMFJSON", {T, BL, I, I},           V, TgeoAsMfjsonExec));
+    loader.RegisterFunction(ScalarFunction("asMFJSON", {T, BL, I, I, V},        V, TgeoAsMfjsonExec));
+
+    /* tgeompointFromText / FromEWKT — both route to tgeompoint_in (auto-detects EWKT prefix) */
+    loader.RegisterFunction(ScalarFunction("tgeompointFromText",  {V}, T, TgeoFromTextExec));
+    loader.RegisterFunction(ScalarFunction("tgeompointFromEWKT",  {V}, T, TgeoFromTextExec));
+
+    /* tgeompointFromBinary / FromEWKB — temporal_from_wkb auto-detects format */
+    loader.RegisterFunction(ScalarFunction("tgeompointFromBinary", {B}, T, TgeoFromWkbExec));
+    loader.RegisterFunction(ScalarFunction("tgeompointFromEWKB",   {B}, T, TgeoFromWkbExec));
+
+    /* tgeompointFromHexWKB / FromHexEWKB — temporal_from_hexwkb auto-detects */
+    loader.RegisterFunction(ScalarFunction("tgeompointFromHexWKB",  {V}, T, TgeoFromHexWkbExec));
+    loader.RegisterFunction(ScalarFunction("tgeompointFromHexEWKB", {V}, T, TgeoFromHexWkbExec));
+
+    /* tgeompointFromMFJSON */
+    loader.RegisterFunction(ScalarFunction("tgeompointFromMFJSON", {V}, T, TgeoFromMfjsonExec));
+}
+
 } // namespace duckdb
