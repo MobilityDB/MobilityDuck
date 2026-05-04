@@ -2,35 +2,38 @@
 # description: MobilityDB regression file 032_temporal_topops.test.sql adapted for MobilityDuck
 # group: [sql]
 #
-# Whole file under `mode skip`. Topological operators (`@>`, `<@`,
-# `&&`, `-|-`) between temporal and {value, span, spanset, tbox,
-# temporal} pairs are not registered in MobilityDuck. The set / span
-# / spanset variants of these operators ARE bound (and pass in the
-# corresponding parity files), but the temporal-side variants are
-# not.
+# Topological operators (`@>`, `<@`, `&&`, `-|-`) between temporal and
+# {value, span, spanset, tbox, temporal} pairs.
 #
-# MEOS symbols: contains_temporal_value, contained_value_temporal,
-# overlaps_temporal_temporal, adjacent_temporal_temporal — and the
-# matrix of (temporal × {value, tbox, tstzspan, temporal}) for each
-# of @>, <@, &&, -|-.
+# Registered and active:
+#   temporal && temporal  (overlaps_temporal_temporal)
+#   temporal @> tbox      (contains_tnumber_tbox)
+#   temporal -|- tstzspan (adjacent_temporal_tstzspan)
+#
+# Individually skipped (no MEOS symbol for raw scalar ↔ temporal):
+#   temporal @> value     (needs contains_tnumber_value — not in meos.h)
+#   value <@ temporal     (needs contained_value_tnumber — not in meos.h)
+#   Workaround: convert value to a unit span/tbox first.
 
 require mobilityduck
 
 mode skip
-
-# temporal @> value
-
+# temporal @> value — MEOS exposes contains_tnumber_numspan but not
+# contains_tnumber_value; a raw scalar overload is not yet implemented.
 query I
 SELECT tint '[1@2000-01-01, 5@2000-01-05]' @> 3;
 ----
 true
+mode unskip
 
-# value <@ temporal
-
+mode skip
+# value <@ temporal — same gap as @> above; contained_value_tnumber
+# is not in meos.h.
 query I
 SELECT 3 <@ tint '[1@2000-01-01, 5@2000-01-05]';
 ----
 true
+mode unskip
 
 # temporal && temporal
 
@@ -52,5 +55,3 @@ query I
 SELECT tint '[1@2000-01-01, 5@2000-01-05]' -|- tstzspan '[2000-01-05, 2000-01-06]';
 ----
 true
-
-mode unskip
