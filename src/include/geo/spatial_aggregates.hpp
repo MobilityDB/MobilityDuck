@@ -5,12 +5,12 @@
 
 namespace duckdb {
 
-struct SpanAggregates {
-    // Add span / spanset / set overloads of extent() to the given set.
+struct SpatialAggregates {
+    // Add tgeompoint overloads of extent() to the given set.
     static void AddExtentOverloads(AggregateFunctionSet &extent_set);
 
-    // Register spanUnion(span | spanset) → spanset.
-    static void RegisterSpanUnion(ExtensionLoader &loader);
+    // Register tCentroid(tgeompoint) -> tgeompoint.
+    static void RegisterTcentroid(ExtensionLoader &loader);
 };
 
 } // namespace duckdb
