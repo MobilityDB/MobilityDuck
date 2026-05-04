@@ -9,6 +9,8 @@
 #include "temporal/span.hpp"
 #include "geo/stbox.hpp"
 #include "geo/tgeompoint.hpp"
+#include "geo/tgeometry.hpp"
+#include "time_util.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/common/exception.hpp"
@@ -125,6 +127,10 @@ void TemporalTypes::RegisterCastFunctions(ExtensionLoader &loader) {
 
 }
 }
+
+void TemporalTimeSplitExec(DataChunk &, ExpressionState &, Vector &);
+template <bool> void TnumberValueSplitExec(DataChunk &, ExpressionState &, Vector &);
+void StboxQuadSplitExec(DataChunk &, ExpressionState &, Vector &);
 
 void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     for (auto &type : TemporalTypes::AllTypes()) {
@@ -1596,6 +1602,163 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction("||", {LogicalType::VARCHAR, TemporalTypes::TTEXT()}, TemporalTypes::TTEXT(), TemporalFunctions::Textcat_text_ttext));
     loader.RegisterFunction(ScalarFunction("||", {TemporalTypes::TTEXT(), LogicalType::VARCHAR}, TemporalTypes::TTEXT(), TemporalFunctions::Textcat_ttext_text));
     loader.RegisterFunction(ScalarFunction("||", {TemporalTypes::TTEXT(), TemporalTypes::TTEXT()}, TemporalTypes::TTEXT(), TemporalFunctions::Textcat_ttext_ttext));
+
+    // timeSplit(temporal, interval, timestamptz) -> LIST<temporal>
+    for (const auto &ttype : {TemporalTypes::TINT(), TemporalTypes::TFLOAT(),
+                              TemporalTypes::TBOOL(), TemporalTypes::TTEXT(),
+                              TgeompointType::TGEOMPOINT(),
+                              TGeometryTypes::TGEOMETRY()}) {
+        loader.RegisterFunction(ScalarFunction("timeSplit",
+            {ttype, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ},
+            LogicalType::LIST(ttype),
+            TemporalTimeSplitExec));
+    }
+
+    // valueSplit(tnumber, size, origin) -> LIST<tnumber>
+    loader.RegisterFunction(ScalarFunction("valueSplit",
+        {TemporalTypes::TINT(), LogicalType::INTEGER, LogicalType::INTEGER},
+        LogicalType::LIST(TemporalTypes::TINT()),
+        TnumberValueSplitExec<true>));
+    loader.RegisterFunction(ScalarFunction("valueSplit",
+        {TemporalTypes::TFLOAT(), LogicalType::DOUBLE, LogicalType::DOUBLE},
+        LogicalType::LIST(TemporalTypes::TFLOAT()),
+        TnumberValueSplitExec<false>));
+
+    // quadSplit(stbox) -> LIST<stbox>
+    loader.RegisterFunction(ScalarFunction("quadSplit",
+        {StboxType::STBOX()}, LogicalType::LIST(StboxType::STBOX()),
+        StboxQuadSplitExec));
+}
+
+// LIST<temporal> emitter — shared by the *Split family.
+inline void EmitTemporalList(Vector &result, idx_t row_idx, Temporal **parts,
+                             int count, idx_t &total_offset,
+                             list_entry_t *list_entries, Vector &child_vector,
+                             ValidityMask &result_validity) {
+    if (!parts || count <= 0) {
+        if (parts) free(parts);
+        result_validity.SetInvalid(row_idx);
+        return;
+    }
+    ListVector::SetListSize(result, total_offset + count);
+    list_entries[row_idx] = list_entry_t{total_offset, (uint64_t) count};
+    auto *child_data = FlatVector::GetData<string_t>(child_vector);
+    for (int j = 0; j < count; ++j) {
+        size_t sz = temporal_mem_size(parts[j]);
+        child_data[total_offset + j] = StringVector::AddStringOrBlob(
+            child_vector, reinterpret_cast<const char *>(parts[j]), sz);
+        free(parts[j]);
+    }
+    free(parts);
+    total_offset += count;
+}
+
+void TemporalTimeSplitExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t c = 0; c < args.ColumnCount(); ++c) args.data[c].Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+    idx_t total_offset = 0;
+
+    auto temp_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto iv_data = FlatVector::GetData<interval_t>(args.data[1]);
+    auto torigin_data = FlatVector::GetData<timestamp_tz_t>(args.data[2]);
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (FlatVector::IsNull(args.data[0], i) || FlatVector::IsNull(args.data[1], i) ||
+            FlatVector::IsNull(args.data[2], i)) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        Temporal *t = (Temporal *) malloc(temp_data[i].GetSize());
+        memcpy(t, temp_data[i].GetData(), temp_data[i].GetSize());
+        MeosInterval iv = IntervaltToInterval(iv_data[i]);
+        timestamp_tz_t tor = DuckDBToMeosTimestamp(torigin_data[i]);
+        TimestampTz *time_bins = nullptr;
+        int count = 0;
+        Temporal **parts = temporal_time_split(t, &iv, (TimestampTz) tor.value,
+                                               &time_bins, &count);
+        free(t);
+        if (time_bins) free(time_bins);
+        EmitTemporalList(result, i, parts, count, total_offset, list_entries,
+                         child_vector, result_validity);
+    }
+}
+
+template <bool IS_INT>
+void TnumberValueSplitExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t c = 0; c < args.ColumnCount(); ++c) args.data[c].Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+    idx_t total_offset = 0;
+
+    auto temp_data = FlatVector::GetData<string_t>(args.data[0]);
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (FlatVector::IsNull(args.data[0], i) || FlatVector::IsNull(args.data[1], i) ||
+            FlatVector::IsNull(args.data[2], i)) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        Temporal *t = (Temporal *) malloc(temp_data[i].GetSize());
+        memcpy(t, temp_data[i].GetData(), temp_data[i].GetSize());
+        Datum size_d, origin_d;
+        if (IS_INT) {
+            size_d = Int32GetDatum(FlatVector::GetData<int32_t>(args.data[1])[i]);
+            origin_d = Int32GetDatum(FlatVector::GetData<int32_t>(args.data[2])[i]);
+        } else {
+            size_d = Float8GetDatum(FlatVector::GetData<double>(args.data[1])[i]);
+            origin_d = Float8GetDatum(FlatVector::GetData<double>(args.data[2])[i]);
+        }
+        Datum *bins = nullptr;
+        int count = 0;
+        Temporal **parts = tnumber_value_split(t, size_d, origin_d, &bins, &count);
+        free(t);
+        if (bins) free(bins);
+        EmitTemporalList(result, i, parts, count, total_offset, list_entries,
+                         child_vector, result_validity);
+    }
+}
+
+void StboxQuadSplitExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t row_count = args.size();
+    args.data[0].Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+    idx_t total_offset = 0;
+    auto box_data = FlatVector::GetData<string_t>(args.data[0]);
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (FlatVector::IsNull(args.data[0], i)) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        STBox box;
+        memcpy(&box, box_data[i].GetData(), sizeof(STBox));
+        int count = 0;
+        STBox *quads = stbox_quad_split(&box, &count);
+        if (!quads || count <= 0) {
+            if (quads) free(quads);
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        ListVector::SetListSize(result, total_offset + count);
+        list_entries[i] = list_entry_t{total_offset, (uint64_t) count};
+        auto *child_data = FlatVector::GetData<string_t>(child_vector);
+        for (int j = 0; j < count; ++j) {
+            child_data[total_offset + j] = StringVector::AddStringOrBlob(
+                child_vector, reinterpret_cast<const char *>(&quads[j]), sizeof(STBox));
+        }
+        free(quads);
+        total_offset += count;
+    }
 }
 
 struct TemporalUnnestBindData : public TableFunctionData {
