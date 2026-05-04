@@ -1,4 +1,4 @@
-#include "geo/tgeometry.hpp"
+#include "geo/tgeography.hpp"
 #include "geo/tgeompoint_functions.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/common/extension_type_info.hpp"
@@ -24,9 +24,9 @@ extern "C" {
 
 namespace duckdb {
 
-LogicalType TGeometryTypes::TGEOMETRY() {
+LogicalType TGeographyTypes::TGEOGRAPHY() {
     auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("TGEOMETRY");
+    type.SetAlias("TGEOGRAPHY");
     return type;
 }
 
@@ -34,7 +34,7 @@ LogicalType TGeometryTypes::TGEOMETRY() {
  * Constructors
 */
 
-inline void Tgeo_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
+inline void Tgeog_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_geom_vec = args.data[0];
     
@@ -43,9 +43,9 @@ inline void Tgeo_constructor(DataChunk &args, ExpressionState &state, Vector &re
         [&](string_t input_geom_str) -> string_t {
             std::string input = input_geom_str.GetString();
             
-            Temporal *tinst = tgeometry_in(input.c_str());
+            Temporal *tinst = tgeography_in(input.c_str());
             if (!tinst) {
-                throw InvalidInputException("Invalid TGEOMETRY input: " + input);
+                throw InvalidInputException("Invalid TGEOGRAPHY input: " + input);
             }
             
             size_t data_size = temporal_mem_size(tinst);
@@ -53,7 +53,7 @@ inline void Tgeo_constructor(DataChunk &args, ExpressionState &state, Vector &re
             uint8_t *data_buffer = (uint8_t*)malloc(data_size);
             if (!data_buffer) {
                 free(tinst);  
-                throw InvalidInputException("Failed to allocate memory for TGEOMETRY data");
+                throw InvalidInputException("Failed to allocate memory for TGEOGRAPHY data");
             }
             
             memcpy(data_buffer, tinst, data_size);
@@ -72,7 +72,7 @@ inline void Tgeo_constructor(DataChunk &args, ExpressionState &state, Vector &re
     }
 }
 
-inline void Tgeoinst_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
+inline void Tgeoginst_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &value_vec = args.data[0];
     auto &t_vec = args.data[1];
@@ -158,7 +158,7 @@ inline void Tsequence_from_base_tstzspan(DataChunk &args, ExpressionState &state
                 interp = interptype_from_string(interp_string.c_str());
             }
 
-            TSequence *seq = tsequence_from_base_tstzspan(Datum(gs), T_TGEOMETRY, span_cmp, interp);
+            TSequence *seq = tsequence_from_base_tstzspan(Datum(gs), T_TGEOGRAPHY, span_cmp, interp);
 
             if (seq == NULL) {
                 free(gs);
@@ -192,8 +192,8 @@ inline void Tsequence_from_base_tstzspan(DataChunk &args, ExpressionState &state
     }
 }
 
-TInstant **temparr_extract(Vector &tgeometry_arr_vec, list_entry_t list_entry, int *count) {
-    auto &child_vector = ListVector::GetEntry(tgeometry_arr_vec);
+TInstant **temparr_extract_g(Vector &tgeography_arr_vec, list_entry_t list_entry, int *count) {
+    auto &child_vector = ListVector::GetEntry(tgeography_arr_vec);
     auto list_size = list_entry.length;
     auto list_offset = list_entry.offset;
     
@@ -264,8 +264,8 @@ inline void Tsequence_constructor(DataChunk &args, ExpressionState &state, Vecto
     auto arg_count = args.ColumnCount();
     
     
-    auto &tgeometry_arr_vec = args.data[0];    
-    tgeometry_arr_vec.Flatten(count);
+    auto &tgeography_arr_vec = args.data[0];    
+    tgeography_arr_vec.Flatten(count);
     
     Vector *interp_vec = nullptr;
     Vector *lower_vec = nullptr;
@@ -286,21 +286,21 @@ inline void Tsequence_constructor(DataChunk &args, ExpressionState &state, Vecto
     
     result.Flatten(count);
     
-    auto tgeometry_data = FlatVector::GetData<list_entry_t>(tgeometry_arr_vec);
+    auto tgeography_data = FlatVector::GetData<list_entry_t>(tgeography_arr_vec);
     auto result_data = FlatVector::GetData<string_t>(result);
     
     // Get validity masks
-    auto &tgeometry_validity = FlatVector::Validity(tgeometry_arr_vec);
+    auto &tgeography_validity = FlatVector::Validity(tgeography_arr_vec);
     auto &result_validity = FlatVector::Validity(result);
     
     for (idx_t i = 0; i < count; i++) {
-        if (!tgeometry_validity.RowIsValid(i)) {
+        if (!tgeography_validity.RowIsValid(i)) {
             result_validity.SetInvalid(i);
             continue;
         }
         
         try {
-            list_entry_t list_entry = tgeometry_data[i];
+            list_entry_t list_entry = tgeography_data[i];
             
             // Handle interp parameter with default
             std::string interp_str = default_interp;
@@ -334,7 +334,7 @@ inline void Tsequence_constructor(DataChunk &args, ExpressionState &state, Vecto
             
             // Extract array elements
             int element_count;
-            TInstant **instants = temparr_extract(tgeometry_arr_vec, list_entry, &element_count);
+            TInstant **instants = temparr_extract_g(tgeography_arr_vec, list_entry, &element_count);
             
             if (!instants || element_count == 0) {
                 result_validity.SetInvalid(i);
@@ -412,13 +412,13 @@ inline void Temporal_to_tstzspan(DataChunk &args, ExpressionState &state, Vector
             Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
             
             if (!temp) {
-                throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
+                throw InvalidInputException("Invalid TGEOGRAPHY data: null pointer");
             }
 
             Span *timespan = temporal_to_tstzspan(temp);
             
             if (!timespan) {
-                throw InvalidInputException("Failed to extract timespan from TGEOMETRY");
+                throw InvalidInputException("Failed to extract timespan from TGEOGRAPHY");
             }
             
             size_t span_size = sizeof(Span);
@@ -462,12 +462,12 @@ inline void Temporal_to_tinstant(DataChunk &args, ExpressionState &state, Vector
             Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
             
             if (!temp) {
-                throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
+                throw InvalidInputException("Invalid TGEOGRAPHY data: null pointer");
             }
 
             TInstant *inst = temporal_to_tinstant(temp);
             if (!inst) {
-                throw InvalidInputException("Failed to convert TGEOMETRY to TInstant");
+                throw InvalidInputException("Failed to convert TGEOGRAPHY to TInstant");
             }
             
             size_t inst_size = temporal_mem_size((Temporal*)inst);
@@ -512,7 +512,7 @@ inline void Temporal_set_interp(DataChunk &args, ExpressionState &state, Vector 
 
             Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
             if (!temp) {
-                throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
+                throw InvalidInputException("Invalid TGEOGRAPHY data: null pointer");
             }
 
             std::string interp_str = interp_str_t.GetString();
@@ -562,14 +562,14 @@ inline void Temporal_merge(DataChunk &args, ExpressionState &state, Vector &resu
 
             Temporal *temp1 = reinterpret_cast<Temporal*>(const_cast<char*>(tgeom1.c_str()));
             if (!temp1) {
-                throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
+                throw InvalidInputException("Invalid TGEOGRAPHY data: null pointer");
             }
 
             std::string tgeom2 = tgeom2_str_t.GetString();
 
             Temporal *temp2 = reinterpret_cast<Temporal*>(const_cast<char*>(tgeom2.c_str()));
             if (!temp2) {
-                throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
+                throw InvalidInputException("Invalid TGEOGRAPHY data: null pointer");
             }
             
             Temporal *result_temp = temporal_merge(temp1, temp2);
@@ -618,7 +618,7 @@ inline void Temporal_subtype(DataChunk &args, ExpressionState &state, Vector &re
 
             Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
             if (!temp) {
-                throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
+                throw InvalidInputException("Invalid TGEOGRAPHY data: null pointer");
             }
             
             const char *subtype_str = temporal_subtype(temp);
@@ -654,7 +654,7 @@ inline void Temporal_interp(DataChunk &args, ExpressionState &state, Vector &res
 
             Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
             if (!temp) {
-                throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
+                throw InvalidInputException("Invalid TGEOGRAPHY data: null pointer");
             }
 
             
@@ -687,7 +687,7 @@ inline void Temporal_mem_size(DataChunk &args, ExpressionState &state, Vector &r
 
             Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
             if (!temp) {
-                throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
+                throw InvalidInputException("Invalid TGEOGRAPHY data: null pointer");
             }
             
             size_t mem_size = temporal_mem_size(temp);
@@ -978,12 +978,12 @@ inline void Tinstant_timestamptz(DataChunk &args, ExpressionState &state, Vector
             size_t data_size = input_geom_str.GetSize();
 
             if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TGEOMETRY data: insufficient size");
+                throw InvalidInputException("Invalid TGEOGRAPHY data: insufficient size");
             }
 
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for TGEOMETRY deserialization");
+                throw InvalidInputException("Failed to allocate memory for TGEOGRAPHY deserialization");
             }
             memcpy(data_copy, data, data_size);
 
@@ -991,7 +991,7 @@ inline void Tinstant_timestamptz(DataChunk &args, ExpressionState &state, Vector
             
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
+                throw InvalidInputException("Invalid TGEOGRAPHY data: null pointer");
             }
 
             TimestampTz meos_t = temp->t;
@@ -1013,7 +1013,7 @@ inline void Tinstant_timestamptz(DataChunk &args, ExpressionState &state, Vector
 inline void ExecuteTGeometrySeq(DataChunk &args, ExpressionState &state, Vector &result) {
     const char* default_interp = "step";
     auto count = args.size();
-    auto &tgeometry_vec = args.data[0];
+    auto &tgeography_vec = args.data[0];
     
     Vector interp_vec(LogicalType::VARCHAR, count);
     if (args.data.size() > 1) {
@@ -1025,25 +1025,25 @@ inline void ExecuteTGeometrySeq(DataChunk &args, ExpressionState &state, Vector 
     }
     
     BinaryExecutor::Execute<string_t, string_t, string_t>(
-        tgeometry_vec, interp_vec, result, count,
+        tgeography_vec, interp_vec, result, count,
         [&](string_t tgeom_blob, string_t interp_str) -> string_t {
             const uint8_t *data = reinterpret_cast<const uint8_t*>(tgeom_blob.GetData());
             size_t data_size = tgeom_blob.GetSize();
             
             if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TGEOMETRY data: insufficient size");
+                throw InvalidInputException("Invalid TGEOGRAPHY data: insufficient size");
             }
 
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for TGEOMETRY deserialization");
+                throw InvalidInputException("Failed to allocate memory for TGEOGRAPHY deserialization");
             }
             memcpy(data_copy, data, data_size);
 
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
+                throw InvalidInputException("Invalid TGEOGRAPHY data: null pointer");
             }
             
             std::string interp_string = interp_str.GetString();
@@ -1087,90 +1087,90 @@ inline void ExecuteTGeometrySeq(DataChunk &args, ExpressionState &state, Vector 
 
 
 
-void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
+void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
-    auto tgeometry_function = ScalarFunction(
-        "TGEOMETRY", 
+    auto tgeography_function = ScalarFunction(
+        "TGEOGRAPHY", 
         {LogicalType::VARCHAR}, 
-        TGeometryTypes::TGEOMETRY(),
-        Tgeo_constructor
+        TGeographyTypes::TGEOGRAPHY(),
+        Tgeog_constructor
     );
-    loader.RegisterFunction( tgeometry_function);
+    loader.RegisterFunction( tgeography_function);
         
-    auto tgeometry_from_timestamp_function = ScalarFunction(
-        "TGEOMETRY",
+    auto tgeography_from_timestamp_function = ScalarFunction(
+        "TGEOGRAPHY",
         {LogicalType::VARCHAR, LogicalType::TIMESTAMP_TZ}, 
-        TGeometryTypes::TGEOMETRY(), 
-        Tgeoinst_constructor);
-    loader.RegisterFunction( tgeometry_from_timestamp_function);
+        TGeographyTypes::TGEOGRAPHY(), 
+        Tgeoginst_constructor);
+    loader.RegisterFunction( tgeography_from_timestamp_function);
 
-     auto tgeometry_from_tstzspan_function = ScalarFunction(
-        "TGEOMETRY", 
+     auto tgeography_from_tstzspan_function = ScalarFunction(
+        "TGEOGRAPHY", 
         {LogicalType::VARCHAR, SpanTypes::TSTZSPAN(), LogicalType::VARCHAR}, 
-        TGeometryTypes::TGEOMETRY(),  
+        TGeographyTypes::TGEOGRAPHY(),  
         Tsequence_from_base_tstzspan
     );
-    loader.RegisterFunction( tgeometry_from_tstzspan_function);
+    loader.RegisterFunction( tgeography_from_tstzspan_function);
 
-    auto tgeometry_from_tstzspan_default = ScalarFunction(
-        "TGEOMETRY", 
+    auto tgeography_from_tstzspan_default = ScalarFunction(
+        "TGEOGRAPHY", 
         {LogicalType::VARCHAR, SpanTypes::TSTZSPAN()}, 
-        TGeometryTypes::TGEOMETRY(),  
+        TGeographyTypes::TGEOGRAPHY(),  
         Tsequence_from_base_tstzspan
     );
-    loader.RegisterFunction( tgeometry_from_tstzspan_default);
+    loader.RegisterFunction( tgeography_from_tstzspan_default);
 
-     auto tgeometryseqarr_1param= ScalarFunction(
-        "tgeometrySeq", 
-        {LogicalType::LIST(TGeometryTypes::TGEOMETRY())},
-        TGeometryTypes::TGEOMETRY(),
+     auto tgeographyseqarr_1param= ScalarFunction(
+        "tgeographySeq", 
+        {LogicalType::LIST(TGeographyTypes::TGEOGRAPHY())},
+        TGeographyTypes::TGEOGRAPHY(),
         Tsequence_constructor
     );
-    loader.RegisterFunction( tgeometryseqarr_1param);
+    loader.RegisterFunction( tgeographyseqarr_1param);
 
-    auto tgeometryseqarr_2params = ScalarFunction(
-        "tgeometrySeq", 
-        {LogicalType::LIST(TGeometryTypes::TGEOMETRY()), LogicalType::VARCHAR},
-        TGeometryTypes::TGEOMETRY(),
+    auto tgeographyseqarr_2params = ScalarFunction(
+        "tgeographySeq", 
+        {LogicalType::LIST(TGeographyTypes::TGEOGRAPHY()), LogicalType::VARCHAR},
+        TGeographyTypes::TGEOGRAPHY(),
         Tsequence_constructor
     );
-    loader.RegisterFunction( tgeometryseqarr_2params);
+    loader.RegisterFunction( tgeographyseqarr_2params);
 
-    auto tgeometryseqarr_3params = ScalarFunction(
-        "tgeometrySeq", 
-        {LogicalType::LIST(TGeometryTypes::TGEOMETRY()), LogicalType::VARCHAR, LogicalType::BOOLEAN},
-        TGeometryTypes::TGEOMETRY(),
+    auto tgeographyseqarr_3params = ScalarFunction(
+        "tgeographySeq", 
+        {LogicalType::LIST(TGeographyTypes::TGEOGRAPHY()), LogicalType::VARCHAR, LogicalType::BOOLEAN},
+        TGeographyTypes::TGEOGRAPHY(),
         Tsequence_constructor
     );
-    loader.RegisterFunction( tgeometryseqarr_3params);
+    loader.RegisterFunction( tgeographyseqarr_3params);
 
-    auto tgeometryseqarr_4params = ScalarFunction(
-        "tgeometrySeq", 
-        {LogicalType::LIST(TGeometryTypes::TGEOMETRY()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN},
-        TGeometryTypes::TGEOMETRY(),
+    auto tgeographyseqarr_4params = ScalarFunction(
+        "tgeographySeq", 
+        {LogicalType::LIST(TGeographyTypes::TGEOGRAPHY()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN},
+        TGeographyTypes::TGEOGRAPHY(),
         Tsequence_constructor
     );
-    loader.RegisterFunction( tgeometryseqarr_4params);
+    loader.RegisterFunction( tgeographyseqarr_4params);
 
-    auto tgeometry_to_timespan_function = ScalarFunction(
+    auto tgeography_to_timespan_function = ScalarFunction(
         "timeSpan",
-        {TGeometryTypes::TGEOMETRY()},     
+        {TGeographyTypes::TGEOGRAPHY()},     
         SpanTypes::TSTZSPAN(),               
         Temporal_to_tstzspan);
-    loader.RegisterFunction( tgeometry_to_timespan_function);
+    loader.RegisterFunction( tgeography_to_timespan_function);
 
-    auto tgeometry_to_tinstant_function = ScalarFunction(
-        "tgeometryInst",
-        {TGeometryTypes::TGEOMETRY()},
-        TGeometryTypes::TGEOMETRY(),  
+    auto tgeography_to_tinstant_function = ScalarFunction(
+        "tgeographyInst",
+        {TGeographyTypes::TGEOGRAPHY()},
+        TGeographyTypes::TGEOGRAPHY(),  
         Temporal_to_tinstant);
-    loader.RegisterFunction( tgeometry_to_tinstant_function);
+    loader.RegisterFunction( tgeography_to_tinstant_function);
 
 
     auto setInterp_function = ScalarFunction(
         "setInterp",
-        {TGeometryTypes::TGEOMETRY(), LogicalType::VARCHAR},
-        TGeometryTypes::TGEOMETRY(),
+        {TGeographyTypes::TGEOGRAPHY(), LogicalType::VARCHAR},
+        TGeographyTypes::TGEOGRAPHY(),
         Temporal_set_interp
     );
     loader.RegisterFunction( setInterp_function);
@@ -1178,15 +1178,15 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     auto merge_function = ScalarFunction(
         "merge",
-        {TGeometryTypes::TGEOMETRY(), TGeometryTypes::TGEOMETRY()},
-        TGeometryTypes::TGEOMETRY(),
+        {TGeographyTypes::TGEOGRAPHY(), TGeographyTypes::TGEOGRAPHY()},
+        TGeographyTypes::TGEOGRAPHY(),
         Temporal_merge
     );
     loader.RegisterFunction( merge_function);
 
     auto tempSubtype_function = ScalarFunction(
         "tempSubtype",
-        {TGeometryTypes::TGEOMETRY()},
+        {TGeographyTypes::TGEOGRAPHY()},
         LogicalType::VARCHAR,
         Temporal_subtype
     );
@@ -1194,7 +1194,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     auto interp_function = ScalarFunction(
         "interp",
-        {TGeometryTypes::TGEOMETRY()},
+        {TGeographyTypes::TGEOGRAPHY()},
         LogicalType::VARCHAR,
         Temporal_interp
     );
@@ -1202,7 +1202,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     auto memSize_function = ScalarFunction(
         "memSize",
-        {TGeometryTypes::TGEOMETRY()},
+        {TGeographyTypes::TGEOGRAPHY()},
         LogicalType::INTEGER,
         Temporal_mem_size
     );
@@ -1210,69 +1210,69 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     auto getValue_function = ScalarFunction(
         "getValue",
-        {TGeometryTypes::TGEOMETRY()},
+        {TGeographyTypes::TGEOGRAPHY()},
         GeoTypes::GEOMETRY(),
         Tinstant_value
     );
     loader.RegisterFunction( getValue_function);
     
 
-    auto tgeometry_start_value_function = ScalarFunction(
+    auto tgeography_start_value_function = ScalarFunction(
         "startValue", 
-        {TGeometryTypes::TGEOMETRY()},
+        {TGeographyTypes::TGEOGRAPHY()},
         GeoTypes::GEOMETRY(),
         Temporal_start_value
     );
-    loader.RegisterFunction( tgeometry_start_value_function);
+    loader.RegisterFunction( tgeography_start_value_function);
 
-    auto tgeometry_end_value_function = ScalarFunction(
+    auto tgeography_end_value_function = ScalarFunction(
         "endValue", 
-        {TGeometryTypes::TGEOMETRY()},
+        {TGeographyTypes::TGEOGRAPHY()},
         GeoTypes::GEOMETRY(),
         Temporal_end_value
     );
-    loader.RegisterFunction( tgeometry_end_value_function);
+    loader.RegisterFunction( tgeography_end_value_function);
 
     auto startInstant_function = ScalarFunction(
         "startInstant",
-        {TGeometryTypes::TGEOMETRY()},
-        TGeometryTypes::TGEOMETRY(), 
+        {TGeographyTypes::TGEOGRAPHY()},
+        TGeographyTypes::TGEOGRAPHY(), 
         Temporal_start_instant
     );
     loader.RegisterFunction( startInstant_function);
 
     auto endInstant_function = ScalarFunction(
         "endInstant",
-        {TGeometryTypes::TGEOMETRY()},
-        TGeometryTypes::TGEOMETRY(), 
+        {TGeographyTypes::TGEOGRAPHY()},
+        TGeographyTypes::TGEOGRAPHY(), 
         Temporal_end_instant
     );
     loader.RegisterFunction( endInstant_function);
 
     auto instantN_function = ScalarFunction(
         "instantN",
-        {TGeometryTypes::TGEOMETRY(), LogicalType::INTEGER},
-        TGeometryTypes::TGEOMETRY(),  
+        {TGeographyTypes::TGEOGRAPHY(), LogicalType::INTEGER},
+        TGeographyTypes::TGEOGRAPHY(),  
         Temporal_instant_n
     );
     loader.RegisterFunction( instantN_function);
 
 
-    auto tgeometry_gettimestamptz_function = ScalarFunction(
+    auto tgeography_gettimestamptz_function = ScalarFunction(
         "getTimestamp",
-        {TGeometryTypes::TGEOMETRY()},
+        {TGeographyTypes::TGEOGRAPHY()},
         LogicalType::TIMESTAMP_TZ,
         Tinstant_timestamptz);
-    loader.RegisterFunction( tgeometry_gettimestamptz_function);
+    loader.RegisterFunction( tgeography_gettimestamptz_function);
 
     // ===================================================================
-    // Foundational tgeometry surface — accessors, time/value-restrict,
+    // Foundational tgeography surface — accessors, time/value-restrict,
     // modifiers, and comparison. The MEOS C functions delegated to here
     // are subtype-agnostic (they take Temporal *), so we reuse the same
     // generic handlers wired for tgeompoint in temporal_functions.cpp.
     // ===================================================================
 
-    const LogicalType TGEOM = TGeometryTypes::TGEOMETRY();
+    const LogicalType TGEOM = TGeographyTypes::TGEOGRAPHY();
     const LogicalType GEOM  = GeoTypes::GEOMETRY();
     const LogicalType TSTZ  = LogicalType::TIMESTAMP_TZ;
     const LogicalType IVAL  = LogicalType::INTERVAL;
@@ -1490,8 +1490,8 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     }
 }
 
-void TGeometryTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType( "TGEOMETRY", TGeometryTypes::TGEOMETRY());
+void TGeographyTypes::RegisterTypes(ExtensionLoader &loader) {
+    loader.RegisterType( "TGEOGRAPHY", TGeographyTypes::TGEOGRAPHY());
 }
 
 

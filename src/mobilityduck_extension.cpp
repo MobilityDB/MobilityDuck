@@ -11,8 +11,14 @@
 #include "geo/tgeompoint.hpp"
 #include "duckdb.hpp"
 #include "geo/tgeometry.hpp"
+#include "geo/tgeometry_ops.hpp"
+#include "geo/tgeography.hpp"
+#include "geo/tgeography_ops.hpp"
+#include "geo/tgeogpoint.hpp"
+#include "geo/tgeogpoint_ops.hpp"
 #include "temporal/span.hpp"
 #include "temporal/span_aggregates.hpp"
+#include "temporal/temporal_aggregates.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
@@ -21,6 +27,7 @@
 #include "duckdb/main/extension/extension_loader.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include "index/rtree_module.hpp"
+#include "single_tile_getters.hpp"
 
 #include <mutex>
 #include <fstream>
@@ -245,6 +252,11 @@ static void LoadInternal(ExtensionLoader &loader) {
 	SpanTypes::RegisterTypes(loader);
 	SpanTypes::RegisterCastFunctions(loader);
 	SpanAggregates::RegisterAggregateFunctions(loader);
+	TemporalAggregates::RegisterAggregateFunctions(loader);
+
+	// Tile getters return SpanTypes blobs and consume TBOX, so all those
+	// types must already be registered.
+	TemporalTypes::RegisterTileGetters(loader);
 
 	TgeompointType::RegisterType(loader);
 	TgeompointType::RegisterCastFunctions(loader);
@@ -254,6 +266,19 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TGeometryTypes::RegisterTypes(loader);
 	TGeometryTypes::RegisterCastFunctions(loader);
 	TGeometryTypes::RegisterScalarInOutFunctions(loader);
+	TGeometryOps::RegisterScalarFunctions(loader);
+
+	TGeographyTypes::RegisterTypes(loader);
+	TGeographyTypes::RegisterScalarFunctions(loader);
+	TGeographyTypes::RegisterCastFunctions(loader);
+	TGeographyTypes::RegisterScalarInOutFunctions(loader);
+	TGeographyOps::RegisterScalarFunctions(loader);
+
+	TGeogpointType::RegisterTypes(loader);
+	TGeogpointType::RegisterScalarFunctions(loader);
+	TGeogpointType::RegisterCastFunctions(loader);
+	TGeogpointType::RegisterScalarInOutFunctions(loader);
+	TGeogpointOps::RegisterScalarFunctions(loader);
 
 	SetTypes::RegisterTypes(loader);
 	SetTypes::RegisterCastFunctions(loader);
@@ -271,6 +296,10 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TRTreeModule::RegisterRTreeIndex(loader);
 	TRTreeModule::RegisterIndexScan(loader);
 	TRTreeModule::RegisterScanOptimizer(loader);
+
+	// Single-tile getters depend on TBOX, STBOX, and the spatial GEOMETRY
+	// type being registered first.
+	SingleTileGetters::RegisterScalarFunctions(loader);
 }
 
 void MobilityduckExtension::Load(ExtensionLoader &loader) {

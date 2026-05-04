@@ -20,6 +20,7 @@
 #include "duckdb/function/table_function.hpp"
 #include "duckdb/common/types/data_chunk.hpp"
 
+#include "time_util.hpp"
 #include "mobilityduck/bindings.hpp"
 
 namespace duckdb {
@@ -1720,6 +1721,345 @@ void TemporalTypes::RegisterTemporalUnnestFunction(ExtensionLoader &loader) {
             loader.RegisterFunction( fn);
         }
     }
+}
+
+namespace {
+
+inline string_t MallocBlobToResultLocal(Vector &result, void *buf, size_t sz) {
+    string_t blob(reinterpret_cast<const char *>(buf), UnsafeNumericCast<uint32_t>(sz));
+    string_t stored = StringVector::AddStringOrBlob(result, blob);
+    free(buf);
+    return stored;
+}
+
+// ----- getBin: single-bin getters returning spans -----
+//
+// MobilityDB SQL: getBin(value, size, origin) -> <type>span. We compute the
+// lower bound via MEOS *_get_bin and pair it with upper = lower + size to
+// emit a [lower, upper) span blob. Time/date variants stride the duration
+// interval rather than a numeric size.
+
+inline string_t SpanToBlob(Vector &result, Span *span) {
+    string_t out = StringVector::AddStringOrBlob(
+        result, reinterpret_cast<const char *>(span), sizeof(Span));
+    free(span);
+    return out;
+}
+
+void GetBinIntExec(DataChunk &args, ExpressionState &, Vector &result) {
+    TernaryExecutor::Execute<int32_t, int32_t, int32_t, string_t>(
+        args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](int32_t v, int32_t vsize, int32_t vorigin) {
+            int lower = int_get_bin(v, vsize, vorigin);
+            Span *span = intspan_make(lower, lower + vsize, true, false);
+            return SpanToBlob(result, span);
+        });
+}
+
+void GetBinBigintExec(DataChunk &args, ExpressionState &, Vector &result) {
+    TernaryExecutor::Execute<int64_t, int64_t, int64_t, string_t>(
+        args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](int64_t v, int64_t vsize, int64_t vorigin) {
+            int64_t lower = bigint_get_bin(v, vsize, vorigin);
+            Span *span = bigintspan_make(lower, lower + vsize, true, false);
+            return SpanToBlob(result, span);
+        });
+}
+
+void GetBinFloatExec(DataChunk &args, ExpressionState &, Vector &result) {
+    TernaryExecutor::Execute<double, double, double, string_t>(
+        args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](double v, double vsize, double vorigin) {
+            double lower = float_get_bin(v, vsize, vorigin);
+            Span *span = floatspan_make(lower, lower + vsize, true, false);
+            return SpanToBlob(result, span);
+        });
+}
+
+void GetBinTstzExec(DataChunk &args, ExpressionState &, Vector &result) {
+    TernaryExecutor::Execute<timestamp_tz_t, interval_t, timestamp_tz_t, string_t>(
+        args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](timestamp_tz_t t, interval_t duration, timestamp_tz_t torigin) {
+            timestamp_tz_t meos_t = DuckDBToMeosTimestamp(t);
+            timestamp_tz_t meos_torigin = DuckDBToMeosTimestamp(torigin);
+            MeosInterval iv = IntervaltToInterval(duration);
+            TimestampTz lower_meos = timestamptz_get_bin(
+                (TimestampTz) meos_t.value, &iv, (TimestampTz) meos_torigin.value);
+            TimestampTz upper_meos = add_timestamptz_interval(lower_meos, &iv);
+            Span *span = tstzspan_make(lower_meos, upper_meos, true, false);
+            return SpanToBlob(result, span);
+        });
+}
+
+void GetBinDateExec(DataChunk &args, ExpressionState &, Vector &result) {
+    TernaryExecutor::Execute<date_t, interval_t, date_t, string_t>(
+        args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](date_t d, interval_t duration, date_t origin) {
+            int32_t meos_d = ToMeosDate(d);
+            int32_t meos_origin = ToMeosDate(origin);
+            MeosInterval iv = IntervaltToInterval(duration);
+            DateADT lower = date_get_bin((DateADT) meos_d, &iv, (DateADT) meos_origin);
+            // Date bins use duration.day; months/micros are not meaningful
+            // for date-aligned bins (MobilityDB rejects them upstream).
+            DateADT upper = add_date_int(lower, (int32) iv.day);
+            Span *span = datespan_make(lower, upper, true, false);
+            return SpanToBlob(result, span);
+        });
+}
+
+// ----- tbox tile emitters: LIST(TBOX) outputs -----
+
+inline void EmitTboxList(Vector &result, idx_t row_idx, TBox *tiles, int count,
+                         idx_t &total_offset, list_entry_t *list_entries,
+                         Vector &child_vector, ValidityMask &result_validity) {
+    if (!tiles || count <= 0) {
+        if (tiles) free(tiles);
+        result_validity.SetInvalid(row_idx);
+        return;
+    }
+    ListVector::SetListSize(result, total_offset + count);
+    list_entries[row_idx] = list_entry_t{total_offset, static_cast<uint64_t>(count)};
+    auto *child_data = FlatVector::GetData<string_t>(child_vector);
+    const size_t tbox_bytes = sizeof(TBox);
+    for (int j = 0; j < count; ++j) {
+        child_data[total_offset + j] = StringVector::AddStringOrBlob(
+            child_vector, reinterpret_cast<const char *>(&tiles[j]), tbox_bytes);
+    }
+    free(tiles);
+    total_offset += count;
+}
+
+// valueTiles(tbox, vsize [, vorigin]) — int branch uses int xsize/xorigin, float uses double
+void TboxValueTilesExec(DataChunk &args, ExpressionState &, Vector &result) {
+    auto &tbox_vec = args.data[0];
+    auto &vsize_vec = args.data[1];
+    Vector *vorigin_vec = args.ColumnCount() >= 3 ? &args.data[2] : nullptr;
+    idx_t row_count = args.size();
+    tbox_vec.Flatten(row_count);
+    vsize_vec.Flatten(row_count);
+    if (vorigin_vec) vorigin_vec->Flatten(row_count);
+
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+    idx_t total_offset = 0;
+
+    auto tbox_data = FlatVector::GetData<string_t>(tbox_vec);
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (FlatVector::IsNull(tbox_vec, i) || FlatVector::IsNull(vsize_vec, i) ||
+            (vorigin_vec && FlatVector::IsNull(*vorigin_vec, i))) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        string_t blob = tbox_data[i];
+        TBox *box = (TBox *) malloc(blob.GetSize());
+        memcpy(box, blob.GetData(), blob.GetSize());
+
+        int count = 0;
+        TBox *tiles = nullptr;
+        if (box->span.spantype == T_INTSPAN) {
+            int32_t vsize = FlatVector::GetData<int32_t>(vsize_vec)[i];
+            int32_t vorigin = vorigin_vec ? FlatVector::GetData<int32_t>(*vorigin_vec)[i] : 0;
+            tiles = tintbox_value_tiles(box, vsize, vorigin, &count);
+        } else if (box->span.spantype == T_FLOATSPAN) {
+            double vsize = FlatVector::GetData<double>(vsize_vec)[i];
+            double vorigin = vorigin_vec ? FlatVector::GetData<double>(*vorigin_vec)[i] : 0.0;
+            tiles = tfloatbox_value_tiles(box, vsize, vorigin, &count);
+        } else {
+            free(box);
+            throw InvalidInputException("valueTiles: tbox has no value dimension");
+        }
+        free(box);
+        EmitTboxList(result, i, tiles, count, total_offset, list_entries, child_vector,
+                     result_validity);
+    }
+}
+
+// MobilityDB default torigin for time bins: '2000-01-03' (a Monday).
+// In MEOS PG-epoch microseconds that is 2 days * 86_400 * 1_000_000.
+constexpr int64_t DEFAULT_TIME_ORIGIN_MEOS = 2LL * 86400LL * 1000000LL;
+
+// timeTiles(tbox, duration [, torigin])
+void TboxTimeTilesExec(DataChunk &args, ExpressionState &, Vector &result) {
+    auto &tbox_vec = args.data[0];
+    auto &dur_vec = args.data[1];
+    Vector *torigin_vec = args.ColumnCount() >= 3 ? &args.data[2] : nullptr;
+    idx_t row_count = args.size();
+    tbox_vec.Flatten(row_count);
+    dur_vec.Flatten(row_count);
+    if (torigin_vec) torigin_vec->Flatten(row_count);
+
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+    idx_t total_offset = 0;
+
+    auto tbox_data = FlatVector::GetData<string_t>(tbox_vec);
+    auto dur_data = FlatVector::GetData<interval_t>(dur_vec);
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (FlatVector::IsNull(tbox_vec, i) || FlatVector::IsNull(dur_vec, i) ||
+            (torigin_vec && FlatVector::IsNull(*torigin_vec, i))) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        string_t blob = tbox_data[i];
+        TBox *box = (TBox *) malloc(blob.GetSize());
+        memcpy(box, blob.GetData(), blob.GetSize());
+
+        MeosInterval iv = IntervaltToInterval(dur_data[i]);
+        timestamp_tz_t torigin_meos;
+        torigin_meos.value = DEFAULT_TIME_ORIGIN_MEOS;
+        if (torigin_vec) {
+            timestamp_tz_t torigin_in = FlatVector::GetData<timestamp_tz_t>(*torigin_vec)[i];
+            torigin_meos = DuckDBToMeosTimestamp(torigin_in);
+        }
+
+        int count = 0;
+        TBox *tiles = nullptr;
+        if (box->span.spantype == T_INTSPAN) {
+            tiles = tintbox_time_tiles(box, &iv, (TimestampTz) torigin_meos.value, &count);
+        } else if (box->span.spantype == T_FLOATSPAN) {
+            tiles = tfloatbox_time_tiles(box, &iv, (TimestampTz) torigin_meos.value, &count);
+        } else {
+            free(box);
+            throw InvalidInputException("timeTiles: tbox has no value dimension to dispatch on");
+        }
+        free(box);
+        EmitTboxList(result, i, tiles, count, total_offset, list_entries, child_vector,
+                     result_validity);
+    }
+}
+
+// valueTimeTiles(tbox, vsize, duration [, vorigin, torigin])
+void TboxValueTimeTilesExec(DataChunk &args, ExpressionState &, Vector &result) {
+    auto &tbox_vec = args.data[0];
+    auto &vsize_vec = args.data[1];
+    auto &dur_vec = args.data[2];
+    Vector *vorigin_vec = args.ColumnCount() >= 4 ? &args.data[3] : nullptr;
+    Vector *torigin_vec = args.ColumnCount() >= 5 ? &args.data[4] : nullptr;
+    idx_t row_count = args.size();
+    tbox_vec.Flatten(row_count);
+    vsize_vec.Flatten(row_count);
+    dur_vec.Flatten(row_count);
+    if (vorigin_vec) vorigin_vec->Flatten(row_count);
+    if (torigin_vec) torigin_vec->Flatten(row_count);
+
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &child_vector = ListVector::GetEntry(result);
+    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+    ListVector::Reserve(result, row_count);
+    idx_t total_offset = 0;
+
+    auto tbox_data = FlatVector::GetData<string_t>(tbox_vec);
+    auto dur_data = FlatVector::GetData<interval_t>(dur_vec);
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (FlatVector::IsNull(tbox_vec, i) || FlatVector::IsNull(vsize_vec, i) ||
+            FlatVector::IsNull(dur_vec, i) ||
+            (vorigin_vec && FlatVector::IsNull(*vorigin_vec, i)) ||
+            (torigin_vec && FlatVector::IsNull(*torigin_vec, i))) {
+            result_validity.SetInvalid(i);
+            continue;
+        }
+        string_t blob = tbox_data[i];
+        TBox *box = (TBox *) malloc(blob.GetSize());
+        memcpy(box, blob.GetData(), blob.GetSize());
+
+        MeosInterval iv = IntervaltToInterval(dur_data[i]);
+        timestamp_tz_t torigin_meos;
+        torigin_meos.value = DEFAULT_TIME_ORIGIN_MEOS;
+        if (torigin_vec) {
+            timestamp_tz_t torigin_in = FlatVector::GetData<timestamp_tz_t>(*torigin_vec)[i];
+            torigin_meos = DuckDBToMeosTimestamp(torigin_in);
+        }
+
+        int count = 0;
+        TBox *tiles = nullptr;
+        if (box->span.spantype == T_INTSPAN) {
+            int32_t vsize = FlatVector::GetData<int32_t>(vsize_vec)[i];
+            int32_t vorigin = vorigin_vec ? FlatVector::GetData<int32_t>(*vorigin_vec)[i] : 0;
+            tiles = tintbox_value_time_tiles(box, vsize, &iv, vorigin,
+                                             (TimestampTz) torigin_meos.value, &count);
+        } else if (box->span.spantype == T_FLOATSPAN) {
+            double vsize = FlatVector::GetData<double>(vsize_vec)[i];
+            double vorigin = vorigin_vec ? FlatVector::GetData<double>(*vorigin_vec)[i] : 0.0;
+            tiles = tfloatbox_value_time_tiles(box, vsize, &iv, vorigin,
+                                               (TimestampTz) torigin_meos.value, &count);
+        } else {
+            free(box);
+            throw InvalidInputException("valueTimeTiles: tbox has no value dimension");
+        }
+        free(box);
+        EmitTboxList(result, i, tiles, count, total_offset, list_entries, child_vector,
+                     result_validity);
+    }
+}
+
+} // namespace
+
+void TemporalTypes::RegisterTileGetters(ExtensionLoader &loader) {
+    // Single-bin getters — getBin(value, size, origin) -> <type>span
+    loader.RegisterFunction(ScalarFunction(
+        "getBin", {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::INTEGER},
+        SpanTypes::INTSPAN(), GetBinIntExec));
+    loader.RegisterFunction(ScalarFunction(
+        "getBin", {LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
+        SpanTypes::BIGINTSPAN(), GetBinBigintExec));
+    loader.RegisterFunction(ScalarFunction(
+        "getBin", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
+        SpanTypes::FLOATSPAN(), GetBinFloatExec));
+    loader.RegisterFunction(ScalarFunction(
+        "getBin", {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ},
+        SpanTypes::TSTZSPAN(), GetBinTstzExec));
+    loader.RegisterFunction(ScalarFunction(
+        "getBin", {LogicalType::DATE, LogicalType::INTERVAL, LogicalType::DATE},
+        SpanTypes::DATESPAN(), GetBinDateExec));
+
+    LogicalType list_tbox = LogicalType::LIST(TboxType::TBOX());
+
+    // valueTiles(tbox, vsize [, vorigin]) — both INTEGER and DOUBLE size variants
+    loader.RegisterFunction(ScalarFunction(
+        "valueTiles", {TboxType::TBOX(), LogicalType::INTEGER},
+        list_tbox, TboxValueTilesExec));
+    loader.RegisterFunction(ScalarFunction(
+        "valueTiles", {TboxType::TBOX(), LogicalType::INTEGER, LogicalType::INTEGER},
+        list_tbox, TboxValueTilesExec));
+    loader.RegisterFunction(ScalarFunction(
+        "valueTiles", {TboxType::TBOX(), LogicalType::DOUBLE},
+        list_tbox, TboxValueTilesExec));
+    loader.RegisterFunction(ScalarFunction(
+        "valueTiles", {TboxType::TBOX(), LogicalType::DOUBLE, LogicalType::DOUBLE},
+        list_tbox, TboxValueTilesExec));
+
+    // timeTiles(tbox, duration [, torigin])
+    loader.RegisterFunction(ScalarFunction(
+        "timeTiles", {TboxType::TBOX(), LogicalType::INTERVAL},
+        list_tbox, TboxTimeTilesExec));
+    loader.RegisterFunction(ScalarFunction(
+        "timeTiles", {TboxType::TBOX(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ},
+        list_tbox, TboxTimeTilesExec));
+
+    // valueTimeTiles(tbox, vsize, duration [, vorigin, torigin])
+    loader.RegisterFunction(ScalarFunction(
+        "valueTimeTiles", {TboxType::TBOX(), LogicalType::INTEGER, LogicalType::INTERVAL},
+        list_tbox, TboxValueTimeTilesExec));
+    loader.RegisterFunction(ScalarFunction(
+        "valueTimeTiles",
+        {TboxType::TBOX(), LogicalType::INTEGER, LogicalType::INTERVAL,
+         LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ},
+        list_tbox, TboxValueTimeTilesExec));
+    loader.RegisterFunction(ScalarFunction(
+        "valueTimeTiles", {TboxType::TBOX(), LogicalType::DOUBLE, LogicalType::INTERVAL},
+        list_tbox, TboxValueTimeTilesExec));
+    loader.RegisterFunction(ScalarFunction(
+        "valueTimeTiles",
+        {TboxType::TBOX(), LogicalType::DOUBLE, LogicalType::INTERVAL,
+         LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ},
+        list_tbox, TboxValueTimeTilesExec));
 }
 
 } // namespace duckdb
