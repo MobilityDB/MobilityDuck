@@ -2,20 +2,11 @@
 # description: MobilityDB regression file 032_temporal_box.test.sql adapted for MobilityDuck
 # group: [sql]
 #
-# Whole file under `mode skip`. Exercises tbox-from-temporal
-# constructors: tbox(<tnumber>), tbox(<tnumber>, <tnumber>), and the
-# expand-temporal helpers expandValue / expandTime over tnumber. The
-# corresponding `tbox` accessor is registered in
-# src/temporal/temporal.cpp but the conversions / expand operations
-# are not.
-#
-# MEOS symbols: tnumber_to_tbox, tbox_expand_value,
-# tbox_expand_time. Plus the related tbox <-> tnumber comparison
-# casts.
+# tbox-from-temporal constructors and expand helpers.
+# tbox(<tnumber>), expandValue(<tbox>, <n>), expandTime(<tbox>, <interval>)
+# are all registered in src/temporal/tbox.cpp and tbox_functions.cpp.
 
 require mobilityduck
-
-mode skip
 
 query I
 SELECT tbox(tint '[1@2000-01-01, 5@2000-01-05]');
@@ -25,11 +16,9 @@ TBOXINT XT([1, 6),[2000-01-01 00:00:00+00, 2000-01-05 00:00:00+00])
 query I
 SELECT expandValue(tbox 'TBOXINT XT([1, 5],[2000-01-01, 2000-01-05])', 2);
 ----
-TBOXINT XT([-1, 7],[2000-01-01 00:00:00+00, 2000-01-05 00:00:00+00])
+TBOXINT XT([-1, 8),[2000-01-01 00:00:00+00, 2000-01-05 00:00:00+00])
 
 query I
 SELECT expandTime(tbox 'TBOXINT XT([1, 5],[2000-01-01, 2000-01-05])', interval '1 day');
 ----
 TBOXINT XT([1, 6),[1999-12-31 00:00:00+00, 2000-01-06 00:00:00+00])
-
-mode unskip
