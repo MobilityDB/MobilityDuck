@@ -19,6 +19,7 @@ struct TgeompointType {
     static void RegisterCastFunctions(ExtensionLoader &loader);
     static void RegisterScalarFunctions(ExtensionLoader &loader);
     static void RegisterRoundtripIO(ExtensionLoader &loader);
+    static void RegisterTpointSplit(ExtensionLoader &loader);
 };
 
 } // namespace duckdb

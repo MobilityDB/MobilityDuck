@@ -24,6 +24,7 @@
 #include "duckdb/main/extension/extension_loader.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include "index/rtree_module.hpp"
+#include "single_tile_getters.hpp"
 
 #include <mutex>
 #include <fstream>
@@ -245,6 +246,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TemporalTypes::RegisterScalarFunctions(loader);
 	TemporalTypes::RegisterTemporalUnnestFunction(loader);
 	TemporalTypes::RegisterWkbFunctions(loader);
+	TemporalTypes::RegisterTemporalTileSplit(loader);
 
 	TboxType::RegisterType(loader);
 	TboxType::RegisterCastFunctions(loader);
@@ -273,10 +275,15 @@ static void LoadInternal(ExtensionLoader &loader) {
 	SetTypes::RegisterSetUnionAgg(loader);
 	SpatialAggregates::RegisterTcentroid(loader);
 
+	// Tile getters return SpanTypes blobs and consume TBOX, so all those
+	// types must already be registered.
+	TemporalTypes::RegisterTileGetters(loader);
+
 	TgeompointType::RegisterType(loader);
 	TgeompointType::RegisterCastFunctions(loader);
 	TgeompointType::RegisterScalarFunctions(loader);
 	TgeompointType::RegisterRoundtripIO(loader);
+	TgeompointType::RegisterTpointSplit(loader);
 
 	TgeogpointType::RegisterType(loader);
 	TgeogpointType::RegisterCastFunctions(loader);
@@ -304,6 +311,10 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TRTreeModule::RegisterRTreeIndex(loader);
 	TRTreeModule::RegisterIndexScan(loader);
 	TRTreeModule::RegisterScanOptimizer(loader);
+
+	// Single-tile getters depend on TBOX, STBOX, and the spatial GEOMETRY
+	// type being registered first.
+	SingleTileGetters::RegisterScalarFunctions(loader);
 }
 
 void MobilityduckExtension::Load(ExtensionLoader &loader) {

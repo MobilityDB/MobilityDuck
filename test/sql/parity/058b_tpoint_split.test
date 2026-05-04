@@ -1,0 +1,48 @@
+# name: test/sql/parity/058b_tpoint_split.test
+# description: Set-returning splitters spaceSplit / spaceTimeSplit on
+#              tgeompoint trajectories, returning one row per spatial (and
+#              optional temporal) bin.
+# group: [sql]
+
+require mobilityduck
+
+# spaceSplit: 10x10 trajectory with 5x5 cells -> 3 bins (0,0), (5,5), (10,10)
+
+query I
+SELECT count(*) FROM spaceSplit(tgeompoint '[POINT(0 0)@2000-01-01 00:00:00+00, POINT(10 10)@2000-01-05 00:00:00+00]', 5.0, 5.0, 5.0);
+----
+3
+
+query II
+SELECT ST_AsText(spaceBin), tempSubtype(tpoint)
+FROM spaceSplit(tgeompoint '[POINT(0 0)@2000-01-01 00:00:00+00, POINT(10 10)@2000-01-05 00:00:00+00]', 5.0, 5.0, 5.0)
+ORDER BY ST_AsText(spaceBin);
+----
+POINT (0 0)	SequenceSet
+POINT (10 10)	SequenceSet
+POINT (5 5)	SequenceSet
+
+# spaceTimeSplit: same trajectory with 2-day duration and 5x5 cells
+
+query I
+SELECT count(*) FROM spaceTimeSplit(tgeompoint '[POINT(0 0)@2000-01-01 00:00:00+00, POINT(10 10)@2000-01-05 00:00:00+00]', 5.0, 5.0, 5.0, INTERVAL '2 days');
+----
+3
+
+# spaceSplit with explicit sorigin
+
+query I
+SELECT count(*) FROM spaceSplit(tgeompoint '[POINT(0 0)@2000-01-01 00:00:00+00, POINT(10 10)@2000-01-05 00:00:00+00]', 5.0, 5.0, 5.0, ST_GeomFromText('POINT(0 0)'));
+----
+3
+
+# spaceTimeSplit with explicit sorigin and torigin
+
+query I
+SELECT count(*) FROM spaceTimeSplit(
+    tgeompoint '[POINT(0 0)@2000-01-01 00:00:00+00, POINT(10 10)@2000-01-05 00:00:00+00]',
+    5.0, 5.0, 5.0, INTERVAL '2 days',
+    ST_GeomFromText('POINT(0 0)'),
+    TIMESTAMP '2000-01-01');
+----
+3

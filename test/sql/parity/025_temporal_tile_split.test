@@ -4,31 +4,20 @@
 #              other temporal subtypes).  Set-returning splitters: each
 #              input row produces N output rows, one per (value[, time]) bin.
 # group: [sql]
-#
-# Whole file under `mode skip`: MobilityDuck does not register the
-# table-returning split family — `valueSplit`, `timeSplit`, `valueTimeSplit`.
-# MEOS symbols: tint_value_split, tfloat_value_split, temporal_time_split,
-# tnumber_value_time_split. These require DuckDB table-function registration
-# (set-returning); deferred until table-function infrastructure is in place.
 
 require mobilityduck
-
-mode skip
-
-statement ok
-SET TimeZone='UTC'
 
 # valueSplit on tint with size 2 -> bins 0 and 4
 
 query I
-SELECT count(*) FROM valueSplit(tint '[1@2000-01-01, 5@2000-01-05]', 2);
+SELECT count(*) FROM valueSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', 2);
 ----
 2
 
 # valueSplit returns the bin start values
 
 query I
-SELECT value FROM valueSplit(tint '[1@2000-01-01, 5@2000-01-05]', 2) ORDER BY value;
+SELECT value FROM valueSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', 2) ORDER BY value;
 ----
 0
 4
@@ -36,61 +25,61 @@ SELECT value FROM valueSplit(tint '[1@2000-01-01, 5@2000-01-05]', 2) ORDER BY va
 # valueSplit on tfloat
 
 query I
-SELECT count(*) FROM valueSplit(tfloat '[1@2000-01-01, 5@2000-01-05]', 2.0);
+SELECT count(*) FROM valueSplit(tfloat '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', 2.0);
 ----
 3
 
 # valueSplit with explicit vorigin shifts the bin starts to bins {1, 5}
 
 query I
-SELECT count(*) FROM valueSplit(tint '[1@2000-01-01, 5@2000-01-05]', 2, 1);
+SELECT count(*) FROM valueSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', 2, 1);
 ----
 2
 
 query I
 SELECT array_agg(value ORDER BY value) FROM
-  valueSplit(tint '[1@2000-01-01, 5@2000-01-05]', 2, 1);
+  valueSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', 2, 1);
 ----
 [1, 5]
 
 # timeSplit on tfloat with 2-day duration -> 2 buckets
 
 query I
-SELECT count(*) FROM timeSplit(tfloat '[1@2000-01-01, 5@2000-01-05]', INTERVAL '2 days');
+SELECT count(*) FROM timeSplit(tfloat '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', INTERVAL '2 days');
 ----
 2
 
 # timeSplit on tbool
 
 query I
-SELECT count(*) FROM timeSplit(tbool '[t@2000-01-01, f@2000-01-05]', INTERVAL '2 days');
+SELECT count(*) FROM timeSplit(tbool '[t@2000-01-01 00:00:00+00, f@2000-01-05 00:00:00+00]', INTERVAL '2 days');
 ----
 2
 
 # timeSplit on ttext
 
 query I
-SELECT count(*) FROM timeSplit(ttext '["a"@2000-01-01, "b"@2000-01-05]', INTERVAL '2 days');
+SELECT count(*) FROM timeSplit(ttext '["a"@2000-01-01 00:00:00+00, "b"@2000-01-05 00:00:00+00]', INTERVAL '2 days');
 ----
 2
 
 # timeSplit with explicit torigin
 
 query I
-SELECT count(*) FROM timeSplit(tint '[1@2000-01-01, 5@2000-01-05]', INTERVAL '2 days', TIMESTAMP '2000-01-01');
+SELECT count(*) FROM timeSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', INTERVAL '2 days', TIMESTAMPTZ '2000-01-01 00:00:00+00');
 ----
 2
 
 # valueTimeSplit cross-product (value × time bins)
 
 query I
-SELECT count(*) FROM valueTimeSplit(tint '[1@2000-01-01, 5@2000-01-05]', 2, INTERVAL '2 days');
+SELECT count(*) FROM valueTimeSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', 2, INTERVAL '2 days');
 ----
 3
 
 query III
 SELECT value, time, tempSubtype(tint) FROM
-  valueTimeSplit(tint '[1@2000-01-01, 5@2000-01-05]', 2, INTERVAL '2 days')
+  valueTimeSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', 2, INTERVAL '2 days')
   ORDER BY value, time;
 ----
 0	2000-01-01 00:00:00+00	SequenceSet
