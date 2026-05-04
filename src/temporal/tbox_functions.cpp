@@ -1861,4 +1861,156 @@ void TboxFunctions::Tbox_cmp(DataChunk &args, ExpressionState &state, Vector &re
     }
 }
 
+/* ***************************************************
+ * WKB / hex-WKB serialization + hashing
+ ****************************************************/
+
+void TboxFunctions::Tbox_as_wkb(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() < sizeof(TBox)) {
+                throw InvalidInputException("asBinary: invalid TBox value");
+            }
+            uint8_t *copy = (uint8_t *)malloc(input.GetSize());
+            memcpy(copy, input.GetData(), input.GetSize());
+            TBox *tbox = reinterpret_cast<TBox *>(copy);
+            size_t wkb_size = 0;
+            uint8_t *wkb = tbox_as_wkb(tbox, WKB_EXTENDED, &wkb_size);
+            free(copy);
+            if (!wkb || wkb_size == 0) {
+                if (wkb) free(wkb);
+                throw InternalException("asBinary: tbox_as_wkb failed");
+            }
+            string_t ret(reinterpret_cast<const char *>(wkb), wkb_size);
+            string_t stored = StringVector::AddStringOrBlob(result, ret);
+            free(wkb);
+            return stored;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TboxFunctions::Tbox_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() < sizeof(TBox)) {
+                throw InvalidInputException("asHexWKB: invalid TBox value");
+            }
+            uint8_t *copy = (uint8_t *)malloc(input.GetSize());
+            memcpy(copy, input.GetData(), input.GetSize());
+            TBox *tbox = reinterpret_cast<TBox *>(copy);
+            size_t hex_size = 0;
+            char *hex = tbox_as_hexwkb(tbox, WKB_EXTENDED, &hex_size);
+            (void)hex_size;
+            free(copy);
+            if (!hex) {
+                throw InternalException("asHexWKB: tbox_as_hexwkb failed");
+            }
+            string_t stored = StringVector::AddString(result, hex);
+            free(hex);
+            return stored;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TboxFunctions::Tbox_from_wkb(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input_wkb) -> string_t {
+            if (input_wkb.GetSize() == 0) {
+                throw InvalidInputException("tboxFromBinary: empty input");
+            }
+            uint8_t *wkb = (uint8_t *)malloc(input_wkb.GetSize());
+            memcpy(wkb, input_wkb.GetData(), input_wkb.GetSize());
+            TBox *tbox = tbox_from_wkb(wkb, input_wkb.GetSize());
+            free(wkb);
+            if (!tbox) {
+                throw InvalidInputException("tboxFromBinary: invalid WKB");
+            }
+            size_t sz = sizeof(TBox);
+            uint8_t *out = (uint8_t *)malloc(sz);
+            memcpy(out, tbox, sz);
+            string_t ret(reinterpret_cast<const char *>(out), sz);
+            string_t stored = StringVector::AddStringOrBlob(result, ret);
+            free(out);
+            free(tbox);
+            return stored;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TboxFunctions::Tbox_from_hexwkb(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input_hex) -> string_t {
+            std::string hex(input_hex.GetData(), input_hex.GetSize());
+            TBox *tbox = tbox_from_hexwkb(hex.c_str());
+            if (!tbox) {
+                throw InvalidInputException("tboxFromHexWKB: invalid hex-WKB");
+            }
+            size_t sz = sizeof(TBox);
+            uint8_t *out = (uint8_t *)malloc(sz);
+            memcpy(out, tbox, sz);
+            string_t ret(reinterpret_cast<const char *>(out), sz);
+            string_t stored = StringVector::AddStringOrBlob(result, ret);
+            free(out);
+            free(tbox);
+            return stored;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TboxFunctions::Tbox_hash(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, int32_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> int32_t {
+            if (input.GetSize() < sizeof(TBox)) {
+                throw InvalidInputException("tbox_hash: invalid TBox value");
+            }
+            uint8_t *copy = (uint8_t *)malloc(input.GetSize());
+            memcpy(copy, input.GetData(), input.GetSize());
+            TBox *tbox = reinterpret_cast<TBox *>(copy);
+            uint32_t h = tbox_hash(tbox);
+            free(copy);
+            return static_cast<int32_t>(h);
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TboxFunctions::Tbox_hash_extended(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, int64_t, int64_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input, int64_t seed) -> int64_t {
+            if (input.GetSize() < sizeof(TBox)) {
+                throw InvalidInputException("tbox_hash_extended: invalid TBox value");
+            }
+            uint8_t *copy = (uint8_t *)malloc(input.GetSize());
+            memcpy(copy, input.GetData(), input.GetSize());
+            TBox *tbox = reinterpret_cast<TBox *>(copy);
+            uint64_t h = tbox_hash_extended(tbox, static_cast<uint64_t>(seed));
+            free(copy);
+            return static_cast<int64_t>(h);
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
 } // namespace duckdb
