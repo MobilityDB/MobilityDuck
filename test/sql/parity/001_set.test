@@ -483,9 +483,6 @@ SELECT tstzset '{2000-01-01}' >= tstzset '{2000-01-01, 2000-01-02, 2000-01-03}';
 ----
 false
 
-mode skip
-# set_hash / set_hash_extended not registered. MEOS symbols:
-# set_hash, set_hash_extended.
 query I
 SELECT set_hash(dateset '{2000-01-01,2000-01-02}') = set_hash(dateset '{2000-01-01,2000-01-02}');
 ----
