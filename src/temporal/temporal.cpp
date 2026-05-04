@@ -9,6 +9,7 @@
 #include "temporal/span.hpp"
 #include "geo/stbox.hpp"
 #include "geo/tgeompoint.hpp"
+#include "geo/tgeometry.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/common/exception.hpp"
@@ -1353,6 +1354,47 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {TemporalTypes::TFLOAT(), LogicalType::BOOLEAN}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_degrees));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("radians", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_radians));
 
+    // Unary tfloat math functions
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("exp",   {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_exp));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("ln",    {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_ln));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("log10", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_log10));
+
+    // deltaValue / trend on tnumber
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("deltaValue", {TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Tnumber_delta_value));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("deltaValue", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tnumber_delta_value));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("trend",      {TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Tnumber_trend));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("trend",      {TemporalTypes::TFLOAT()}, TemporalTypes::TINT(),   TemporalFunctions::Tnumber_trend));
+
+    // Named-function aliases for the arithmetic operators (MobilityDB exposes
+    // both `+`/`-`/`*`/`/` and `tnumber_add`/`sub`/`mult`/`div`).
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_add",  {LogicalType::INTEGER,    TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Add_int_tint));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_add",  {TemporalTypes::TINT(),   LogicalType::INTEGER},    TemporalTypes::TINT(),   TemporalFunctions::Add_tint_int));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_add",  {LogicalType::DOUBLE,     TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Add_float_tfloat));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_add",  {TemporalTypes::TFLOAT(), LogicalType::DOUBLE},     TemporalTypes::TFLOAT(), TemporalFunctions::Add_tfloat_float));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_add",  {TemporalTypes::TINT(),   TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Add_tnumber_tnumber));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_add",  {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Add_tnumber_tnumber));
+
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_sub",  {LogicalType::INTEGER,    TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Sub_int_tint));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_sub",  {TemporalTypes::TINT(),   LogicalType::INTEGER},    TemporalTypes::TINT(),   TemporalFunctions::Sub_tint_int));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_sub",  {LogicalType::DOUBLE,     TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Sub_float_tfloat));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_sub",  {TemporalTypes::TFLOAT(), LogicalType::DOUBLE},     TemporalTypes::TFLOAT(), TemporalFunctions::Sub_tfloat_float));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_sub",  {TemporalTypes::TINT(),   TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Sub_tnumber_tnumber));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_sub",  {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Sub_tnumber_tnumber));
+
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_mult", {LogicalType::INTEGER,    TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Mult_int_tint));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_mult", {TemporalTypes::TINT(),   LogicalType::INTEGER},    TemporalTypes::TINT(),   TemporalFunctions::Mult_tint_int));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_mult", {LogicalType::DOUBLE,     TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Mult_float_tfloat));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_mult", {TemporalTypes::TFLOAT(), LogicalType::DOUBLE},     TemporalTypes::TFLOAT(), TemporalFunctions::Mult_tfloat_float));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_mult", {TemporalTypes::TINT(),   TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Mult_tnumber_tnumber));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_mult", {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Mult_tnumber_tnumber));
+
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_div",  {LogicalType::INTEGER,    TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Div_int_tint));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_div",  {TemporalTypes::TINT(),   LogicalType::INTEGER},    TemporalTypes::TINT(),   TemporalFunctions::Div_tint_int));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_div",  {LogicalType::DOUBLE,     TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Div_float_tfloat));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_div",  {TemporalTypes::TFLOAT(), LogicalType::DOUBLE},     TemporalTypes::TFLOAT(), TemporalFunctions::Div_tfloat_float));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_div",  {TemporalTypes::TINT(),   TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Div_tnumber_tnumber));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tnumber_div",  {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Div_tnumber_tnumber));
+
     // tnumber distance and nearest-approach-distance.
     //
     // Value-distance variants `<-> ` for (tint, INTEGER), (INTEGER, tint),
@@ -1494,10 +1536,41 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     // Similarity measures (tnumber × tnumber)
     for (auto &t : {TemporalTypes::TINT(), TemporalTypes::TFLOAT()}) {
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistance", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("discreteFrechet", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarp",     {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_dyntimewarp_distance));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("hausdorffDistance", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_hausdorff_distance));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistance",     {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("discreteFrechet",     {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarp",         {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_dyntimewarp_distance));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpDistance", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_dyntimewarp_distance));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("hausdorffDistance",   {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_hausdorff_distance));
+        auto path_type = LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}}));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistancePath", {t, t}, path_type, TemporalFunctions::Temporal_frechet_path));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpPath",     {t, t}, path_type, TemporalFunctions::Temporal_dyntimewarp_path));
+    }
+    // similarity path on tgeompoint
+    {
+        auto tg = TgeompointType::TGEOMPOINT();
+        auto path_type = LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}}));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistancePath", {tg, tg}, path_type, TemporalFunctions::Temporal_frechet_path));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpPath",     {tg, tg}, path_type, TemporalFunctions::Temporal_dyntimewarp_path));
+    }
+
+    // simplify family (subtype-agnostic but only meaningful on linear temporal types)
+    for (const auto &t : {TemporalTypes::TFLOAT(), TgeompointType::TGEOMPOINT(),
+                          TGeometryTypes::TGEOMETRY()}) {
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("douglasPeuckerSimplify",
+            {t, LogicalType::DOUBLE}, t, TemporalFunctions::Temporal_simplify_dp));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("douglasPeuckerSimplify",
+            {t, LogicalType::DOUBLE, LogicalType::BOOLEAN}, t,
+            TemporalFunctions::Temporal_simplify_dp));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("maxDistSimplify",
+            {t, LogicalType::DOUBLE}, t, TemporalFunctions::Temporal_simplify_max_dist));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("maxDistSimplify",
+            {t, LogicalType::DOUBLE, LogicalType::BOOLEAN}, t,
+            TemporalFunctions::Temporal_simplify_max_dist));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("minDistSimplify",
+            {t, LogicalType::DOUBLE}, t, TemporalFunctions::Temporal_simplify_min_dist));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("minTimeDeltaSimplify",
+            {t, LogicalType::INTERVAL}, t,
+            TemporalFunctions::Temporal_simplify_min_tdelta));
     }
 
     // tnumber × {numspan, tbox} topological predicates (4 ops × 8 shape pairs)

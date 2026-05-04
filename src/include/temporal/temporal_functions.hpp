@@ -227,6 +227,11 @@ struct TemporalFunctions {
     static void Tnumber_tboxes(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_split_n_tboxes(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_split_each_n_tboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_delta_value(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_trend(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tfloat_exp(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tfloat_ln(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tfloat_log10(DataChunk &args, ExpressionState &state, Vector &result);
     // Temporal_derivative declared in the math-functions block below.
     static void Tfloat_degrees(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tfloat_radians(DataChunk &args, ExpressionState &state, Vector &result);
@@ -408,6 +413,8 @@ struct TemporalFunctions {
     static void Temporal_frechet_distance(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_dyntimewarp_distance(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_hausdorff_distance(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_frechet_path(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_dyntimewarp_path(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * tnumber × {numspan, tbox} topological predicates
@@ -536,6 +543,14 @@ struct TemporalFunctions {
      ****************************************************/
     static void Temporal_round(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_derivative(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * Analytics — trajectory/temporal simplification
+     ****************************************************/
+    static void Temporal_simplify_min_dist(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_simplify_min_tdelta(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_simplify_max_dist(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_simplify_dp(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

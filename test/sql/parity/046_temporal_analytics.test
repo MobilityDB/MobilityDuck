@@ -1,0 +1,62 @@
+# name: test/sql/parity/046_temporal_analytics.test
+# description: Trajectory / temporal simplification — minDistSimplify,
+#              minTimeDeltaSimplify, maxDistSimplify, douglasPeuckerSimplify.
+# group: [sql]
+
+require mobilityduck
+
+# minDistSimplify(tfloat, float) — drop in-between instants closer than threshold
+
+query I
+SELECT minDistSimplify(tfloat '[1@2000-01-01, 2@2000-01-02, 3@2000-01-03, 4@2000-01-04]', 0.5);
+----
+[1@2000-01-01 00:00:00+01, 4@2000-01-04 00:00:00+01]
+
+# minDistSimplify on tgeompoint trajectory
+
+query I
+SELECT asEWKT(minDistSimplify(tgeompoint '[POINT(0 0)@2000-01-01, POINT(0.1 0)@2000-01-02, POINT(5 0)@2000-01-03]', 1));
+----
+[POINT(0 0)@2000-01-01 00:00:00+01, POINT(5 0)@2000-01-03 00:00:00+01]
+
+# minTimeDeltaSimplify(tfloat, interval) — drop instants spaced closer than threshold
+
+query I
+SELECT minTimeDeltaSimplify(tfloat '[1@2000-01-01, 2@2000-01-01 12:00:00, 3@2000-01-02]', INTERVAL '6 hours');
+----
+[1@2000-01-01 00:00:00+01, 3@2000-01-02 00:00:00+01]
+
+# maxDistSimplify(tfloat, float) — collinear points collapse under default sync
+
+query I
+SELECT maxDistSimplify(tfloat '[1@2000-01-01, 2@2000-01-02, 3@2000-01-03]', 0.1);
+----
+[1@2000-01-01 00:00:00+01, 3@2000-01-03 00:00:00+01]
+
+# maxDistSimplify(tfloat, float, bool) — explicit synchronized=false
+
+query I
+SELECT maxDistSimplify(tfloat '[1@2000-01-01, 2@2000-01-02, 3@2000-01-03]', 0.1, FALSE);
+----
+[1@2000-01-01 00:00:00+01, 3@2000-01-03 00:00:00+01]
+
+# maxDistSimplify on tgeompoint
+
+query I
+SELECT asEWKT(maxDistSimplify(tgeompoint '[POINT(0 0)@2000-01-01, POINT(1 0)@2000-01-02, POINT(2 0)@2000-01-03]', 0.5));
+----
+[POINT(0 0)@2000-01-01 00:00:00+01, POINT(2 0)@2000-01-03 00:00:00+01]
+
+# douglasPeuckerSimplify(tfloat, float)
+
+query I
+SELECT douglasPeuckerSimplify(tfloat '[1@2000-01-01, 2@2000-01-02, 3@2000-01-03]', 0.1);
+----
+[1@2000-01-01 00:00:00+01, 3@2000-01-03 00:00:00+01]
+
+# douglasPeuckerSimplify(tgeompoint, float, bool)
+
+query I
+SELECT asEWKT(douglasPeuckerSimplify(tgeompoint '[POINT(0 0)@2000-01-01, POINT(1 0)@2000-01-02, POINT(2 0)@2000-01-03]', 0.1, TRUE));
+----
+[POINT(0 0)@2000-01-01 00:00:00+01, POINT(2 0)@2000-01-03 00:00:00+01]
