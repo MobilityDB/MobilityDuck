@@ -900,66 +900,66 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
     loader.RegisterFunction( ScalarFunction("span_union", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpansetTypes::intspanset(), SpanFunctions::Union_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_union", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpansetTypes::intspanset(), SpanFunctions::Union_span_span)
+    loader.RegisterFunction( ScalarFunction("span_union", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Union_span_span)
     );
     loader.RegisterFunction( ScalarFunction("+", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpansetTypes::intspanset(), SpanFunctions::Union_span_value)
     );
     loader.RegisterFunction( ScalarFunction("+", {LogicalType::INTEGER, SpanTypes::INTSPAN()}, SpansetTypes::intspanset(), SpanFunctions::Union_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("+", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpansetTypes::intspanset(), SpanFunctions::Union_span_span)
+    loader.RegisterFunction( ScalarFunction("+", {SpanTypes::INTSPAN(), SpanTypes::INTSPAN()}, SpanTypes::INTSPAN(), SpanFunctions::Union_span_span)
     );
 
     loader.RegisterFunction( ScalarFunction("span_union", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpansetTypes::bigintspanset(), SpanFunctions::Union_span_value)
     );
     loader.RegisterFunction( ScalarFunction("span_union", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpansetTypes::bigintspanset(), SpanFunctions::Union_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_union", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpansetTypes::bigintspanset(), SpanFunctions::Union_span_span)
+    loader.RegisterFunction( ScalarFunction("span_union", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Union_span_span)
     );
     loader.RegisterFunction( ScalarFunction("+", {SpanTypes::BIGINTSPAN(), LogicalType::BIGINT}, SpansetTypes::bigintspanset(), SpanFunctions::Union_span_value)
     );
     loader.RegisterFunction( ScalarFunction("+", {LogicalType::BIGINT, SpanTypes::BIGINTSPAN()}, SpansetTypes::bigintspanset(), SpanFunctions::Union_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("+", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpansetTypes::bigintspanset(), SpanFunctions::Union_span_span)
+    loader.RegisterFunction( ScalarFunction("+", {SpanTypes::BIGINTSPAN(), SpanTypes::BIGINTSPAN()}, SpanTypes::BIGINTSPAN(), SpanFunctions::Union_span_span)
     );
 
     loader.RegisterFunction( ScalarFunction("span_union", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpansetTypes::floatspanset(), SpanFunctions::Union_span_value)
     );
     loader.RegisterFunction( ScalarFunction("span_union", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpansetTypes::floatspanset(), SpanFunctions::Union_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_union", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpansetTypes::floatspanset(), SpanFunctions::Union_span_span)
+    loader.RegisterFunction( ScalarFunction("span_union", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Union_span_span)
     );
     loader.RegisterFunction( ScalarFunction("+", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE}, SpansetTypes::floatspanset(), SpanFunctions::Union_span_value)
     );
     loader.RegisterFunction( ScalarFunction("+", {LogicalType::DOUBLE, SpanTypes::FLOATSPAN()}, SpansetTypes::floatspanset(), SpanFunctions::Union_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("+", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpansetTypes::floatspanset(), SpanFunctions::Union_span_span)
+    loader.RegisterFunction( ScalarFunction("+", {SpanTypes::FLOATSPAN(), SpanTypes::FLOATSPAN()}, SpanTypes::FLOATSPAN(), SpanFunctions::Union_span_span)
     );
 
     loader.RegisterFunction( ScalarFunction("span_union", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpansetTypes::datespanset(), SpanFunctions::Union_span_value)
     );
     loader.RegisterFunction( ScalarFunction("span_union", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpansetTypes::datespanset(), SpanFunctions::Union_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_union", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpansetTypes::datespanset(), SpanFunctions::Union_span_span)
+    loader.RegisterFunction( ScalarFunction("span_union", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Union_span_span)
     );
     loader.RegisterFunction( ScalarFunction("+", {SpanTypes::DATESPAN(), LogicalType::DATE}, SpansetTypes::datespanset(), SpanFunctions::Union_span_value)
     );
     loader.RegisterFunction( ScalarFunction("+", {LogicalType::DATE, SpanTypes::DATESPAN()}, SpansetTypes::datespanset(), SpanFunctions::Union_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("+", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpansetTypes::datespanset(), SpanFunctions::Union_span_span)
+    loader.RegisterFunction( ScalarFunction("+", {SpanTypes::DATESPAN(), SpanTypes::DATESPAN()}, SpanTypes::DATESPAN(), SpanFunctions::Union_span_span)
     );  
 
     loader.RegisterFunction( ScalarFunction("span_union", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpansetTypes::tstzspanset(), SpanFunctions::Union_span_value)
     );
     loader.RegisterFunction( ScalarFunction("span_union", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpansetTypes::tstzspanset(), SpanFunctions::Union_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("span_union", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpansetTypes::tstzspanset(), SpanFunctions::Union_span_span)
+    loader.RegisterFunction( ScalarFunction("span_union", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Union_span_span)
     );
     loader.RegisterFunction( ScalarFunction("+", {SpanTypes::TSTZSPAN(), LogicalType::TIMESTAMP_TZ}, SpansetTypes::tstzspanset(), SpanFunctions::Union_span_value)
     );
     loader.RegisterFunction( ScalarFunction("+", {LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()}, SpansetTypes::tstzspanset(), SpanFunctions::Union_value_span)
     );
-    loader.RegisterFunction( ScalarFunction("+", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpansetTypes::tstzspanset(), SpanFunctions::Union_span_span)
-    );
+    loader.RegisterFunction( ScalarFunction("+", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, SpanTypes::TSTZSPAN(), SpanFunctions::Union_span_span)  
+    );  
 
     loader.RegisterFunction( ScalarFunction("span_intersection", {SpanTypes::INTSPAN(), LogicalType::INTEGER}, SpanTypes::INTSPAN(), SpanFunctions::Intersection_span_value)
     );

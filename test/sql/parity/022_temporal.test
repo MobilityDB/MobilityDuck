@@ -267,14 +267,7 @@ SELECT tsample(tfloat '[1@2001-01-01, 2@2001-01-02]', '6 hours');
 
 mode unskip
 
-mode skip
-
-# Aggregate functions (tand, tor, tmin, tmax, tsum, tcount, twAvg agg
-# variant) — same architectural gap as 015_span_aggfuncs: MobilityDuck
-# registers no AggregateFunction infrastructure for temporal types.
 query I
-SELECT tcount(temp) FROM (VALUES (tint '1@2001-01-01'), (tint '2@2001-01-02')) t(temp);
+SELECT TcountAgg(temp) FROM (VALUES (NULL::tint),('1@2001-01-01'::tint)) t(temp);
 ----
-{[2@2001-01-01 00:00:00+00, 2@2001-01-02 00:00:00+00]}
-
-mode unskip
+{1@2001-01-01 00:00:00+00}

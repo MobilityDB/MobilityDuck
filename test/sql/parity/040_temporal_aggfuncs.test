@@ -2,48 +2,121 @@
 # description: MobilityDB regression file 040_temporal_aggfuncs.test.sql adapted for MobilityDuck
 # group: [sql]
 #
-# Whole file under `mode skip`: same root cause as PR #21 (015) —
-# MobilityDuck registers no AggregateFunction calls anywhere in the
-# temporal/geo code, so `tcount`, `tand`, `tor`, `tmin`, `tmax`,
-# `tsum`, `extent`, etc. all fail with "function not found".
+# Temporal aggregate functions registered in src/temporal/temporal_aggregates.cpp.
+# All use the *Agg suffix convention from MobilityDB RFC #827 / PR #828.
 #
-# This file is the per-temporal-type aggregate manifest:
-#   - tcount (over any temporal type)
-#   - tand / tor (over tbool)
-#   - tmin / tmax / tsum (over tint, tfloat)
-#   - extent (over tnumber, returns tbox)
-# MEOS symbols: temporal_tcount_transfn, tnumber_extent_transfn,
-# tbool_tand_transfn, tbool_tor_transfn, tnumber_tsum_transfn,
-# tnumber_tmin_transfn, tnumber_tmax_transfn, plus combinefn /
-# finalfn for each.
+# Naming note: tmin/tmax/tsum cannot be used as aggregate names in DuckDB
+# because scalars of the same lowercase name (tbox/stbox accessors) are already
+# registered. MobilityDuck uses TminAgg / TmaxAgg / TsumAgg instead, matching
+# MobilityDB's alias convention. All other names (TcountAgg, TandAgg, TorAgg,
+# TavgAgg) also use the *Agg suffix for cross-binding consistency.
+#
+# Expected outputs verified against MobilityDB 040_temporal_aggfuncs.test.out.
 
 require mobilityduck
 
-mode skip
+# =============================================================================
+# tcount — count temporal objects at each instant
+# =============================================================================
 
 query I
-SELECT tcount(temp) FROM (VALUES (tint '1@2000-01-01'), (tint '2@2000-01-02')) t(temp);
+SELECT TcountAgg(temp) FROM (VALUES (NULL::tbool),(NULL::tbool)) t(temp);
 ----
-{[2@2000-01-01 00:00:00+00, 2@2000-01-02 00:00:00+00]}
+NULL
 
 query I
-SELECT tand(temp) FROM (VALUES (tbool 't@2000-01-01'), (tbool 'f@2000-01-02')) t(temp);
+SELECT TcountAgg(temp) FROM (VALUES (NULL::tbool),('true@2000-01-01'::tbool)) t(temp);
 ----
-{[t@2000-01-01 00:00:00+00, f@2000-01-02 00:00:00+00]}
+{1@2000-01-01 00:00:00+00}
 
 query I
-SELECT tmin(temp) FROM (VALUES (tint '3@2000-01-01'), (tint '1@2000-01-02')) t(temp);
+SELECT TcountAgg(temp) FROM (VALUES (NULL::tint),(NULL::tint)) t(temp);
 ----
-{[1@2000-01-01 00:00:00+00, 1@2000-01-02 00:00:00+00]}
+NULL
 
 query I
-SELECT tsum(temp) FROM (VALUES (tint '1@2000-01-01'), (tint '2@2000-01-02')) t(temp);
+SELECT TcountAgg(temp) FROM (VALUES (NULL::tint),('1@2000-01-01'::tint)) t(temp);
 ----
-{[3@2000-01-01 00:00:00+00, 3@2000-01-02 00:00:00+00]}
+{1@2000-01-01 00:00:00+00}
+
+# =============================================================================
+# tand / tor — temporal boolean aggregates
+# =============================================================================
+
+query I
+SELECT TandAgg(temp) FROM (VALUES (NULL::tbool),(NULL::tbool)) t(temp);
+----
+NULL
+
+query I
+SELECT TandAgg(temp) FROM (VALUES (NULL::tbool),('true@2000-01-01'::tbool)) t(temp);
+----
+{t@2000-01-01 00:00:00+00}
+
+query I
+SELECT TorAgg(temp) FROM (VALUES (NULL::tbool),(NULL::tbool)) t(temp);
+----
+NULL
+
+query I
+SELECT TorAgg(temp) FROM (VALUES (NULL::tbool),('true@2000-01-01'::tbool)) t(temp);
+----
+{t@2000-01-01 00:00:00+00}
+
+# =============================================================================
+# TminAgg / TmaxAgg / TsumAgg — temporal min / max / sum aggregates
+# (MobilityDB legacy names: tmin / tmax / tsum; see naming note in header)
+# =============================================================================
+
+query I
+SELECT TminAgg(temp) FROM (VALUES (NULL::tint),(NULL::tint)) t(temp);
+----
+NULL
+
+query I
+SELECT TminAgg(temp) FROM (VALUES (NULL::tint),('1@2000-01-01'::tint)) t(temp);
+----
+{1@2000-01-01 00:00:00+00}
+
+query I
+SELECT TmaxAgg(temp) FROM (VALUES (NULL::tint),(NULL::tint)) t(temp);
+----
+NULL
+
+query I
+SELECT TmaxAgg(temp) FROM (VALUES (NULL::tint),('1@2000-01-01'::tint)) t(temp);
+----
+{1@2000-01-01 00:00:00+00}
+
+query I
+SELECT TsumAgg(temp) FROM (VALUES (NULL::tint),(NULL::tint)) t(temp);
+----
+NULL
+
+query I
+SELECT TsumAgg(temp) FROM (VALUES (NULL::tint),('1@2000-01-01'::tint)) t(temp);
+----
+{1@2000-01-01 00:00:00+00}
+
+# =============================================================================
+# tAvg — temporal average aggregate (returns tfloat)
+# =============================================================================
+
+query I
+SELECT TavgAgg(temp) FROM (VALUES (NULL::tint),(NULL::tint)) t(temp);
+----
+NULL
+
+query I
+SELECT TavgAgg(temp) FROM (VALUES (NULL::tint),('1@2000-01-01'::tint)) t(temp);
+----
+{1@2000-01-01 00:00:00+00}
+
+# =============================================================================
+# extent(tnumber) — bounding tbox aggregate
+# =============================================================================
 
 query I
 SELECT extent(temp) FROM (VALUES (tfloat '[1@2000-01-01, 5@2000-01-05]')) t(temp);
 ----
 TBOXFLOAT XT([1, 5],[2000-01-01 00:00:00+00, 2000-01-05 00:00:00+00])
-
-mode unskip

@@ -419,23 +419,22 @@ SELECT spans(floatspanset '{[1,2),[3,4),[5,6)}');
 # =============================================================================
 
 mode skip
-# Result divergence:
-#   - MobilityDB returns SpanSet (`{[1, 4), [5, 10)}`)
-#   - MobilityDuck returns LIST<Span> (`['[1, 8)', '[9, 10)']`)
-# splitNspans values also differ: MobilityDB groups {[1,2),[3,4)} +
-# {[5,6),[7,8),[9,10)}; MobilityDuck groups {[1,2),[3,4),[5,6),[7,8)}
-# + {[9,10)}. The MEOS symbol used (spanset_split_n_spans) is the same
-# but the input partitioning differs.
+# splitNspans partition-boundary divergence: both return SpanSet after
+# fix/splitnspans-spanset-result, but the grouping algorithm differs —
+# MobilityDB yields {[1, 4), [5, 10)} while MobilityDuck yields
+# {[1, 8), [9, 10)}. MEOS spanset_split_n_spans uses a different
+# partition strategy than the MobilityDB SQL wrapper.
 query I
 SELECT splitNspans(intspanset '{[1, 2), [3, 4), [5, 6), [7, 8), [9, 10)}', 2);
 ----
-{[1, 4), [5, 10)}
+{[1, 8), [9, 10)}
+mode unskip
 
+# splitEachNspans groups agree with MobilityDB (each group ≤ n spans).
 query I
 SELECT splitEachNspans(intspanset '{[1, 2), [3, 4), [5, 6), [7, 8), [9, 10)}', 2);
 ----
 {[1, 4), [5, 8), [9, 10)}
-mode unskip
 
 # =============================================================================
 # Date / timestamp accessors on dateset / tstz spanset

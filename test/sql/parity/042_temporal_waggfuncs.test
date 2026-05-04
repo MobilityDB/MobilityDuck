@@ -2,34 +2,85 @@
 # description: MobilityDB regression file 042_temporal_waggfuncs.test.sql adapted for MobilityDuck
 # group: [sql]
 #
-# Whole file under `mode skip`. Windowed temporal aggregates
-# (wcount, wmin, wmax, wsum, wavg) over a fixed-width interval
-# window. Same architectural blocker as PR #21 (015) and PR #24
-# (040): MobilityDuck has no AggregateFunction infrastructure, and
-# windowed aggregates additionally need DuckDB's WindowFunction
-# infrastructure (also unused in temporal/geo today).
-#
-# MEOS symbols: tnumber_wcount_transfn, tnumber_wmin_transfn,
-# tnumber_wmax_transfn, tnumber_wsum_transfn, tnumber_wavg_transfn,
-# plus the corresponding combinefn / finalfn for each.
+# Windowed temporal aggregates: wmin, wmax, wsum, wavg registered in
+# src/temporal/temporal_aggregates.cpp.
+# wcount is NOT registered (MEOS wcount_transfn produces a tint count
+# over a window, but is absent from the current MEOS public API header).
+# Expected outputs verified against MobilityDB 042_temporal_waggfuncs.test.out.
 
 require mobilityduck
 
 mode skip
-
+# wcount is not registered — MEOS symbol tnumber_wcount_transfn absent
+# from meos.h public surface.
 query I
-SELECT wcount(temp, '1 day') FROM (VALUES (tint '[1@2000-01-01, 5@2000-01-05]')) t(temp);
+SELECT wcount(temp, interval '5 minutes') FROM (VALUES (NULL::tint),('1@2000-01-01'::tint)) t(temp);
 ----
-{[1@2000-01-01 00:00:00+00, 1@2000-01-05 00:00:00+00]}
-
-query I
-SELECT wmin(temp, '1 day') FROM (VALUES (tint '[1@2000-01-01, 5@2000-01-05]')) t(temp);
-----
-{[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]}
-
-query I
-SELECT wsum(temp, '1 day') FROM (VALUES (tint '[1@2000-01-01, 5@2000-01-05]')) t(temp);
-----
-{[1@2000-01-01 00:00:00+00, ...]}
-
+{[1@2000-01-01 00:00:00+00, 1@2000-01-01 00:05:00+00]}
 mode unskip
+
+# =============================================================================
+# wmin — windowed minimum
+# =============================================================================
+
+query I
+SELECT WminAgg(temp, NULL) FROM (VALUES (NULL::tint),(NULL::tint)) t(temp);
+----
+NULL
+
+query I
+SELECT WminAgg(temp, NULL) FROM (VALUES (NULL::tint),('1@2000-01-01'::tint)) t(temp);
+----
+NULL
+
+query I
+SELECT WminAgg(temp, interval '5 minutes') FROM (VALUES (NULL::tint),(NULL::tint)) t(temp);
+----
+NULL
+
+query I
+SELECT WminAgg(temp, interval '5 minutes') FROM (VALUES (NULL::tint),('1@2000-01-01'::tint)) t(temp);
+----
+{[1@2000-01-01 00:00:00+00, 1@2000-01-01 00:05:00+00]}
+
+# =============================================================================
+# wmax — windowed maximum
+# =============================================================================
+
+query I
+SELECT WmaxAgg(temp, interval '5 minutes') FROM (VALUES (NULL::tint),(NULL::tint)) t(temp);
+----
+NULL
+
+query I
+SELECT WmaxAgg(temp, interval '5 minutes') FROM (VALUES (NULL::tint),('1@2000-01-01'::tint)) t(temp);
+----
+{[1@2000-01-01 00:00:00+00, 1@2000-01-01 00:05:00+00]}
+
+# =============================================================================
+# wsum — windowed sum
+# =============================================================================
+
+query I
+SELECT WsumAgg(temp, interval '5 minutes') FROM (VALUES (NULL::tint),(NULL::tint)) t(temp);
+----
+NULL
+
+query I
+SELECT WsumAgg(temp, interval '5 minutes') FROM (VALUES (NULL::tint),('1@2000-01-01'::tint)) t(temp);
+----
+{[1@2000-01-01 00:00:00+00, 1@2000-01-01 00:05:00+00]}
+
+# =============================================================================
+# wavg — windowed average (returns tfloat with Interp=Step)
+# =============================================================================
+
+query I
+SELECT WavgAgg(temp, interval '5 minutes') FROM (VALUES (NULL::tint),(NULL::tint)) t(temp);
+----
+NULL
+
+query I
+SELECT WavgAgg(temp, interval '5 minutes') FROM (VALUES (NULL::tint),('1@2000-01-01'::tint)) t(temp);
+----
+Interp=Step;{[1@2000-01-01 00:00:00+00, 1@2000-01-01 00:05:00+00]}
