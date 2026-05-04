@@ -4796,6 +4796,26 @@ void TemporalFunctions::Tnumber_abs(DataChunk &args, ExpressionState &state, Vec
     TemporalUnary(args, result, [](Temporal *t) { return tnumber_abs(t); });
 }
 
+void TemporalFunctions::Tnumber_delta_value(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return tnumber_delta_value(t); });
+}
+
+void TemporalFunctions::Tnumber_trend(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return tnumber_trend(t); });
+}
+
+void TemporalFunctions::Tfloat_exp(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return tfloat_exp(t); });
+}
+
+void TemporalFunctions::Tfloat_ln(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return tfloat_ln(t); });
+}
+
+void TemporalFunctions::Tfloat_log10(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return tfloat_log10(t); });
+}
+
 // Temporal_derivative is implemented later in this file in the Math
 // functions block (existed before the unary-tnumber additions).
 
@@ -5147,6 +5167,148 @@ void TemporalFunctions::Temporal_dyntimewarp_distance(DataChunk &args, Expressio
 }
 void TemporalFunctions::Temporal_hausdorff_distance(DataChunk &args, ExpressionState &state, Vector &result) {
     TempTempDoublePred(args, result, [](Temporal *a, Temporal *b) { return temporal_hausdorff_distance(a, b); });
+}
+
+namespace {
+
+void RunSimilarityPath(DataChunk &args, Vector &result,
+                      Match *(*path_fn)(const Temporal *, const Temporal *, int *),
+                      const char *fn_name) {
+    const idx_t row_count = args.size();
+    args.data[0].Flatten(row_count);
+    args.data[1].Flatten(row_count);
+
+    auto in_a = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_b = FlatVector::GetData<string_t>(args.data[1]);
+    auto &valid_a = FlatVector::Validity(args.data[0]);
+    auto &valid_b = FlatVector::Validity(args.data[1]);
+
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!valid_a.RowIsValid(row) || !valid_b.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        Temporal *a = BlobToTemporal(in_a[row]);
+        Temporal *b = BlobToTemporal(in_b[row]);
+        int count = 0;
+        Match *matches = path_fn(a, b, &count);
+        free(a); free(b);
+        if (!matches || count <= 0) {
+            list_entries[row] = list_entry_t{total, 0};
+            if (matches) free(matches);
+            continue;
+        }
+        ListVector::Reserve(result, total + count);
+        ListVector::SetListSize(result, total + count);
+        list_entries[row] = list_entry_t{total, static_cast<uint64_t>(count)};
+        auto &child_struct = ListVector::GetEntry(result);
+        auto &struct_children = StructVector::GetEntries(child_struct);
+        auto i_data = FlatVector::GetData<int32_t>(*struct_children[0]);
+        auto j_data = FlatVector::GetData<int32_t>(*struct_children[1]);
+        for (int k = 0; k < count; k++) {
+            i_data[total + k] = matches[k].i;
+            j_data[total + k] = matches[k].j;
+        }
+        total += count;
+        free(matches);
+    }
+    if (row_count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+    (void) fn_name;
+}
+
+} // namespace
+
+void TemporalFunctions::Temporal_frechet_path(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunSimilarityPath(args, result, &temporal_frechet_path, "frechetDistancePath");
+}
+
+void TemporalFunctions::Temporal_dyntimewarp_path(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunSimilarityPath(args, result, &temporal_dyntimewarp_path, "dynTimeWarpPath");
+}
+
+/* ***************************************************
+ * Temporal simplification — Douglas-Peucker, min/max-dist,
+ * min-time-delta.
+ ****************************************************/
+
+void TemporalFunctions::Temporal_simplify_dp(DataChunk &args, ExpressionState &state, Vector &result) {
+    if (args.ColumnCount() >= 3) {
+        TernaryExecutor::ExecuteWithNulls<string_t, double, bool, string_t>(
+            args.data[0], args.data[1], args.data[2], result, args.size(),
+            [&](string_t blob, double eps, bool sync, ValidityMask &mask, idx_t idx) -> string_t {
+                Temporal *t = BlobToTemporal(blob);
+                Temporal *r = temporal_simplify_dp(t, eps, sync);
+                free(t);
+                if (!r) { mask.SetInvalid(idx); return string_t(); }
+                return TemporalToBlob(result, r);
+            });
+    } else {
+        BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(
+            args.data[0], args.data[1], result, args.size(),
+            [&](string_t blob, double eps, ValidityMask &mask, idx_t idx) -> string_t {
+                Temporal *t = BlobToTemporal(blob);
+                Temporal *r = temporal_simplify_dp(t, eps, true);
+                free(t);
+                if (!r) { mask.SetInvalid(idx); return string_t(); }
+                return TemporalToBlob(result, r);
+            });
+    }
+}
+
+void TemporalFunctions::Temporal_simplify_max_dist(DataChunk &args, ExpressionState &state, Vector &result) {
+    if (args.ColumnCount() >= 3) {
+        TernaryExecutor::ExecuteWithNulls<string_t, double, bool, string_t>(
+            args.data[0], args.data[1], args.data[2], result, args.size(),
+            [&](string_t blob, double eps, bool sync, ValidityMask &mask, idx_t idx) -> string_t {
+                Temporal *t = BlobToTemporal(blob);
+                Temporal *r = temporal_simplify_max_dist(t, eps, sync);
+                free(t);
+                if (!r) { mask.SetInvalid(idx); return string_t(); }
+                return TemporalToBlob(result, r);
+            });
+    } else {
+        BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(
+            args.data[0], args.data[1], result, args.size(),
+            [&](string_t blob, double eps, ValidityMask &mask, idx_t idx) -> string_t {
+                Temporal *t = BlobToTemporal(blob);
+                Temporal *r = temporal_simplify_max_dist(t, eps, true);
+                free(t);
+                if (!r) { mask.SetInvalid(idx); return string_t(); }
+                return TemporalToBlob(result, r);
+            });
+    }
+}
+
+void TemporalFunctions::Temporal_simplify_min_dist(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t blob, double dist, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(blob);
+            Temporal *r = temporal_simplify_min_dist(t, dist);
+            free(t);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TemporalToBlob(result, r);
+        });
+}
+
+void TemporalFunctions::Temporal_simplify_min_tdelta(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t blob, interval_t iv, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(blob);
+            MeosInterval interv = IntervaltToInterval(iv);
+            Temporal *r = temporal_simplify_min_tdelta(t, &interv);
+            free(t);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TemporalToBlob(result, r);
+        });
 }
 
 /* ***************************************************

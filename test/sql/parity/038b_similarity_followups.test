@@ -1,0 +1,49 @@
+# name: test/sql/parity/038b_similarity_followups.test
+# description: dynTimeWarpDistance alias + frechetDistancePath +
+#              dynTimeWarpPath (tnumber and tgeompoint).
+# group: [sql]
+
+require mobilityduck
+
+# dynTimeWarpDistance: MobilityDB-canonical name, same handler as dynTimeWarp
+
+query I
+SELECT dynTimeWarpDistance(tfloat '[1@2000-01-01, 2@2000-01-02, 3@2000-01-03]', tfloat '[1@2000-01-01, 3@2000-01-03]');
+----
+0
+
+# Equivalence with the existing alias
+
+query I
+SELECT dynTimeWarpDistance(tfloat '[1@2000-01-01, 5@2000-01-02]', tfloat '[2@2000-01-01, 3@2000-01-02]')
+     = dynTimeWarp(tfloat '[1@2000-01-01, 5@2000-01-02]', tfloat '[2@2000-01-01, 3@2000-01-02]');
+----
+true
+
+# frechetDistancePath returns LIST(STRUCT(i INTEGER, j INTEGER))
+
+query I
+SELECT frechetDistancePath(tfloat '[1@2000-01-01, 2@2000-01-02, 3@2000-01-03]', tfloat '[1@2000-01-01, 3@2000-01-03]');
+----
+[{'i': 1, 'j': 1}, {'i': 0, 'j': 0}]
+
+# dynTimeWarpPath same shape
+
+query I
+SELECT dynTimeWarpPath(tfloat '[1@2000-01-01, 2@2000-01-02, 3@2000-01-03]', tfloat '[1@2000-01-01, 3@2000-01-03]');
+----
+[{'i': 1, 'j': 1}, {'i': 0, 'j': 0}]
+
+# Path on tgeompoint trajectories
+
+query I
+SELECT frechetDistancePath(tgeompoint '[POINT(0 0)@2000-01-01, POINT(1 1)@2000-01-02]', tgeompoint '[POINT(0 0)@2000-01-01, POINT(2 2)@2000-01-02]');
+----
+[{'i': 1, 'j': 1}, {'i': 0, 'j': 0}]
+
+# Path length matches min(n1, n2) for already-aligned inputs
+
+query I
+SELECT len(dynTimeWarpPath(tfloat '[1@2000-01-01, 2@2000-01-02]', tfloat '[10@2000-01-01, 20@2000-01-02]'));
+----
+2

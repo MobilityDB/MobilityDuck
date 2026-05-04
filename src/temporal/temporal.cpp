@@ -9,6 +9,7 @@
 #include "temporal/span.hpp"
 #include "geo/stbox.hpp"
 #include "geo/tgeompoint.hpp"
+#include "geo/tgeometry.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/common/exception.hpp"
@@ -1352,6 +1353,47 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction("degrees", {TemporalTypes::TFLOAT(), LogicalType::BOOLEAN}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_degrees));
     loader.RegisterFunction(ScalarFunction("radians", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_radians));
 
+    // Unary tfloat math functions
+    loader.RegisterFunction(ScalarFunction("exp",   {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_exp));
+    loader.RegisterFunction(ScalarFunction("ln",    {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_ln));
+    loader.RegisterFunction(ScalarFunction("log10", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_log10));
+
+    // deltaValue / trend on tnumber
+    loader.RegisterFunction(ScalarFunction("deltaValue", {TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Tnumber_delta_value));
+    loader.RegisterFunction(ScalarFunction("deltaValue", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tnumber_delta_value));
+    loader.RegisterFunction(ScalarFunction("trend",      {TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Tnumber_trend));
+    loader.RegisterFunction(ScalarFunction("trend",      {TemporalTypes::TFLOAT()}, TemporalTypes::TINT(),   TemporalFunctions::Tnumber_trend));
+
+    // Named-function aliases for the arithmetic operators (MobilityDB exposes
+    // both `+`/`-`/`*`/`/` and `tnumber_add`/`sub`/`mult`/`div`).
+    loader.RegisterFunction(ScalarFunction("tnumber_add",  {LogicalType::INTEGER,    TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Add_int_tint));
+    loader.RegisterFunction(ScalarFunction("tnumber_add",  {TemporalTypes::TINT(),   LogicalType::INTEGER},    TemporalTypes::TINT(),   TemporalFunctions::Add_tint_int));
+    loader.RegisterFunction(ScalarFunction("tnumber_add",  {LogicalType::DOUBLE,     TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Add_float_tfloat));
+    loader.RegisterFunction(ScalarFunction("tnumber_add",  {TemporalTypes::TFLOAT(), LogicalType::DOUBLE},     TemporalTypes::TFLOAT(), TemporalFunctions::Add_tfloat_float));
+    loader.RegisterFunction(ScalarFunction("tnumber_add",  {TemporalTypes::TINT(),   TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Add_tnumber_tnumber));
+    loader.RegisterFunction(ScalarFunction("tnumber_add",  {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Add_tnumber_tnumber));
+
+    loader.RegisterFunction(ScalarFunction("tnumber_sub",  {LogicalType::INTEGER,    TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Sub_int_tint));
+    loader.RegisterFunction(ScalarFunction("tnumber_sub",  {TemporalTypes::TINT(),   LogicalType::INTEGER},    TemporalTypes::TINT(),   TemporalFunctions::Sub_tint_int));
+    loader.RegisterFunction(ScalarFunction("tnumber_sub",  {LogicalType::DOUBLE,     TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Sub_float_tfloat));
+    loader.RegisterFunction(ScalarFunction("tnumber_sub",  {TemporalTypes::TFLOAT(), LogicalType::DOUBLE},     TemporalTypes::TFLOAT(), TemporalFunctions::Sub_tfloat_float));
+    loader.RegisterFunction(ScalarFunction("tnumber_sub",  {TemporalTypes::TINT(),   TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Sub_tnumber_tnumber));
+    loader.RegisterFunction(ScalarFunction("tnumber_sub",  {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Sub_tnumber_tnumber));
+
+    loader.RegisterFunction(ScalarFunction("tnumber_mult", {LogicalType::INTEGER,    TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Mult_int_tint));
+    loader.RegisterFunction(ScalarFunction("tnumber_mult", {TemporalTypes::TINT(),   LogicalType::INTEGER},    TemporalTypes::TINT(),   TemporalFunctions::Mult_tint_int));
+    loader.RegisterFunction(ScalarFunction("tnumber_mult", {LogicalType::DOUBLE,     TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Mult_float_tfloat));
+    loader.RegisterFunction(ScalarFunction("tnumber_mult", {TemporalTypes::TFLOAT(), LogicalType::DOUBLE},     TemporalTypes::TFLOAT(), TemporalFunctions::Mult_tfloat_float));
+    loader.RegisterFunction(ScalarFunction("tnumber_mult", {TemporalTypes::TINT(),   TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Mult_tnumber_tnumber));
+    loader.RegisterFunction(ScalarFunction("tnumber_mult", {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Mult_tnumber_tnumber));
+
+    loader.RegisterFunction(ScalarFunction("tnumber_div",  {LogicalType::INTEGER,    TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Div_int_tint));
+    loader.RegisterFunction(ScalarFunction("tnumber_div",  {TemporalTypes::TINT(),   LogicalType::INTEGER},    TemporalTypes::TINT(),   TemporalFunctions::Div_tint_int));
+    loader.RegisterFunction(ScalarFunction("tnumber_div",  {LogicalType::DOUBLE,     TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Div_float_tfloat));
+    loader.RegisterFunction(ScalarFunction("tnumber_div",  {TemporalTypes::TFLOAT(), LogicalType::DOUBLE},     TemporalTypes::TFLOAT(), TemporalFunctions::Div_tfloat_float));
+    loader.RegisterFunction(ScalarFunction("tnumber_div",  {TemporalTypes::TINT(),   TemporalTypes::TINT()},   TemporalTypes::TINT(),   TemporalFunctions::Div_tnumber_tnumber));
+    loader.RegisterFunction(ScalarFunction("tnumber_div",  {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Div_tnumber_tnumber));
+
     // tnumber distance and nearest-approach-distance.
     //
     // Value-distance variants `<-> ` for (tint, INTEGER), (INTEGER, tint),
@@ -1464,7 +1506,41 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         loader.RegisterFunction(ScalarFunction("frechetDistance", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
         loader.RegisterFunction(ScalarFunction("discreteFrechet", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
         loader.RegisterFunction(ScalarFunction("dynTimeWarp",     {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_dyntimewarp_distance));
+        loader.RegisterFunction(ScalarFunction("dynTimeWarpDistance", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_dyntimewarp_distance));
         loader.RegisterFunction(ScalarFunction("hausdorffDistance", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_hausdorff_distance));
+        loader.RegisterFunction(ScalarFunction("frechetDistancePath", {t, t},
+            LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})),
+            TemporalFunctions::Temporal_frechet_path));
+        loader.RegisterFunction(ScalarFunction("dynTimeWarpPath", {t, t},
+            LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})),
+            TemporalFunctions::Temporal_dyntimewarp_path));
+    }
+    // similarity path on tgeompoint
+    {
+        auto tg = TgeompointType::TGEOMPOINT();
+        auto path_type = LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}}));
+        loader.RegisterFunction(ScalarFunction("frechetDistancePath", {tg, tg}, path_type, TemporalFunctions::Temporal_frechet_path));
+        loader.RegisterFunction(ScalarFunction("dynTimeWarpPath",     {tg, tg}, path_type, TemporalFunctions::Temporal_dyntimewarp_path));
+    }
+
+    // simplify family (subtype-agnostic but only meaningful on linear temporal types)
+    for (const auto &t : {TemporalTypes::TFLOAT(), TgeompointType::TGEOMPOINT(),
+                          TGeometryTypes::TGEOMETRY()}) {
+        loader.RegisterFunction(ScalarFunction("douglasPeuckerSimplify",
+            {t, LogicalType::DOUBLE}, t, TemporalFunctions::Temporal_simplify_dp));
+        loader.RegisterFunction(ScalarFunction("douglasPeuckerSimplify",
+            {t, LogicalType::DOUBLE, LogicalType::BOOLEAN}, t,
+            TemporalFunctions::Temporal_simplify_dp));
+        loader.RegisterFunction(ScalarFunction("maxDistSimplify",
+            {t, LogicalType::DOUBLE}, t, TemporalFunctions::Temporal_simplify_max_dist));
+        loader.RegisterFunction(ScalarFunction("maxDistSimplify",
+            {t, LogicalType::DOUBLE, LogicalType::BOOLEAN}, t,
+            TemporalFunctions::Temporal_simplify_max_dist));
+        loader.RegisterFunction(ScalarFunction("minDistSimplify",
+            {t, LogicalType::DOUBLE}, t, TemporalFunctions::Temporal_simplify_min_dist));
+        loader.RegisterFunction(ScalarFunction("minTimeDeltaSimplify",
+            {t, LogicalType::INTERVAL}, t,
+            TemporalFunctions::Temporal_simplify_min_tdelta));
     }
 
     // tnumber × {numspan, tbox} topological predicates (4 ops × 8 shape pairs)
