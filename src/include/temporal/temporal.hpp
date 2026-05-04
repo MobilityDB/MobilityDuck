@@ -44,6 +44,8 @@ struct TemporalTypes {
     static void RegisterWkbFunctions(ExtensionLoader &loader);
     static void RegisterTemporalTileSplit(ExtensionLoader &loader);
     static void RegisterTileGetters(ExtensionLoader &loader);
+    static void RegisterTnumberValueSplit(ExtensionLoader &loader);
+    static void RegisterSimilarityPath(ExtensionLoader &loader);
 };
 
 } // namespace duckdb

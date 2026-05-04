@@ -16,6 +16,10 @@
 
 #include "duckdb/common/types.hpp"
 
+#include <cmath>
+
+#include "meos_internal_geo.h"
+
 namespace duckdb {
 
 namespace {
@@ -3320,8 +3324,9 @@ void TgeompointFunctions::distance_geo_geo(DataChunk &args, ExpressionState &sta
 }
 
 /* ***************************************************
- * Spatial comparison predicates — ever/always + temporal_t* on
- * tgeompoint × {geometry, tgeompoint}.
+ * Affine-derived spatial-transform stragglers + Spatial comparison predicates
+ * (rotate-around-point-geometry, scale-by-doubles)
+ * (ever/always + temporal_t* on tgeompoint × {geometry, tgeompoint})
  ****************************************************/
 
 namespace {
@@ -3341,6 +3346,37 @@ string_t TemporalToBlobLocal(Vector &result, Temporal *r) {
     string_t stored = StringVector::AddStringOrBlob(result, blob);
     free(buf);
     return stored;
+}
+
+string_t ApplyAffineToTgeoStraggler(Vector &result, string_t input_blob, const AFFINE &m) {
+    size_t data_size = input_blob.GetSize();
+    if (data_size < sizeof(void *)) {
+        throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
+    }
+    uint8_t *data_copy = (uint8_t *)malloc(data_size);
+    memcpy(data_copy, input_blob.GetData(), data_size);
+    Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
+    Temporal *ret = tgeo_affine(temp, &m);
+    free(temp);
+    if (!ret) {
+        throw InternalException("tgeo_affine returned null");
+    }
+    size_t ret_size = temporal_mem_size(ret);
+    uint8_t *ret_data = (uint8_t *)malloc(ret_size);
+    memcpy(ret_data, ret, ret_size);
+    string_t ret_string(reinterpret_cast<const char *>(ret_data), ret_size);
+    string_t stored = StringVector::AddStringOrBlob(result, ret_string);
+    free(ret_data);
+    free(ret);
+    return stored;
+}
+
+inline AFFINE IdentityAffineStraggler() {
+    AFFINE m{};
+    m.afac = 1.0;
+    m.efac = 1.0;
+    m.ifac = 1.0;
+    return m;
 }
 
 } // namespace
@@ -3440,6 +3476,113 @@ void TgeompointFunctions::Teq_temporal_temporal(DataChunk &args, ExpressionState
 
 void TgeompointFunctions::Tne_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result) {
     Tne_tgeo_tgeo(args, state, result);
+}
+
+void TgeompointFunctions::Tgeo_rotate_geom(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    args.data[0].Flatten(row_count);
+    args.data[1].Flatten(row_count);
+    args.data[2].Flatten(row_count);
+    auto in_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto angle_data = FlatVector::GetData<double>(args.data[1]);
+    auto geom_data = FlatVector::GetData<string_t>(args.data[2]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto &v1 = FlatVector::Validity(args.data[1]);
+    auto &v2 = FlatVector::Validity(args.data[2]);
+    auto out_data = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row) || !v1.RowIsValid(row) || !v2.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        const double theta = angle_data[row];
+        GSERIALIZED *gs = GeometryToGSerialized(geom_data[row], 0);
+        if (!gs) {
+            throw InvalidInputException("Invalid centre-point geometry");
+        }
+        const POINT2D *pt = GSERIALIZED_POINT2D_P(gs);
+        const double cx = pt->x;
+        const double cy = pt->y;
+        free(gs);
+
+        const double c = std::cos(theta);
+        const double s = std::sin(theta);
+        AFFINE m = IdentityAffineStraggler();
+        m.afac =  c; m.bfac = -s;
+        m.dfac =  s; m.efac =  c;
+        m.xoff = cx - c * cx + s * cy;
+        m.yoff = cy - s * cx - c * cy;
+
+        out_data[row] = ApplyAffineToTgeoStraggler(result, in_data[row], m);
+    }
+    if (row_count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TgeompointFunctions::Tgeo_scale_xy(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    args.data[0].Flatten(row_count);
+    args.data[1].Flatten(row_count);
+    args.data[2].Flatten(row_count);
+    auto in_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto sx_data = FlatVector::GetData<double>(args.data[1]);
+    auto sy_data = FlatVector::GetData<double>(args.data[2]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto &v1 = FlatVector::Validity(args.data[1]);
+    auto &v2 = FlatVector::Validity(args.data[2]);
+    auto out_data = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row) || !v1.RowIsValid(row) || !v2.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        AFFINE m = IdentityAffineStraggler();
+        m.afac = sx_data[row];
+        m.efac = sy_data[row];
+        out_data[row] = ApplyAffineToTgeoStraggler(result, in_data[row], m);
+    }
+    if (row_count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TgeompointFunctions::Tgeo_scale_xyz(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    args.data[0].Flatten(row_count);
+    args.data[1].Flatten(row_count);
+    args.data[2].Flatten(row_count);
+    args.data[3].Flatten(row_count);
+    auto in_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto sx_data = FlatVector::GetData<double>(args.data[1]);
+    auto sy_data = FlatVector::GetData<double>(args.data[2]);
+    auto sz_data = FlatVector::GetData<double>(args.data[3]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto &v1 = FlatVector::Validity(args.data[1]);
+    auto &v2 = FlatVector::Validity(args.data[2]);
+    auto &v3 = FlatVector::Validity(args.data[3]);
+    auto out_data = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row) || !v1.RowIsValid(row) ||
+            !v2.RowIsValid(row) || !v3.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        AFFINE m = IdentityAffineStraggler();
+        m.afac = sx_data[row];
+        m.efac = sy_data[row];
+        m.ifac = sz_data[row];
+        out_data[row] = ApplyAffineToTgeoStraggler(result, in_data[row], m);
+    }
+    if (row_count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
 }
 
 } // namespace duckdb

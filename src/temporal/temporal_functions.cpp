@@ -6018,4 +6018,103 @@ void TemporalFunctions::Temporal_derivative(DataChunk &args, ExpressionState &st
     }
 }
 
+/* ***************************************************
+ * Serialization functions
+ ****************************************************/
+
+static uint8_t parse_wkb_endian(const std::string &endian) {
+    if (endian.empty()) return 0;
+    if (endian.size() == 3 &&
+        (endian[0] == 'n' || endian[0] == 'N') &&
+        (endian[1] == 'd' || endian[1] == 'D') &&
+        (endian[2] == 'r' || endian[2] == 'R'))
+        return WKB_NDR;
+    if (endian.size() == 3 &&
+        (endian[0] == 'x' || endian[0] == 'X') &&
+        (endian[1] == 'd' || endian[1] == 'D') &&
+        (endian[2] == 'r' || endian[2] == 'R'))
+        return WKB_XDR;
+    throw InvalidInputException("Invalid value for endian flag (expected 'NDR' or 'XDR')");
+}
+
+void TemporalFunctions::Temporal_as_wkb(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto row_count = args.size();
+    auto arg_count = args.ColumnCount();
+    uint8_t variant = 0;
+    if (arg_count > 1) {
+        auto &c = args.data[1];
+        c.Flatten(row_count);
+        variant = parse_wkb_endian(c.GetValue(0).GetValue<std::string>());
+    }
+
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input_blob) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t *>(input_blob.GetData());
+            size_t data_size = input_blob.GetSize();
+            if (data_size < sizeof(void *)) {
+                throw InvalidInputException("[Temporal_as_wkb] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t *)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
+
+            size_t wkb_size = 0;
+            uint8_t *wkb = temporal_as_wkb(temp, variant, &wkb_size);
+            if (!wkb) {
+                free(temp);
+                throw InternalException("[Temporal_as_wkb] temporal_as_wkb returned NULL");
+            }
+            string_t ret_str(reinterpret_cast<const char *>(wkb), wkb_size);
+            string_t stored = StringVector::AddStringOrBlob(result, ret_str);
+
+            free(wkb);
+            free(temp);
+            return stored;
+        });
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TemporalFunctions::Temporal_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto row_count = args.size();
+    auto arg_count = args.ColumnCount();
+    uint8_t variant = 0;
+    if (arg_count > 1) {
+        auto &c = args.data[1];
+        c.Flatten(row_count);
+        variant = parse_wkb_endian(c.GetValue(0).GetValue<std::string>());
+    }
+
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input_blob) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t *>(input_blob.GetData());
+            size_t data_size = input_blob.GetSize();
+            if (data_size < sizeof(void *)) {
+                throw InvalidInputException("[Temporal_as_hexwkb] Invalid Temporal data: insufficient size");
+            }
+            uint8_t *data_copy = (uint8_t *)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
+
+            size_t hex_size = 0;
+            char *hex = temporal_as_hexwkb(temp, variant, &hex_size);
+            if (!hex) {
+                free(temp);
+                throw InternalException("[Temporal_as_hexwkb] temporal_as_hexwkb returned NULL");
+            }
+            std::string ret(hex);
+            string_t stored = StringVector::AddStringOrBlob(result, ret);
+
+            free(hex);
+            free(temp);
+            return stored;
+        });
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
 } // namespace duckdb

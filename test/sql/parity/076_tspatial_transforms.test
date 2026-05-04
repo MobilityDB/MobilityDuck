@@ -1,0 +1,90 @@
+# name: test/sql/parity/076_tspatial_transforms.test
+# description: tgeompoint affine and derived spatial transforms (translate,
+#              rotate, rotateX/Y/Z, transscale, scale, affine).
+# group: [sql]
+
+require mobilityduck
+
+# affine 12-arg core (3D affine matrix + translation)
+
+query I
+SELECT asEWKT(affine(tgeompoint '[POINT(1 1)@2000-01-01]', 2, 0, 0, 0, 3, 0, 0, 0, 1, 5, 7, 0));
+----
+[POINT(7 10)@2000-01-01 00:00:00+00]
+
+# affine 6-arg shorthand maps to the 12-arg core
+
+query I
+SELECT asEWKT(affine(tgeompoint '[POINT(1 1)@2000-01-01]', 2, 0, 0, 3, 5, 7));
+----
+[POINT(7 10)@2000-01-01 00:00:00+00]
+
+# translate 2D
+
+query I
+SELECT asEWKT(translate(tgeompoint '[POINT(1 1)@2000-01-01, POINT(2 2)@2000-01-02]', 10, 20));
+----
+[POINT(11 21)@2000-01-01 00:00:00+00, POINT(12 22)@2000-01-02 00:00:00+00]
+
+# translate 3D
+
+query I
+SELECT asEWKT(translate(tgeompoint '[POINT(1 1 0)@2000-01-01]', 10, 20, 30));
+----
+[POINT Z (11 21 30)@2000-01-01 00:00:00+00]
+
+# rotate around origin (pi/2 maps (1,0) -> (0,1) and (0,1) -> (-1,0))
+
+query I
+SELECT asEWKT(round(rotate(tgeompoint '[POINT(1 0)@2000-01-01, POINT(0 1)@2000-01-02]', pi()/2), 6));
+----
+[POINT(0 1)@2000-01-01 00:00:00+00, POINT(-1 0)@2000-01-02 00:00:00+00]
+
+# rotate around (cx, cy) — pi rotation around (1, 0) maps (2, 0) to (0, 0)
+
+query I
+SELECT asEWKT(round(rotate(tgeompoint '[POINT(2 0)@2000-01-01]', pi(), 1, 0), 6));
+----
+[POINT(0 0)@2000-01-01 00:00:00+00]
+
+# rotateZ alias of rotate
+
+query I
+SELECT asEWKT(round(rotateZ(tgeompoint '[POINT(1 0)@2000-01-01]', pi()), 6));
+----
+[POINT(-1 0)@2000-01-01 00:00:00+00]
+
+# rotateX (3D rotation around X axis): (0, 1, 0) -> (0, 0, 1)
+
+query I
+SELECT asEWKT(round(rotateX(tgeompoint '[POINT(0 1 0)@2000-01-01]', pi()/2), 6));
+----
+[POINT Z (0 0 1)@2000-01-01 00:00:00+00]
+
+# rotateY (3D rotation around Y axis): (1, 0, 0) -> (0, 0, -1)
+
+query I
+SELECT asEWKT(round(rotateY(tgeompoint '[POINT(1 0 0)@2000-01-01]', pi()/2), 6));
+----
+[POINT Z (0 0 -1)@2000-01-01 00:00:00+00]
+
+# transscale: scale by (sx, sy) then translate by (dx*sx, dy*sy)
+
+query I
+SELECT asEWKT(transscale(tgeompoint '[POINT(1 1)@2000-01-01]', 1, 2, 3, 4));
+----
+[POINT(6 12)@2000-01-01 00:00:00+00]
+
+# scale by point factor (no origin)
+
+query I
+SELECT asEWKT(scale(tgeompoint '[POINT(2 3)@2000-01-01]', ST_GeomFromText('POINT(10 100)')));
+----
+[POINT(20 300)@2000-01-01 00:00:00+00]
+
+# scale with explicit origin
+
+query I
+SELECT asEWKT(scale(tgeompoint '[POINT(2 3)@2000-01-01]', ST_GeomFromText('POINT(2 2)'), ST_GeomFromText('POINT(1 1)')));
+----
+[POINT(3 5)@2000-01-01 00:00:00+00]

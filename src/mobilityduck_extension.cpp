@@ -247,6 +247,8 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TemporalTypes::RegisterTemporalUnnestFunction(loader);
 	TemporalTypes::RegisterWkbFunctions(loader);
 	TemporalTypes::RegisterTemporalTileSplit(loader);
+	TemporalTypes::RegisterTnumberValueSplit(loader);
+	TemporalTypes::RegisterSimilarityPath(loader);
 
 	TboxType::RegisterType(loader);
 	TboxType::RegisterCastFunctions(loader);
@@ -284,6 +286,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TgeompointType::RegisterScalarFunctions(loader);
 	TgeompointType::RegisterRoundtripIO(loader);
 	TgeompointType::RegisterTpointSplit(loader);
+	TgeompointType::RegisterAnalyticsViz(loader);
 
 	TgeogpointType::RegisterType(loader);
 	TgeogpointType::RegisterCastFunctions(loader);

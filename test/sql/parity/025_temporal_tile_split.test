@@ -17,7 +17,7 @@ SELECT count(*) FROM valueSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00
 # valueSplit returns the bin start values
 
 query I
-SELECT value FROM valueSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', 2) ORDER BY value;
+SELECT number FROM valueSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', 2) ORDER BY number;
 ----
 0
 4
@@ -37,7 +37,7 @@ SELECT count(*) FROM valueSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00
 2
 
 query I
-SELECT array_agg(value ORDER BY value) FROM
+SELECT array_agg(number ORDER BY number) FROM
   valueSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', 2, 1);
 ----
 [1, 5]

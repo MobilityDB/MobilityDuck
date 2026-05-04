@@ -1409,6 +1409,9 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // Restore the value-distance registrations once the MEOS issue is resolved.
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<->", {TemporalTypes::TINT(), TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Tdistance_tnumber_tnumber));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<->", {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tdistance_tnumber_tnumber));
+    // Named form of the same function for SQL portability.
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tdistance", {TemporalTypes::TINT(), TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Tdistance_tnumber_tnumber));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tdistance", {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tdistance_tnumber_tnumber));
 
     // nearestApproachDistance / nad — scalar return
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nad", {TemporalTypes::TINT(), LogicalType::INTEGER}, LogicalType::INTEGER, TemporalFunctions::Nad_tint_int));
@@ -1497,6 +1500,25 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overafter", {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Overafter_tstzspan_temporal));
     }
 
+    // Same time-position predicates extended to tgeompoint (× tstzspan and
+    // × tgeompoint). MEOS dispatches by Temporal* so the same C wrappers work.
+    {
+        auto tg = TgeompointType::TGEOMPOINT();
+        auto tspan = SpanTypes::TSTZSPAN();
+        loader.RegisterFunction(ScalarFunction("before",     {tg, tspan}, LogicalType::BOOLEAN, TemporalFunctions::Before_temporal_tstzspan));
+        loader.RegisterFunction(ScalarFunction("after",      {tg, tspan}, LogicalType::BOOLEAN, TemporalFunctions::After_temporal_tstzspan));
+        loader.RegisterFunction(ScalarFunction("overbefore", {tg, tspan}, LogicalType::BOOLEAN, TemporalFunctions::Overbefore_temporal_tstzspan));
+        loader.RegisterFunction(ScalarFunction("overafter",  {tg, tspan}, LogicalType::BOOLEAN, TemporalFunctions::Overafter_temporal_tstzspan));
+        loader.RegisterFunction(ScalarFunction("before",     {tspan, tg}, LogicalType::BOOLEAN, TemporalFunctions::Before_tstzspan_temporal));
+        loader.RegisterFunction(ScalarFunction("after",      {tspan, tg}, LogicalType::BOOLEAN, TemporalFunctions::After_tstzspan_temporal));
+        loader.RegisterFunction(ScalarFunction("overbefore", {tspan, tg}, LogicalType::BOOLEAN, TemporalFunctions::Overbefore_tstzspan_temporal));
+        loader.RegisterFunction(ScalarFunction("overafter",  {tspan, tg}, LogicalType::BOOLEAN, TemporalFunctions::Overafter_tstzspan_temporal));
+        loader.RegisterFunction(ScalarFunction("before",     {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Before_temporal_temporal));
+        loader.RegisterFunction(ScalarFunction("after",      {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::After_temporal_temporal));
+        loader.RegisterFunction(ScalarFunction("overbefore", {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Overbefore_temporal_temporal));
+        loader.RegisterFunction(ScalarFunction("overafter",  {tg, tg},    LogicalType::BOOLEAN, TemporalFunctions::Overafter_temporal_temporal));
+    }
+
     // Ever / always equality and inequality (named functions; DuckDB
     // parser does not accept ?= / #= operator names).
 #define REG_EA(NAME, FN)                                                                                                                                                          \
@@ -1535,7 +1557,7 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     REG_EA_ORD("always_ge", Always_ge)
 #undef REG_EA_ORD
 
-    // Similarity measures (tnumber × tnumber)
+    // Similarity measures (tnumber × tnumber, tgeompoint × tgeompoint)
     for (auto &t : {TemporalTypes::TINT(), TemporalTypes::TFLOAT()}) {
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistance",     {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("discreteFrechet",     {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
@@ -1546,9 +1568,13 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistancePath", {t, t}, path_type, TemporalFunctions::Temporal_frechet_path));
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpPath",     {t, t}, path_type, TemporalFunctions::Temporal_dyntimewarp_path));
     }
-    // similarity path on tgeompoint
+    // similarity on tgeompoint (including paths)
     {
         auto tg = TgeompointType::TGEOMPOINT();
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistance",   {tg, tg}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("discreteFrechet",   {tg, tg}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarp",       {tg, tg}, LogicalType::DOUBLE, TemporalFunctions::Temporal_dyntimewarp_distance));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("hausdorffDistance", {tg, tg}, LogicalType::DOUBLE, TemporalFunctions::Temporal_hausdorff_distance));
         auto path_type = LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}}));
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistancePath", {tg, tg}, path_type, TemporalFunctions::Temporal_frechet_path));
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpPath",     {tg, tg}, path_type, TemporalFunctions::Temporal_dyntimewarp_path));
@@ -2707,16 +2733,7 @@ void TemporalTypes::RegisterTemporalTileSplit(ExtensionLoader &loader) {
             "timeSplit", {ttype, IV, TS}, TimeSplitExec, TimeSplitBind, TimeSplitInit));
     }
 
-    // valueSplit(tint, integer [, integer])
-    loader.RegisterFunction(TableFunction(
-        "valueSplit", {TINT(), I}, ValueSplitExec, ValueSplitBind<true>, ValueSplitInit));
-    loader.RegisterFunction(TableFunction(
-        "valueSplit", {TINT(), I, I}, ValueSplitExec, ValueSplitBind<true>, ValueSplitInit));
-    // valueSplit(tfloat, double [, double])
-    loader.RegisterFunction(TableFunction(
-        "valueSplit", {TFLOAT(), D}, ValueSplitExec, ValueSplitBind<false>, ValueSplitInit));
-    loader.RegisterFunction(TableFunction(
-        "valueSplit", {TFLOAT(), D, D}, ValueSplitExec, ValueSplitBind<false>, ValueSplitInit));
+    // valueSplit is registered separately via RegisterTnumberValueSplit
 
     // valueTimeSplit(tint, integer, interval [, integer, timestamptz])
     loader.RegisterFunction(TableFunction(
@@ -2732,6 +2749,256 @@ void TemporalTypes::RegisterTemporalTileSplit(ExtensionLoader &loader) {
     loader.RegisterFunction(TableFunction(
         "valueTimeSplit", {TFLOAT(), D, IV, D, TS},
         ValueTimeSplitExec, ValueTimeSplitBind<false>, ValueTimeSplitInit));
+}
+
+/* ***************************************************
+ * valueSplit(tint|tfloat, size, origin) → SETOF (number, tnumber)
+ * ---------------------------------------------------
+ * Wraps MEOS tint_value_split / tfloat_value_split. Each row is a (bin-start
+ * value, sub-temporal) pair where the sub-temporal is the slice of the input
+ * whose value fell into that bin.
+ ****************************************************/
+
+struct TnumberValueSplitBindData : public TableFunctionData {
+    string_t blob;
+    meosType temptype;
+    LogicalType base_type;     // BIGINT for tint, DOUBLE for tfloat
+    LogicalType temporal_type; // TINT or TFLOAT
+    double size;
+    double origin;
+};
+
+struct TnumberValueSplitGlobalState : public GlobalTableFunctionState {
+    idx_t idx = 0;
+    std::vector<std::pair<Value, Value>> rows;
+};
+
+static unique_ptr<FunctionData> TnumberValueSplitBind(ClientContext &context,
+                                                      TableFunctionBindInput &input,
+                                                      vector<LogicalType> &return_types,
+                                                      vector<string> &names) {
+    if (input.inputs.size() < 2 || input.inputs[0].IsNull()) {
+        throw BinderException("valueSplit: expects (tint|tfloat, size [, origin])");
+    }
+
+    auto in_val = input.inputs[0];
+    if (in_val.type().id() != LogicalTypeId::BLOB) {
+        throw BinderException("valueSplit: expected a temporal number as first argument");
+    }
+
+    auto alias = in_val.type().GetAlias();
+    auto bind = make_uniq<TnumberValueSplitBindData>();
+    bind->blob = StringValue::Get(in_val);
+    bind->temptype = TemporalHelpers::GetTemptypeFromAlias(alias.c_str());
+    if (alias == "TINT") {
+        bind->base_type = LogicalType::BIGINT;
+        bind->temporal_type = TemporalTypes::TINT();
+    } else if (alias == "TFLOAT") {
+        bind->base_type = LogicalType::DOUBLE;
+        bind->temporal_type = TemporalTypes::TFLOAT();
+    } else {
+        throw BinderException("valueSplit: only tint and tfloat are supported, got %s", alias);
+    }
+
+    bind->size = input.inputs[1].GetValue<double>();
+    bind->origin = (input.inputs.size() >= 3 && !input.inputs[2].IsNull())
+                       ? input.inputs[2].GetValue<double>()
+                       : 0.0;
+
+    return_types = {bind->base_type, bind->temporal_type};
+    names = {"number", "tnumber"};
+    return std::move(bind);
+}
+
+static unique_ptr<GlobalTableFunctionState> TnumberValueSplitInit(ClientContext &context,
+                                                                  TableFunctionInitInput &input) {
+    auto &bind = input.bind_data->Cast<TnumberValueSplitBindData>();
+    auto state = make_uniq<TnumberValueSplitGlobalState>();
+
+    const uint8_t *data = (const uint8_t *)bind.blob.GetData();
+    size_t size = bind.blob.GetSize();
+    Temporal *temp = (Temporal *)malloc(size);
+    memcpy(temp, data, size);
+
+    auto make_slice_value = [&](Temporal *slice) {
+        size_t slice_size = temporal_mem_size(slice);
+        uint8_t *slice_buf = (uint8_t *)malloc(slice_size);
+        memcpy(slice_buf, slice, slice_size);
+        Value slice_blob = Value::BLOB(slice_buf, slice_size);
+        // Carry the BLOB bytes through under the TINT/TFLOAT alias. There's no
+        // BLOB → tint/tfloat cast registered (the temporal value is already in
+        // its native serialized form), so reinterpret instead of CastAs.
+        slice_blob.Reinterpret(bind.temporal_type);
+        free(slice_buf);
+        return slice_blob;
+    };
+
+    int count = 0;
+    Temporal **slices = nullptr;
+    if (bind.temptype == T_TINT) {
+        int *bins_int = nullptr;
+        slices = tint_value_split(temp, (int)bind.size, (int)bind.origin, &bins_int, &count);
+        for (int i = 0; i < count; ++i) {
+            state->rows.emplace_back(Value::BIGINT((int64_t)bins_int[i]), make_slice_value(slices[i]));
+            free(slices[i]);
+        }
+        free(slices);
+        free(bins_int);
+    } else if (bind.temptype == T_TFLOAT) {
+        double *bins_dbl = nullptr;
+        slices = tfloat_value_split(temp, bind.size, bind.origin, &bins_dbl, &count);
+        for (int i = 0; i < count; ++i) {
+            state->rows.emplace_back(Value::DOUBLE(bins_dbl[i]), make_slice_value(slices[i]));
+            free(slices[i]);
+        }
+        free(slices);
+        free(bins_dbl);
+    }
+
+    free(temp);
+    return std::move(state);
+}
+
+static void TnumberValueSplitExec(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
+    auto &state = input.global_state->Cast<TnumberValueSplitGlobalState>();
+    auto count = MinValue<idx_t>(STANDARD_VECTOR_SIZE, state.rows.size() - state.idx);
+    for (idx_t i = 0; i < count; ++i) {
+        output.SetValue(0, i, state.rows[state.idx].first);
+        output.SetValue(1, i, state.rows[state.idx].second);
+        state.idx++;
+    }
+    output.SetCardinality(count);
+}
+
+/* ***************************************************
+ * frechetDistancePath / dynTimeWarpPath table functions
+ * ---------------------------------------------------
+ * Wraps MEOS temporal_frechet_path / temporal_dyntimewarp_path. Returns the
+ * (i, j) alignment pairs of the two input temporal sequences. Same shape on
+ * tnumber × tnumber and tgeompoint × tgeompoint.
+ ****************************************************/
+
+enum class SimilarityPathKind { Frechet, DynTimeWarp };
+
+struct SimilarityPathBindData : public TableFunctionData {
+    string_t blob1;
+    string_t blob2;
+    SimilarityPathKind kind;
+};
+
+struct SimilarityPathGlobalState : public GlobalTableFunctionState {
+    idx_t idx = 0;
+    std::vector<std::pair<int32_t, int32_t>> rows;
+};
+
+template <SimilarityPathKind KIND>
+static unique_ptr<FunctionData> SimilarityPathBind(ClientContext &context,
+                                                   TableFunctionBindInput &input,
+                                                   vector<LogicalType> &return_types,
+                                                   vector<string> &names) {
+    if (input.inputs.size() != 2 || input.inputs[0].IsNull() || input.inputs[1].IsNull()) {
+        throw BinderException("similarity path: expects two non-null temporal arguments");
+    }
+    auto bind = make_uniq<SimilarityPathBindData>();
+    bind->blob1 = StringValue::Get(input.inputs[0]);
+    bind->blob2 = StringValue::Get(input.inputs[1]);
+    bind->kind = KIND;
+    return_types = {LogicalType::INTEGER, LogicalType::INTEGER};
+    names = {"i", "j"};
+    return std::move(bind);
+}
+
+static unique_ptr<GlobalTableFunctionState> SimilarityPathInit(ClientContext &context,
+                                                               TableFunctionInitInput &input) {
+    auto &bind = input.bind_data->Cast<SimilarityPathBindData>();
+    auto state = make_uniq<SimilarityPathGlobalState>();
+
+    auto load = [](const string_t &blob) -> Temporal * {
+        const uint8_t *src = (const uint8_t *)blob.GetData();
+        size_t sz = blob.GetSize();
+        Temporal *t = (Temporal *)malloc(sz);
+        memcpy(t, src, sz);
+        return t;
+    };
+    Temporal *t1 = load(bind.blob1);
+    Temporal *t2 = load(bind.blob2);
+
+    int count = 0;
+    Match *path = (bind.kind == SimilarityPathKind::Frechet)
+                      ? temporal_frechet_path(t1, t2, &count)
+                      : temporal_dyntimewarp_path(t1, t2, &count);
+    if (path) {
+        state->rows.reserve(count);
+        for (int i = 0; i < count; ++i) {
+            state->rows.emplace_back((int32_t)path[i].i, (int32_t)path[i].j);
+        }
+        free(path);
+    }
+    free(t1);
+    free(t2);
+    return std::move(state);
+}
+
+static void SimilarityPathExec(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
+    auto &state = input.global_state->Cast<SimilarityPathGlobalState>();
+    auto count = MinValue<idx_t>(STANDARD_VECTOR_SIZE, state.rows.size() - state.idx);
+    auto i_data = FlatVector::GetData<int32_t>(output.data[0]);
+    auto j_data = FlatVector::GetData<int32_t>(output.data[1]);
+    for (idx_t k = 0; k < count; ++k) {
+        i_data[k] = state.rows[state.idx].first;
+        j_data[k] = state.rows[state.idx].second;
+        state.idx++;
+    }
+    output.SetCardinality(count);
+}
+
+void TemporalTypes::RegisterSimilarityPath(ExtensionLoader &loader) {
+    auto reg = [&](const char *name, const LogicalType &t1, const LogicalType &t2,
+                   SimilarityPathKind kind) {
+        TableFunction fn(name, {t1, t2}, SimilarityPathExec,
+                         (kind == SimilarityPathKind::Frechet)
+                             ? SimilarityPathBind<SimilarityPathKind::Frechet>
+                             : SimilarityPathBind<SimilarityPathKind::DynTimeWarp>,
+                         SimilarityPathInit);
+        loader.RegisterFunction(fn);
+    };
+
+    reg("frechetDistancePath", TemporalTypes::TINT(),   TemporalTypes::TINT(),   SimilarityPathKind::Frechet);
+    reg("frechetDistancePath", TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT(), SimilarityPathKind::Frechet);
+    reg("frechetDistancePath", TgeompointType::TGEOMPOINT(), TgeompointType::TGEOMPOINT(), SimilarityPathKind::Frechet);
+
+    reg("dynTimeWarpPath", TemporalTypes::TINT(),   TemporalTypes::TINT(),   SimilarityPathKind::DynTimeWarp);
+    reg("dynTimeWarpPath", TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT(), SimilarityPathKind::DynTimeWarp);
+    reg("dynTimeWarpPath", TgeompointType::TGEOMPOINT(), TgeompointType::TGEOMPOINT(), SimilarityPathKind::DynTimeWarp);
+}
+
+void TemporalTypes::RegisterTnumberValueSplit(ExtensionLoader &loader) {
+    // tint variant
+    {
+        TableFunction fn("valueSplit",
+                         {TemporalTypes::TINT(), LogicalType::INTEGER},
+                         TnumberValueSplitExec, TnumberValueSplitBind, TnumberValueSplitInit);
+        loader.RegisterFunction(fn);
+    }
+    {
+        TableFunction fn("valueSplit",
+                         {TemporalTypes::TINT(), LogicalType::INTEGER, LogicalType::INTEGER},
+                         TnumberValueSplitExec, TnumberValueSplitBind, TnumberValueSplitInit);
+        loader.RegisterFunction(fn);
+    }
+    // tfloat variant
+    {
+        TableFunction fn("valueSplit",
+                         {TemporalTypes::TFLOAT(), LogicalType::DOUBLE},
+                         TnumberValueSplitExec, TnumberValueSplitBind, TnumberValueSplitInit);
+        loader.RegisterFunction(fn);
+    }
+    {
+        TableFunction fn("valueSplit",
+                         {TemporalTypes::TFLOAT(), LogicalType::DOUBLE, LogicalType::DOUBLE},
+                         TnumberValueSplitExec, TnumberValueSplitBind, TnumberValueSplitInit);
+        loader.RegisterFunction(fn);
+    }
 }
 
 } // namespace duckdb
