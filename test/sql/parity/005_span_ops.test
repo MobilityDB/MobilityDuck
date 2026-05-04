@@ -148,26 +148,20 @@ true
 # Union: +
 # =============================================================================
 
-mode skip
-# `+` for span × span is broken in src/temporal/span.cpp regardless of
-# whether the inputs overlap or are disjoint — it returns the empty
-# canonical (t, t) value instead of the union. MEOS symbol:
-# union_span_span (returns SpanSet for disjoint, Span for connected).
 query I
 SELECT floatspan '[1, 3]' + floatspan '[1, 3]';
 ----
-[1, 3]
+{[1, 3]}
 
 query I
 SELECT floatspan '[1, 3]' + floatspan '(3, 5]';
 ----
-[1, 5]
+{[1, 5]}
 
 query I
 SELECT floatspan '[1, 1]' + floatspan '[3, 4]';
 ----
 {[1, 1], [3, 4]}
-mode unskip
 
 # =============================================================================
 # Difference: -  (returns SpanSet)
@@ -176,7 +170,7 @@ mode unskip
 query I
 SELECT floatspan '[1, 3]' - floatspan '[1, 3]';
 ----
-{}
+NULL
 
 query I
 SELECT floatspan '[1, 3]' - floatspan '(3, 5]';

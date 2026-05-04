@@ -3419,12 +3419,8 @@ void SpanFunctions::Union_value_span(DataChunk &args, ExpressionState &state, Ve
                         throw InvalidInputException("Invalid SPAN data: null pointer");
                     }
                     SpanSet *ret = union_value_span(Datum(value), span);
-                    size_t span_size = sizeof(*ret);
-                    uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-                    memcpy(span_buffer, ret, span_size);
-                    string_t span_string_t((char *) span_buffer, span_size);
-                    string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-                    free(span_buffer);
+                    size_t ss_size = spanset_mem_size(ret);
+                    string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
                     free(span_data_copy);
                     free(ret);
                     return stored_data;
@@ -3445,12 +3441,8 @@ void SpanFunctions::Union_value_span(DataChunk &args, ExpressionState &state, Ve
                         throw InvalidInputException("Invalid SPAN data: null pointer");
                     }
                     SpanSet *ret = union_value_span(Datum(value), span);
-                    size_t span_size = sizeof(*ret);
-                    uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-                    memcpy(span_buffer, ret, span_size);
-                    string_t span_string_t((char *) span_buffer, span_size);
-                    string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-                    free(span_buffer);
+                    size_t ss_size = spanset_mem_size(ret);
+                    string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
                     free(span_data_copy);
                     free(ret);
                     return stored_data;
@@ -3472,12 +3464,8 @@ void SpanFunctions::Union_value_span(DataChunk &args, ExpressionState &state, Ve
                         throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
                     }
                     SpanSet *ret = union_value_span(Float8GetDatum(value), span);
-                    size_t span_size = sizeof(*ret);
-                    uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-                    memcpy(span_buffer, ret, span_size);
-                    string_t span_string_t((char *) span_buffer, span_size);
-                    string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-                    free(span_buffer);
+                    size_t ss_size = spanset_mem_size(ret);
+                    string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
                     free(span_data_copy);
                     free(ret);
                     return stored_data;
@@ -3498,12 +3486,8 @@ void SpanFunctions::Union_value_span(DataChunk &args, ExpressionState &state, Ve
                         throw InvalidInputException("Invalid SPAN data: null pointer");
                     }
                     SpanSet *ret = union_value_span(Datum(value), span);
-                    size_t span_size = sizeof(*ret);
-                    uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-                    memcpy(span_buffer, ret, span_size);
-                    string_t span_string_t((char *) span_buffer, span_size);
-                    string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-                    free(span_buffer);
+                    size_t ss_size = spanset_mem_size(ret);
+                    string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
                     free(span_data_copy);
                     free(ret);
                     return stored_data;
@@ -3525,12 +3509,8 @@ void SpanFunctions::Union_value_span(DataChunk &args, ExpressionState &state, Ve
                         throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
                     }
                     SpanSet *ret = union_value_span(Datum(ts_meos.value), span);
-                    size_t span_size = sizeof(*ret);
-                    uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-                    memcpy(span_buffer, ret, span_size);    
-                    string_t span_string_t((char *) span_buffer, span_size);
-                    string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-                    free(span_buffer);
+                    size_t ss_size = spanset_mem_size(ret);
+                    string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
                     free(span_data_copy);
                     free(ret);
                     return stored_data;
@@ -3564,12 +3544,8 @@ void SpanFunctions::Union_span_value(DataChunk &args, ExpressionState &state, Ve
                         throw InvalidInputException("Invalid SPAN data: null pointer");
                     }
                     SpanSet *ret = union_span_value(span, Datum(value));
-                    size_t span_size = sizeof(*ret);
-                    uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-                    memcpy(span_buffer, ret, span_size);
-                    string_t span_string_t((char *) span_buffer, span_size);
-                    string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-                    free(span_buffer);
+                    size_t ss_size = spanset_mem_size(ret);
+                    string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
                     free(span_data_copy);
                     free(ret);
                     return stored_data;
@@ -3590,12 +3566,8 @@ void SpanFunctions::Union_span_value(DataChunk &args, ExpressionState &state, Ve
                         throw InvalidInputException("Invalid SPAN data: null pointer");
                     }
                     SpanSet *ret = union_span_value(span, Datum(value));
-                    size_t span_size = sizeof(*ret);
-                    uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-                    memcpy(span_buffer, ret, span_size);
-                    string_t span_string_t((char *) span_buffer, span_size);
-                    string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-                    free(span_buffer);
+                    size_t ss_size = spanset_mem_size(ret);
+                    string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
                     free(span_data_copy);
                     free(ret);
                     return stored_data;
@@ -3617,12 +3589,8 @@ void SpanFunctions::Union_span_value(DataChunk &args, ExpressionState &state, Ve
                         throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
                     }
                     SpanSet *ret = union_span_value(span, Float8GetDatum(value));
-                    size_t span_size = sizeof(*ret);
-                    uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-                    memcpy(span_buffer, ret, span_size);
-                    string_t span_string_t((char *) span_buffer, span_size);
-                    string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-                    free(span_buffer);
+                    size_t ss_size = spanset_mem_size(ret);
+                    string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
                     free(span_data_copy);
                     free(ret);
                     return stored_data;
@@ -3643,12 +3611,8 @@ void SpanFunctions::Union_span_value(DataChunk &args, ExpressionState &state, Ve
                         throw InvalidInputException("Invalid SPAN data: null pointer");
                     }
                     SpanSet *ret = union_span_value(span, Datum(value));
-                    size_t span_size = sizeof(*ret);
-                    uint8_t *span_buffer = (uint8_t*) malloc(span_size);    
-                    memcpy(span_buffer, ret, span_size);
-                    string_t span_string_t((char *) span_buffer, span_size);
-                    string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-                    free(span_buffer);
+                    size_t ss_size = spanset_mem_size(ret);
+                    string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
                     free(span_data_copy);   
                     free(ret);
                     return stored_data;
@@ -3670,12 +3634,8 @@ void SpanFunctions::Union_span_value(DataChunk &args, ExpressionState &state, Ve
                         throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
                     }
                     SpanSet *ret = union_span_value(span, Datum(ts_meos.value));
-                    size_t span_size = sizeof(*ret);
-                    uint8_t *span_buffer = (uint8_t*) malloc(span_size);    
-                    memcpy(span_buffer, ret, span_size);
-                    string_t span_string_t((char *) span_buffer, span_size);
-                    string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-                    free(span_buffer);
+                    size_t ss_size = spanset_mem_size(ret);
+                    string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
                     free(span_data_copy);   
                     free(ret);
                     return stored_data;
@@ -4129,12 +4089,8 @@ void SpanFunctions::Minus_value_span(DataChunk &args, ExpressionState &state, Ve
                         free(span_data_copy);
                         return string_t();
                     }
-                    size_t span_size = sizeof(*ret);
-                    uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-                    memcpy(span_buffer, ret, span_size);
-                    string_t span_string_t((char *) span_buffer, span_size);
-                    string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-                    free(span_buffer);
+                    size_t ss_size = spanset_mem_size(ret);
+                    string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
                     free(span_data_copy);
                     free(ret);
                     return stored_data;
@@ -4160,12 +4116,8 @@ void SpanFunctions::Minus_value_span(DataChunk &args, ExpressionState &state, Ve
                         free(span_data_copy);
                         return string_t();
                     }
-                    size_t span_size = sizeof(*ret);
-                    uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-                    memcpy(span_buffer, ret, span_size);
-                    string_t span_string_t((char *) span_buffer, span_size);
-                    string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-                    free(span_buffer);
+                    size_t ss_size = spanset_mem_size(ret);
+                    string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
                     free(span_data_copy);
                     free(ret);
                     return stored_data;
@@ -4191,12 +4143,8 @@ void SpanFunctions::Minus_value_span(DataChunk &args, ExpressionState &state, Ve
                         free(span_data_copy);
                         return string_t();
                     }
-                    size_t span_size = sizeof(*ret);
-                    uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-                    memcpy(span_buffer, ret, span_size);        
-                    string_t span_string_t((char *) span_buffer, span_size);
-                    string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-                    free(span_buffer);
+                    size_t ss_size = spanset_mem_size(ret);
+                    string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
                     free(span_data_copy);
                     free(ret);
                     return stored_data;
@@ -4221,12 +4169,8 @@ void SpanFunctions::Minus_value_span(DataChunk &args, ExpressionState &state, Ve
                         free(span_data_copy);
                         return string_t();
                     }
-                    size_t span_size = sizeof(*ret);
-                    uint8_t *span_buffer = (uint8_t*) malloc(span_size);    
-                    memcpy(span_buffer, ret, span_size);
-                    string_t span_string_t((char *) span_buffer, span_size);
-                    string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-                    free(span_buffer);
+                    size_t ss_size = spanset_mem_size(ret);
+                    string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
                     free(span_data_copy);   
                     free(ret);
                     return stored_data;
@@ -4252,12 +4196,8 @@ void SpanFunctions::Minus_value_span(DataChunk &args, ExpressionState &state, Ve
                         free(span_data_copy);
                         return string_t();
                     }
-                    size_t span_size = sizeof(*ret);
-                    uint8_t *span_buffer = (uint8_t*) malloc(span_size);    
-                    memcpy(span_buffer, ret, span_size);
-                    string_t span_string_t((char *) span_buffer, span_size);
-                    string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-                    free(span_buffer);
+                    size_t ss_size = spanset_mem_size(ret);
+                    string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
                     free(span_data_copy);   
                     free(ret);
                     return stored_data;
@@ -4294,12 +4234,8 @@ void SpanFunctions::Minus_span_value(DataChunk &args, ExpressionState &state, Ve
                         free(span_data_copy);
                         return string_t();
                     }
-                    size_t span_size = sizeof(*ret);
-                    uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-                    memcpy(span_buffer, ret, span_size);
-                    string_t span_string_t((char *) span_buffer, span_size);
-                    string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-                    free(span_buffer);
+                    size_t ss_size = spanset_mem_size(ret);
+                    string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
                     free(span_data_copy);
                     free(ret);
                     return stored_data;
@@ -4325,12 +4261,8 @@ void SpanFunctions::Minus_span_value(DataChunk &args, ExpressionState &state, Ve
                         free(span_data_copy);
                         return string_t();
                     }
-                    size_t span_size = sizeof(*ret);
-                    uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-                    memcpy(span_buffer, ret, span_size);
-                    string_t span_string_t((char *) span_buffer, span_size);
-                    string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-                    free(span_buffer);
+                    size_t ss_size = spanset_mem_size(ret);
+                    string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
                     free(span_data_copy);
                     free(ret);
                     return stored_data; 
@@ -4356,12 +4288,8 @@ void SpanFunctions::Minus_span_value(DataChunk &args, ExpressionState &state, Ve
                         free(span_data_copy);
                         return string_t();
                     }
-                    size_t span_size = sizeof(*ret);
-                    uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-                    memcpy(span_buffer, ret, span_size);        
-                    string_t span_string_t((char *) span_buffer, span_size);
-                    string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-                    free(span_buffer);
+                    size_t ss_size = spanset_mem_size(ret);
+                    string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
                     free(span_data_copy);
                     free(ret);
                     return stored_data;
@@ -4386,12 +4314,8 @@ void SpanFunctions::Minus_span_value(DataChunk &args, ExpressionState &state, Ve
                         free(span_data_copy);
                         return string_t();
                     }
-                    size_t span_size = sizeof(*ret);
-                    uint8_t *span_buffer = (uint8_t*) malloc(span_size);    
-                    memcpy(span_buffer, ret, span_size);
-                    string_t span_string_t((char *) span_buffer, span_size);
-                    string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-                    free(span_buffer);
+                    size_t ss_size = spanset_mem_size(ret);
+                    string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
                     free(span_data_copy);   
                     free(ret);
                     return stored_data;
@@ -4417,12 +4341,8 @@ void SpanFunctions::Minus_span_value(DataChunk &args, ExpressionState &state, Ve
                         free(span_data_copy);
                         return string_t();
                     }
-                    size_t span_size = sizeof(*ret);
-                    uint8_t *span_buffer = (uint8_t*) malloc(span_size);    
-                    memcpy(span_buffer, ret, span_size);
-                    string_t span_string_t((char *) span_buffer, span_size);
-                    string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-                    free(span_buffer);
+                    size_t ss_size = spanset_mem_size(ret);
+                    string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
                     free(span_data_copy);   
                     free(ret);
                     return stored_data;
@@ -4469,12 +4389,8 @@ void SpanFunctions::Minus_span_span(DataChunk &args, ExpressionState &state, Vec
                 return string_t();
             }
 
-            size_t span_size = sizeof(*ret);
-            uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-            memcpy(span_buffer, ret, span_size);
-            string_t span_string_t((char *) span_buffer, span_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-            free(span_buffer);
+            size_t ss_size = spanset_mem_size(ret);
+            string_t stored_data = StringVector::AddStringOrBlob(result, (const char *)ret, ss_size);
             free(ret);
             free(span1);
             free(span2);
@@ -4544,7 +4460,7 @@ void SpanFunctions::Distance_span_value(DataChunk &args, ExpressionState &state,
                         free(span_data_copy);
                         throw InvalidInputException("Invalid FLOATSPAN data: null pointer");    
                     }
-                    double distance = distance_span_value(span, Float8GetDatum(value));
+                    double distance = DatumGetFloat8(distance_span_value(span, Float8GetDatum(value)));
                     free(span_data_copy);
                     return distance;
                 });
@@ -4655,7 +4571,7 @@ void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state,
                         free(span_data_copy);
                         throw InvalidInputException("Invalid FLOATSPAN data: null pointer");    
                     }
-                    double distance = distance_span_value(span, Float8GetDatum(value));
+                    double distance = DatumGetFloat8(distance_span_value(span, Float8GetDatum(value)));
                     free(span_data_copy);
                     return distance;
                 });
