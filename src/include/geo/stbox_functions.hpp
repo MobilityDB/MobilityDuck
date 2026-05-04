@@ -104,6 +104,18 @@ struct StboxFunctions {
     static void Same_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adjacent_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
 
+#define DECL_TSPATIAL_TOPO(OP)                                                                                  \
+    static void OP##_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);                   \
+    static void OP##_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);                   \
+    static void OP##_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+
+    DECL_TSPATIAL_TOPO(Contains)
+    DECL_TSPATIAL_TOPO(Contained)
+    DECL_TSPATIAL_TOPO(Overlaps)
+    DECL_TSPATIAL_TOPO(Same)
+    DECL_TSPATIAL_TOPO(Adjacent)
+#undef DECL_TSPATIAL_TOPO
+
     /* ***************************************************
      * Position operators
      ****************************************************/

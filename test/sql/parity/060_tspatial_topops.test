@@ -1,0 +1,72 @@
+# name: test/sql/parity/060_tspatial_topops.test
+# description: Tspatial × {stbox, tspatial} topological predicates —
+#              temporal_contains/contained/overlaps/same/adjacent and the
+#              corresponding @>/<@/&&/~=/-|- operator forms.
+# group: [sql]
+
+require mobilityduck
+
+# Operator + named-function forms are equivalent
+
+query I
+SELECT (tgeompoint '[POINT(0 0)@2000-01-01, POINT(10 10)@2000-01-02]'
+        @> stbox 'STBOX X((1, 1), (5, 5))')
+     = temporal_contains(tgeompoint '[POINT(0 0)@2000-01-01, POINT(10 10)@2000-01-02]',
+                         stbox 'STBOX X((1, 1), (5, 5))');
+----
+true
+
+# stbox × tspatial direction
+
+query I
+SELECT temporal_overlaps(stbox 'STBOX X((0, 0), (10, 10))',
+                         tgeompoint '[POINT(5 5)@2000-01-01]');
+----
+true
+
+query I
+SELECT (stbox 'STBOX X((0, 0), (10, 10))' && tgeompoint '[POINT(5 5)@2000-01-01]');
+----
+true
+
+# Same on tgeompoint × tgeompoint
+
+query I
+SELECT temporal_same(tgeompoint '[POINT(0 0)@2000-01-01]',
+                     tgeompoint '[POINT(0 0)@2000-01-01]');
+----
+true
+
+query I
+SELECT (tgeompoint '[POINT(0 0)@2000-01-01]' ~= tgeompoint '[POINT(0 0)@2000-01-01]');
+----
+true
+
+# Disjoint trajectories: not same, not contains
+
+query I
+SELECT temporal_same(tgeompoint '[POINT(0 0)@2000-01-01]',
+                     tgeompoint '[POINT(1 1)@2000-01-01]');
+----
+false
+
+# Adjacent — point on the box corner shares the boundary
+
+query I
+SELECT temporal_adjacent(tgeompoint '[POINT(0 0)@2000-01-01]', stbox 'STBOX X((0, 0), (5, 5))');
+----
+true
+
+# Contains via stbox × tspatial
+
+query I
+SELECT temporal_contains(stbox 'STBOX X((0, 0), (10, 10))', tgeompoint '[POINT(5 5)@2000-01-01]');
+----
+true
+
+# Contained as the inverse
+
+query I
+SELECT temporal_contained(tgeompoint '[POINT(5 5)@2000-01-01]', stbox 'STBOX X((0, 0), (10, 10))');
+----
+true

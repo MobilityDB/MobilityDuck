@@ -3319,4 +3319,127 @@ void TgeompointFunctions::distance_geo_geo(DataChunk &args, ExpressionState &sta
     }
 }
 
+/* ***************************************************
+ * Spatial comparison predicates — ever/always + temporal_t* on
+ * tgeompoint × {geometry, tgeompoint}.
+ ****************************************************/
+
+namespace {
+
+inline Temporal *BlobToTgeoLocal(string_t b) {
+    size_t sz = b.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, b.GetData(), sz);
+    return reinterpret_cast<Temporal *>(copy);
+}
+
+string_t TemporalToBlobLocal(Vector &result, Temporal *r) {
+    size_t sz = temporal_mem_size(r);
+    uint8_t *buf = (uint8_t *)malloc(sz);
+    memcpy(buf, r, sz);
+    string_t blob(reinterpret_cast<const char *>(buf), sz);
+    string_t stored = StringVector::AddStringOrBlob(result, blob);
+    free(buf);
+    return stored;
+}
+
+} // namespace
+
+#define DEFINE_EA_GEO_TGEO(NAME, MEOS)                                                                                                       \
+void TgeompointFunctions::NAME##_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {                                         \
+    BinaryExecutor::Execute<string_t, string_t, bool>(                                                                                       \
+        args.data[0], args.data[1], result, args.size(),                                                                                     \
+        [](string_t bg, string_t bt) -> bool {                                                                                               \
+            Temporal *t = BlobToTgeoLocal(bt);                                                                                               \
+            int32 srid = tspatial_srid(t);                                                                                                   \
+            GSERIALIZED *gs = GeometryToGSerialized(bg, srid);                                                                               \
+            int r = MEOS##_geo_tgeo(gs, t);                                                                                                  \
+            free(t); free(gs);                                                                                                               \
+            return r != 0;                                                                                                                   \
+        });                                                                                                                                   \
+}                                                                                                                                             \
+void TgeompointFunctions::NAME##_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {                                         \
+    BinaryExecutor::Execute<string_t, string_t, bool>(                                                                                       \
+        args.data[0], args.data[1], result, args.size(),                                                                                     \
+        [](string_t bt, string_t bg) -> bool {                                                                                               \
+            Temporal *t = BlobToTgeoLocal(bt);                                                                                               \
+            int32 srid = tspatial_srid(t);                                                                                                   \
+            GSERIALIZED *gs = GeometryToGSerialized(bg, srid);                                                                               \
+            int r = MEOS##_tgeo_geo(t, gs);                                                                                                  \
+            free(t); free(gs);                                                                                                               \
+            return r != 0;                                                                                                                   \
+        });                                                                                                                                   \
+}                                                                                                                                             \
+void TgeompointFunctions::NAME##_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {                                        \
+    BinaryExecutor::Execute<string_t, string_t, bool>(                                                                                       \
+        args.data[0], args.data[1], result, args.size(),                                                                                     \
+        [](string_t b1, string_t b2) -> bool {                                                                                               \
+            Temporal *t1 = BlobToTgeoLocal(b1);                                                                                              \
+            Temporal *t2 = BlobToTgeoLocal(b2);                                                                                              \
+            int r = MEOS##_tgeo_tgeo(t1, t2);                                                                                                \
+            free(t1); free(t2);                                                                                                              \
+            return r != 0;                                                                                                                   \
+        });                                                                                                                                   \
+}
+
+DEFINE_EA_GEO_TGEO(Ever_eq,   ever_eq)
+DEFINE_EA_GEO_TGEO(Always_eq, always_eq)
+DEFINE_EA_GEO_TGEO(Ever_ne,   ever_ne)
+DEFINE_EA_GEO_TGEO(Always_ne, always_ne)
+
+#undef DEFINE_EA_GEO_TGEO
+
+#define DEFINE_TCMP_GEO_TGEO(NAME, MEOS)                                                                                                     \
+void TgeompointFunctions::NAME##_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {                                         \
+    BinaryExecutor::Execute<string_t, string_t, string_t>(                                                                                   \
+        args.data[0], args.data[1], result, args.size(),                                                                                     \
+        [&](string_t bg, string_t bt) -> string_t {                                                                                          \
+            Temporal *t = BlobToTgeoLocal(bt);                                                                                               \
+            int32 srid = tspatial_srid(t);                                                                                                   \
+            GSERIALIZED *gs = GeometryToGSerialized(bg, srid);                                                                               \
+            Temporal *r = MEOS##_geo_tgeo(gs, t);                                                                                            \
+            free(t); free(gs);                                                                                                               \
+            if (!r) throw InvalidInputException("MEOS " #MEOS "_geo_tgeo returned null");                                                    \
+            return TemporalToBlobLocal(result, r);                                                                                           \
+        });                                                                                                                                   \
+}                                                                                                                                             \
+void TgeompointFunctions::NAME##_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {                                         \
+    BinaryExecutor::Execute<string_t, string_t, string_t>(                                                                                   \
+        args.data[0], args.data[1], result, args.size(),                                                                                     \
+        [&](string_t bt, string_t bg) -> string_t {                                                                                          \
+            Temporal *t = BlobToTgeoLocal(bt);                                                                                               \
+            int32 srid = tspatial_srid(t);                                                                                                   \
+            GSERIALIZED *gs = GeometryToGSerialized(bg, srid);                                                                               \
+            Temporal *r = MEOS##_tgeo_geo(t, gs);                                                                                            \
+            free(t); free(gs);                                                                                                               \
+            if (!r) throw InvalidInputException("MEOS " #MEOS "_tgeo_geo returned null");                                                    \
+            return TemporalToBlobLocal(result, r);                                                                                           \
+        });                                                                                                                                   \
+}                                                                                                                                             \
+void TgeompointFunctions::NAME##_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {                                        \
+    BinaryExecutor::Execute<string_t, string_t, string_t>(                                                                                   \
+        args.data[0], args.data[1], result, args.size(),                                                                                     \
+        [&](string_t b1, string_t b2) -> string_t {                                                                                          \
+            Temporal *t1 = BlobToTgeoLocal(b1);                                                                                              \
+            Temporal *t2 = BlobToTgeoLocal(b2);                                                                                              \
+            Temporal *r = MEOS##_temporal_temporal(t1, t2);                                                                                  \
+            free(t1); free(t2);                                                                                                              \
+            if (!r) throw InvalidInputException("MEOS " #MEOS "_temporal_temporal returned null");                                           \
+            return TemporalToBlobLocal(result, r);                                                                                           \
+        });                                                                                                                                   \
+}
+
+DEFINE_TCMP_GEO_TGEO(Teq, teq)
+DEFINE_TCMP_GEO_TGEO(Tne, tne)
+
+#undef DEFINE_TCMP_GEO_TGEO
+
+void TgeompointFunctions::Teq_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result) {
+    Teq_tgeo_tgeo(args, state, result);
+}
+
+void TgeompointFunctions::Tne_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result) {
+    Tne_tgeo_tgeo(args, state, result);
+}
+
 } // namespace duckdb

@@ -1,0 +1,60 @@
+# name: test/sql/parity/054_tspatial_compops.test
+# description: Tspatial × {geometry, tspatial} comparison predicates —
+#              ever_eq / always_eq / ever_ne / always_ne and temporal_teq /
+#              temporal_tne. The MobilityDB operators `?=` / `?<>` / `#=` etc.
+#              are unreachable in DuckDB's parser, so only named functions
+#              are registered.
+# group: [sql]
+
+require mobilityduck
+
+# ever_eq across (geo × tgeo, tgeo × geo, tgeo × tgeo)
+
+query I
+SELECT ever_eq(ST_GeomFromText('POINT(0 0)'), tgeompoint '[POINT(0 0)@2000-01-01]');
+----
+true
+
+query I
+SELECT ever_eq(tgeompoint '[POINT(0 0)@2000-01-01, POINT(1 1)@2000-01-02]', ST_GeomFromText('POINT(0 0)'));
+----
+true
+
+query I
+SELECT ever_eq(tgeompoint '[POINT(0 0)@2000-01-01]', tgeompoint '[POINT(0 0)@2000-01-01]');
+----
+true
+
+# always_eq / ever_ne / always_ne
+
+query I
+SELECT always_eq(tgeompoint '[POINT(5 5)@2000-01-01]', ST_GeomFromText('POINT(5 5)'));
+----
+true
+
+query I
+SELECT ever_ne(tgeompoint '[POINT(0 0)@2000-01-01, POINT(1 1)@2000-01-02]', ST_GeomFromText('POINT(0 0)'));
+----
+true
+
+query I
+SELECT always_ne(ST_GeomFromText('POINT(5 5)'), tgeompoint '[POINT(0 0)@2000-01-01, POINT(1 1)@2000-01-02]');
+----
+true
+
+# temporal_teq returns tbool with t/f along the trajectory
+
+query I
+SELECT temporal_teq(tgeompoint '[POINT(0 0)@2000-01-01]', tgeompoint '[POINT(0 0)@2000-01-01]');
+----
+[t@2000-01-01 00:00:00+01]
+
+query I
+SELECT temporal_teq(tgeompoint '[POINT(0 0)@2000-01-01]', ST_GeomFromText('POINT(0 0)'));
+----
+{[t@2000-01-01 00:00:00+01]}
+
+query I
+SELECT temporal_tne(ST_GeomFromText('POINT(5 5)'), tgeompoint '[POINT(0 0)@2000-01-01]');
+----
+{[t@2000-01-01 00:00:00+01]}

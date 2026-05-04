@@ -469,7 +469,33 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
+    /* ***************************************************
+     * Tspatial topological predicates (5 ops × 3 type pairs)
+     * Operators + MobilityDB-canonical named-function aliases.
+     ****************************************************/
+    {
+        const auto P = TgeompointType::TGEOMPOINT();
+        const auto B = STBOX();
+
+#define REG_TSPATIAL_TOPO(L, R, FN_SUFFIX)                                                                                       \
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",                {L, R}, LogicalType::BOOLEAN, StboxFunctions::Contains_##FN_SUFFIX));   \
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contains", {L, R}, LogicalType::BOOLEAN, StboxFunctions::Contains_##FN_SUFFIX));   \
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",                 {L, R}, LogicalType::BOOLEAN, StboxFunctions::Contained_##FN_SUFFIX)); \
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contained", {L, R}, LogicalType::BOOLEAN, StboxFunctions::Contained_##FN_SUFFIX)); \
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",                {L, R}, LogicalType::BOOLEAN, StboxFunctions::Overlaps_##FN_SUFFIX));   \
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overlaps", {L, R}, LogicalType::BOOLEAN, StboxFunctions::Overlaps_##FN_SUFFIX));   \
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("~=",                {L, R}, LogicalType::BOOLEAN, StboxFunctions::Same_##FN_SUFFIX));       \
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_same",     {L, R}, LogicalType::BOOLEAN, StboxFunctions::Same_##FN_SUFFIX));       \
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-",                {L, R}, LogicalType::BOOLEAN, StboxFunctions::Adjacent_##FN_SUFFIX));  \
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_adjacent", {L, R}, LogicalType::BOOLEAN, StboxFunctions::Adjacent_##FN_SUFFIX));
+
+        REG_TSPATIAL_TOPO(P, B, tspatial_stbox)
+        REG_TSPATIAL_TOPO(B, P, stbox_tspatial)
+        REG_TSPATIAL_TOPO(P, P, tspatial_tspatial)
+#undef REG_TSPATIAL_TOPO
+    }
+
+        duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "stbox_left",
             {STBOX(), STBOX()},

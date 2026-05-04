@@ -1772,6 +1772,35 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::distance_geo_geo
         )
     );
+
+    /* ***************************************************
+     * Spatial comparison predicates — ever/always + temporal_t*
+     * on tgeompoint × {geometry, tgeompoint}
+     ****************************************************/
+    {
+        const auto T = TGEOMPOINT();
+        const auto G = GeoTypes::GEOMETRY();
+
+#define REG_SPATIAL_EA(NAME, FN)                                                                                                                  \
+        loader.RegisterFunction(ScalarFunction(NAME, {G, T}, LogicalType::BOOLEAN, TgeompointFunctions::FN##_geo_tgeo));                          \
+        loader.RegisterFunction(ScalarFunction(NAME, {T, G}, LogicalType::BOOLEAN, TgeompointFunctions::FN##_tgeo_geo));                          \
+        loader.RegisterFunction(ScalarFunction(NAME, {T, T}, LogicalType::BOOLEAN, TgeompointFunctions::FN##_tgeo_tgeo));
+
+        REG_SPATIAL_EA("ever_eq",   Ever_eq)
+        REG_SPATIAL_EA("always_eq", Always_eq)
+        REG_SPATIAL_EA("ever_ne",   Ever_ne)
+        REG_SPATIAL_EA("always_ne", Always_ne)
+#undef REG_SPATIAL_EA
+
+#define REG_SPATIAL_TCMP(NAME, FN)                                                                                                                \
+        loader.RegisterFunction(ScalarFunction(NAME, {G, T}, TemporalTypes::TBOOL(), TgeompointFunctions::FN##_geo_tgeo));                        \
+        loader.RegisterFunction(ScalarFunction(NAME, {T, G}, TemporalTypes::TBOOL(), TgeompointFunctions::FN##_tgeo_geo));                        \
+        loader.RegisterFunction(ScalarFunction(NAME, {T, T}, TemporalTypes::TBOOL(), TgeompointFunctions::FN##_tgeo_tgeo));
+
+        REG_SPATIAL_TCMP("temporal_teq", Teq)
+        REG_SPATIAL_TCMP("temporal_tne", Tne)
+#undef REG_SPATIAL_TCMP
+    }
 }
 
 /* ***************************************************

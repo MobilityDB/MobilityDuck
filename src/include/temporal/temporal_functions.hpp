@@ -511,6 +511,22 @@ struct TemporalFunctions {
     static void Overback_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
+     * Time-axis position predicates on tspatial
+     ****************************************************/
+    static void Before_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void After_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overbefore_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overafter_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Before_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void After_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overbefore_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overafter_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Before_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void After_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overbefore_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overafter_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
      * Text functions on ttext
      ****************************************************/
     static void Ttext_lower(DataChunk &args, ExpressionState &state, Vector &result);
