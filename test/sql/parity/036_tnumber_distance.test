@@ -2,11 +2,15 @@
 # description: MobilityDB regression file 036_tnumber_distance.test.sql adapted for MobilityDuck
 # group: [sql]
 #
-# Whole file under `mode skip`: MobilityDuck does not register the
-# temporal-distance operator (`<->`) for tnumber types or the related
-# `nearestApproachDistance` / `nad` / `shortestLine`. MEOS symbols:
-# distance_tnumber_value, distance_tnumber_tnumber, nad_tnumber_value,
-# nad_tnumber_tnumber.
+# Registered and active:
+#   tint <-> tint         (temporal.cpp line 1395)
+#   tfloat <-> tfloat     (temporal.cpp line 1396)
+#   nad / nearestApproachDistance for tint/tfloat × {value, temporal}
+#                         (temporal.cpp lines 1399-1406)
+#
+# Individually skipped (MEOS bug — value-tnumber distance returns the
+# temporal's own value rather than |t - v|):
+#   value <-> tnumber / tnumber <-> value
 
 require mobilityduck
 
