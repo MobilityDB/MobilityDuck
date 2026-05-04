@@ -13,3 +13,5 @@ duckdb_extension_load(spatial
     SOURCE_DIR  ${CMAKE_CURRENT_LIST_DIR}/duckdb-spatial
     INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/duckdb-spatial/src/spatial
 )
+
+duckdb_extension_load(icu)
