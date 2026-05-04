@@ -13,9 +13,11 @@
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/function/scalar_function.hpp"
+#include "duckdb/function/function_set.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include "spatial/spatial_types.hpp"
+#include "spatial/util/function_builder.hpp"
 
 namespace duckdb {
 
@@ -1165,6 +1167,47 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Tpoint_trajectory_gs
         )
     );
+
+    // asMVTGeom: transform tgeompoint trajectory to MVT tile coordinates
+    FunctionBuilder::RegisterScalar(loader, "asMVTGeom", [](ScalarFunctionBuilder &func) {
+        func.AddVariant([](ScalarFunctionVariantBuilder &variant) {
+            variant.AddParameter("tgeo", TGEOMPOINT());
+            variant.AddParameter("bounds", GeoTypes::BOX_2D());
+            variant.SetReturnType(GeoTypes::GEOMETRY());
+            variant.CanThrowErrors();
+            variant.SetFunction(TgeompointFunctions::Tpoint_as_mvt_geom);
+        });
+        func.AddVariant([](ScalarFunctionVariantBuilder &variant) {
+            variant.AddParameter("tgeo", TGEOMPOINT());
+            variant.AddParameter("bounds", GeoTypes::BOX_2D());
+            variant.AddParameter("extent", LogicalType::BIGINT);
+            variant.SetReturnType(GeoTypes::GEOMETRY());
+            variant.CanThrowErrors();
+            variant.SetFunction(TgeompointFunctions::Tpoint_as_mvt_geom);
+        });
+        func.AddVariant([](ScalarFunctionVariantBuilder &variant) {
+            variant.AddParameter("tgeo", TGEOMPOINT());
+            variant.AddParameter("bounds", GeoTypes::BOX_2D());
+            variant.AddParameter("extent", LogicalType::BIGINT);
+            variant.AddParameter("buffer", LogicalType::BIGINT);
+            variant.SetReturnType(GeoTypes::GEOMETRY());
+            variant.CanThrowErrors();
+            variant.SetFunction(TgeompointFunctions::Tpoint_as_mvt_geom);
+        });
+        func.AddVariant([](ScalarFunctionVariantBuilder &variant) {
+            variant.AddParameter("tgeo", TGEOMPOINT());
+            variant.AddParameter("bounds", GeoTypes::BOX_2D());
+            variant.AddParameter("extent", LogicalType::BIGINT);
+            variant.AddParameter("buffer", LogicalType::BIGINT);
+            variant.AddParameter("clip_geom", LogicalType::BOOLEAN);
+            variant.SetReturnType(GeoTypes::GEOMETRY());
+            variant.CanThrowErrors();
+            variant.SetFunction(TgeompointFunctions::Tpoint_as_mvt_geom);
+        });
+        func.SetDescription("Transform a tgeompoint trajectory into Mapbox Vector Tile (MVT) tile coordinate space");
+        func.SetTag("ext", "mobilityduck");
+        func.SetTag("category", "conversion");
+    });
 
     loader.RegisterFunction(
         ScalarFunction(

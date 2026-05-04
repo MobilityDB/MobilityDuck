@@ -161,6 +161,11 @@ struct TgeompointFunctions {
     // static void gs_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void collect_gs(DataChunk &args, ExpressionState &state, Vector &result);
     static void distance_geo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * MVT output
+     ****************************************************/
+    static void Tpoint_as_mvt_geom(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

@@ -1,0 +1,107 @@
+# name: test/sql/parity/066_asmvtgeom.test
+# description: asMVTGeom(tgeompoint, BOX_2D [, extent [, buffer [, clip_geom]]]) -> GEOMETRY
+#   Mirrors MobilityDB's asMVTGeom: transforms a tgeompoint trajectory into
+#   Mapbox Vector Tile (MVT) tile-coordinate space.
+#   - Affine transform with Y-axis flip to match MVT convention
+#   - Snap to integer grid
+#   - Clip to tile+buffer rectangle (default on)
+#   Points/lines fully outside the tile return NULL.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# Return type
+# =============================================================================
+
+query I
+SELECT typeof(asMVTGeom(
+    '[Point(0 0)@2000-01-01, Point(1 1)@2000-01-02]'::tgeompoint,
+    {min_x: 0.0, min_y: 0.0, max_x: 1.0, max_y: 1.0}::BOX_2D
+));
+----
+GEOMETRY
+
+# =============================================================================
+# Basic: trajectory inside tile → non-NULL geometry
+# =============================================================================
+
+query I
+SELECT asMVTGeom(
+    '[Point(0 0)@2000-01-01, Point(1 1)@2000-01-02]'::tgeompoint,
+    {min_x: 0.0, min_y: 0.0, max_x: 1.0, max_y: 1.0}::BOX_2D
+) IS NOT NULL;
+----
+true
+
+# Instant tgeompoint → point geometry in tile space
+query I
+SELECT asMVTGeom(
+    'Point(0.5 0.5)@2000-01-01'::tgeompoint,
+    {min_x: 0.0, min_y: 0.0, max_x: 1.0, max_y: 1.0}::BOX_2D
+) IS NOT NULL;
+----
+true
+
+# =============================================================================
+# Clipping: point fully outside tile → NULL
+# =============================================================================
+
+query I
+SELECT asMVTGeom(
+    'Point(5 5)@2000-01-01'::tgeompoint,
+    {min_x: 0.0, min_y: 0.0, max_x: 1.0, max_y: 1.0}::BOX_2D
+) IS NULL;
+----
+true
+
+# =============================================================================
+# Explicit extent
+# =============================================================================
+
+query I
+SELECT asMVTGeom(
+    '[Point(0 0)@2000-01-01, Point(1 1)@2000-01-02]'::tgeompoint,
+    {min_x: 0.0, min_y: 0.0, max_x: 1.0, max_y: 1.0}::BOX_2D,
+    256::BIGINT
+) IS NOT NULL;
+----
+true
+
+# =============================================================================
+# Explicit extent + buffer
+# =============================================================================
+
+query I
+SELECT asMVTGeom(
+    '[Point(0 0)@2000-01-01, Point(1 1)@2000-01-02]'::tgeompoint,
+    {min_x: 0.0, min_y: 0.0, max_x: 1.0, max_y: 1.0}::BOX_2D,
+    4096::BIGINT, 128::BIGINT
+) IS NOT NULL;
+----
+true
+
+# =============================================================================
+# clip_geom=false: trajectory extending beyond tile still returned
+# =============================================================================
+
+query I
+SELECT asMVTGeom(
+    '[Point(0 0)@2000-01-01, Point(4 4)@2000-01-02]'::tgeompoint,
+    {min_x: 0.0, min_y: 0.0, max_x: 1.0, max_y: 1.0}::BOX_2D,
+    4096::BIGINT, 256::BIGINT, false
+) IS NOT NULL;
+----
+true
+
+# =============================================================================
+# NULL propagation
+# =============================================================================
+
+query I
+SELECT asMVTGeom(
+    NULL::tgeompoint,
+    {min_x: 0.0, min_y: 0.0, max_x: 1.0, max_y: 1.0}::BOX_2D
+) IS NULL;
+----
+true

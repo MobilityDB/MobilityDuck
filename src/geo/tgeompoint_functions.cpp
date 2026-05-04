@@ -13,8 +13,11 @@
 
 #include "spatial/spatial_types.hpp"
 #include "spatial/geometry/wkb_writer.hpp"
+#include "spatial/modules/geos/geos_geometry.hpp"
+#include "spatial/modules/geos/geos_serde.hpp"
 
 #include "duckdb/common/types.hpp"
+#include "duckdb/common/types/vector.hpp"
 
 namespace duckdb {
 
@@ -3316,6 +3319,160 @@ void TgeompointFunctions::distance_geo_geo(DataChunk &args, ExpressionState &sta
     );
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+void TgeompointFunctions::Tpoint_as_mvt_geom(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t n = args.size();
+    const idx_t ncols = args.ColumnCount();
+
+    // GEOS context (RAII)
+    struct GeosCtx {
+        GEOSContextHandle_t ctx;
+        GeosCtx() : ctx(GEOS_init_r()) {
+            GEOSContext_setErrorMessageHandler_r(ctx,
+                [](const char *m, void *) { throw InvalidInputException(m); }, nullptr);
+        }
+        ~GeosCtx() { GEOS_finish_r(ctx); }
+    } geos_ctx;
+
+    // Scratch vector for intermediate GEOMETRY blobs (GSERIALIZED → DuckDB format)
+    Vector scratch(GeoTypes::GEOMETRY(), n);
+    ArenaAllocator arena(BufferAllocator::Get(state.GetContext()));
+
+    // Unified formats for tgeompoint arg and BOX_2D struct fields
+    UnifiedVectorFormat tgeo_fmt, bbox_fmt;
+    args.data[0].ToUnifiedFormat(n, tgeo_fmt);
+    args.data[1].ToUnifiedFormat(n, bbox_fmt);
+    const auto tgeo_data = UnifiedVectorFormat::GetData<string_t>(tgeo_fmt);
+
+    const auto &bbox_parts = StructVector::GetEntries(args.data[1]);
+    UnifiedVectorFormat minx_fmt, miny_fmt, maxx_fmt, maxy_fmt;
+    bbox_parts[0]->ToUnifiedFormat(n, minx_fmt);
+    bbox_parts[1]->ToUnifiedFormat(n, miny_fmt);
+    bbox_parts[2]->ToUnifiedFormat(n, maxx_fmt);
+    bbox_parts[3]->ToUnifiedFormat(n, maxy_fmt);
+    const auto minx_d = UnifiedVectorFormat::GetData<double>(minx_fmt);
+    const auto miny_d = UnifiedVectorFormat::GetData<double>(miny_fmt);
+    const auto maxx_d = UnifiedVectorFormat::GetData<double>(maxx_fmt);
+    const auto maxy_d = UnifiedVectorFormat::GetData<double>(maxy_fmt);
+
+    // Optional extent / buffer / clip_geom args
+    UnifiedVectorFormat extent_fmt, buffer_fmt, clip_fmt;
+    const int64_t *extent_d = nullptr;
+    const int64_t *buffer_d = nullptr;
+    const bool *clip_d = nullptr;
+    if (ncols >= 3) {
+        args.data[2].ToUnifiedFormat(n, extent_fmt);
+        extent_d = UnifiedVectorFormat::GetData<int64_t>(extent_fmt);
+    }
+    if (ncols >= 4) {
+        args.data[3].ToUnifiedFormat(n, buffer_fmt);
+        buffer_d = UnifiedVectorFormat::GetData<int64_t>(buffer_fmt);
+    }
+    if (ncols >= 5) {
+        args.data[4].ToUnifiedFormat(n, clip_fmt);
+        clip_d = UnifiedVectorFormat::GetData<bool>(clip_fmt);
+    }
+
+    const auto res_data = FlatVector::GetData<string_t>(result);
+
+    for (idx_t i = 0; i < n; i++) {
+        const auto geo_idx = tgeo_fmt.sel->get_index(i);
+        const auto box_idx = bbox_fmt.sel->get_index(i);
+
+        if (!tgeo_fmt.validity.RowIsValid(geo_idx) || !bbox_fmt.validity.RowIsValid(box_idx)) {
+            FlatVector::SetNull(result, i, true);
+            continue;
+        }
+
+        // Per-row parameters (with defaults matching ST_AsMVTGeom)
+        int32_t extent = 4096, buffer = 256;
+        bool clip = true, null_param = false;
+        if (ncols >= 3) {
+            const auto eidx = extent_fmt.sel->get_index(i);
+            if (!extent_fmt.validity.RowIsValid(eidx)) null_param = true;
+            else extent = static_cast<int32_t>(extent_d[eidx]);
+        }
+        if (!null_param && ncols >= 4) {
+            const auto bidx = buffer_fmt.sel->get_index(i);
+            if (!buffer_fmt.validity.RowIsValid(bidx)) null_param = true;
+            else buffer = static_cast<int32_t>(buffer_d[bidx]);
+        }
+        if (!null_param && ncols >= 5) {
+            const auto cidx = clip_fmt.sel->get_index(i);
+            if (!clip_fmt.validity.RowIsValid(cidx)) null_param = true;
+            else clip = clip_d[cidx];
+        }
+        if (null_param) {
+            FlatVector::SetNull(result, i, true);
+            continue;
+        }
+
+        // Extract trajectory from tgeompoint
+        const auto &blob = tgeo_data[geo_idx];
+        const size_t bsz = blob.GetSize();
+        uint8_t *tc = static_cast<uint8_t*>(malloc(bsz));
+        memcpy(tc, blob.GetData(), bsz);
+        Temporal *temp = reinterpret_cast<Temporal*>(tc);
+        GSERIALIZED *gs = tpoint_trajectory(temp, false);
+        free(temp);
+        if (!gs) {
+            FlatVector::SetNull(result, i, true);
+            continue;
+        }
+
+        // GSERIALIZED → DuckDB GEOMETRY blob → GEOSGeometry
+        string_t geom_blob = GSerializedToGeometry(gs, arena, scratch);
+        free(gs);
+        GEOSGeometry *raw = GeosSerde::Deserialize(geos_ctx.ctx, geom_blob.GetData(), geom_blob.GetSize());
+        if (!raw) {
+            FlatVector::SetNull(result, i, true);
+            continue;
+        }
+        GeosGeometry geom(geos_ctx.ctx, raw);
+
+        // Tile bounds from BOX_2D
+        const double minx = minx_d[minx_fmt.sel->get_index(box_idx)];
+        const double miny = miny_d[miny_fmt.sel->get_index(box_idx)];
+        const double maxx = maxx_d[maxx_fmt.sel->get_index(box_idx)];
+        const double maxy = maxy_d[maxy_fmt.sel->get_index(box_idx)];
+        const double tw = maxx - minx, th = maxy - miny;
+        if (tw <= 0 || th <= 0)
+            throw InvalidInputException("asMVTGeom: tile width and height must be positive");
+
+        // MVT affine transform: scale to extent, Y-axis flip, translate to origin
+        //   x' = scale_x * (x - minx)
+        //   y' = scale_y * (y - maxy)   (scale_y is negative → flip)
+        const double sx = extent / tw;
+        const double sy = -(extent / th);
+        const double aff[6] = { sx, 0.0, 0.0, sy, -minx * sx, -maxy * sy };
+        auto xf = geom.get_transformed(aff);
+        auto sn = xf.get_gridded(1.0);
+
+        if (!clip) {
+            sn.orient_polygons(false);
+            const auto rsz = GeosSerde::GetRequiredSize(geos_ctx.ctx, sn.get_raw());
+            auto out = StringVector::EmptyString(result, rsz);
+            GeosSerde::Serialize(geos_ctx.ctx, sn.get_raw(), out.GetDataWriteable(), rsz);
+            out.Finalize();
+            res_data[i] = out;
+            continue;
+        }
+
+        // Clip to tile+buffer in MVT coordinate space
+        auto cl = sn.get_clipped(-buffer, -buffer, extent + buffer, extent + buffer);
+        if (cl.is_empty()) {
+            FlatVector::SetNull(result, i, true);
+            continue;
+        }
+        auto cn = cl.get_gridded(1.0);
+        cn.orient_polygons(false);
+        const auto rsz = GeosSerde::GetRequiredSize(geos_ctx.ctx, cn.get_raw());
+        auto out = StringVector::EmptyString(result, rsz);
+        GeosSerde::Serialize(geos_ctx.ctx, cn.get_raw(), out.GetDataWriteable(), rsz);
+        out.Finalize();
+        res_data[i] = out;
     }
 }
 
