@@ -225,11 +225,14 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("shift", {SetTypes::dateset(), LogicalType::INTEGER}, SetTypes::dateset(), SetFunctions::Numset_shift)
         );        
 
-        loader.RegisterFunction( 
+        loader.RegisterFunction(
             ScalarFunction("shift", {SetTypes::tstzset(), LogicalType::INTERVAL}, SetTypes::tstzset(), SetFunctions::Tstzset_shift)
         );
+        loader.RegisterFunction(
+            ScalarFunction("+", {SetTypes::tstzset(), LogicalType::INTERVAL}, SetTypes::tstzset(), SetFunctions::Tstzset_shift)
+        );
 
-        loader.RegisterFunction( 
+        loader.RegisterFunction(
             ScalarFunction("scale", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), SetFunctions::Numset_scale)
         );
 
@@ -677,9 +680,9 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction( ScalarFunction("set_distance", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::INTEGER, SetFunctions::Distance_set_value));
     loader.RegisterFunction( ScalarFunction("set_distance", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::INTEGER, SetFunctions::Distance_value_set));
     loader.RegisterFunction( ScalarFunction("set_distance", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::INTEGER, SetFunctions::Distance_set_set));
-    loader.RegisterFunction( ScalarFunction("set_distance", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::DOUBLE, SetFunctions::Distance_set_value));
-    loader.RegisterFunction( ScalarFunction("set_distance", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::DOUBLE, SetFunctions::Distance_value_set));
-    loader.RegisterFunction( ScalarFunction("set_distance", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::DOUBLE, SetFunctions::Distance_set_set));
+    loader.RegisterFunction( ScalarFunction("set_distance", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::INTERVAL, SetFunctions::Distance_set_value));
+    loader.RegisterFunction( ScalarFunction("set_distance", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::INTERVAL, SetFunctions::Distance_value_set));
+    loader.RegisterFunction( ScalarFunction("set_distance", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::INTERVAL, SetFunctions::Distance_set_set));
     loader.RegisterFunction( ScalarFunction("<->", {LogicalType::INTEGER, LogicalType::INTEGER}, LogicalType::INTEGER, SetFunctions::Distance_value_value));
     loader.RegisterFunction( ScalarFunction("<->", {LogicalType::BIGINT, LogicalType::BIGINT}, LogicalType::BIGINT, SetFunctions::Distance_value_value));
     loader.RegisterFunction( ScalarFunction("<->", {LogicalType::DOUBLE, LogicalType::DOUBLE}, LogicalType::DOUBLE, SetFunctions::Distance_value_value));
@@ -697,9 +700,9 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction( ScalarFunction("<->", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::INTEGER, SetFunctions::Distance_set_value));
     loader.RegisterFunction( ScalarFunction("<->", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::INTEGER, SetFunctions::Distance_value_set));
     loader.RegisterFunction( ScalarFunction("<->", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::INTEGER, SetFunctions::Distance_set_set));
-    loader.RegisterFunction( ScalarFunction("<->", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::DOUBLE, SetFunctions::Distance_set_value));
-    loader.RegisterFunction( ScalarFunction("<->", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::DOUBLE, SetFunctions::Distance_value_set));
-    loader.RegisterFunction( ScalarFunction("<->", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::DOUBLE, SetFunctions::Distance_set_set));
+    loader.RegisterFunction( ScalarFunction("<->", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::INTERVAL, SetFunctions::Distance_set_value));
+    loader.RegisterFunction( ScalarFunction("<->", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::INTERVAL, SetFunctions::Distance_value_set));
+    loader.RegisterFunction( ScalarFunction("<->", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::INTERVAL, SetFunctions::Distance_set_set));
 
     // --- set_eq / = ---
     loader.RegisterFunction( ScalarFunction("set_eq", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Set_eq));

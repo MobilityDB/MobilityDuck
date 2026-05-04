@@ -57,4 +57,15 @@ inline timestamp_tz_t MeosToDuckDBTimestamp(timestamp_tz_t meos_ts) {
     return duckdb_ts;
 }
 
-} 
+// Convert a MEOS temporal distance in seconds (double) to a DuckDB interval_t.
+// Days component is extracted first so that exact multiples of 86400 s display
+// as "N days" rather than "NNN:00:00".
+inline interval_t SecsToInterval(double secs) {
+    interval_t iv;
+    iv.months = 0;
+    iv.days   = static_cast<int32_t>(secs / 86400.0);
+    iv.micros = static_cast<int64_t>((secs - iv.days * 86400.0) * 1e6 + 0.5);
+    return iv;
+}
+
+}
