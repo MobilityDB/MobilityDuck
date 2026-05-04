@@ -2699,7 +2699,7 @@ void TemporalTypes::RegisterTemporalTileSplit(ExtensionLoader &loader) {
         loader.RegisterFunction(TableFunction(
             "timeSplit", {ttype, IV, TS}, TimeSplitExec, TimeSplitBind, TimeSplitInit));
     }
-    // also for tgeompoint
+    // also for tgeompoint and tgeometry
     for (const auto &ttype : {TgeompointType::TGEOMPOINT()}) {
         loader.RegisterFunction(TableFunction(
             "timeSplit", {ttype, IV}, TimeSplitExec, TimeSplitBind, TimeSplitInit));
