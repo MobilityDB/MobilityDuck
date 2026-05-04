@@ -2,21 +2,10 @@
 # description: MobilityDB regression file 026_tnumber_mathfuncs.test.sql adapted for MobilityDuck
 # group: [sql]
 #
-# Whole file under `mode skip`: MobilityDuck does not register the
-# arithmetic operators (`+`, `-`, `*`, `/`) for tnumber types
-# (tint / tfloat) on either side. The error surfaces as
-# `+(tstzset, TIMESTAMP WITH TIME ZONE) -> tstzset` (DuckDB picks an
-# unrelated overload). MEOS symbols: tnumber_add_tnumber,
-# tnumber_sub_tnumber, tnumber_mult_tnumber, tnumber_div_tnumber, plus
-# the value-tnumber and tnumber-value variants for each of the four
-# operators.
-#
-# The full surface to cover:
-#   value op tnumber, tnumber op value, tnumber op tnumber
-#   for + (add), - (sub), * (mult), / (div)
-#   x both (tint, tfloat) base types
-#   = 24 ScalarFunction registrations per operator, 96 total.
-# Plus unary functions: abs, deg, rad, atan, derivative.
+# Arithmetic operators (+, -, *, /), unary functions (abs, degrees, radians,
+# derivative), and tnumber <-> tnumber distance are all registered
+# (src/temporal/temporal.cpp lines 1330–1370, added in feat/bindings
+# commit f2227e8). No mode skip in this file.
 
 require mobilityduck
 

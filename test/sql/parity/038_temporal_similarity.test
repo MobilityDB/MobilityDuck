@@ -2,11 +2,10 @@
 # description: MobilityDB regression file 038_temporal_similarity.test.sql adapted for MobilityDuck
 # group: [sql]
 #
-# Whole file under `mode skip`: MobilityDuck does not register the
-# similarity-measure family — `frechetDistance`, `discreteFrechet`,
-# `dynTimeWarp` (DTW), `hausdorffDistance`, `similarityPath`. MEOS
-# symbols: temporal_frechet_distance, temporal_dyntimewarp_distance,
-# temporal_hausdorff_distance, temporal_similarity_path.
+# frechetDistance, discreteFrechet, dynTimeWarp, hausdorffDistance are all
+# registered (src/temporal/temporal.cpp lines 1464–1467, added in feat/bindings
+# commit ce02241). Only similarityPath is skipped: it returns a relation of
+# matched-pair indices and needs DuckDB TableFunction infrastructure.
 
 require mobilityduck
 
