@@ -1107,7 +1107,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         ScalarFunction(
             "direction",
             {TGEOMPOINT()},
-            TemporalTypes::TFLOAT(),
+            LogicalType::DOUBLE,
             TgeompointFunctions::Tpoint_direction
         )
     );
@@ -1125,7 +1125,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         ScalarFunction(
             "angularDifference",
             {TGEOMPOINT()},
-            GeoTypes::GEOMETRY(),
+            TemporalTypes::TFLOAT(),
             TgeompointFunctions::Tpoint_angular_difference
         )
     );

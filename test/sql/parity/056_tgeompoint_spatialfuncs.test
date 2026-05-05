@@ -1,0 +1,314 @@
+# name: test/sql/parity/056_tgeompoint_spatialfuncs.test
+# description: tgeompoint spatial functions parity — mirrors the bound
+#              surface of MobilityDB's 056_tpoint_spatialfuncs.test.sql.
+#
+#              Covers: SRID-related accessors are intentionally omitted
+#              (setSRID / SRID are not registered on tgeompoint in this
+#              branch).  Covered surface:
+#                - getX / getY / getZ via startValue/endValue wrappers
+#                - length / cumulativeLength
+#                - speed (via startValue wrapper)
+#                - direction (scalar double)
+#                - azimuth (tfloat, via numInstants)
+#                - angularDifference (tfloat, via startValue)
+#                - trajectory (returns GEOMETRY, tested via ST_AsText)
+#                - isSimple / makeSimple
+#                - twCentroid (returns GEOMETRY, tested via ST_AsText)
+#                - shortestLine (returns GEOMETRY, tested via ST_AsText)
+#                - atGeometry / minusGeometry
+#                - atStbox / minusStbox
+#                - distance operator <-> (via startValue/endValue)
+#                - ever/always spatial predicates: eContains/aContains,
+#                  eDisjoint/aDisjoint, eIntersects/aIntersects,
+#                  eDwithin/aDwithin, eTouches/aTouches
+#                - temporal spatial predicates: tContains/tDisjoint/
+#                  tIntersects/tDwithin/tTouches (via startValue)
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# getX / getY / getZ — extract coordinate component as tfloat
+# =============================================================================
+
+query I
+SELECT startValue(getX(tgeompoint '[Point(1 2)@2000-01-01, Point(3 4)@2000-01-02]'));
+----
+1.0
+
+query I
+SELECT endValue(getX(tgeompoint '[Point(1 2)@2000-01-01, Point(3 4)@2000-01-02]'));
+----
+3.0
+
+query I
+SELECT startValue(getY(tgeompoint '[Point(1 2)@2000-01-01, Point(3 4)@2000-01-02]'));
+----
+2.0
+
+query I
+SELECT endValue(getY(tgeompoint '[Point(1 2)@2000-01-01, Point(3 4)@2000-01-02]'));
+----
+4.0
+
+query I
+SELECT startValue(getZ(tgeompoint '[Point(1 2 3)@2000-01-01, Point(4 5 6)@2000-01-02]'));
+----
+3.0
+
+query I
+SELECT endValue(getZ(tgeompoint '[Point(1 2 3)@2000-01-01, Point(4 5 6)@2000-01-02]'));
+----
+6.0
+
+# =============================================================================
+# length — total traversed distance
+# =============================================================================
+
+query I
+SELECT round(length(tgeompoint '[Point(0 0)@2000-01-01, Point(1 0)@2000-01-02]'), 6);
+----
+1.0
+
+query I
+SELECT round(length(tgeompoint '{[Point(0 0)@2000-01-01, Point(1 0)@2000-01-02],[Point(2 0)@2000-01-03, Point(4 0)@2000-01-04]}'), 6);
+----
+3.0
+
+# =============================================================================
+# cumulativeLength — length at each instant
+# =============================================================================
+
+query I
+SELECT startValue(cumulativeLength(tgeompoint '[Point(0 0)@2000-01-01, Point(1 0)@2000-01-02, Point(3 0)@2000-01-03]'));
+----
+0.0
+
+query I
+SELECT endValue(cumulativeLength(tgeompoint '[Point(0 0)@2000-01-01, Point(1 0)@2000-01-02, Point(3 0)@2000-01-03]'));
+----
+3.0
+
+# =============================================================================
+# speed — instantaneous speed as tfloat (metres/second)
+# =============================================================================
+
+query I
+SELECT round(startValue(speed(tgeompoint '[Point(0 0)@2000-01-01, Point(1 0)@2000-01-02]')), 6);
+----
+1.2e-05
+
+# =============================================================================
+# direction — overall bearing (scalar double, radians)
+# =============================================================================
+
+query I
+SELECT round(direction(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02]'), 6);
+----
+0.785398
+
+query I
+SELECT round(direction(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02],[Point(2 2)@2000-01-03, Point(3 3)@2000-01-04]}'), 6);
+----
+0.785398
+
+# =============================================================================
+# angularDifference — change in bearing at each instant as tfloat
+# =============================================================================
+
+query I
+SELECT startValue(angularDifference(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]'));
+----
+0.0
+
+# =============================================================================
+# trajectory — geometry swept by the temporal point
+# =============================================================================
+
+query I
+SELECT ST_AsText(trajectory(tgeompoint 'Point(1 1)@2000-01-01'));
+----
+POINT (1 1)
+
+query I
+SELECT ST_AsText(trajectory(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02]'));
+----
+LINESTRING (1 1, 2 2)
+
+query I
+SELECT ST_AsText(trajectory(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02}'));
+----
+MULTIPOINT (1 1, 2 2)
+
+# =============================================================================
+# isSimple / makeSimple
+# =============================================================================
+
+query I
+SELECT isSimple(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02]');
+----
+true
+
+query I
+SELECT isSimple(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]');
+----
+false
+
+query I
+SELECT isSimple(tgeompoint 'Point(0 0)@2000-01-01');
+----
+true
+
+query I
+SELECT list_count(makeSimple(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02]'));
+----
+1
+
+query I
+SELECT list_count(makeSimple(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]'));
+----
+2
+
+# =============================================================================
+# twCentroid — time-weighted centroid (returns GEOMETRY)
+# =============================================================================
+
+query I
+SELECT ST_AsText(twCentroid(tgeompoint 'Point(3 4)@2000-01-01'));
+----
+POINT (3 4)
+
+query I
+SELECT ST_AsText(twCentroid(tgeompoint '[Point(0 0)@2000-01-01, Point(2 0)@2000-01-02]'));
+----
+POINT (1 0)
+
+# =============================================================================
+# shortestLine — geometry of closest approach between two temporal points
+# =============================================================================
+
+query I
+SELECT ST_AsText(shortestLine(tgeompoint '[Point(0 0)@2000-01-01, Point(2 0)@2000-01-02]', tgeompoint '[Point(0 2)@2000-01-01, Point(2 2)@2000-01-02]'));
+----
+LINESTRING (0 0, 0 2)
+
+# =============================================================================
+# atGeometry / minusGeometry
+# =============================================================================
+
+query I
+SELECT asText(atGeometry(tgeompoint '[Point(0 0)@2000-01-01, Point(2 0)@2000-01-02]', ST_GeomFromText('Polygon((0.5 -1, 1.5 -1, 1.5 1, 0.5 1, 0.5 -1))')));
+----
+{[POINT(0.5 0)@2000-01-01 06:00:00+00, POINT(1.5 0)@2000-01-01 18:00:00+00]}
+
+query I
+SELECT asText(minusGeometry(tgeompoint '[Point(0 0)@2000-01-01, Point(2 0)@2000-01-02]', ST_GeomFromText('Polygon((0.5 -1, 1.5 -1, 1.5 1, 0.5 1, 0.5 -1))')));
+----
+{[POINT(0 0)@2000-01-01 00:00:00+00, POINT(0.5 0)@2000-01-01 06:00:00+00), (POINT(1.5 0)@2000-01-01 18:00:00+00, POINT(2 0)@2000-01-02 00:00:00+00]}
+
+# =============================================================================
+# atStbox / minusStbox
+# =============================================================================
+
+query I
+SELECT asText(atStbox(tgeompoint '[Point(0 0)@2000-01-01, Point(4 0)@2000-01-05]', stbox 'STBOX XT(((1,-1),(3,1)),[2000-01-01,2000-01-05])'));
+----
+{[POINT(1 0)@2000-01-02 00:00:00+00, POINT(3 0)@2000-01-04 00:00:00+00]}
+
+query I
+SELECT asText(minusStbox(tgeompoint '[Point(0 0)@2000-01-01, Point(4 0)@2000-01-05]', stbox 'STBOX X((0,-1),(2,1))'));
+----
+{(POINT(2 0)@2000-01-03 00:00:00+00, POINT(4 0)@2000-01-05 00:00:00+00]}
+
+# =============================================================================
+# distance operator <->
+# =============================================================================
+
+query I
+SELECT round(startValue(tgeompoint '[Point(0 0)@2000-01-01, Point(2 0)@2000-01-02]' <-> tgeompoint '[Point(0 2)@2000-01-01, Point(2 2)@2000-01-02]'), 4);
+----
+2.0
+
+query I
+SELECT round(endValue(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02]' <-> tgeompoint '[Point(3 3)@2000-01-01, Point(3 3)@2000-01-02]'), 4);
+----
+1.4142
+
+# =============================================================================
+# ever/always spatial predicates
+# =============================================================================
+
+query I
+SELECT eContains(ST_GeomFromText('Polygon((0 0,2 0,2 2,0 2,0 0))'), tgeompoint '[Point(1 1)@2000-01-01, Point(1.5 1.5)@2000-01-02]');
+----
+true
+
+query I
+SELECT aContains(ST_GeomFromText('Polygon((0 0,3 0,3 3,0 3,0 0))'), tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02]');
+----
+true
+
+query I
+SELECT eDisjoint(tgeompoint '[Point(3 3)@2000-01-01, Point(4 4)@2000-01-02]', ST_GeomFromText('Polygon((0 0,2 0,2 2,0 2,0 0))'));
+----
+true
+
+query I
+SELECT aDisjoint(tgeompoint '[Point(3 3)@2000-01-01, Point(4 4)@2000-01-02]', ST_GeomFromText('Polygon((0 0,2 0,2 2,0 2,0 0))'));
+----
+true
+
+query I
+SELECT eIntersects(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02]', ST_GeomFromText('Polygon((0 0,3 0,3 3,0 3,0 0))'));
+----
+true
+
+query I
+SELECT aIntersects(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02]', ST_GeomFromText('Polygon((0 0,3 0,3 3,0 3,0 0))'));
+----
+true
+
+query I
+SELECT eDwithin(tgeompoint '[Point(0 0)@2000-01-01, Point(1 1)@2000-01-02]', ST_GeomFromText('Point(0.5 0.5)'), 1.0);
+----
+true
+
+query I
+SELECT aDwithin(tgeompoint '[Point(0 0)@2000-01-01, Point(1 1)@2000-01-02]', ST_GeomFromText('Point(0.5 0.5)'), 1.0);
+----
+true
+
+# =============================================================================
+# temporal spatial predicates — tContains, tDisjoint, tIntersects, tDwithin
+# (tbool output; tested via startValue/endValue)
+# =============================================================================
+
+query I
+SELECT startValue(tContains(ST_GeomFromText('Polygon((0 0,3 0,3 3,0 3,0 0))'), tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02]'));
+----
+true
+
+query I
+SELECT endValue(tContains(ST_GeomFromText('Polygon((0 0,3 0,3 3,0 3,0 0))'), tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02]'));
+----
+true
+
+query I
+SELECT startValue(tDisjoint(tgeompoint '[Point(3 3)@2000-01-01, Point(4 4)@2000-01-02]', ST_GeomFromText('Polygon((0 0,2 0,2 2,0 2,0 0))')));
+----
+true
+
+query I
+SELECT startValue(tIntersects(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02]', ST_GeomFromText('Polygon((0 0,3 0,3 3,0 3,0 0))')));
+----
+true
+
+query I
+SELECT startValue(tDwithin(tgeompoint '[Point(0 0)@2000-01-01, Point(2 0)@2000-01-02]', ST_GeomFromText('Point(1 0)'), 0.5));
+----
+false
+
+query I
+SELECT endValue(tDwithin(tgeompoint '[Point(0 0)@2000-01-01, Point(2 0)@2000-01-02]', ST_GeomFromText('Point(1 0)'), 0.5));
+----
+false
