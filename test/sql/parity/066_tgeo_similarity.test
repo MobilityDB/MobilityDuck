@@ -1,0 +1,84 @@
+# name: test/sql/parity/066_tgeo_similarity.test
+# description: tgeompoint trajectory similarity measures parity —
+#              mirrors the bound surface of MobilityDB's
+#              066_tpoint_similarity.test.sql.
+#
+#              Registered in MobilityDuck for tgeompoint:
+#                - frechetDistance(tgeompoint, tgeompoint)
+#                - dynTimeWarp(tgeompoint, tgeompoint)
+#                - hausdorffDistance(tgeompoint, tgeompoint)
+#
+#              NOT registered (skipped):
+#                - similarityPath — needs table-function infrastructure
+#
+#              Note: the tfloat / tint variants are also covered by
+#              038_temporal_similarity.test.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# frechetDistance(tgeompoint, tgeompoint)
+# =============================================================================
+
+query I
+SELECT round(frechetDistance(tgeompoint 'Point(1 1)@2001-01-01', tgeompoint 'Point(1 1)@2001-01-01'), 6);
+----
+0.0
+
+query I
+SELECT round(frechetDistance(tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02]', tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02]'), 6);
+----
+0.0
+
+query I
+SELECT round(frechetDistance(tgeompoint '[Point(0 0)@2001-01-01, Point(2 0)@2001-01-02]', tgeompoint '[Point(0 1)@2001-01-01, Point(2 1)@2001-01-02]'), 6);
+----
+1.0
+
+query I
+SELECT round(frechetDistance(tgeompoint '{[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02],[Point(3 3)@2001-01-03, Point(4 4)@2001-01-04]}', tgeompoint '{[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02],[Point(3 3)@2001-01-03, Point(4 4)@2001-01-04]}'), 6);
+----
+0.0
+
+# =============================================================================
+# dynTimeWarp(tgeompoint, tgeompoint)
+# =============================================================================
+
+query I
+SELECT round(dynTimeWarp(tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02]', tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02]'), 6);
+----
+0.0
+
+query I
+SELECT round(dynTimeWarp(tgeompoint '[Point(0 0)@2001-01-01, Point(2 0)@2001-01-02]', tgeompoint '[Point(0 1)@2001-01-01, Point(2 1)@2001-01-02]'), 6);
+----
+2.0
+
+# =============================================================================
+# hausdorffDistance(tgeompoint, tgeompoint)
+# =============================================================================
+
+query I
+SELECT round(hausdorffDistance(tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02]', tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02]'), 6);
+----
+0.0
+
+query I
+SELECT round(hausdorffDistance(tgeompoint '[Point(0 0)@2001-01-01, Point(2 0)@2001-01-02]', tgeompoint '[Point(0 1)@2001-01-01, Point(2 1)@2001-01-02]'), 6);
+----
+1.0
+
+# =============================================================================
+# similarityPath — needs table-function infrastructure (skip)
+# =============================================================================
+
+mode skip
+# similarityPath returns a relation and needs TableFunction infrastructure
+# that MobilityDuck does not yet expose.
+query II
+SELECT * FROM similarityPath(tgeompoint '[Point(1 1)@2001-01-01]', tgeompoint '[Point(1 1)@2001-01-01]', 'frechet');
+----
+0  0
+
+mode unskip

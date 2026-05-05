@@ -1,0 +1,292 @@
+# name: test/sql/parity/052_tgeo_basic.test
+# description: tgeompoint constructors, I/O, and accessors parity —
+#              mirrors the bound surface of MobilityDB's 052_tgeo.test.sql
+#              and 052_tpoint.test.sql.
+#
+#              Covers:
+#                - Input / output: cast from string, asText, asEWKT
+#                - All 4 subtypes: Instant, Discrete Sequence, Sequence,
+#                  SequenceSet
+#                - Key accessors: getValue, getTimestamp, startValue,
+#                  endValue, startTimestamp, endTimestamp, duration,
+#                  numInstants, instantN, instants, timestamps
+#                - Interpolation: interp
+#                - Subtype: tempSubtype
+#                - Constructor: TGEOMPOINT(geom, tstz)
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# I/O — instant
+# =============================================================================
+
+query I
+SELECT asText(tgeompoint 'Point(1 2)@2001-01-01');
+----
+POINT(1 2)@2001-01-01 00:00:00+00
+
+query I
+SELECT asEWKT(tgeompoint 'Point(1 2)@2001-01-01');
+----
+POINT(1 2)@2001-01-01 00:00:00+00
+
+# =============================================================================
+# I/O — discrete sequence (curly braces)
+# =============================================================================
+
+query I
+SELECT asText(tgeompoint '{Point(1 1)@2001-01-01, Point(2 2)@2001-01-02, Point(3 3)@2001-01-03}');
+----
+{POINT(1 1)@2001-01-01 00:00:00+00, POINT(2 2)@2001-01-02 00:00:00+00, POINT(3 3)@2001-01-03 00:00:00+00}
+
+# =============================================================================
+# I/O — continuous sequence (square brackets)
+# =============================================================================
+
+query I
+SELECT asText(tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02, Point(4 5)@2001-01-03]');
+----
+[POINT(1 1)@2001-01-01 00:00:00+00, POINT(2 2)@2001-01-02 00:00:00+00, POINT(4 5)@2001-01-03 00:00:00+00]
+
+# =============================================================================
+# I/O — sequence set
+# =============================================================================
+
+query I
+SELECT asText(tgeompoint '{[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02],[Point(3 3)@2001-01-03, Point(4 4)@2001-01-04]}');
+----
+{[POINT(1 1)@2001-01-01 00:00:00+00, POINT(2 2)@2001-01-02 00:00:00+00], [POINT(3 3)@2001-01-03 00:00:00+00, POINT(4 4)@2001-01-04 00:00:00+00]}
+
+# =============================================================================
+# I/O — 3D points
+# =============================================================================
+
+query I
+SELECT asText(tgeompoint '[Point(1 1 1)@2001-01-01, Point(2 2 2)@2001-01-02]');
+----
+[POINT Z (1 1 1)@2001-01-01 00:00:00+00, POINT Z (2 2 2)@2001-01-02 00:00:00+00]
+
+# =============================================================================
+# tempSubtype — one per subtype
+# =============================================================================
+
+query I
+SELECT tempSubtype(tgeompoint 'Point(1 2)@2001-01-01');
+----
+Instant
+
+query I
+SELECT tempSubtype(tgeompoint '{Point(1 1)@2001-01-01, Point(2 2)@2001-01-02}');
+----
+Sequence
+
+query I
+SELECT tempSubtype(tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02]');
+----
+Sequence
+
+query I
+SELECT tempSubtype(tgeompoint '{[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02],[Point(3 3)@2001-01-03, Point(4 4)@2001-01-04]}');
+----
+SequenceSet
+
+# =============================================================================
+# interp — interpolation mode
+# =============================================================================
+
+query I
+SELECT interp(tgeompoint 'Point(1 2)@2001-01-01');
+----
+None
+
+query I
+SELECT interp(tgeompoint '{Point(1 1)@2001-01-01, Point(2 2)@2001-01-02}');
+----
+Discrete
+
+query I
+SELECT interp(tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02]');
+----
+Linear
+
+# =============================================================================
+# Constructor: TGEOMPOINT(geometry, timestamptz)
+# =============================================================================
+
+query I
+SELECT asText(TGEOMPOINT(ST_GeomFromText('POINT(1 2)'), TIMESTAMPTZ '2001-01-01 00:00:00+00'));
+----
+POINT(1 2)@2001-01-01 00:00:00+00
+
+# =============================================================================
+# getValue / getTimestamp — instant accessors
+# =============================================================================
+
+query I
+SELECT ST_AsText(getValue(tgeompoint 'Point(1 2)@2001-01-01'));
+----
+POINT (1 2)
+
+query I
+SELECT getTimestamp(tgeompoint 'Point(1 2)@2001-01-01');
+----
+2001-01-01 00:00:00+00
+
+# =============================================================================
+# startValue / endValue
+# =============================================================================
+
+query I
+SELECT ST_AsText(startValue(tgeompoint '[Point(1 2)@2001-01-01, Point(3 4)@2001-01-02]'));
+----
+POINT (1 2)
+
+query I
+SELECT ST_AsText(endValue(tgeompoint '[Point(1 2)@2001-01-01, Point(3 4)@2001-01-02]'));
+----
+POINT (3 4)
+
+# =============================================================================
+# startTimestamp / endTimestamp
+# =============================================================================
+
+query I
+SELECT startTimestamp(tgeompoint '[Point(1 2)@2001-01-01, Point(3 4)@2001-01-03]');
+----
+2001-01-01 00:00:00+00
+
+query I
+SELECT endTimestamp(tgeompoint '[Point(1 2)@2001-01-01, Point(3 4)@2001-01-03]');
+----
+2001-01-03 00:00:00+00
+
+# =============================================================================
+# duration
+# =============================================================================
+
+query I
+SELECT duration(tgeompoint '[Point(1 2)@2001-01-01, Point(3 4)@2001-01-03]');
+----
+2 days
+
+# =============================================================================
+# numInstants
+# =============================================================================
+
+query I
+SELECT numInstants(tgeompoint '{Point(1 1)@2001-01-01, Point(2 2)@2001-01-02, Point(3 3)@2001-01-03}');
+----
+3
+
+query I
+SELECT numInstants(tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02, Point(4 5)@2001-01-03]');
+----
+3
+
+# =============================================================================
+# instantN — 1-based index
+# =============================================================================
+
+query I
+SELECT asText(instantN(tgeompoint '{Point(1 1)@2001-01-01, Point(2 2)@2001-01-02, Point(3 3)@2001-01-03}', 2));
+----
+POINT(2 2)@2001-01-02 00:00:00+00
+
+query I
+SELECT asText(instantN(tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02, Point(4 5)@2001-01-03]', 2));
+----
+POINT(2 2)@2001-01-02 00:00:00+00
+
+# =============================================================================
+# instants — returns list of instants
+# =============================================================================
+
+query I
+SELECT len(instants(tgeompoint '{Point(1 1)@2001-01-01, Point(2 2)@2001-01-02, Point(3 3)@2001-01-03}'));
+----
+3
+
+query I
+SELECT asText(instants(tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02]')[1]);
+----
+POINT(1 1)@2001-01-01 00:00:00+00
+
+query I
+SELECT asText(instants(tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02]')[2]);
+----
+POINT(2 2)@2001-01-02 00:00:00+00
+
+# =============================================================================
+# timestamps — returns list of timestamptz
+# =============================================================================
+
+query I
+SELECT timestamps(tgeompoint '{Point(1 1)@2001-01-01, Point(2 2)@2001-01-02}');
+----
+['2001-01-01 00:00:00+00', '2001-01-02 00:00:00+00']
+
+query I
+SELECT len(timestamps(tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02, Point(4 5)@2001-01-03]'));
+----
+3
+
+# =============================================================================
+# Round-trip: tgeompoint → asText → tgeompoint
+# =============================================================================
+
+query I
+SELECT asText(CAST(asText(tgeompoint '[Point(1 2)@2001-01-01, Point(3 4)@2001-01-02]') AS tgeompoint));
+----
+[POINT(1 2)@2001-01-01 00:00:00+00, POINT(3 4)@2001-01-02 00:00:00+00]
+
+# =============================================================================
+# numSequences / startSequence / endSequence (SequenceSet)
+# =============================================================================
+
+query I
+SELECT numSequences(tgeompoint '{[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02],[Point(3 3)@2001-01-03, Point(4 4)@2001-01-04]}');
+----
+2
+
+query I
+SELECT asText(startSequence(tgeompoint '{[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02],[Point(3 3)@2001-01-03, Point(4 4)@2001-01-04]}'));
+----
+[POINT(1 1)@2001-01-01 00:00:00+00, POINT(2 2)@2001-01-02 00:00:00+00]
+
+query I
+SELECT asText(endSequence(tgeompoint '{[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02],[Point(3 3)@2001-01-03, Point(4 4)@2001-01-04]}'));
+----
+[POINT(3 3)@2001-01-03 00:00:00+00, POINT(4 4)@2001-01-04 00:00:00+00]
+
+# =============================================================================
+# lowerInc / upperInc — boundary flags
+# =============================================================================
+
+query I
+SELECT lowerInc(tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02]');
+----
+true
+
+query I
+SELECT upperInc(tgeompoint '(Point(1 1)@2001-01-01, Point(2 2)@2001-01-02)');
+----
+false
+
+# =============================================================================
+# stbox cast
+# =============================================================================
+
+query I
+SELECT CAST(tgeompoint '[Point(1 2)@2001-01-01, Point(3 4)@2001-01-02]' AS stbox)::VARCHAR;
+----
+STBOX XT(((1,2),(3,4)),[2001-01-01 00:00:00+00, 2001-01-02 00:00:00+00])
+
+# =============================================================================
+# tstzspan cast
+# =============================================================================
+
+query I
+SELECT CAST(tgeompoint '[Point(1 2)@2001-01-01, Point(3 4)@2001-01-03]' AS tstzspan)::VARCHAR;
+----
+[2001-01-01 00:00:00+00, 2001-01-03 00:00:00+00]
