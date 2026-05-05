@@ -5033,16 +5033,40 @@ void TemporalFunctions::Tfloat_radians(DataChunk &args, ExpressionState &state, 
  ****************************************************/
 
 void TemporalFunctions::Tdistance_tint_int(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV<int32_t>(args, result, [](Temporal *t, int32_t i) { return tdistance_tint_int(t, i); });
+    TemporalBinaryV<int32_t>(args, result, [](Temporal *t, int32_t i) {
+        Temporal *diff = sub_tint_int(t, i);
+        if (!diff) return (Temporal *)nullptr;
+        Temporal *r = tnumber_abs(diff);
+        free(diff);
+        return r;
+    });
 }
 void TemporalFunctions::Tdistance_int_tint(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV1<int32_t>(args, result, [](int32_t i, Temporal *t) { return tdistance_tint_int(t, i); });
+    TemporalBinaryV1<int32_t>(args, result, [](int32_t i, Temporal *t) {
+        Temporal *diff = sub_int_tint(i, t);
+        if (!diff) return (Temporal *)nullptr;
+        Temporal *r = tnumber_abs(diff);
+        free(diff);
+        return r;
+    });
 }
 void TemporalFunctions::Tdistance_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV<double>(args, result, [](Temporal *t, double d) { return tdistance_tfloat_float(t, d); });
+    TemporalBinaryV<double>(args, result, [](Temporal *t, double d) {
+        Temporal *diff = sub_tfloat_float(t, d);
+        if (!diff) return (Temporal *)nullptr;
+        Temporal *r = tnumber_abs(diff);
+        free(diff);
+        return r;
+    });
 }
 void TemporalFunctions::Tdistance_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV1<double>(args, result, [](double d, Temporal *t) { return tdistance_tfloat_float(t, d); });
+    TemporalBinaryV1<double>(args, result, [](double d, Temporal *t) {
+        Temporal *diff = sub_float_tfloat(d, t);
+        if (!diff) return (Temporal *)nullptr;
+        Temporal *r = tnumber_abs(diff);
+        free(diff);
+        return r;
+    });
 }
 void TemporalFunctions::Tdistance_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result) {
     TemporalBinaryTT(args, result, [](Temporal *a, Temporal *b) { return tdistance_tnumber_tnumber(a, b); });
@@ -5425,6 +5449,54 @@ void TemporalFunctions::Overlaps_numspan_tnumber(DataChunk &args, ExpressionStat
 }
 void TemporalFunctions::Adjacent_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result) {
     BoxTempBoolPred<Span>(args, result, [](Span *s, Temporal *t) { return adjacent_numspan_tnumber(s, t); });
+}
+// tnumber × scalar value: @> and <@
+// Uses tnumber_to_span to get the value range of the temporal, then checks
+// if the scalar is within that range. Semantics: tint @> 3 is true when 3
+// is in the value domain [min, max] of the temporal number.
+void TemporalFunctions::Contains_tint_int(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, int32_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t blob, int32_t i) -> bool {
+            Temporal *t = BlobToTemporal(blob);
+            Span *s = tnumber_to_span(t);
+            bool r = s ? contains_span_int(s, i) : false;
+            free(t); free(s);
+            return r;
+        });
+}
+void TemporalFunctions::Contains_int_tint(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<int32_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](int32_t i, string_t blob) -> bool {
+            Temporal *t = BlobToTemporal(blob);
+            Span *s = tnumber_to_span(t);
+            bool r = s ? contains_span_int(s, i) : false;
+            free(t); free(s);
+            return r;
+        });
+}
+void TemporalFunctions::Contains_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, double, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t blob, double d) -> bool {
+            Temporal *t = BlobToTemporal(blob);
+            Span *s = tnumber_to_span(t);
+            bool r = s ? contains_span_float(s, d) : false;
+            free(t); free(s);
+            return r;
+        });
+}
+void TemporalFunctions::Contains_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<double, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](double d, string_t blob) -> bool {
+            Temporal *t = BlobToTemporal(blob);
+            Span *s = tnumber_to_span(t);
+            bool r = s ? contains_span_float(s, d) : false;
+            free(t); free(s);
+            return r;
+        });
 }
 // tnumber × tbox (uses TBox)
 void TemporalFunctions::Contains_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result) {

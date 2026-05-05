@@ -400,6 +400,10 @@ struct TemporalFunctions {
     static void Contained_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
     static void Overlaps_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adjacent_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Contains_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Contains_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Contains_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Contains_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contains_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contained_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Overlaps_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);

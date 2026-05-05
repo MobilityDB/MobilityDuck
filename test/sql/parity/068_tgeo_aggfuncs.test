@@ -94,22 +94,25 @@ POINT (3 5)
 # AppendInstantAgg / AppendSequenceAgg for tgeompoint — NOT registered (skip)
 # =============================================================================
 
-mode skip
-# AppendInstantAgg only covers tint/tbool/tfloat/ttext (via AllTypes()).
-# The tgeompoint overload is not registered.
-query I
-SELECT AppendInstantAgg(v ORDER BY v)::VARCHAR FROM (VALUES
-  (tgeompoint 'Point(1 1)@2001-01-01'),
-  (tgeompoint 'Point(2 2)@2001-01-02'),
-  (tgeompoint 'Point(3 3)@2001-01-03')) t(v);
-----
-{[POINT(1 1)@2001-01-01 00:00:00+00, POINT(2 2)@2001-01-02 00:00:00+00, POINT(3 3)@2001-01-03 00:00:00+00]}
+# AppendInstantAgg / AppendSequenceAgg for tgeompoint.
+# Notes:
+#   - ORDER BY startTimestamp(v) gives chronological order for instants.
+#   - asText() is needed because ::VARCHAR outputs raw WKB hex for tgeompoint
+#     sequences (geometry display limitation).
+#   - Non-collinear points are used so MEOS does not simplify (collinear
+#     middle points are dropped by temporal_app_tinst_transfn).
 
 query I
-SELECT AppendSequenceAgg(v ORDER BY v)::VARCHAR FROM (VALUES
+SELECT asText(AppendInstantAgg(v ORDER BY startTimestamp(v))) FROM (VALUES
+  (tgeompoint 'Point(1 1)@2001-01-01'),
+  (tgeompoint 'Point(2 3)@2001-01-02'),
+  (tgeompoint 'Point(3 1)@2001-01-03')) t(v);
+----
+[POINT(1 1)@2001-01-01 00:00:00+00, POINT(2 3)@2001-01-02 00:00:00+00, POINT(3 1)@2001-01-03 00:00:00+00]
+
+query I
+SELECT asText(AppendSequenceAgg(v ORDER BY startTimestamp(v))) FROM (VALUES
   (tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02]'),
   (tgeompoint '[Point(3 3)@2001-01-03, Point(4 4)@2001-01-04]')) t(v);
 ----
 {[POINT(1 1)@2001-01-01 00:00:00+00, POINT(2 2)@2001-01-02 00:00:00+00], [POINT(3 3)@2001-01-03 00:00:00+00, POINT(4 4)@2001-01-04 00:00:00+00]}
-
-mode unskip

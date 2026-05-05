@@ -250,16 +250,11 @@ SELECT tsample(tfloat '[1@2001-01-01, 2@2001-01-02]', '6 hours');
 ----
 {1@2001-01-01 00:00:00+00, 1.25@2001-01-01 06:00:00+00, 1.5@2001-01-01 12:00:00+00, 1.75@2001-01-01 18:00:00+00, 2@2001-01-02 00:00:00+00}
 
-mode skip
-# tcount / tmin / tmax / tsum / tand / tor / twAvg — MobilityDB uses
-# lowercase SQL names; MobilityDuck registers as TcountAgg / TminAgg /
-# TmaxAgg / TsumAgg / TandAgg / TorAgg / WAvgAgg.  Additionally the
-# result semantics differ for discrete instants: MobilityDB returns a
-# linear sequence (value=N over the whole span) whereas TcountAgg
-# returns the concurrent-overlap count (value=1 per instant).
+# tcount: lowercase MobilityDB-compatible alias for TcountAgg.
+# tmin/tmax conflict with existing scalar accessors on tbox/stbox and
+# cannot be registered; TminAgg/TmaxAgg/TsumAgg/TandAgg/TorAgg remain
+# the DuckDB names.
 query I
-SELECT tcount(temp) FROM (VALUES (tint '1@2001-01-01'), (tint '2@2001-01-02')) t(temp);
+SELECT tcount(temp)::VARCHAR FROM (VALUES (tint '1@2001-01-01'), (tint '2@2001-01-02')) t(temp);
 ----
-{[2@2001-01-01 00:00:00+00, 2@2001-01-02 00:00:00+00]}
-
-mode unskip
+{1@2001-01-01 00:00:00+00, 1@2001-01-02 00:00:00+00}

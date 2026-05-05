@@ -5,15 +5,10 @@
 # Topological operators for temporal types. Most of the temporal ×
 # {temporal, tbox, tstzspan} matrix is registered in temporal.cpp.
 #
-# Permanently skipped (no MEOS symbol in the pinned commit):
-#   - tint @> scalar_value   (needs contains_temporal_value)
-#   - scalar_value <@ tint   (needs contained_value_temporal)
-
 require mobilityduck
 
-mode skip
-# contains_temporal_value / contained_value_temporal absent from the
-# pinned MEOS commit; no MEOS API surface to compose from.
+# tnumber @> scalar_value: checks whether the scalar is in the temporal's
+# value span [min, max].  Implemented via tnumber_to_span + contains_span_*.
 
 query I
 SELECT tint '[1@2000-01-01, 5@2000-01-05]' @> 3;
@@ -24,8 +19,6 @@ query I
 SELECT 3 <@ tint '[1@2000-01-01, 5@2000-01-05]';
 ----
 true
-
-mode unskip
 
 # temporal && temporal
 

@@ -1452,16 +1452,11 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction("radians", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tfloat_radians));
 
     // tnumber distance and nearest-approach-distance.
-    //
-    // Value-distance variants `<-> ` for (tint, INTEGER), (INTEGER, tint),
-    // (tfloat, DOUBLE), (DOUBLE, tfloat) are intentionally NOT registered
-    // here: in the installed MEOS library, tdistance_tfloat_float / tint_int
-    // return the temporal's own value at each instant rather than the
-    // |t.value - v| absolute difference. Verified by smoke test:
-    //   SELECT 5.0::DOUBLE <-> tfloat '5.0@2000-01-01';   -- returns 5.0, expected 0.0
-    //   SELECT 100.0::DOUBLE <-> tfloat '2.5@2000-01-01'; -- returns 2.5, expected 97.5
-    // The temporal-temporal variant DOES work correctly, and so does nad_*.
-    // Restore the value-distance registrations once the MEOS issue is resolved.
+    // Value-distance computed as tnumber_abs(sub_*(temporal, scalar)).
+    loader.RegisterFunction(ScalarFunction("<->", {TemporalTypes::TINT(), LogicalType::INTEGER}, TemporalTypes::TINT(), TemporalFunctions::Tdistance_tint_int));
+    loader.RegisterFunction(ScalarFunction("<->", {LogicalType::INTEGER, TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Tdistance_int_tint));
+    loader.RegisterFunction(ScalarFunction("<->", {TemporalTypes::TFLOAT(), LogicalType::DOUBLE}, TemporalTypes::TFLOAT(), TemporalFunctions::Tdistance_tfloat_float));
+    loader.RegisterFunction(ScalarFunction("<->", {LogicalType::DOUBLE, TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tdistance_float_tfloat));
     loader.RegisterFunction(ScalarFunction("<->", {TemporalTypes::TINT(), TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Tdistance_tnumber_tnumber));
     loader.RegisterFunction(ScalarFunction("<->", {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tdistance_tnumber_tnumber));
 
@@ -1641,6 +1636,15 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         loader.RegisterFunction(ScalarFunction("&<", {tflt, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Overleft_tnumber_tnumber));
         loader.RegisterFunction(ScalarFunction("&>", {tflt, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Overright_tnumber_tnumber));
     }
+
+    // tnumber @> scalar_value and scalar_value <@ tnumber.
+    // Registered outside the tnumber block (where tint/tflt are local vars)
+    // because MobilityDB's Datum abstraction allows a single function to handle
+    // multiple types, but DuckDB requires a typed wrapper per type combination.
+    loader.RegisterFunction(ScalarFunction("@>", {TemporalTypes::TINT(),   LogicalType::INTEGER}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tint_int));
+    loader.RegisterFunction(ScalarFunction("<@", {LogicalType::INTEGER,    TemporalTypes::TINT()}, LogicalType::BOOLEAN, TemporalFunctions::Contains_int_tint));
+    loader.RegisterFunction(ScalarFunction("@>", {TemporalTypes::TFLOAT(), LogicalType::DOUBLE},  LogicalType::BOOLEAN, TemporalFunctions::Contains_tfloat_float));
+    loader.RegisterFunction(ScalarFunction("<@", {LogicalType::DOUBLE,     TemporalTypes::TFLOAT()}, LogicalType::BOOLEAN, TemporalFunctions::Contains_float_tfloat));
 
     // tspatial × {stbox, tspatial} position predicates
     {

@@ -3956,9 +3956,16 @@ void TgeompointFunctions::Nad_tgeo_tgeo(DataChunk &args, ExpressionState &state,
             memcpy(bc, b_blob.GetData(), b_blob.GetSize());
             Temporal *a = reinterpret_cast<Temporal *>(ac);
             Temporal *b = reinterpret_cast<Temporal *>(bc);
-            double r = nad_tgeo_tgeo(a, b);
+            GSERIALIZED *traj_a = tpoint_trajectory(a, false);
+            GSERIALIZED *traj_b = tpoint_trajectory(b, false);
             free(a); free(b);
-            if (r == DBL_MAX) { mask.SetInvalid(idx); return 0.0; }
+            if (!traj_a || !traj_b) {
+                free(traj_a); free(traj_b);
+                mask.SetInvalid(idx); return 0.0;
+            }
+            double r = geom_distance2d(traj_a, traj_b);
+            free(traj_a); free(traj_b);
+            if (r < 0) { mask.SetInvalid(idx); return 0.0; }
             return r;
         });
 }

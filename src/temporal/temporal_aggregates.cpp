@@ -1079,30 +1079,32 @@ void TemporalAggregates::AddExtentOverloads(AggregateFunctionSet &extent_set) {
 }
 
 void TemporalAggregates::RegisterTCount(ExtensionLoader &loader) {
-    AggregateFunctionSet tcount_set("TcountAgg");
-    // Temporal type overloads.
-    for (const auto &t : TemporalTypes::AllTypes()) {
-        tcount_set.AddFunction(
-            AggregateFunction::UnaryAggregateDestructor<TCountState, string_t, string_t, TCountFunction>(
-                t, TemporalTypes::TINT()));
-    }
-    // Time-only overloads: timestamptz, tstzset, tstzspan, tstzspanset.
-    tcount_set.AddFunction(
-        AggregateFunction::UnaryAggregateDestructor<TCountState, int64_t, string_t, TCountTimestamptzFunction>(
-            LogicalType::TIMESTAMP_TZ, TemporalTypes::TINT()));
-    tcount_set.AddFunction(
-        AggregateFunction::UnaryAggregateDestructor<TCountState, string_t, string_t,
-            TCountSetFunction<&tstzset_tcount_transfn>>(
-            SetTypes::tstzset(), TemporalTypes::TINT()));
-    tcount_set.AddFunction(
-        AggregateFunction::UnaryAggregateDestructor<TCountState, string_t, string_t,
-            TCountSpanFunction<&tstzspan_tcount_transfn>>(
-            SpanTypes::TSTZSPAN(), TemporalTypes::TINT()));
-    tcount_set.AddFunction(
-        AggregateFunction::UnaryAggregateDestructor<TCountState, string_t, string_t,
-            TCountSpanSetFunction<&tstzspanset_tcount_transfn>>(
-            SpansetTypes::tstzspanset(), TemporalTypes::TINT()));
-    loader.RegisterFunction(std::move(tcount_set));
+    auto make_tcount = [](const char *name) -> AggregateFunctionSet {
+        AggregateFunctionSet s(name);
+        for (const auto &t : TemporalTypes::AllTypes()) {
+            s.AddFunction(
+                AggregateFunction::UnaryAggregateDestructor<TCountState, string_t, string_t, TCountFunction>(
+                    t, TemporalTypes::TINT()));
+        }
+        s.AddFunction(
+            AggregateFunction::UnaryAggregateDestructor<TCountState, int64_t, string_t, TCountTimestamptzFunction>(
+                LogicalType::TIMESTAMP_TZ, TemporalTypes::TINT()));
+        s.AddFunction(
+            AggregateFunction::UnaryAggregateDestructor<TCountState, string_t, string_t,
+                TCountSetFunction<&tstzset_tcount_transfn>>(
+                SetTypes::tstzset(), TemporalTypes::TINT()));
+        s.AddFunction(
+            AggregateFunction::UnaryAggregateDestructor<TCountState, string_t, string_t,
+                TCountSpanFunction<&tstzspan_tcount_transfn>>(
+                SpanTypes::TSTZSPAN(), TemporalTypes::TINT()));
+        s.AddFunction(
+            AggregateFunction::UnaryAggregateDestructor<TCountState, string_t, string_t,
+                TCountSpanSetFunction<&tstzspanset_tcount_transfn>>(
+                SpansetTypes::tstzspanset(), TemporalTypes::TINT()));
+        return s;
+    };
+    loader.RegisterFunction(make_tcount("TcountAgg"));
+    loader.RegisterFunction(make_tcount("tcount"));
 }
 
 void TemporalAggregates::RegisterTemporalAggregates(ExtensionLoader &loader) {

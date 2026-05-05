@@ -83,12 +83,9 @@ SELECT ST_AsText(shortestLine(tgeompoint 'Point(1 1)@2001-01-01', tgeompoint 'Po
 LINESTRING (1 1, 1 1)
 
 # =============================================================================
-# geometry <-> tgeompoint (NOT registered — skip)
+# geometry <-> tgeompoint cross-type distance
 # =============================================================================
 
-mode skip
-# <->(geometry, tgeompoint) and <->(tgeompoint, geometry) are not registered
-# for the cross-type case.  Only <->(tgeompoint, tgeompoint) is bound.
 query I
 SELECT round(startValue("<->"(geometry 'Point(0 0)', tgeompoint 'Point(3 4)@2001-01-01')), 6);
 ----
@@ -99,14 +96,11 @@ SELECT round(startValue("<->"(tgeompoint 'Point(3 4)@2001-01-01', geometry 'Poin
 ----
 5.0
 
-mode unskip
-
 # =============================================================================
-# nad / nearestApproachDistance for tgeompoint (NOT registered — skip)
+# nad / nearestApproachDistance for tgeompoint
+# nad(tgeo,tgeo) uses trajectory union + geom_distance2d for spatial NAD.
 # =============================================================================
 
-mode skip
-# nad(tgeompoint, ...) is only registered for tint/tfloat, not tgeompoint.
 query I
 SELECT round(nad(tgeompoint '[Point(0 0)@2001-01-01, Point(2 0)@2001-01-02]', tgeompoint '[Point(1 0)@2001-01-01, Point(3 0)@2001-01-02]'), 6);
 ----
@@ -116,5 +110,3 @@ query I
 SELECT round(nearestApproachDistance(tgeompoint 'Point(0 0)@2001-01-01', geometry 'Point(3 4)'), 6);
 ----
 5.0
-
-mode unskip
