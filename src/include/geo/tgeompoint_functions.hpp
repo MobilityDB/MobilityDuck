@@ -78,7 +78,9 @@ struct TgeompointFunctions {
     static void Ever_ne_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Always_ne_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Teq_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Teq_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tne_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tne_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Teq_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Teq_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tne_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
@@ -161,6 +163,24 @@ struct TgeompointFunctions {
     // static void gs_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void collect_gs(DataChunk &args, ExpressionState &state, Vector &result);
     static void distance_geo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * Spatial relationship functions (eCovers / tCovers)
+     ****************************************************/
+    static void Ecovers_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ecovers_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ecovers_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tcovers_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tcovers_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tcovers_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * MFJSON functions
+     ****************************************************/
+    static void Tgeompoint_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeogpoint_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeometry_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeography_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

@@ -1,0 +1,159 @@
+# name: test/sql/parity/054_tgeo_compops.test
+# description: MobilityDB 054_tgeo_compops — ever/always/temporal eq/ne for tgeompoint
+# group: [sql]
+#
+# Covers ever_eq / always_eq / ever_ne / always_ne / teq / tne
+# for (tgeompoint × geometry), (geometry × tgeompoint), and
+# (tgeompoint × tgeompoint) overloads.
+
+require mobilityduck
+
+# =============================================================================
+# ever_eq
+# =============================================================================
+
+# tgeompoint × geometry: point at matching location → ever equal
+query I
+SELECT ever_eq(tgeompoint 'Point(1 1)@2000-01-01', geometry 'Point(1 1)');
+----
+true
+
+# tgeompoint × geometry: sequence never visits the geometry
+query I
+SELECT ever_eq(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02]', geometry 'Point(3 3)');
+----
+false
+
+# geometry × tgeompoint
+query I
+SELECT ever_eq(geometry 'Point(1 1)', tgeompoint 'Point(1 1)@2000-01-01');
+----
+true
+
+# tgeompoint × tgeompoint: overlapping instants at same location
+query I
+SELECT ever_eq(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02}', tgeompoint 'Point(1 1)@2000-01-01');
+----
+true
+
+# tgeompoint × tgeompoint: disjoint value sets
+query I
+SELECT ever_eq(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02}', tgeompoint '{Point(3 3)@2000-01-01, Point(4 4)@2000-01-02}');
+----
+false
+
+# =============================================================================
+# always_eq
+# =============================================================================
+
+# constant sequence always at the same geometry
+query I
+SELECT always_eq(tgeompoint '{Point(1 1)@2000-01-01, Point(1 1)@2000-01-02}', geometry 'Point(1 1)');
+----
+true
+
+# sequence moves → not always equal
+query I
+SELECT always_eq(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02]', geometry 'Point(1 1)');
+----
+false
+
+# geometry × constant tgeompoint
+query I
+SELECT always_eq(geometry 'Point(1 1)', tgeompoint '{Point(1 1)@2000-01-01, Point(1 1)@2000-01-02}');
+----
+true
+
+# tgeompoint × tgeompoint: same singleton both sides
+query I
+SELECT always_eq(tgeompoint 'Point(1 1)@2000-01-01', tgeompoint 'Point(1 1)@2000-01-01');
+----
+true
+
+# =============================================================================
+# ever_ne
+# =============================================================================
+
+# point differs from geometry
+query I
+SELECT ever_ne(tgeompoint 'Point(1 1)@2000-01-01', geometry 'Point(2 2)');
+----
+true
+
+# point matches geometry → never ne
+query I
+SELECT ever_ne(tgeompoint 'Point(1 1)@2000-01-01', geometry 'Point(1 1)');
+----
+false
+
+# geometry × tgeompoint
+query I
+SELECT ever_ne(geometry 'Point(2 2)', tgeompoint 'Point(1 1)@2000-01-01');
+----
+true
+
+# tgeompoint × tgeompoint: one different instant → ever ne
+query I
+SELECT ever_ne(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02}', tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02}');
+----
+false
+
+# =============================================================================
+# always_ne
+# =============================================================================
+
+# constant point always differs from a different geometry
+query I
+SELECT always_ne(tgeompoint '{Point(1 1)@2000-01-01, Point(1 1)@2000-01-02}', geometry 'Point(2 2)');
+----
+true
+
+# sequence passes through the geometry → not always ne
+query I
+SELECT always_ne(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02]', geometry 'Point(1 1)');
+----
+false
+
+# geometry × tgeompoint
+query I
+SELECT always_ne(geometry 'Point(2 2)', tgeompoint '{Point(1 1)@2000-01-01, Point(1 1)@2000-01-02}');
+----
+true
+
+# tgeompoint × tgeompoint: same singleton → not always ne
+query I
+SELECT always_ne(tgeompoint 'Point(1 1)@2000-01-01', tgeompoint 'Point(1 1)@2000-01-01');
+----
+false
+
+# =============================================================================
+# teq  (returns tbool)
+# =============================================================================
+
+# tgeompoint × geometry instant: equal at the only timestamp
+query I
+SELECT teq(tgeompoint 'Point(1 1)@2000-01-01', geometry 'Point(1 1)');
+----
+t@2000-01-01 00:00:00+00
+
+# geometry × tgeompoint sequence: true only when tgeompoint = geometry
+query I
+SELECT teq(geometry 'Point(1 1)', tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02}');
+----
+{t@2000-01-01 00:00:00+00, f@2000-01-02 00:00:00+00}
+
+# =============================================================================
+# tne  (returns tbool)
+# =============================================================================
+
+# tgeompoint × geometry instant: never equal → all true
+query I
+SELECT tne(tgeompoint 'Point(1 1)@2000-01-01', geometry 'Point(2 2)');
+----
+t@2000-01-01 00:00:00+00
+
+# geometry × tgeompoint sequence: false when equal
+query I
+SELECT tne(geometry 'Point(1 1)', tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02}');
+----
+{f@2000-01-01 00:00:00+00, t@2000-01-02 00:00:00+00}

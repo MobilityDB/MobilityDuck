@@ -10,9 +10,11 @@
 #   eTouches    / aTouches     (geometry × tgeompoint, tgeompoint × geometry)
 #   eDwithin    / aDwithin     (geometry × tgeompoint, tgeompoint × geometry,
 #                                tgeompoint × tgeompoint)
+#   eCovers                    (geometry × tgeompoint, tgeompoint × geometry,
+#                                tgeompoint × tgeompoint)
 #
 # Not registered (permanently skipped):
-#   eCovers / aCovers — absent from tgeompoint.cpp
+#   aCovers — not in MEOS public header
 #   tgeompoint × tgeompoint overloads for eTouches/aTouches
 
 require mobilityduck
@@ -251,3 +253,57 @@ query I
 SELECT aDwithin(tgeompoint '[Point(0 0)@2000-01-01, Point(2 0)@2000-01-02]', geometry 'Point(1 0)', 0.5);
 ----
 false
+
+# =============================================================================
+# eCovers  (geometry × tgeompoint)
+# =============================================================================
+
+# polygon ever covers all points of an enclosed sequence
+query I
+SELECT eCovers(geometry 'Polygon((0 0,2 0,2 2,0 2,0 0))', tgeompoint '[Point(0.5 0.5)@2000-01-01, Point(1.5 1.5)@2000-01-02]');
+----
+true
+
+# polygon never covers a point completely outside it
+query I
+SELECT eCovers(geometry 'Polygon((0 0,1 0,1 1,0 1,0 0))', tgeompoint 'Point(3 3)@2000-01-01');
+----
+false
+
+# =============================================================================
+# eCovers  (tgeompoint × geometry) — semantics: does geometry ever cover tgeo?
+# =============================================================================
+
+# geometry (point) ever covers the tgeo (same point)
+query I
+SELECT eCovers(tgeompoint 'Point(1 1)@2000-01-01', geometry 'Point(1 1)');
+----
+true
+
+# polygon ever covers tgeo: trajectory lies inside the polygon
+query I
+SELECT eCovers(tgeompoint '[Point(0 0)@2000-01-01, Point(1 1)@2000-01-02]', geometry 'Polygon((0 0,1 0,1 1,0 1,0 0))');
+----
+true
+
+# tgeompoint completely outside the geometry → geometry never covers it
+query I
+SELECT eCovers(tgeompoint 'Point(5 5)@2000-01-01', geometry 'Polygon((0 0,1 0,1 1,0 1,0 0))');
+----
+false
+
+# =============================================================================
+# eCovers  (tgeompoint × tgeompoint)
+# =============================================================================
+
+# singleton covering itself
+query I
+SELECT eCovers(tgeompoint 'Point(1 1)@2000-01-01', tgeompoint 'Point(1 1)@2000-01-01');
+----
+true
+
+# discrete sequence with shared instant
+query I
+SELECT eCovers(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02}', tgeompoint 'Point(1 1)@2000-01-01');
+----
+true

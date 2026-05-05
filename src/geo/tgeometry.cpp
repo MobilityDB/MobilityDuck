@@ -7,6 +7,9 @@
 #include<time_util.hpp>
 #include "geo_util.hpp"
 #include "spatial/spatial_types.hpp"
+#include "temporal/temporal_functions.hpp"
+#include "temporal/temporal.hpp"
+#include "geo/tgeompoint_functions.hpp"
 
 extern "C" {
     #include <meos.h>
@@ -1255,10 +1258,87 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     auto tgeometry_gettimestamptz_function = ScalarFunction(
         "getTimestamp",
         {TGeometryTypes::TGEOMETRY()},
-        LogicalType::TIMESTAMP_TZ,  
+        LogicalType::TIMESTAMP_TZ,
         Tinstant_timestamptz);
     loader.RegisterFunction( tgeometry_gettimestamptz_function);
-    
+
+    // -------------------------------------------------------------------------
+    // asMFJSON  (tgeometry/tgeography → VARCHAR)
+    // -------------------------------------------------------------------------
+
+    auto TGEOM = TGeometryTypes::TGEOMETRY();
+    auto GEO = GeoTypes::GEOMETRY();
+
+    loader.RegisterFunction(ScalarFunction("asMFJSON", {TGEOM}, LogicalType::VARCHAR,
+        TemporalFunctions::Temporal_as_mfjson));
+    loader.RegisterFunction(ScalarFunction("asMFJSON", {TGEOM, LogicalType::INTEGER},
+        LogicalType::VARCHAR, TemporalFunctions::Temporal_as_mfjson));
+    loader.RegisterFunction(ScalarFunction("asMFJSON", {TGEOM, LogicalType::INTEGER, LogicalType::INTEGER},
+        LogicalType::VARCHAR, TemporalFunctions::Temporal_as_mfjson));
+
+    // -------------------------------------------------------------------------
+    // tgeometryFromMFJSON
+    // -------------------------------------------------------------------------
+
+    loader.RegisterFunction(ScalarFunction("tgeometryFromMFJSON", {LogicalType::VARCHAR}, TGEOM,
+        TgeompointFunctions::Tgeometry_from_mfjson));
+
+    // -------------------------------------------------------------------------
+    // ever/always eq/ne  (tgeometry × geometry, geometry × tgeometry,
+    //                     tgeometry × tgeometry)
+    // -------------------------------------------------------------------------
+
+    loader.RegisterFunction(ScalarFunction("ever_eq",
+        {TGEOM, GEO}, LogicalType::BOOLEAN, TgeompointFunctions::Ever_eq_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("ever_eq",
+        {GEO, TGEOM}, LogicalType::BOOLEAN, TgeompointFunctions::Ever_eq_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction("ever_eq",
+        {TGEOM, TGEOM}, LogicalType::BOOLEAN, TgeompointFunctions::Ever_eq_tgeo_tgeo));
+
+    loader.RegisterFunction(ScalarFunction("always_eq",
+        {TGEOM, GEO}, LogicalType::BOOLEAN, TgeompointFunctions::Always_eq_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("always_eq",
+        {GEO, TGEOM}, LogicalType::BOOLEAN, TgeompointFunctions::Always_eq_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction("always_eq",
+        {TGEOM, TGEOM}, LogicalType::BOOLEAN, TgeompointFunctions::Always_eq_tgeo_tgeo));
+
+    loader.RegisterFunction(ScalarFunction("ever_ne",
+        {TGEOM, GEO}, LogicalType::BOOLEAN, TgeompointFunctions::Ever_ne_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("ever_ne",
+        {GEO, TGEOM}, LogicalType::BOOLEAN, TgeompointFunctions::Ever_ne_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction(
+        "ever_ne", {TGEOM, TGEOM}, LogicalType::BOOLEAN, TgeompointFunctions::Ever_ne_tgeo_tgeo));
+
+    loader.RegisterFunction(ScalarFunction("always_ne",
+        {TGEOM, GEO}, LogicalType::BOOLEAN, TgeompointFunctions::Always_ne_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("always_ne",
+        {GEO, TGEOM}, LogicalType::BOOLEAN, TgeompointFunctions::Always_ne_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction("always_ne",
+        {TGEOM, TGEOM}, LogicalType::BOOLEAN, TgeompointFunctions::Always_ne_tgeo_tgeo));
+
+    // -------------------------------------------------------------------------
+    // eCovers / tCovers  (tgeometry)
+    // -------------------------------------------------------------------------
+
+    loader.RegisterFunction(ScalarFunction("eCovers",
+        {GEO, TGEOM}, LogicalType::BOOLEAN, TgeompointFunctions::Ecovers_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction("eCovers",
+        {TGEOM, GEO}, LogicalType::BOOLEAN, TgeompointFunctions::Ecovers_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("eCovers",
+        {TGEOM, TGEOM}, LogicalType::BOOLEAN, TgeompointFunctions::Ecovers_tgeo_tgeo));
+
+    loader.RegisterFunction(ScalarFunction("tCovers",
+        {GEO, TGEOM}, TemporalTypes::TBOOL(), TgeompointFunctions::Tcovers_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction("tCovers",
+        {GEO, TGEOM, LogicalType::BOOLEAN}, TemporalTypes::TBOOL(), TgeompointFunctions::Tcovers_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction("tCovers",
+        {TGEOM, GEO}, TemporalTypes::TBOOL(), TgeompointFunctions::Tcovers_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("tCovers",
+        {TGEOM, GEO, LogicalType::BOOLEAN}, TemporalTypes::TBOOL(), TgeompointFunctions::Tcovers_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("tCovers",
+        {TGEOM, TGEOM}, TemporalTypes::TBOOL(), TgeompointFunctions::Tcovers_tgeo_tgeo));
+    loader.RegisterFunction(ScalarFunction("tCovers",
+        {TGEOM, TGEOM, LogicalType::BOOLEAN}, TemporalTypes::TBOOL(), TgeompointFunctions::Tcovers_tgeo_tgeo));
 
 }
 
