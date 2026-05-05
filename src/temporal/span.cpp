@@ -262,7 +262,9 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         }
         else if( span_type == SpanTypes::TSTZSPAN() ){
             duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("shift", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Tstzspan_shift)
-            ); 
+            );
+            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Tstzspan_shift)
+            );
 
             duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("expand", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Tstzspan_expand)
             );

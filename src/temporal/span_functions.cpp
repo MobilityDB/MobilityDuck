@@ -4569,26 +4569,26 @@ void SpanFunctions::Distance_span_value(DataChunk &args, ExpressionState &state,
                 });
             break;  
         }
-        case T_TSTZSPAN: { // distance between tstzspan and timestamptz
-            BinaryExecutor::Execute<string_t, timestamp_tz_t, double>(
+        case T_TSTZSPAN: { // distance between tstzspan and timestamptz → INTERVAL
+            BinaryExecutor::Execute<string_t, timestamp_tz_t, interval_t>(
                 span_vec, args.data[1], result, args.size(),
-                [&](string_t span_blob, timestamp_tz_t ts_duckdb) -> double {
+                [&](string_t span_blob, timestamp_tz_t ts_duckdb) -> interval_t {
                     const uint8_t *span_data = reinterpret_cast<const uint8_t*>(span_blob.GetData());
                     size_t span_data_size = span_blob.GetSize();
                     uint8_t *span_data_copy = (uint8_t*)malloc(span_data_size);
-                    memcpy(span_data_copy, span_data, span_data_size);  
+                    memcpy(span_data_copy, span_data, span_data_size);
                     timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts_duckdb);
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer"); 
+                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
                     }
-                    double distance = distance_span_value(span, Datum(ts_meos.value));
+                    double secs = distance_span_timestamptz(span, (TimestampTz)ts_meos.value);
                     free(span_data_copy);
-                    return distance;
+                    return SecondsToInterval(secs);
                 });
-            break;   
-        }   
+            break;
+        }
         default:
             throw NotImplementedException("distance between SPAN and value: unsupported span type");    
 
@@ -4680,23 +4680,23 @@ void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state,
                 });
             break;
         }
-        case T_TSTZSPAN: { // distance between timestamptz and tstzspan
-            BinaryExecutor::Execute<timestamp_tz_t, string_t, double>(
+        case T_TSTZSPAN: { // distance between timestamptz and tstzspan → INTERVAL
+            BinaryExecutor::Execute<timestamp_tz_t, string_t, interval_t>(
                 args.data[0], span_vec, result, args.size(),
-                [&](timestamp_tz_t ts_duckdb, string_t span_blob) -> double {
+                [&](timestamp_tz_t ts_duckdb, string_t span_blob) -> interval_t {
                     const uint8_t *span_data = reinterpret_cast<const uint8_t*>(span_blob.GetData());
                     size_t span_data_size = span_blob.GetSize();
                     uint8_t *span_data_copy = (uint8_t*)malloc(span_data_size);
-                    memcpy(span_data_copy, span_data, span_data_size);  
+                    memcpy(span_data_copy, span_data, span_data_size);
                     timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts_duckdb);
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer"); 
+                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
                     }
-                    double distance = distance_span_value(span, Datum(ts_meos.value));
+                    double secs = distance_span_timestamptz(span, (TimestampTz)ts_meos.value);
                     free(span_data_copy);
-                    return distance;
+                    return SecondsToInterval(secs);
                 });
             break;
         }
@@ -4709,35 +4709,54 @@ void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state,
 }
 
 void SpanFunctions::Distance_span_span(DataChunk &args, ExpressionState &state, Vector &result) {
-    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t span1_blob, string_t span2_blob, ValidityMask &mask, idx_t idx) -> double {
-            const uint8_t *span1_data = reinterpret_cast<const uint8_t*>(span1_blob.GetData());
-            size_t span1_data_size = span1_blob.GetSize();
-            uint8_t *span1_data_copy = (uint8_t*)malloc(span1_data_size);
-            memcpy(span1_data_copy, span1_data, span1_data_size);
-            Span *span1 = reinterpret_cast<Span*>(span1_data_copy);
-            if (!span1) {
-                free(span1_data_copy);
-                throw InvalidInputException("Invalid SPAN data: null pointer");
-            }
+    auto &span1_vec = args.data[0];
+    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span1_vec.GetType().GetAlias());
 
-            const uint8_t *span2_data = reinterpret_cast<const uint8_t*>(span2_blob.GetData());
-            size_t span2_data_size = span2_blob.GetSize();
-            uint8_t *span2_data_copy = (uint8_t*)malloc(span2_data_size);
-            memcpy(span2_data_copy, span2_data, span2_data_size);
-            Span *span2 = reinterpret_cast<Span*>(span2_data_copy);
-            if (!span2) {
-                free(span2_data_copy);
-                throw InvalidInputException("Invalid SPAN data: null pointer");
+    if (span_type == T_TSTZSPAN) {
+        BinaryExecutor::ExecuteWithNulls<string_t, string_t, interval_t>(
+            args.data[0], args.data[1], result, args.size(),
+            [&](string_t s1_blob, string_t s2_blob, ValidityMask &mask, idx_t idx) -> interval_t {
+                Span *s1 = (Span *)malloc(s1_blob.GetSize());
+                memcpy(s1, s1_blob.GetData(), s1_blob.GetSize());
+                Span *s2 = (Span *)malloc(s2_blob.GetSize());
+                memcpy(s2, s2_blob.GetData(), s2_blob.GetSize());
+                double secs = distance_tstzspan_tstzspan(s1, s2);
+                free(s1);
+                free(s2);
+                return SecondsToInterval(secs);
             }
+        );
+    } else {
+        BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(
+            args.data[0], args.data[1], result, args.size(),
+            [&](string_t span1_blob, string_t span2_blob, ValidityMask &mask, idx_t idx) -> double {
+                const uint8_t *span1_data = reinterpret_cast<const uint8_t*>(span1_blob.GetData());
+                size_t span1_data_size = span1_blob.GetSize();
+                uint8_t *span1_data_copy = (uint8_t*)malloc(span1_data_size);
+                memcpy(span1_data_copy, span1_data, span1_data_size);
+                Span *span1 = reinterpret_cast<Span*>(span1_data_copy);
+                if (!span1) {
+                    free(span1_data_copy);
+                    throw InvalidInputException("Invalid SPAN data: null pointer");
+                }
 
-            double distance = distance_span_span(span1, span2);
-            free(span1);
-            free(span2);
-            return distance;
-        }
-    );
+                const uint8_t *span2_data = reinterpret_cast<const uint8_t*>(span2_blob.GetData());
+                size_t span2_data_size = span2_blob.GetSize();
+                uint8_t *span2_data_copy = (uint8_t*)malloc(span2_data_size);
+                memcpy(span2_data_copy, span2_data, span2_data_size);
+                Span *span2 = reinterpret_cast<Span*>(span2_data_copy);
+                if (!span2) {
+                    free(span2_data_copy);
+                    throw InvalidInputException("Invalid SPAN data: null pointer");
+                }
+
+                double distance = distance_span_span(span1, span2);
+                free(span1);
+                free(span2);
+                return distance;
+            }
+        );
+    }
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }

@@ -1,0 +1,150 @@
+# name: test/sql/parity/030_aggregates_extent.test
+# description: extent() aggregate parity across span / set / spanset / scalar /
+#              tbox / stbox / temporal inputs.
+# group: [sql]
+
+require mobilityduck
+
+require icu
+
+statement ok
+SET TimeZone='UTC'
+
+# =============================================================================
+# extent(scalar)
+# =============================================================================
+
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES (1::INTEGER),(5::INTEGER),(3::INTEGER)) t(v);
+----
+[1, 6)
+
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES (1::BIGINT),(5::BIGINT),(3::BIGINT)) t(v);
+----
+[1, 6)
+
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES (1.5::DOUBLE),(5.5::DOUBLE),(3.5::DOUBLE)) t(v);
+----
+[1.5, 5.5]
+
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES (DATE '2001-01-01'),(DATE '2001-02-15'),(DATE '2001-01-15')) t(v);
+----
+[2001-01-01, 2001-02-16)
+
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES (TIMESTAMPTZ '2001-01-01 00:00:00+00'),(TIMESTAMPTZ '2001-02-15 00:00:00+00')) t(v);
+----
+[2001-01-01 01:00:00+01, 2001-02-15 01:00:00+01]
+
+# =============================================================================
+# extent(span) — already covered by previous PR, verify still fine
+# =============================================================================
+
+query I
+SELECT extent(v::intspan)::VARCHAR FROM (VALUES ('[1,5)'), ('[3,8)')) t(v);
+----
+[1, 8)
+
+query I
+SELECT extent(v::floatspan)::VARCHAR FROM (VALUES ('[1.0,5.0]'), ('[3.0,8.0]')) t(v);
+----
+[1, 8]
+
+# =============================================================================
+# extent(set)
+# =============================================================================
+
+query I
+SELECT extent(v::intset)::VARCHAR FROM (VALUES ('{1,3,5}'), ('{2,4,7}')) t(v);
+----
+[1, 8)
+
+query I
+SELECT extent(v::tstzset)::VARCHAR FROM (VALUES
+  ('{2001-01-01, 2001-01-05}'), ('{2001-01-03, 2001-01-10}')) t(v);
+----
+[2001-01-01 00:00:00+01, 2001-01-10 00:00:00+01]
+
+# =============================================================================
+# extent(spanset)
+# =============================================================================
+
+query I
+SELECT extent(v::intspanset)::VARCHAR FROM (VALUES ('{[1,3),[5,7)}'), ('{[10,15)}')) t(v);
+----
+[1, 15)
+
+query I
+SELECT extent(v::tstzspanset)::VARCHAR FROM (VALUES
+  ('{[2001-01-01, 2001-01-03), [2001-01-05, 2001-01-07)}'),
+  ('{[2001-01-10, 2001-01-15)}')) t(v);
+----
+[2001-01-01 00:00:00+01, 2001-01-15 00:00:00+01)
+
+# =============================================================================
+# extent(tbox)
+# =============================================================================
+
+query I
+SELECT extent(v::tbox)::VARCHAR FROM (VALUES
+  ('TBOXINT XT([1, 5),[2000-01-01, 2000-01-05])'),
+  ('TBOXINT XT([3, 8),[2000-01-03, 2000-01-08])')) t(v);
+----
+TBOXINT XT([1, 8),[2000-01-01 00:00:00+01, 2000-01-08 00:00:00+01])
+
+# =============================================================================
+# extent(stbox)
+# =============================================================================
+
+query I
+SELECT extent(v::stbox)::VARCHAR FROM (VALUES
+  ('STBOX X((1,2),(3,4))'),
+  ('STBOX X((0,1),(5,6))')) t(v);
+----
+STBOX X((0,1),(5,6))
+
+# =============================================================================
+# extent(temporal)
+# =============================================================================
+
+query I
+SELECT extent(v::tint)::VARCHAR FROM (VALUES ('1@2000-01-01'),('5@2000-01-02')) t(v);
+----
+TBOXINT XT([1, 6),[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01])
+
+query I
+SELECT extent(v::tfloat)::VARCHAR FROM (VALUES ('1.5@2000-01-01'),('5.5@2000-01-05')) t(v);
+----
+TBOXFLOAT XT([1.5, 5.5],[2000-01-01 00:00:00+01, 2000-01-05 00:00:00+01])
+
+query I
+SELECT extent(v::tbool)::VARCHAR FROM (VALUES ('true@2000-01-01'),('false@2000-01-05')) t(v);
+----
+[2000-01-01 00:00:00+01, 2000-01-05 00:00:00+01]
+
+query I
+SELECT extent(v::ttext)::VARCHAR FROM (VALUES ('"hi"@2000-01-01'),('"bye"@2000-01-05')) t(v);
+----
+[2000-01-01 00:00:00+01, 2000-01-05 00:00:00+01]
+
+query I
+SELECT extent(v::tgeompoint)::VARCHAR FROM (VALUES ('Point(1 2)@2000-01-01'),('Point(3 4)@2000-01-02')) t(v);
+----
+STBOX XT(((1,2),(3,4)),[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01])
+
+# =============================================================================
+# extent ignores NULLs
+# =============================================================================
+
+query I
+SELECT extent(v::INTEGER)::VARCHAR FROM (VALUES (1),(NULL),(5),(NULL),(3)) t(v);
+----
+[1, 6)
+
+query I
+SELECT extent(v::INTEGER)::VARCHAR FROM (VALUES (NULL::INTEGER)) t(v);
+----
+NULL

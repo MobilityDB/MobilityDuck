@@ -1,6 +1,8 @@
 #include "temporal/set.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/common/extension_type_info.hpp"
+#include "duckdb/function/aggregate_function.hpp"
+#include "duckdb/function/function_set.hpp"
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/function/table_function.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
@@ -226,8 +228,11 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("shift", {SetTypes::dateset(), LogicalType::INTEGER}, SetTypes::dateset(), SetFunctions::Numset_shift)
         );        
 
-        duckdb::RegisterSerializedScalarFunction(loader,  
+        duckdb::RegisterSerializedScalarFunction(loader,
             ScalarFunction("shift", {SetTypes::tstzset(), LogicalType::INTERVAL}, SetTypes::tstzset(), SetFunctions::Tstzset_shift)
+        );
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("+", {SetTypes::tstzset(), LogicalType::INTERVAL}, SetTypes::tstzset(), SetFunctions::Tstzset_shift)
         );
 
         duckdb::RegisterSerializedScalarFunction(loader,  
@@ -698,9 +703,9 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<->", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::INTEGER, SetFunctions::Distance_set_value));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<->", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::INTEGER, SetFunctions::Distance_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<->", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::INTEGER, SetFunctions::Distance_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<->", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::DOUBLE, SetFunctions::Distance_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<->", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::DOUBLE, SetFunctions::Distance_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<->", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::DOUBLE, SetFunctions::Distance_set_set));
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<->", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::INTERVAL, SetFunctions::Distance_set_value));
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<->", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::INTERVAL, SetFunctions::Distance_value_set));
+    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<->", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::INTERVAL, SetFunctions::Distance_set_set));
 
     // --- set_eq / = ---
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_eq", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Set_eq));
@@ -908,6 +913,170 @@ void SetTypes::RegisterSetUnnest(ExtensionLoader &loader) {
                          SetUnnestInit);
         loader.RegisterFunction(fn);
     }
+}
+
+// ============================================================================
+// SetUnionAgg — aggregate that unions sets or scalar values into a Set.
+//
+// Overloads:
+//   SetUnionAgg(int)      → intset      (via int_to_set + set_union_transfn)
+//   SetUnionAgg(bigint)   → bigintset   (via bigint_to_set)
+//   SetUnionAgg(float)    → floatset    (via float_to_set)
+//   SetUnionAgg(date)     → dateset     (via date_to_set)
+//   SetUnionAgg(intset)   → intset      (direct set_union_transfn)
+//   SetUnionAgg(dateset)  → dateset
+//   ... etc. for all Set types
+// ============================================================================
+
+namespace {
+
+static inline Set *date_to_set_duckdb(DateADT d) {
+    return date_to_set(ToMeosDate(duckdb::date_t(d)));
+}
+
+struct SetPtrState {
+    Set *accumulated;
+};
+
+// Combine and Finalize are type-independent.
+static inline void SetPtrCombine(const SetPtrState &source, SetPtrState &target) {
+    if (!source.accumulated) {
+        return;
+    }
+    int src_size = set_mem_size(source.accumulated);
+    Set *src_copy = reinterpret_cast<Set *>(malloc(src_size));
+    memcpy(src_copy, source.accumulated, src_size);
+    if (!target.accumulated) {
+        target.accumulated = src_copy;
+    } else {
+        Set *merged = set_union_transfn(target.accumulated, src_copy);
+        free(src_copy);
+        target.accumulated = merged;
+    }
+}
+
+// Shared finalizer: calls set_union_finalfn to sort and deduplicate.
+// set_union_finalfn calls pfree(state) internally (= free in MEOS standalone
+// mode), so we null out state.accumulated to prevent a double-free in Destroy.
+static inline void SetUnionFinalize(SetPtrState &state, string_t &target,
+                                    AggregateFinalizeData &finalize_data) {
+    if (!state.accumulated) { finalize_data.ReturnNull(); return; }
+    Set *result = set_union_finalfn(state.accumulated);
+    state.accumulated = nullptr;
+    if (!result) { finalize_data.ReturnNull(); return; }
+    int out_size = set_mem_size(result);
+    target = finalize_data.ReturnString(
+        string_t(reinterpret_cast<const char *>(result), out_size));
+    free(result);
+}
+
+// SetUnionAgg(scalar) — Operation converts scalar to a single-element Set
+// then calls set_union_transfn.
+template <typename SCALAR_T, Set *(*TO_SET_FN)(SCALAR_T)>
+struct SetUnionScalarFunction {
+    template <class STATE>
+    static void Initialize(STATE &state) { state.accumulated = nullptr; }
+
+    static bool IgnoreNull() { return true; }
+
+    template <class INPUT_TYPE, class STATE, class OP>
+    static void Operation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &) {
+        Set *s = TO_SET_FN(static_cast<SCALAR_T>(input));
+        state.accumulated = set_union_transfn(state.accumulated, s);
+        free(s);
+    }
+
+    template <class INPUT_TYPE, class STATE, class OP>
+    static void ConstantOperation(STATE &state, const INPUT_TYPE &input,
+                                  AggregateUnaryInput &ui, idx_t /*count*/) {
+        Operation<INPUT_TYPE, STATE, OP>(state, input, ui);
+    }
+
+    template <class STATE, class OP>
+    static void Combine(const STATE &source, STATE &target, AggregateInputData &) {
+        SetPtrCombine(source, target);
+    }
+
+    template <class T, class STATE>
+    static void Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data) {
+        SetUnionFinalize(state, target, finalize_data);
+    }
+
+    template <class STATE>
+    static void Destroy(STATE &state, AggregateInputData &) {
+        if (state.accumulated) { free(state.accumulated); state.accumulated = nullptr; }
+    }
+};
+
+// SetUnionAgg(Set) — Operation copies the blob and calls set_union_transfn.
+struct SetUnionSetFunction {
+    template <class STATE>
+    static void Initialize(STATE &state) { state.accumulated = nullptr; }
+
+    static bool IgnoreNull() { return true; }
+
+    template <class INPUT_TYPE, class STATE, class OP>
+    static void Operation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &) {
+        size_t size = input.GetSize();
+        Set *s = reinterpret_cast<Set *>(malloc(size));
+        memcpy(s, input.GetData(), size);
+        state.accumulated = set_union_transfn(state.accumulated, s);
+        free(s);
+    }
+
+    template <class INPUT_TYPE, class STATE, class OP>
+    static void ConstantOperation(STATE &state, const INPUT_TYPE &input,
+                                  AggregateUnaryInput &ui, idx_t /*count*/) {
+        Operation<INPUT_TYPE, STATE, OP>(state, input, ui);
+    }
+
+    template <class STATE, class OP>
+    static void Combine(const STATE &source, STATE &target, AggregateInputData &) {
+        SetPtrCombine(source, target);
+    }
+
+    template <class T, class STATE>
+    static void Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data) {
+        SetUnionFinalize(state, target, finalize_data);
+    }
+
+    template <class STATE>
+    static void Destroy(STATE &state, AggregateInputData &) {
+        if (state.accumulated) { free(state.accumulated); state.accumulated = nullptr; }
+    }
+};
+
+} // anonymous namespace
+
+void SetTypes::RegisterSetUnionAgg(ExtensionLoader &loader) {
+    AggregateFunctionSet set_union_set("SetUnionAgg");
+
+    // Scalar overloads: convert each value to a single-element Set.
+    set_union_set.AddFunction(
+        AggregateFunction::UnaryAggregateDestructor<SetPtrState, int32_t, string_t,
+            SetUnionScalarFunction<int32_t, int_to_set>>(
+            LogicalType::INTEGER, SetTypes::intset()));
+    set_union_set.AddFunction(
+        AggregateFunction::UnaryAggregateDestructor<SetPtrState, int64_t, string_t,
+            SetUnionScalarFunction<int64_t, bigint_to_set>>(
+            LogicalType::BIGINT, SetTypes::bigintset()));
+    set_union_set.AddFunction(
+        AggregateFunction::UnaryAggregateDestructor<SetPtrState, double, string_t,
+            SetUnionScalarFunction<double, float_to_set>>(
+            LogicalType::DOUBLE, SetTypes::floatset()));
+    set_union_set.AddFunction(
+        AggregateFunction::UnaryAggregateDestructor<SetPtrState, date_t, string_t,
+            SetUnionScalarFunction<DateADT, date_to_set_duckdb>>(
+            LogicalType::DATE, SetTypes::dateset()));
+
+    // Set-input overloads: union existing sets together.
+    for (const auto &set_type : SetTypes::AllTypes()) {
+        set_union_set.AddFunction(
+            AggregateFunction::UnaryAggregateDestructor<SetPtrState, string_t, string_t,
+                SetUnionSetFunction>(set_type, set_type));
+    }
+
+    loader.RegisterFunction(std::move(set_union_set));
 }
 
 } // namespace duckdb

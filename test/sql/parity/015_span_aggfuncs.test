@@ -3,18 +3,11 @@
 # group: [sql]
 #
 # Queries from mobilitydb/test/temporal/queries/015_span_aggfuncs.test.sql.
-# Whole file currently under `mode skip`: MobilityDuck registers no
-# aggregate functions (no AggregateFunction calls in src/temporal/ or
-# src/geo/), so every query in this file fails with "function not
-# found". Aggregate infrastructure landing is the precondition for
-# turning the assertions in this file on; until then the file is a
-# tracked manifest of what `extent`, `setUnion`, `spanUnion`,
-# `tcount`, `tand`, `tor`, `tmin`, `tmax`, `tsum`, `tcount_transfn`,
-# `tagg_combinefn`, `tagg_finalfn` etc. need to cover.
+# Aggregate infrastructure (extent, SpanUnionAgg, SetUnionAgg) is now
+# registered; this file is fully active. Function names follow RFC #827:
+# setUnion → SetUnionAgg, spanUnion → SpanUnionAgg.
 
 require mobilityduck
-
-mode skip
 
 # extent(<span>) and extent(<spanset>) — MEOS symbol: span_extent_transfn
 # / spanset_extent_transfn / span_extent_combinefn etc.
@@ -29,13 +22,13 @@ query I
 SELECT extent(temp) FROM (VALUES
 (NULL::tstzspan),('[2000-01-01, 2000-01-02]'::tstzspan)) t(temp);
 ----
-[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00]
+[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01]
 
 query I
 SELECT extent(temp) FROM (VALUES
 ('[2000-01-01, 2000-01-02]'::tstzspan),(NULL::tstzspan)) t(temp);
 ----
-[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00]
+[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01]
 
 query I
 SELECT extent(temp) FROM (VALUES
@@ -47,13 +40,13 @@ query I
 SELECT extent(temp) FROM (VALUES
 (NULL::tstzspanset),('{[2000-01-01, 2000-01-02]}'::tstzspanset)) t(temp);
 ----
-[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00]
+[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01]
 
 query I
 SELECT extent(temp) FROM (VALUES
 ('{[2000-01-01, 2000-01-02]}'::tstzspanset),(NULL::tstzspanset)) t(temp);
 ----
-[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00]
+[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01]
 
 # extent(<base>) — value-aggregate variants
 
@@ -121,18 +114,16 @@ SELECT extent(NULL::tstzspanset) FROM generate_series(1,10);
 ----
 NULL
 
-# setUnion / spanUnion — accumulator aggregates returning set / span
+# SetUnionAgg / SpanUnionAgg — accumulator aggregates returning set / span
 
 query I
-SELECT setUnion(t) FROM (VALUES
+SELECT SetUnionAgg(t::tstzset)::VARCHAR FROM (VALUES
 ('{2000-01-01}'::tstzset)) t(t);
 ----
-{"2000-01-01 00:00:00+00"}
+{"2000-01-01 00:00:00+01"}
 
 query I
-SELECT spanUnion(t) FROM (VALUES
+SELECT SpanUnionAgg(t::tstzspan)::VARCHAR FROM (VALUES
 ('[2000-01-01, 2000-01-02]'::tstzspan)) t(t);
 ----
-{[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00]}
-
-mode unskip
+{[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01]}

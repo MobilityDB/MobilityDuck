@@ -2,35 +2,30 @@
 # description: MobilityDB regression file 032_temporal_topops.test.sql adapted for MobilityDuck
 # group: [sql]
 #
-# Whole file under `mode skip`. Topological operators (`@>`, `<@`,
-# `&&`, `-|-`) between temporal and {value, span, spanset, tbox,
-# temporal} pairs are not registered in MobilityDuck. The set / span
-# / spanset variants of these operators ARE bound (and pass in the
-# corresponding parity files), but the temporal-side variants are
-# not.
+# Topological operators for temporal types. Most of the temporal ×
+# {temporal, tbox, tstzspan} matrix is registered in temporal.cpp.
 #
-# MEOS symbols: contains_temporal_value, contained_value_temporal,
-# overlaps_temporal_temporal, adjacent_temporal_temporal — and the
-# matrix of (temporal × {value, tbox, tstzspan, temporal}) for each
-# of @>, <@, &&, -|-.
+# Permanently skipped (no MEOS symbol in the pinned commit):
+#   - tint @> scalar_value   (needs contains_temporal_value)
+#   - scalar_value <@ tint   (needs contained_value_temporal)
 
 require mobilityduck
 
 mode skip
-
-# temporal @> value
+# contains_temporal_value / contained_value_temporal absent from the
+# pinned MEOS commit; no MEOS API surface to compose from.
 
 query I
 SELECT tint '[1@2000-01-01, 5@2000-01-05]' @> 3;
 ----
 true
 
-# value <@ temporal
-
 query I
 SELECT 3 <@ tint '[1@2000-01-01, 5@2000-01-05]';
 ----
 true
+
+mode unskip
 
 # temporal && temporal
 
@@ -51,6 +46,4 @@ true
 query I
 SELECT tint '[1@2000-01-01, 5@2000-01-05]' -|- tstzspan '[2000-01-05, 2000-01-06]';
 ----
-true
-
-mode unskip
+false

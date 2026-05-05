@@ -2783,14 +2783,14 @@ void SetFunctions::Distance_set_value(DataChunk &args, ExpressionState &state, V
         return;
     }
     if (alias == "tstzset") {
-        BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, double>(
+        BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, interval_t>(
             set_vec, val_vec, result, count,
-            [&](string_t blob, timestamp_tz_t ts, ValidityMask &mask, idx_t idx) -> double {
+            [&](string_t blob, timestamp_tz_t ts, ValidityMask &mask, idx_t idx) -> interval_t {
                 Set *s = CopySet(blob);
                 timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts);
-                double r = distance_set_timestamptz(s, (TimestampTz)ts_meos.value);
+                double secs = distance_set_timestamptz(s, (TimestampTz)ts_meos.value);
                 free(s);
-                return r;
+                return SecondsToInterval(secs);
             });
         return;
     }
@@ -2849,14 +2849,14 @@ void SetFunctions::Distance_value_set(DataChunk &args, ExpressionState &state, V
         return;
     }
     if (alias == "tstzset") {
-        BinaryExecutor::ExecuteWithNulls<timestamp_tz_t, string_t, double>(
+        BinaryExecutor::ExecuteWithNulls<timestamp_tz_t, string_t, interval_t>(
             val_vec, set_vec, result, count,
-            [&](timestamp_tz_t ts, string_t blob, ValidityMask &mask, idx_t idx) -> double {
+            [&](timestamp_tz_t ts, string_t blob, ValidityMask &mask, idx_t idx) -> interval_t {
                 Set *s = CopySet(blob);
                 timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts);
-                double r = distance_set_timestamptz(s, (TimestampTz)ts_meos.value);
+                double secs = distance_set_timestamptz(s, (TimestampTz)ts_meos.value);
                 free(s);
-                return r;
+                return SecondsToInterval(secs);
             });
         return;
     }
@@ -2920,15 +2920,15 @@ void SetFunctions::Distance_set_set(DataChunk &args, ExpressionState &state, Vec
         return;
     }
     if (alias == "tstzset") {
-        BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(
+        BinaryExecutor::ExecuteWithNulls<string_t, string_t, interval_t>(
             a, b, result, args.size(),
-            [&](string_t x, string_t y, ValidityMask &mask, idx_t idx) -> double {
+            [&](string_t x, string_t y, ValidityMask &mask, idx_t idx) -> interval_t {
                 Set *s1 = CopySet(x);
                 Set *s2 = CopySet(y);
-                double r = distance_tstzset_tstzset(s1, s2);
+                double secs = distance_tstzset_tstzset(s1, s2);
                 free(s1);
                 free(s2);
-                return r;
+                return SecondsToInterval(secs);
             });
         return;
     }

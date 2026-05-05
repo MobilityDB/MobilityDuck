@@ -1049,7 +1049,7 @@ void TboxFunctions::TboxExpandValueExecutor(Vector &tbox, Vector &value, meosTyp
 void TboxFunctions::Tbox_expand_value(DataChunk &args, ExpressionState &state, Vector &result) {
     const auto &arg_type = args.data[1].GetType();
     if (arg_type.id() == LogicalTypeId::INTEGER) {
-        TboxExpandValueExecutor<int64_t>(args.data[0], args.data[1], T_INT4, result, args.size());
+        TboxExpandValueExecutor<int32_t>(args.data[0], args.data[1], T_INT4, result, args.size());
     } else if (arg_type.id() == LogicalTypeId::DOUBLE) {
         TboxExpandValueExecutor<double>(args.data[0], args.data[1], T_FLOAT8, result, args.size());
     } else {
