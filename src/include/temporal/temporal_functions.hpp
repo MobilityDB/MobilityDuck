@@ -78,6 +78,8 @@ struct TemporalFunctions {
     static void Temporal_end_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_min_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_max_value(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ttext_min_value(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ttext_max_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_avg_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_value_n(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_num_instants(DataChunk &args, ExpressionState &state, Vector &result); 
@@ -174,7 +176,16 @@ struct TemporalFunctions {
     static void Temporal_tsample(DataChunk &args, ExpressionState &state, Vector &result);
 
     // TODO: Stop functions
-    
+
+    /* ***************************************************
+     * MFJSON I/O
+     ****************************************************/
+    static void Temporal_as_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tbool_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tint_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tfloat_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ttext_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result);
+
     /* ***************************************************
      * Local Aggregate Functions
      ****************************************************/

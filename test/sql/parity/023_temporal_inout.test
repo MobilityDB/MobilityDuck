@@ -1,0 +1,55 @@
+# name: test/sql/parity/023_temporal_inout.test
+# description: MobilityDB regression file 023_temporal_inout.test.sql adapted for MobilityDuck
+# group: [sql]
+#
+# Covers asMFJSON output and *FromMFJSON round-trip for all four base types.
+
+require mobilityduck
+
+# asMFJSON — tbool instant
+query I
+SELECT asMFJSON(tbool 't@2000-01-01');
+----
+{"type":"MovingBoolean","values":[true],"datetimes":["2000-01-01T00:00:00+00"],"interpolation":"None"}
+
+# asMFJSON — tint instant
+query I
+SELECT asMFJSON(tint '1@2000-01-01');
+----
+{"type":"MovingInteger","values":[1],"datetimes":["2000-01-01T00:00:00+00"],"interpolation":"None"}
+
+# asMFJSON — tfloat sequence
+query I
+SELECT asMFJSON(tfloat '[1.5@2000-01-01, 2.5@2000-01-02]');
+----
+{"type":"MovingFloat","values":[1.5,2.5],"datetimes":["2000-01-01T00:00:00+00","2000-01-02T00:00:00+00"],"lower_inc":true,"upper_inc":true,"interpolation":"Linear"}
+
+# asMFJSON — ttext instant
+query I
+SELECT asMFJSON(ttext 'hello@2000-01-01');
+----
+{"type":"MovingText","values":["hello"],"datetimes":["2000-01-01T00:00:00+00"],"interpolation":"None"}
+
+# Round-trip: tint
+query I
+SELECT tintFromMFJSON(asMFJSON(tint '[1@2000-01-01, 2@2000-01-02]')) = tint '[1@2000-01-01, 2@2000-01-02]';
+----
+true
+
+# Round-trip: tfloat
+query I
+SELECT tfloatFromMFJSON(asMFJSON(tfloat '[1.5@2000-01-01, 2.5@2000-01-02]')) = tfloat '[1.5@2000-01-01, 2.5@2000-01-02]';
+----
+true
+
+# Round-trip: tbool
+query I
+SELECT tboolFromMFJSON(asMFJSON(tbool '{t@2000-01-01, f@2000-01-02}')) = tbool '{t@2000-01-01, f@2000-01-02}';
+----
+true
+
+# Round-trip: ttext instant
+query I
+SELECT ttextFromMFJSON(asMFJSON(ttext 'hello@2000-01-01')) = ttext 'hello@2000-01-01';
+----
+true

@@ -1242,6 +1242,42 @@ void TemporalFunctions::Temporal_max_value(DataChunk &args, ExpressionState &sta
     }
 }
 
+void TemporalFunctions::Ttext_min_value(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
+        args.data[0], result, count,
+        [&](string_t input, ValidityMask &mask, idx_t idx) -> string_t {
+            size_t data_size = input.GetSize();
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, input.GetData(), data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            text *val = ttext_min_value(temp);
+            free(data_copy);
+            if (!val) { mask.SetInvalid(idx); return string_t(); }
+            char *cstr = text2cstring(val);
+            return StringVector::AddString(result, cstr);
+        }
+    );
+}
+
+void TemporalFunctions::Ttext_max_value(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
+        args.data[0], result, count,
+        [&](string_t input, ValidityMask &mask, idx_t idx) -> string_t {
+            size_t data_size = input.GetSize();
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, input.GetData(), data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            text *val = ttext_max_value(temp);
+            free(data_copy);
+            if (!val) { mask.SetInvalid(idx); return string_t(); }
+            char *cstr = text2cstring(val);
+            return StringVector::AddString(result, cstr);
+        }
+    );
+}
+
 void TemporalFunctions::Temporal_value_n(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &res_type = result.GetType();
@@ -5748,6 +5784,101 @@ void TemporalFunctions::Temporal_derivative(DataChunk &args, ExpressionState &st
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
+}
+
+void TemporalFunctions::Temporal_as_mfjson(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    bool with_bbox = false;
+    int flags = 0;
+    int precision = 15;
+    if (args.ColumnCount() >= 2) {
+        args.data[1].Flatten(count);
+        int options = args.data[1].GetValue(0).GetValue<int32_t>();
+        if (options & 1) with_bbox = true;
+    }
+    if (args.ColumnCount() >= 3) {
+        args.data[2].Flatten(count);
+        flags = args.data[2].GetValue(0).GetValue<int32_t>();
+    }
+    if (args.ColumnCount() >= 4) {
+        args.data[3].Flatten(count);
+        precision = args.data[3].GetValue(0).GetValue<int32_t>();
+    }
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
+        args.data[0], result, count,
+        [&](string_t input, ValidityMask &mask, idx_t idx) -> string_t {
+            size_t data_size = input.GetSize();
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, input.GetData(), data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            char *json = temporal_as_mfjson(temp, with_bbox, flags, precision, nullptr);
+            free(data_copy);
+            if (!json) { mask.SetInvalid(idx); return string_t(); }
+            string_t stored = StringVector::AddString(result, json);
+            free(json);
+            return stored;
+        }
+    );
+}
+
+void TemporalFunctions::Tbool_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input, ValidityMask &mask, idx_t idx) -> string_t {
+            std::string json_str = input.GetString();
+            Temporal *temp = tbool_from_mfjson(json_str.c_str());
+            if (!temp) { mask.SetInvalid(idx); return string_t(); }
+            size_t temp_size = temporal_mem_size(temp);
+            string_t stored = StringVector::AddStringOrBlob(result, (const char*)temp, temp_size);
+            free(temp);
+            return stored;
+        }
+    );
+}
+
+void TemporalFunctions::Tint_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input, ValidityMask &mask, idx_t idx) -> string_t {
+            std::string json_str = input.GetString();
+            Temporal *temp = tint_from_mfjson(json_str.c_str());
+            if (!temp) { mask.SetInvalid(idx); return string_t(); }
+            size_t temp_size = temporal_mem_size(temp);
+            string_t stored = StringVector::AddStringOrBlob(result, (const char*)temp, temp_size);
+            free(temp);
+            return stored;
+        }
+    );
+}
+
+void TemporalFunctions::Tfloat_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input, ValidityMask &mask, idx_t idx) -> string_t {
+            std::string json_str = input.GetString();
+            Temporal *temp = tfloat_from_mfjson(json_str.c_str());
+            if (!temp) { mask.SetInvalid(idx); return string_t(); }
+            size_t temp_size = temporal_mem_size(temp);
+            string_t stored = StringVector::AddStringOrBlob(result, (const char*)temp, temp_size);
+            free(temp);
+            return stored;
+        }
+    );
+}
+
+void TemporalFunctions::Ttext_from_mfjson(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input, ValidityMask &mask, idx_t idx) -> string_t {
+            std::string json_str = input.GetString();
+            Temporal *temp = ttext_from_mfjson(json_str.c_str());
+            if (!temp) { mask.SetInvalid(idx); return string_t(); }
+            size_t temp_size = temporal_mem_size(temp);
+            string_t stored = StringVector::AddStringOrBlob(result, (const char*)temp, temp_size);
+            free(temp);
+            return stored;
+        }
+    );
 }
 
 } // namespace duckdb

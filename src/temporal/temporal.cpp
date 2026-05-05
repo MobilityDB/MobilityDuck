@@ -1094,6 +1094,11 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     mobilityduck::RegisterTemporalDatumAccessor<double>(
         loader, "maxValue", TemporalTypes::TFLOAT(), LogicalType::DOUBLE, temporal_max_value);
 
+    loader.RegisterFunction(ScalarFunction("minValue", {TemporalTypes::TTEXT()}, LogicalType::VARCHAR,
+        TemporalFunctions::Ttext_min_value));
+    loader.RegisterFunction(ScalarFunction("maxValue", {TemporalTypes::TTEXT()}, LogicalType::VARCHAR,
+        TemporalFunctions::Ttext_max_value));
+
     loader.RegisterFunction(
         ScalarFunction(
             "atValues",
@@ -1692,6 +1697,28 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction("ttext_cat", {LogicalType::VARCHAR, TemporalTypes::TTEXT()}, TemporalTypes::TTEXT(), TemporalFunctions::Textcat_text_ttext));
     loader.RegisterFunction(ScalarFunction("ttext_cat", {TemporalTypes::TTEXT(), LogicalType::VARCHAR}, TemporalTypes::TTEXT(), TemporalFunctions::Textcat_ttext_text));
     loader.RegisterFunction(ScalarFunction("ttext_cat", {TemporalTypes::TTEXT(), TemporalTypes::TTEXT()}, TemporalTypes::TTEXT(), TemporalFunctions::Textcat_ttext_ttext));
+
+    // asMFJSON — output temporal as Moving Features JSON
+    for (auto &type : {TemporalTypes::TBOOL(), TemporalTypes::TINT(), TemporalTypes::TFLOAT(), TemporalTypes::TTEXT()}) {
+        loader.RegisterFunction(ScalarFunction("asMFJSON", {type}, LogicalType::VARCHAR,
+            TemporalFunctions::Temporal_as_mfjson));
+        loader.RegisterFunction(ScalarFunction("asMFJSON", {type, LogicalType::INTEGER}, LogicalType::VARCHAR,
+            TemporalFunctions::Temporal_as_mfjson));
+        loader.RegisterFunction(ScalarFunction("asMFJSON", {type, LogicalType::INTEGER, LogicalType::INTEGER}, LogicalType::VARCHAR,
+            TemporalFunctions::Temporal_as_mfjson));
+    }
+    loader.RegisterFunction(ScalarFunction("asMFJSON", {TemporalTypes::TFLOAT(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::INTEGER}, LogicalType::VARCHAR,
+        TemporalFunctions::Temporal_as_mfjson));
+
+    // *FromMFJSON — parse Moving Features JSON to temporal type
+    loader.RegisterFunction(ScalarFunction("tboolFromMFJSON", {LogicalType::VARCHAR}, TemporalTypes::TBOOL(),
+        TemporalFunctions::Tbool_from_mfjson));
+    loader.RegisterFunction(ScalarFunction("tintFromMFJSON",  {LogicalType::VARCHAR}, TemporalTypes::TINT(),
+        TemporalFunctions::Tint_from_mfjson));
+    loader.RegisterFunction(ScalarFunction("tfloatFromMFJSON",{LogicalType::VARCHAR}, TemporalTypes::TFLOAT(),
+        TemporalFunctions::Tfloat_from_mfjson));
+    loader.RegisterFunction(ScalarFunction("ttextFromMFJSON", {LogicalType::VARCHAR}, TemporalTypes::TTEXT(),
+        TemporalFunctions::Ttext_from_mfjson));
 
 }
 
