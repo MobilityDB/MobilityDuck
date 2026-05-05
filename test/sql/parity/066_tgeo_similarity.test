@@ -70,15 +70,10 @@ SELECT round(hausdorffDistance(tgeompoint '[Point(0 0)@2001-01-01, Point(2 0)@20
 1.0
 
 # =============================================================================
-# similarityPath — needs table-function infrastructure (skip)
+# similarityPath
 # =============================================================================
 
-mode skip
-# similarityPath returns a relation and needs TableFunction infrastructure
-# that MobilityDuck does not yet expose.
 query II
-SELECT * FROM similarityPath(tgeompoint '[Point(1 1)@2001-01-01]', tgeompoint '[Point(1 1)@2001-01-01]', 'frechet');
+SELECT i, j FROM similarityPath(tgeompoint '[Point(1 1)@2001-01-01]', tgeompoint '[Point(1 1)@2001-01-01]', 'frechet') ORDER BY i, j;
 ----
-0  0
-
-mode unskip
+0	0

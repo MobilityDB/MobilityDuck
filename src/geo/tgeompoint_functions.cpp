@@ -1,5 +1,6 @@
 #include "meos_wrapper_simple.hpp"
 #include "common.hpp"
+#include <cfloat>
 
 #include "geo/tgeompoint_functions.hpp"
 #include "temporal/temporal_functions.hpp"
@@ -3904,6 +3905,79 @@ void TgeompointFunctions::distance_geo_geo(DataChunk &args, ExpressionState &sta
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
+}
+
+void TgeompointFunctions::Tdistance_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t tgeom_blob, string_t geometry_blob, ValidityMask &mask, idx_t idx) -> string_t {
+            uint8_t *tc = (uint8_t *)malloc(tgeom_blob.GetSize());
+            memcpy(tc, tgeom_blob.GetData(), tgeom_blob.GetSize());
+            Temporal *tgeom = reinterpret_cast<Temporal *>(tc);
+            int32 srid = tspatial_srid(tgeom);
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
+            if (!gs) { free(tgeom); mask.SetInvalid(idx); return string_t(); }
+            Temporal *ret = tdistance_tgeo_geo(tgeom, gs);
+            free(tgeom); free(gs);
+            if (!ret) { mask.SetInvalid(idx); return string_t(); }
+            string_t stored = StringVector::AddStringOrBlob(result, (const char *)ret, temporal_mem_size(ret));
+            free(ret);
+            return stored;
+        });
+}
+
+void TgeompointFunctions::Tdistance_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    // arg[0]=geometry, arg[1]=tgeompoint — forward to tdistance_tgeo_geo with swapped roles
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t geometry_blob, string_t tgeom_blob, ValidityMask &mask, idx_t idx) -> string_t {
+            uint8_t *tc = (uint8_t *)malloc(tgeom_blob.GetSize());
+            memcpy(tc, tgeom_blob.GetData(), tgeom_blob.GetSize());
+            Temporal *tgeom = reinterpret_cast<Temporal *>(tc);
+            int32 srid = tspatial_srid(tgeom);
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
+            if (!gs) { free(tgeom); mask.SetInvalid(idx); return string_t(); }
+            Temporal *ret = tdistance_tgeo_geo(tgeom, gs);
+            free(tgeom); free(gs);
+            if (!ret) { mask.SetInvalid(idx); return string_t(); }
+            string_t stored = StringVector::AddStringOrBlob(result, (const char *)ret, temporal_mem_size(ret));
+            free(ret);
+            return stored;
+        });
+}
+
+void TgeompointFunctions::Nad_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a_blob, string_t b_blob, ValidityMask &mask, idx_t idx) -> double {
+            uint8_t *ac = (uint8_t *)malloc(a_blob.GetSize());
+            memcpy(ac, a_blob.GetData(), a_blob.GetSize());
+            uint8_t *bc = (uint8_t *)malloc(b_blob.GetSize());
+            memcpy(bc, b_blob.GetData(), b_blob.GetSize());
+            Temporal *a = reinterpret_cast<Temporal *>(ac);
+            Temporal *b = reinterpret_cast<Temporal *>(bc);
+            double r = nad_tgeo_tgeo(a, b);
+            free(a); free(b);
+            if (r == DBL_MAX) { mask.SetInvalid(idx); return 0.0; }
+            return r;
+        });
+}
+
+void TgeompointFunctions::Nad_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t tgeom_blob, string_t geometry_blob, ValidityMask &mask, idx_t idx) -> double {
+            uint8_t *tc = (uint8_t *)malloc(tgeom_blob.GetSize());
+            memcpy(tc, tgeom_blob.GetData(), tgeom_blob.GetSize());
+            Temporal *tgeom = reinterpret_cast<Temporal *>(tc);
+            int32 srid = tspatial_srid(tgeom);
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
+            if (!gs) { free(tgeom); mask.SetInvalid(idx); return 0.0; }
+            double r = nad_tgeo_geo(tgeom, gs);
+            free(tgeom); free(gs);
+            if (r == DBL_MAX) { mask.SetInvalid(idx); return 0.0; }
+            return r;
+        });
 }
 
 } // namespace duckdb

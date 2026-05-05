@@ -42,6 +42,7 @@ struct TemporalTypes {
     static void RegisterScalarFunctions(ExtensionLoader &loader);
     static void RegisterTemporalUnnestFunction(ExtensionLoader &loader);
     static void RegisterTileFunctions(ExtensionLoader &loader);
+    static void RegisterSimilarityPath(ExtensionLoader &loader);
 };
 
 } // namespace duckdb

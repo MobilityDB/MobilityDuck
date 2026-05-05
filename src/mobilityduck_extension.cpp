@@ -236,6 +236,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TemporalTypes::RegisterScalarFunctions(loader);
 	TemporalTypes::RegisterTemporalUnnestFunction(loader);
 	TemporalTypes::RegisterTileFunctions(loader);
+	TemporalTypes::RegisterSimilarityPath(loader);
 
 	TboxType::RegisterType(loader);
 	TboxType::RegisterCastFunctions(loader);

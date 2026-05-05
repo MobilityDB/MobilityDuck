@@ -2303,4 +2303,96 @@ void TemporalTypes::RegisterTileFunctions(ExtensionLoader &loader) {
     }
 }
 
+// ============================================================================
+// similarityPath(temp1, temp2, method) → TABLE(i INTEGER, j INTEGER)
+// method: 'frechet' | 'dtw'
+// ============================================================================
+
+namespace {
+
+struct SimilarityPathBD : public TableFunctionData {
+    std::vector<std::pair<int32_t, int32_t>> rows;
+};
+
+struct SimilarityPathState : public GlobalTableFunctionState {
+    idx_t pos = 0;
+};
+
+static unique_ptr<FunctionData> SimilarityPathBind(ClientContext &context,
+                                                    TableFunctionBindInput &input,
+                                                    vector<LogicalType> &return_types,
+                                                    vector<string> &names) {
+    auto bd = make_uniq<SimilarityPathBD>();
+
+    string_t a_blob = input.inputs[0].GetValueUnsafe<string_t>();
+    string_t b_blob = input.inputs[1].GetValueUnsafe<string_t>();
+    string method   = StringUtil::Lower(input.inputs[2].GetValue<string>());
+
+    uint8_t *ac = (uint8_t *)malloc(a_blob.GetSize());
+    memcpy(ac, a_blob.GetData(), a_blob.GetSize());
+    uint8_t *bc = (uint8_t *)malloc(b_blob.GetSize());
+    memcpy(bc, b_blob.GetData(), b_blob.GetSize());
+    Temporal *a = reinterpret_cast<Temporal *>(ac);
+    Temporal *b = reinterpret_cast<Temporal *>(bc);
+
+    int count = 0;
+    Match *matches = nullptr;
+    if (method == "dtw" || method == "dyntimewarp") {
+        matches = temporal_dyntimewarp_path(a, b, &count);
+    } else {
+        matches = temporal_frechet_path(a, b, &count);
+    }
+    free(a); free(b);
+
+    if (matches && count > 0) {
+        bd->rows.reserve(count);
+        for (int k = 0; k < count; k++) {
+            bd->rows.emplace_back(matches[k].i, matches[k].j);
+        }
+        free(matches);
+    }
+
+    return_types = {LogicalType::INTEGER, LogicalType::INTEGER};
+    names = {"i", "j"};
+    return std::move(bd);
+}
+
+static unique_ptr<GlobalTableFunctionState> SimilarityPathInit(ClientContext &context,
+                                                                TableFunctionInitInput &input) {
+    return make_uniq<SimilarityPathState>();
+}
+
+static void SimilarityPathExec(ClientContext &context, TableFunctionInput &data,
+                                DataChunk &output) {
+    auto &bd    = data.bind_data->Cast<SimilarityPathBD>();
+    auto &state = data.global_state->Cast<SimilarityPathState>();
+    idx_t count = MinValue<idx_t>(bd.rows.size() - state.pos, (idx_t)STANDARD_VECTOR_SIZE);
+    if (count == 0) { output.SetCardinality(0); return; }
+
+    auto i_data = FlatVector::GetData<int32_t>(output.data[0]);
+    auto j_data = FlatVector::GetData<int32_t>(output.data[1]);
+    for (idx_t k = 0; k < count; k++) {
+        i_data[k] = bd.rows[state.pos + k].first;
+        j_data[k] = bd.rows[state.pos + k].second;
+    }
+    state.pos += count;
+    output.SetCardinality(count);
+}
+
+} // anonymous namespace
+
+void TemporalTypes::RegisterSimilarityPath(ExtensionLoader &loader) {
+    auto types = TemporalTypes::AllTypes();
+    for (auto &t : types) {
+        loader.RegisterFunction(TableFunction("similarityPath", {t, t, LogicalType::VARCHAR},
+                                              SimilarityPathExec, SimilarityPathBind,
+                                              SimilarityPathInit));
+    }
+    auto tgeomp = TgeompointType::TGEOMPOINT();
+    loader.RegisterFunction(TableFunction("similarityPath",
+                                          {tgeomp, tgeomp, LogicalType::VARCHAR},
+                                          SimilarityPathExec, SimilarityPathBind,
+                                          SimilarityPathInit));
+}
+
 } // namespace duckdb

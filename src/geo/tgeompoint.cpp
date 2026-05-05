@@ -1730,6 +1730,19 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Tdistance_tgeo_tgeo
         )
     );
+    loader.RegisterFunction(ScalarFunction("<->", {TGEOMPOINT(), GeoTypes::GEOMETRY()},
+        TemporalTypes::TFLOAT(), TgeompointFunctions::Tdistance_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("<->", {GeoTypes::GEOMETRY(), TGEOMPOINT()},
+        TemporalTypes::TFLOAT(), TgeompointFunctions::Tdistance_geo_tgeo));
+
+    loader.RegisterFunction(ScalarFunction("nad", {TGEOMPOINT(), TGEOMPOINT()},
+        LogicalType::DOUBLE, TgeompointFunctions::Nad_tgeo_tgeo));
+    loader.RegisterFunction(ScalarFunction("nad", {TGEOMPOINT(), GeoTypes::GEOMETRY()},
+        LogicalType::DOUBLE, TgeompointFunctions::Nad_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("nearestApproachDistance", {TGEOMPOINT(), TGEOMPOINT()},
+        LogicalType::DOUBLE, TgeompointFunctions::Nad_tgeo_tgeo));
+    loader.RegisterFunction(ScalarFunction("nearestApproachDistance", {TGEOMPOINT(), GeoTypes::GEOMETRY()},
+        LogicalType::DOUBLE, TgeompointFunctions::Nad_tgeo_geo));
 
     loader.RegisterFunction(
         ScalarFunction(

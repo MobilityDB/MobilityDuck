@@ -1,5 +1,6 @@
 #include "meos_wrapper_simple.hpp"
 
+#include "geo/tgeompoint.hpp"
 #include "temporal/set.hpp"
 #include "temporal/span.hpp"
 #include "temporal/spanset.hpp"
@@ -1227,6 +1228,7 @@ void TemporalAggregates::RegisterAppendMergeAggregates(ExtensionLoader &loader) 
         for (const auto &t : TemporalTypes::AllTypes()) {
             append_inst_set.AddFunction(MakeTemporalPtrAggregate<AppendInstantAggFunction>(t));
         }
+        append_inst_set.AddFunction(MakeTemporalPtrAggregate<AppendInstantAggFunction>(TgeompointType::TGEOMPOINT()));
         loader.RegisterFunction(std::move(append_inst_set));
     }
     {
@@ -1234,6 +1236,7 @@ void TemporalAggregates::RegisterAppendMergeAggregates(ExtensionLoader &loader) 
         for (const auto &t : TemporalTypes::AllTypes()) {
             append_seq_set.AddFunction(MakeTemporalPtrAggregate<AppendSequenceAggFunction>(t));
         }
+        append_seq_set.AddFunction(MakeTemporalPtrAggregate<AppendSequenceAggFunction>(TgeompointType::TGEOMPOINT()));
         loader.RegisterFunction(std::move(append_seq_set));
     }
 }

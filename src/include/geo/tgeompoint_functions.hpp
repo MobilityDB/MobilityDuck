@@ -159,6 +159,10 @@ struct TgeompointFunctions {
      * Distance function
      ****************************************************/
     static void Tdistance_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tdistance_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tdistance_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nad_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nad_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
     // static void gs_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void collect_gs(DataChunk &args, ExpressionState &state, Vector &result);
     static void distance_geo_geo(DataChunk &args, ExpressionState &state, Vector &result);
