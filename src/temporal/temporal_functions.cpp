@@ -4796,6 +4796,26 @@ void TemporalFunctions::Tnumber_abs(DataChunk &args, ExpressionState &state, Vec
     TemporalUnary(args, result, [](Temporal *t) { return tnumber_abs(t); });
 }
 
+void TemporalFunctions::Tnumber_delta_value(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return tnumber_delta_value(t); });
+}
+
+void TemporalFunctions::Tnumber_trend(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return tnumber_trend(t); });
+}
+
+void TemporalFunctions::Tfloat_exp(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return tfloat_exp(t); });
+}
+
+void TemporalFunctions::Tfloat_ln(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return tfloat_ln(t); });
+}
+
+void TemporalFunctions::Tfloat_log10(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return tfloat_log10(t); });
+}
+
 // Temporal_derivative is implemented later in this file in the Math
 // functions block (existed before the unary-tnumber additions).
 

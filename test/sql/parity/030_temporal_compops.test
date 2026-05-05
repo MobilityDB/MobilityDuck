@@ -37,3 +37,27 @@ query I
 SELECT always_lt(tint '[1@2000-01-01, 2@2000-01-02]', tint '[3@2000-01-01, 4@2000-01-02]');
 ----
 true
+
+# ever_ge / always_le — ordered comparison variants
+
+query I
+SELECT ever_ge(tint '[1@2000-01-01, 3@2000-01-03]', 2);
+----
+true
+
+query I
+SELECT always_le(tint '[1@2000-01-01, 2@2000-01-02]', 3);
+----
+true
+
+# Cross-type: tbool ever_eq / always_eq
+
+query I
+SELECT ever_eq(tbool 't@2000-01-01', true);
+----
+true
+
+query I
+SELECT always_eq(true, tbool 't@2000-01-01');
+----
+true

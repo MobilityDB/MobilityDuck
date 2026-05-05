@@ -23,3 +23,22 @@ query I
 SELECT ~ tbool 't@2000-01-01';
 ----
 f@2000-01-01 00:00:00+00
+
+# =============================================================================
+# Named-function aliases (MobilityDB SQL names for the operators)
+# =============================================================================
+
+query I
+SELECT tbool_and(tbool 't@2000-01-01', false);
+----
+f@2000-01-01 00:00:00+00
+
+query I
+SELECT tbool_or(false, tbool 'f@2000-01-01');
+----
+f@2000-01-01 00:00:00+00
+
+query I
+SELECT tbool_not(tbool 't@2000-01-01');
+----
+f@2000-01-01 00:00:00+00

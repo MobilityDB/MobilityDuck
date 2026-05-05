@@ -37,3 +37,22 @@ query I
 SELECT initcap(ttext '"hello world"@2000-01-01');
 ----
 "Hello World"@2000-01-01 00:00:00+00
+
+# =============================================================================
+# ttext_cat — named alias for ||
+# =============================================================================
+
+query I
+SELECT ttext_cat(text 'A', ttext 'AA@2000-01-01');
+----
+"AAA"@2000-01-01 00:00:00+00
+
+query I
+SELECT ttext_cat(ttext 'AA@2000-01-01', text 'A');
+----
+"AAA"@2000-01-01 00:00:00+00
+
+query I
+SELECT ttext_cat(ttext 'AB@2000-01-01', ttext 'CD@2000-01-01');
+----
+"ABCD"@2000-01-01 00:00:00+00

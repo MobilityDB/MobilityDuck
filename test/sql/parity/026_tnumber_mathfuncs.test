@@ -1,22 +1,6 @@
 # name: test/sql/parity/026_tnumber_mathfuncs.test
 # description: MobilityDB regression file 026_tnumber_mathfuncs.test.sql adapted for MobilityDuck
 # group: [sql]
-#
-# Whole file under `mode skip`: MobilityDuck does not register the
-# arithmetic operators (`+`, `-`, `*`, `/`) for tnumber types
-# (tint / tfloat) on either side. The error surfaces as
-# `+(tstzset, TIMESTAMP WITH TIME ZONE) -> tstzset` (DuckDB picks an
-# unrelated overload). MEOS symbols: tnumber_add_tnumber,
-# tnumber_sub_tnumber, tnumber_mult_tnumber, tnumber_div_tnumber, plus
-# the value-tnumber and tnumber-value variants for each of the four
-# operators.
-#
-# The full surface to cover:
-#   value op tnumber, tnumber op value, tnumber op tnumber
-#   for + (add), - (sub), * (mult), / (div)
-#   x both (tint, tfloat) base types
-#   = 24 ScalarFunction registrations per operator, 96 total.
-# Plus unary functions: abs, deg, rad, atan, derivative.
 
 require mobilityduck
 
@@ -57,3 +41,55 @@ query I
 SELECT round(derivative(tfloat '[1@2000-01-01, 4@2000-01-04]'), 6);
 ----
 Interp=Step;[0.000012@2000-01-01 00:00:00+00, 0.000012@2000-01-04 00:00:00+00]
+
+# =============================================================================
+# deltaValue — difference between successive instants
+# =============================================================================
+
+query I
+SELECT deltaValue(tint '[1@2000-01-01, 4@2000-01-04]');
+----
+[3@2000-01-01 00:00:00+00, 3@2000-01-04 00:00:00+00)
+
+query I
+SELECT deltaValue(tfloat '[1@2000-01-01, 4.5@2000-01-04]');
+----
+Interp=Step;[3.5@2000-01-01 00:00:00+00, 3.5@2000-01-04 00:00:00+00)
+
+# =============================================================================
+# trend — sign of slope (+1, 0, -1) at each step
+# =============================================================================
+
+query I
+SELECT trend(tfloat '[1@2000-01-01, 4@2000-01-04]');
+----
+[1@2000-01-01 00:00:00+00, 1@2000-01-04 00:00:00+00]
+
+query I
+SELECT trend(tfloat '[4@2000-01-01, 1@2000-01-04]');
+----
+[-1@2000-01-01 00:00:00+00, -1@2000-01-04 00:00:00+00]
+
+query I
+SELECT trend(tint '[1@2000-01-01, 4@2000-01-04]');
+----
+[1@2000-01-01 00:00:00+00, 1@2000-01-04 00:00:00+00]
+
+# =============================================================================
+# exp / ln / log10 — pointwise math on tfloat
+# =============================================================================
+
+query I
+SELECT round(exp(tfloat '0@2000-01-01'), 6);
+----
+1@2000-01-01 00:00:00+00
+
+query I
+SELECT round(ln(tfloat '1@2000-01-01'), 6);
+----
+0@2000-01-01 00:00:00+00
+
+query I
+SELECT round(log10(tfloat '10@2000-01-01'), 6);
+----
+1@2000-01-01 00:00:00+00
