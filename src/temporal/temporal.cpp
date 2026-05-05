@@ -1,6 +1,7 @@
 #include "meos_wrapper_simple.hpp"
 
 #include "common.hpp"
+#include "time_util.hpp"
 #include "temporal/temporal.hpp"
 #include "temporal/temporal_functions.hpp"
 #include "temporal/spanset.hpp"
@@ -1843,6 +1844,462 @@ void TemporalTypes::RegisterTemporalUnnestFunction(ExtensionLoader &loader) {
                             TemporalUnnestInit);
             loader.RegisterFunction( fn);
         }
+    }
+}
+
+// =============================================================================
+// Split table functions: valueSplit / timeSplit / valueTimeSplit
+// =============================================================================
+
+// ---- valueSplit (tint) -------------------------------------------------------
+
+struct ValueSplitTintBD : public TableFunctionData {
+    std::vector<std::pair<int32_t, std::vector<uint8_t>>> rows; // (bin_start, temporal_bytes)
+    LogicalType tint_type;
+};
+
+static unique_ptr<FunctionData> ValueSplitTintBind2(ClientContext &context,
+                                                      TableFunctionBindInput &input,
+                                                      vector<LogicalType> &return_types,
+                                                      vector<string> &names) {
+    if (input.inputs[0].IsNull()) throw BinderException("valueSplit: input temporal must not be null");
+    auto &in0 = input.inputs[0];
+    auto &in1 = input.inputs[1];
+    int32_t vsize = IntegerValue::Get(in1);
+    int32_t vorigin = input.inputs.size() >= 3 ? IntegerValue::Get(input.inputs[2]) : 0;
+
+    string_t blob = StringValue::Get(in0);
+    Temporal *temp = (Temporal *)malloc(blob.GetSize());
+    memcpy(temp, blob.GetData(), blob.GetSize());
+
+    int count = 0;
+    int *bins = nullptr;
+    Temporal **frags = tint_value_split(temp, vsize, vorigin, &bins, &count);
+    free(temp);
+
+    auto bd = make_uniq<ValueSplitTintBD>();
+    bd->tint_type = in0.type();
+    if (frags && bins && count > 0) {
+        for (int i = 0; i < count; i++) {
+            size_t fsz = temporal_mem_size(frags[i]);
+            std::vector<uint8_t> fbuf(fsz);
+            memcpy(fbuf.data(), frags[i], fsz);
+            bd->rows.emplace_back(bins[i], std::move(fbuf));
+            free(frags[i]);
+        }
+        free(frags);
+        free(bins);
+    }
+
+    return_types = {LogicalType::INTEGER, bd->tint_type};
+    names = {"value", "tint"};
+    return std::move(bd);
+}
+
+struct ValueSplitTintState : public GlobalTableFunctionState {
+    idx_t idx = 0;
+};
+
+static unique_ptr<GlobalTableFunctionState> ValueSplitTintInit2(ClientContext &,
+                                                                  TableFunctionInitInput &) {
+    return make_uniq<ValueSplitTintState>();
+}
+
+static void ValueSplitTintExec(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
+    auto &bd = input.bind_data->Cast<ValueSplitTintBD>();
+    auto &state = input.global_state->Cast<ValueSplitTintState>();
+    idx_t count = MinValue<idx_t>(STANDARD_VECTOR_SIZE, bd.rows.size() - state.idx);
+    auto int_data = FlatVector::GetData<int32_t>(output.data[0]);
+    auto &temp_vec = output.data[1];
+    auto temp_data = FlatVector::GetData<string_t>(temp_vec);
+    for (idx_t i = 0; i < count; i++) {
+        auto &row = bd.rows[state.idx + i];
+        int_data[i] = row.first;
+        temp_data[i] = StringVector::AddStringOrBlob(temp_vec,
+            reinterpret_cast<const char *>(row.second.data()), row.second.size());
+    }
+    output.SetCardinality(count);
+    state.idx += count;
+}
+
+// ---- valueSplit (tfloat) -----------------------------------------------------
+
+struct ValueSplitTfloatBD : public TableFunctionData {
+    std::vector<std::pair<double, std::vector<uint8_t>>> rows;
+    LogicalType tfloat_type;
+};
+
+static unique_ptr<FunctionData> ValueSplitTfloatBind(ClientContext &context,
+                                                       TableFunctionBindInput &input,
+                                                       vector<LogicalType> &return_types,
+                                                       vector<string> &names) {
+    if (input.inputs[0].IsNull()) throw BinderException("valueSplit: input temporal must not be null");
+    auto &in0 = input.inputs[0];
+    double vsize = DoubleValue::Get(input.inputs[1]);
+    double vorigin = input.inputs.size() >= 3 ? DoubleValue::Get(input.inputs[2]) : 0.0;
+
+    string_t blob = StringValue::Get(in0);
+    Temporal *temp = (Temporal *)malloc(blob.GetSize());
+    memcpy(temp, blob.GetData(), blob.GetSize());
+
+    int count = 0;
+    double *bins = nullptr;
+    Temporal **frags = tfloat_value_split(temp, vsize, vorigin, &bins, &count);
+    free(temp);
+
+    auto bd = make_uniq<ValueSplitTfloatBD>();
+    bd->tfloat_type = in0.type();
+    if (frags && bins && count > 0) {
+        for (int i = 0; i < count; i++) {
+            size_t fsz = temporal_mem_size(frags[i]);
+            std::vector<uint8_t> fbuf(fsz);
+            memcpy(fbuf.data(), frags[i], fsz);
+            bd->rows.emplace_back(bins[i], std::move(fbuf));
+            free(frags[i]);
+        }
+        free(frags);
+        free(bins);
+    }
+
+    return_types = {LogicalType::DOUBLE, bd->tfloat_type};
+    names = {"value", "tfloat"};
+    return std::move(bd);
+}
+
+struct ValueSplitTfloatState : public GlobalTableFunctionState { idx_t idx = 0; };
+
+static unique_ptr<GlobalTableFunctionState> ValueSplitTfloatInit(ClientContext &,
+                                                                   TableFunctionInitInput &) {
+    return make_uniq<ValueSplitTfloatState>();
+}
+
+static void ValueSplitTfloatExec(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
+    auto &bd = input.bind_data->Cast<ValueSplitTfloatBD>();
+    auto &state = input.global_state->Cast<ValueSplitTfloatState>();
+    idx_t count = MinValue<idx_t>(STANDARD_VECTOR_SIZE, bd.rows.size() - state.idx);
+    auto dbl_data = FlatVector::GetData<double>(output.data[0]);
+    auto &temp_vec = output.data[1];
+    auto temp_data = FlatVector::GetData<string_t>(temp_vec);
+    for (idx_t i = 0; i < count; i++) {
+        auto &row = bd.rows[state.idx + i];
+        dbl_data[i] = row.first;
+        temp_data[i] = StringVector::AddStringOrBlob(temp_vec,
+            reinterpret_cast<const char *>(row.second.data()), row.second.size());
+    }
+    output.SetCardinality(count);
+    state.idx += count;
+}
+
+// ---- timeSplit (any temporal type) ------------------------------------------
+
+struct TimeSplitBD : public TableFunctionData {
+    std::vector<std::pair<timestamp_tz_t, std::vector<uint8_t>>> rows;
+    LogicalType temporal_type;
+};
+
+static unique_ptr<FunctionData> TimeSplitBind(ClientContext &context,
+                                               TableFunctionBindInput &input,
+                                               vector<LogicalType> &return_types,
+                                               vector<string> &names) {
+    if (input.inputs[0].IsNull()) throw BinderException("timeSplit: input temporal must not be null");
+    auto &in0 = input.inputs[0];
+    interval_t iv = input.inputs[1].GetValue<interval_t>();
+    TimestampTz meos_origin = (TimestampTz)0;
+    if (input.inputs.size() >= 3) {
+        timestamp_tz_t duck_origin = input.inputs[2].GetValue<timestamp_tz_t>();
+        meos_origin = DuckDBToMeosTimestamp(duck_origin).value;
+    }
+    MeosInterval meos_iv = IntervaltToInterval(iv);
+
+    string_t blob = StringValue::Get(in0);
+    Temporal *temp = (Temporal *)malloc(blob.GetSize());
+    memcpy(temp, blob.GetData(), blob.GetSize());
+
+    int count = 0;
+    TimestampTz *time_bins = nullptr;
+    Temporal **frags = temporal_time_split(temp, &meos_iv, meos_origin, &time_bins, &count);
+    free(temp);
+
+    auto bd = make_uniq<TimeSplitBD>();
+    bd->temporal_type = in0.type();
+    if (frags && time_bins && count > 0) {
+        for (int i = 0; i < count; i++) {
+            timestamp_tz_t duck_ts = MeosToDuckDBTimestamp(timestamp_tz_t{time_bins[i]});
+            size_t fsz = temporal_mem_size(frags[i]);
+            std::vector<uint8_t> fbuf(fsz);
+            memcpy(fbuf.data(), frags[i], fsz);
+            bd->rows.emplace_back(duck_ts, std::move(fbuf));
+            free(frags[i]);
+        }
+        free(frags);
+        free(time_bins);
+    }
+
+    return_types = {LogicalType::TIMESTAMP_TZ, bd->temporal_type};
+    names = {"time", "temp"};
+    return std::move(bd);
+}
+
+struct TimeSplitState : public GlobalTableFunctionState { idx_t idx = 0; };
+
+static unique_ptr<GlobalTableFunctionState> TimeSplitInit(ClientContext &,
+                                                           TableFunctionInitInput &) {
+    return make_uniq<TimeSplitState>();
+}
+
+static void TimeSplitExec(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
+    auto &bd = input.bind_data->Cast<TimeSplitBD>();
+    auto &state = input.global_state->Cast<TimeSplitState>();
+    idx_t count = MinValue<idx_t>(STANDARD_VECTOR_SIZE, bd.rows.size() - state.idx);
+    auto ts_data = FlatVector::GetData<timestamp_tz_t>(output.data[0]);
+    auto &temp_vec = output.data[1];
+    auto temp_data = FlatVector::GetData<string_t>(temp_vec);
+    for (idx_t i = 0; i < count; i++) {
+        auto &row = bd.rows[state.idx + i];
+        ts_data[i] = row.first;
+        temp_data[i] = StringVector::AddStringOrBlob(temp_vec,
+            reinterpret_cast<const char *>(row.second.data()), row.second.size());
+    }
+    output.SetCardinality(count);
+    state.idx += count;
+}
+
+// ---- valueTimeSplit (tint) ---------------------------------------------------
+
+struct ValueTimeSplitTintBD : public TableFunctionData {
+    struct Row { int32_t value; timestamp_tz_t time; std::vector<uint8_t> frag; };
+    std::vector<Row> rows;
+    LogicalType tint_type;
+};
+
+static unique_ptr<FunctionData> ValueTimeSplitTintBind(ClientContext &context,
+                                                         TableFunctionBindInput &input,
+                                                         vector<LogicalType> &return_types,
+                                                         vector<string> &names) {
+    if (input.inputs[0].IsNull()) throw BinderException("valueTimeSplit: input temporal must not be null");
+    auto &in0 = input.inputs[0];
+    int32_t vsize = IntegerValue::Get(input.inputs[1]);
+    interval_t iv = input.inputs[2].GetValue<interval_t>();
+    int32_t vorigin = input.inputs.size() >= 4 ? IntegerValue::Get(input.inputs[3]) : 0;
+    TimestampTz meos_torigin = (TimestampTz)0;
+    if (input.inputs.size() >= 5) {
+        timestamp_tz_t duck_to = input.inputs[4].GetValue<timestamp_tz_t>();
+        meos_torigin = DuckDBToMeosTimestamp(duck_to).value;
+    }
+    MeosInterval meos_iv = IntervaltToInterval(iv);
+
+    string_t blob = StringValue::Get(in0);
+    Temporal *temp = (Temporal *)malloc(blob.GetSize());
+    memcpy(temp, blob.GetData(), blob.GetSize());
+
+    int count = 0;
+    int *val_bins = nullptr;
+    TimestampTz *time_bins = nullptr;
+    Temporal **frags = tint_value_time_split(temp, vsize, &meos_iv, vorigin, meos_torigin,
+                                              &val_bins, &time_bins, &count);
+    free(temp);
+
+    auto bd = make_uniq<ValueTimeSplitTintBD>();
+    bd->tint_type = in0.type();
+    if (frags && val_bins && time_bins && count > 0) {
+        for (int i = 0; i < count; i++) {
+            ValueTimeSplitTintBD::Row row;
+            row.value = val_bins[i];
+            row.time = MeosToDuckDBTimestamp(timestamp_tz_t{time_bins[i]});
+            size_t fsz = temporal_mem_size(frags[i]);
+            row.frag.resize(fsz);
+            memcpy(row.frag.data(), frags[i], fsz);
+            bd->rows.push_back(std::move(row));
+            free(frags[i]);
+        }
+        free(frags);
+        free(val_bins);
+        free(time_bins);
+    }
+
+    return_types = {LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ, bd->tint_type};
+    names = {"value", "time", "tint"};
+    return std::move(bd);
+}
+
+struct ValueTimeSplitTintState : public GlobalTableFunctionState { idx_t idx = 0; };
+
+static unique_ptr<GlobalTableFunctionState> ValueTimeSplitTintInit(ClientContext &,
+                                                                     TableFunctionInitInput &) {
+    return make_uniq<ValueTimeSplitTintState>();
+}
+
+static void ValueTimeSplitTintExec(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
+    auto &bd = input.bind_data->Cast<ValueTimeSplitTintBD>();
+    auto &state = input.global_state->Cast<ValueTimeSplitTintState>();
+    idx_t count = MinValue<idx_t>(STANDARD_VECTOR_SIZE, bd.rows.size() - state.idx);
+    auto int_data = FlatVector::GetData<int32_t>(output.data[0]);
+    auto ts_data = FlatVector::GetData<timestamp_tz_t>(output.data[1]);
+    auto &temp_vec = output.data[2];
+    auto temp_data = FlatVector::GetData<string_t>(temp_vec);
+    for (idx_t i = 0; i < count; i++) {
+        auto &row = bd.rows[state.idx + i];
+        int_data[i] = row.value;
+        ts_data[i] = row.time;
+        temp_data[i] = StringVector::AddStringOrBlob(temp_vec,
+            reinterpret_cast<const char *>(row.frag.data()), row.frag.size());
+    }
+    output.SetCardinality(count);
+    state.idx += count;
+}
+
+// ---- valueTimeSplit (tfloat) -------------------------------------------------
+
+struct ValueTimeSplitTfloatBD : public TableFunctionData {
+    struct Row { double value; timestamp_tz_t time; std::vector<uint8_t> frag; };
+    std::vector<Row> rows;
+    LogicalType tfloat_type;
+};
+
+static unique_ptr<FunctionData> ValueTimeSplitTfloatBind(ClientContext &context,
+                                                           TableFunctionBindInput &input,
+                                                           vector<LogicalType> &return_types,
+                                                           vector<string> &names) {
+    if (input.inputs[0].IsNull()) throw BinderException("valueTimeSplit: input temporal must not be null");
+    auto &in0 = input.inputs[0];
+    double vsize = DoubleValue::Get(input.inputs[1]);
+    interval_t iv = input.inputs[2].GetValue<interval_t>();
+    double vorigin = input.inputs.size() >= 4 ? DoubleValue::Get(input.inputs[3]) : 0.0;
+    TimestampTz meos_torigin = (TimestampTz)0;
+    if (input.inputs.size() >= 5) {
+        timestamp_tz_t duck_to = input.inputs[4].GetValue<timestamp_tz_t>();
+        meos_torigin = DuckDBToMeosTimestamp(duck_to).value;
+    }
+    MeosInterval meos_iv = IntervaltToInterval(iv);
+
+    string_t blob = StringValue::Get(in0);
+    Temporal *temp = (Temporal *)malloc(blob.GetSize());
+    memcpy(temp, blob.GetData(), blob.GetSize());
+
+    int count = 0;
+    double *val_bins = nullptr;
+    TimestampTz *time_bins = nullptr;
+    Temporal **frags = tfloat_value_time_split(temp, vsize, &meos_iv, vorigin, meos_torigin,
+                                                &val_bins, &time_bins, &count);
+    free(temp);
+
+    auto bd = make_uniq<ValueTimeSplitTfloatBD>();
+    bd->tfloat_type = in0.type();
+    if (frags && val_bins && time_bins && count > 0) {
+        for (int i = 0; i < count; i++) {
+            ValueTimeSplitTfloatBD::Row row;
+            row.value = val_bins[i];
+            row.time = MeosToDuckDBTimestamp(timestamp_tz_t{time_bins[i]});
+            size_t fsz = temporal_mem_size(frags[i]);
+            row.frag.resize(fsz);
+            memcpy(row.frag.data(), frags[i], fsz);
+            bd->rows.push_back(std::move(row));
+            free(frags[i]);
+        }
+        free(frags);
+        free(val_bins);
+        free(time_bins);
+    }
+
+    return_types = {LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ, bd->tfloat_type};
+    names = {"value", "time", "tfloat"};
+    return std::move(bd);
+}
+
+struct ValueTimeSplitTfloatState : public GlobalTableFunctionState { idx_t idx = 0; };
+
+static unique_ptr<GlobalTableFunctionState> ValueTimeSplitTfloatInit(ClientContext &,
+                                                                       TableFunctionInitInput &) {
+    return make_uniq<ValueTimeSplitTfloatState>();
+}
+
+static void ValueTimeSplitTfloatExec(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
+    auto &bd = input.bind_data->Cast<ValueTimeSplitTfloatBD>();
+    auto &state = input.global_state->Cast<ValueTimeSplitTfloatState>();
+    idx_t count = MinValue<idx_t>(STANDARD_VECTOR_SIZE, bd.rows.size() - state.idx);
+    auto dbl_data = FlatVector::GetData<double>(output.data[0]);
+    auto ts_data = FlatVector::GetData<timestamp_tz_t>(output.data[1]);
+    auto &temp_vec = output.data[2];
+    auto temp_data = FlatVector::GetData<string_t>(temp_vec);
+    for (idx_t i = 0; i < count; i++) {
+        auto &row = bd.rows[state.idx + i];
+        dbl_data[i] = row.value;
+        ts_data[i] = row.time;
+        temp_data[i] = StringVector::AddStringOrBlob(temp_vec,
+            reinterpret_cast<const char *>(row.frag.data()), row.frag.size());
+    }
+    output.SetCardinality(count);
+    state.idx += count;
+}
+
+// ---- Registration -----------------------------------------------------------
+
+void TemporalTypes::RegisterTileFunctions(ExtensionLoader &loader) {
+    // valueSplit(tint, size[, origin]) -> TABLE(value INTEGER, tint TINT)
+    for (auto &tint_type : std::vector<LogicalType>{TemporalTypes::TINT()}) {
+        loader.RegisterFunction(TableFunction("valueSplit", {tint_type, LogicalType::INTEGER},
+                                              ValueSplitTintExec, ValueSplitTintBind2,
+                                              ValueSplitTintInit2));
+        loader.RegisterFunction(TableFunction("valueSplit",
+                                              {tint_type, LogicalType::INTEGER, LogicalType::INTEGER},
+                                              ValueSplitTintExec, ValueSplitTintBind2,
+                                              ValueSplitTintInit2));
+    }
+
+    // valueSplit(tfloat, size[, origin]) -> TABLE(value DOUBLE, tfloat TFLOAT)
+    for (auto &tfloat_type : std::vector<LogicalType>{TemporalTypes::TFLOAT()}) {
+        loader.RegisterFunction(TableFunction("valueSplit", {tfloat_type, LogicalType::DOUBLE},
+                                              ValueSplitTfloatExec, ValueSplitTfloatBind,
+                                              ValueSplitTfloatInit));
+        loader.RegisterFunction(TableFunction("valueSplit",
+                                              {tfloat_type, LogicalType::DOUBLE, LogicalType::DOUBLE},
+                                              ValueSplitTfloatExec, ValueSplitTfloatBind,
+                                              ValueSplitTfloatInit));
+    }
+
+    // timeSplit(temporal, interval[, origin]) -> TABLE(time TIMESTAMPTZ, temporal <type>)
+    for (auto &temp_type : TemporalTypes::AllTypes()) {
+        loader.RegisterFunction(TableFunction("timeSplit", {temp_type, LogicalType::INTERVAL},
+                                              TimeSplitExec, TimeSplitBind, TimeSplitInit));
+        loader.RegisterFunction(TableFunction("timeSplit",
+                                              {temp_type, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ},
+                                              TimeSplitExec, TimeSplitBind, TimeSplitInit));
+    }
+
+    // valueTimeSplit(tint, size, interval[, vorigin, torigin]) -> TABLE(value, time, tint)
+    for (auto &tint_type : std::vector<LogicalType>{TemporalTypes::TINT()}) {
+        loader.RegisterFunction(TableFunction("valueTimeSplit",
+                                              {tint_type, LogicalType::INTEGER, LogicalType::INTERVAL},
+                                              ValueTimeSplitTintExec, ValueTimeSplitTintBind,
+                                              ValueTimeSplitTintInit));
+        loader.RegisterFunction(TableFunction("valueTimeSplit",
+                                              {tint_type, LogicalType::INTEGER, LogicalType::INTERVAL,
+                                               LogicalType::INTEGER},
+                                              ValueTimeSplitTintExec, ValueTimeSplitTintBind,
+                                              ValueTimeSplitTintInit));
+        loader.RegisterFunction(TableFunction("valueTimeSplit",
+                                              {tint_type, LogicalType::INTEGER, LogicalType::INTERVAL,
+                                               LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ},
+                                              ValueTimeSplitTintExec, ValueTimeSplitTintBind,
+                                              ValueTimeSplitTintInit));
+    }
+
+    // valueTimeSplit(tfloat, size, interval[, vorigin, torigin]) -> TABLE(value, time, tfloat)
+    for (auto &tfloat_type : std::vector<LogicalType>{TemporalTypes::TFLOAT()}) {
+        loader.RegisterFunction(TableFunction("valueTimeSplit",
+                                              {tfloat_type, LogicalType::DOUBLE, LogicalType::INTERVAL},
+                                              ValueTimeSplitTfloatExec, ValueTimeSplitTfloatBind,
+                                              ValueTimeSplitTfloatInit));
+        loader.RegisterFunction(TableFunction("valueTimeSplit",
+                                              {tfloat_type, LogicalType::DOUBLE, LogicalType::INTERVAL,
+                                               LogicalType::DOUBLE},
+                                              ValueTimeSplitTfloatExec, ValueTimeSplitTfloatBind,
+                                              ValueTimeSplitTfloatInit));
+        loader.RegisterFunction(TableFunction("valueTimeSplit",
+                                              {tfloat_type, LogicalType::DOUBLE, LogicalType::INTERVAL,
+                                               LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ},
+                                              ValueTimeSplitTfloatExec, ValueTimeSplitTfloatBind,
+                                              ValueTimeSplitTfloatInit));
     }
 }
 

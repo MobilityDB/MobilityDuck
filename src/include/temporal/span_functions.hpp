@@ -111,7 +111,16 @@ struct SpanFunctions {
     static void Distance_span_span(DataChunk &args, ExpressionState &state, Vector &result);
     static void Distance_value_span(DataChunk &args, ExpressionState &state, Vector &result);
     static void Distance_span_value(DataChunk &args, ExpressionState &state, Vector &result);
-    
+
+    // Tile / bin functions
+    static void Bins_intspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Bins_floatspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Bins_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void GetBin_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void GetBin_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void GetBin_date(DataChunk &args, ExpressionState &state, Vector &result);
+    static void GetBin_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
+
 };
 
 

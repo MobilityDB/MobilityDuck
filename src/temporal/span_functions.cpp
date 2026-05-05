@@ -4758,4 +4758,223 @@ void SpanFunctions::Distance_span_span(DataChunk &args, ExpressionState &state, 
     }
 }
 
+// =============================================================================
+// Tile / bin functions
+// =============================================================================
+
+static string_t SpanArrayToSpansetBlob(Span *bins, int count, Vector &result,
+                                        ValidityMask &mask, idx_t idx) {
+    if (!bins || count <= 0) {
+        if (bins) free(bins);
+        mask.SetInvalid(idx);
+        return string_t();
+    }
+    // normalize=false, order=true: bins are already ordered and non-normalizable
+    // (adjacent bins share boundaries — normalizing would merge them all into one).
+    SpanSet *ss = spanset_make_free(bins, count, false, true);
+    if (!ss) { mask.SetInvalid(idx); return string_t(); }
+    size_t sz = spanset_mem_size(ss);
+    string_t stored = StringVector::AddStringOrBlob(result, (const char *)ss, sz);
+    free(ss);
+    return stored;
+}
+
+void SpanFunctions::Bins_intspan(DataChunk &args, ExpressionState &state, Vector &result) {
+    bool has_origin = args.ColumnCount() == 3;
+    auto exec = [&](string_t blob, int32_t size, int32_t origin,
+                    ValidityMask &mask, idx_t idx) -> string_t {
+        Span *s = (Span *)malloc(blob.GetSize());
+        memcpy(s, blob.GetData(), blob.GetSize());
+        int count;
+        Span *bins = intspan_bins(s, size, origin, &count);
+        free(s);
+        return SpanArrayToSpansetBlob(bins, count, result, mask, idx);
+    };
+    if (has_origin) {
+        TernaryExecutor::ExecuteWithNulls<string_t, int32_t, int32_t, string_t>(
+            args.data[0], args.data[1], args.data[2], result, args.size(),
+            [&](string_t a, int32_t b, int32_t c, ValidityMask &mask, idx_t idx) {
+                return exec(a, b, c, mask, idx);
+            });
+    } else {
+        BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(
+            args.data[0], args.data[1], result, args.size(),
+            [&](string_t a, int32_t b, ValidityMask &mask, idx_t idx) {
+                return exec(a, b, 0, mask, idx);
+            });
+    }
+}
+
+void SpanFunctions::Bins_floatspan(DataChunk &args, ExpressionState &state, Vector &result) {
+    bool has_origin = args.ColumnCount() == 3;
+    auto exec = [&](string_t blob, double size, double origin,
+                    ValidityMask &mask, idx_t idx) -> string_t {
+        Span *s = (Span *)malloc(blob.GetSize());
+        memcpy(s, blob.GetData(), blob.GetSize());
+        int count;
+        Span *bins = floatspan_bins(s, size, origin, &count);
+        free(s);
+        return SpanArrayToSpansetBlob(bins, count, result, mask, idx);
+    };
+    if (has_origin) {
+        TernaryExecutor::ExecuteWithNulls<string_t, double, double, string_t>(
+            args.data[0], args.data[1], args.data[2], result, args.size(),
+            [&](string_t a, double b, double c, ValidityMask &mask, idx_t idx) {
+                return exec(a, b, c, mask, idx);
+            });
+    } else {
+        BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(
+            args.data[0], args.data[1], result, args.size(),
+            [&](string_t a, double b, ValidityMask &mask, idx_t idx) {
+                return exec(a, b, 0.0, mask, idx);
+            });
+    }
+}
+
+void SpanFunctions::Bins_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
+    bool has_origin = args.ColumnCount() == 3;
+    auto exec = [&](string_t blob, interval_t iv, TimestampTz meos_origin,
+                    ValidityMask &mask, idx_t idx) -> string_t {
+        Span *s = (Span *)malloc(blob.GetSize());
+        memcpy(s, blob.GetData(), blob.GetSize());
+        MeosInterval meos_iv = IntervaltToInterval(iv);
+        int count;
+        Span *bins = tstzspan_bins(s, &meos_iv, meos_origin, &count);
+        free(s);
+        return SpanArrayToSpansetBlob(bins, count, result, mask, idx);
+    };
+    if (has_origin) {
+        TernaryExecutor::ExecuteWithNulls<string_t, interval_t, timestamp_tz_t, string_t>(
+            args.data[0], args.data[1], args.data[2], result, args.size(),
+            [&](string_t a, interval_t b, timestamp_tz_t c, ValidityMask &mask, idx_t idx) {
+                return exec(a, b, DuckDBToMeosTimestamp(c).value, mask, idx);
+            });
+    } else {
+        BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(
+            args.data[0], args.data[1], result, args.size(),
+            [&](string_t a, interval_t b, ValidityMask &mask, idx_t idx) {
+                return exec(a, b, (TimestampTz)0, mask, idx);
+            });
+    }
+}
+
+void SpanFunctions::GetBin_int(DataChunk &args, ExpressionState &state, Vector &result) {
+    bool has_origin = args.ColumnCount() == 3;
+    auto exec = [&](int32_t value, int32_t size, int32_t origin,
+                    ValidityMask &mask, idx_t idx) -> string_t {
+        int bin_lo = int_get_bin(value, size, origin);
+        Span *span = intspan_make(bin_lo, bin_lo + size, true, false);
+        if (!span) { mask.SetInvalid(idx); return string_t(); }
+        string_t stored = StringVector::AddStringOrBlob(result, (const char *)span, sizeof(Span));
+        free(span);
+        return stored;
+    };
+    if (has_origin) {
+        TernaryExecutor::ExecuteWithNulls<int32_t, int32_t, int32_t, string_t>(
+            args.data[0], args.data[1], args.data[2], result, args.size(),
+            [&](int32_t a, int32_t b, int32_t c, ValidityMask &mask, idx_t idx) {
+                return exec(a, b, c, mask, idx);
+            });
+    } else {
+        BinaryExecutor::ExecuteWithNulls<int32_t, int32_t, string_t>(
+            args.data[0], args.data[1], result, args.size(),
+            [&](int32_t a, int32_t b, ValidityMask &mask, idx_t idx) {
+                return exec(a, b, 0, mask, idx);
+            });
+    }
+}
+
+void SpanFunctions::GetBin_float(DataChunk &args, ExpressionState &state, Vector &result) {
+    bool has_origin = args.ColumnCount() == 3;
+    auto exec = [&](double value, double size, double origin,
+                    ValidityMask &mask, idx_t idx) -> string_t {
+        double bin_lo = float_get_bin(value, size, origin);
+        Span *span = floatspan_make(bin_lo, bin_lo + size, true, false);
+        if (!span) { mask.SetInvalid(idx); return string_t(); }
+        string_t stored = StringVector::AddStringOrBlob(result, (const char *)span, sizeof(Span));
+        free(span);
+        return stored;
+    };
+    if (has_origin) {
+        TernaryExecutor::ExecuteWithNulls<double, double, double, string_t>(
+            args.data[0], args.data[1], args.data[2], result, args.size(),
+            [&](double a, double b, double c, ValidityMask &mask, idx_t idx) {
+                return exec(a, b, c, mask, idx);
+            });
+    } else {
+        BinaryExecutor::ExecuteWithNulls<double, double, string_t>(
+            args.data[0], args.data[1], result, args.size(),
+            [&](double a, double b, ValidityMask &mask, idx_t idx) {
+                return exec(a, b, 0.0, mask, idx);
+            });
+    }
+}
+
+void SpanFunctions::GetBin_date(DataChunk &args, ExpressionState &state, Vector &result) {
+    bool has_origin = args.ColumnCount() == 3;
+    auto exec = [&](date_t duckdb_d, interval_t iv, date_t duckdb_origin,
+                    ValidityMask &mask, idx_t idx) -> string_t {
+        DateADT d = ToMeosDate(duckdb_d);
+        DateADT origin = ToMeosDate(duckdb_origin);
+        MeosInterval meos_iv = IntervaltToInterval(iv);
+        // Use datespan_bins on [d, d+1) to find the bin containing d.
+        Span *s = datespan_make(d, add_date_int(d, 1), true, false);
+        if (!s) { mask.SetInvalid(idx); return string_t(); }
+        int count;
+        Span *bins = datespan_bins(s, &meos_iv, origin, &count);
+        free(s);
+        if (!bins || count < 1) {
+            if (bins) free(bins);
+            mask.SetInvalid(idx);
+            return string_t();
+        }
+        string_t stored = StringVector::AddStringOrBlob(result, (const char *)&bins[0], sizeof(Span));
+        free(bins);
+        return stored;
+    };
+    date_t zero_date = FromMeosDate(0);
+    if (has_origin) {
+        TernaryExecutor::ExecuteWithNulls<date_t, interval_t, date_t, string_t>(
+            args.data[0], args.data[1], args.data[2], result, args.size(),
+            [&](date_t a, interval_t b, date_t c, ValidityMask &mask, idx_t idx) {
+                return exec(a, b, c, mask, idx);
+            });
+    } else {
+        BinaryExecutor::ExecuteWithNulls<date_t, interval_t, string_t>(
+            args.data[0], args.data[1], result, args.size(),
+            [&](date_t a, interval_t b, ValidityMask &mask, idx_t idx) {
+                return exec(a, b, zero_date, mask, idx);
+            });
+    }
+}
+
+void SpanFunctions::GetBin_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
+    bool has_origin = args.ColumnCount() == 3;
+    auto exec = [&](timestamp_tz_t duckdb_ts, interval_t iv, TimestampTz meos_origin,
+                    ValidityMask &mask, idx_t idx) -> string_t {
+        TimestampTz ts = DuckDBToMeosTimestamp(duckdb_ts).value;
+        MeosInterval meos_iv = IntervaltToInterval(iv);
+        TimestampTz bin_lo = timestamptz_get_bin(ts, &meos_iv, meos_origin);
+        TimestampTz bin_hi = add_timestamptz_interval(bin_lo, &meos_iv);
+        Span *span = tstzspan_make(bin_lo, bin_hi, true, false);
+        if (!span) { mask.SetInvalid(idx); return string_t(); }
+        string_t stored = StringVector::AddStringOrBlob(result, (const char *)span, sizeof(Span));
+        free(span);
+        return stored;
+    };
+    if (has_origin) {
+        TernaryExecutor::ExecuteWithNulls<timestamp_tz_t, interval_t, timestamp_tz_t, string_t>(
+            args.data[0], args.data[1], args.data[2], result, args.size(),
+            [&](timestamp_tz_t a, interval_t b, timestamp_tz_t c, ValidityMask &mask, idx_t idx) {
+                return exec(a, b, DuckDBToMeosTimestamp(c).value, mask, idx);
+            });
+    } else {
+        BinaryExecutor::ExecuteWithNulls<timestamp_tz_t, interval_t, string_t>(
+            args.data[0], args.data[1], result, args.size(),
+            [&](timestamp_tz_t a, interval_t b, ValidityMask &mask, idx_t idx) {
+                return exec(a, b, (TimestampTz)0, mask, idx);
+            });
+    }
+}
+
 }

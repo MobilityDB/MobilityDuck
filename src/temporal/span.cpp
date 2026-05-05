@@ -1156,6 +1156,38 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
     loader.RegisterFunction( ScalarFunction("<->", {SpanTypes::TSTZSPAN(), SpanTypes::TSTZSPAN()}, LogicalType::INTERVAL, SpanFunctions::Distance_span_span)
     );
+
+    // bins(span, size[, origin]) → spanset
+    loader.RegisterFunction(ScalarFunction("bins", {SpanTypes::INTSPAN(), LogicalType::INTEGER},
+                                           SpansetTypes::intspanset(), SpanFunctions::Bins_intspan));
+    loader.RegisterFunction(ScalarFunction("bins", {SpanTypes::INTSPAN(), LogicalType::INTEGER, LogicalType::INTEGER},
+                                           SpansetTypes::intspanset(), SpanFunctions::Bins_intspan));
+    loader.RegisterFunction(ScalarFunction("bins", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE},
+                                           SpansetTypes::floatspanset(), SpanFunctions::Bins_floatspan));
+    loader.RegisterFunction(ScalarFunction("bins", {SpanTypes::FLOATSPAN(), LogicalType::DOUBLE, LogicalType::DOUBLE},
+                                           SpansetTypes::floatspanset(), SpanFunctions::Bins_floatspan));
+    loader.RegisterFunction(ScalarFunction("bins", {SpanTypes::TSTZSPAN(), LogicalType::INTERVAL},
+                                           SpansetTypes::tstzspanset(), SpanFunctions::Bins_tstzspan));
+    loader.RegisterFunction(ScalarFunction("bins", {SpanTypes::TSTZSPAN(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ},
+                                           SpansetTypes::tstzspanset(), SpanFunctions::Bins_tstzspan));
+
+    // getBin(value, size[, origin]) → span
+    loader.RegisterFunction(ScalarFunction("getBin", {LogicalType::INTEGER, LogicalType::INTEGER},
+                                           SpanTypes::INTSPAN(), SpanFunctions::GetBin_int));
+    loader.RegisterFunction(ScalarFunction("getBin", {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::INTEGER},
+                                           SpanTypes::INTSPAN(), SpanFunctions::GetBin_int));
+    loader.RegisterFunction(ScalarFunction("getBin", {LogicalType::DOUBLE, LogicalType::DOUBLE},
+                                           SpanTypes::FLOATSPAN(), SpanFunctions::GetBin_float));
+    loader.RegisterFunction(ScalarFunction("getBin", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
+                                           SpanTypes::FLOATSPAN(), SpanFunctions::GetBin_float));
+    loader.RegisterFunction(ScalarFunction("getBin", {LogicalType::DATE, LogicalType::INTERVAL},
+                                           SpanTypes::DATESPAN(), SpanFunctions::GetBin_date));
+    loader.RegisterFunction(ScalarFunction("getBin", {LogicalType::DATE, LogicalType::INTERVAL, LogicalType::DATE},
+                                           SpanTypes::DATESPAN(), SpanFunctions::GetBin_date));
+    loader.RegisterFunction(ScalarFunction("getBin", {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL},
+                                           SpanTypes::TSTZSPAN(), SpanFunctions::GetBin_timestamptz));
+    loader.RegisterFunction(ScalarFunction("getBin", {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ},
+                                           SpanTypes::TSTZSPAN(), SpanFunctions::GetBin_timestamptz));
 }
 
 
