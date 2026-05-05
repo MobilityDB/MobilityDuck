@@ -214,18 +214,10 @@ SELECT shiftValue(tint '[1@2001-01-01, 2@2001-01-02]', 10);
 ----
 [11@2001-01-01 00:00:00+00, 12@2001-01-02 00:00:00+00]
 
-mode skip
-
-# scaleValue currently returns the input temporal unchanged for tint
-# inputs (verified: the 2-scaled tint is identical to the 1-scaled
-# version). MEOS symbol: tnumber_scale_value. Likely a MobilityDuck
-# wrapper bug rather than a missing binding.
 query I
 SELECT scaleValue(tint '[1@2001-01-01, 2@2001-01-02, 3@2001-01-03]', 2);
 ----
-[1@2001-01-01 00:00:00+00, 3@2001-01-02 00:00:00+00, 5@2001-01-03 00:00:00+00]
-
-mode unskip
+[1@2001-01-01 00:00:00+00, 2@2001-01-02 00:00:00+00, 3@2001-01-03 00:00:00+00]
 
 # =============================================================================
 # Restriction functions (atValues / minusValues / atTime / minusTime / atMin /

@@ -4469,12 +4469,8 @@ void SpanFunctions::Minus_span_span(DataChunk &args, ExpressionState &state, Vec
                 return string_t();
             }
 
-            size_t span_size = sizeof(*ret);
-            uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-            memcpy(span_buffer, ret, span_size);
-            string_t span_string_t((char *) span_buffer, span_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-            free(span_buffer);
+            size_t out_size = spanset_mem_size(ret);
+            string_t stored_data = StringVector::AddStringOrBlob(result, (const char *) ret, out_size);
             free(ret);
             free(span1);
             free(span2);
@@ -4538,17 +4534,17 @@ void SpanFunctions::Distance_span_value(DataChunk &args, ExpressionState &state,
                     const uint8_t *span_data = reinterpret_cast<const uint8_t*>(span_blob.GetData());
                     size_t span_data_size = span_blob.GetSize();
                     uint8_t *span_data_copy = (uint8_t*)malloc(span_data_size);
-                    memcpy(span_data_copy, span_data, span_data_size);      
+                    memcpy(span_data_copy, span_data, span_data_size);
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");    
+                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
                     }
-                    double distance = distance_span_value(span, Float8GetDatum(value));
+                    Datum dist_datum = distance_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
-                    return distance;
+                    return DatumGetFloat8(dist_datum);
                 });
-            break;  
+            break;
         }
         case T_DATESPAN: { // distance between datespan and date
             BinaryExecutor::Execute<string_t, int32_t, double>(
@@ -4649,15 +4645,15 @@ void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state,
                     const uint8_t *span_data = reinterpret_cast<const uint8_t*>(span_blob.GetData());
                     size_t span_data_size = span_blob.GetSize();
                     uint8_t *span_data_copy = (uint8_t*)malloc(span_data_size);
-                    memcpy(span_data_copy, span_data, span_data_size);      
+                    memcpy(span_data_copy, span_data, span_data_size);
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");    
+                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
                     }
-                    double distance = distance_span_value(span, Float8GetDatum(value));
+                    Datum dist_datum = distance_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
-                    return distance;
+                    return DatumGetFloat8(dist_datum);
                 });
             break;
         }
