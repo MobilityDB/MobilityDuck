@@ -157,3 +157,19 @@ query I
 SELECT tne(geometry 'Point(1 1)', tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02}');
 ----
 {f@2000-01-01 00:00:00+00, t@2000-01-02 00:00:00+00}
+
+# =============================================================================
+# teq / tne  (tgeompoint × tgeompoint)
+# =============================================================================
+
+# equal at first instant, different at second
+query I
+SELECT teq(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02}', tgeompoint '{Point(1 1)@2000-01-01, Point(3 3)@2000-01-02}');
+----
+{t@2000-01-01 00:00:00+00, f@2000-01-02 00:00:00+00}
+
+# singleton always equal to itself
+query I
+SELECT tne(tgeompoint 'Point(1 1)@2000-01-01', tgeompoint 'Point(1 1)@2000-01-01');
+----
+f@2000-01-01 00:00:00+00

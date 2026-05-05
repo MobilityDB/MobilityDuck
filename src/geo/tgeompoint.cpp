@@ -1833,10 +1833,14 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         {TGEOMPOINT, GEO}, TemporalTypes::TBOOL(), TgeompointFunctions::Teq_tgeo_geo));
     loader.RegisterFunction(ScalarFunction("teq",
         {GEO, TGEOMPOINT}, TemporalTypes::TBOOL(), TgeompointFunctions::Teq_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction("teq",
+        {TGEOMPOINT, TGEOMPOINT}, TemporalTypes::TBOOL(), TgeompointFunctions::Teq_tgeo_tgeo));
     loader.RegisterFunction(ScalarFunction("tne",
         {TGEOMPOINT, GEO}, TemporalTypes::TBOOL(), TgeompointFunctions::Tne_tgeo_geo));
     loader.RegisterFunction(ScalarFunction("tne",
         {GEO, TGEOMPOINT}, TemporalTypes::TBOOL(), TgeompointFunctions::Tne_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction("tne",
+        {TGEOMPOINT, TGEOMPOINT}, TemporalTypes::TBOOL(), TgeompointFunctions::Tne_tgeo_tgeo));
 
     // -------------------------------------------------------------------------
     // eCovers / tCovers

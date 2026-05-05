@@ -3605,6 +3605,48 @@ void TgeompointFunctions::Tne_geo_tgeo(DataChunk &args, ExpressionState &state, 
 
 
 // ---------------------------------------------------------------------------
+// teq / tne  (tgeo × tgeo — generic temporal comparison)
+// ---------------------------------------------------------------------------
+
+void TgeompointFunctions::Teq_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t b1, string_t b2, ValidityMask &mask, idx_t idx) -> string_t {
+            uint8_t *buf1 = (uint8_t*)malloc(b1.GetSize()); memcpy(buf1, b1.GetData(), b1.GetSize());
+            Temporal *t1 = reinterpret_cast<Temporal*>(buf1);
+            uint8_t *buf2 = (uint8_t*)malloc(b2.GetSize()); memcpy(buf2, b2.GetData(), b2.GetSize());
+            Temporal *t2 = reinterpret_cast<Temporal*>(buf2);
+            Temporal *ret = teq_temporal_temporal(t1, t2);
+            free(t1); free(t2);
+            if (!ret) { mask.SetInvalid(idx); return string_t(); }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t stored = StringVector::AddStringOrBlob(result, (const char*)ret, ret_size);
+            free(ret);
+            return stored;
+        });
+    if (args.size() == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void TgeompointFunctions::Tne_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t b1, string_t b2, ValidityMask &mask, idx_t idx) -> string_t {
+            uint8_t *buf1 = (uint8_t*)malloc(b1.GetSize()); memcpy(buf1, b1.GetData(), b1.GetSize());
+            Temporal *t1 = reinterpret_cast<Temporal*>(buf1);
+            uint8_t *buf2 = (uint8_t*)malloc(b2.GetSize()); memcpy(buf2, b2.GetData(), b2.GetSize());
+            Temporal *t2 = reinterpret_cast<Temporal*>(buf2);
+            Temporal *ret = tne_temporal_temporal(t1, t2);
+            free(t1); free(t2);
+            if (!ret) { mask.SetInvalid(idx); return string_t(); }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t stored = StringVector::AddStringOrBlob(result, (const char*)ret, ret_size);
+            free(ret);
+            return stored;
+        });
+    if (args.size() == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+// ---------------------------------------------------------------------------
 // eCovers
 // ---------------------------------------------------------------------------
 

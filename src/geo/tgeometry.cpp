@@ -1309,6 +1309,20 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction(
         "ever_ne", {TGEOM, TGEOM}, LogicalType::BOOLEAN, TgeompointFunctions::Ever_ne_tgeo_tgeo));
 
+    // teq / tne  (tgeometry)
+    loader.RegisterFunction(ScalarFunction("teq",
+        {TGEOM, GEO}, TemporalTypes::TBOOL(), TgeompointFunctions::Teq_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("teq",
+        {GEO, TGEOM}, TemporalTypes::TBOOL(), TgeompointFunctions::Teq_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction("teq",
+        {TGEOM, TGEOM}, TemporalTypes::TBOOL(), TgeompointFunctions::Teq_tgeo_tgeo));
+    loader.RegisterFunction(ScalarFunction("tne",
+        {TGEOM, GEO}, TemporalTypes::TBOOL(), TgeompointFunctions::Tne_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("tne",
+        {GEO, TGEOM}, TemporalTypes::TBOOL(), TgeompointFunctions::Tne_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction("tne",
+        {TGEOM, TGEOM}, TemporalTypes::TBOOL(), TgeompointFunctions::Tne_tgeo_tgeo));
+
     loader.RegisterFunction(ScalarFunction("always_ne",
         {TGEOM, GEO}, LogicalType::BOOLEAN, TgeompointFunctions::Always_ne_tgeo_geo));
     loader.RegisterFunction(ScalarFunction("always_ne",

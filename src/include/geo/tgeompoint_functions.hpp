@@ -82,8 +82,7 @@ struct TgeompointFunctions {
     static void Tne_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tne_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Teq_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Teq_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tne_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tne_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
      * Spatial functions
      ****************************************************/
