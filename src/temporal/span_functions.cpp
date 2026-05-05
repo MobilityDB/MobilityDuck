@@ -1865,7 +1865,7 @@ void SpanFunctions::Contains_span_value(DataChunk &args, ExpressionState &state,
                         free(span_data_copy);
                         throw InvalidInputException("Invalid DATESPAN data: null pointer");
                     }
-                    bool ret = contains_span_value(span, Datum(value));
+                    bool ret = contains_span_value(span, SpanInt32ToDatum(span_type, value));
                     free(span_data_copy);
                     return ret;
                 });
@@ -2011,7 +2011,7 @@ void SpanFunctions::Contained_value_span(DataChunk &args, ExpressionState &state
                         free(span_data_copy);
                         throw InvalidInputException("Invalid DATESPAN data: null pointer");
                     }
-                    bool ret = contains_span_value(span, Datum(value));
+                    bool ret = contains_span_value(span, SpanInt32ToDatum(span_type, value));
                     free(span_data_copy);
                     return ret;
                 });
@@ -2196,7 +2196,7 @@ void SpanFunctions::Adjacent_value_span(DataChunk &args, ExpressionState &state,
                         free(span_data_copy);
                         throw InvalidInputException("Invalid DATESPAN data: null pointer");
                     }
-                    bool ret = adjacent_span_value(span, Datum(ToMeosDate(date_t(value))));
+                    bool ret = adjacent_span_value(span, SpanInt32ToDatum(span_type, value));
                     free(span_data_copy);
                     return ret;
                 });
@@ -2308,7 +2308,7 @@ void SpanFunctions::Adjacent_span_value(DataChunk &args, ExpressionState &state,
                         free(span_data_copy);
                         throw InvalidInputException("Invalid DATESPAN data: null pointer");
                     }
-                    bool ret = adjacent_span_value(span, Datum(ToMeosDate(date_t(value))));
+                    bool ret = adjacent_span_value(span, SpanInt32ToDatum(span_type, value));
                     free(span_data_copy);
                     return ret;
                 });
@@ -2456,7 +2456,7 @@ void SpanFunctions::Left_value_span(DataChunk &args, ExpressionState &state, Vec
                         free(span_data_copy);
                         throw InvalidInputException("Invalid DATESPAN data: null pointer");
                     }
-                    bool ret = left_value_span(Datum(value), span);
+                    bool ret = left_value_span(SpanInt32ToDatum(span_type, value), span);
                     free(span_data_copy);
                     return ret;
                 });
@@ -2567,7 +2567,7 @@ void SpanFunctions::Left_span_value(DataChunk &args, ExpressionState &state, Vec
                         free(span_data_copy);
                         throw InvalidInputException("Invalid DATESPAN data: null pointer");
                     }
-                    bool ret = left_span_value(span, Datum(value));
+                    bool ret = left_span_value(span, SpanInt32ToDatum(span_type, value));
                     free(span_data_copy);
                     return ret;
                 });
@@ -2711,7 +2711,7 @@ void SpanFunctions::Right_value_span(DataChunk &args, ExpressionState &state, Ve
                         free(span_data_copy);
                         throw InvalidInputException("Invalid DATESPAN data: null pointer");
                     }
-                    bool ret = right_value_span(Datum(value), span);
+                    bool ret = right_value_span(SpanInt32ToDatum(span_type, value), span);
                     free(span_data_copy);
                     return ret;
                 });
@@ -2821,7 +2821,7 @@ void SpanFunctions::Right_span_value(DataChunk &args, ExpressionState &state, Ve
                         free(span_data_copy);
                         throw InvalidInputException("Invalid DATESPAN data: null pointer");
                     }
-                    bool ret = right_span_value(span, Datum(value));
+                    bool ret = right_span_value(span, SpanInt32ToDatum(span_type, value));
                     free(span_data_copy);
                     return ret;
                 });
@@ -2966,7 +2966,7 @@ void SpanFunctions::Overleft_value_span(DataChunk &args, ExpressionState &state,
                         free(span_data_copy);
                         throw InvalidInputException("Invalid DATESPAN data: null pointer");
                     }
-                    bool ret = overleft_value_span(Datum(value), span);
+                    bool ret = overleft_value_span(SpanInt32ToDatum(span_type, value), span);
                     free(span_data_copy);
                     return ret;
                 });
@@ -3076,7 +3076,7 @@ void SpanFunctions::Overleft_span_value(DataChunk &args, ExpressionState &state,
                         free(span_data_copy);
                         throw InvalidInputException("Invalid DATESPAN data: null pointer");
                     }
-                    bool ret = overleft_span_value(span, Datum(value)); 
+                    bool ret = overleft_span_value(span, SpanInt32ToDatum(span_type, value)); 
                     free(span_data_copy);
                     return ret;
                 });
@@ -3221,7 +3221,7 @@ void SpanFunctions::Overright_value_span(DataChunk &args, ExpressionState &state
                         free(span_data_copy);
                         throw InvalidInputException("Invalid DATESPAN data: null pointer");
                     }
-                    bool ret = overright_value_span(Datum(value), span);
+                    bool ret = overright_value_span(SpanInt32ToDatum(span_type, value), span);
                     free(span_data_copy);
                     return ret;
                 });
@@ -3332,7 +3332,7 @@ void SpanFunctions::Overright_span_value(DataChunk &args, ExpressionState &state
                         free(span_data_copy);
                         throw InvalidInputException("Invalid DATESPAN data: null pointer");
                     }
-                    bool ret = overright_span_value(span, Datum(value));
+                    bool ret = overright_span_value(span, SpanInt32ToDatum(span_type, value));
                     free(span_data_copy);
                     return ret;
                 });
@@ -3497,7 +3497,7 @@ void SpanFunctions::Union_value_span(DataChunk &args, ExpressionState &state, Ve
                         free(span_data_copy);
                         throw InvalidInputException("Invalid SPAN data: null pointer");
                     }
-                    SpanSet *ret = union_value_span(Datum(value), span);
+                    SpanSet *ret = union_value_span(SpanInt32ToDatum(span_type, value), span);
                     size_t span_size = sizeof(*ret);
                     uint8_t *span_buffer = (uint8_t*) malloc(span_size);
                     memcpy(span_buffer, ret, span_size);
@@ -3642,7 +3642,7 @@ void SpanFunctions::Union_span_value(DataChunk &args, ExpressionState &state, Ve
                         free(span_data_copy);
                         throw InvalidInputException("Invalid SPAN data: null pointer");
                     }
-                    SpanSet *ret = union_span_value(span, Datum(value));
+                    SpanSet *ret = union_span_value(span, SpanInt32ToDatum(span_type, value));
                     size_t span_size = sizeof(*ret);
                     uint8_t *span_buffer = (uint8_t*) malloc(span_size);    
                     memcpy(span_buffer, ret, span_size);
@@ -3836,7 +3836,7 @@ void SpanFunctions::Intersection_value_span(DataChunk &args, ExpressionState &st
                         free(span_data_copy);
                         throw InvalidInputException("Invalid SPAN data: null pointer");
                     }
-                    Span *ret = intersection_value_span(Datum(value), span);
+                    Span *ret = intersection_value_span(SpanInt32ToDatum(span_type, value), span);
                     if (!ret) {
                         free(span_data_copy);
                         return string_t();
@@ -4001,7 +4001,7 @@ void SpanFunctions::Intersection_span_value(DataChunk &args, ExpressionState &st
                         free(span_data_copy);
                         throw InvalidInputException("Invalid SPAN data: null pointer");
                     }
-                    Span *ret = intersection_span_value(span, Datum(value));
+                    Span *ret = intersection_span_value(span, SpanInt32ToDatum(span_type, value));
                     if (!ret) {
                         free(span_data_copy);
                         return string_t();
@@ -4216,7 +4216,7 @@ void SpanFunctions::Minus_value_span(DataChunk &args, ExpressionState &state, Ve
                         free(span_data_copy);
                         throw InvalidInputException("Invalid SPAN data: null pointer");
                     }
-                    SpanSet *ret = minus_value_span(Datum(value), span);
+                    SpanSet *ret = minus_value_span(SpanInt32ToDatum(span_type, value), span);
                     if (!ret) {
                         free(span_data_copy);
                         return string_t();
@@ -4381,7 +4381,7 @@ void SpanFunctions::Minus_span_value(DataChunk &args, ExpressionState &state, Ve
                         free(span_data_copy);
                         throw InvalidInputException("Invalid SPAN data: null pointer");
                     }
-                    SpanSet *ret = minus_span_value(span, Datum(value));
+                    SpanSet *ret = minus_span_value(span, SpanInt32ToDatum(span_type, value));
                     if (!ret) {
                         free(span_data_copy);
                         return string_t();
@@ -4559,7 +4559,7 @@ void SpanFunctions::Distance_span_value(DataChunk &args, ExpressionState &state,
                         free(span_data_copy);
                         throw InvalidInputException("Invalid SPAN data: null pointer");
                     }
-                    int32_t distance = distance_span_value(span, Datum(value));
+                    int32_t distance = distance_span_value(span, SpanInt32ToDatum(span_type, value));
                     free(span_data_copy);
                     return distance;
                 });
@@ -4670,7 +4670,7 @@ void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state,
                         free(span_data_copy);
                         throw InvalidInputException("Invalid SPAN data: null pointer");
                     }
-                    int32_t distance = distance_span_value(span, Datum(value));
+                    int32_t distance = distance_span_value(span, SpanInt32ToDatum(span_type, value));
                     free(span_data_copy);
                     return distance;
                 });

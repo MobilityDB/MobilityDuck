@@ -57,6 +57,15 @@ inline timestamp_tz_t MeosToDuckDBTimestamp(timestamp_tz_t meos_ts) {
     return duckdb_ts;
 }
 
+// Convert a DuckDB int32 scalar span-value to the MEOS Datum for the given
+// span element type.  For T_DATESPAN the raw DuckDB value (days since
+// 1970-01-01) must be shifted to MEOS DateADT (days since 2000-01-01);
+// for T_INTSPAN it passes through unchanged.
+inline Datum SpanInt32ToDatum(meosType span_type, int32_t value) {
+    if (span_type == T_DATESPAN) return Datum(ToMeosDate(duckdb::date_t(value)));
+    return Datum(value);
+}
+
 // Convert MEOS time-distance (seconds as double) to DuckDB interval_t.
 // Normalizes to whole days + remaining microseconds so "2 days" formats
 // as "2 days" rather than "48:00:00".
