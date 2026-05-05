@@ -169,8 +169,12 @@ struct TemporalFunctions {
     ****************************************************/
     static void Temporal_segm_min_duration(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_segm_max_duration(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_simplify_dp(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_simplify_max_dist(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_simplify_min_dist(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_simplify_min_tdelta(DataChunk &args, ExpressionState &state, Vector &result);
 
-    // TODO: Stop functions 
+    // TODO: Stop functions
     
     /* ***************************************************
      * Local Aggregate Functions

@@ -1,0 +1,40 @@
+# name: test/sql/parity/046_temporal_analytics.test
+# description: MobilityDB regression file 046_temporal_analytics.test.sql adapted for MobilityDuck
+# group: [sql]
+
+require mobilityduck
+
+# Douglas-Peucker simplification — middle point distance 1 < eps 1.5 → removed
+query I
+SELECT douglasPeuckerSimplify(tfloat '[1@2000-01-01, 2@2000-01-02, 1@2000-01-03]', 1.5);
+----
+[1@2000-01-01 00:00:00+00, 1@2000-01-03 00:00:00+00]
+
+# Max-distance simplification — same threshold
+query I
+SELECT maxDistSimplify(tfloat '[1@2000-01-01, 2@2000-01-02, 1@2000-01-03]', 1.5);
+----
+[1@2000-01-01 00:00:00+00, 1@2000-01-03 00:00:00+00]
+
+# Min-distance simplification — middle point delta (1) > dist (0.5) → kept
+query I
+SELECT minDistSimplify(tfloat '[1@2000-01-01, 2@2000-01-02, 1@2000-01-03]', 0.5);
+----
+[1@2000-01-01 00:00:00+00, 2@2000-01-02 00:00:00+00, 1@2000-01-03 00:00:00+00]
+
+# Min-time-delta simplification — gap 24h < mintdelta 36h → middle instant removed
+query I
+SELECT minTimeDeltaSimplify(tfloat '[1@2000-01-01, 2@2000-01-02, 1@2000-01-03]', interval '36 hours');
+----
+[1@2000-01-01 00:00:00+00, 1@2000-01-03 00:00:00+00]
+
+# MobilityDuck version info
+query I
+SELECT length(mobilityduck_version()) > 0;
+----
+true
+
+query I
+SELECT length(mobilityduck_full_version()) > 0;
+----
+true

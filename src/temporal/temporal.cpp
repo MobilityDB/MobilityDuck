@@ -888,6 +888,54 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_segm_max_duration
             )
         );
+        loader.RegisterFunction(
+            ScalarFunction(
+                "douglasPeuckerSimplify",
+                {type, LogicalType::DOUBLE},
+                type,
+                TemporalFunctions::Temporal_simplify_dp
+            )
+        );
+        loader.RegisterFunction(
+            ScalarFunction(
+                "douglasPeuckerSimplify",
+                {type, LogicalType::DOUBLE, LogicalType::BOOLEAN},
+                type,
+                TemporalFunctions::Temporal_simplify_dp
+            )
+        );
+        loader.RegisterFunction(
+            ScalarFunction(
+                "maxDistSimplify",
+                {type, LogicalType::DOUBLE},
+                type,
+                TemporalFunctions::Temporal_simplify_max_dist
+            )
+        );
+        loader.RegisterFunction(
+            ScalarFunction(
+                "maxDistSimplify",
+                {type, LogicalType::DOUBLE, LogicalType::BOOLEAN},
+                type,
+                TemporalFunctions::Temporal_simplify_max_dist
+            )
+        );
+        loader.RegisterFunction(
+            ScalarFunction(
+                "minDistSimplify",
+                {type, LogicalType::DOUBLE},
+                type,
+                TemporalFunctions::Temporal_simplify_min_dist
+            )
+        );
+        loader.RegisterFunction(
+            ScalarFunction(
+                "minTimeDeltaSimplify",
+                {type, LogicalType::INTERVAL},
+                type,
+                TemporalFunctions::Temporal_simplify_min_tdelta
+            )
+        );
 
         loader.RegisterFunction(
             ScalarFunction(
@@ -1351,6 +1399,32 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction("/", {TemporalTypes::TINT(), TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Div_tnumber_tnumber));
     loader.RegisterFunction(ScalarFunction("/", {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Div_tnumber_tnumber));
 
+    // Named aliases matching MobilityDB tnumber_add/sub/mult/div function names
+    loader.RegisterFunction(ScalarFunction("tnumber_add", {LogicalType::INTEGER, TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Add_int_tint));
+    loader.RegisterFunction(ScalarFunction("tnumber_add", {TemporalTypes::TINT(), LogicalType::INTEGER}, TemporalTypes::TINT(), TemporalFunctions::Add_tint_int));
+    loader.RegisterFunction(ScalarFunction("tnumber_add", {LogicalType::DOUBLE, TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Add_float_tfloat));
+    loader.RegisterFunction(ScalarFunction("tnumber_add", {TemporalTypes::TFLOAT(), LogicalType::DOUBLE}, TemporalTypes::TFLOAT(), TemporalFunctions::Add_tfloat_float));
+    loader.RegisterFunction(ScalarFunction("tnumber_add", {TemporalTypes::TINT(), TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Add_tnumber_tnumber));
+    loader.RegisterFunction(ScalarFunction("tnumber_add", {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Add_tnumber_tnumber));
+    loader.RegisterFunction(ScalarFunction("tnumber_sub", {LogicalType::INTEGER, TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Sub_int_tint));
+    loader.RegisterFunction(ScalarFunction("tnumber_sub", {TemporalTypes::TINT(), LogicalType::INTEGER}, TemporalTypes::TINT(), TemporalFunctions::Sub_tint_int));
+    loader.RegisterFunction(ScalarFunction("tnumber_sub", {LogicalType::DOUBLE, TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Sub_float_tfloat));
+    loader.RegisterFunction(ScalarFunction("tnumber_sub", {TemporalTypes::TFLOAT(), LogicalType::DOUBLE}, TemporalTypes::TFLOAT(), TemporalFunctions::Sub_tfloat_float));
+    loader.RegisterFunction(ScalarFunction("tnumber_sub", {TemporalTypes::TINT(), TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Sub_tnumber_tnumber));
+    loader.RegisterFunction(ScalarFunction("tnumber_sub", {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Sub_tnumber_tnumber));
+    loader.RegisterFunction(ScalarFunction("tnumber_mult", {LogicalType::INTEGER, TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Mult_int_tint));
+    loader.RegisterFunction(ScalarFunction("tnumber_mult", {TemporalTypes::TINT(), LogicalType::INTEGER}, TemporalTypes::TINT(), TemporalFunctions::Mult_tint_int));
+    loader.RegisterFunction(ScalarFunction("tnumber_mult", {LogicalType::DOUBLE, TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Mult_float_tfloat));
+    loader.RegisterFunction(ScalarFunction("tnumber_mult", {TemporalTypes::TFLOAT(), LogicalType::DOUBLE}, TemporalTypes::TFLOAT(), TemporalFunctions::Mult_tfloat_float));
+    loader.RegisterFunction(ScalarFunction("tnumber_mult", {TemporalTypes::TINT(), TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Mult_tnumber_tnumber));
+    loader.RegisterFunction(ScalarFunction("tnumber_mult", {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Mult_tnumber_tnumber));
+    loader.RegisterFunction(ScalarFunction("tnumber_div", {LogicalType::INTEGER, TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Div_int_tint));
+    loader.RegisterFunction(ScalarFunction("tnumber_div", {TemporalTypes::TINT(), LogicalType::INTEGER}, TemporalTypes::TINT(), TemporalFunctions::Div_tint_int));
+    loader.RegisterFunction(ScalarFunction("tnumber_div", {LogicalType::DOUBLE, TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Div_float_tfloat));
+    loader.RegisterFunction(ScalarFunction("tnumber_div", {TemporalTypes::TFLOAT(), LogicalType::DOUBLE}, TemporalTypes::TFLOAT(), TemporalFunctions::Div_tfloat_float));
+    loader.RegisterFunction(ScalarFunction("tnumber_div", {TemporalTypes::TINT(), TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Div_tnumber_tnumber));
+    loader.RegisterFunction(ScalarFunction("tnumber_div", {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Div_tnumber_tnumber));
+
     // Unary tnumber functions
     loader.RegisterFunction(ScalarFunction("abs", {TemporalTypes::TINT()}, TemporalTypes::TINT(), TemporalFunctions::Tnumber_abs));
     loader.RegisterFunction(ScalarFunction("abs", {TemporalTypes::TFLOAT()}, TemporalTypes::TFLOAT(), TemporalFunctions::Tnumber_abs));
@@ -1613,6 +1687,7 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction("ttext_cat", {LogicalType::VARCHAR, TemporalTypes::TTEXT()}, TemporalTypes::TTEXT(), TemporalFunctions::Textcat_text_ttext));
     loader.RegisterFunction(ScalarFunction("ttext_cat", {TemporalTypes::TTEXT(), LogicalType::VARCHAR}, TemporalTypes::TTEXT(), TemporalFunctions::Textcat_ttext_text));
     loader.RegisterFunction(ScalarFunction("ttext_cat", {TemporalTypes::TTEXT(), TemporalTypes::TTEXT()}, TemporalTypes::TTEXT(), TemporalFunctions::Textcat_ttext_ttext));
+
 }
 
 struct TemporalUnnestBindData : public TableFunctionData {

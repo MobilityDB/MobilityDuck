@@ -4,6 +4,7 @@
 #include "temporal/spanset.hpp"
 #include "geo_util.hpp"
 
+
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
@@ -4818,6 +4819,101 @@ void TemporalFunctions::Tfloat_log10(DataChunk &args, ExpressionState &state, Ve
 
 // Temporal_derivative is implemented later in this file in the Math
 // functions block (existed before the unary-tnumber additions).
+
+/* ***************************************************
+ * Simplification functions
+ ****************************************************/
+
+void TemporalFunctions::Temporal_simplify_dp(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    bool synchronized = false;
+    if (args.ColumnCount() == 3) {
+        args.data[2].Flatten(count);
+        synchronized = args.data[2].GetValue(0).GetValue<bool>();
+    }
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(
+        args.data[0], args.data[1], result, count,
+        [&](string_t temp_str, double eps_dist, ValidityMask &mask, idx_t idx) -> string_t {
+            size_t data_size = temp_str.GetSize();
+            uint8_t *data_copy = (uint8_t *)malloc(data_size);
+            memcpy(data_copy, temp_str.GetData(), data_size);
+            Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
+            Temporal *ret = temporal_simplify_dp(temp, eps_dist, synchronized);
+            free(data_copy);
+            if (!ret) { mask.SetInvalid(idx); return string_t(); }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t stored = StringVector::AddStringOrBlob(result, (const char *)ret, ret_size);
+            free(ret);
+            return stored;
+        }
+    );
+}
+
+void TemporalFunctions::Temporal_simplify_max_dist(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    bool synchronized = false;
+    if (args.ColumnCount() == 3) {
+        args.data[2].Flatten(count);
+        synchronized = args.data[2].GetValue(0).GetValue<bool>();
+    }
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(
+        args.data[0], args.data[1], result, count,
+        [&](string_t temp_str, double eps_dist, ValidityMask &mask, idx_t idx) -> string_t {
+            size_t data_size = temp_str.GetSize();
+            uint8_t *data_copy = (uint8_t *)malloc(data_size);
+            memcpy(data_copy, temp_str.GetData(), data_size);
+            Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
+            Temporal *ret = temporal_simplify_max_dist(temp, eps_dist, synchronized);
+            free(data_copy);
+            if (!ret) { mask.SetInvalid(idx); return string_t(); }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t stored = StringVector::AddStringOrBlob(result, (const char *)ret, ret_size);
+            free(ret);
+            return stored;
+        }
+    );
+}
+
+void TemporalFunctions::Temporal_simplify_min_dist(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(
+        args.data[0], args.data[1], result, count,
+        [&](string_t temp_str, double dist, ValidityMask &mask, idx_t idx) -> string_t {
+            size_t data_size = temp_str.GetSize();
+            uint8_t *data_copy = (uint8_t *)malloc(data_size);
+            memcpy(data_copy, temp_str.GetData(), data_size);
+            Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
+            Temporal *ret = temporal_simplify_min_dist(temp, dist);
+            free(data_copy);
+            if (!ret) { mask.SetInvalid(idx); return string_t(); }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t stored = StringVector::AddStringOrBlob(result, (const char *)ret, ret_size);
+            free(ret);
+            return stored;
+        }
+    );
+}
+
+void TemporalFunctions::Temporal_simplify_min_tdelta(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(
+        args.data[0], args.data[1], result, count,
+        [&](string_t temp_str, interval_t interval, ValidityMask &mask, idx_t idx) -> string_t {
+            size_t data_size = temp_str.GetSize();
+            uint8_t *data_copy = (uint8_t *)malloc(data_size);
+            memcpy(data_copy, temp_str.GetData(), data_size);
+            Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
+            MeosInterval meos_interval = IntervaltToInterval(interval);
+            Temporal *ret = temporal_simplify_min_tdelta(temp, &meos_interval);
+            free(data_copy);
+            if (!ret) { mask.SetInvalid(idx); return string_t(); }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t stored = StringVector::AddStringOrBlob(result, (const char *)ret, ret_size);
+            free(ret);
+            return stored;
+        }
+    );
+}
 
 void TemporalFunctions::Tfloat_degrees(DataChunk &args, ExpressionState &state, Vector &result) {
     if (args.ColumnCount() == 2) {
