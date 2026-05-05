@@ -764,48 +764,45 @@ SELECT 5.5 -|- floatspan '[3.5, 5.5]';
 ----
 false
 
-mode skip
-# DuckDB's SQL parser does not accept `#` inside operator names, so the
-# time-position MEOS operators (<<#, #>>, &<#, #&>) cannot be invoked
-# from SQL even though the underlying ScalarFunctions are registered
-# with BOOLEAN return type.
+# DuckDB's parser rejects `#` in infix operator position; use quoted
+# function-call syntax instead (<<# → "<<#"(a,b) etc.).
 query I
-SELECT datespan '[2000-01-03,2000-01-05)' <<# date '2000-01-05';
+SELECT "<<#"(datespan '[2000-01-03,2000-01-05)', date '2000-01-05');
 ----
 true
 
 query I
-SELECT date '2000-01-05' <<# datespan '[2000-01-03,2000-01-05)';
+SELECT "<<#"(date '2000-01-05', datespan '[2000-01-03,2000-01-05)');
 ----
 false
 
 query I
-SELECT datespan '[2000-01-03,2000-01-05)' #>> date '2000-01-05';
+SELECT "#>>"(datespan '[2000-01-03,2000-01-05)', date '2000-01-05');
 ----
 false
 
 query I
-SELECT date '2000-01-05' #>> datespan '[2000-01-03,2000-01-05)';
+SELECT "#>>"(date '2000-01-05', datespan '[2000-01-03,2000-01-05)');
 ----
 true
 
 query I
-SELECT datespan '[2000-01-03,2000-01-05)' &<# date '2000-01-05';
+SELECT "&<#"(datespan '[2000-01-03,2000-01-05)', date '2000-01-05');
 ----
 true
 
 query I
-SELECT date '2000-01-05' &<# datespan '[2000-01-03,2000-01-05)';
+SELECT "&<#"(date '2000-01-05', datespan '[2000-01-03,2000-01-05)');
 ----
 false
 
 query I
-SELECT datespan '[2000-01-03,2000-01-05)' #&> date '2000-01-05';
+SELECT "#&>"(datespan '[2000-01-03,2000-01-05)', date '2000-01-05');
 ----
 false
 
 query I
-SELECT date '2000-01-05' #&> datespan '[2000-01-03,2000-01-05)';
+SELECT "#&>"(date '2000-01-05', datespan '[2000-01-03,2000-01-05)');
 ----
 true
 
@@ -818,4 +815,3 @@ query I
 SELECT date '2000-01-05' -|- datespan '[2000-01-03,2000-01-05)';
 ----
 true
-mode unskip

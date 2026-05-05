@@ -2189,14 +2189,14 @@ void SpanFunctions::Adjacent_value_span(DataChunk &args, ExpressionState &state,
                 [&](int32_t value, string_t span_blob) -> bool {
                     const uint8_t *span_data = reinterpret_cast<const uint8_t*>(span_blob.GetData());
                     size_t span_data_size = span_blob.GetSize();
-                    uint8_t *span_data_copy = (uint8_t*)malloc(span_data_size);     
+                    uint8_t *span_data_copy = (uint8_t*)malloc(span_data_size);
                     memcpy(span_data_copy, span_data, span_data_size);
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
                         throw InvalidInputException("Invalid DATESPAN data: null pointer");
                     }
-                    bool ret = adjacent_span_value(span, Datum(value));
+                    bool ret = adjacent_span_value(span, Datum(ToMeosDate(date_t(value))));
                     free(span_data_copy);
                     return ret;
                 });
@@ -2308,11 +2308,11 @@ void SpanFunctions::Adjacent_span_value(DataChunk &args, ExpressionState &state,
                         free(span_data_copy);
                         throw InvalidInputException("Invalid DATESPAN data: null pointer");
                     }
-                    bool ret = adjacent_span_value(span, Datum(value));
+                    bool ret = adjacent_span_value(span, Datum(ToMeosDate(date_t(value))));
                     free(span_data_copy);
                     return ret;
                 });
-            break;      
+            break;
         }
         case T_TSTZSPAN: { // tstzspan -|- timestamptz
             BinaryExecutor::Execute<string_t, timestamp_tz_t, bool>(

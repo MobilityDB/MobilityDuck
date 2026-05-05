@@ -86,16 +86,10 @@ SELECT tfloat '[1@2001-01-01 08:00:00,2@2001-01-01 08:05:00,3@2001-01-01 08:06:0
 ----
 [1@2001-01-01 08:00:00+00, 2@2001-01-01 08:05:00+00, 3@2001-01-01 08:06:00+00]
 
-mode skip
-
-# Step interpolation prefix `Interp=Step;` parsing — verify against
-# MobilityDuck's parser; output likely includes the interp marker.
 query I
 SELECT tfloat 'Interp=Step;[1@2001-01-01 08:00:00,2@2001-01-01 08:05:00,3@2001-01-01 08:06:00]';
 ----
-Interp=Step;[1@2001-01-01 00:00:00+00, ...]
-
-mode unskip
+Interp=Step;[1@2001-01-01 08:00:00+00, 2@2001-01-01 08:05:00+00, 3@2001-01-01 08:06:00+00]
 
 # =============================================================================
 # Constructors (TINT / TFLOAT / TBOOL / TTEXT scalar+timestamptz)
@@ -125,17 +119,10 @@ SELECT TTEXT('hello', '2023-01-01'::TIMESTAMPTZ);
 # Conversion functions (tboolSeq, tintSeq, tfloatSeq, ttextSeq with interp)
 # =============================================================================
 
-mode skip
-
-# `tboolSeq(<temporal>, <interpolation_text>)` 2-arg form parsing;
-# verify discrete/step/linear interpolation arg handling in
-# src/temporal/temporal.cpp.
 query I
 SELECT tboolSeq(tbool '{true@2000-01-01, false@2000-01-02}', 'discrete');
 ----
 {t@2000-01-01 00:00:00+00, f@2000-01-02 00:00:00+00}
-
-mode unskip
 
 # =============================================================================
 # Accessor functions
@@ -258,22 +245,18 @@ SELECT appendInstant(tint '[1@2001-01-01, 2@2001-01-02]', tint '3@2001-01-03');
 ----
 [1@2001-01-01 00:00:00+00, 2@2001-01-02 00:00:00+00, 3@2001-01-03 00:00:00+00]
 
-mode skip
-
-# tsample / tprecision sampling functions — not yet checked for
-# binding presence. MEOS symbols: temporal_tsample, temporal_tprecision.
 query I
 SELECT tsample(tfloat '[1@2001-01-01, 2@2001-01-02]', '6 hours');
 ----
-{1@2001-01-01 00:00:00+00, 1.25@2001-01-01 06:00:00+00, 1.5@2001-01-01 12:00:00+00, ...}
-
-mode unskip
+{1@2001-01-01 00:00:00+00, 1.25@2001-01-01 06:00:00+00, 1.5@2001-01-01 12:00:00+00, 1.75@2001-01-01 18:00:00+00, 2@2001-01-02 00:00:00+00}
 
 mode skip
-
-# Aggregate functions (tand, tor, tmin, tmax, tsum, tcount, twAvg agg
-# variant) — same architectural gap as 015_span_aggfuncs: MobilityDuck
-# registers no AggregateFunction infrastructure for temporal types.
+# tcount / tmin / tmax / tsum / tand / tor / twAvg — MobilityDB uses
+# lowercase SQL names; MobilityDuck registers as TcountAgg / TminAgg /
+# TmaxAgg / TsumAgg / TandAgg / TorAgg / WAvgAgg.  Additionally the
+# result semantics differ for discrete instants: MobilityDB returns a
+# linear sequence (value=N over the whole span) whereas TcountAgg
+# returns the concurrent-overlap count (value=1 per instant).
 query I
 SELECT tcount(temp) FROM (VALUES (tint '1@2001-01-01'), (tint '2@2001-01-02')) t(temp);
 ----
