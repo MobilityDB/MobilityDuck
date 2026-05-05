@@ -261,7 +261,9 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         }
         else if( span_type == SpanTypes::TSTZSPAN() ){
             loader.RegisterFunction( ScalarFunction("shift", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Tstzspan_shift)
-            ); 
+            );
+            loader.RegisterFunction( ScalarFunction("+", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Tstzspan_shift)
+            );
 
             loader.RegisterFunction( ScalarFunction("expand", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Tstzspan_expand)
             );

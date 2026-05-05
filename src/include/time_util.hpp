@@ -57,4 +57,16 @@ inline timestamp_tz_t MeosToDuckDBTimestamp(timestamp_tz_t meos_ts) {
     return duckdb_ts;
 }
 
-} 
+// Convert MEOS time-distance (seconds as double) to DuckDB interval_t.
+// Normalizes to whole days + remaining microseconds so "2 days" formats
+// as "2 days" rather than "48:00:00".
+inline interval_t SecondsToInterval(double secs) {
+    int64_t total_micros = (int64_t)(secs * 1000000.0);
+    interval_t iv;
+    iv.months = 0;
+    iv.days = (int32_t)(total_micros / 86400000000LL);
+    iv.micros = total_micros % 86400000000LL;
+    return iv;
+}
+
+}

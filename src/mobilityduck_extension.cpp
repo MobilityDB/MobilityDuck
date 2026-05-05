@@ -13,6 +13,8 @@
 #include "geo/tgeometry.hpp"
 #include "temporal/span.hpp"
 #include "temporal/span_aggregates.hpp"
+#include "temporal/temporal_aggregates.hpp"
+#include "geo/spatial_aggregates.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
@@ -206,6 +208,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 	static std::once_flag meos_init_flag;
     std::call_once(meos_init_flag, []() {
         meos_initialize();
+        meos_initialize_timezone("UTC");
         meos_initialize_error_handler(&MobilityduckMeosErrorHandler);
     });
 
@@ -244,7 +247,21 @@ static void LoadInternal(ExtensionLoader &loader) {
 	SpanTypes::RegisterScalarFunctions(loader);
 	SpanTypes::RegisterTypes(loader);
 	SpanTypes::RegisterCastFunctions(loader);
-	SpanAggregates::RegisterAggregateFunctions(loader);
+	{
+		AggregateFunctionSet extent_set("extent");
+		SpanAggregates::AddExtentOverloads(extent_set);
+		TemporalAggregates::AddExtentOverloads(extent_set);
+		SpatialAggregates::AddExtentOverloads(extent_set);
+		loader.RegisterFunction(std::move(extent_set));
+	}
+	TemporalAggregates::RegisterTCount(loader);
+	TemporalAggregates::RegisterTemporalAggregates(loader);
+	TemporalAggregates::RegisterWindowAggregates(loader);
+	TemporalAggregates::RegisterTAvg(loader);
+	TemporalAggregates::RegisterAppendMergeAggregates(loader);
+	SpanAggregates::RegisterSpanUnion(loader);
+	SetTypes::RegisterSetUnionAgg(loader);
+	SpatialAggregates::RegisterTcentroid(loader);
 
 	TgeompointType::RegisterType(loader);
 	TgeompointType::RegisterCastFunctions(loader);

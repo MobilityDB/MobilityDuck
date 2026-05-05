@@ -90,13 +90,8 @@
 
 require mobilityduck
 
-mode skip
-
-# Token assertion just to keep the runner happy; the value of this
-# file is the manifest above, not the assertions.
+# Token assertion; the value of this file is the manifest above.
 query I
 SELECT 1;
 ----
 1
-
-mode unskip
