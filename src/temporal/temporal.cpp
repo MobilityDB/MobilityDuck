@@ -936,6 +936,11 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_simplify_min_tdelta
             )
         );
+        loader.RegisterFunction(ScalarFunction("tprecision", {type, LogicalType::INTERVAL}, type, TemporalFunctions::Temporal_tprecision));
+        loader.RegisterFunction(ScalarFunction("tprecision", {type, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, type, TemporalFunctions::Temporal_tprecision));
+        loader.RegisterFunction(ScalarFunction("tsample", {type, LogicalType::INTERVAL}, type, TemporalFunctions::Temporal_tsample));
+        loader.RegisterFunction(ScalarFunction("tsample", {type, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, type, TemporalFunctions::Temporal_tsample));
+        loader.RegisterFunction(ScalarFunction("tsample", {type, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::VARCHAR}, type, TemporalFunctions::Temporal_tsample));
 
         loader.RegisterFunction(
             ScalarFunction(

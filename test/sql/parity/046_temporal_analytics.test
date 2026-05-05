@@ -28,6 +28,18 @@ SELECT minTimeDeltaSimplify(tfloat '[1@2000-01-01, 2@2000-01-02, 1@2000-01-03]',
 ----
 [1@2000-01-01 00:00:00+00, 1@2000-01-03 00:00:00+00]
 
+# tprecision — snap instants to 1-day grid relative to default origin
+query I
+SELECT tprecision(tfloat '[1@2000-01-01, 2@2000-01-02, 3@2000-01-03]', interval '1 day');
+----
+[1.5@2000-01-01 00:00:00+00, 2.5@2000-01-02 00:00:00+00, 3@2000-01-03 00:00:00+00]
+
+# tsample — interpolate at 12-hour intervals → discrete sequence
+query I
+SELECT tsample(tfloat '[1@2000-01-01, 2@2000-01-02, 3@2000-01-03]', interval '12 hours');
+----
+{1@2000-01-01 00:00:00+00, 1.5@2000-01-01 12:00:00+00, 2@2000-01-02 00:00:00+00, 2.5@2000-01-02 12:00:00+00, 3@2000-01-03 00:00:00+00}
+
 # MobilityDuck version info
 query I
 SELECT length(mobilityduck_version()) > 0;

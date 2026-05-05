@@ -4915,6 +4915,69 @@ void TemporalFunctions::Temporal_simplify_min_tdelta(DataChunk &args, Expression
     );
 }
 
+void TemporalFunctions::Temporal_tprecision(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    TimestampTz origin = (TimestampTz)(INT64_C(2) * 86400 * INT64_C(1000000));
+    if (args.ColumnCount() >= 3) {
+        auto &origin_vec = args.data[2];
+        origin_vec.Flatten(count);
+        timestamp_tz_t duck_origin = origin_vec.GetValue(0).GetValue<timestamp_tz_t>();
+        origin = (TimestampTz)DuckDBToMeosTimestamp(duck_origin).value;
+    }
+    BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(
+        args.data[0], args.data[1], result, count,
+        [&](string_t temp_str, interval_t interval, ValidityMask &mask, idx_t idx) -> string_t {
+            size_t data_size = temp_str.GetSize();
+            uint8_t *data_copy = (uint8_t *)malloc(data_size);
+            memcpy(data_copy, temp_str.GetData(), data_size);
+            Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
+            MeosInterval meos_interval = IntervaltToInterval(interval);
+            Temporal *ret = temporal_tprecision(temp, &meos_interval, origin);
+            free(data_copy);
+            if (!ret) { mask.SetInvalid(idx); return string_t(); }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t stored = StringVector::AddStringOrBlob(result, (const char *)ret, ret_size);
+            free(ret);
+            return stored;
+        }
+    );
+}
+
+void TemporalFunctions::Temporal_tsample(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto count = args.size();
+    TimestampTz origin = (TimestampTz)(INT64_C(2) * 86400 * INT64_C(1000000));
+    interpType interp = interptype_from_string("Discrete");
+    if (args.ColumnCount() >= 3) {
+        auto &origin_vec = args.data[2];
+        origin_vec.Flatten(count);
+        timestamp_tz_t duck_origin = origin_vec.GetValue(0).GetValue<timestamp_tz_t>();
+        origin = (TimestampTz)DuckDBToMeosTimestamp(duck_origin).value;
+    }
+    if (args.ColumnCount() >= 4) {
+        auto &interp_vec = args.data[3];
+        interp_vec.Flatten(count);
+        auto interp_str = interp_vec.GetValue(0).ToString();
+        interp = interptype_from_string(interp_str.c_str());
+    }
+    BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(
+        args.data[0], args.data[1], result, count,
+        [&](string_t temp_str, interval_t interval, ValidityMask &mask, idx_t idx) -> string_t {
+            size_t data_size = temp_str.GetSize();
+            uint8_t *data_copy = (uint8_t *)malloc(data_size);
+            memcpy(data_copy, temp_str.GetData(), data_size);
+            Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
+            MeosInterval meos_interval = IntervaltToInterval(interval);
+            Temporal *ret = temporal_tsample(temp, &meos_interval, origin, interp);
+            free(data_copy);
+            if (!ret) { mask.SetInvalid(idx); return string_t(); }
+            size_t ret_size = temporal_mem_size(ret);
+            string_t stored = StringVector::AddStringOrBlob(result, (const char *)ret, ret_size);
+            free(ret);
+            return stored;
+        }
+    );
+}
+
 void TemporalFunctions::Tfloat_degrees(DataChunk &args, ExpressionState &state, Vector &result) {
     if (args.ColumnCount() == 2) {
         TemporalBinaryV<bool>(args, result, [](Temporal *t, bool normalize) {

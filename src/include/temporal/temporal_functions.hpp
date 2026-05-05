@@ -109,9 +109,6 @@ struct TemporalFunctions {
     static void Temporal_shift_time(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_scale_time(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_shift_scale_time(DataChunk &args, ExpressionState &state, Vector &result);
-    // TODO: static void Temporal_tprecision
-    // TODO: static void Temporal_tsample
-
     /* ***************************************************
      * Transformation functions
      ****************************************************/
@@ -173,6 +170,8 @@ struct TemporalFunctions {
     static void Temporal_simplify_max_dist(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_simplify_min_dist(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_simplify_min_tdelta(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_tprecision(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_tsample(DataChunk &args, ExpressionState &state, Vector &result);
 
     // TODO: Stop functions
     
