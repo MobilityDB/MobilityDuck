@@ -1,0 +1,253 @@
+# name: test/sql/parity/070_tgeo_spatialrels.test
+# description: MobilityDB regression file 070_tgeo_spatialrels.test.sql adapted for MobilityDuck
+# group: [sql]
+#
+# Ever/always spatial predicates for tgeompoint:
+#   eContains / aContains  (geometry × tgeompoint only)
+#   eDisjoint  / aDisjoint (geometry × tgeompoint, tgeompoint × geometry,
+#                            tgeompoint × tgeompoint)
+#   eIntersects / aIntersects  (same three overloads)
+#   eTouches    / aTouches     (geometry × tgeompoint, tgeompoint × geometry)
+#   eDwithin    / aDwithin     (geometry × tgeompoint, tgeompoint × geometry,
+#                                tgeompoint × tgeompoint)
+#
+# Not registered (permanently skipped):
+#   eCovers / aCovers — absent from tgeompoint.cpp
+#   tgeompoint × tgeompoint overloads for eTouches/aTouches
+
+require mobilityduck
+
+# =============================================================================
+# eContains  geometry × tgeompoint
+# =============================================================================
+
+# point contains matching instant
+query I
+SELECT eContains(geometry 'Point(1 1)', tgeompoint 'Point(1 1)@2000-01-01');
+----
+true
+
+# point contains discrete sequence containing matching instant
+query I
+SELECT eContains(geometry 'Point(1 1)', tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}');
+----
+true
+
+# point contains sequence that passes through it
+query I
+SELECT eContains(geometry 'Point(1 1)', tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]');
+----
+true
+
+# point contains sequence set that passes through it
+query I
+SELECT eContains(geometry 'Point(1 1)', tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}');
+----
+true
+
+# =============================================================================
+# aContains  geometry × tgeompoint
+# =============================================================================
+
+# polygon always contains interior trajectory
+query I
+SELECT aContains(geometry 'Polygon((0 0,0 2,2 2,2 0,0 0))', tgeompoint '[Point(0.5 0.5)@2000-01-01, Point(1.5 1.5)@2000-01-02]');
+----
+true
+
+# point cannot always contain a moving trajectory that leaves it
+query I
+SELECT aContains(geometry 'Point(1 1)', tgeompoint '[Point(0 0)@2000-01-01, Point(2 2)@2000-01-02]');
+----
+false
+
+# =============================================================================
+# eDisjoint  geometry × tgeompoint  /  tgeompoint × geometry
+# =============================================================================
+
+query I
+SELECT eDisjoint(geometry 'Point(1 1)', tgeompoint 'Point(2 2)@2000-01-01');
+----
+true
+
+query I
+SELECT eDisjoint(geometry 'Point(1 1)', tgeompoint 'Point(1 1)@2000-01-01');
+----
+false
+
+query I
+SELECT eDisjoint(tgeompoint 'Point(2 2)@2000-01-01', geometry 'Point(1 1)');
+----
+true
+
+query I
+SELECT eDisjoint(tgeompoint 'Point(1 1)@2000-01-01', geometry 'Point(1 1)');
+----
+false
+
+# =============================================================================
+# eDisjoint  tgeompoint × tgeompoint
+# =============================================================================
+
+query I
+SELECT eDisjoint(tgeompoint 'Point(1 1)@2000-01-01', tgeompoint 'Point(1 1)@2000-01-01');
+----
+false
+
+query I
+SELECT eDisjoint(tgeompoint 'Point(1 1)@2000-01-01', tgeompoint 'Point(2 2)@2000-01-01');
+----
+true
+
+# =============================================================================
+# aDisjoint  geometry × tgeompoint  /  tgeompoint × geometry
+# =============================================================================
+
+query I
+SELECT aDisjoint(geometry 'Point(1 1)', tgeompoint '[Point(2 2)@2000-01-01, Point(3 3)@2000-01-02]');
+----
+true
+
+query I
+SELECT aDisjoint(geometry 'Point(1 1)', tgeompoint 'Point(1 1)@2000-01-01');
+----
+false
+
+query I
+SELECT aDisjoint(tgeompoint '[Point(2 2)@2000-01-01, Point(3 3)@2000-01-02]', geometry 'Point(1 1)');
+----
+true
+
+# =============================================================================
+# eIntersects  geometry × tgeompoint  /  tgeompoint × geometry
+# =============================================================================
+
+query I
+SELECT eIntersects(geometry 'Point(1 1)', tgeompoint 'Point(1 1)@2000-01-01');
+----
+true
+
+query I
+SELECT eIntersects(geometry 'Point(1 1)', tgeompoint 'Point(2 2)@2000-01-01');
+----
+false
+
+query I
+SELECT eIntersects(tgeompoint 'Point(1 1)@2000-01-01', geometry 'Point(1 1)');
+----
+true
+
+query I
+SELECT eIntersects(tgeompoint 'Point(2 2)@2000-01-01', geometry 'Point(1 1)');
+----
+false
+
+# =============================================================================
+# eIntersects  tgeompoint × tgeompoint
+# =============================================================================
+
+query I
+SELECT eIntersects(tgeompoint 'Point(1 1)@2000-01-01', tgeompoint 'Point(1 1)@2000-01-01');
+----
+true
+
+query I
+SELECT eIntersects(tgeompoint 'Point(1 1)@2000-01-01', tgeompoint 'Point(2 2)@2000-01-01');
+----
+false
+
+# =============================================================================
+# aIntersects  tgeompoint × geometry  /  geometry × tgeompoint
+# =============================================================================
+
+# trajectory that visits a point — aIntersects is false if not always
+query I
+SELECT aIntersects(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02]', geometry 'Point(1 1)');
+----
+false
+
+# instant at a point — always intersects
+query I
+SELECT aIntersects(tgeompoint 'Point(1 1)@2000-01-01', geometry 'Point(1 1)');
+----
+true
+
+query I
+SELECT aIntersects(geometry 'Point(1 1)', tgeompoint 'Point(1 1)@2000-01-01');
+----
+true
+
+# =============================================================================
+# eTouches  geometry × tgeompoint  /  tgeompoint × geometry
+# =============================================================================
+
+query I
+SELECT eTouches(geometry 'Polygon((0 0,0 1,1 1,1 0,0 0))', tgeompoint 'Point(0 0)@2000-01-01');
+----
+true
+
+query I
+SELECT eTouches(geometry 'Polygon((0 0,0 1,1 1,1 0,0 0))', tgeompoint 'Point(0.5 0.5)@2000-01-01');
+----
+false
+
+query I
+SELECT eTouches(tgeompoint 'Point(0 0)@2000-01-01', geometry 'Polygon((0 0,0 1,1 1,1 0,0 0))');
+----
+true
+
+# =============================================================================
+# aTouches  geometry × tgeompoint  /  tgeompoint × geometry
+# =============================================================================
+
+# trajectory that stays on the boundary
+query I
+SELECT aTouches(geometry 'Polygon((0 0,0 1,1 1,1 0,0 0))', tgeompoint '[Point(0 0)@2000-01-01, Point(1 0)@2000-01-02]');
+----
+true
+
+# point inside — not a touch
+query I
+SELECT aTouches(geometry 'Polygon((0 0,0 1,1 1,1 0,0 0))', tgeompoint 'Point(0.5 0.5)@2000-01-01');
+----
+false
+
+# =============================================================================
+# eDwithin  tgeompoint × tgeompoint,  geometry × tgeompoint,  tgeompoint × geometry
+# =============================================================================
+
+query I
+SELECT eDwithin(tgeompoint 'Point(1 1)@2000-01-01', tgeompoint 'Point(1 2)@2000-01-01', 1.5);
+----
+true
+
+query I
+SELECT eDwithin(tgeompoint 'Point(1 1)@2000-01-01', tgeompoint 'Point(1 5)@2000-01-01', 1.5);
+----
+false
+
+query I
+SELECT eDwithin(geometry 'Point(1 1)', tgeompoint 'Point(1 2)@2000-01-01', 1.5);
+----
+true
+
+query I
+SELECT eDwithin(tgeompoint 'Point(1 2)@2000-01-01', geometry 'Point(1 1)', 1.5);
+----
+true
+
+# =============================================================================
+# aDwithin  tgeompoint × geometry  /  geometry × tgeompoint
+# =============================================================================
+
+# trajectory that stays within distance 0.5 of Point(1 0)
+query I
+SELECT aDwithin(tgeompoint '[Point(0.6 0)@2000-01-01, Point(1.4 0)@2000-01-02]', geometry 'Point(1 0)', 0.5);
+----
+true
+
+# trajectory that moves too far away
+query I
+SELECT aDwithin(tgeompoint '[Point(0 0)@2000-01-01, Point(2 0)@2000-01-02]', geometry 'Point(1 0)', 0.5);
+----
+false

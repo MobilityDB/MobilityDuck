@@ -1,0 +1,228 @@
+# name: test/sql/parity/062_tgeo_posops.test
+# description: MobilityDB regression file 062_tgeo_posops.test.sql adapted for MobilityDuck
+# group: [sql]
+#
+# Positional operators for stbox (left/right/below/above/front/back and
+# over- variants) plus temporal before/after variants.
+#
+# MobilityDB exposes these via operator symbols (<<, &<, >>, &>, <<|, &<|,
+# |>>, |&>, <</,  &</, />>, /&>) and named functions (stbox_before,
+# stbox_overbefore, stbox_after, stbox_overafter, stbox_front, stbox_back,
+# etc.).
+#
+# DuckDB does not allow '#' in operator names, so the time-positional forms
+# <<#, &<#, #>>, #&> are exposed as stbox_before/overbefore/after/overafter
+# named functions (no infix form).
+#
+# For tgeompoint × tgeompoint positional queries, cast via stbox() first —
+# there are no direct tgeompoint × tgeompoint posop overloads registered.
+#
+# Permanently skipped (no direct tgeompoint positional-op overloads):
+#   tgeompoint << tgeompoint   (needs left_tgeo_tgeo)
+#   tgeompoint << stbox        (needs left_tgeo_stbox)
+#   stbox << tgeompoint        (needs left_stbox_tgeo)
+
+require mobilityduck
+
+# =============================================================================
+# stbox × stbox — spatial positional operators (infix form)
+# =============================================================================
+
+# left
+query I
+SELECT "<<"(stbox 'STBOX X((0,0),(1,1))', stbox 'STBOX X((2,2),(3,3))');
+----
+true
+
+query I
+SELECT "<<"(stbox 'STBOX X((2,2),(3,3))', stbox 'STBOX X((0,0),(1,1))');
+----
+false
+
+# overleft
+query I
+SELECT "&<"(stbox 'STBOX X((0,0),(2,2))', stbox 'STBOX X((1,1),(3,3))');
+----
+true
+
+# right
+query I
+SELECT ">>"(stbox 'STBOX X((2,2),(3,3))', stbox 'STBOX X((0,0),(1,1))');
+----
+true
+
+query I
+SELECT ">>"(stbox 'STBOX X((0,0),(1,1))', stbox 'STBOX X((2,2),(3,3))');
+----
+false
+
+# overright
+query I
+SELECT "&>"(stbox 'STBOX X((1,1),(3,3))', stbox 'STBOX X((0,0),(2,2))');
+----
+true
+
+# below
+query I
+SELECT "<<|"(stbox 'STBOX X((0,0),(1,1))', stbox 'STBOX X((0,2),(1,3))');
+----
+true
+
+query I
+SELECT "<<|"(stbox 'STBOX X((0,2),(1,3))', stbox 'STBOX X((0,0),(1,1))');
+----
+false
+
+# overbelow
+query I
+SELECT "&<|"(stbox 'STBOX X((0,0),(1,2))', stbox 'STBOX X((0,1),(1,3))');
+----
+true
+
+# above
+query I
+SELECT "|>>"(stbox 'STBOX X((0,2),(1,3))', stbox 'STBOX X((0,0),(1,1))');
+----
+true
+
+query I
+SELECT "|>>"(stbox 'STBOX X((0,0),(1,1))', stbox 'STBOX X((0,2),(1,3))');
+----
+false
+
+# overabove
+query I
+SELECT "|&>"(stbox 'STBOX X((0,1),(1,3))', stbox 'STBOX X((0,0),(1,2))');
+----
+true
+
+# =============================================================================
+# stbox × stbox — 3D (front / back)
+# =============================================================================
+
+# front (<</)
+query I
+SELECT "<</"(stbox 'STBOX Z((0,0,0),(1,1,1))', stbox 'STBOX Z((0,0,2),(1,1,3))');
+----
+true
+
+query I
+SELECT "<</"(stbox 'STBOX Z((0,0,2),(1,1,3))', stbox 'STBOX Z((0,0,0),(1,1,1))');
+----
+false
+
+# overfront (&</)
+query I
+SELECT "&</"(stbox 'STBOX Z((0,0,0),(1,1,2))', stbox 'STBOX Z((0,0,1),(1,1,3))');
+----
+true
+
+# back (/>>)
+query I
+SELECT "/>>"(stbox 'STBOX Z((0,0,2),(1,1,3))', stbox 'STBOX Z((0,0,0),(1,1,1))');
+----
+true
+
+# overback (/&>)
+query I
+SELECT "/&>"(stbox 'STBOX Z((0,0,1),(1,1,3))', stbox 'STBOX Z((0,0,0),(1,1,2))');
+----
+true
+
+# =============================================================================
+# stbox × stbox — temporal positional (named functions, no # operator)
+# =============================================================================
+
+query I
+SELECT stbox_before(stbox 'STBOX T([2000-01-01,2000-01-01])', stbox 'STBOX T([2000-01-02,2000-01-03])');
+----
+true
+
+query I
+SELECT stbox_before(stbox 'STBOX T([2000-01-02,2000-01-03])', stbox 'STBOX T([2000-01-01,2000-01-01])');
+----
+false
+
+query I
+SELECT stbox_overbefore(stbox 'STBOX T([2000-01-01,2000-01-02])', stbox 'STBOX T([2000-01-02,2000-01-03])');
+----
+true
+
+query I
+SELECT stbox_after(stbox 'STBOX T([2000-01-03,2000-01-04])', stbox 'STBOX T([2000-01-01,2000-01-02])');
+----
+true
+
+query I
+SELECT stbox_after(stbox 'STBOX T([2000-01-01,2000-01-02])', stbox 'STBOX T([2000-01-03,2000-01-04])');
+----
+false
+
+query I
+SELECT stbox_overafter(stbox 'STBOX T([2000-01-02,2000-01-04])', stbox 'STBOX T([2000-01-01,2000-01-02])');
+----
+true
+
+# =============================================================================
+# stbox × stbox — named function forms (stbox_left etc.)
+# =============================================================================
+
+query I
+SELECT stbox_left(stbox 'STBOX X((0,0),(1,1))', stbox 'STBOX X((2,2),(3,3))');
+----
+true
+
+query I
+SELECT stbox_overleft(stbox 'STBOX X((0,0),(2,2))', stbox 'STBOX X((1,1),(3,3))');
+----
+true
+
+query I
+SELECT stbox_right(stbox 'STBOX X((2,2),(3,3))', stbox 'STBOX X((0,0),(1,1))');
+----
+true
+
+query I
+SELECT stbox_overright(stbox 'STBOX X((1,1),(3,3))', stbox 'STBOX X((0,0),(2,2))');
+----
+true
+
+query I
+SELECT stbox_below(stbox 'STBOX X((0,0),(1,1))', stbox 'STBOX X((0,2),(1,3))');
+----
+true
+
+query I
+SELECT stbox_overbelow(stbox 'STBOX X((0,0),(1,2))', stbox 'STBOX X((0,1),(1,3))');
+----
+true
+
+query I
+SELECT stbox_above(stbox 'STBOX X((0,2),(1,3))', stbox 'STBOX X((0,0),(1,1))');
+----
+true
+
+query I
+SELECT stbox_overabove(stbox 'STBOX X((0,1),(1,3))', stbox 'STBOX X((0,0),(1,2))');
+----
+true
+
+query I
+SELECT stbox_front(stbox 'STBOX Z((0,0,0),(1,1,1))', stbox 'STBOX Z((0,0,2),(1,1,3))');
+----
+true
+
+query I
+SELECT stbox_overfront(stbox 'STBOX Z((0,0,0),(1,1,2))', stbox 'STBOX Z((0,0,1),(1,1,3))');
+----
+true
+
+query I
+SELECT stbox_back(stbox 'STBOX Z((0,0,2),(1,1,3))', stbox 'STBOX Z((0,0,0),(1,1,1))');
+----
+true
+
+query I
+SELECT stbox_overback(stbox 'STBOX Z((0,0,1),(1,1,3))', stbox 'STBOX Z((0,0,0),(1,1,2))');
+----
+true
