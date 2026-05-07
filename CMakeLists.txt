@@ -66,6 +66,8 @@ set(EXTENSION_SOURCES
     src/geo/stbox_functions.cpp
     src/geo/tgeompoint.cpp
     src/geo/tgeompoint_functions.cpp
+    src/geo/tgeogpoint.cpp
+    src/geo/tgeogpoint_functions.cpp
     src/temporal/set.cpp
     src/temporal/set_functions.cpp
     src/temporal/span.cpp

@@ -9,6 +9,7 @@
 #include "temporal/tbox.hpp"
 #include "geo/stbox.hpp"
 #include "geo/tgeompoint.hpp"
+#include "geo/tgeogpoint.hpp"
 #include "duckdb.hpp"
 #include "geo/tgeometry.hpp"
 #include "temporal/span.hpp"
@@ -253,6 +254,11 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TgeompointType::RegisterCastFunctions(loader);
 	TgeompointType::RegisterScalarFunctions(loader);
 	TgeompointType::RegisterRoundtripIO(loader);
+
+	TgeogpointType::RegisterType(loader);
+	TgeogpointType::RegisterCastFunctions(loader);
+	TgeogpointType::RegisterScalarFunctions(loader);
+	TgeogpointType::RegisterRoundtripIO(loader);
 
 	TGeometryTypes::RegisterScalarFunctions(loader);
 	TGeometryTypes::RegisterTypes(loader);
