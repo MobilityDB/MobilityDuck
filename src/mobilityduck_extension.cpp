@@ -22,6 +22,7 @@
 #include "duckdb/main/extension/extension_loader.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include "index/rtree_module.hpp"
+#include "temporal/temporal_parquet.hpp"
 
 #include <mutex>
 #include <fstream>
@@ -281,6 +282,8 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TRTreeModule::RegisterRTreeIndex(loader);
 	TRTreeModule::RegisterIndexScan(loader);
 	TRTreeModule::RegisterScanOptimizer(loader);
+
+	TemporalParquetFunctions::Register(loader);
 }
 
 void MobilityduckExtension::Load(ExtensionLoader &loader) {
