@@ -1723,4 +1723,78 @@ void TemporalTypes::RegisterTemporalUnnestFunction(ExtensionLoader &loader) {
     }
 }
 
+// ─── portable WKB I/O for scalar temporal types ──────────────────────────────
+// Uses temporal_as_wkb / temporal_from_wkb (type-agnostic MEOS functions) to
+// produce the same MEOS-WKB bytes that tgeompoint's asBinary/tgeompointFromBinary
+// already use.  Adding these overloads gives TINT / TFLOAT / TBOOL / TTEXT the
+// same Parquet-round-trip story as spatial temporals.
+
+namespace {
+
+inline Temporal *ScalarBlobToTemp(const string_t &b) {
+    size_t sz = b.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    if (!copy) throw InternalException("asBinary: malloc failed");
+    memcpy(copy, b.GetData(), sz);
+    return reinterpret_cast<Temporal *>(copy);
+}
+
+void TemporalScalarAsWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            Temporal *t = ScalarBlobToTemp(input);
+            size_t sz = 0;
+            uint8_t *wkb = temporal_as_wkb(t, WKB_EXTENDED, &sz);
+            free(t);
+            if (!wkb || sz == 0) {
+                if (wkb) free(wkb);
+                throw InternalException("temporal_as_wkb returned null");
+            }
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(wkb), sz));
+            free(wkb);
+            return stored;
+        });
+}
+
+void TemporalScalarFromWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() == 0)
+                throw InvalidInputException("fromBinary: empty WKB input");
+            uint8_t *wkb = (uint8_t *)malloc(input.GetSize());
+            if (!wkb) throw InternalException("fromBinary: malloc failed");
+            memcpy(wkb, input.GetData(), input.GetSize());
+            Temporal *t = temporal_from_wkb(wkb, input.GetSize());
+            free(wkb);
+            if (!t) throw InvalidInputException("fromBinary: invalid MEOS-WKB");
+            size_t sz = temporal_mem_size(t);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(t), sz));
+            free(t);
+            return stored;
+        });
+}
+
+} // anonymous namespace
+
+void TemporalTypes::RegisterWkbFunctions(ExtensionLoader &loader) {
+    const auto B = LogicalType::BLOB;
+    const struct { LogicalType type; const char *from_name; } types[] = {
+        { TINT(),   "tintFromBinary"   },
+        { TFLOAT(), "tfloatFromBinary" },
+        { TBOOL(),  "tboolFromBinary"  },
+        { TTEXT(),  "ttextFromBinary"  },
+    };
+    for (auto &e : types) {
+        loader.RegisterFunction(
+            ScalarFunction("asBinary", {e.type}, B, TemporalScalarAsWkbExec));
+        duckdb::RegisterSerializedScalarFunction(
+            loader,
+            ScalarFunction(e.from_name, {B}, e.type, TemporalScalarFromWkbExec));
+    }
+}
+
 } // namespace duckdb
