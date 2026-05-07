@@ -152,12 +152,15 @@ struct TgeompointFunctions {
      ****************************************************/
     static void Temporal_overlaps_tgeompoint_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_overlaps_tgeompoint_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_overlaps_tgeompoint_tgeompoint(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_contains_tgeompoint_stbox(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Distance function
      ****************************************************/
     static void Tdistance_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nad_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void ExpandSpace_tgeo_double(DataChunk &args, ExpressionState &state, Vector &result);
     // static void gs_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void collect_gs(DataChunk &args, ExpressionState &state, Vector &result);
     static void distance_geo_geo(DataChunk &args, ExpressionState &state, Vector &result);

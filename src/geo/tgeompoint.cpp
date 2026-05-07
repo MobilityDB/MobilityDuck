@@ -1710,7 +1710,16 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction(
+            "&&", // overlaps tgeompoint x tgeompoint
+            {TGEOMPOINT(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Temporal_overlaps_tgeompoint_tgeompoint
+        )
+    );
+
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "@>", // contains
             {TGEOMPOINT(), StboxType::STBOX()},
@@ -1723,7 +1732,25 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
      * Distance functions
      ****************************************************/
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction(
+            "nearestApproachDistance",
+            {TGEOMPOINT(), TGEOMPOINT()},
+            LogicalType::DOUBLE,
+            TgeompointFunctions::Nad_tgeo_tgeo
+        )
+    );
+
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction(
+            "expandSpace",
+            {TGEOMPOINT(), LogicalType::DOUBLE},
+            StboxType::STBOX(),
+            TgeompointFunctions::ExpandSpace_tgeo_double
+        )
+    );
+
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "<->",
             {TGEOMPOINT(), TGEOMPOINT()},
