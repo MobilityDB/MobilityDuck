@@ -166,3 +166,35 @@ SELECT tboolFromBinary(active)::VARCHAR
 FROM read_parquet('__TEST_DIR__/mixed.parquet')
 ----
 [t@2026-01-01 00:00:00+00, f@2026-01-01 00:30:00+00]
+
+# =============================================================================
+# tgeogpoint — geodetic (spheroidal) round-trip; asBinary must preserve type tag
+# =============================================================================
+
+statement ok
+COPY (
+  SELECT 1 AS vessel_id,
+         asBinary(tgeogpointSeq(
+           list(TGEOGPOINT(ST_Point(lon, lat), ts) ORDER BY ts)
+         )) AS traj
+  FROM (VALUES
+    (4.35, 50.85, TIMESTAMPTZ '2026-01-01 00:00:00+00'),
+    (5.57, 50.63, TIMESTAMPTZ '2026-01-01 02:00:00+00')
+  ) t(lon, lat, ts)
+)
+TO '__TEST_DIR__/tgeogpoint.parquet' (FORMAT PARQUET)
+
+# Must land as BYTE_ARRAY
+query T
+SELECT type FROM parquet_schema('__TEST_DIR__/tgeogpoint.parquet')
+WHERE name = 'traj'
+----
+BYTE_ARRAY
+
+# Geodetic length survives round-trip: Brussels→Liège ~89500 m
+query I
+SELECT round(length(tgeogpointFromBinary(traj)) / 1000) AS length_km
+FROM read_parquet('__TEST_DIR__/tgeogpoint.parquet')
+WHERE vessel_id = 1
+----
+90
