@@ -1782,9 +1782,9 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         const auto G = GeoTypes::GEOMETRY();
 
 #define REG_SPATIAL_EA(NAME, FN)                                                                                                                  \
-        loader.RegisterFunction(ScalarFunction(NAME, {G, T}, LogicalType::BOOLEAN, TgeompointFunctions::FN##_geo_tgeo));                          \
-        loader.RegisterFunction(ScalarFunction(NAME, {T, G}, LogicalType::BOOLEAN, TgeompointFunctions::FN##_tgeo_geo));                          \
-        loader.RegisterFunction(ScalarFunction(NAME, {T, T}, LogicalType::BOOLEAN, TgeompointFunctions::FN##_tgeo_tgeo));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {G, T}, LogicalType::BOOLEAN, TgeompointFunctions::FN##_geo_tgeo)); \
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {T, G}, LogicalType::BOOLEAN, TgeompointFunctions::FN##_tgeo_geo)); \
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {T, T}, LogicalType::BOOLEAN, TgeompointFunctions::FN##_tgeo_tgeo));
 
         REG_SPATIAL_EA("ever_eq",   Ever_eq)
         REG_SPATIAL_EA("always_eq", Always_eq)
@@ -1793,13 +1793,68 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
 #undef REG_SPATIAL_EA
 
 #define REG_SPATIAL_TCMP(NAME, FN)                                                                                                                \
-        loader.RegisterFunction(ScalarFunction(NAME, {G, T}, TemporalTypes::TBOOL(), TgeompointFunctions::FN##_geo_tgeo));                        \
-        loader.RegisterFunction(ScalarFunction(NAME, {T, G}, TemporalTypes::TBOOL(), TgeompointFunctions::FN##_tgeo_geo));                        \
-        loader.RegisterFunction(ScalarFunction(NAME, {T, T}, TemporalTypes::TBOOL(), TgeompointFunctions::FN##_tgeo_tgeo));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {G, T}, TemporalTypes::TBOOL(), TgeompointFunctions::FN##_geo_tgeo)); \
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {T, G}, TemporalTypes::TBOOL(), TgeompointFunctions::FN##_tgeo_geo)); \
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {T, T}, TemporalTypes::TBOOL(), TgeompointFunctions::FN##_tgeo_tgeo));
 
         REG_SPATIAL_TCMP("temporal_teq", Teq)
         REG_SPATIAL_TCMP("temporal_tne", Tne)
 #undef REG_SPATIAL_TCMP
+    }
+
+    /* tdistance named form (mirrors the <-> operator) */
+    {
+        const auto TG = TGEOMPOINT();
+        const auto G  = GeoTypes::GEOMETRY();
+        const auto TF = TemporalTypes::TFLOAT();
+        const auto D  = LogicalType::DOUBLE;
+
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tdistance", {TG, TG}, TF, TgeompointFunctions::Tdistance_named));
+
+        /* nearestApproachInstant */
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachInstant", {TG, G}, TG, TgeompointFunctions::Nai_tgeo_geo));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachInstant", {G, TG}, TG, TgeompointFunctions::Nai_geo_tgeo));
+
+        /* nearestApproachDistance */
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {TG, G}, D, TgeompointFunctions::Nad_tgeo_geo));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {G, TG}, D, TgeompointFunctions::Nad_geo_tgeo));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {TG, TG}, D, TgeompointFunctions::Nad_tgeo_tgeo));
+
+        /* nad — alias */
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nad", {TG, G}, D, TgeompointFunctions::Nad_tgeo_geo));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nad", {G, TG}, D, TgeompointFunctions::Nad_geo_tgeo));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nad", {TG, TG}, D, TgeompointFunctions::Nad_tgeo_tgeo));
+
+        /* affine (12-arg and 6-arg) */
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("affine",
+            {TG, D, D, D, D, D, D, D, D, D, D, D, D}, TG,
+            TgeompointFunctions::Tgeo_affine_12));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("affine",
+            {TG, D, D, D, D, D, D}, TG,
+            TgeompointFunctions::Tgeo_affine_6));
+
+        /* translate */
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("translate", {TG, D, D, D}, TG, TgeompointFunctions::Tgeo_translate_3d));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("translate", {TG, D, D},    TG, TgeompointFunctions::Tgeo_translate_2d));
+
+        /* rotate */
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("rotate", {TG, D},       TG, TgeompointFunctions::Tgeo_rotate_angle));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("rotate", {TG, D, D, D}, TG, TgeompointFunctions::Tgeo_rotate_angle_cx_cy));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("rotate", {TG, D, G},    TG, TgeompointFunctions::Tgeo_rotate_geom));
+
+        /* rotateZ / rotateX / rotateY */
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("rotateZ", {TG, D}, TG, TgeompointFunctions::Tgeo_rotate_angle));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("rotateX", {TG, D}, TG, TgeompointFunctions::Tgeo_rotateX));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("rotateY", {TG, D}, TG, TgeompointFunctions::Tgeo_rotateY));
+
+        /* transscale */
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("transscale", {TG, D, D, D, D}, TG, TgeompointFunctions::Tgeo_transscale));
+
+        /* scale */
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("scale", {TG, G},    TG, TgeompointFunctions::Tgeo_scale_geom));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("scale", {TG, G, G}, TG, TgeompointFunctions::Tgeo_scale_geom_origin));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("scale", {TG, D, D},    TG, TgeompointFunctions::Tgeo_scale_xy));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("scale", {TG, D, D, D}, TG, TgeompointFunctions::Tgeo_scale_xyz));
     }
 }
 

@@ -16,6 +16,7 @@
 
 #include "duckdb/common/types.hpp"
 
+#include <cfloat>
 #include <cmath>
 
 #include "meos_internal_geo.h"
@@ -3583,6 +3584,439 @@ void TgeompointFunctions::Tgeo_scale_xyz(DataChunk &args, ExpressionState &state
     if (row_count == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
+}
+
+/* ***************************************************
+ * tdistance named-function alias (tgeompoint × tgeompoint → tfloat)
+ * The <-> operator is already registered; this adds the SQL name.
+ ****************************************************/
+
+void TgeompointFunctions::Tdistance_named(DataChunk &args, ExpressionState &state, Vector &result) {
+    TgeompointFunctions::Tdistance_tgeo_tgeo(args, state, result);
+}
+
+/* ***************************************************
+ * nearestApproachInstant / nearestApproachDistance / nad
+ ****************************************************/
+
+namespace {
+
+string_t NaiToHex(Vector &result, TInstant *inst) {
+    size_t sz = temporal_mem_size(reinterpret_cast<Temporal *>(inst));
+    uint8_t *buf = (uint8_t *)malloc(sz);
+    memcpy(buf, inst, sz);
+    string_t s(reinterpret_cast<const char *>(buf), sz);
+    string_t stored = StringVector::AddStringOrBlob(result, s);
+    free(buf);
+    free(inst);
+    return stored;
+}
+
+} // anonymous namespace
+
+void TgeompointFunctions::Nai_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t n = args.size();
+    args.data[0].Flatten(n); args.data[1].Flatten(n);
+    auto in_t  = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_g  = FlatVector::GetData<string_t>(args.data[1]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto &v1 = FlatVector::Validity(args.data[1]);
+    auto out   = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+
+    for (idx_t i = 0; i < n; i++) {
+        if (!v0.RowIsValid(i) || !v1.RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        size_t tsz = in_t[i].GetSize();
+        uint8_t *tcopy = (uint8_t *)malloc(tsz);
+        memcpy(tcopy, in_t[i].GetData(), tsz);
+        Temporal *temp = reinterpret_cast<Temporal *>(tcopy);
+        GSERIALIZED *gs = GeometryToGSerialized(in_g[i], 0);
+        if (!gs) { free(temp); outv.SetInvalid(i); continue; }
+        TInstant *inst = nai_tgeo_geo(temp, gs);
+        free(temp); free(gs);
+        if (!inst) { outv.SetInvalid(i); continue; }
+        out[i] = NaiToHex(result, inst);
+    }
+    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void TgeompointFunctions::Nai_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t n = args.size();
+    args.data[0].Flatten(n); args.data[1].Flatten(n);
+    auto in_g  = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_t  = FlatVector::GetData<string_t>(args.data[1]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto &v1 = FlatVector::Validity(args.data[1]);
+    auto out   = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+
+    for (idx_t i = 0; i < n; i++) {
+        if (!v0.RowIsValid(i) || !v1.RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        size_t tsz = in_t[i].GetSize();
+        uint8_t *tcopy = (uint8_t *)malloc(tsz);
+        memcpy(tcopy, in_t[i].GetData(), tsz);
+        Temporal *temp = reinterpret_cast<Temporal *>(tcopy);
+        GSERIALIZED *gs = GeometryToGSerialized(in_g[i], 0);
+        if (!gs) { free(temp); outv.SetInvalid(i); continue; }
+        TInstant *inst = nai_tgeo_geo(temp, gs);
+        free(temp); free(gs);
+        if (!inst) { outv.SetInvalid(i); continue; }
+        out[i] = NaiToHex(result, inst);
+    }
+    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void TgeompointFunctions::Nad_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [](string_t tblob, string_t gblob, ValidityMask &mask, idx_t idx) -> double {
+            size_t tsz = tblob.GetSize();
+            uint8_t *tcopy = (uint8_t *)malloc(tsz);
+            memcpy(tcopy, tblob.GetData(), tsz);
+            Temporal *temp = reinterpret_cast<Temporal *>(tcopy);
+            GSERIALIZED *gs = GeometryToGSerialized(gblob, 0);
+            if (!gs) { free(temp); mask.SetInvalid(idx); return 0.0; }
+            double d = nad_tgeo_geo(temp, gs);
+            free(temp); free(gs);
+            if (d == DBL_MAX) { mask.SetInvalid(idx); return 0.0; }
+            return d;
+        }
+    );
+}
+
+void TgeompointFunctions::Nad_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [](string_t gblob, string_t tblob, ValidityMask &mask, idx_t idx) -> double {
+            size_t tsz = tblob.GetSize();
+            uint8_t *tcopy = (uint8_t *)malloc(tsz);
+            memcpy(tcopy, tblob.GetData(), tsz);
+            Temporal *temp = reinterpret_cast<Temporal *>(tcopy);
+            GSERIALIZED *gs = GeometryToGSerialized(gblob, 0);
+            if (!gs) { free(temp); mask.SetInvalid(idx); return 0.0; }
+            double d = nad_tgeo_geo(temp, gs);
+            free(temp); free(gs);
+            if (d == DBL_MAX) { mask.SetInvalid(idx); return 0.0; }
+            return d;
+        }
+    );
+}
+
+void TgeompointFunctions::Nad_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [](string_t ablob, string_t bblob, ValidityMask &mask, idx_t idx) -> double {
+            size_t asz = ablob.GetSize(), bsz = bblob.GetSize();
+            uint8_t *acopy = (uint8_t *)malloc(asz), *bcopy = (uint8_t *)malloc(bsz);
+            memcpy(acopy, ablob.GetData(), asz); memcpy(bcopy, bblob.GetData(), bsz);
+            Temporal *ta = reinterpret_cast<Temporal *>(acopy);
+            Temporal *tb = reinterpret_cast<Temporal *>(bcopy);
+            double d = nad_tgeo_tgeo(ta, tb);
+            free(ta); free(tb);
+            if (d == DBL_MAX) { mask.SetInvalid(idx); return 0.0; }
+            return d;
+        }
+    );
+}
+
+/* ***************************************************
+ * Affine/translate/rotate/rotateX/Y/Z/transscale/scale transforms
+ * All build an AFFINE struct and delegate to tgeo_affine (or tgeo_scale).
+ ****************************************************/
+
+namespace {
+
+string_t ApplyAffineToTgeo(Vector &result, string_t blob, const AFFINE &m) {
+    size_t sz = blob.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    Temporal *temp = reinterpret_cast<Temporal *>(copy);
+    Temporal *ret = tgeo_affine(temp, &m);
+    free(temp);
+    if (!ret) throw InternalException("tgeo_affine returned null");
+    size_t rsz = temporal_mem_size(ret);
+    uint8_t *rbuf = (uint8_t *)malloc(rsz);
+    memcpy(rbuf, ret, rsz);
+    string_t rs(reinterpret_cast<const char *>(rbuf), rsz);
+    string_t stored = StringVector::AddStringOrBlob(result, rs);
+    free(rbuf); free(ret);
+    return stored;
+}
+
+inline AFFINE IdentityAffine() {
+    AFFINE m{};
+    m.afac = 1.0; m.efac = 1.0; m.ifac = 1.0;
+    return m;
+}
+
+} // anonymous namespace
+
+void TgeompointFunctions::Tgeo_affine_12(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t n = args.size();
+    for (idx_t c = 0; c < 13; c++) args.data[c].Flatten(n);
+    auto in   = FlatVector::GetData<string_t>(args.data[0]);
+    auto a    = FlatVector::GetData<double>(args.data[1]);
+    auto b    = FlatVector::GetData<double>(args.data[2]);
+    auto c_   = FlatVector::GetData<double>(args.data[3]);
+    auto d_   = FlatVector::GetData<double>(args.data[4]);
+    auto e    = FlatVector::GetData<double>(args.data[5]);
+    auto f_   = FlatVector::GetData<double>(args.data[6]);
+    auto g_   = FlatVector::GetData<double>(args.data[7]);
+    auto h_   = FlatVector::GetData<double>(args.data[8]);
+    auto ii   = FlatVector::GetData<double>(args.data[9]);
+    auto xoff = FlatVector::GetData<double>(args.data[10]);
+    auto yoff = FlatVector::GetData<double>(args.data[11]);
+    auto zoff = FlatVector::GetData<double>(args.data[12]);
+    auto &v0  = FlatVector::Validity(args.data[0]);
+    auto out  = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+
+    for (idx_t i = 0; i < n; i++) {
+        if (!v0.RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        AFFINE m{};
+        m.afac = a[i]; m.bfac = b[i]; m.cfac = c_[i];
+        m.dfac = d_[i]; m.efac = e[i]; m.ffac = f_[i];
+        m.gfac = g_[i]; m.hfac = h_[i]; m.ifac = ii[i];
+        m.xoff = xoff[i]; m.yoff = yoff[i]; m.zoff = zoff[i];
+        out[i] = ApplyAffineToTgeo(result, in[i], m);
+    }
+    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void TgeompointFunctions::Tgeo_affine_6(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t n = args.size();
+    for (idx_t c = 0; c < 7; c++) args.data[c].Flatten(n);
+    auto in   = FlatVector::GetData<string_t>(args.data[0]);
+    auto a    = FlatVector::GetData<double>(args.data[1]);
+    auto b    = FlatVector::GetData<double>(args.data[2]);
+    auto d_   = FlatVector::GetData<double>(args.data[3]);
+    auto e    = FlatVector::GetData<double>(args.data[4]);
+    auto xoff = FlatVector::GetData<double>(args.data[5]);
+    auto yoff = FlatVector::GetData<double>(args.data[6]);
+    auto &v0  = FlatVector::Validity(args.data[0]);
+    auto out  = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+
+    for (idx_t i = 0; i < n; i++) {
+        if (!v0.RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        AFFINE m = IdentityAffine();
+        m.afac = a[i]; m.bfac = b[i];
+        m.dfac = d_[i]; m.efac = e[i];
+        m.xoff = xoff[i]; m.yoff = yoff[i];
+        out[i] = ApplyAffineToTgeo(result, in[i], m);
+    }
+    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void TgeompointFunctions::Tgeo_translate_3d(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t n = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(n);
+    auto in = FlatVector::GetData<string_t>(args.data[0]);
+    auto dx = FlatVector::GetData<double>(args.data[1]);
+    auto dy = FlatVector::GetData<double>(args.data[2]);
+    auto dz = FlatVector::GetData<double>(args.data[3]);
+    auto &v0  = FlatVector::Validity(args.data[0]);
+    auto out  = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+
+    for (idx_t i = 0; i < n; i++) {
+        if (!v0.RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        AFFINE m = IdentityAffine();
+        m.xoff = dx[i]; m.yoff = dy[i]; m.zoff = dz[i];
+        out[i] = ApplyAffineToTgeo(result, in[i], m);
+    }
+    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void TgeompointFunctions::Tgeo_translate_2d(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t n = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(n);
+    auto in = FlatVector::GetData<string_t>(args.data[0]);
+    auto dx = FlatVector::GetData<double>(args.data[1]);
+    auto dy = FlatVector::GetData<double>(args.data[2]);
+    auto &v0  = FlatVector::Validity(args.data[0]);
+    auto out  = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+
+    for (idx_t i = 0; i < n; i++) {
+        if (!v0.RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        AFFINE m = IdentityAffine();
+        m.xoff = dx[i]; m.yoff = dy[i];
+        out[i] = ApplyAffineToTgeo(result, in[i], m);
+    }
+    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void TgeompointFunctions::Tgeo_rotate_angle(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t n = args.size();
+    args.data[0].Flatten(n); args.data[1].Flatten(n);
+    auto in    = FlatVector::GetData<string_t>(args.data[0]);
+    auto angle = FlatVector::GetData<double>(args.data[1]);
+    auto &v0   = FlatVector::Validity(args.data[0]);
+    auto out   = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+
+    for (idx_t i = 0; i < n; i++) {
+        if (!v0.RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const double c = std::cos(angle[i]), s = std::sin(angle[i]);
+        AFFINE m = IdentityAffine();
+        m.afac = c; m.bfac = -s;
+        m.dfac = s; m.efac =  c;
+        out[i] = ApplyAffineToTgeo(result, in[i], m);
+    }
+    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void TgeompointFunctions::Tgeo_rotate_angle_cx_cy(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t n = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(n);
+    auto in    = FlatVector::GetData<string_t>(args.data[0]);
+    auto angle = FlatVector::GetData<double>(args.data[1]);
+    auto cx_d  = FlatVector::GetData<double>(args.data[2]);
+    auto cy_d  = FlatVector::GetData<double>(args.data[3]);
+    auto &v0   = FlatVector::Validity(args.data[0]);
+    auto out   = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+
+    for (idx_t i = 0; i < n; i++) {
+        if (!v0.RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const double th = angle[i], cx = cx_d[i], cy = cy_d[i];
+        const double c = std::cos(th), s = std::sin(th);
+        AFFINE m = IdentityAffine();
+        m.afac = c; m.bfac = -s;
+        m.dfac = s; m.efac =  c;
+        m.xoff = cx - c * cx + s * cy;
+        m.yoff = cy - s * cx - c * cy;
+        out[i] = ApplyAffineToTgeo(result, in[i], m);
+    }
+    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void TgeompointFunctions::Tgeo_rotateX(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t n = args.size();
+    args.data[0].Flatten(n); args.data[1].Flatten(n);
+    auto in    = FlatVector::GetData<string_t>(args.data[0]);
+    auto angle = FlatVector::GetData<double>(args.data[1]);
+    auto &v0   = FlatVector::Validity(args.data[0]);
+    auto out   = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+
+    for (idx_t i = 0; i < n; i++) {
+        if (!v0.RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const double c = std::cos(angle[i]), s = std::sin(angle[i]);
+        AFFINE m{};
+        m.afac = 1.0;
+        m.efac = c; m.ffac = -s;
+        m.hfac = s; m.ifac =  c;
+        out[i] = ApplyAffineToTgeo(result, in[i], m);
+    }
+    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void TgeompointFunctions::Tgeo_rotateY(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t n = args.size();
+    args.data[0].Flatten(n); args.data[1].Flatten(n);
+    auto in    = FlatVector::GetData<string_t>(args.data[0]);
+    auto angle = FlatVector::GetData<double>(args.data[1]);
+    auto &v0   = FlatVector::Validity(args.data[0]);
+    auto out   = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+
+    for (idx_t i = 0; i < n; i++) {
+        if (!v0.RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const double c = std::cos(angle[i]), s = std::sin(angle[i]);
+        AFFINE m{};
+        m.afac =  c; m.cfac = s;
+        m.efac = 1.0;
+        m.gfac = -s; m.ifac = c;
+        out[i] = ApplyAffineToTgeo(result, in[i], m);
+    }
+    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void TgeompointFunctions::Tgeo_transscale(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t n = args.size();
+    for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(n);
+    auto in = FlatVector::GetData<string_t>(args.data[0]);
+    auto dx = FlatVector::GetData<double>(args.data[1]);
+    auto dy = FlatVector::GetData<double>(args.data[2]);
+    auto sx = FlatVector::GetData<double>(args.data[3]);
+    auto sy = FlatVector::GetData<double>(args.data[4]);
+    auto &v0  = FlatVector::Validity(args.data[0]);
+    auto out  = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+
+    for (idx_t i = 0; i < n; i++) {
+        if (!v0.RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        AFFINE m{};
+        m.afac = sx[i]; m.efac = sy[i]; m.ifac = 1.0;
+        m.xoff = dx[i] * sx[i]; m.yoff = dy[i] * sy[i];
+        out[i] = ApplyAffineToTgeo(result, in[i], m);
+    }
+    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void TgeompointFunctions::Tgeo_scale_geom(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t n = args.size();
+    args.data[0].Flatten(n); args.data[1].Flatten(n);
+    auto in_t  = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_g  = FlatVector::GetData<string_t>(args.data[1]);
+    auto &v0   = FlatVector::Validity(args.data[0]);
+    auto &v1   = FlatVector::Validity(args.data[1]);
+    auto out   = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+
+    for (idx_t i = 0; i < n; i++) {
+        if (!v0.RowIsValid(i) || !v1.RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        size_t tsz = in_t[i].GetSize();
+        uint8_t *tcopy = (uint8_t *)malloc(tsz);
+        memcpy(tcopy, in_t[i].GetData(), tsz);
+        Temporal *temp = reinterpret_cast<Temporal *>(tcopy);
+        GSERIALIZED *scale = GeometryToGSerialized(in_g[i], 0);
+        if (!scale) { free(temp); outv.SetInvalid(i); continue; }
+        Temporal *ret = tgeo_scale(temp, scale, nullptr);
+        free(temp); free(scale);
+        if (!ret) { outv.SetInvalid(i); continue; }
+        size_t rsz = temporal_mem_size(ret);
+        uint8_t *rbuf = (uint8_t *)malloc(rsz);
+        memcpy(rbuf, ret, rsz);
+        out[i] = StringVector::AddStringOrBlob(result, string_t(reinterpret_cast<const char *>(rbuf), rsz));
+        free(rbuf); free(ret);
+    }
+    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void TgeompointFunctions::Tgeo_scale_geom_origin(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t n = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(n);
+    auto in_t  = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_g  = FlatVector::GetData<string_t>(args.data[1]);
+    auto in_o  = FlatVector::GetData<string_t>(args.data[2]);
+    auto &v0   = FlatVector::Validity(args.data[0]);
+    auto &v1   = FlatVector::Validity(args.data[1]);
+    auto &v2   = FlatVector::Validity(args.data[2]);
+    auto out   = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+
+    for (idx_t i = 0; i < n; i++) {
+        if (!v0.RowIsValid(i) || !v1.RowIsValid(i) || !v2.RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        size_t tsz = in_t[i].GetSize();
+        uint8_t *tcopy = (uint8_t *)malloc(tsz);
+        memcpy(tcopy, in_t[i].GetData(), tsz);
+        Temporal *temp = reinterpret_cast<Temporal *>(tcopy);
+        GSERIALIZED *scale  = GeometryToGSerialized(in_g[i], 0);
+        GSERIALIZED *origin = GeometryToGSerialized(in_o[i], 0);
+        if (!scale || !origin) { free(temp); if (scale) free(scale); if (origin) free(origin); outv.SetInvalid(i); continue; }
+        Temporal *ret = tgeo_scale(temp, scale, origin);
+        free(temp); free(scale); free(origin);
+        if (!ret) { outv.SetInvalid(i); continue; }
+        size_t rsz = temporal_mem_size(ret);
+        uint8_t *rbuf = (uint8_t *)malloc(rsz);
+        memcpy(rbuf, ret, rsz);
+        out[i] = StringVector::AddStringOrBlob(result, string_t(reinterpret_cast<const char *>(rbuf), rsz));
+        free(rbuf); free(ret);
+    }
+    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 } // namespace duckdb
