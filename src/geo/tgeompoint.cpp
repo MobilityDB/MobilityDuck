@@ -16,6 +16,7 @@
 #include "duckdb/main/extension/extension_loader.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include "spatial/spatial_types.hpp"
+#include "geo_util.hpp"
 
 namespace duckdb {
 
@@ -1768,6 +1769,213 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::distance_geo_geo
         )
     );
+
+    /* tdistance named form (mirrors the <-> operator) */
+    const auto TG = TGEOMPOINT();
+    const auto G  = GeoTypes::GEOMETRY();
+    const auto TF = TemporalTypes::TFLOAT();
+    const auto D  = LogicalType::DOUBLE;
+
+    loader.RegisterFunction(ScalarFunction("tdistance", {TG, TG}, TF, TgeompointFunctions::Tdistance_named));
+
+    /* nearestApproachInstant */
+    loader.RegisterFunction(ScalarFunction("nearestApproachInstant", {TG, G}, TG, TgeompointFunctions::Nai_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("nearestApproachInstant", {G, TG}, TG, TgeompointFunctions::Nai_geo_tgeo));
+
+    /* nearestApproachDistance */
+    loader.RegisterFunction(ScalarFunction("nearestApproachDistance", {TG, G}, D, TgeompointFunctions::Nad_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("nearestApproachDistance", {G, TG}, D, TgeompointFunctions::Nad_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction("nearestApproachDistance", {TG, TG}, D, TgeompointFunctions::Nad_tgeo_tgeo));
+
+    /* nad — alias */
+    loader.RegisterFunction(ScalarFunction("nad", {TG, G}, D, TgeompointFunctions::Nad_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("nad", {G, TG}, D, TgeompointFunctions::Nad_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction("nad", {TG, TG}, D, TgeompointFunctions::Nad_tgeo_tgeo));
+
+    /* affine (12-arg and 6-arg) */
+    loader.RegisterFunction(ScalarFunction("affine",
+        {TG, D, D, D, D, D, D, D, D, D, D, D, D}, TG,
+        TgeompointFunctions::Tgeo_affine_12));
+    loader.RegisterFunction(ScalarFunction("affine",
+        {TG, D, D, D, D, D, D}, TG,
+        TgeompointFunctions::Tgeo_affine_6));
+
+    /* translate */
+    loader.RegisterFunction(ScalarFunction("translate", {TG, D, D, D}, TG, TgeompointFunctions::Tgeo_translate_3d));
+    loader.RegisterFunction(ScalarFunction("translate", {TG, D, D},    TG, TgeompointFunctions::Tgeo_translate_2d));
+
+    /* rotate */
+    loader.RegisterFunction(ScalarFunction("rotate", {TG, D},       TG, TgeompointFunctions::Tgeo_rotate_angle));
+    loader.RegisterFunction(ScalarFunction("rotate", {TG, D, D, D}, TG, TgeompointFunctions::Tgeo_rotate_angle_cx_cy));
+    loader.RegisterFunction(ScalarFunction("rotate", {TG, D, G},    TG, TgeompointFunctions::Tgeo_rotate_geom));
+
+    /* rotateZ / rotateX / rotateY */
+    loader.RegisterFunction(ScalarFunction("rotateZ", {TG, D}, TG, TgeompointFunctions::Tgeo_rotate_angle));
+    loader.RegisterFunction(ScalarFunction("rotateX", {TG, D}, TG, TgeompointFunctions::Tgeo_rotateX));
+    loader.RegisterFunction(ScalarFunction("rotateY", {TG, D}, TG, TgeompointFunctions::Tgeo_rotateY));
+
+    /* transscale */
+    loader.RegisterFunction(ScalarFunction("transscale", {TG, D, D, D, D}, TG, TgeompointFunctions::Tgeo_transscale));
+
+    /* scale */
+    loader.RegisterFunction(ScalarFunction("scale", {TG, G},    TG, TgeompointFunctions::Tgeo_scale_geom));
+    loader.RegisterFunction(ScalarFunction("scale", {TG, G, G}, TG, TgeompointFunctions::Tgeo_scale_geom_origin));
+    loader.RegisterFunction(ScalarFunction("scale", {TG, D, D},    TG, TgeompointFunctions::Tgeo_scale_xy));
+    loader.RegisterFunction(ScalarFunction("scale", {TG, D, D, D}, TG, TgeompointFunctions::Tgeo_scale_xyz));
+}
+
+/* ***************************************************
+ * asMVTGeom + geoMeasure for tgeompoint
+ *
+ *   asMVTGeom(tgeompoint, stbox bounds[, extent int[, buffer int[, clip bool]]])
+ *     RETURNS STRUCT(geom geometry, times bigint[])
+ *
+ *   geoMeasure(tgeompoint, tfloat measure[, segmentize boolean])
+ *     RETURNS geometry
+ ****************************************************/
+
+namespace {
+
+inline Temporal *BlobToTempMVT(string_t b) {
+    size_t sz = b.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, b.GetData(), sz);
+    return reinterpret_cast<Temporal *>(copy);
+}
+
+inline STBox *BlobToStboxMVT(string_t b) {
+    size_t sz = b.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, b.GetData(), sz);
+    return reinterpret_cast<STBox *>(copy);
+}
+
+void TgeoAsMVTGeomExec(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+
+    auto in_temp   = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_bounds = FlatVector::GetData<string_t>(args.data[1]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto &v1 = FlatVector::Validity(args.data[1]);
+    auto &out_validity = FlatVector::Validity(result);
+
+    auto &struct_children = StructVector::GetEntries(result);
+    auto &geom_col = *struct_children[0];
+    auto &times_col = *struct_children[1];
+    auto times_entries = FlatVector::GetData<list_entry_t>(times_col);
+    auto &times_child = ListVector::GetEntry(times_col);
+
+    idx_t total_times = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row) || !v1.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            times_entries[row] = list_entry_t{total_times, 0};
+            continue;
+        }
+        Temporal *t = BlobToTempMVT(in_temp[row]);
+        STBox *bx = BlobToStboxMVT(in_bounds[row]);
+        int32_t extent = 4096;
+        int32_t buffer = 256;
+        bool clip = true;
+        if (cc > 2) extent = FlatVector::GetData<int32_t>(args.data[2])[row];
+        if (cc > 3) buffer = FlatVector::GetData<int32_t>(args.data[3])[row];
+        if (cc > 4) clip   = FlatVector::GetData<bool>(args.data[4])[row];
+
+        GSERIALIZED *geom = nullptr;
+        int64 *times = nullptr;
+        int count = 0;
+        bool found = tpoint_as_mvtgeom(t, bx, extent, buffer, clip, &geom, &times, &count);
+        free(t); free(bx);
+        if (!found || !geom) {
+            out_validity.SetInvalid(row);
+            times_entries[row] = list_entry_t{total_times, 0};
+            if (geom) free(geom);
+            if (times) free(times);
+            continue;
+        }
+        /* Encode geom into the geometry struct child */
+        ArenaAllocator arena(BufferAllocator::Get(state.GetContext()));
+        string_t enc = GSerializedToGeometry(geom, arena, geom_col);
+        FlatVector::GetData<string_t>(geom_col)[row] =
+            StringVector::AddStringOrBlob(geom_col, enc);
+        free(geom);
+        /* Encode times[] into the bigint[] struct child */
+        if (count > 0 && times) {
+            ListVector::Reserve(times_col, total_times + count);
+            ListVector::SetListSize(times_col, total_times + count);
+            times_entries[row] = list_entry_t{total_times, static_cast<uint64_t>(count)};
+            auto times_data = FlatVector::GetData<int64_t>(times_child);
+            for (int k = 0; k < count; k++) {
+                times_data[total_times + k] = (int64_t) times[k];
+            }
+            total_times += count;
+        } else {
+            times_entries[row] = list_entry_t{total_times, 0};
+        }
+        if (times) free(times);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void TgeoGeoMeasureExec(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_temp = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_meas = FlatVector::GetData<string_t>(args.data[1]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto &v1 = FlatVector::Validity(args.data[1]);
+    auto out_data = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row) || !v1.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        Temporal *t = BlobToTempMVT(in_temp[row]);
+        Temporal *m = BlobToTempMVT(in_meas[row]);
+        bool segmentize = (cc > 2) ? FlatVector::GetData<bool>(args.data[2])[row] : false;
+        GSERIALIZED *geom = nullptr;
+        bool ok = tpoint_tfloat_to_geomeas(t, m, segmentize, &geom);
+        free(t); free(m);
+        if (!ok || !geom) {
+            out_validity.SetInvalid(row);
+            if (geom) free(geom);
+            continue;
+        }
+        ArenaAllocator arena(BufferAllocator::Get(state.GetContext()));
+        string_t enc = GSerializedToGeometry(geom, arena, result);
+        out_data[row] = StringVector::AddStringOrBlob(result, enc);
+        free(geom);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+} // namespace
+
+void TgeompointType::RegisterAnalyticsViz(ExtensionLoader &loader) {
+    const auto T  = TGEOMPOINT();
+    const auto B  = StboxType::STBOX();
+    const auto G  = GeoTypes::GEOMETRY();
+    const auto I  = LogicalType::INTEGER;
+    const auto BL = LogicalType::BOOLEAN;
+
+    /* asMVTGeom returns STRUCT(geom GEOMETRY, times BIGINT[]) */
+    const auto MVT_OUT = LogicalType::STRUCT({
+        {"geom", G},
+        {"times", LogicalType::LIST(LogicalType::BIGINT)},
+    });
+    loader.RegisterFunction(ScalarFunction("asMVTGeom", {T, B},                MVT_OUT, TgeoAsMVTGeomExec));
+    loader.RegisterFunction(ScalarFunction("asMVTGeom", {T, B, I},             MVT_OUT, TgeoAsMVTGeomExec));
+    loader.RegisterFunction(ScalarFunction("asMVTGeom", {T, B, I, I},          MVT_OUT, TgeoAsMVTGeomExec));
+    loader.RegisterFunction(ScalarFunction("asMVTGeom", {T, B, I, I, BL},      MVT_OUT, TgeoAsMVTGeomExec));
+
+    /* geoMeasure(tgeompoint, tfloat[, segmentize]) -> geometry */
+    loader.RegisterFunction(ScalarFunction("geoMeasure", {T, TemporalTypes::TFLOAT()},     G, TgeoGeoMeasureExec));
+    loader.RegisterFunction(ScalarFunction("geoMeasure", {T, TemporalTypes::TFLOAT(), BL}, G, TgeoGeoMeasureExec));
 }
 
 } // namespace duckdb
