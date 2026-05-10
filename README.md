@@ -16,6 +16,14 @@ This repository is based on https://github.com/duckdb/extension-template.
 
 With MobilityDuck, users can use these data types and functions directly in DuckDB queries. 
 
+### For contributors and reviewers
+
+- Reviewing a pull request?  See the
+  [PR Reviewer Guide](doc/contributing/reviewer-guide.md) — tier ranking,
+  dependency chains and the standards checklist.  Reviewers landing in
+  any of the three platform repos (MobilityDB / MobilityDuck /
+  MobilitySpark) find the same canonical structure at the same path.
+
 ---
 ## 1. Requirements
 MobilityDuck needs some dependencies(including MEOS) which can be installed through VCPKG. Run the following to enable it: 
