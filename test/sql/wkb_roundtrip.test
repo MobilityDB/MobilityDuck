@@ -1,0 +1,337 @@
+# name: test/sql/wkb_roundtrip.test
+# description: asBinary / xFromBinary / asHexWKB / xFromHexWKB round-trip for span, spanset, set, tgeometry, and temporal types
+# group: [sql]
+
+require mobilityduck
+
+require parquet
+
+# =============================================================================
+# span types
+# =============================================================================
+
+query I
+SELECT intspanFromBinary(asBinary(intspan '[1,10]'))::VARCHAR
+----
+[1, 11)
+
+query I
+SELECT bigintspanFromBinary(asBinary(bigintspan '[1000000000000,2000000000000]'))::VARCHAR
+----
+[1000000000000, 2000000000001)
+
+query I
+SELECT floatspanFromBinary(asBinary(floatspan '[1.5,3.5]'))::VARCHAR
+----
+[1.5, 3.5]
+
+query I
+SELECT datespanFromBinary(asBinary(datespan '[2000-01-01,2000-01-10]'))::VARCHAR
+----
+[2000-01-01, 2000-01-11)
+
+query I
+SELECT tstzspanFromBinary(asBinary(tstzspan '[2000-01-01,2000-01-10]'))
+    = tstzspan '[2000-01-01,2000-01-10]'
+----
+true
+
+# round-trip preserves bounds: lower bound equals original lower
+query I
+SELECT lower(tstzspanFromBinary(asBinary(tstzspan '[2000-01-01,2000-12-31)')))
+    = lower(tstzspan '[2000-01-01,2000-12-31)')
+----
+true
+
+query I
+SELECT upperInc(floatspanFromBinary(asBinary(floatspan '[0.0,1.0]')))
+----
+true
+
+# =============================================================================
+# spanset types
+# =============================================================================
+
+query I
+SELECT intspansetFromBinary(asBinary(intspanset '{[1,3],[10,20]}'  ))::VARCHAR
+----
+{[1, 4), [10, 21)}
+
+query I
+SELECT bigintspansetFromBinary(asBinary(bigintspanset '{[1,5],[100,200]}'))::VARCHAR
+----
+{[1, 6), [100, 201)}
+
+query I
+SELECT floatspansetFromBinary(asBinary(floatspanset '{[1.0,2.0],[3.0,4.0]}'))::VARCHAR
+----
+{[1, 2], [3, 4]}
+
+query I
+SELECT datespansetFromBinary(asBinary(datespanset '{[2000-01-01,2000-01-05],[2000-02-01,2000-02-10]}'))::VARCHAR
+----
+{[2000-01-01, 2000-01-06), [2000-02-01, 2000-02-11)}
+
+query I
+SELECT tstzspansetFromBinary(asBinary(tstzspanset '{[2000-01-01,2000-01-03],[2000-02-01,2000-02-03]}'))
+    = tstzspanset '{[2000-01-01,2000-01-03],[2000-02-01,2000-02-03]}'
+----
+true
+
+# numSpans survives round-trip
+query I
+SELECT numSpans(tstzspansetFromBinary(asBinary(tstzspanset '{[2000-01-01,2000-01-02],[2000-03-01,2000-03-02],[2000-06-01,2000-06-02]}')))
+----
+3
+
+# =============================================================================
+# set types
+# =============================================================================
+
+query I
+SELECT intsetFromBinary(asBinary(intset '{1,3,5,7}'))::VARCHAR
+----
+{1, 3, 5, 7}
+
+query I
+SELECT bigintsetFromBinary(asBinary(bigintset '{100,200,300}'))::VARCHAR
+----
+{100, 200, 300}
+
+query I
+SELECT floatsetFromBinary(asBinary(floatset '{1.1,2.2,3.3}'))::VARCHAR
+----
+{1.1, 2.2, 3.3}
+
+query I
+SELECT textsetFromBinary(asBinary(textset '{"hello","world"}'))::VARCHAR
+----
+{"hello", "world"}
+
+query I
+SELECT datesetFromBinary(asBinary(dateset '{2000-01-01,2000-06-15,2000-12-31}'))::VARCHAR
+----
+{2000-01-01, 2000-06-15, 2000-12-31}
+
+query I
+SELECT tstzsetFromBinary(asBinary(tstzset '{2000-01-01,2000-06-01,2001-01-01}'))
+    = tstzset '{2000-01-01,2000-06-01,2001-01-01}'
+----
+true
+
+# numValues survives round-trip
+query I
+SELECT numValues(intsetFromBinary(asBinary(intset '{10,20,30,40,50}')))
+----
+5
+
+# =============================================================================
+# tgeometry
+# =============================================================================
+
+query I
+SELECT asText(tgeometryFromBinary(asBinary(tgeometry 'Point(1 2)@2023-01-01')))
+    = asText(tgeometry 'Point(1 2)@2023-01-01')
+----
+true
+
+query I
+SELECT asText(tgeometryFromBinary(asBinary(
+    tgeometry '[Point(0 0)@2023-01-01, Point(1 1)@2023-01-02]'
+))) = asText(tgeometry '[Point(0 0)@2023-01-01, Point(1 1)@2023-01-02]')
+----
+true
+
+# sequence round-trip
+query I
+SELECT asText(tgeometryFromBinary(asBinary(
+    tgeometry '[Point(0 0)@2023-01-01, Point(2 2)@2023-01-03]'
+))) = asText(tgeometry '[Point(0 0)@2023-01-01, Point(2 2)@2023-01-03]')
+----
+true
+
+# =============================================================================
+# asHexWKB / xFromHexWKB — span types
+# =============================================================================
+
+query I
+SELECT intspanFromHexWKB(asHexWKB(intspan '[1,10]'))::VARCHAR
+----
+[1, 11)
+
+query I
+SELECT bigintspanFromHexWKB(asHexWKB(bigintspan '[1000000000000,2000000000000]'))::VARCHAR
+----
+[1000000000000, 2000000000001)
+
+query I
+SELECT floatspanFromHexWKB(asHexWKB(floatspan '[1.5,3.5]'))::VARCHAR
+----
+[1.5, 3.5]
+
+query I
+SELECT datespanFromHexWKB(asHexWKB(datespan '[2000-01-01,2000-01-10]'))::VARCHAR
+----
+[2000-01-01, 2000-01-11)
+
+query I
+SELECT lower(tstzspanFromHexWKB(asHexWKB(tstzspan '[2000-01-01,2000-12-31)')))
+    = lower(tstzspan '[2000-01-01,2000-12-31)')
+----
+true
+
+query I
+SELECT upperInc(floatspanFromHexWKB(asHexWKB(floatspan '[0.0,1.0]')))
+----
+true
+
+# =============================================================================
+# asHexWKB / xFromHexWKB — spanset types
+# =============================================================================
+
+query I
+SELECT intspansetFromHexWKB(asHexWKB(intspanset '{[1,3],[10,20]}'))::VARCHAR
+----
+{[1, 4), [10, 21)}
+
+query I
+SELECT bigintspansetFromHexWKB(asHexWKB(bigintspanset '{[1,5],[100,200]}'))::VARCHAR
+----
+{[1, 6), [100, 201)}
+
+query I
+SELECT floatspansetFromHexWKB(asHexWKB(floatspanset '{[1.0,2.0],[3.0,4.0]}'))::VARCHAR
+----
+{[1, 2], [3, 4]}
+
+query I
+SELECT datespansetFromHexWKB(asHexWKB(datespanset '{[2000-01-01,2000-01-05],[2000-02-01,2000-02-10]}'))::VARCHAR
+----
+{[2000-01-01, 2000-01-06), [2000-02-01, 2000-02-11)}
+
+query I
+SELECT numSpans(tstzspansetFromHexWKB(asHexWKB(tstzspanset '{[2000-01-01,2000-01-02],[2000-03-01,2000-03-02],[2000-06-01,2000-06-02]}')))
+----
+3
+
+# =============================================================================
+# asHexWKB / xFromHexWKB — set types
+# =============================================================================
+
+query I
+SELECT intsetFromHexWKB(asHexWKB(intset '{1,3,5,7}'))::VARCHAR
+----
+{1, 3, 5, 7}
+
+query I
+SELECT bigintsetFromHexWKB(asHexWKB(bigintset '{100,200,300}'))::VARCHAR
+----
+{100, 200, 300}
+
+query I
+SELECT floatsetFromHexWKB(asHexWKB(floatset '{1.1,2.2,3.3}'))::VARCHAR
+----
+{1.1, 2.2, 3.3}
+
+query I
+SELECT textsetFromHexWKB(asHexWKB(textset '{"hello","world"}'))::VARCHAR
+----
+{"hello", "world"}
+
+query I
+SELECT datesetFromHexWKB(asHexWKB(dateset '{2000-01-01,2000-06-15,2000-12-31}'))::VARCHAR
+----
+{2000-01-01, 2000-06-15, 2000-12-31}
+
+query I
+SELECT numValues(tstzsetFromHexWKB(asHexWKB(tstzset '{2000-01-01,2000-06-01,2001-01-01}')))
+----
+3
+
+# =============================================================================
+# asHexWKB / tgeometryFromHexWKB
+# =============================================================================
+
+query I
+SELECT asText(tgeometryFromHexWKB(asHexWKB(tgeometry 'Point(1 2)@2023-01-01')))
+    = asText(tgeometry 'Point(1 2)@2023-01-01')
+----
+true
+
+query I
+SELECT asText(tgeometryFromHexWKB(asHexWKB(
+    tgeometry '[Point(0 0)@2023-01-01, Point(1 1)@2023-01-02]'
+))) = asText(tgeometry '[Point(0 0)@2023-01-01, Point(1 1)@2023-01-02]')
+----
+true
+
+# =============================================================================
+# asHexWKB / xFromHexWKB — temporal scalar types (tbool, tint, tfloat, ttext)
+# =============================================================================
+
+query I
+SELECT tboolFromHexWKB(asHexWKB(tbool 'true@2023-01-01'))::VARCHAR
+    = tbool 'true@2023-01-01'::VARCHAR
+----
+true
+
+query I
+SELECT tintFromHexWKB(asHexWKB(tint '42@2023-01-01'))::VARCHAR
+    = tint '42@2023-01-01'::VARCHAR
+----
+true
+
+query I
+SELECT tfloatFromHexWKB(asHexWKB(tfloat '3.14@2023-01-01'))::VARCHAR
+    = tfloat '3.14@2023-01-01'::VARCHAR
+----
+true
+
+query I
+SELECT ttextFromHexWKB(asHexWKB(ttext 'hello@2023-01-01'))::VARCHAR
+    = ttext 'hello@2023-01-01'::VARCHAR
+----
+true
+
+# round-trip equality for tint sequence
+query I
+SELECT tintFromHexWKB(asHexWKB(tint '{1@2023-01-01, 2@2023-01-02, 3@2023-01-03}'))::VARCHAR
+    = tint '{1@2023-01-01, 2@2023-01-02, 3@2023-01-03}'::VARCHAR
+----
+true
+
+# =============================================================================
+# Parquet round-trip: span + spanset + set + tgeometry all in one file
+# =============================================================================
+
+statement ok
+COPY (
+  SELECT
+    1                                                                   AS id,
+    asBinary(tstzspan '[2026-01-01,2026-01-31]')                        AS period,
+    asBinary(tstzspanset '{[2026-01-01,2026-01-10],[2026-01-20,2026-01-31]}') AS periods,
+    asBinary(intset '{1,2,3,4,5}')                                      AS tags,
+    asBinary(tgeometry '[Point(0 0)@2026-01-01, Point(1 1)@2026-01-15]') AS geom
+)
+TO '__TEST_DIR__/mixed_wkb.parquet' (FORMAT PARQUET)
+
+query I
+SELECT type FROM parquet_schema('__TEST_DIR__/mixed_wkb.parquet')
+WHERE name IN ('period','periods','tags','geom')
+ORDER BY name
+----
+BYTE_ARRAY
+BYTE_ARRAY
+BYTE_ARRAY
+BYTE_ARRAY
+
+query IIII
+SELECT
+  lower(tstzspanFromBinary(period)) = lower(tstzspan '[2026-01-01,2026-01-31]'),
+  numSpans(tstzspansetFromBinary(periods)),
+  numValues(intsetFromBinary(tags)),
+  asText(tgeometryFromBinary(geom))
+    = asText(tgeometry '[Point(0 0)@2026-01-01, Point(1 1)@2026-01-15]')
+FROM read_parquet('__TEST_DIR__/mixed_wkb.parquet')
+----
+true	2	5	true

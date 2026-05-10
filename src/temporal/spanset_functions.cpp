@@ -1917,4 +1917,84 @@ void SpansetFunctions::Spanset_cmp(DataChunk &args, ExpressionState &state, Vect
     }
 }
 
-} // namespace duckdb   
+// --- asBinary ---
+void SpansetFunctions::Spanset_as_binary(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() < sizeof(SpanSet))
+                throw InvalidInputException("asBinary: invalid spanset value (too small)");
+            uint8_t *copy = (uint8_t *)malloc(input.GetSize());
+            if (!copy) throw InternalException("asBinary: malloc failed");
+            memcpy(copy, input.GetData(), input.GetSize());
+            SpanSet *ss = reinterpret_cast<SpanSet *>(copy);
+            size_t sz = 0;
+            uint8_t *wkb = spanset_as_wkb(ss, WKB_EXTENDED, &sz);
+            free(copy);
+            if (!wkb || sz == 0) { if (wkb) free(wkb); throw InternalException("spanset_as_wkb failed"); }
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(wkb), sz));
+            free(wkb);
+            return stored;
+        });
+}
+
+// --- fromBinary ---
+void SpansetFunctions::Spanset_from_binary(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() == 0)
+                throw InvalidInputException("fromBinary: empty WKB input");
+            uint8_t *wkb = (uint8_t *)malloc(input.GetSize());
+            if (!wkb) throw InternalException("fromBinary: malloc failed");
+            memcpy(wkb, input.GetData(), input.GetSize());
+            SpanSet *ss = spanset_from_wkb(wkb, input.GetSize());
+            free(wkb);
+            if (!ss) throw InvalidInputException("fromBinary: invalid spanset WKB");
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(ss), spanset_mem_size(ss)));
+            free(ss);
+            return stored;
+        });
+}
+
+// --- asHexWKB ---
+void SpansetFunctions::Spanset_as_hexwkb(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() == 0)
+                throw InvalidInputException("asHexWKB: empty spanset value");
+            uint8_t *copy = (uint8_t *)malloc(input.GetSize());
+            if (!copy) throw InternalException("asHexWKB: malloc failed");
+            memcpy(copy, input.GetData(), input.GetSize());
+            SpanSet *ss = reinterpret_cast<SpanSet *>(copy);
+            size_t sz = 0;
+            char *hex = spanset_as_hexwkb(ss, WKB_EXTENDED, &sz);
+            free(copy);
+            if (!hex || sz == 0) { if (hex) free(hex); throw InternalException("spanset_as_hexwkb failed"); }
+            string_t stored = StringVector::AddString(result, hex, sz);
+            free(hex);
+            return stored;
+        });
+}
+
+// --- fromHexWKB ---
+void SpansetFunctions::Spanset_from_hexwkb(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() == 0)
+                throw InvalidInputException("fromHexWKB: empty hex input");
+            std::string hex_str(input.GetData(), input.GetSize());
+            SpanSet *ss = spanset_from_hexwkb(hex_str.c_str());
+            if (!ss) throw InvalidInputException("fromHexWKB: invalid spanset hex WKB");
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(ss), spanset_mem_size(ss)));
+            free(ss);
+            return stored;
+        });
+}
+
+} // namespace duckdb

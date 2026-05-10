@@ -1701,7 +1701,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "&&", // overlaps
             {TGEOMPOINT(), SpanTypes::TSTZSPAN()},
@@ -1710,7 +1710,16 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction(
+            "&&", // overlaps (stbox-level bounding-box overlap between two tgeompoints)
+            {TGEOMPOINT(), TGEOMPOINT()},
+            LogicalType::BOOLEAN,
+            TgeompointFunctions::Temporal_overlaps_tgeompoint_tgeompoint
+        )
+    );
+
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "@>", // contains
             {TGEOMPOINT(), StboxType::STBOX()},

@@ -7,6 +7,8 @@
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 
+#include <algorithm>
+#include <string>
 #include "time_util.hpp"
 #include "mobilityduck/meos_exec_serial.hpp"
 
@@ -167,11 +169,27 @@ void SpansetTypes::RegisterCastFunctions(ExtensionLoader &loader) {
 }
 
 // --- Register Scalar Functions ---
-void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {    
+void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     for (const auto &spanset_type : SpansetTypes::AllTypes()) {
-        auto child_type = SpansetTypeMapping::GetChildType(spanset_type);    // span     
-        auto base_type = SpansetTypeMapping::GetBaseType(spanset_type); 
+        auto child_type = SpansetTypeMapping::GetChildType(spanset_type);    // span
+        auto base_type = SpansetTypeMapping::GetBaseType(spanset_type);
         auto set_type = SpansetTypeMapping::GetSetType(spanset_type);       // set
+
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("asBinary", {spanset_type}, LogicalType::BLOB,
+                           SpansetFunctions::Spanset_as_binary));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction(spanset_type.ToString() + "FromBinary",
+                           {LogicalType::BLOB}, spanset_type,
+                           SpansetFunctions::Spanset_from_binary));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("asHexWKB", {spanset_type}, LogicalType::VARCHAR,
+                           SpansetFunctions::Spanset_as_hexwkb));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction(spanset_type.ToString() + "FromHexWKB",
+                           {LogicalType::VARCHAR}, spanset_type,
+                           SpansetFunctions::Spanset_from_hexwkb));
+
         // Register: asText
         if (spanset_type == SpansetTypes::floatspanset()) {            
             duckdb::RegisterSerializedScalarFunction(loader,  // asText(floatset)

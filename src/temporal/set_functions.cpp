@@ -106,6 +106,26 @@ void SetFunctions::Set_as_binary(DataChunk &args, ExpressionState &state, Vector
     );
 }
 
+// --- fromBinary ---
+void SetFunctions::Set_from_binary(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() == 0)
+                throw InvalidInputException("fromBinary: empty WKB input");
+            uint8_t *wkb = (uint8_t *)malloc(input.GetSize());
+            if (!wkb) throw InternalException("fromBinary: malloc failed");
+            memcpy(wkb, input.GetData(), input.GetSize());
+            Set *s = set_from_wkb(wkb, input.GetSize());
+            free(wkb);
+            if (!s) throw InvalidInputException("fromBinary: invalid set WKB");
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(s), set_mem_size(s)));
+            free(s);
+            return stored;
+        });
+}
+
 // --- asHexWKB ---
 void SetFunctions::Set_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
@@ -131,6 +151,24 @@ void SetFunctions::Set_as_hexwkb(DataChunk &args, ExpressionState &state, Vector
             return stored;
         }
     );
+}
+
+
+// --- fromHexWKB ---
+void SetFunctions::Set_from_hexwkb(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() == 0)
+                throw InvalidInputException("fromHexWKB: empty hex input");
+            std::string hex_str(input.GetData(), input.GetSize());
+            Set *s = set_from_hexwkb(hex_str.c_str());
+            if (!s) throw InvalidInputException("fromHexWKB: invalid set hex WKB");
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(s), set_mem_size(s)));
+            free(s);
+            return stored;
+        });
 }
 
 

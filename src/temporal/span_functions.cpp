@@ -4743,4 +4743,84 @@ void SpanFunctions::Distance_span_span(DataChunk &args, ExpressionState &state, 
     }
 }
 
+// --- asBinary ---
+void SpanFunctions::Span_as_binary(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() < sizeof(Span))
+                throw InvalidInputException("asBinary: invalid span value (too small)");
+            uint8_t *copy = (uint8_t *)malloc(input.GetSize());
+            if (!copy) throw InternalException("asBinary: malloc failed");
+            memcpy(copy, input.GetData(), input.GetSize());
+            Span *s = reinterpret_cast<Span *>(copy);
+            size_t sz = 0;
+            uint8_t *wkb = span_as_wkb(s, WKB_EXTENDED, &sz);
+            free(copy);
+            if (!wkb || sz == 0) { if (wkb) free(wkb); throw InternalException("span_as_wkb failed"); }
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(wkb), sz));
+            free(wkb);
+            return stored;
+        });
+}
+
+// --- fromBinary ---
+void SpanFunctions::Span_from_binary(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() == 0)
+                throw InvalidInputException("fromBinary: empty WKB input");
+            uint8_t *wkb = (uint8_t *)malloc(input.GetSize());
+            if (!wkb) throw InternalException("fromBinary: malloc failed");
+            memcpy(wkb, input.GetData(), input.GetSize());
+            Span *s = span_from_wkb(wkb, input.GetSize());
+            free(wkb);
+            if (!s) throw InvalidInputException("fromBinary: invalid span WKB");
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(s), sizeof(Span)));
+            free(s);
+            return stored;
+        });
+}
+
+// --- asHexWKB ---
+void SpanFunctions::Span_as_hexwkb(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() < sizeof(Span))
+                throw InvalidInputException("asHexWKB: invalid span value (too small)");
+            uint8_t *copy = (uint8_t *)malloc(input.GetSize());
+            if (!copy) throw InternalException("asHexWKB: malloc failed");
+            memcpy(copy, input.GetData(), input.GetSize());
+            Span *s = reinterpret_cast<Span *>(copy);
+            size_t sz = 0;
+            char *hex = span_as_hexwkb(s, WKB_EXTENDED, &sz);
+            free(copy);
+            if (!hex || sz == 0) { if (hex) free(hex); throw InternalException("span_as_hexwkb failed"); }
+            string_t stored = StringVector::AddString(result, hex, sz);
+            free(hex);
+            return stored;
+        });
+}
+
+// --- fromHexWKB ---
+void SpanFunctions::Span_from_hexwkb(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() == 0)
+                throw InvalidInputException("fromHexWKB: empty hex input");
+            std::string hex_str(input.GetData(), input.GetSize());
+            Span *s = span_from_hexwkb(hex_str.c_str());
+            if (!s) throw InvalidInputException("fromHexWKB: invalid span hex WKB");
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(s), sizeof(Span)));
+            free(s);
+            return stored;
+        });
+}
+
 }

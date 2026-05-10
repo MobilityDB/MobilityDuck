@@ -195,22 +195,98 @@ bool TgeometryFunctions::TgeometryToString(Vector &source, Vector &result, idx_t
     return true;   
 }
 
-void TGeometryTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
-    auto TgeometryAsText = ScalarFunction(
-            "asText", 
-            {TGeometryTypes::TGEOMETRY()},
-            LogicalType::VARCHAR,
-            Tspatial_as_text
-        );
-        duckdb::RegisterSerializedScalarFunction(loader,  TgeometryAsText);
+namespace {
 
-    auto TgeometryAsEWKT = ScalarFunction(
-        "asEWKT",
-        {TGeometryTypes::TGEOMETRY()},
-        LogicalType::VARCHAR,
-        Tspatial_as_ewkt
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  TgeometryAsEWKT);
+void TgeometryAsWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            size_t sz = input.GetSize();
+            uint8_t *copy = (uint8_t *)malloc(sz);
+            if (!copy) throw InternalException("asBinary: malloc failed");
+            memcpy(copy, input.GetData(), sz);
+            Temporal *t = reinterpret_cast<Temporal *>(copy);
+            size_t wkb_sz = 0;
+            uint8_t *wkb = temporal_as_wkb(t, WKB_EXTENDED, &wkb_sz);
+            free(copy);
+            if (!wkb || wkb_sz == 0) { if (wkb) free(wkb); throw InternalException("temporal_as_wkb failed"); }
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(wkb), wkb_sz));
+            free(wkb);
+            return stored;
+        });
+}
+
+void TgeometryFromWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() == 0)
+                throw InvalidInputException("fromBinary: empty WKB input");
+            uint8_t *wkb = (uint8_t *)malloc(input.GetSize());
+            if (!wkb) throw InternalException("fromBinary: malloc failed");
+            memcpy(wkb, input.GetData(), input.GetSize());
+            Temporal *t = temporal_from_wkb(wkb, input.GetSize());
+            free(wkb);
+            if (!t) throw InvalidInputException("fromBinary: invalid tgeometry WKB");
+            size_t sz = temporal_mem_size(t);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(t), sz));
+            free(t);
+            return stored;
+        });
+}
+
+void TgeometryAsHexWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            size_t sz = input.GetSize();
+            uint8_t *copy = (uint8_t *)malloc(sz);
+            if (!copy) throw InternalException("asHexWKB: malloc failed");
+            memcpy(copy, input.GetData(), sz);
+            Temporal *t = reinterpret_cast<Temporal *>(copy);
+            size_t hex_sz = 0;
+            char *hex = temporal_as_hexwkb(t, WKB_EXTENDED, &hex_sz);
+            free(copy);
+            if (!hex || hex_sz == 0) { if (hex) free(hex); throw InternalException("temporal_as_hexwkb failed"); }
+            string_t stored = StringVector::AddString(result, hex, hex_sz);
+            free(hex);
+            return stored;
+        });
+}
+
+void TgeometryFromHexWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() == 0)
+                throw InvalidInputException("fromHexWKB: empty hex input");
+            std::string hex_str(input.GetData(), input.GetSize());
+            Temporal *t = temporal_from_hexwkb(hex_str.c_str());
+            if (!t) throw InvalidInputException("fromHexWKB: invalid tgeometry hex WKB");
+            size_t sz = temporal_mem_size(t);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(t), sz));
+            free(t);
+            return stored;
+        });
+}
+
+} // anonymous namespace
+
+void TGeometryTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
+    const auto T = TGeometryTypes::TGEOMETRY();
+    const auto B = LogicalType::BLOB;
+    const auto V = LogicalType::VARCHAR;
+
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("asBinary",           {T}, B, TgeometryAsWkbExec));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometryFromBinary", {B}, T, TgeometryFromWkbExec));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("asHexWKB",            {T}, V, TgeometryAsHexWkbExec));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometryFromHexWKB", {V}, T, TgeometryFromHexWkbExec));
+
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("asText",  {T}, V, Tspatial_as_text));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT",  {T}, V, Tspatial_as_ewkt));
 }
 
 

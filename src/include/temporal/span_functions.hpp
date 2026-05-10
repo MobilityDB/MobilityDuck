@@ -28,6 +28,10 @@ struct SpanFunctions {
     // TODO (Type Range): static bool Range_to_span_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     // TODO (Type Range): static bool Span_to_range_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     // scalar functions
+    static void Span_as_binary(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Span_from_binary(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Span_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Span_from_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
     static void Span_as_text(DataChunk &args, ExpressionState &state, Vector &result);    
     static void Span_constructor(DataChunk &args, ExpressionState &state, Vector &result);   
     static void Span_binary_constructor(DataChunk &args, ExpressionState &state, Vector &result);

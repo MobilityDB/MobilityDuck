@@ -152,6 +152,7 @@ struct TgeompointFunctions {
      ****************************************************/
     static void Temporal_overlaps_tgeompoint_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_overlaps_tgeompoint_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_overlaps_tgeompoint_tgeompoint(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_contains_tgeompoint_stbox(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************

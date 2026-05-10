@@ -314,12 +314,21 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("+", {set_type, set_type}, set_type, SetFunctions::Union_set_set)
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
+        duckdb::RegisterSerializedScalarFunction(loader,
             ScalarFunction("asBinary", {set_type}, LogicalType::BLOB, SetFunctions::Set_as_binary)
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction(set_type.ToString() + "FromBinary",
+                           {LogicalType::BLOB}, set_type, SetFunctions::Set_from_binary)
+        );
+
+        duckdb::RegisterSerializedScalarFunction(loader,
             ScalarFunction("asHexWKB", {set_type}, LogicalType::VARCHAR, SetFunctions::Set_as_hexwkb)
+        );
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction(set_type.ToString() + "FromHexWKB",
+                           {LogicalType::VARCHAR}, set_type, SetFunctions::Set_from_hexwkb)
         );
     }
 

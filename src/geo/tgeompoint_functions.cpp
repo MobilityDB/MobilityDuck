@@ -3094,6 +3094,29 @@ void TgeompointFunctions::Temporal_overlaps_tgeompoint_tstzspan(DataChunk &args,
     }
 }
 
+void TgeompointFunctions::Temporal_overlaps_tgeompoint_tgeompoint(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t t1_blob, string_t t2_blob) -> bool {
+            uint8_t *t1_copy = (uint8_t*)malloc(t1_blob.GetSize());
+            memcpy(t1_copy, t1_blob.GetData(), t1_blob.GetSize());
+            Temporal *t1 = reinterpret_cast<Temporal*>(t1_copy);
+
+            uint8_t *t2_copy = (uint8_t*)malloc(t2_blob.GetSize());
+            memcpy(t2_copy, t2_blob.GetData(), t2_blob.GetSize());
+            Temporal *t2 = reinterpret_cast<Temporal*>(t2_copy);
+
+            bool ret = overlaps_tspatial_tspatial(t1, t2);
+            free(t1);
+            free(t2);
+            return ret;
+        }
+    );
+    if (args.size() == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
 void TgeompointFunctions::Temporal_contains_tgeompoint_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::Execute<string_t, string_t, bool>(
         args.data[0], args.data[1], result, args.size(),

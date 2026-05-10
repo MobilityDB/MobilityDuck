@@ -1778,22 +1778,61 @@ void TemporalScalarFromWkbExec(DataChunk &args, ExpressionState &, Vector &resul
         });
 }
 
+void TemporalScalarAsHexWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            Temporal *t = ScalarBlobToTemp(input);
+            size_t sz = 0;
+            char *hex = temporal_as_hexwkb(t, WKB_EXTENDED, &sz);
+            free(t);
+            if (!hex || sz == 0) {
+                if (hex) free(hex);
+                throw InternalException("temporal_as_hexwkb returned null");
+            }
+            string_t stored = StringVector::AddString(result, hex, sz);
+            free(hex);
+            return stored;
+        });
+}
+
+void TemporalScalarFromHexWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() == 0)
+                throw InvalidInputException("fromHexWKB: empty hex input");
+            std::string hex_str(input.GetData(), input.GetSize());
+            Temporal *t = temporal_from_hexwkb(hex_str.c_str());
+            if (!t) throw InvalidInputException("fromHexWKB: invalid MEOS hex WKB");
+            size_t sz = temporal_mem_size(t);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(t), sz));
+            free(t);
+            return stored;
+        });
+}
+
 } // anonymous namespace
 
 void TemporalTypes::RegisterWkbFunctions(ExtensionLoader &loader) {
     const auto B = LogicalType::BLOB;
-    const struct { LogicalType type; const char *from_name; } types[] = {
-        { TINT(),   "tintFromBinary"   },
-        { TFLOAT(), "tfloatFromBinary" },
-        { TBOOL(),  "tboolFromBinary"  },
-        { TTEXT(),  "ttextFromBinary"  },
+    const auto V = LogicalType::VARCHAR;
+    const struct { LogicalType type; const char *from_binary; const char *from_hexwkb; } types[] = {
+        { TINT(),   "tintFromBinary",   "tintFromHexWKB"   },
+        { TFLOAT(), "tfloatFromBinary", "tfloatFromHexWKB" },
+        { TBOOL(),  "tboolFromBinary",  "tboolFromHexWKB"  },
+        { TTEXT(),  "ttextFromBinary",  "ttextFromHexWKB"  },
     };
     for (auto &e : types) {
         loader.RegisterFunction(
             ScalarFunction("asBinary", {e.type}, B, TemporalScalarAsWkbExec));
         duckdb::RegisterSerializedScalarFunction(
-            loader,
-            ScalarFunction(e.from_name, {B}, e.type, TemporalScalarFromWkbExec));
+            loader, ScalarFunction(e.from_binary, {B}, e.type, TemporalScalarFromWkbExec));
+        duckdb::RegisterSerializedScalarFunction(
+            loader, ScalarFunction("asHexWKB", {e.type}, V, TemporalScalarAsHexWkbExec));
+        duckdb::RegisterSerializedScalarFunction(
+            loader, ScalarFunction(e.from_hexwkb, {V}, e.type, TemporalScalarFromHexWkbExec));
     }
 }
 

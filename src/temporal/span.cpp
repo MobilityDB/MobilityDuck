@@ -12,6 +12,7 @@
 
 #include "time_util.hpp"
 
+#include <algorithm>
 #include <regex>
 #include <string>
 #include "mobilityduck/meos_exec_serial.hpp"
@@ -154,9 +155,23 @@ void SpanTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     }
 }
 
-void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {    
+void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     for (const auto &span_type : SpanTypes::AllTypes()) {
-        auto base_type = SpanTypeMapping::GetChildType(span_type);         
+        auto base_type = SpanTypeMapping::GetChildType(span_type);
+        std::string alias = span_type.ToString();
+        std::string lower_alias = alias;
+        std::transform(lower_alias.begin(), lower_alias.end(), lower_alias.begin(), ::tolower);
+
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("asBinary", {span_type}, LogicalType::BLOB, SpanFunctions::Span_as_binary));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction(lower_alias + "FromBinary",
+                           {LogicalType::BLOB}, span_type, SpanFunctions::Span_from_binary));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("asHexWKB", {span_type}, LogicalType::VARCHAR, SpanFunctions::Span_as_hexwkb));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction(lower_alias + "FromHexWKB",
+                           {LogicalType::VARCHAR}, span_type, SpanFunctions::Span_from_hexwkb));
 
         // Register: asText
         if (span_type == SpanTypes::FLOATSPAN()) {            
