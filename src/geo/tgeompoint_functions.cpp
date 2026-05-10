@@ -1236,6 +1236,11 @@ void TgeompointFunctions::Tgeo_at_geom(DataChunk &args, ExpressionState &state, 
                 free(tgeom);
                 throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
             }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
+            }
 
             Temporal *ret = tgeo_at_geom(tgeom, gs);
             if (!ret) {
@@ -1504,12 +1509,6 @@ void TgeompointFunctions::Econtains_geo_tgeo(DataChunk &args, ExpressionState &s
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t geometry_blob, string_t tgeom_blob, ValidityMask &mask, idx_t idx) -> bool {
-            int32 srid = 0;
-            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
-            if (!gs) {
-                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
-            }
-
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t*>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             uint8_t *tgeom_data_copy = (uint8_t*)malloc(tgeom_data_size);
@@ -1517,8 +1516,19 @@ void TgeompointFunctions::Econtains_geo_tgeo(DataChunk &args, ExpressionState &s
             Temporal *tgeom = reinterpret_cast<Temporal*>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                free(gs);
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+
+            int32 srid = tspatial_srid(tgeom);
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
+            if (!gs) {
+                free(tgeom);
+                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+            }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
             }
 
             int ret = econtains_geo_tgeo(gs, tgeom);
@@ -1540,12 +1550,6 @@ void TgeompointFunctions::Acontains_geo_tgeo(DataChunk &args, ExpressionState &s
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t geometry_blob, string_t tgeom_blob, ValidityMask &mask, idx_t idx) -> bool {
-            int32 srid = 0;
-            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
-            if (!gs) {
-                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
-            }
-
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t*>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             uint8_t *tgeom_data_copy = (uint8_t*)malloc(tgeom_data_size);
@@ -1553,8 +1557,19 @@ void TgeompointFunctions::Acontains_geo_tgeo(DataChunk &args, ExpressionState &s
             Temporal *tgeom = reinterpret_cast<Temporal*>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                free(gs);
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+
+            int32 srid = tspatial_srid(tgeom);
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
+            if (!gs) {
+                free(tgeom);
+                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+            }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
             }
 
             int ret = acontains_geo_tgeo(gs, tgeom);
@@ -1595,6 +1610,11 @@ void TgeompointFunctions::Edisjoint_geo_tgeo(DataChunk &args, ExpressionState &s
                 free(tgeom);
                 throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
             }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
+            }
 
             int ret = ea_disjoint_geo_tgeo_dispatch(gs, tgeom, true);
             free(tgeom);
@@ -1633,6 +1653,11 @@ void TgeompointFunctions::Edisjoint_tgeo_geo(DataChunk &args, ExpressionState &s
             if (!gs) {
                 free(tgeom);
                 throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+            }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
             }
 
             int ret = edisjoint_tgeo_geo(tgeom, gs);
@@ -1713,6 +1738,11 @@ void TgeompointFunctions::Adisjoint_geo_tgeo(DataChunk &args, ExpressionState &s
                 free(tgeom);
                 throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
             }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
+            }
 
             // Same as MobilityDB EA_spatialrel_geo_tspatial(..., &ea_disjoint_geo_tgeo, ALWAYS)
             int ret = ea_disjoint_geo_tgeo_dispatch(gs, tgeom, false);
@@ -1752,6 +1782,11 @@ void TgeompointFunctions::Adisjoint_tgeo_geo(DataChunk &args, ExpressionState &s
             if (!gs) {
                 free(tgeom);
                 throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+            }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
             }
 
             int ret = adisjoint_tgeo_geo(tgeom, gs);
@@ -1854,12 +1889,6 @@ void TgeompointFunctions::Eintersects_geo_tgeo(DataChunk &args, ExpressionState 
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t geometry_blob, string_t tgeom_blob, ValidityMask &mask, idx_t idx) -> bool {
-            int32 srid = 0;
-            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
-            if (!gs) {
-                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
-            }
-
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t*>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             uint8_t *tgeom_data_copy = (uint8_t*)malloc(tgeom_data_size);
@@ -1867,8 +1896,19 @@ void TgeompointFunctions::Eintersects_geo_tgeo(DataChunk &args, ExpressionState 
             Temporal *tgeom = reinterpret_cast<Temporal*>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                free(gs);
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+
+            int32 srid = tspatial_srid(tgeom);
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
+            if (!gs) {
+                free(tgeom);
+                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+            }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
             }
 
             int ret = ea_intersects_geo_tgeo_dispatch(gs, tgeom, true);
@@ -1906,6 +1946,11 @@ void TgeompointFunctions::Eintersects_tgeo_geo(DataChunk &args, ExpressionState 
                 free(tgeom);
                 throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
             }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
+            }
 
             int ret = eintersects_tgeo_geo(tgeom, gs);
             free(tgeom);
@@ -1926,12 +1971,6 @@ void TgeompointFunctions::Aintersects_geo_tgeo(DataChunk &args, ExpressionState 
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t geometry_blob, string_t tgeom_blob, ValidityMask &mask, idx_t idx) -> bool {
-            int32 srid = 0;
-            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
-            if (!gs) {
-                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
-            }
-
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
@@ -1939,8 +1978,19 @@ void TgeompointFunctions::Aintersects_geo_tgeo(DataChunk &args, ExpressionState 
             Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                free(gs);
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+
+            int32 srid = tspatial_srid(tgeom);
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
+            if (!gs) {
+                free(tgeom);
+                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+            }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
             }
             int ret = ea_intersects_geo_tgeo_dispatch(gs, tgeom, false);
             free(tgeom);
@@ -1976,6 +2026,11 @@ void TgeompointFunctions::Aintersects_tgeo_geo(DataChunk &args, ExpressionState 
             if (!gs) {
                 free(tgeom);
                 throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+            }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
             }
 
             int ret = aintersects_tgeo_geo(tgeom, gs);
@@ -2129,6 +2184,11 @@ void TgeompointFunctions::Etouches_tpoint_geo(DataChunk &args, ExpressionState &
                 free(tgeom);
                 throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
             }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
+            }
 
             int ret = etouches_tpoint_geo(tgeom, gs);
             free(tgeom);
@@ -2164,6 +2224,11 @@ void TgeompointFunctions::Atouches_tpoint_geo(DataChunk &args, ExpressionState &
             if (!gs) {
                 free(tgeom);
                 throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+            }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
             }
 
             int ret = atouches_tpoint_geo(tgeom, gs);
@@ -2241,6 +2306,11 @@ void TgeompointFunctions::Edwithin_tgeo_geo(DataChunk &args, ExpressionState &st
                 free(tgeom);
                 throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
             }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
+            }
 
             int ret = edwithin_tgeo_geo(tgeom, gs, dist);
             free(tgeom);
@@ -2279,6 +2349,11 @@ void TgeompointFunctions::Edwithin_geo_tgeo(DataChunk &args, ExpressionState &st
             if (!gs) {
                 free(tgeom);
                 throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+            }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
             }
 
             int ret = ea_dwithin_geo_tgeo_dispatch(gs, tgeom, dist, true);
@@ -2319,6 +2394,11 @@ void TgeompointFunctions::Adwithin_tgeo_geo(DataChunk &args, ExpressionState &st
                 free(tgeom);
                 throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
             }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
+            }
 
             int ret = adwithin_tgeo_geo(tgeom, gs, dist);
             free(tgeom);
@@ -2357,6 +2437,11 @@ void TgeompointFunctions::Adwithin_geo_tgeo(DataChunk &args, ExpressionState &st
             if (!gs) {
                 free(tgeom);
                 throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+            }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
             }
 
             int ret = ea_dwithin_geo_tgeo_dispatch(gs, tgeom, dist, false);
@@ -2421,12 +2506,6 @@ void TgeompointFunctions::Tcontains_geo_tgeo(DataChunk &args, ExpressionState &s
     const idx_t count = args.size();
     auto eval = [&](string_t geometry_blob, string_t tgeom_blob, bool restr, bool at_value, ValidityMask &mask,
                     idx_t idx) -> string_t {
-        int32 srid = 0;
-        GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
-        if (!gs) {
-            throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
-        }
-
         const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
         size_t tgeom_data_size = tgeom_blob.GetSize();
         uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
@@ -2434,8 +2513,19 @@ void TgeompointFunctions::Tcontains_geo_tgeo(DataChunk &args, ExpressionState &s
         Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
         if (!tgeom) {
             free(tgeom_data_copy);
-            free(gs);
             throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+        }
+
+        int32 srid = tspatial_srid(tgeom);
+        GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
+        if (!gs) {
+            free(tgeom);
+            throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+        }
+        if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+            GSERIALIZED *gs_geog = geom_to_geog(gs);
+            free(gs);
+            gs = gs_geog;
         }
 
         Temporal *ret = tcontains_geo_tgeo(gs, tgeom, restr, at_value);
@@ -2483,12 +2573,6 @@ void TgeompointFunctions::Tdisjoint_geo_tgeo(DataChunk &args, ExpressionState &s
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t geometry_blob, string_t tgeom_blob, ValidityMask &mask, idx_t idx) -> string_t {
-            int32 srid = 0;
-            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
-            if (!gs) {
-                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
-            }
-
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
@@ -2496,8 +2580,19 @@ void TgeompointFunctions::Tdisjoint_geo_tgeo(DataChunk &args, ExpressionState &s
             Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                free(gs);
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+
+            int32 srid = tspatial_srid(tgeom);
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
+            if (!gs) {
+                free(tgeom);
+                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+            }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
             }
 
             Temporal *ret = tdisjoint_geo_tgeo(gs, tgeom, restr, at_value);
@@ -2528,12 +2623,6 @@ void TgeompointFunctions::Tdisjoint_tgeo_geo(DataChunk &args, ExpressionState &s
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t tgeom_blob, string_t geometry_blob, ValidityMask &mask, idx_t idx) -> string_t {
-            int32 srid = 0;
-            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
-            if (!gs) {
-                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
-            }
-
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
@@ -2541,8 +2630,19 @@ void TgeompointFunctions::Tdisjoint_tgeo_geo(DataChunk &args, ExpressionState &s
             Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                free(gs);
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+
+            int32 srid = tspatial_srid(tgeom);
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
+            if (!gs) {
+                free(tgeom);
+                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+            }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
             }
 
             Temporal *ret = tdisjoint_tgeo_geo(tgeom, gs, restr, at_value);
@@ -2622,12 +2722,6 @@ void TgeompointFunctions::Tintersects_geo_tgeo(DataChunk &args, ExpressionState 
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t geometry_blob, string_t tgeom_blob, ValidityMask &mask, idx_t idx) -> string_t {
-            int32 srid = 0;
-            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
-            if (!gs) {
-                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
-            }
-
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
@@ -2635,8 +2729,19 @@ void TgeompointFunctions::Tintersects_geo_tgeo(DataChunk &args, ExpressionState 
             Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                free(gs);
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+
+            int32 srid = tspatial_srid(tgeom);
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
+            if (!gs) {
+                free(tgeom);
+                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+            }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
             }
 
             Temporal *ret = tintersects_geo_tgeo(gs, tgeom, restr, at_value);
@@ -2667,12 +2772,6 @@ void TgeompointFunctions::Tintersects_tgeo_geo(DataChunk &args, ExpressionState 
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t tgeom_blob, string_t geometry_blob, ValidityMask &mask, idx_t idx) -> string_t {
-            int32 srid = 0;
-            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
-            if (!gs) {
-                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
-            }
-
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
@@ -2680,8 +2779,19 @@ void TgeompointFunctions::Tintersects_tgeo_geo(DataChunk &args, ExpressionState 
             Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                free(gs);
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+
+            int32 srid = tspatial_srid(tgeom);
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
+            if (!gs) {
+                free(tgeom);
+                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+            }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
             }
 
             Temporal *ret = tintersects_tgeo_geo(tgeom, gs, restr, at_value);
@@ -2761,12 +2871,6 @@ void TgeompointFunctions::Ttouches_geo_tgeo(DataChunk &args, ExpressionState &st
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t geometry_blob, string_t tgeom_blob, ValidityMask &mask, idx_t idx) -> string_t {
-            int32 srid = 0;
-            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
-            if (!gs) {
-                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
-            }
-
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
@@ -2774,8 +2878,19 @@ void TgeompointFunctions::Ttouches_geo_tgeo(DataChunk &args, ExpressionState &st
             Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                free(gs);
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+
+            int32 srid = tspatial_srid(tgeom);
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
+            if (!gs) {
+                free(tgeom);
+                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+            }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
             }
 
             Temporal *ret = ttouches_geo_tgeo(gs, tgeom, restr, at_value);
@@ -2806,12 +2921,6 @@ void TgeompointFunctions::Ttouches_tgeo_geo(DataChunk &args, ExpressionState &st
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t tgeom_blob, string_t geometry_blob, ValidityMask &mask, idx_t idx) -> string_t {
-            int32 srid = 0;
-            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
-            if (!gs) {
-                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
-            }
-
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
@@ -2819,8 +2928,19 @@ void TgeompointFunctions::Ttouches_tgeo_geo(DataChunk &args, ExpressionState &st
             Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                free(gs);
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+
+            int32 srid = tspatial_srid(tgeom);
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
+            if (!gs) {
+                free(tgeom);
+                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+            }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
             }
 
             Temporal *ret = ttouches_tgeo_geo(tgeom, gs, restr, at_value);
@@ -2917,6 +3037,11 @@ void TgeompointFunctions::Tdwithin_tgeo_geo(DataChunk &args, ExpressionState &st
                 free(tgeom);
                 throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
             }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
+            }
 
             Temporal *ret = tdwithin_tgeo_geo(tgeom, gs, dist, restr, at_value);
             free(tgeom);
@@ -2946,12 +3071,6 @@ void TgeompointFunctions::Tdwithin_geo_tgeo(DataChunk &args, ExpressionState &st
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, string_t>(
         args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t geometry_blob, string_t tgeom_blob, double dist, ValidityMask &mask, idx_t idx) -> string_t {
-            int32 srid = 0;
-            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
-            if (!gs) {
-                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
-            }
-
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
@@ -2959,8 +3078,19 @@ void TgeompointFunctions::Tdwithin_geo_tgeo(DataChunk &args, ExpressionState &st
             Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                free(gs);
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            }
+
+            int32 srid = tspatial_srid(tgeom);
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
+            if (!gs) {
+                free(tgeom);
+                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+            }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
             }
 
             Temporal *ret = tdwithin_geo_tgeo(gs, tgeom, dist, restr, at_value);

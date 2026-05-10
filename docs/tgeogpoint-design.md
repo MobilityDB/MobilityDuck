@@ -57,6 +57,36 @@ The last point is important: a Parquet file written by `asBinary(tgeogpointSeq(.
 MobilityDuck can be read with `tgeogpointFromBinary` in MobilityDB and vice-versa —
 the MEOS-WKB type tag carries the geodetic flag.
 
+## Spatial Predicates with GEOMETRY Input
+
+Because DuckDB has no `geography` type, spatial predicates that compare a `TGEOGPOINT`
+against a region use the plain `GEOMETRY` type:
+
+```sql
+SELECT entity_id
+FROM trajectories
+WHERE eIntersects(
+    ST_GeomFromText('POLYGON((11.5 55.0,13.5 55.0,13.5 56.5,11.5 56.5,11.5 55.0))'),
+    traj
+);
+```
+
+MobilityDuck transparently converts the `GEOMETRY` to a proper geodetic GSERIALIZED using
+MEOS's `geom_to_geog()` when the opposing temporal type is a geodetic one (i.e. when
+`MEOS_FLAGS_GET_GEODETIC(tgeom->flags)` is true).  This mirrors what PostgreSQL does when
+an implicit `geometry → geography` cast is applied in MobilityDB.
+
+**Root causes fixed (commit `3441566`, 2026-05-07):**
+
+| Bug | Symptom | Fix |
+|---|---|---|
+| SRID hardcoded 0 in `(GEOMETRY, temporal)` direction | "Operation on mixed SRID" | Deserialize `tgeom` first; use `tspatial_srid(tgeom)` |
+| Geodetic flag mismatch | "Operation on mixed planar and geodetic coordinates" | Call `geom_to_geog(gs)` to rebuild GSERIALIZED with valid 3D bbox + GEODETIC=1 |
+
+Applies to all 12 `(GEOMETRY, temporal)` overloads: `eIntersects/eContains/eDisjoint/
+eTouches` (ever/always variants) and `tIntersects/tContains/tDisjoint/tTouches/tDwithin`
+families.
+
 ## Usage
 
 ```sql
@@ -65,6 +95,14 @@ SELECT length(tgeogpointSeq(
     list(TGEOGPOINT(ST_Point(lon, lat), ts) ORDER BY ts)
 ))
 FROM ais_raw GROUP BY mmsi;
+
+-- Region intersection — GEOMETRY is auto-promoted to geodetic:
+SELECT mmsi
+FROM trajectories
+WHERE eIntersects(
+    ST_GeomFromText('POLYGON((xmin ymin,xmax ymin,xmax ymax,xmin ymax,xmin ymin))'),
+    traj
+);
 
 -- Round-trip through Parquet:
 COPY (SELECT mmsi, asBinary(traj) AS traj FROM trajectories)
