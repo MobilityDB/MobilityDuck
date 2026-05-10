@@ -1799,6 +1799,9 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
 
         REG_SPATIAL_TCMP("temporal_teq", Teq)
         REG_SPATIAL_TCMP("temporal_tne", Tne)
+        // Portable-SQL aliases (MobilityDB names): tgeo_teq / tgeo_tne
+        REG_SPATIAL_TCMP("tgeo_teq", Teq)
+        REG_SPATIAL_TCMP("tgeo_tne", Tne)
 #undef REG_SPATIAL_TCMP
     }
 

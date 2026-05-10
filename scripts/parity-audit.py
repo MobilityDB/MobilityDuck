@@ -111,8 +111,25 @@ REGISTER_TABLE_RE = re.compile(r'TableFunction\s*\(\s*"([^"]+)"')
 # parameter, not a literal string.
 REGISTER_MACRO_RE = re.compile(
     r'\b(?:REG_EA|REG_EA_ORD|REG_SPATIAL_EA|REG_SPATIAL_TCMP|'
-    r'REG_TSPATIAL_OP|REG_TSPATIAL_TOPO)\s*\(\s*"([^"]+)"'
+    r'REG_TSPATIAL_OP|REG_TSPATIAL_TOPO|POS_REG|TIME_POS_REG|BOX_REG|'
+    r'TREL_REG|EA_DWITHIN_REG|EA_REG_[A-Z_]*)\s*\(\s*"([^"]+)"'
 )
+
+
+# Names registered through dynamic patterns the static scan can't see —
+# e.g. `StringUtil::Lower(type.GetAlias())` that resolves at runtime to
+# "tbool"/"tint"/"tfloat"/"ttext", or per-type accessors registered by
+# `RegisterTemporalDatumAccessor` template helpers (`minValue`,
+# `maxValue`, `getValue`, `startValue`, `endValue`).  These ARE
+# registered (verified by tests passing); listed here so the audit
+# reflects reality.
+DYNAMIC_REGISTERED = {
+    # Per-subtype constructors registered through the
+    # TemporalTypes::RegisterScalarFunctions loop.
+    "tbool", "tint", "tfloat", "ttext",
+    # Accessors registered through RegisterTemporalDatumAccessor.
+    "minValue", "maxValue", "getValue", "startValue", "endValue",
+}
 
 
 def collect_mobilitydb(mdb_root):
@@ -158,6 +175,12 @@ def collect_mobilityduck(mduck_root):
             for m in regex.finditer(text):
                 funcs[m.group(1)] += 1
                 files_for_func[m.group(1)].add(rel)
+    # Synthesize known dynamically-registered names so the audit
+    # reflects reality (see DYNAMIC_REGISTERED comment above).
+    for name in DYNAMIC_REGISTERED:
+        if name not in funcs:
+            funcs[name] = 1
+            files_for_func[name].add("<dynamic registration>")
     return funcs, files_for_func
 
 
