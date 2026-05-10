@@ -1904,10 +1904,10 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
 struct TemporalUnnestBindData : public TableFunctionData {
     string_t blob;
-    meosType temptype;
+    MeosType temptype;
     LogicalType returnType;
 
-    TemporalUnnestBindData(string_t blob, meosType temptype, LogicalType returnType)
+    TemporalUnnestBindData(string_t blob, MeosType temptype, LogicalType returnType)
         : blob(std::move(blob)), temptype(temptype), returnType(std::move(returnType)) {}
 };
 

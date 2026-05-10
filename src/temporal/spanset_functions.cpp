@@ -160,7 +160,7 @@ bool SpansetFunctions::Text_to_spanset(Vector &source, Vector &result, idx_t cou
     result.SetVectorType(VectorType::FLAT_VECTOR);
 
     auto target_type = result.GetType();
-    meosType spanset_type = SpansetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
+    MeosType spanset_type = SpansetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
 
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
@@ -226,7 +226,7 @@ static inline void Write_spanset(Vector &result, idx_t row, SpanSet *s) {
     free(s);
 }
 
-static inline void Value_to_spanset_core(Vector &source, Vector &result, idx_t count, meosType base_type) {
+static inline void Value_to_spanset_core(Vector &source, Vector &result, idx_t count, MeosType base_type) {
     source.Flatten(count);
     result.SetVectorType(VectorType::FLAT_VECTOR);
 
@@ -288,9 +288,9 @@ static inline void Value_to_spanset_core(Vector &source, Vector &result, idx_t c
 // --- CAST (conversion: base -> spanset) ----
 bool SpansetFunctions::Value_to_spanset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     auto target_type   = result.GetType();
-    meosType spanset_t = SpansetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
-    meosType span_t    = spansettype_spantype(spanset_t);
-    meosType base_t    = spantype_basetype(span_t);
+    MeosType spanset_t = SpansetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
+    MeosType span_t    = spansettype_spantype(spanset_t);
+    MeosType base_t    = spantype_basetype(span_t);
 
     Value_to_spanset_core(source, result, count, base_t);
     return true;
@@ -300,9 +300,9 @@ bool SpansetFunctions::Value_to_spanset_cast(Vector &source, Vector &result, idx
 void SpansetFunctions::Value_to_spanset(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &source      = args.data[0];
     auto out_type     = result.GetType();
-    meosType spanset_t= SpansetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
-    meosType span_t   = spansettype_spantype(spanset_t);
-    meosType base_t   = spantype_basetype(span_t);
+    MeosType spanset_t= SpansetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
+    MeosType span_t   = spansettype_spantype(spanset_t);
+    MeosType base_t   = spantype_basetype(span_t);
 
     Value_to_spanset_core(source, result, args.size(), base_t);
 }
@@ -1161,7 +1161,7 @@ void SpansetFunctions::Tstzspanset_timestamps(DataChunk &args, ExpressionState &
 }
 
 static inline string_t Numspanset_shift_common(const string_t &blob, Datum shift_datum,
-                                        meosType validate_spanset_type, Vector &result) {
+                                        MeosType validate_spanset_type, Vector &result) {
     const uint8_t *data = (const uint8_t *)blob.GetData();
     size_t size = blob.GetSize();
     
@@ -1208,7 +1208,7 @@ static inline string_t Tstzspanset_shift_common(const string_t &blob, interval_t
 void SpansetFunctions::Numspanset_shift(DataChunk &args, ExpressionState &state, Vector &result) {    
     auto &spanset_vec = args.data[0];
     auto out_type  = result.GetType();    
-    meosType spanset_type = SpansetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    MeosType spanset_type = SpansetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
     
     switch (spanset_type) {
         case T_INTSPANSET: { // shift(intspanset, integer) -> intspanset
@@ -1262,7 +1262,7 @@ void SpansetFunctions::Tstzspanset_shift(DataChunk &args, ExpressionState &state
 }
 
 static inline string_t Numspanset_scale_common(const string_t &blob, Datum scale_datum,
-                                        meosType validate_spanset_type, Vector &result) {
+                                        MeosType validate_spanset_type, Vector &result) {
     const uint8_t *data = (const uint8_t *)blob.GetData();
     size_t size = blob.GetSize();
     
@@ -1289,7 +1289,7 @@ static inline string_t Numspanset_scale_common(const string_t &blob, Datum scale
 void SpansetFunctions::Numspanset_scale(DataChunk &args, ExpressionState &state, Vector &result) {    
     auto &spanset_vec = args.data[0];
     auto out_type  = result.GetType();    
-    meosType spanset_type = SpansetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    MeosType spanset_type = SpansetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
     
     switch (spanset_type) {
         case T_INTSPANSET: { // scale(intspanset, integer) -> intspanset
@@ -1386,7 +1386,7 @@ static inline string_t Tstzspanset_shift_scale_common(const string_t &blob, inte
 }
 
 static inline string_t Numspanset_shift_scale_common(const string_t &blob, Datum shift_datum, Datum scale_datum,
-                                                 meosType validate_spanset_type, Vector &result) {
+                                                 MeosType validate_spanset_type, Vector &result) {
     const uint8_t *data = (const uint8_t *)blob.GetData();
     size_t size = blob.GetSize();
 
@@ -1423,7 +1423,7 @@ static inline string_t Numspanset_shift_scale_common(const string_t &blob, Datum
 void SpansetFunctions::Numspanset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &spanset_vec = args.data[0];
     auto out_type = result.GetType();
-    meosType spanset_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
+    MeosType spanset_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
 
     switch (spanset_type) {
         case T_INTSPANSET: {
