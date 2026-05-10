@@ -8,6 +8,7 @@
 #include "geo/tgeometry.hpp"
 #include "geo/tgeometry_ops.hpp"
 #include "geo/tgeompoint.hpp"
+#include "geo/tgeompoint_functions.hpp"
 #include "geo/stbox.hpp"
 #include "temporal/span.hpp"
 #include "temporal/temporal.hpp"
@@ -972,6 +973,19 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction(
         "douglasPeuckerSimplify", {TGEOM, DBL, LogicalType::BOOLEAN}, TGEOM,
         simplify_double_bool_exec_factory(temporal_simplify_dp)));
+
+    // tgeo_teq / tgeo_tne — temporal equality predicates (geometry × tgeo).
+    // The MEOS teq_*/tne_* exports work on Temporal* regardless of subtype,
+    // so we reuse the TgeompointFunctions wrappers which cover all 3 forms.
+#define REG_TCMP(NAME, FN)                                                                                                                            \
+        loader.RegisterFunction(ScalarFunction(NAME, {GEOM, TGEOM},  TemporalTypes::TBOOL(), TgeompointFunctions::FN##_geo_tgeo)); \
+        loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, GEOM},  TemporalTypes::TBOOL(), TgeompointFunctions::FN##_tgeo_geo)); \
+        loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, TGEOM}, TemporalTypes::TBOOL(), TgeompointFunctions::FN##_tgeo_tgeo));
+    REG_TCMP("tgeo_teq", Teq)
+    REG_TCMP("tgeo_tne", Tne)
+    REG_TCMP("temporal_teq", Teq)
+    REG_TCMP("temporal_tne", Tne)
+#undef REG_TCMP
 }
 
 } // namespace duckdb

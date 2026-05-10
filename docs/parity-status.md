@@ -1,6 +1,6 @@
 # MobilityDuck parity status — surface-level audit
 
-Generated 2026-05-10. **Active addressable scope** (temporal + geo, excluding PG-only helpers): 807/960 names covered (84.1%).
+Generated 2026-05-10. **Active addressable scope** (temporal + geo, excluding PG-only helpers): 811/960 names covered (84.5%).
 
 **Out of scope** (PG-only — no DuckDB equivalent exists): 303 names skipped — 84 from PG-only sections (GiST/SPGiST opclasses, set/span/spanset index files, `019_geo_constructors.in.sql` PG geometric types, `999_oid_cache.in.sql`) plus 219 PG helper functions inside active sections (`*_in/_out/_recv/_send`, `*_transfn/_combinefn/_finalfn/_serialize/_deserialize`, `*_sel/_joinsel/_supportfn/_analyze`, `*_typmod_in/_typmod_out`).  Listed in appendix B; not counted in the headline.
 
@@ -26,8 +26,8 @@ Per-section counts: `Addressable` = MDB names minus PG-only helpers (see appendi
 | `geo/052_tpoint.in.sql` | 70 | 66 | 4 | 94% | 8 | 12 |
 | `geo/053_tgeo_inout.in.sql` | 18 | 6 | 12 | 33% | 0 | 0 |
 | `geo/053_tpoint_inout.in.sql` | 18 | 18 | 0 | 100% | 0 | 0 |
-| `geo/054_tgeo_compops.in.sql` | 6 | 4 | 2 | 67% | 1 | 36 |
-| `geo/054_tpoint_compops.in.sql` | 6 | 4 | 2 | 67% | 0 | 36 |
+| `geo/054_tgeo_compops.in.sql` | 6 | 6 | 0 | 100% | 1 | 36 |
+| `geo/054_tpoint_compops.in.sql` | 6 | 6 | 0 | 100% | 0 | 36 |
 | `geo/056_tgeo_spatialfuncs.in.sql` | 17 | 15 | 2 | 88% | 0 | 0 |
 | `geo/056_tpoint_spatialfuncs.in.sql` | 30 | 24 | 6 | 80% | 0 | 0 |
 | `geo/058_tgeo_tile.in.sql` | 5 | 2 | 3 | 40% | 0 | 0 |
@@ -70,7 +70,7 @@ Per-section counts: `Addressable` = MDB names minus PG-only helpers (see appendi
 | `temporal/040_temporal_aggfuncs.in.sql` | 0 | 0 | 0 | 0% | 40 | 0 |
 | `temporal/042_temporal_waggfuncs.in.sql` | 0 | 0 | 0 | 0% | 8 | 0 |
 | `temporal/046_temporal_analytics.in.sql` | 4 | 4 | 0 | 100% | 0 | 0 |
-| **TOTAL (active)** | **960** | **807** | **153** | **84%** | **219** | — |
+| **TOTAL (active)** | **960** | **811** | **149** | **84%** | **219** | — |
 
 ## Missing function names per active section
 
@@ -138,16 +138,6 @@ Per-section counts: `Addressable` = MDB names minus PG-only helpers (see appendi
 - `tgeometryFromHexEWKB`
 - `tgeometryFromMFJSON`
 - `tgeometryFromText`
-
-### `geo/054_tgeo_compops.in.sql` — 2 missing of 6 addressable (67% covered)
-
-- `tgeo_teq` (6 overloads)
-- `tgeo_tne` (6 overloads)
-
-### `geo/054_tpoint_compops.in.sql` — 2 missing of 6 addressable (67% covered)
-
-- `tgeo_teq` (6 overloads)
-- `tgeo_tne` (6 overloads)
 
 ### `geo/056_tgeo_spatialfuncs.in.sql` — 2 missing of 17 addressable (88% covered)
 
