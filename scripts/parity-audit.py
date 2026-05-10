@@ -83,9 +83,31 @@ OUT_OF_SCOPE_NAME_SUFFIXES = (
 )
 
 
+# Individual function names that are out-of-scope by domain — not part of
+# the MobilityDuck surface because they exist for a MobilityDB-specific
+# integration or PG-internal pattern that DuckDB doesn't share.
+OUT_OF_SCOPE_NAMES = {
+    # Gauss-Krüger projection — added to MobilityDB to connect with the
+    # SECONDO platform.  No equivalent need in MobilityDuck.
+    "transform_gk",
+    # Synthetic-trip generator for the BerlinMOD benchmark generator.
+    # The generator runs in MobilityDB / SECONDO; the parquet artefacts
+    # it produces are what MobilityDuck consumes.
+    "create_trip",
+    # Internal C helper composed by the `edisjoint` SQL wrapper for the
+    # bbox short-circuit pattern (`NOT(bbox && temp) OR _edisjoint(...)`).
+    # MobilityDuck registers `eDisjoint` directly against the MEOS C
+    # export, so the PG SQL-wrapper helper has no DuckDB equivalent.
+    "_edisjoint",
+}
+
+
 def is_out_of_scope_name(fname):
-    """Return True for PG-only helper names (suffix match)."""
+    """Return True for PG-only helper names (suffix match) or
+    domain-specific names that have no MobilityDuck equivalent."""
     lower = fname.lower()
+    if lower in {n.lower() for n in OUT_OF_SCOPE_NAMES}:
+        return True
     # All suffixes start with `_`, so a non-empty prefix means the suffix
     # matched a "<base>_<suffix>" shape (e.g. tnumber_in, temporal_sel).
     for suf in OUT_OF_SCOPE_NAME_SUFFIXES:
