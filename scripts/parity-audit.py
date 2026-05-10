@@ -11,10 +11,16 @@ The audit matches by **function name only** (case-insensitive). A name
 registered in MobilityDuck is treated as covering all its overloads;
 per-overload signature parity is *not* verified at this granularity.
 
-Sections under SQL subdirectories listed in DEFERRED_FAMILIES are out
-of scope for the active sweep. They still appear in the report (in a
-deferred appendix) but do not contribute to the headline coverage
-percentage. Re-include by removing the entry from DEFERRED_FAMILIES.
+Three scopes:
+- ACTIVE: counted in the headline coverage percentage.
+- OUT_OF_SCOPE: PG-only entries that have no DuckDB equivalent (GiST/
+  SPGiST index support, aggregate transition/combine/final/serialize
+  helpers, I/O helpers like `_in/_out/_recv/_send`, planner hooks like
+  `_sel/_joinsel/_supportfn/_analyze`, typmod helpers, PG geometric
+  type constructors, the oid_cache catalog hook).  These appear in a
+  separate appendix and do NOT contribute to the headline.
+- DEFERRED_FAMILIES: type families parked for a later sweep (cbuffer,
+  npoint, pose, rgeo, etc.).  Listed in their own appendix.
 """
 
 import argparse
@@ -34,6 +40,58 @@ DEFERRED_FAMILIES = {
     "pose",
     "rgeo",
 }
+
+
+# Whole SQL sections that are PG-only (no DuckDB equivalent exists).
+# Match by tail of the relpath under mobilitydb/sql/.
+OUT_OF_SCOPE_SECTIONS = {
+    "temporal/011_span_indexes.in.sql",       # GiST/SPGiST opclasses
+    "temporal/012_spanset_indexes.in.sql",    # GiST/SPGiST opclasses
+    "temporal/013_set_indexes.in.sql",        # GiST/SPGiST opclasses
+    "temporal/019_geo_constructors.in.sql",   # PG geometric types (point/line/box…)
+    "temporal/043_temporal_gist.in.sql",      # GiST support
+    "temporal/044_temporal_spgist.in.sql",    # SPGiST support
+    "temporal/999_oid_cache.in.sql",          # PG catalog hook
+    "geo/073_tgeo_gist.in.sql",               # GiST support
+    "geo/073_tpoint_gist.in.sql",             # GiST support
+    "geo/074_tgeo_spgist.in.sql",             # SPGiST support
+}
+
+
+# Function-name suffixes that mark PG-only helpers (no DuckDB analog).
+# Matched against the tail of the function name, case-insensitive.
+OUT_OF_SCOPE_NAME_SUFFIXES = (
+    # Aggregate plumbing — user-facing aggregate name is what we register.
+    "_transfn",
+    "_combinefn",
+    "_finalfn",
+    "_serialize",
+    "_deserialize",
+    # PG planner hooks.
+    "_sel",
+    "_joinsel",
+    "_supportfn",
+    "_analyze",
+    # PG type modifier helpers (DuckDB types are unparameterized).
+    "_typmod_in",
+    "_typmod_out",
+    # PG text/binary I/O helpers — DuckDB uses casts and binders.
+    "_in",
+    "_out",
+    "_recv",
+    "_send",
+)
+
+
+def is_out_of_scope_name(fname):
+    """Return True for PG-only helper names (suffix match)."""
+    lower = fname.lower()
+    # All suffixes start with `_`, so a non-empty prefix means the suffix
+    # matched a "<base>_<suffix>" shape (e.g. tnumber_in, temporal_sel).
+    for suf in OUT_OF_SCOPE_NAME_SUFFIXES:
+        if lower.endswith(suf) and len(lower) > len(suf):
+            return True
+    return False
 
 
 CREATE_FUNC_RE = re.compile(
@@ -97,48 +155,91 @@ def is_deferred(section_relpath):
     return family in DEFERRED_FAMILIES
 
 
+def is_out_of_scope_section(section_relpath):
+    return section_relpath in OUT_OF_SCOPE_SECTIONS
+
+
 def write_report(out_path, mdb_section_funcs, mdb_section_op_count,
                  all_mdb_funcs, mduck_funcs):
     mduck_funcs_lower = {k.lower(): k for k in mduck_funcs}
 
     active_results = []
     deferred_results = []
+    out_of_scope_results = []
+    # Track out-of-scope-by-name within active sections separately, so the
+    # active row reports only the addressable surface.
     for sec, funcs in mdb_section_funcs.items():
         if not funcs:
             continue
-        covered, missing = [], []
+        section_oos = is_out_of_scope_section(sec)
+        section_deferred = is_deferred(sec)
+        covered, missing, oos_names = [], [], []
         for fname, count in sorted(funcs.items()):
+            # Whole-section out-of-scope: every entry routed to OOS bucket.
+            if section_oos:
+                oos_names.append((fname, count))
+                continue
+            # Per-name out-of-scope (PG helpers): routed to OOS bucket too.
+            if not section_deferred and is_out_of_scope_name(fname):
+                oos_names.append((fname, count))
+                continue
             if fname.lower() in mduck_funcs_lower:
                 covered.append((fname, count))
             else:
                 missing.append((fname, count))
-        pct = (len(covered) / len(funcs)) * 100 if funcs else 0
+        addressable = len(covered) + len(missing)
+        pct = (len(covered) / addressable * 100) if addressable else 0
         row = (sec, len(funcs), len(covered), len(missing), pct,
-               missing, covered, mdb_section_op_count[sec])
-        if is_deferred(sec):
+               missing, covered, mdb_section_op_count[sec],
+               oos_names, addressable)
+        if section_oos:
+            out_of_scope_results.append(row)
+        elif section_deferred:
             deferred_results.append(row)
         else:
             active_results.append(row)
 
     def totals(results):
-        n = sum(r[1] for r in results)
+        # n: addressable names only (covered + missing)
         cov = sum(r[2] for r in results)
         miss = sum(r[3] for r in results)
+        n = cov + miss
         pct = (cov / n * 100) if n else 0
         return n, cov, miss, pct
 
+    def oos_total(results):
+        return sum(len(r[8]) for r in results)
+
     a_total, a_cov, a_miss, a_pct = totals(active_results)
     d_total, d_cov, d_miss, d_pct = totals(deferred_results)
+    a_oos_inside = oos_total(active_results)
+    section_oos_total = sum(len(r[8]) for r in out_of_scope_results)
 
+    total_oos = a_oos_inside + section_oos_total
     lines = []
     lines.append("# MobilityDuck parity status — surface-level audit")
     lines.append("")
     lines.append(
-        f"Generated {date.today().isoformat()}. **Active scope** "
-        f"(temporal + geo): {a_cov}/{a_total} names covered "
-        f"({a_pct:.1f}%). Deferred families "
-        f"({', '.join(sorted(DEFERRED_FAMILIES))}) listed in an "
-        f"appendix and not counted in headline coverage."
+        f"Generated {date.today().isoformat()}. **Active addressable scope** "
+        f"(temporal + geo, excluding PG-only helpers): "
+        f"{a_cov}/{a_total} names covered ({a_pct:.1f}%)."
+    )
+    lines.append("")
+    lines.append(
+        f"**Out of scope** (PG-only — no DuckDB equivalent exists): "
+        f"{total_oos} names skipped — {section_oos_total} from PG-only "
+        f"sections (GiST/SPGiST opclasses, set/span/spanset index files, "
+        f"`019_geo_constructors.in.sql` PG geometric types, "
+        f"`999_oid_cache.in.sql`) plus {a_oos_inside} PG helper functions "
+        f"inside active sections (`*_in/_out/_recv/_send`, `*_transfn/"
+        f"_combinefn/_finalfn/_serialize/_deserialize`, `*_sel/_joinsel/"
+        f"_supportfn/_analyze`, `*_typmod_in/_typmod_out`).  Listed in "
+        f"appendix B; not counted in the headline."
+    )
+    lines.append("")
+    lines.append(
+        f"**Deferred families** ({', '.join(sorted(DEFERRED_FAMILIES))}) "
+        "appear in appendix C and are also excluded from the headline."
     )
     lines.append("")
     lines.append(
@@ -159,12 +260,6 @@ def write_report(out_path, mdb_section_funcs, mdb_section_op_count,
         "per-overload audit is needed for the full picture."
     )
     lines.append(
-        "- Some MobilityDB names are internal helpers (gist/spgist support "
-        "functions, transition functions for aggregates) — these never need "
-        "user-facing SQL registration but they show as 'missing' here. "
-        "Sections dominated by these are flagged in the per-section detail."
-    )
-    lines.append(
         "- DuckDB rejects multi-character operator tokens (`<<#`, `|>>`, "
         "`<#>`, `|=|`, `~=`); equivalent named functions are registered. "
         "See `docs/DuckDB-Parity-Gaps.md` for the catalogue."
@@ -172,37 +267,80 @@ def write_report(out_path, mdb_section_funcs, mdb_section_op_count,
     lines.append("")
     lines.append(
         "Regenerate with `python3 scripts/parity-audit.py --mdb "
-        "../MobilityDB --mduck . --out docs/parity-status.md`. Deferred "
-        "families are configured at the top of that script."
+        "../MobilityDB --mduck . --out docs/parity-status.md`. The "
+        "OUT_OF_SCOPE_SECTIONS / OUT_OF_SCOPE_NAME_SUFFIXES / "
+        "DEFERRED_FAMILIES sets at the top of that script control bucketing."
     )
     lines.append("")
 
-    lines.append("## Active-scope coverage summary")
+    lines.append("## Active-scope coverage summary (addressable surface)")
     lines.append("")
-    lines.append("| Section | MDB names | Covered | Missing | Coverage | MDB operators |")
-    lines.append("|---|---:|---:|---:|---:|---:|")
-    for sec, total, cov, miss, pct, _, _, ops in active_results:
-        lines.append(f"| `{sec}` | {total} | {cov} | {miss} | {pct:.0f}% | {ops} |")
+    lines.append(
+        "Per-section counts: `Addressable` = MDB names minus PG-only "
+        "helpers (see appendix B).  PG-only helper count shown in `OOS` "
+        "column for transparency."
+    )
+    lines.append("")
+    lines.append("| Section | Addressable | Covered | Missing | Coverage | OOS | MDB operators |")
+    lines.append("|---|---:|---:|---:|---:|---:|---:|")
+    for sec, total, cov, miss, pct, _, _, ops, oos_names, addressable in active_results:
+        lines.append(
+            f"| `{sec}` | {addressable} | {cov} | {miss} | {pct:.0f}% | "
+            f"{len(oos_names)} | {ops} |"
+        )
     lines.append(
         f"| **TOTAL (active)** | **{a_total}** | **{a_cov}** | "
-        f"**{a_miss}** | **{a_pct:.0f}%** | — |"
+        f"**{a_miss}** | **{a_pct:.0f}%** | **{a_oos_inside}** | — |"
     )
     lines.append("")
 
     lines.append("## Missing function names per active section")
     lines.append("")
-    for sec, total, cov, miss, pct, missing, _, _ in active_results:
+    for sec, total, cov, miss, pct, missing, _, _, _, addressable in active_results:
         if not missing:
             continue
-        lines.append(f"### `{sec}` — {miss} missing of {total} ({pct:.0f}% covered)")
+        lines.append(f"### `{sec}` — {miss} missing of {addressable} addressable ({pct:.0f}% covered)")
         lines.append("")
         for fname, count in missing:
             tag = f" ({count} overloads)" if count > 1 else ""
             lines.append(f"- `{fname}`{tag}")
         lines.append("")
 
+    # ----- Appendix B: out-of-scope (PG-only) -----
+    lines.append("## Appendix B — Out of scope (PG-only, no DuckDB equivalent)")
+    lines.append("")
+    lines.append(
+        "These entries are PG-specific helpers — index opclasses, "
+        "aggregate transition/combine/final/serialize callbacks, planner "
+        "hooks (`_sel`, `_joinsel`, `_supportfn`, `_analyze`), text/binary "
+        "I/O helpers (`_in`, `_out`, `_recv`, `_send`), type modifier "
+        "helpers, the `999_oid_cache` PG catalog hook, and PG geometric "
+        "type constructors (`019_geo_constructors`).  None of them have "
+        "DuckDB equivalents and they should not be implemented; listed "
+        "here only for completeness."
+    )
+    lines.append("")
+    if out_of_scope_results:
+        lines.append("### Whole sections excluded")
+        lines.append("")
+        lines.append("| Section | Names |")
+        lines.append("|---|---:|")
+        for sec, total, _, _, _, _, _, _, oos_names, _ in out_of_scope_results:
+            lines.append(f"| `{sec}` | {len(oos_names)} |")
+        lines.append("")
+    if a_oos_inside:
+        lines.append("### PG helpers inside active sections")
+        lines.append("")
+        lines.append("| Section | PG helpers |")
+        lines.append("|---|---:|")
+        for sec, _, _, _, _, _, _, _, oos_names, _ in active_results:
+            if oos_names:
+                lines.append(f"| `{sec}` | {len(oos_names)} |")
+        lines.append("")
+
+    # ----- Appendix C: deferred families -----
     if deferred_results:
-        lines.append("## Deferred families (out of scope for current sweep)")
+        lines.append("## Appendix C — Deferred families")
         lines.append("")
         lines.append(
             f"These families ({', '.join(sorted(DEFERRED_FAMILIES))}) are "
@@ -212,10 +350,12 @@ def write_report(out_path, mdb_section_funcs, mdb_section_op_count,
             "complete; not counted in headline coverage."
         )
         lines.append("")
-        lines.append("| Section | MDB names | Covered | Missing | Coverage |")
+        lines.append("| Section | Addressable | Covered | Missing | Coverage |")
         lines.append("|---|---:|---:|---:|---:|")
-        for sec, total, cov, miss, pct, _, _, _ in deferred_results:
-            lines.append(f"| `{sec}` | {total} | {cov} | {miss} | {pct:.0f}% |")
+        for sec, total, cov, miss, pct, _, _, _, _, addressable in deferred_results:
+            lines.append(
+                f"| `{sec}` | {addressable} | {cov} | {miss} | {pct:.0f}% |"
+            )
         lines.append(
             f"| **TOTAL (deferred)** | **{d_total}** | **{d_cov}** | "
             f"**{d_miss}** | **{d_pct:.0f}%** |"
@@ -245,11 +385,8 @@ def main():
         args.out, mdb_section_funcs, mdb_section_op_count,
         all_mdb_funcs, mduck_funcs,
     )
-    total_names = a_total
-    total_covered = a_cov
     print(f"Wrote {args.out}")
-    print(f"Coverage: {total_covered}/{total_names} "
-          f"({(total_covered/total_names*100):.1f}%)")
+    print(f"Active addressable coverage: {a_cov}/{a_total} ({a_pct:.1f}%)")
 
 
 if __name__ == "__main__":
