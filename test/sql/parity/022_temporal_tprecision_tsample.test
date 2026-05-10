@@ -1,0 +1,61 @@
+# name: test/sql/parity/022_temporal_tprecision_tsample.test
+# description: Temporal time-domain rebinning — tprecision and tsample on
+#              tnumber and ttext.
+# group: [sql]
+
+require mobilityduck
+
+require icu
+
+statement ok
+SET TimeZone='UTC'
+
+# tprecision(tfloat, interval) — bin-mean by default origin
+
+query I
+SELECT tprecision(tfloat '[1@2000-01-01, 5@2000-01-05]', INTERVAL '1 day');
+----
+[1.020833333333334@1999-12-31 01:00:00+01, 1.541666666666667@2000-01-01 01:00:00+01, 3.541666666666666@2000-01-03 01:00:00+01, 4.520833333333333@2000-01-04 01:00:00+01]
+
+# tprecision(tfloat, interval, timestamptz) — explicit origin
+
+query I
+SELECT tprecision(tfloat '[1@2000-01-01, 5@2000-01-05]', INTERVAL '1 day', TIMESTAMP '2000-01-01');
+----
+[1.020833333333334@1999-12-31 01:00:00+01, 1.541666666666667@2000-01-01 01:00:00+01, 3.541666666666666@2000-01-03 01:00:00+01, 4.520833333333333@2000-01-04 01:00:00+01]
+
+# tsample(tfloat, interval) — discrete by default
+
+query I
+SELECT tsample(tfloat '[1@2000-01-01, 5@2000-01-05]', INTERVAL '1 day');
+----
+{1.041666666666667@2000-01-01 01:00:00+01, 2.041666666666667@2000-01-02 01:00:00+01, 3.041666666666666@2000-01-03 01:00:00+01, 4.041666666666666@2000-01-04 01:00:00+01}
+
+# tsample with explicit linear interpolation
+
+query I
+SELECT tsample(tfloat '[1@2000-01-01, 5@2000-01-05]', INTERVAL '1 day', TIMESTAMP '2000-01-01', 'linear');
+----
+[1.041666666666667@2000-01-01 01:00:00+01, 4.041666666666666@2000-01-04 01:00:00+01]
+
+# tsample on tbool
+
+query I
+SELECT tsample(tbool '[t@2000-01-01, f@2000-01-03]', INTERVAL '12 hours', TIMESTAMP '2000-01-01');
+----
+{t@2000-01-01 01:00:00+01, t@2000-01-01 13:00:00+01, t@2000-01-02 01:00:00+01, t@2000-01-02 13:00:00+01}
+
+# tsample on tint (tint defaults to step interpolation, so the last sample
+# carries the upper-end value)
+
+query I
+SELECT tsample(tint '[1@2000-01-01, 5@2000-01-05]', INTERVAL '2 days', TIMESTAMP '2000-01-01');
+----
+{1@2000-01-01 01:00:00+01, 1@2000-01-03 01:00:00+01}
+
+# Invalid interpolation rejected
+
+statement error
+SELECT tsample(tfloat '[1@2000-01-01]', INTERVAL '1 day', TIMESTAMP '2000-01-01', 'invalid');
+----
+Invalid interpolation

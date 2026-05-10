@@ -1377,25 +1377,45 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {TemporalTypes::TFLOAT(), LogicalType::DOUBLE}, LogicalType::DOUBLE, TemporalFunctions::Nad_tfloat_float));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()}, LogicalType::DOUBLE, TemporalFunctions::Nad_tfloat_tfloat));
 
-    // Temporal topological predicates: temporal × temporal (4 ops × 4 type pairs)
+    // Temporal topological predicates: temporal × temporal (5 ops × 4 type pairs).
+    // Each operator also registers the matching `temporal_*` named alias.
     for (auto &t1 : TemporalTypes::AllTypes()) {
         for (auto &t2 : TemporalTypes::AllTypes()) {
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Contains_temporal_temporal));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Contained_temporal_temporal));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_temporal_temporal));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_temporal_temporal));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",            {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Contains_temporal_temporal));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",            {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Contained_temporal_temporal));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",            {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_temporal_temporal));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("~=",            {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Same_temporal_temporal));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_same", {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Same_temporal_temporal));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-",           {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_temporal_temporal));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contains",  {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Contains_temporal_temporal));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contained", {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Contained_temporal_temporal));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overlaps",  {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_temporal_temporal));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_adjacent",  {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_temporal_temporal));
         }
     }
     // Temporal × tstzspan (and the reverse direction)
     for (auto &t : TemporalTypes::AllTypes()) {
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Contains_temporal_tstzspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Contained_temporal_tstzspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_temporal_tstzspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_temporal_tstzspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tstzspan_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tstzspan_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tstzspan_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tstzspan_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",            {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Contains_temporal_tstzspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",            {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Contained_temporal_tstzspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",            {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_temporal_tstzspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("~=",            {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Same_temporal_tstzspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_same", {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Same_temporal_tstzspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-",           {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_temporal_tstzspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contains",  {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Contains_temporal_tstzspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contained", {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Contained_temporal_tstzspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overlaps",  {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_temporal_tstzspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_adjacent",  {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_temporal_tstzspan));
+
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",            {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tstzspan_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",            {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tstzspan_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",            {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tstzspan_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("~=",            {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Same_tstzspan_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_same", {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Same_tstzspan_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-",           {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tstzspan_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contains",  {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tstzspan_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contained", {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tstzspan_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overlaps",  {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tstzspan_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_adjacent",  {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tstzspan_temporal));
     }
 
     // Temporal time-position predicates registered as named functions:
@@ -1405,21 +1425,33 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // `after`, `overbefore`, `overafter` provide equivalent behaviour.
     for (auto &t1 : TemporalTypes::AllTypes()) {
         for (auto &t2 : TemporalTypes::AllTypes()) {
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("before",     {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Before_temporal_temporal));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("after",      {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::After_temporal_temporal));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Overbefore_temporal_temporal));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("overafter",  {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Overafter_temporal_temporal));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("before",             {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Before_temporal_temporal));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("after",              {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::After_temporal_temporal));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore",         {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Overbefore_temporal_temporal));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("overafter",          {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Overafter_temporal_temporal));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_before",    {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Before_temporal_temporal));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_after",     {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::After_temporal_temporal));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overbefore",{t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Overbefore_temporal_temporal));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overafter", {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Overafter_temporal_temporal));
         }
     }
     for (auto &t : TemporalTypes::AllTypes()) {
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("before",     {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Before_temporal_tstzspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("after",      {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::After_temporal_tstzspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Overbefore_temporal_tstzspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("overafter",  {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Overafter_temporal_tstzspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("before",     {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Before_tstzspan_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("after",      {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::After_tstzspan_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Overbefore_tstzspan_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("overafter",  {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Overafter_tstzspan_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("before",             {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Before_temporal_tstzspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("after",              {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::After_temporal_tstzspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore",         {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Overbefore_temporal_tstzspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("overafter",          {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Overafter_temporal_tstzspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_before",    {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Before_temporal_tstzspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_after",     {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::After_temporal_tstzspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overbefore",{t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Overbefore_temporal_tstzspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overafter", {t, SpanTypes::TSTZSPAN()}, LogicalType::BOOLEAN, TemporalFunctions::Overafter_temporal_tstzspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("before",             {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Before_tstzspan_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("after",              {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::After_tstzspan_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore",         {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Overbefore_tstzspan_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("overafter",          {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Overafter_tstzspan_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_before",    {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Before_tstzspan_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_after",     {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::After_tstzspan_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overbefore",{SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Overbefore_tstzspan_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overafter", {SpanTypes::TSTZSPAN(), t}, LogicalType::BOOLEAN, TemporalFunctions::Overafter_tstzspan_temporal));
     }
 
     // Ever / always equality and inequality (named functions; DuckDB
@@ -1476,34 +1508,70 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         auto fspan = SpanTypes::FLOATSPAN();
         auto tbox  = TboxType::TBOX();
 
-        // tnumber × numspan
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",  {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",  {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",  {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",  {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",  {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",  {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tnumber_numspan));
+        // tnumber × numspan (5 ops each: @>, <@, &&, ~=, -|-)
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",             {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",             {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",             {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("~=",             {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Same_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_same",  {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Same_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-",            {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contains",  {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contained", {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overlaps",  {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_adjacent",  {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",             {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",             {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",             {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("~=",             {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Same_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_same",  {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Same_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-",            {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contains",  {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contained", {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overlaps",  {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_adjacent",  {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tnumber_numspan));
         // numspan × tnumber
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",  {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Contains_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",  {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Contained_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",  {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",  {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Contains_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",  {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Contained_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",  {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",             {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Contains_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",             {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Contained_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",             {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("~=",             {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Same_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_same",  {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Same_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-",            {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contains",  {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Contains_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contained", {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Contained_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overlaps",  {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_adjacent",  {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",             {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Contains_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",             {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Contained_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",             {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("~=",             {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Same_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_same",  {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Same_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-",            {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contains",  {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Contains_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contained", {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Contained_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overlaps",  {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_adjacent",  {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_numspan_tnumber));
         // tnumber × tbox
         for (auto &t : {tint, tflt}) {
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",  {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tnumber_tbox));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",  {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tnumber_tbox));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",  {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tnumber_tbox));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tnumber_tbox));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",  {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tbox_tnumber));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",  {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tbox_tnumber));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",  {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tbox_tnumber));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tbox_tnumber));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",             {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tnumber_tbox));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",             {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tnumber_tbox));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",             {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tnumber_tbox));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("~=",             {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Same_tnumber_tbox));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_same",  {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Same_tnumber_tbox));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-",            {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tnumber_tbox));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contains",  {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tnumber_tbox));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contained", {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tnumber_tbox));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overlaps",  {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tnumber_tbox));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_adjacent",  {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tnumber_tbox));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",             {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tbox_tnumber));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",             {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tbox_tnumber));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",             {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tbox_tnumber));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("~=",             {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Same_tbox_tnumber));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_same",  {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Same_tbox_tnumber));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-",            {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tbox_tnumber));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contains",  {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tbox_tnumber));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contained", {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tbox_tnumber));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overlaps",  {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tbox_tnumber));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_adjacent",  {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tbox_tnumber));
         }
 
         // Position ops (<<, >>, &<, &>) — same surface
@@ -1542,6 +1610,129 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {tflt, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Right_tnumber_tnumber));
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {tflt, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Overleft_tnumber_tnumber));
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {tflt, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Overright_tnumber_tnumber));
+
+        // Named aliases for numeric-axis position predicates
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_left",      {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Left_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_right",     {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Right_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overleft",  {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Overleft_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overright", {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Overright_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_left",      {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Left_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_right",     {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Right_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overleft",  {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Overleft_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overright", {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Overright_tnumber_numspan));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_left",      {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Left_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_right",     {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Right_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overleft",  {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Overleft_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overright", {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Overright_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_left",      {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Left_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_right",     {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Right_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overleft",  {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Overleft_numspan_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overright", {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Overright_numspan_tnumber));
+        for (auto &t : {tint, tflt}) {
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_left",      {t,    tbox}, LogicalType::BOOLEAN, TemporalFunctions::Left_tnumber_tbox));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_right",     {t,    tbox}, LogicalType::BOOLEAN, TemporalFunctions::Right_tnumber_tbox));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overleft",  {t,    tbox}, LogicalType::BOOLEAN, TemporalFunctions::Overleft_tnumber_tbox));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overright", {t,    tbox}, LogicalType::BOOLEAN, TemporalFunctions::Overright_tnumber_tbox));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_left",      {tbox, t},    LogicalType::BOOLEAN, TemporalFunctions::Left_tbox_tnumber));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_right",     {tbox, t},    LogicalType::BOOLEAN, TemporalFunctions::Right_tbox_tnumber));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overleft",  {tbox, t},    LogicalType::BOOLEAN, TemporalFunctions::Overleft_tbox_tnumber));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overright", {tbox, t},    LogicalType::BOOLEAN, TemporalFunctions::Overright_tbox_tnumber));
+        }
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_left",      {tint, tint}, LogicalType::BOOLEAN, TemporalFunctions::Left_tnumber_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_right",     {tint, tint}, LogicalType::BOOLEAN, TemporalFunctions::Right_tnumber_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overleft",  {tint, tint}, LogicalType::BOOLEAN, TemporalFunctions::Overleft_tnumber_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overright", {tint, tint}, LogicalType::BOOLEAN, TemporalFunctions::Overright_tnumber_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_left",      {tflt, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Left_tnumber_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_right",     {tflt, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Right_tnumber_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overleft",  {tflt, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Overleft_tnumber_tnumber));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overright", {tflt, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Overright_tnumber_tnumber));
+    }
+
+    // Temporal comparison predicates returning tbool (temporal_teq/tne/tlt/tle/tgt/tge)
+    {
+        auto tbool = TemporalTypes::TBOOL();
+        auto tint  = TemporalTypes::TINT();
+        auto tflt  = TemporalTypes::TFLOAT();
+        auto ttext = TemporalTypes::TTEXT();
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {LogicalType::BOOLEAN,    tbool}, tbool, TemporalFunctions::Teq_bool_tbool));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {tbool,  LogicalType::BOOLEAN},   tbool, TemporalFunctions::Teq_tbool_bool));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {LogicalType::INTEGER,    tint},  tbool, TemporalFunctions::Teq_int_tint));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {tint,   LogicalType::INTEGER},   tbool, TemporalFunctions::Teq_tint_int));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {LogicalType::DOUBLE,     tflt},  tbool, TemporalFunctions::Teq_float_tfloat));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {tflt,   LogicalType::DOUBLE},    tbool, TemporalFunctions::Teq_tfloat_float));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {LogicalType::VARCHAR,    ttext}, tbool, TemporalFunctions::Teq_text_ttext));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {ttext,  LogicalType::VARCHAR},   tbool, TemporalFunctions::Teq_ttext_text));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {tint,   tint},                  tbool, TemporalFunctions::Teq_temporal_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {tflt,   tflt},                  tbool, TemporalFunctions::Teq_temporal_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {tbool,  tbool},                 tbool, TemporalFunctions::Teq_temporal_temporal));
+
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {LogicalType::BOOLEAN,    tbool}, tbool, TemporalFunctions::Tne_bool_tbool));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {tbool,  LogicalType::BOOLEAN},   tbool, TemporalFunctions::Tne_tbool_bool));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {LogicalType::INTEGER,    tint},  tbool, TemporalFunctions::Tne_int_tint));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {tint,   LogicalType::INTEGER},   tbool, TemporalFunctions::Tne_tint_int));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {LogicalType::DOUBLE,     tflt},  tbool, TemporalFunctions::Tne_float_tfloat));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {tflt,   LogicalType::DOUBLE},    tbool, TemporalFunctions::Tne_tfloat_float));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {LogicalType::VARCHAR,    ttext}, tbool, TemporalFunctions::Tne_text_ttext));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {ttext,  LogicalType::VARCHAR},   tbool, TemporalFunctions::Tne_ttext_text));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {tint,   tint},                  tbool, TemporalFunctions::Tne_temporal_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {tflt,   tflt},                  tbool, TemporalFunctions::Tne_temporal_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {tbool,  tbool},                 tbool, TemporalFunctions::Tne_temporal_temporal));
+
+        // temporal_tlt/tle/tgt/tge: ordered types only (int, float, text)
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tlt", {LogicalType::INTEGER,    tint},  tbool, TemporalFunctions::Tlt_int_tint));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tlt", {tint,   LogicalType::INTEGER},   tbool, TemporalFunctions::Tlt_tint_int));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tlt", {LogicalType::DOUBLE,     tflt},  tbool, TemporalFunctions::Tlt_float_tfloat));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tlt", {tflt,   LogicalType::DOUBLE},    tbool, TemporalFunctions::Tlt_tfloat_float));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tlt", {LogicalType::VARCHAR,    ttext}, tbool, TemporalFunctions::Tlt_text_ttext));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tlt", {ttext,  LogicalType::VARCHAR},   tbool, TemporalFunctions::Tlt_ttext_text));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tlt", {tint,   tint},                  tbool, TemporalFunctions::Tlt_temporal_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tlt", {tflt,   tflt},                  tbool, TemporalFunctions::Tlt_temporal_temporal));
+
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tle", {LogicalType::INTEGER,    tint},  tbool, TemporalFunctions::Tle_int_tint));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tle", {tint,   LogicalType::INTEGER},   tbool, TemporalFunctions::Tle_tint_int));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tle", {LogicalType::DOUBLE,     tflt},  tbool, TemporalFunctions::Tle_float_tfloat));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tle", {tflt,   LogicalType::DOUBLE},    tbool, TemporalFunctions::Tle_tfloat_float));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tle", {LogicalType::VARCHAR,    ttext}, tbool, TemporalFunctions::Tle_text_ttext));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tle", {ttext,  LogicalType::VARCHAR},   tbool, TemporalFunctions::Tle_ttext_text));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tle", {tint,   tint},                  tbool, TemporalFunctions::Tle_temporal_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tle", {tflt,   tflt},                  tbool, TemporalFunctions::Tle_temporal_temporal));
+
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tgt", {LogicalType::INTEGER,    tint},  tbool, TemporalFunctions::Tgt_int_tint));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tgt", {tint,   LogicalType::INTEGER},   tbool, TemporalFunctions::Tgt_tint_int));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tgt", {LogicalType::DOUBLE,     tflt},  tbool, TemporalFunctions::Tgt_float_tfloat));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tgt", {tflt,   LogicalType::DOUBLE},    tbool, TemporalFunctions::Tgt_tfloat_float));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tgt", {LogicalType::VARCHAR,    ttext}, tbool, TemporalFunctions::Tgt_text_ttext));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tgt", {ttext,  LogicalType::VARCHAR},   tbool, TemporalFunctions::Tgt_ttext_text));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tgt", {tint,   tint},                  tbool, TemporalFunctions::Tgt_temporal_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tgt", {tflt,   tflt},                  tbool, TemporalFunctions::Tgt_temporal_temporal));
+
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tge", {LogicalType::INTEGER,    tint},  tbool, TemporalFunctions::Tge_int_tint));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tge", {tint,   LogicalType::INTEGER},   tbool, TemporalFunctions::Tge_tint_int));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tge", {LogicalType::DOUBLE,     tflt},  tbool, TemporalFunctions::Tge_float_tfloat));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tge", {tflt,   LogicalType::DOUBLE},    tbool, TemporalFunctions::Tge_tfloat_float));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tge", {LogicalType::VARCHAR,    ttext}, tbool, TemporalFunctions::Tge_text_ttext));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tge", {ttext,  LogicalType::VARCHAR},   tbool, TemporalFunctions::Tge_ttext_text));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tge", {tint,   tint},                  tbool, TemporalFunctions::Tge_temporal_temporal));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tge", {tflt,   tflt},                  tbool, TemporalFunctions::Tge_temporal_temporal));
+    }
+
+    // tprecision and tsample — time-domain rebinning
+    for (auto &t : TemporalTypes::AllTypes()) {
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tprecision", {t, LogicalType::INTERVAL}, t, TemporalFunctions::Temporal_tprecision));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tprecision", {t, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, t, TemporalFunctions::Temporal_tprecision));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tsample",    {t, LogicalType::INTERVAL}, t, TemporalFunctions::Temporal_tsample));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tsample",    {t, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, t, TemporalFunctions::Temporal_tsample));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tsample",    {t, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::VARCHAR}, t, TemporalFunctions::Temporal_tsample));
+    }
+
+    // tboxes / splitNTboxes / splitEachNTboxes — tnumber → LIST(TBOX)
+    {
+        auto tbox_list = LogicalType::LIST(TboxType::TBOX());
+        for (auto &t : {TemporalTypes::TINT(), TemporalTypes::TFLOAT()}) {
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tboxes",           {t},                      tbox_list, TemporalFunctions::Tnumber_tboxes));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("splitNTboxes",     {t, LogicalType::INTEGER}, tbox_list, TemporalFunctions::Tnumber_split_n_tboxes));
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("splitEachNTboxes", {t, LogicalType::INTEGER}, tbox_list, TemporalFunctions::Tnumber_split_each_n_tboxes));
+        }
     }
 
     // tspatial × {stbox, tspatial} position predicates

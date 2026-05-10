@@ -1,39 +1,88 @@
 # name: test/sql/parity/030_temporal_compops.test
-# description: MobilityDB regression file 030_temporal_compops.test.sql adapted for MobilityDuck
+# description: Temporal comparison predicates returning Temporal — temporal_teq,
+#              temporal_tne, temporal_tlt, temporal_tle, temporal_tgt,
+#              temporal_tge across (base × t, t × base, t × t).
+#              MobilityDB also exposes these as `?=`/`?<>`/`?<` etc. operators;
+#              DuckDB's parser does not accept multi-character operator tokens
+#              (`?=`, `#=`), so only the named functions are registered here.
 # group: [sql]
-#
-# DuckDB's SQL parser does not accept `?` or `#` inside operator names,
-# so MobilityDB's `?=` / `?<>` / `?<` / `#=` / `#<>` / `#<` etc. forms
-# cannot be invoked from SQL. MobilityDuck exposes them as the named
-# scalar functions ever_eq / always_eq / ever_ne / always_ne / ever_lt
-# / always_lt / etc. — this parity test uses those forms.
 
 require mobilityduck
 
-# Ever-equal — value ever_eq temporal
+# temporal_teq with value × t (tint side)
 
 query I
-SELECT ever_eq(1, tint '1@2000-01-01');
+SELECT temporal_teq(1, tint '[1@2000-01-01, 2@2000-01-02]');
 ----
-true
-
-# Ever-not-equal — temporal ever_ne value
+[t@2000-01-01 00:00:00+01, f@2000-01-02 00:00:00+01]
 
 query I
-SELECT ever_ne(tint '[1@2000-01-01, 2@2000-01-02]', 1);
+SELECT temporal_teq(tint '[1@2000-01-01, 2@2000-01-02]', 1);
 ----
-true
+[t@2000-01-01 00:00:00+01, f@2000-01-02 00:00:00+01]
 
-# Always-equal — value always_eq temporal
+# temporal_teq on tbool
 
 query I
-SELECT always_eq(1, tint '1@2000-01-01');
+SELECT temporal_teq(true, tbool '[t@2000-01-01, f@2000-01-02]');
 ----
-true
+[t@2000-01-01 00:00:00+01, f@2000-01-02 00:00:00+01]
 
-# Always-less-than — temporal always_lt temporal
+# temporal_teq on tfloat (continuous interpolation crosses the threshold)
 
 query I
-SELECT always_lt(tint '[1@2000-01-01, 2@2000-01-02]', tint '[3@2000-01-01, 4@2000-01-02]');
+SELECT temporal_teq(2.5, tfloat '[1@2000-01-01, 5@2000-01-03]');
 ----
-true
+{[f@2000-01-01 00:00:00+01, t@2000-01-01 18:00:00+01], (f@2000-01-01 18:00:00+01, f@2000-01-03 00:00:00+01]}
+
+# temporal_teq on ttext
+
+query I
+SELECT temporal_tne('hello', ttext '["hello"@2000-01-01, "world"@2000-01-02]');
+----
+[f@2000-01-01 00:00:00+01, t@2000-01-02 00:00:00+01]
+
+# temporal_teq with two temporals (same shape)
+
+query I
+SELECT temporal_teq(tint '[1@2000-01-01, 2@2000-01-02]', tint '[1@2000-01-01, 3@2000-01-02]');
+----
+[t@2000-01-01 00:00:00+01, f@2000-01-02 00:00:00+01]
+
+# temporal_tlt — strict less-than
+
+query I
+SELECT temporal_tlt(tint '[1@2000-01-01, 5@2000-01-02]', 3);
+----
+[t@2000-01-01 00:00:00+01, f@2000-01-02 00:00:00+01]
+
+# temporal_tle vs temporal_tlt at the boundary value
+
+query I
+SELECT temporal_tle(tint '[3@2000-01-01]', 3);
+----
+[t@2000-01-01 00:00:00+01]
+
+query I
+SELECT temporal_tlt(tint '[3@2000-01-01]', 3);
+----
+[f@2000-01-01 00:00:00+01]
+
+# temporal_tge / temporal_tgt symmetric to tle / tlt
+
+query I
+SELECT temporal_tge(tint '[3@2000-01-01]', 3);
+----
+[t@2000-01-01 00:00:00+01]
+
+query I
+SELECT temporal_tgt(tint '[3@2000-01-01]', 3);
+----
+[f@2000-01-01 00:00:00+01]
+
+# Ordered comparisons on ttext
+
+query I
+SELECT temporal_tlt(ttext '["a"@2000-01-01, "z"@2000-01-02]', 'm');
+----
+[t@2000-01-01 00:00:00+01, f@2000-01-02 00:00:00+01]

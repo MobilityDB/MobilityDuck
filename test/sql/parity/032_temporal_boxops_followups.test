@@ -1,0 +1,65 @@
+# name: test/sql/parity/032_temporal_boxops_followups.test
+# description: Tail of temporal/032_temporal_boxops — named-function aliases
+#              (temporal_contains/contained/overlaps/adjacent) for the
+#              already-wired @>/<@/&&/-|- operators, plus tboxes /
+#              splitNTboxes / splitEachNTboxes.
+# group: [sql]
+
+require mobilityduck
+
+# Named-function aliases agree with the operator forms
+
+query I
+SELECT temporal_contains(tint '[1@2000-01-01, 5@2000-01-05]', tint '[2@2000-01-02, 3@2000-01-03]')
+     = (tint '[1@2000-01-01, 5@2000-01-05]' @> tint '[2@2000-01-02, 3@2000-01-03]');
+----
+true
+
+query I
+SELECT temporal_contained(tint '[2@2000-01-02, 3@2000-01-03]', tint '[1@2000-01-01, 5@2000-01-05]')
+     = (tint '[2@2000-01-02, 3@2000-01-03]' <@ tint '[1@2000-01-01, 5@2000-01-05]');
+----
+true
+
+query I
+SELECT temporal_overlaps(tint '[1@2000-01-01]', tint '[1@2000-01-01]');
+----
+true
+
+query I
+SELECT temporal_adjacent(tint '[1@2000-01-01, 2@2000-01-02]', tint '[3@2000-01-03, 4@2000-01-04]');
+----
+false
+
+# Aliases also work for (temporal × tstzspan)
+
+query I
+SELECT temporal_contains(tstzspan '[2000-01-01, 2000-01-10]', tint '[3@2000-01-03, 4@2000-01-04]');
+----
+true
+
+# Aliases on (tnumber × numspan) and (tnumber × tbox)
+
+query I
+SELECT temporal_overlaps(tint '[1@2000-01-01, 5@2000-01-05]', intspan '[2, 4)');
+----
+true
+
+# tboxes(tnumber) returns at least one tbox
+
+query I
+SELECT len(tboxes(tfloat '[1@2000-01-01, 2@2000-01-02]')) > 0;
+----
+true
+
+# splitNTboxes / splitEachNTboxes return non-empty lists for a sequence
+
+query I
+SELECT len(splitNTboxes(tfloat '[1@2000-01-01, 5@2000-01-05]', 2)) >= 1;
+----
+true
+
+query I
+SELECT len(splitEachNTboxes(tfloat '[1@2000-01-01, 2@2000-01-02, 3@2000-01-03, 4@2000-01-04, 5@2000-01-05]', 2)) >= 1;
+----
+true
