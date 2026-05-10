@@ -23,7 +23,6 @@
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include "index/rtree_module.hpp"
 
-#include <mutex>
 #include <fstream>
 #include <cstdlib>
 #include <string>
@@ -204,13 +203,13 @@ static void LoadInternal(ExtensionLoader &loader) {
 	// Configure MEOS SRID CSV once (env / embedded)
 	ConfigureMeosSridCsvOnce();
 
-	// Initialize MEOS once and install our error handler so MEOS errors
-	// become DuckDB exceptions instead of exit()ing the process.
-	static std::once_flag meos_init_flag;
-    std::call_once(meos_init_flag, []() {
-        meos_initialize();
-        meos_initialize_error_handler(&MobilityduckMeosErrorHandler);
-    });
+	// Initialise MEOS on the extension-loading (main) thread.  This covers
+	// cast functions, which bypass RegisterSerializedScalarFunction and would
+	// otherwise leave MEOS uninitialised when a cast is the first MEOS call
+	// (e.g. `SELECT stbox 'STBOX XT(...)'` before any scalar function call).
+	// Worker threads are initialised lazily via EnsureMeosInitializedOnThread()
+	// inside every RegisterSerializedScalarFunction wrapper.
+	EnsureMeosInitializedOnThread();
 
 
 	// Register scalar function: mobilityduck_openssl_version
