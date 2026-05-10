@@ -166,6 +166,12 @@ struct TgeompointFunctions {
     static void collect_gs(DataChunk &args, ExpressionState &state, Vector &result);
     static void distance_geo_geo(DataChunk &args, ExpressionState &state, Vector &result);
 
+    /* bearing — initial bearing in radians [0, 2π) */
+    static void Bearing_geo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Bearing_geo_tpoint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Bearing_tpoint_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Bearing_tpoint_tpoint(DataChunk &args, ExpressionState &state, Vector &result);
+
     /* nearestApproachInstant / nearestApproachDistance / nad */
     static void Nai_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Nai_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);

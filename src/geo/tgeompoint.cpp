@@ -1814,6 +1814,12 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
 
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tdistance", {TG, TG}, TF, TgeompointFunctions::Tdistance_named));
 
+        /* bearing — initial bearing in radians [0, 2π) */
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("bearing", {G, G},   D,  TgeompointFunctions::Bearing_geo_geo));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("bearing", {TG, G},  TF, TgeompointFunctions::Bearing_tpoint_geo));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("bearing", {G, TG},  TF, TgeompointFunctions::Bearing_geo_tpoint));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("bearing", {TG, TG}, TF, TgeompointFunctions::Bearing_tpoint_tpoint));
+
         /* nearestApproachInstant */
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachInstant", {TG, G}, TG, TgeompointFunctions::Nai_tgeo_geo));
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachInstant", {G, TG}, TG, TgeompointFunctions::Nai_geo_tgeo));

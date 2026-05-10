@@ -3596,6 +3596,91 @@ void TgeompointFunctions::Tdistance_named(DataChunk &args, ExpressionState &stat
 }
 
 /* ***************************************************
+ * bearing — initial bearing in radians [0, 2π)
+ ****************************************************/
+
+void TgeompointFunctions::Bearing_geo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t g1_blob, string_t g2_blob, ValidityMask &mask, idx_t idx) -> double {
+            GSERIALIZED *g1 = GeometryToGSerialized(g1_blob, 0);
+            GSERIALIZED *g2 = GeometryToGSerialized(g2_blob, 0);
+            if (!g1 || !g2) {
+                if (g1) free(g1);
+                if (g2) free(g2);
+                throw InvalidInputException("bearing: invalid geometry input");
+            }
+            double r = 0.0;
+            bool ok = bearing_point_point(g1, g2, &r);
+            free(g1); free(g2);
+            if (!ok) { mask.SetInvalid(idx); return 0.0; }
+            return r;
+        });
+}
+
+void TgeompointFunctions::Bearing_tpoint_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t t_blob, string_t g_blob, ValidityMask &mask, idx_t idx) -> string_t {
+            uint8_t *t_copy = (uint8_t *)malloc(t_blob.GetSize());
+            memcpy(t_copy, t_blob.GetData(), t_blob.GetSize());
+            Temporal *t = reinterpret_cast<Temporal *>(t_copy);
+            int32 srid = tspatial_srid(t);
+            GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
+            if (!gs) { free(t); throw InvalidInputException("bearing: invalid geometry"); }
+            Temporal *r = bearing_tpoint_point(t, gs, false);
+            free(t); free(gs);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            size_t sz = temporal_mem_size(r);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(r), sz));
+            free(r);
+            return stored;
+        });
+}
+
+void TgeompointFunctions::Bearing_geo_tpoint(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t g_blob, string_t t_blob, ValidityMask &mask, idx_t idx) -> string_t {
+            uint8_t *t_copy = (uint8_t *)malloc(t_blob.GetSize());
+            memcpy(t_copy, t_blob.GetData(), t_blob.GetSize());
+            Temporal *t = reinterpret_cast<Temporal *>(t_copy);
+            int32 srid = tspatial_srid(t);
+            GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
+            if (!gs) { free(t); throw InvalidInputException("bearing: invalid geometry"); }
+            Temporal *r = bearing_tpoint_point(t, gs, true);
+            free(t); free(gs);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            size_t sz = temporal_mem_size(r);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(r), sz));
+            free(r);
+            return stored;
+        });
+}
+
+void TgeompointFunctions::Bearing_tpoint_tpoint(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t t1_blob, string_t t2_blob, ValidityMask &mask, idx_t idx) -> string_t {
+            uint8_t *c1 = (uint8_t *)malloc(t1_blob.GetSize());
+            memcpy(c1, t1_blob.GetData(), t1_blob.GetSize());
+            uint8_t *c2 = (uint8_t *)malloc(t2_blob.GetSize());
+            memcpy(c2, t2_blob.GetData(), t2_blob.GetSize());
+            Temporal *r = bearing_tpoint_tpoint(
+                reinterpret_cast<Temporal *>(c1), reinterpret_cast<Temporal *>(c2));
+            free(c1); free(c2);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            size_t sz = temporal_mem_size(r);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(r), sz));
+            free(r);
+            return stored;
+        });
+}
+
+/* ***************************************************
  * nearestApproachInstant / nearestApproachDistance / nad
  ****************************************************/
 
