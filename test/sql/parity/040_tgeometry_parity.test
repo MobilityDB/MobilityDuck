@@ -38,13 +38,13 @@ query I
 SELECT startTimestamp(t::tgeometry)::VARCHAR FROM (VALUES
   ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
 ----
-2000-01-01 00:00:00+01
+2000-01-01 00:00:00+00
 
 query I
 SELECT endTimestamp(t::tgeometry)::VARCHAR FROM (VALUES
   ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
 ----
-2000-01-03 00:00:00+01
+2000-01-03 00:00:00+00
 
 query I
 SELECT duration(t::tgeometry)::VARCHAR FROM (VALUES
@@ -78,16 +78,16 @@ SELECT len(timestamps(t::tgeometry)) FROM (VALUES
 # =============================================================================
 
 query I
-SELECT atTime(t::tgeometry, TIMESTAMPTZ '2000-01-01 00:00:00+01')::VARCHAR FROM (VALUES
+SELECT atTime(t::tgeometry, TIMESTAMPTZ '2000-01-01 00:00:00+00')::VARCHAR FROM (VALUES
   ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
 ----
-010100000000000000000000000000000000000000@2000-01-01 00:00:00+01
+010100000000000000000000000000000000000000@2000-01-01 00:00:00+00
 
 query I
-SELECT beforeTimestamp(t::tgeometry, TIMESTAMPTZ '2000-01-02 00:00:00+01')::VARCHAR FROM (VALUES
+SELECT beforeTimestamp(t::tgeometry, TIMESTAMPTZ '2000-01-02 00:00:00+00')::VARCHAR FROM (VALUES
   ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
 ----
-[010100000000000000000000000000000000000000@2000-01-01 00:00:00+01, 010100000000000000000000000000000000000000@2000-01-02 00:00:00+01)
+[010100000000000000000000000000000000000000@2000-01-01 00:00:00+00, 010100000000000000000000000000000000000000@2000-01-02 00:00:00+00)
 
 # =============================================================================
 # Modifiers (shift / scale / shiftScale)
@@ -97,13 +97,13 @@ query I
 SELECT shiftTime(t::tgeometry, INTERVAL '1 day')::VARCHAR FROM (VALUES
   ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
 ----
-[010100000000000000000000000000000000000000@2000-01-02 00:00:00+01, 010100000000000000000000400000000000000040@2000-01-04 00:00:00+01]
+[010100000000000000000000000000000000000000@2000-01-02 00:00:00+00, 010100000000000000000000400000000000000040@2000-01-04 00:00:00+00]
 
 query I
 SELECT scaleTime(t::tgeometry, INTERVAL '1 day')::VARCHAR FROM (VALUES
   ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
 ----
-[010100000000000000000000000000000000000000@2000-01-01 00:00:00+01, 010100000000000000000000400000000000000040@2000-01-02 00:00:00+01]
+[010100000000000000000000000000000000000000@2000-01-01 00:00:00+00, 010100000000000000000000400000000000000040@2000-01-02 00:00:00+00]
 
 # =============================================================================
 # Spatial restrict
@@ -115,7 +115,7 @@ SELECT atGeometry(
   ST_GeomFromText('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'))::VARCHAR
 FROM (VALUES ('Point(0.5 0.5)@2000-01-01')) t(t);
 ----
-0101000000000000000000E03F000000000000E03F@2000-01-01 00:00:00+01
+0101000000000000000000E03F000000000000E03F@2000-01-01 00:00:00+00
 
 # =============================================================================
 # Comparison (named functions and operators)
@@ -248,13 +248,13 @@ SELECT tIntersects(
   ST_GeomFromText('POLYGON((0 0, 0 5, 5 5, 5 0, 0 0))'))::VARCHAR
 FROM (VALUES ('Point(2 2)@2000-01-01')) t(t);
 ----
-t@2000-01-01 00:00:00+01
+t@2000-01-01 00:00:00+00
 
 query I
 SELECT tDwithin(t::tgeometry, ST_Point(10, 0), 5.0)::VARCHAR
 FROM (VALUES ('Point(2 2)@2000-01-01')) t(t);
 ----
-f@2000-01-01 00:00:00+01
+f@2000-01-01 00:00:00+00
 
 # =============================================================================
 # Distance — tdistance + <->
@@ -264,13 +264,13 @@ query I
 SELECT tdistance(t1::tgeometry, t2::tgeometry)::VARCHAR
 FROM (VALUES ('Point(0 0)@2000-01-01', 'Point(3 4)@2000-01-01')) t(t1, t2);
 ----
-5@2000-01-01 00:00:00+01
+5@2000-01-01 00:00:00+00
 
 query I
 SELECT (t1::tgeometry <-> t2::tgeometry)::VARCHAR
 FROM (VALUES ('Point(0 0)@2000-01-01', 'Point(3 4)@2000-01-01')) t(t1, t2);
 ----
-5@2000-01-01 00:00:00+01
+5@2000-01-01 00:00:00+00
 
 # =============================================================================
 # Spatial functions: SRID accessor / setter, transform, stbox, coercions,
@@ -290,7 +290,7 @@ SELECT SRID(setSRID(t::tgeometry, 4326)) FROM (VALUES ('Point(0 0)@2000-01-01'))
 query I
 SELECT stbox(t::tgeometry)::VARCHAR FROM (VALUES ('Point(0 0)@2000-01-01')) t(t);
 ----
-STBOX XT(((0,0),(0,0)),[2000-01-01 00:00:00+01, 2000-01-01 00:00:00+01])
+STBOX XT(((0,0),(0,0)),[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00])
 
 # tgeometry → tgeompoint round-trip via the explicit coercion pair.
 query I
@@ -320,13 +320,13 @@ query I
 SELECT extent(t::tgeometry)::VARCHAR FROM (VALUES
   ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
 ----
-STBOX XT(((0,0),(2,2)),[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01])
+STBOX XT(((0,0),(2,2)),[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
 
 query I
 SELECT TcountAgg(t::tgeometry)::VARCHAR FROM (VALUES
   ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
 ----
-{1@2000-01-01 00:00:00+01, 1@2000-01-02 00:00:00+01}
+{1@2000-01-01 00:00:00+00, 1@2000-01-02 00:00:00+00}
 
 query I
 SELECT (MergeAgg(t::tgeometry) IS NOT NULL) FROM (VALUES

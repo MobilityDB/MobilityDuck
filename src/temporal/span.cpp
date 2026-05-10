@@ -59,8 +59,8 @@ const std::vector<LogicalType> &SpanTypes::AllTypes() {
     return types;
 }
 
-meosType SpanTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
-    static const std::unordered_map<std::string, meosType> alias_to_type = {
+MeosType SpanTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
+    static const std::unordered_map<std::string, MeosType> alias_to_type = {
         {"INTSPAN", T_INTSPAN},
         {"BIGINTSPAN", T_BIGINTSPAN},
         {"FLOATSPAN", T_FLOATSPAN},

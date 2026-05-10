@@ -454,7 +454,7 @@ void TgeompointFunctions::Tgeompoint_sequence_constructor(DataChunk &args, Expre
     
     auto arg_count = args.ColumnCount();
     auto row_count = args.size();
-    meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
+    MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
     interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
     bool lower_inc = true;
     bool upper_inc = true;
@@ -2438,7 +2438,17 @@ void TgeompointFunctions::Tcontains_geo_tgeo(DataChunk &args, ExpressionState &s
             throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
         }
 
-        Temporal *ret = tcontains_geo_tgeo(gs, tgeom, restr, at_value);
+        Temporal *ret = tcontains_geo_tgeo(gs, tgeom);
+
+        if (ret && restr) {
+
+            Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+            free(ret);
+
+            ret = restricted;
+
+        }
         free(tgeom);
         free(gs);
         if (!ret) {
@@ -2500,7 +2510,17 @@ void TgeompointFunctions::Tdisjoint_geo_tgeo(DataChunk &args, ExpressionState &s
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            Temporal *ret = tdisjoint_geo_tgeo(gs, tgeom, restr, at_value);
+            Temporal *ret = tdisjoint_geo_tgeo(gs, tgeom);
+
+            if (ret && restr) {
+
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+                free(ret);
+
+                ret = restricted;
+
+            }
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2545,7 +2565,17 @@ void TgeompointFunctions::Tdisjoint_tgeo_geo(DataChunk &args, ExpressionState &s
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            Temporal *ret = tdisjoint_tgeo_geo(tgeom, gs, restr, at_value);
+            Temporal *ret = tdisjoint_tgeo_geo(tgeom, gs);
+
+            if (ret && restr) {
+
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+                free(ret);
+
+                ret = restricted;
+
+            }
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2594,7 +2624,17 @@ void TgeompointFunctions::Tdisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            Temporal *ret = tdisjoint_tgeo_tgeo(tgeom1, tgeom2, restr, at_value);
+            Temporal *ret = tdisjoint_tgeo_tgeo(tgeom1, tgeom2);
+
+            if (ret && restr) {
+
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+                free(ret);
+
+                ret = restricted;
+
+            }
             free(tgeom1);
             free(tgeom2);
             if (!ret) {
@@ -2639,7 +2679,17 @@ void TgeompointFunctions::Tintersects_geo_tgeo(DataChunk &args, ExpressionState 
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            Temporal *ret = tintersects_geo_tgeo(gs, tgeom, restr, at_value);
+            Temporal *ret = tintersects_geo_tgeo(gs, tgeom);
+
+            if (ret && restr) {
+
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+                free(ret);
+
+                ret = restricted;
+
+            }
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2684,7 +2734,17 @@ void TgeompointFunctions::Tintersects_tgeo_geo(DataChunk &args, ExpressionState 
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            Temporal *ret = tintersects_tgeo_geo(tgeom, gs, restr, at_value);
+            Temporal *ret = tintersects_tgeo_geo(tgeom, gs);
+
+            if (ret && restr) {
+
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+                free(ret);
+
+                ret = restricted;
+
+            }
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2733,7 +2793,17 @@ void TgeompointFunctions::Tintersects_tgeo_tgeo(DataChunk &args, ExpressionState
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            Temporal *ret = tintersects_tgeo_tgeo(tgeom1, tgeom2, restr, at_value);
+            Temporal *ret = tintersects_tgeo_tgeo(tgeom1, tgeom2);
+
+            if (ret && restr) {
+
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+                free(ret);
+
+                ret = restricted;
+
+            }
             free(tgeom1);
             free(tgeom2);
             if (!ret) {
@@ -2778,7 +2848,17 @@ void TgeompointFunctions::Ttouches_geo_tgeo(DataChunk &args, ExpressionState &st
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            Temporal *ret = ttouches_geo_tgeo(gs, tgeom, restr, at_value);
+            Temporal *ret = ttouches_geo_tgeo(gs, tgeom);
+
+            if (ret && restr) {
+
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+                free(ret);
+
+                ret = restricted;
+
+            }
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2823,7 +2903,17 @@ void TgeompointFunctions::Ttouches_tgeo_geo(DataChunk &args, ExpressionState &st
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            Temporal *ret = ttouches_tgeo_geo(tgeom, gs, restr, at_value);
+            Temporal *ret = ttouches_tgeo_geo(tgeom, gs);
+
+            if (ret && restr) {
+
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+                free(ret);
+
+                ret = restricted;
+
+            }
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2871,7 +2961,12 @@ void TgeompointFunctions::Tdwithin_tgeo_tgeo(DataChunk &args, ExpressionState &s
                 free(tgeom2_data_copy);
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
-            Temporal *ret = tdwithin_tgeo_tgeo(tgeom1, tgeom2, dist, restr, at_value);
+            Temporal *ret = tdwithin_tgeo_tgeo(tgeom1, tgeom2, dist);
+            if (ret && restr) {
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+                free(ret);
+                ret = restricted;
+            }
             if (!ret) {
                 free(tgeom1);
                 free(tgeom2);
@@ -2918,7 +3013,17 @@ void TgeompointFunctions::Tdwithin_tgeo_geo(DataChunk &args, ExpressionState &st
                 throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
             }
 
-            Temporal *ret = tdwithin_tgeo_geo(tgeom, gs, dist, restr, at_value);
+            Temporal *ret = tdwithin_tgeo_geo(tgeom, gs, dist);
+
+            if (ret && restr) {
+
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+                free(ret);
+
+                ret = restricted;
+
+            }
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2963,7 +3068,17 @@ void TgeompointFunctions::Tdwithin_geo_tgeo(DataChunk &args, ExpressionState &st
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            Temporal *ret = tdwithin_geo_tgeo(gs, tgeom, dist, restr, at_value);
+            Temporal *ret = tdwithin_geo_tgeo(gs, tgeom, dist);
+
+            if (ret && restr) {
+
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+                free(ret);
+
+                ret = restricted;
+
+            }
             free(tgeom);
             free(gs);
             if (!ret) {

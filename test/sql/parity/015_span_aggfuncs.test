@@ -22,13 +22,13 @@ query I
 SELECT extent(temp) FROM (VALUES
 (NULL::tstzspan),('[2000-01-01, 2000-01-02]'::tstzspan)) t(temp);
 ----
-[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01]
+[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00]
 
 query I
 SELECT extent(temp) FROM (VALUES
 ('[2000-01-01, 2000-01-02]'::tstzspan),(NULL::tstzspan)) t(temp);
 ----
-[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01]
+[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00]
 
 query I
 SELECT extent(temp) FROM (VALUES
@@ -40,13 +40,13 @@ query I
 SELECT extent(temp) FROM (VALUES
 (NULL::tstzspanset),('{[2000-01-01, 2000-01-02]}'::tstzspanset)) t(temp);
 ----
-[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01]
+[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00]
 
 query I
 SELECT extent(temp) FROM (VALUES
 ('{[2000-01-01, 2000-01-02]}'::tstzspanset),(NULL::tstzspanset)) t(temp);
 ----
-[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01]
+[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00]
 
 # extent(<base>) — value-aggregate variants
 
@@ -120,10 +120,10 @@ query I
 SELECT SetUnionAgg(t::tstzset)::VARCHAR FROM (VALUES
 ('{2000-01-01}'::tstzset)) t(t);
 ----
-{"2000-01-01 00:00:00+01"}
+{"2000-01-01 00:00:00+00"}
 
 query I
 SELECT SpanUnionAgg(t::tstzspan)::VARCHAR FROM (VALUES
 ('[2000-01-01, 2000-01-02]'::tstzspan)) t(t);
 ----
-{[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01]}
+{[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00]}

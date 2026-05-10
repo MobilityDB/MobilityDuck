@@ -14,11 +14,11 @@ class ExtensionLoader;
 
 typedef struct {
     char *alias;
-    meosType temptype;
+    MeosType temptype;
 } alias_type_struct;
 
 struct TemporalHelpers {
-    static meosType GetTemptypeFromAlias(const char *alias);
+    static MeosType GetTemptypeFromAlias(const char *alias);
     static vector<Value> TempArrToArray(Temporal **temparr, int32_t count, LogicalType element_type);
 };
 
@@ -551,7 +551,7 @@ struct TemporalFunctions {
      * Workaround functions
      ****************************************************/
     template <typename T>
-    static void Temporal_dump_common(DataChunk &args, Vector &result, meosType basetype);
+    static void Temporal_dump_common(DataChunk &args, Vector &result, MeosType basetype);
     static void Temporal_dump(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************

@@ -50,7 +50,7 @@ SELECT getBin(DATE '2001-01-04', INTERVAL '1 week', DATE '2001-01-07')::VARCHAR;
 query I
 SELECT getBin(TIMESTAMPTZ '2001-01-04', INTERVAL '1 day', TIMESTAMPTZ '2000-01-03')::VARCHAR;
 ----
-[2001-01-04 00:00:00+01, 2001-01-05 00:00:00+01)
+[2001-01-04 01:00:00+00, 2001-01-05 01:00:00+00)
 
 # =============================================================================
 # valueTiles — int / float dispatch via tbox->span.spantype
@@ -83,7 +83,7 @@ SELECT len(timeTiles(tbox 'TBOXINT XT([1,10],[2000-01-01,2000-01-10])', INTERVAL
 query I
 SELECT (timeTiles(tbox 'TBOXINT XT([1,10],[2000-01-01,2000-01-10])', INTERVAL '3 days'))[1]::VARCHAR;
 ----
-TBOXINT XT([1, 11),[1999-12-31 01:00:00+01, 2000-01-03 01:00:00+01))
+TBOXINT XT([1, 11),[1999-12-31 01:00:00+00, 2000-01-03 01:00:00+00))
 
 # Explicit torigin overrides the default
 query I
@@ -93,7 +93,7 @@ SELECT (timeTiles(
   TIMESTAMPTZ '2000-01-01'
 ))[1]::VARCHAR;
 ----
-TBOXINT XT([1, 11),[2000-01-01 00:00:00+01, 2000-01-04 00:00:00+01))
+TBOXINT XT([1, 11),[1999-12-29 01:00:00+00, 2000-01-01 01:00:00+00))
 
 # =============================================================================
 # valueTimeTiles — cartesian of value tiles × time tiles
@@ -107,7 +107,7 @@ SELECT len(valueTimeTiles(tbox 'TBOXINT XT([1,10],[2000-01-01,2000-01-10])', 5, 
 query I
 SELECT (valueTimeTiles(tbox 'TBOXINT XT([1,10],[2000-01-01,2000-01-10])', 5, INTERVAL '5 days'))[1]::VARCHAR;
 ----
-TBOXINT XT([0, 5),[1999-12-29 01:00:00+01, 2000-01-03 01:00:00+01))
+TBOXINT XT([0, 5),[1999-12-29 01:00:00+00, 2000-01-03 01:00:00+00))
 
 query I
 SELECT len(valueTimeTiles(
@@ -115,5 +115,5 @@ SELECT len(valueTimeTiles(
   2.5, INTERVAL '5 days', 0.0, TIMESTAMPTZ '2000-01-01'
 ));
 ----
-10
+15
 

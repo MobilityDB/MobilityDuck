@@ -53,8 +53,8 @@ const std::vector<LogicalType> &SpansetTypes::AllTypes() {
     return types;
 }
 
-meosType SpansetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
-    static const std::unordered_map<std::string, meosType> alias_to_type = {
+MeosType SpansetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
+    static const std::unordered_map<std::string, MeosType> alias_to_type = {
         {"intspanset", T_INTSPANSET},
         {"bigintspanset", T_BIGINTSPANSET},
         {"floatspanset", T_FLOATSPANSET},        

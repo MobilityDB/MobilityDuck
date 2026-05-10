@@ -71,8 +71,8 @@ SELECT id, tintFromBinary(val)::VARCHAR
 FROM read_parquet('__TEST_DIR__/tint.parquet')
 ORDER BY id
 ----
-1	[1@2000-01-01 00:00:00+01, 2@2000-01-02 00:00:00+01, 3@2000-01-03 00:00:00+01]
-2	{5@2000-01-01 00:00:00+01, 10@2000-01-05 00:00:00+01}
+1	[1@2000-01-01 00:00:00+00, 2@2000-01-02 00:00:00+00, 3@2000-01-03 00:00:00+00]
+2	{5@2000-01-01 00:00:00+00, 10@2000-01-05 00:00:00+00}
 
 # minValue/maxValue survive the round-trip
 query II
@@ -97,7 +97,7 @@ SELECT id, tfloatFromBinary(val)::VARCHAR
 FROM read_parquet('__TEST_DIR__/tfloat.parquet')
 ORDER BY id
 ----
-1	[1.5@2000-01-01 00:00:00+01, 3.5@2000-01-02 00:00:00+01]
+1	[1.5@2000-01-01 00:00:00+00, 3.5@2000-01-02 00:00:00+00]
 
 # =============================================================================
 # tbool
@@ -114,7 +114,7 @@ SELECT id, tboolFromBinary(val)::VARCHAR
 FROM read_parquet('__TEST_DIR__/tbool.parquet')
 ORDER BY id
 ----
-1	[t@2000-01-01 00:00:00+01, f@2000-01-02 00:00:00+01]
+1	[t@2000-01-01 00:00:00+00, f@2000-01-02 00:00:00+00]
 
 # =============================================================================
 # ttext
@@ -131,7 +131,7 @@ SELECT id, ttextFromBinary(val)::VARCHAR
 FROM read_parquet('__TEST_DIR__/ttext.parquet')
 ORDER BY id
 ----
-1	["hello"@2000-01-01 00:00:00+01, "world"@2000-01-02 00:00:00+01]
+1	["hello"@2000-01-01 00:00:00+00, "world"@2000-01-02 00:00:00+00]
 
 # =============================================================================
 # Mixed temporal data lake shard: multiple types in one Parquet file
@@ -153,19 +153,19 @@ query T
 SELECT asText(tgeompointFromBinary(position))
 FROM read_parquet('__TEST_DIR__/mixed.parquet')
 ----
-[POINT(5 52)@2026-01-01 01:00:00+01, POINT(6 53)@2026-01-01 02:00:00+01]
+[POINT(5 52)@2026-01-01 00:00:00+00, POINT(6 53)@2026-01-01 01:00:00+00]
 
 query T
 SELECT tfloatFromBinary(temperature)::VARCHAR
 FROM read_parquet('__TEST_DIR__/mixed.parquet')
 ----
-[0.1@2026-01-01 01:00:00+01, 0.9@2026-01-01 02:00:00+01]
+[0.1@2026-01-01 00:00:00+00, 0.9@2026-01-01 01:00:00+00]
 
 query T
 SELECT tboolFromBinary(active)::VARCHAR
 FROM read_parquet('__TEST_DIR__/mixed.parquet')
 ----
-[t@2026-01-01 01:00:00+01, f@2026-01-01 01:30:00+01]
+[t@2026-01-01 00:00:00+00, f@2026-01-01 00:30:00+00]
 
 # =============================================================================
 # tgeogpoint — geodetic (spheroidal) round-trip; asBinary must preserve type tag
