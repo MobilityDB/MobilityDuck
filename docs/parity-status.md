@@ -1,6 +1,6 @@
 # MobilityDuck parity status — surface-level audit
 
-Generated 2026-05-10. **Active addressable scope** (temporal + geo, excluding PG-only helpers): 835/960 names covered (87.0%).
+Generated 2026-05-10. **Active addressable scope** (temporal + geo, excluding PG-only helpers): 867/960 names covered (90.3%).
 
 **Out of scope** (PG-only — no DuckDB equivalent exists): 303 names skipped — 84 from PG-only sections (GiST/SPGiST opclasses, set/span/spanset index files, `019_geo_constructors.in.sql` PG geometric types, `999_oid_cache.in.sql`) plus 219 PG helper functions inside active sections (`*_in/_out/_recv/_send`, `*_transfn/_combinefn/_finalfn/_serialize/_deserialize`, `*_sel/_joinsel/_supportfn/_analyze`, `*_typmod_in/_typmod_out`).  Listed in appendix B; not counted in the headline.
 
@@ -48,11 +48,11 @@ Per-section counts: `Addressable` = MDB names minus PG-only helpers (see appendi
 | `geo/076_tgeo_analytics.in.sql` | 13 | 13 | 0 | 100% | 0 | 0 |
 | `geo/076_tpoint_analytics.in.sql` | 18 | 17 | 1 | 94% | 0 | 0 |
 | `geo/078_tpoint_datagen.in.sql` | 1 | 0 | 1 | 0% | 0 | 0 |
-| `temporal/001_set.in.sql` | 48 | 35 | 13 | 73% | 34 | 38 |
+| `temporal/001_set.in.sql` | 48 | 47 | 1 | 98% | 34 | 38 |
 | `temporal/002_set_ops.in.sql` | 11 | 11 | 0 | 100% | 0 | 176 |
-| `temporal/003_span.in.sql` | 46 | 35 | 11 | 76% | 22 | 30 |
+| `temporal/003_span.in.sql` | 46 | 45 | 1 | 98% | 22 | 30 |
 | `temporal/005_span_ops.in.sql` | 12 | 12 | 0 | 100% | 0 | 160 |
-| `temporal/007_spanset.in.sql` | 61 | 50 | 11 | 82% | 20 | 30 |
+| `temporal/007_spanset.in.sql` | 61 | 60 | 1 | 98% | 20 | 30 |
 | `temporal/009_spanset_ops.in.sql` | 14 | 13 | 1 | 93% | 0 | 280 |
 | `temporal/015_span_aggfuncs.in.sql` | 0 | 0 | 0 | 0% | 10 | 0 |
 | `temporal/021_tbox.in.sql` | 52 | 52 | 0 | 100% | 8 | 21 |
@@ -70,7 +70,7 @@ Per-section counts: `Addressable` = MDB names minus PG-only helpers (see appendi
 | `temporal/040_temporal_aggfuncs.in.sql` | 0 | 0 | 0 | 0% | 40 | 0 |
 | `temporal/042_temporal_waggfuncs.in.sql` | 0 | 0 | 0 | 0% | 8 | 0 |
 | `temporal/046_temporal_analytics.in.sql` | 4 | 4 | 0 | 100% | 0 | 0 |
-| **TOTAL (active)** | **960** | **835** | **125** | **87%** | **219** | — |
+| **TOTAL (active)** | **960** | **867** | **93** | **90%** | **219** | — |
 
 ## Missing function names per active section
 
@@ -184,49 +184,17 @@ Per-section counts: `Addressable` = MDB names minus PG-only helpers (see appendi
 
 - `create_trip`
 
-### `temporal/001_set.in.sql` — 13 missing of 48 addressable (73% covered)
+### `temporal/001_set.in.sql` — 1 missing of 48 addressable (98% covered)
 
-- `bigintsetFromBinary`
-- `bigintsetFromHexWKB`
-- `datesetFromBinary`
-- `datesetFromHexWKB`
-- `floatsetFromBinary`
-- `floatsetFromHexWKB`
-- `intsetFromBinary`
-- `intsetFromHexWKB`
-- `textsetFromBinary`
-- `textsetFromHexWKB`
-- `tstzsetFromBinary`
-- `tstzsetFromHexWKB`
 - `unnest` (6 overloads)
 
-### `temporal/003_span.in.sql` — 11 missing of 46 addressable (76% covered)
+### `temporal/003_span.in.sql` — 1 missing of 46 addressable (98% covered)
 
-- `bigintspanFromBinary`
-- `bigintspanFromHexWKB`
-- `datespanFromBinary`
-- `datespanFromHexWKB`
-- `floatspanFromBinary`
-- `floatspanFromHexWKB`
-- `intspanFromBinary`
-- `intspanFromHexWKB`
 - `range` (4 overloads)
-- `tstzspanFromBinary`
-- `tstzspanFromHexWKB`
 
-### `temporal/007_spanset.in.sql` — 11 missing of 61 addressable (82% covered)
+### `temporal/007_spanset.in.sql` — 1 missing of 61 addressable (98% covered)
 
-- `bigintspansetFromBinary`
-- `bigintspansetFromHexWKB`
-- `datespansetFromBinary`
-- `datespansetFromHexWKB`
-- `floatspansetFromBinary`
-- `floatspansetFromHexWKB`
-- `intspansetFromBinary`
-- `intspansetFromHexWKB`
 - `multirange` (4 overloads)
-- `tstzspansetFromBinary`
-- `tstzspansetFromHexWKB`
 
 ### `temporal/009_spanset_ops.in.sql` — 1 missing of 14 addressable (93% covered)
 

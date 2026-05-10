@@ -134,6 +134,26 @@ DYNAMIC_REGISTERED = {
     "tboolFromBinary", "tintFromBinary", "tfloatFromBinary", "ttextFromBinary",
     "tboolFromHexWKB", "tintFromHexWKB", "tfloatFromHexWKB", "ttextFromHexWKB",
     "tboolFromMFJSON", "tintFromMFJSON", "tfloatFromMFJSON", "ttextFromMFJSON",
+    # Set FromBinary / FromHexWKB — registered in the per-set-type loop
+    # (set.cpp) as alias + "FromBinary" / + "FromHexWKB".
+    "intsetFromBinary",     "intsetFromHexWKB",
+    "bigintsetFromBinary",  "bigintsetFromHexWKB",
+    "floatsetFromBinary",   "floatsetFromHexWKB",
+    "textsetFromBinary",    "textsetFromHexWKB",
+    "datesetFromBinary",    "datesetFromHexWKB",
+    "tstzsetFromBinary",    "tstzsetFromHexWKB",
+    # Span FromBinary / FromHexWKB — registered in the per-span-type loop.
+    "intspanFromBinary",     "intspanFromHexWKB",
+    "bigintspanFromBinary",  "bigintspanFromHexWKB",
+    "floatspanFromBinary",   "floatspanFromHexWKB",
+    "datespanFromBinary",    "datespanFromHexWKB",
+    "tstzspanFromBinary",    "tstzspanFromHexWKB",
+    # Spanset FromBinary / FromHexWKB — registered in the per-spanset loop.
+    "intspansetFromBinary",     "intspansetFromHexWKB",
+    "bigintspansetFromBinary",  "bigintspansetFromHexWKB",
+    "floatspansetFromBinary",   "floatspansetFromHexWKB",
+    "datespansetFromBinary",    "datespansetFromHexWKB",
+    "tstzspansetFromBinary",    "tstzspansetFromHexWKB",
 }
 
 

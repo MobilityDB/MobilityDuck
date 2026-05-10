@@ -133,6 +133,44 @@ void SetFunctions::Set_as_hexwkb(DataChunk &args, ExpressionState &state, Vector
     );
 }
 
+// --- *FromBinary parser (set_from_wkb is subtype-agnostic) ---
+void SetFunctions::Set_from_binary(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() == 0)
+                throw InvalidInputException("setFromBinary: empty WKB input");
+            uint8_t *wkb = (uint8_t *)malloc(input.GetSize());
+            if (!wkb) throw InternalException("setFromBinary: malloc failed");
+            memcpy(wkb, input.GetData(), input.GetSize());
+            Set *s = set_from_wkb(wkb, input.GetSize());
+            free(wkb);
+            if (!s) throw InvalidInputException(
+                "setFromBinary: invalid MEOS-WKB");
+            size_t sz = set_mem_size(s);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(s), sz));
+            free(s);
+            return stored;
+        });
+}
+
+void SetFunctions::Set_from_hexwkb(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            std::string hex(input.GetData(), input.GetSize());
+            Set *s = set_from_hexwkb(hex.c_str());
+            if (!s) throw InvalidInputException(
+                "setFromHexWKB: invalid hex-encoded MEOS-WKB");
+            size_t sz = set_mem_size(s);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(s), sz));
+            free(s);
+            return stored;
+        });
+}
+
 
 // --- Cast From String ---
 bool SetFunctions::Set_to_text(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {

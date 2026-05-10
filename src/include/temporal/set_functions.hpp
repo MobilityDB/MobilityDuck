@@ -30,6 +30,8 @@ struct SetFunctions {
     static void Set_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_as_binary(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Set_from_binary(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Set_from_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_constructor(DataChunk &args, ExpressionState &state, Vector &result);
     static void Value_to_set(DataChunk &args, ExpressionState &state, Vector &result);
     static void Intset_to_floatset(DataChunk &args, ExpressionState &state, Vector &result);

@@ -82,7 +82,80 @@ bool SpansetFunctions::Spanset_to_text(Vector &source, Vector &result, idx_t cou
     return true;
 }
 
-bool SpansetFunctions::Text_to_spanset(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {    
+// --- WKB / HexWKB I/O for spansets (subtype-agnostic — format encodes type) ---
+void SpansetFunctions::Spanset_as_binary(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            uint8_t *copy = (uint8_t *)malloc(input.GetSize());
+            memcpy(copy, input.GetData(), input.GetSize());
+            SpanSet *ss = reinterpret_cast<SpanSet *>(copy);
+            size_t wkb_size = 0;
+            uint8_t *wkb = spanset_as_wkb(ss, WKB_EXTENDED, &wkb_size);
+            free(copy);
+            if (!wkb) throw InternalException("asBinary: spanset_as_wkb failed");
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(wkb), wkb_size));
+            free(wkb);
+            return stored;
+        });
+}
+
+void SpansetFunctions::Spanset_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            uint8_t *copy = (uint8_t *)malloc(input.GetSize());
+            memcpy(copy, input.GetData(), input.GetSize());
+            SpanSet *ss = reinterpret_cast<SpanSet *>(copy);
+            size_t hex_size = 0;
+            char *hex = spanset_as_hexwkb(ss, WKB_EXTENDED, &hex_size);
+            (void)hex_size;
+            free(copy);
+            if (!hex) throw InternalException("asHexWKB: spanset_as_hexwkb failed");
+            string_t stored = StringVector::AddString(result, hex);
+            free(hex);
+            return stored;
+        });
+}
+
+void SpansetFunctions::Spanset_from_binary(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() == 0)
+                throw InvalidInputException("spansetFromBinary: empty WKB input");
+            uint8_t *wkb = (uint8_t *)malloc(input.GetSize());
+            memcpy(wkb, input.GetData(), input.GetSize());
+            SpanSet *ss = spanset_from_wkb(wkb, input.GetSize());
+            free(wkb);
+            if (!ss) throw InvalidInputException(
+                "spansetFromBinary: invalid MEOS-WKB");
+            size_t sz = spanset_mem_size(ss);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(ss), sz));
+            free(ss);
+            return stored;
+        });
+}
+
+void SpansetFunctions::Spanset_from_hexwkb(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            std::string hex(input.GetData(), input.GetSize());
+            SpanSet *ss = spanset_from_hexwkb(hex.c_str());
+            if (!ss) throw InvalidInputException(
+                "spansetFromHexWKB: invalid hex-encoded MEOS-WKB");
+            size_t sz = spanset_mem_size(ss);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(ss), sz));
+            free(ss);
+            return stored;
+        });
+}
+
+bool SpansetFunctions::Text_to_spanset(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     source.Flatten(count);
     result.SetVectorType(VectorType::FLAT_VECTOR);
 

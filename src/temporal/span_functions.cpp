@@ -124,6 +124,79 @@ bool SpanFunctions::Text_to_span(Vector &source, Vector &result, idx_t count, Ca
     return true;
 }
 
+// --- WKB / HexWKB I/O (subtype-agnostic; format encodes the span type) ---
+void SpanFunctions::Span_as_binary(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            uint8_t *copy = (uint8_t *)malloc(input.GetSize());
+            memcpy(copy, input.GetData(), input.GetSize());
+            Span *s = reinterpret_cast<Span *>(copy);
+            size_t wkb_size = 0;
+            uint8_t *wkb = span_as_wkb(s, WKB_EXTENDED, &wkb_size);
+            free(copy);
+            if (!wkb) throw InternalException("asBinary: span_as_wkb failed");
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(wkb), wkb_size));
+            free(wkb);
+            return stored;
+        });
+}
+
+void SpanFunctions::Span_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            uint8_t *copy = (uint8_t *)malloc(input.GetSize());
+            memcpy(copy, input.GetData(), input.GetSize());
+            Span *s = reinterpret_cast<Span *>(copy);
+            size_t hex_size = 0;
+            char *hex = span_as_hexwkb(s, WKB_EXTENDED, &hex_size);
+            (void)hex_size;
+            free(copy);
+            if (!hex) throw InternalException("asHexWKB: span_as_hexwkb failed");
+            string_t stored = StringVector::AddString(result, hex);
+            free(hex);
+            return stored;
+        });
+}
+
+void SpanFunctions::Span_from_binary(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() == 0)
+                throw InvalidInputException("spanFromBinary: empty WKB input");
+            uint8_t *wkb = (uint8_t *)malloc(input.GetSize());
+            memcpy(wkb, input.GetData(), input.GetSize());
+            Span *s = span_from_wkb(wkb, input.GetSize());
+            free(wkb);
+            if (!s) throw InvalidInputException(
+                "spanFromBinary: invalid MEOS-WKB");
+            size_t sz = sizeof(Span);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(s), sz));
+            free(s);
+            return stored;
+        });
+}
+
+void SpanFunctions::Span_from_hexwkb(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            std::string hex(input.GetData(), input.GetSize());
+            Span *s = span_from_hexwkb(hex.c_str());
+            if (!s) throw InvalidInputException(
+                "spanFromHexWKB: invalid hex-encoded MEOS-WKB");
+            size_t sz = sizeof(Span);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(s), sz));
+            free(s);
+            return stored;
+        });
+}
+
 // --- Span constructor from string ---
 void SpanFunctions::Span_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &input_vec = args.data[0];
