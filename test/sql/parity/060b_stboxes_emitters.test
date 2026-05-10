@@ -1,0 +1,82 @@
+# name: test/sql/parity/060b_stboxes_emitters.test
+# description: stboxes / splitNStboxes / splitEachNStboxes — multi-entry
+#              bbox emitters used to build R-tree-style indexes on
+#              temporal trajectories or geometry collections.
+#              Wraps MEOS tgeo_stboxes / tgeo_split_n_stboxes /
+#              tgeo_split_each_n_stboxes plus the geo_* variants for
+#              bare geometry / geography input.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# stboxes(<spatial>) → LIST(STBOX)
+# =============================================================================
+
+# tgeompoint — 1 sequence in, 1 stbox out.
+query I
+SELECT len(stboxes(tgeompoint '[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]'));
+----
+1
+
+# tgeometry — same shape.
+query I
+SELECT len(stboxes(tgeometry '[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]'));
+----
+1
+
+# Bare geometry — collection of two points → 1 covering stbox.
+query I
+SELECT len(stboxes(ST_GeomFromText('MULTIPOINT(0 0, 2 2)')));
+----
+1
+
+# =============================================================================
+# splitNStboxes(<spatial>, n) — n stboxes evenly distributed
+# =============================================================================
+
+# 5-point trajectory split into 2 stboxes.
+query I
+SELECT len(splitNStboxes(
+    tgeompoint '[Point(0 0)@2000-01-01, Point(1 1)@2000-01-02, Point(2 2)@2000-01-03, Point(3 3)@2000-01-04, Point(4 4)@2000-01-05]',
+    2));
+----
+2
+
+# tgeometry — same shape.
+query I
+SELECT len(splitNStboxes(
+    tgeometry '[Point(0 0)@2000-01-01, Point(1 1)@2000-01-02, Point(2 2)@2000-01-03, Point(3 3)@2000-01-04, Point(4 4)@2000-01-05]',
+    2));
+----
+2
+
+# =============================================================================
+# splitEachNStboxes(<spatial>, n) — each stbox covers n consecutive instants
+# =============================================================================
+
+# 5-point trajectory, each stbox covers 2 instants → ceil(5/2) = 3 stboxes.
+query I
+SELECT len(splitEachNStboxes(
+    tgeompoint '[Point(0 0)@2000-01-01, Point(1 1)@2000-01-02, Point(2 2)@2000-01-03, Point(3 3)@2000-01-04, Point(4 4)@2000-01-05]',
+    2));
+----
+3
+
+# tgeography — same shape.
+query I
+SELECT len(splitEachNStboxes(
+    tgeography '[Point(0 0)@2000-01-01, Point(1 1)@2000-01-02, Point(2 2)@2000-01-03, Point(3 3)@2000-01-04, Point(4 4)@2000-01-05]',
+    2));
+----
+3
+
+# =============================================================================
+# Each emitted stbox carries SRID / hasX / hasT.
+# =============================================================================
+
+query II
+SELECT hasX(stboxes(tgeompoint '[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')[1]),
+       hasT(stboxes(tgeompoint '[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')[1]);
+----
+true	true

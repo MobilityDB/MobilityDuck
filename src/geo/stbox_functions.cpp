@@ -3260,4 +3260,161 @@ DEFINE_TSPATIAL_TOPO(Adjacent,  adjacent)
 
 #undef DEFINE_TSPATIAL_TOPO
 
+/* ***************************************************
+ * stboxes / splitNStboxes / splitEachNStboxes
+ *
+ * Emits LIST(STBOX) for the multi-entry bbox index pattern: one stbox
+ * per sequence (stboxes), N evenly-distributed stboxes (splitNStboxes),
+ * or stboxes covering N consecutive instants each (splitEachNStboxes).
+ * Wraps MEOS tgeo_*_stboxes / geo_*_stboxes.
+ ****************************************************/
+
+namespace {
+
+template <typename Producer>
+void RunStboxesEmitTspatial(DataChunk &args, Vector &result, Producer produce, bool has_n_arg) {
+    const idx_t row_count = args.size();
+    args.data[0].Flatten(row_count);
+    if (has_n_arg) args.data[1].Flatten(row_count);
+    auto in_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto &valid_in = FlatVector::Validity(args.data[0]);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!valid_in.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        int n = 0;
+        if (has_n_arg) {
+            auto &nv = args.data[1];
+            if (!FlatVector::Validity(nv).RowIsValid(row)) {
+                out_validity.SetInvalid(row);
+                list_entries[row] = list_entry_t{total, 0};
+                continue;
+            }
+            n = FlatVector::GetData<int32_t>(nv)[row];
+        }
+        const string_t &blob = in_data[row];
+        Temporal *t = (Temporal *) malloc(blob.GetSize());
+        memcpy(t, blob.GetData(), blob.GetSize());
+        int count = 0;
+        STBox *boxes = produce(t, n, &count);
+        free(t);
+        if (!boxes || count <= 0) {
+            list_entries[row] = list_entry_t{total, 0};
+            if (boxes) free(boxes);
+            continue;
+        }
+        ListVector::Reserve(result, total + count);
+        ListVector::SetListSize(result, total + count);
+        list_entries[row] = list_entry_t{total, static_cast<uint64_t>(count)};
+        auto &child = ListVector::GetEntry(result);
+        auto child_data = FlatVector::GetData<string_t>(child);
+        for (int k = 0; k < count; k++) {
+            string_t one(reinterpret_cast<const char *>(&boxes[k]), sizeof(STBox));
+            child_data[total + k] = StringVector::AddStringOrBlob(child, one);
+        }
+        total += count;
+        free(boxes);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+template <typename Producer>
+void RunStboxesEmitGeo(DataChunk &args, Vector &result, Producer produce, bool has_n_arg) {
+    const idx_t row_count = args.size();
+    args.data[0].Flatten(row_count);
+    if (has_n_arg) args.data[1].Flatten(row_count);
+    auto in_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto &valid_in = FlatVector::Validity(args.data[0]);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!valid_in.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        int n = 0;
+        if (has_n_arg) {
+            auto &nv = args.data[1];
+            if (!FlatVector::Validity(nv).RowIsValid(row)) {
+                out_validity.SetInvalid(row);
+                list_entries[row] = list_entry_t{total, 0};
+                continue;
+            }
+            n = FlatVector::GetData<int32_t>(nv)[row];
+        }
+        GSERIALIZED *gs = GeometryToGSerialized(in_data[row], 0);
+        if (!gs) {
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        int count = 0;
+        STBox *boxes = produce(gs, n, &count);
+        free(gs);
+        if (!boxes || count <= 0) {
+            list_entries[row] = list_entry_t{total, 0};
+            if (boxes) free(boxes);
+            continue;
+        }
+        ListVector::Reserve(result, total + count);
+        ListVector::SetListSize(result, total + count);
+        list_entries[row] = list_entry_t{total, static_cast<uint64_t>(count)};
+        auto &child = ListVector::GetEntry(result);
+        auto child_data = FlatVector::GetData<string_t>(child);
+        for (int k = 0; k < count; k++) {
+            string_t one(reinterpret_cast<const char *>(&boxes[k]), sizeof(STBox));
+            child_data[total + k] = StringVector::AddStringOrBlob(child, one);
+        }
+        total += count;
+        free(boxes);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+} // anonymous namespace
+
+void StboxFunctions::Tspatial_stboxes(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunStboxesEmitTspatial(args, result,
+        [](const Temporal *t, int /*unused*/, int *count) { return tgeo_stboxes(t, count); },
+        /*has_n_arg=*/false);
+}
+
+void StboxFunctions::Tspatial_split_n_stboxes(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunStboxesEmitTspatial(args, result,
+        [](const Temporal *t, int n, int *count) { return tgeo_split_n_stboxes(t, n, count); },
+        /*has_n_arg=*/true);
+}
+
+void StboxFunctions::Tspatial_split_each_n_stboxes(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunStboxesEmitTspatial(args, result,
+        [](const Temporal *t, int n, int *count) { return tgeo_split_each_n_stboxes(t, n, count); },
+        /*has_n_arg=*/true);
+}
+
+void StboxFunctions::Geo_stboxes(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunStboxesEmitGeo(args, result,
+        [](const GSERIALIZED *gs, int /*unused*/, int *count) { return geo_stboxes(gs, count); },
+        /*has_n_arg=*/false);
+}
+
+void StboxFunctions::Geo_split_n_stboxes(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunStboxesEmitGeo(args, result,
+        [](const GSERIALIZED *gs, int n, int *count) { return geo_split_n_stboxes(gs, n, count); },
+        /*has_n_arg=*/true);
+}
+
+void StboxFunctions::Geo_split_each_n_stboxes(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunStboxesEmitGeo(args, result,
+        [](const GSERIALIZED *gs, int n, int *count) { return geo_split_each_n_stboxes(gs, n, count); },
+        /*has_n_arg=*/true);
+}
+
 } // namespace duckdb

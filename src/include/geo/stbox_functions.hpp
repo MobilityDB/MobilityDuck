@@ -41,6 +41,19 @@ struct StboxFunctions {
     static void Geo_tstzspan_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
+     * stboxes / splitNStboxes / splitEachNStboxes — multi-entry
+     * bbox emitters used to build R-tree-style indexes on
+     * temporal trajectories or geometry collections.
+     * Returns LIST(STBOX).
+     ****************************************************/
+    static void Tspatial_stboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tspatial_split_n_stboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tspatial_split_each_n_stboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Geo_stboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Geo_split_n_stboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Geo_split_each_n_stboxes(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
      * Conversion functions + cast functions: [TYPE] -> STBOX
      ****************************************************/
     static void Geo_to_stbox_common(Vector &source, Vector &result, idx_t count);

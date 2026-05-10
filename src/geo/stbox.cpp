@@ -4,6 +4,9 @@
 #include "geo/stbox.hpp"
 #include "geo/stbox_functions.hpp"
 #include "geo/tgeompoint.hpp"
+#include "geo/tgeogpoint.hpp"
+#include "geo/tgeometry.hpp"
+#include "geo/tgeography.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/function/function.hpp"
@@ -969,6 +972,42 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         loader.RegisterFunction(ScalarFunction("getSpaceTimeTile", {G, TS, D, D, D, I},          B, StboxFunctions::Stbox_get_space_time_tile));
         loader.RegisterFunction(ScalarFunction("getSpaceTimeTile", {G, TS, D, D, D, I, G},       B, StboxFunctions::Stbox_get_space_time_tile));
         loader.RegisterFunction(ScalarFunction("getSpaceTimeTile", {G, TS, D, D, D, I, G, TS},   B, StboxFunctions::Stbox_get_space_time_tile));
+    }
+
+    /* stboxes / splitNStboxes / splitEachNStboxes — multi-entry bbox
+     * emitters used to build R-tree-style indexes on temporal
+     * trajectories or geometry collections. */
+    {
+        const auto STBLST = LogicalType::LIST(StboxType::STBOX());
+        const auto I  = LogicalType::INTEGER;
+        const auto G  = GeoTypes::GEOMETRY();
+        const auto TG  = TgeompointType::TGEOMPOINT();
+        const auto TGG = TgeogpointType::TGEOGPOINT();
+        const auto TGM = TGeometryTypes::TGEOMETRY();
+        const auto TGY = TGeographyTypes::TGEOGRAPHY();
+
+        // stboxes(<spatial>) → LIST(STBOX) — one stbox per sequence.
+        loader.RegisterFunction(ScalarFunction("stboxes", {TG},  STBLST, StboxFunctions::Tspatial_stboxes));
+        loader.RegisterFunction(ScalarFunction("stboxes", {TGG}, STBLST, StboxFunctions::Tspatial_stboxes));
+        loader.RegisterFunction(ScalarFunction("stboxes", {TGM}, STBLST, StboxFunctions::Tspatial_stboxes));
+        loader.RegisterFunction(ScalarFunction("stboxes", {TGY}, STBLST, StboxFunctions::Tspatial_stboxes));
+        loader.RegisterFunction(ScalarFunction("stboxes", {G},   STBLST, StboxFunctions::Geo_stboxes));
+
+        // splitNStboxes(<spatial>, n) → LIST(STBOX) — exactly n boxes
+        // covering the input, distributed by element count.
+        loader.RegisterFunction(ScalarFunction("splitNStboxes", {TG,  I}, STBLST, StboxFunctions::Tspatial_split_n_stboxes));
+        loader.RegisterFunction(ScalarFunction("splitNStboxes", {TGG, I}, STBLST, StboxFunctions::Tspatial_split_n_stboxes));
+        loader.RegisterFunction(ScalarFunction("splitNStboxes", {TGM, I}, STBLST, StboxFunctions::Tspatial_split_n_stboxes));
+        loader.RegisterFunction(ScalarFunction("splitNStboxes", {TGY, I}, STBLST, StboxFunctions::Tspatial_split_n_stboxes));
+        loader.RegisterFunction(ScalarFunction("splitNStboxes", {G,   I}, STBLST, StboxFunctions::Geo_split_n_stboxes));
+
+        // splitEachNStboxes(<spatial>, n) → LIST(STBOX) — each box
+        // covers n consecutive instants/elements of the input.
+        loader.RegisterFunction(ScalarFunction("splitEachNStboxes", {TG,  I}, STBLST, StboxFunctions::Tspatial_split_each_n_stboxes));
+        loader.RegisterFunction(ScalarFunction("splitEachNStboxes", {TGG, I}, STBLST, StboxFunctions::Tspatial_split_each_n_stboxes));
+        loader.RegisterFunction(ScalarFunction("splitEachNStboxes", {TGM, I}, STBLST, StboxFunctions::Tspatial_split_each_n_stboxes));
+        loader.RegisterFunction(ScalarFunction("splitEachNStboxes", {TGY, I}, STBLST, StboxFunctions::Tspatial_split_each_n_stboxes));
+        loader.RegisterFunction(ScalarFunction("splitEachNStboxes", {G,   I}, STBLST, StboxFunctions::Geo_split_each_n_stboxes));
     }
 }
 
