@@ -212,6 +212,18 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
+    // tgeogpointSeqSetGaps — geographic-distance variant of the gaps
+    // constructor.  Three overloads.
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "tgeogpointSeqSetGaps", {LogicalType::LIST(TGEOGPOINT())},
+        TGEOGPOINT(), TemporalFunctions::Tsequenceset_constructor_gaps));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "tgeogpointSeqSetGaps", {LogicalType::LIST(TGEOGPOINT()), LogicalType::INTERVAL},
+        TGEOGPOINT(), TemporalFunctions::Tsequenceset_constructor_gaps));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "tgeogpointSeqSetGaps", {LogicalType::LIST(TGEOGPOINT()), LogicalType::INTERVAL, LogicalType::DOUBLE},
+        TGEOGPOINT(), TemporalFunctions::Tsequenceset_constructor_gaps));
+
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "stbox",

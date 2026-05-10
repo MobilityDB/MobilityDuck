@@ -410,6 +410,91 @@ void TemporalFunctions::Tsequenceset_constructor(DataChunk &args, ExpressionStat
     }
 }
 
+/* ***************************************************
+ * Tsequenceset_constructor_gaps — split LIST<temporal-instant> into a
+ * TSequenceSet of sequences at gaps that exceed maxt (interval) or
+ * maxdist (numeric/spatial distance).
+ *
+ * SQL signatures supported:
+ *   <type>SeqSetGaps(<type>[])                      // gaps = ∞ → 1 seq
+ *   <type>SeqSetGaps(<type>[], maxt INTERVAL)        // time gap only
+ *   <type>SeqSetGaps(<type>[], maxt INTERVAL, maxdist DOUBLE)
+ *
+ * Wraps MEOS tsequenceset_make_gaps; long-standing user request
+ * (closed MobilityDB issue #187 introduced the C function).
+ ****************************************************/
+void TemporalFunctions::Tsequenceset_constructor_gaps(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    const idx_t arg_count = args.ColumnCount();
+    auto &array_vec = args.data[0];
+    array_vec.Flatten(row_count);
+
+    meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
+    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
+
+    auto &child_vec = ListVector::GetEntry(array_vec);
+    child_vec.Flatten(ListVector::GetListSize(array_vec));
+    auto child_data = FlatVector::GetData<string_t>(child_vec);
+
+    UnaryExecutor::Execute<list_entry_t, string_t>(
+        array_vec, result, row_count,
+        [&](const list_entry_t &list) -> string_t {
+            const idx_t offset = list.offset;
+            const idx_t length = list.length;
+            if (length == 0) {
+                throw InvalidInputException(
+                    "SeqSetGaps: input array must contain at least one instant");
+            }
+
+            TInstant **instants = (TInstant **)malloc(length * sizeof(TInstant *));
+            if (!instants) throw InternalException("SeqSetGaps: malloc failed");
+            int valid = 0;
+            for (idx_t i = 0; i < length; i++) {
+                string_t blob = child_data[offset + i];
+                if (blob.GetSize() < sizeof(void *)) continue;
+                uint8_t *copy = (uint8_t *)malloc(blob.GetSize());
+                memcpy(copy, blob.GetData(), blob.GetSize());
+                instants[valid++] = reinterpret_cast<TInstant *>(copy);
+            }
+
+            // Optional maxt (Interval) and maxdist (DOUBLE).  When maxt
+            // is NULL or omitted the C function treats it as "no time
+            // gap"; when maxdist is 0.0 it treats it as "no distance
+            // gap".
+            Interval maxt_iv = {0, 0, 0};
+            Interval *maxt_ptr = nullptr;
+            double maxdist = 0.0;
+            if (arg_count > 1 && !args.data[1].GetValue(0).IsNull()) {
+                interval_t iv = args.data[1].GetValue(0).GetValue<interval_t>();
+                maxt_iv.month = iv.months;
+                maxt_iv.day   = iv.days;
+                maxt_iv.time  = iv.micros;
+                maxt_ptr = &maxt_iv;
+            }
+            if (arg_count > 2 && !args.data[2].GetValue(0).IsNull()) {
+                maxdist = args.data[2].GetValue(0).GetValue<double>();
+            }
+
+            TSequenceSet *ss = tsequenceset_make_gaps(
+                instants, valid, interp, maxt_ptr, maxdist);
+            if (!ss) {
+                for (int j = 0; j < valid; j++) free(instants[j]);
+                free(instants);
+                throw InvalidInputException(
+                    "SeqSetGaps: tsequenceset_make_gaps returned NULL");
+            }
+
+            size_t sz = temporal_mem_size(reinterpret_cast<Temporal *>(ss));
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(ss), sz));
+            free(ss);
+            // tsequenceset_make_gaps takes ownership of the instants on
+            // success, so do NOT free instants[j] here.
+            free(instants);
+            return stored;
+        });
+}
+
 static string_t Tsequence_from_base_tstzset_impl(Datum datum, string_t set_blob, meosType temptype, Vector &result) {
     size_t data_size = set_blob.GetSize();
     if (data_size < sizeof(void*)) {

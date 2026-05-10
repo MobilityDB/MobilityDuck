@@ -227,7 +227,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tgeompointSeqSet",
             {LogicalType::LIST(TGEOMPOINT())},
@@ -236,7 +236,19 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    // tgeompointSeqSetGaps — split into sequences at temporal or
+    // spatial gaps.  Three overloads (no maxt, maxt only, maxt + maxdist).
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "tgeompointSeqSetGaps", {LogicalType::LIST(TGEOMPOINT())},
+        TGEOMPOINT(), TemporalFunctions::Tsequenceset_constructor_gaps));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "tgeompointSeqSetGaps", {LogicalType::LIST(TGEOMPOINT()), LogicalType::INTERVAL},
+        TGEOMPOINT(), TemporalFunctions::Tsequenceset_constructor_gaps));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "tgeompointSeqSetGaps", {LogicalType::LIST(TGEOMPOINT()), LogicalType::INTERVAL, LogicalType::DOUBLE},
+        TGEOMPOINT(), TemporalFunctions::Tsequenceset_constructor_gaps));
+
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "stbox",
             {TGEOMPOINT()},

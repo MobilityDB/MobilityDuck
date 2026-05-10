@@ -388,7 +388,7 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
+        duckdb::RegisterSerializedScalarFunction(loader,
             ScalarFunction(
                 StringUtil::Lower(type.GetAlias()) + "SeqSet",
                 {type},
@@ -396,6 +396,23 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_to_tsequenceset
             )
         );
+
+        // <type>SeqSetGaps — split LIST<type> into a TSequenceSet of
+        // sequences whenever a gap exceeds maxt (interval) or maxdist
+        // (numeric / spatial).  TBOOL and TTEXT skip the maxdist
+        // overload (no distance metric for those types).
+        const std::string gaps_name = StringUtil::Lower(type.GetAlias()) + "SeqSetGaps";
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            gaps_name, {LogicalType::LIST(type)},
+            type, TemporalFunctions::Tsequenceset_constructor_gaps));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            gaps_name, {LogicalType::LIST(type), LogicalType::INTERVAL},
+            type, TemporalFunctions::Tsequenceset_constructor_gaps));
+        if (type.GetAlias() == "TINT" || type.GetAlias() == "TFLOAT") {
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+                gaps_name, {LogicalType::LIST(type), LogicalType::INTERVAL, LogicalType::DOUBLE},
+                type, TemporalFunctions::Tsequenceset_constructor_gaps));
+        }
 
         if (type.GetAlias() == "TFLOAT") {
             duckdb::RegisterSerializedScalarFunction(loader, 
