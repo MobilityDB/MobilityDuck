@@ -2081,22 +2081,77 @@ void TemporalScalarFromWkbExec(DataChunk &args, ExpressionState &, Vector &resul
         });
 }
 
+void TemporalScalarFromHexWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            std::string hex(input.GetData(), input.GetSize());
+            Temporal *t = temporal_from_hexwkb(hex.c_str());
+            if (!t) throw InvalidInputException(
+                "fromHexWKB: invalid hex-encoded MEOS-WKB");
+            size_t sz = temporal_mem_size(t);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(t), sz));
+            free(t);
+            return stored;
+        });
+}
+
+template <Temporal *(*FN)(const char *)>
+void TemporalScalarFromMfjsonExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            std::string mfj(input.GetData(), input.GetSize());
+            Temporal *t = FN(mfj.c_str());
+            if (!t) throw InvalidInputException(
+                "fromMFJSON: invalid MFJSON input");
+            size_t sz = temporal_mem_size(t);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(t), sz));
+            free(t);
+            return stored;
+        });
+}
+
 } // anonymous namespace
 
 void TemporalTypes::RegisterWkbFunctions(ExtensionLoader &loader) {
     const auto B = LogicalType::BLOB;
-    const struct { LogicalType type; const char *from_name; } types[] = {
-        { TINT(),   "tintFromBinary"   },
-        { TFLOAT(), "tfloatFromBinary" },
-        { TBOOL(),  "tboolFromBinary"  },
-        { TTEXT(),  "ttextFromBinary"  },
+    const auto V = LogicalType::VARCHAR;
+    struct Entry {
+        LogicalType type;
+        const char *bin_name;
+        const char *hex_name;
+        const char *mfj_name;
+        scalar_function_t mfj_exec;
+    };
+    const Entry types[] = {
+        { TINT(),   "tintFromBinary",
+          "tintFromHexWKB",   "tintFromMFJSON",
+          TemporalScalarFromMfjsonExec<&tint_from_mfjson> },
+        { TFLOAT(), "tfloatFromBinary",
+          "tfloatFromHexWKB", "tfloatFromMFJSON",
+          TemporalScalarFromMfjsonExec<&tfloat_from_mfjson> },
+        { TBOOL(),  "tboolFromBinary",
+          "tboolFromHexWKB",  "tboolFromMFJSON",
+          TemporalScalarFromMfjsonExec<&tbool_from_mfjson> },
+        { TTEXT(),  "ttextFromBinary",
+          "ttextFromHexWKB",  "ttextFromMFJSON",
+          TemporalScalarFromMfjsonExec<&ttext_from_mfjson> },
     };
     for (auto &e : types) {
         loader.RegisterFunction(
             ScalarFunction("asBinary", {e.type}, B, TemporalScalarAsWkbExec));
         duckdb::RegisterSerializedScalarFunction(
             loader,
-            ScalarFunction(e.from_name, {B}, e.type, TemporalScalarFromWkbExec));
+            ScalarFunction(e.bin_name, {B}, e.type, TemporalScalarFromWkbExec));
+        duckdb::RegisterSerializedScalarFunction(
+            loader,
+            ScalarFunction(e.hex_name, {V}, e.type, TemporalScalarFromHexWkbExec));
+        duckdb::RegisterSerializedScalarFunction(
+            loader,
+            ScalarFunction(e.mfj_name, {V}, e.type, e.mfj_exec));
     }
 }
 

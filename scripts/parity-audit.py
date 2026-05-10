@@ -129,6 +129,11 @@ DYNAMIC_REGISTERED = {
     "tbool", "tint", "tfloat", "ttext",
     # Accessors registered through RegisterTemporalDatumAccessor.
     "minValue", "maxValue", "getValue", "startValue", "endValue",
+    # Binary / HexWKB / MFJSON parsers registered through
+    # TemporalTypes::RegisterWkbFunctions (loops over scalar types).
+    "tboolFromBinary", "tintFromBinary", "tfloatFromBinary", "ttextFromBinary",
+    "tboolFromHexWKB", "tintFromHexWKB", "tfloatFromHexWKB", "ttextFromHexWKB",
+    "tboolFromMFJSON", "tintFromMFJSON", "tfloatFromMFJSON", "ttextFromMFJSON",
 }
 
 

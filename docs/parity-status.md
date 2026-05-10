@@ -1,6 +1,6 @@
 # MobilityDuck parity status — surface-level audit
 
-Generated 2026-05-10. **Active addressable scope** (temporal + geo, excluding PG-only helpers): 811/960 names covered (84.5%).
+Generated 2026-05-10. **Active addressable scope** (temporal + geo, excluding PG-only helpers): 823/960 names covered (85.7%).
 
 **Out of scope** (PG-only — no DuckDB equivalent exists): 303 names skipped — 84 from PG-only sections (GiST/SPGiST opclasses, set/span/spanset index files, `019_geo_constructors.in.sql` PG geometric types, `999_oid_cache.in.sql`) plus 219 PG helper functions inside active sections (`*_in/_out/_recv/_send`, `*_transfn/_combinefn/_finalfn/_serialize/_deserialize`, `*_sel/_joinsel/_supportfn/_analyze`, `*_typmod_in/_typmod_out`).  Listed in appendix B; not counted in the headline.
 
@@ -57,7 +57,7 @@ Per-section counts: `Addressable` = MDB names minus PG-only helpers (see appendi
 | `temporal/015_span_aggfuncs.in.sql` | 0 | 0 | 0 | 0% | 10 | 0 |
 | `temporal/021_tbox.in.sql` | 52 | 52 | 0 | 100% | 8 | 21 |
 | `temporal/022_temporal.in.sql` | 102 | 84 | 18 | 82% | 15 | 24 |
-| `temporal/023_temporal_inout.in.sql` | 16 | 4 | 12 | 25% | 0 | 0 |
+| `temporal/023_temporal_inout.in.sql` | 16 | 16 | 0 | 100% | 0 | 0 |
 | `temporal/025_temporal_tile.in.sql` | 16 | 10 | 6 | 62% | 0 | 0 |
 | `temporal/026_tnumber_mathfuncs.in.sql` | 17 | 17 | 0 | 100% | 0 | 24 |
 | `temporal/028_tbool_boolops.in.sql` | 4 | 4 | 0 | 100% | 0 | 7 |
@@ -70,7 +70,7 @@ Per-section counts: `Addressable` = MDB names minus PG-only helpers (see appendi
 | `temporal/040_temporal_aggfuncs.in.sql` | 0 | 0 | 0 | 0% | 40 | 0 |
 | `temporal/042_temporal_waggfuncs.in.sql` | 0 | 0 | 0 | 0% | 8 | 0 |
 | `temporal/046_temporal_analytics.in.sql` | 4 | 4 | 0 | 100% | 0 | 0 |
-| **TOTAL (active)** | **960** | **811** | **149** | **84%** | **219** | — |
+| **TOTAL (active)** | **960** | **823** | **137** | **86%** | **219** | — |
 
 ## Missing function names per active section
 
@@ -267,21 +267,6 @@ Per-section counts: `Addressable` = MDB names minus PG-only helpers (see appendi
 - `ttextSeqSet` (2 overloads)
 - `ttextSeqSetGaps`
 - `unnest` (3 overloads)
-
-### `temporal/023_temporal_inout.in.sql` — 12 missing of 16 addressable (25% covered)
-
-- `tboolFromBinary`
-- `tboolFromHexWKB`
-- `tboolFromMFJSON`
-- `tfloatFromBinary`
-- `tfloatFromHexWKB`
-- `tfloatFromMFJSON`
-- `tintFromBinary`
-- `tintFromHexWKB`
-- `tintFromMFJSON`
-- `ttextFromBinary`
-- `ttextFromHexWKB`
-- `ttextFromMFJSON`
 
 ### `temporal/025_temporal_tile.in.sql` — 6 missing of 16 addressable (62% covered)
 
