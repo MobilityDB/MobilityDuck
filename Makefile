@@ -8,9 +8,10 @@ EXT_CONFIG=${PROJ_DIR}extension_config.cmake
 include extension-ci-tools/makefiles/duckdb_extension.Makefile
 
 # Test runner uses a non-UTC timezone (Europe/Brussels) to verify that the
-# extension's forced MEOS UTC initialisation makes tests pass regardless of
-# the OS timezone.  This is the project policy: tests MUST pass with any
-# system TZ; Brussels is the default runner TZ to surface bugs that UTC hides.
+# extension's forced meos_initialize_timezone("Europe/Brussels") call makes
+# tests pass regardless of the OS timezone.  This is the project policy:
+# tests MUST pass with any system TZ; Brussels is the default runner TZ to
+# surface bugs that UTC hides.
 test_release_internal:
 	TZ=Europe/Brussels ./build/release/$(TEST_PATH) "$(PROJ_DIR)test/*"
 test_debug_internal:

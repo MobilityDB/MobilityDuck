@@ -209,11 +209,13 @@ static void LoadInternal(ExtensionLoader &loader) {
 	static std::once_flag meos_init_flag;
     std::call_once(meos_init_flag, []() {
         meos_initialize();
-        /* Force UTC for MEOS text I/O so temporal-type output is always
-         * "+00" regardless of the OS TZ env variable. This makes test
-         * expected values stable across all timezones (Brussels, Pacific,
-         * etc.) without requiring TZ=UTC in the test runner. */
-        meos_initialize_timezone("UTC");
+        /* Set the MEOS timezone to Europe/Brussels explicitly so that all
+         * temporal-type text I/O uses a consistent, named timezone regardless
+         * of the OS TZ environment variable.  The Makefile test runner also
+         * sets TZ=Europe/Brussels so both layers agree.  Production callers
+         * that need a different timezone may call meos_initialize_timezone()
+         * after loading the extension. */
+        meos_initialize_timezone("Europe/Brussels");
         meos_initialize_error_handler(&MobilityduckMeosErrorHandler);
     });
 
