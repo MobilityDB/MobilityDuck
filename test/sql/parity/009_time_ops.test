@@ -26,7 +26,7 @@ SELECT tstzspan '[2000-01-01, 2000-01-02]' + interval '1 day';
 query I
 SELECT timestamptz '2000-01-01' <-> tstzset '{2000-01-03}';
 ----
-1 day 23:00:00
+2 days
 
 query I
 SELECT tstzspan '[2000-01-01, 2000-01-02]' <-> tstzspan '[2000-01-04, 2000-01-05]';

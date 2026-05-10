@@ -58,7 +58,7 @@ SELECT set([1.2,1.5]);
 query I 
 SELECT set(ARRAY[timestamptz '2001-01-01 08:00:00', '2001-01-03 09:30:00']);
 ----
-{"2001-01-01 09:00:00+01", "2001-01-03 10:30:00+01"}
+{"2001-01-01 08:00:00+01", "2001-01-03 09:30:00+01"}
 
 query I 
 SELECT set(ARRAY['highway', 'primary', 'secondary']);
@@ -80,7 +80,7 @@ SELECT DOUBLE '1.5'::floatset;
 query I
 SELECT CAST(TIMESTAMPTZ'2001-01-01 08:00:00' AS tstzset);
 ----
-{"2001-01-01 09:00:00+01"}
+{"2001-01-01 08:00:00+01"}
 
 query I 
 SELECT CAST(DATE'2001-01-01' AS dateset); 
@@ -272,8 +272,8 @@ highway
 query I 
 SELECT * FROM setUnnest(tstzset '{2001-01-01 08:00:00, 2001-01-03 09:30:00}');
 ----
-2001-01-01 07:00:00+00
-2001-01-03 08:30:00+00
+2001-01-01 08:00:00+01
+2001-01-03 09:30:00+01
 
 query I
 SELECT intset '{1,2,3}' + intset '{3, 4, 5}';

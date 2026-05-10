@@ -225,6 +225,15 @@ static void LoadInternal(ExtensionLoader &loader) {
         meos_initialize_error_handler(&MobilityduckMeosErrorHandler);
     });
 
+    // Single-timezone model: ensure DuckDB's session timezone matches the
+    // MEOS timezone so bare TIMESTAMPTZ display agrees with MEOS composite
+    // type strings.  Auto-load ICU (without it, the test framework keeps
+    // session timezone at UTC) and set the TimeZone option to Brussels.
+    auto &db = loader.GetDatabaseInstance();
+    ExtensionHelper::AutoLoadExtension(db, "icu");
+    auto &config = DBConfig::GetConfig(db);
+    config.SetOptionByName("TimeZone", Value("Europe/Brussels"));
+
 
 	// Register scalar function: mobilityduck_openssl_version
 	auto mobilityduck_openssl_version_scalar_function =

@@ -38,13 +38,13 @@ query I
 SELECT startTimestamp(t::tgeometry)::VARCHAR FROM (VALUES
   ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
 ----
-1999-12-31 23:00:00+00
+2000-01-01 00:00:00+01
 
 query I
 SELECT endTimestamp(t::tgeometry)::VARCHAR FROM (VALUES
   ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
 ----
-2000-01-02 23:00:00+00
+2000-01-03 00:00:00+01
 
 query I
 SELECT duration(t::tgeometry)::VARCHAR FROM (VALUES

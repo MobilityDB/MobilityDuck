@@ -104,22 +104,22 @@ mode unskip
 query I
 SELECT TINT(42, '2023-01-01'::TIMESTAMPTZ);
 ----
-42@2023-01-01 01:00:00+01
+42@2023-01-01 00:00:00+01
 
 query I
 SELECT TFLOAT(1.5, '2023-01-01'::TIMESTAMPTZ);
 ----
-1.5@2023-01-01 01:00:00+01
+1.5@2023-01-01 00:00:00+01
 
 query I
 SELECT TBOOL(true, '2023-01-01'::TIMESTAMPTZ);
 ----
-t@2023-01-01 01:00:00+01
+t@2023-01-01 00:00:00+01
 
 query I
 SELECT TTEXT('hello', '2023-01-01'::TIMESTAMPTZ);
 ----
-"hello"@2023-01-01 01:00:00+01
+"hello"@2023-01-01 00:00:00+01
 
 # =============================================================================
 # Conversion functions (tboolSeq, tintSeq, tfloatSeq, ttextSeq with interp)
