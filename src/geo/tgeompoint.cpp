@@ -1263,7 +1263,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Spatial relationships
      ****************************************************/
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "eContains",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1271,7 +1271,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Econtains_geo_tgeo
         )
     );
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "aContains",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1279,6 +1279,26 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Acontains_geo_tgeo
         )
     );
+    /* eCovers — covering relationships (returns BOOLEAN). */
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("eCovers",
+        {GeoTypes::GEOMETRY(), TGEOMPOINT()}, LogicalType::BOOLEAN,
+        TgeompointFunctions::Ecovers_geo_tgeo));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("eCovers",
+        {TGEOMPOINT(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN,
+        TgeompointFunctions::Ecovers_tgeo_geo));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("eCovers",
+        {TGEOMPOINT(), TGEOMPOINT()}, LogicalType::BOOLEAN,
+        TgeompointFunctions::Ecovers_tgeo_tgeo));
+    /* tCovers — temporal covering relationships (returns tbool). */
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tCovers",
+        {GeoTypes::GEOMETRY(), TGEOMPOINT()}, TemporalTypes::TBOOL(),
+        TgeompointFunctions::Tcovers_geo_tgeo));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tCovers",
+        {TGEOMPOINT(), GeoTypes::GEOMETRY()}, TemporalTypes::TBOOL(),
+        TgeompointFunctions::Tcovers_tgeo_geo));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tCovers",
+        {TGEOMPOINT(), TGEOMPOINT()}, TemporalTypes::TBOOL(),
+        TgeompointFunctions::Tcovers_tgeo_tgeo));
     
      duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(

@@ -986,6 +986,16 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     REG_TCMP("temporal_teq", Teq)
     REG_TCMP("temporal_tne", Tne)
 #undef REG_TCMP
+
+    // eCovers (BOOLEAN) and tCovers (tbool) — covering relationships
+    // for tgeometry.  acovers_*_tgeo is not exposed by the MEOS public
+    // API at present so the aCovers wrapper isn't registered here.
+    loader.RegisterFunction(ScalarFunction("eCovers", {GEOM, TGEOM},  LogicalType::BOOLEAN, TgeompointFunctions::Ecovers_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction("eCovers", {TGEOM, GEOM},  LogicalType::BOOLEAN, TgeompointFunctions::Ecovers_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("eCovers", {TGEOM, TGEOM}, LogicalType::BOOLEAN, TgeompointFunctions::Ecovers_tgeo_tgeo));
+    loader.RegisterFunction(ScalarFunction("tCovers", {GEOM, TGEOM},  TemporalTypes::TBOOL(), TgeompointFunctions::Tcovers_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction("tCovers", {TGEOM, GEOM},  TemporalTypes::TBOOL(), TgeompointFunctions::Tcovers_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("tCovers", {TGEOM, TGEOM}, TemporalTypes::TBOOL(), TgeompointFunctions::Tcovers_tgeo_tgeo));
 }
 
 } // namespace duckdb

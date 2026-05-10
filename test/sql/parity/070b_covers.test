@@ -1,0 +1,75 @@
+# name: test/sql/parity/070b_covers.test
+# description: eCovers (BOOLEAN) and tCovers (tbool) — covering
+#              relationships for tgeometry / tgeography / tgeompoint
+#              across the standard three call shapes (geometry × tgeo,
+#              tgeo × geometry, tgeo × tgeo).  aCovers (always covers)
+#              is not exposed by MEOS at present and therefore not
+#              registered.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# eCovers — geometry × tgeompoint
+# =============================================================================
+
+# A 5×5 polygon at the origin covers a tgeompoint at (2, 2).
+query I
+SELECT eCovers(
+  ST_GeomFromText('POLYGON((0 0, 0 5, 5 5, 5 0, 0 0))'),
+  t::tgeompoint)
+FROM (VALUES ('Point(2 2)@2000-01-01')) t(t);
+----
+true
+
+# eCovers — tgeompoint × geometry — a single point covers itself.
+query I
+SELECT eCovers(t::tgeompoint, ST_GeomFromText('POINT(2 2)'))
+FROM (VALUES ('Point(2 2)@2000-01-01')) t(t);
+----
+true
+
+# eCovers — tgeompoint × tgeompoint — identity.
+query I
+SELECT eCovers(t::tgeompoint, t::tgeompoint)
+FROM (VALUES ('Point(2 2)@2000-01-01')) t(t);
+----
+true
+
+# =============================================================================
+# tCovers — temporal coverage (returns tbool, IS NOT NULL is timezone-neutral)
+# =============================================================================
+
+query I
+SELECT tCovers(
+  ST_GeomFromText('POLYGON((0 0, 0 5, 5 5, 5 0, 0 0))'),
+  t::tgeompoint) IS NOT NULL
+FROM (VALUES ('Point(2 2)@2000-01-01')) t(t);
+----
+true
+
+query I
+SELECT tCovers(t::tgeompoint, t::tgeompoint) IS NOT NULL
+FROM (VALUES ('Point(2 2)@2000-01-01')) t(t);
+----
+true
+
+# =============================================================================
+# eCovers / tCovers — tgeometry surface
+# =============================================================================
+
+query I
+SELECT eCovers(
+  ST_GeomFromText('POLYGON((0 0, 0 5, 5 5, 5 0, 0 0))'),
+  t::tgeometry)
+FROM (VALUES ('Point(2 2)@2000-01-01')) t(t);
+----
+true
+
+query I
+SELECT tCovers(
+  ST_GeomFromText('POLYGON((0 0, 0 5, 5 5, 5 0, 0 0))'),
+  t::tgeometry) IS NOT NULL
+FROM (VALUES ('Point(2 2)@2000-01-01')) t(t);
+----
+true

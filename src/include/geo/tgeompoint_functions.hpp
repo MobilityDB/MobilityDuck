@@ -134,10 +134,16 @@ struct TgeompointFunctions {
     static void Adwithin_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adwithin_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adwithin_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ecovers_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ecovers_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ecovers_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
      * Temporal-spatial relationships
      ****************************************************/
     static void Tcontains_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tcovers_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tcovers_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tcovers_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tdisjoint_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tdisjoint_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tdisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
