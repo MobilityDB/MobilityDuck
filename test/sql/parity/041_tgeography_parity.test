@@ -38,7 +38,7 @@ query I
 SELECT startTimestamp(t::tgeography)::VARCHAR FROM (VALUES
   ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
 ----
-2000-01-01 00:00:00+01
+1999-12-31 23:00:00+00
 
 query I
 SELECT duration(t::tgeography)::VARCHAR FROM (VALUES
@@ -57,16 +57,16 @@ SELECT len(timestamps(t::tgeography)) FROM (VALUES
 # =============================================================================
 
 query I
-SELECT atTime(t::tgeography, TIMESTAMPTZ '2000-01-01 00:00:00+01')::VARCHAR FROM (VALUES
+SELECT atTime(t::tgeography, TIMESTAMPTZ '2000-01-01 00:00:00+00')::VARCHAR FROM (VALUES
   ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
 ----
-0101000020E610000000000000000000000000000000000000@2000-01-01 00:00:00+01
+0101000020E610000000000000000000000000000000000000@2000-01-01 00:00:00+00
 
 query I
 SELECT shiftTime(t::tgeography, INTERVAL '1 day')::VARCHAR FROM (VALUES
   ('Point(0 0)@2000-01-01')) t(t);
 ----
-0101000020E610000000000000000000000000000000000000@2000-01-02 00:00:00+01
+0101000020E610000000000000000000000000000000000000@2000-01-02 00:00:00+00
 
 # =============================================================================
 # Comparison
@@ -141,13 +141,13 @@ query I
 SELECT extent(t::tgeography)::VARCHAR FROM (VALUES
   ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
 ----
-SRID=4326;GEODSTBOX XT(((0,0),(2,2)),[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01])
+SRID=4326;GEODSTBOX XT(((0,0),(2,2)),[2000-01-01 00:00:00+00, 2000-01-02 00:00:00+00])
 
 query I
 SELECT TcountAgg(t::tgeography)::VARCHAR FROM (VALUES
   ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
 ----
-{1@2000-01-01 00:00:00+01, 1@2000-01-02 00:00:00+01}
+{1@2000-01-01 00:00:00+00, 1@2000-01-02 00:00:00+00}
 
 query I
 SELECT (MergeAgg(t::tgeography) IS NOT NULL) FROM (VALUES

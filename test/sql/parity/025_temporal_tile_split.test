@@ -82,6 +82,6 @@ SELECT value, time, tempSubtype(tint) FROM
   valueTimeSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', 2, INTERVAL '2 days')
   ORDER BY value, time;
 ----
-0	2000-01-01 01:00:00+01	SequenceSet
-0	2000-01-03 01:00:00+01	SequenceSet
-4	2000-01-05 01:00:00+01	SequenceSet
+0	2000-01-01 00:00:00+00	SequenceSet
+0	2000-01-03 00:00:00+00	SequenceSet
+4	2000-01-05 00:00:00+00	SequenceSet

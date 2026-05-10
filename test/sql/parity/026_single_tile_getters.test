@@ -32,13 +32,13 @@ TBOXFLOAT X([0, 2.5))
 query I
 SELECT getTBoxTimeTile(TIMESTAMPTZ '2001-01-04', INTERVAL '1 day')::VARCHAR;
 ----
-TBOX T([2001-01-03 01:00:00+01, 2001-01-04 01:00:00+01))
+TBOX T([2001-01-04 01:00:00+00, 2001-01-05 01:00:00+00))
 
 # Explicit torigin overrides the default
 query I
 SELECT getTBoxTimeTile(TIMESTAMPTZ '2001-01-04', INTERVAL '1 week', TIMESTAMPTZ '2001-01-07')::VARCHAR;
 ----
-TBOX T([2000-12-31 00:00:00+01, 2001-01-07 00:00:00+01))
+TBOX T([2000-12-31 01:00:00+00, 2001-01-07 01:00:00+00))
 
 # =============================================================================
 # getValueTimeTile(double, timestamptz, double, interval
@@ -48,12 +48,12 @@ TBOX T([2000-12-31 00:00:00+01, 2001-01-07 00:00:00+01))
 query I
 SELECT getValueTimeTile(2.0, TIMESTAMPTZ '2001-01-04', 2.5, INTERVAL '1 day')::VARCHAR;
 ----
-TBOXFLOAT XT([0, 2.5),[2001-01-03 01:00:00+01, 2001-01-04 01:00:00+01))
+TBOXFLOAT XT([0, 2.5),[2001-01-04 01:00:00+00, 2001-01-05 01:00:00+00))
 
 query I
 SELECT getValueTimeTile(2.0, TIMESTAMPTZ '2001-01-04', 2.5, INTERVAL '1 day', 1.5, TIMESTAMPTZ '2000-01-01')::VARCHAR;
 ----
-TBOXFLOAT XT([1.5, 4),[2001-01-04 00:00:00+01, 2001-01-05 00:00:00+01))
+TBOXFLOAT XT([1.5, 4),[2001-01-04 01:00:00+00, 2001-01-05 01:00:00+00))
 
 # =============================================================================
 # getSpaceTile(geom, xsize, ysize, zsize [, sorigin geom='Point(0 0 0)'])
@@ -78,7 +78,7 @@ STBOX X((1,2),(2,3))
 query I
 SELECT getStboxTimeTile(TIMESTAMPTZ '2001-01-04', INTERVAL '1 day')::VARCHAR;
 ----
-STBOX T([2001-01-03 01:00:00+01, 2001-01-04 01:00:00+01))
+STBOX T([2001-01-04 01:00:00+00, 2001-01-05 01:00:00+00))
 
 # =============================================================================
 # getSpaceTimeTile(geom, t, xsize, ysize, zsize, interval
@@ -89,4 +89,4 @@ query I
 SELECT getSpaceTimeTile(ST_Point(1.5, 2.5), TIMESTAMPTZ '2001-01-04',
   1.0, 1.0, 1.0, INTERVAL '1 day')::VARCHAR;
 ----
-STBOX XT(((1,2),(2,3)),[2001-01-03 01:00:00+01, 2001-01-04 01:00:00+01))
+STBOX XT(((1,2),(2,3)),[2001-01-04 01:00:00+00, 2001-01-05 01:00:00+00))

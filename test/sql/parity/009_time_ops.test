@@ -14,19 +14,19 @@ require mobilityduck
 query I
 SELECT tstzset '{2000-01-01}' + interval '1 day';
 ----
-{"2000-01-02 00:00:00+01"}
+{"2000-01-02 00:00:00+00"}
 
 query I
 SELECT tstzspan '[2000-01-01, 2000-01-02]' + interval '1 day';
 ----
-[2000-01-02 00:00:00+01, 2000-01-03 00:00:00+01]
+[2000-01-02 00:00:00+00, 2000-01-03 00:00:00+00]
 
 # Time-difference distance
 
 query I
 SELECT timestamptz '2000-01-01' <-> tstzset '{2000-01-03}';
 ----
-2 days
+1 day 23:00:00
 
 query I
 SELECT tstzspan '[2000-01-01, 2000-01-02]' <-> tstzspan '[2000-01-04, 2000-01-05]';

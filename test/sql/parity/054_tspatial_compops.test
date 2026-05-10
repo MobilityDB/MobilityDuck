@@ -47,14 +47,14 @@ true
 query I
 SELECT temporal_teq(tgeompoint '[POINT(0 0)@2000-01-01]', tgeompoint '[POINT(0 0)@2000-01-01]');
 ----
-[t@2000-01-01 00:00:00+01]
+[t@2000-01-01 00:00:00+00]
 
 query I
 SELECT temporal_teq(tgeompoint '[POINT(0 0)@2000-01-01]', ST_GeomFromText('POINT(0 0)'));
 ----
-{[t@2000-01-01 00:00:00+01]}
+{[t@2000-01-01 00:00:00+00]}
 
 query I
 SELECT temporal_tne(ST_GeomFromText('POINT(5 5)'), tgeompoint '[POINT(0 0)@2000-01-01]');
 ----
-{[t@2000-01-01 00:00:00+01]}
+{[t@2000-01-01 00:00:00+00]}
