@@ -251,6 +251,14 @@ static void LoadInternal(ExtensionLoader &loader) {
 	duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
 		"mobilityduck_full_version", {}, LogicalType::VARCHAR,
 		MobilityduckFullVersionScalarFun));
+	// Portable-SQL aliases — match MobilityDB's `mobilitydb_*` names so
+	// queries that probe for engine version work unchanged across both.
+	duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+		"mobilitydb_version", {}, LogicalType::VARCHAR,
+		MobilityduckVersionScalarFun));
+	duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+		"mobilitydb_full_version", {}, LogicalType::VARCHAR,
+		MobilityduckFullVersionScalarFun));
 
 	// Temporal and related types/functions
 	TemporalTypes::RegisterTypes(loader);

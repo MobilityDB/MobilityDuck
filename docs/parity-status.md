@@ -1,6 +1,6 @@
 # MobilityDuck parity status — surface-level audit
 
-Generated 2026-05-10. **Active addressable scope** (temporal + geo, excluding PG-only helpers): 761/960 names covered (79.3%).
+Generated 2026-05-10. **Active addressable scope** (temporal + geo, excluding PG-only helpers): 787/960 names covered (82.0%).
 
 **Out of scope** (PG-only — no DuckDB equivalent exists): 303 names skipped — 84 from PG-only sections (GiST/SPGiST opclasses, set/span/spanset index files, `019_geo_constructors.in.sql` PG geometric types, `999_oid_cache.in.sql`) plus 219 PG helper functions inside active sections (`*_in/_out/_recv/_send`, `*_transfn/_combinefn/_finalfn/_serialize/_deserialize`, `*_sel/_joinsel/_supportfn/_analyze`, `*_typmod_in/_typmod_out`).  Listed in appendix B; not counted in the headline.
 
@@ -26,8 +26,8 @@ Per-section counts: `Addressable` = MDB names minus PG-only helpers (see appendi
 | `geo/052_tpoint.in.sql` | 70 | 66 | 4 | 94% | 8 | 12 |
 | `geo/053_tgeo_inout.in.sql` | 18 | 6 | 12 | 33% | 0 | 0 |
 | `geo/053_tpoint_inout.in.sql` | 18 | 18 | 0 | 100% | 0 | 0 |
-| `geo/054_tgeo_compops.in.sql` | 6 | 0 | 6 | 0% | 1 | 36 |
-| `geo/054_tpoint_compops.in.sql` | 6 | 0 | 6 | 0% | 0 | 36 |
+| `geo/054_tgeo_compops.in.sql` | 6 | 4 | 2 | 67% | 1 | 36 |
+| `geo/054_tpoint_compops.in.sql` | 6 | 4 | 2 | 67% | 0 | 36 |
 | `geo/056_tgeo_spatialfuncs.in.sql` | 17 | 15 | 2 | 88% | 0 | 0 |
 | `geo/056_tpoint_spatialfuncs.in.sql` | 30 | 24 | 6 | 80% | 0 | 0 |
 | `geo/058_tgeo_tile.in.sql` | 5 | 2 | 3 | 40% | 0 | 0 |
@@ -56,13 +56,13 @@ Per-section counts: `Addressable` = MDB names minus PG-only helpers (see appendi
 | `temporal/009_spanset_ops.in.sql` | 14 | 13 | 1 | 93% | 0 | 280 |
 | `temporal/015_span_aggfuncs.in.sql` | 0 | 0 | 0 | 0% | 10 | 0 |
 | `temporal/021_tbox.in.sql` | 52 | 52 | 0 | 100% | 8 | 21 |
-| `temporal/022_temporal.in.sql` | 102 | 78 | 24 | 76% | 15 | 24 |
+| `temporal/022_temporal.in.sql` | 102 | 80 | 22 | 78% | 15 | 24 |
 | `temporal/023_temporal_inout.in.sql` | 16 | 4 | 12 | 25% | 0 | 0 |
 | `temporal/025_temporal_tile.in.sql` | 16 | 10 | 6 | 62% | 0 | 0 |
 | `temporal/026_tnumber_mathfuncs.in.sql` | 17 | 17 | 0 | 100% | 0 | 24 |
-| `temporal/028_tbool_boolops.in.sql` | 4 | 1 | 3 | 25% | 0 | 7 |
-| `temporal/029_ttext_textfuncs.in.sql` | 4 | 3 | 1 | 75% | 0 | 3 |
-| `temporal/030_temporal_compops.in.sql` | 18 | 6 | 12 | 33% | 1 | 180 |
+| `temporal/028_tbool_boolops.in.sql` | 4 | 4 | 0 | 100% | 0 | 7 |
+| `temporal/029_ttext_textfuncs.in.sql` | 4 | 4 | 0 | 100% | 0 | 3 |
+| `temporal/030_temporal_compops.in.sql` | 18 | 18 | 0 | 100% | 1 | 180 |
 | `temporal/032_temporal_boxops.in.sql` | 11 | 11 | 0 | 100% | 0 | 100 |
 | `temporal/034_temporal_posops.in.sql` | 8 | 8 | 0 | 100% | 0 | 112 |
 | `temporal/036_tnumber_distance.in.sql` | 2 | 2 | 0 | 100% | 0 | 17 |
@@ -70,7 +70,7 @@ Per-section counts: `Addressable` = MDB names minus PG-only helpers (see appendi
 | `temporal/040_temporal_aggfuncs.in.sql` | 0 | 0 | 0 | 0% | 40 | 0 |
 | `temporal/042_temporal_waggfuncs.in.sql` | 0 | 0 | 0 | 0% | 8 | 0 |
 | `temporal/046_temporal_analytics.in.sql` | 4 | 4 | 0 | 100% | 0 | 0 |
-| **TOTAL (active)** | **960** | **761** | **199** | **79%** | **219** | — |
+| **TOTAL (active)** | **960** | **787** | **173** | **82%** | **219** | — |
 
 ## Missing function names per active section
 
@@ -139,21 +139,13 @@ Per-section counts: `Addressable` = MDB names minus PG-only helpers (see appendi
 - `tgeometryFromMFJSON`
 - `tgeometryFromText`
 
-### `geo/054_tgeo_compops.in.sql` — 6 missing of 6 addressable (0% covered)
+### `geo/054_tgeo_compops.in.sql` — 2 missing of 6 addressable (67% covered)
 
-- `always_eq` (6 overloads)
-- `always_ne` (6 overloads)
-- `ever_eq` (6 overloads)
-- `ever_ne` (6 overloads)
 - `tgeo_teq` (6 overloads)
 - `tgeo_tne` (6 overloads)
 
-### `geo/054_tpoint_compops.in.sql` — 6 missing of 6 addressable (0% covered)
+### `geo/054_tpoint_compops.in.sql` — 2 missing of 6 addressable (67% covered)
 
-- `always_eq` (6 overloads)
-- `always_ne` (6 overloads)
-- `ever_eq` (6 overloads)
-- `ever_ne` (6 overloads)
 - `tgeo_teq` (6 overloads)
 - `tgeo_tne` (6 overloads)
 
@@ -287,12 +279,10 @@ Per-section counts: `Addressable` = MDB names minus PG-only helpers (see appendi
 
 - `time_distance` (5 overloads)
 
-### `temporal/022_temporal.in.sql` — 24 missing of 102 addressable (76% covered)
+### `temporal/022_temporal.in.sql` — 22 missing of 102 addressable (78% covered)
 
 - `maxValue` (3 overloads)
 - `minValue` (3 overloads)
-- `mobilitydb_full_version`
-- `mobilitydb_version`
 - `tbool` (5 overloads)
 - `tboolInst`
 - `tboolSeq` (2 overloads)
@@ -337,31 +327,6 @@ Per-section counts: `Addressable` = MDB names minus PG-only helpers (see appendi
 - `valueBoxes` (2 overloads)
 - `valueSplit` (2 overloads)
 - `valueTimeBoxes` (2 overloads)
-
-### `temporal/028_tbool_boolops.in.sql` — 3 missing of 4 addressable (25% covered)
-
-- `tbool_and` (3 overloads)
-- `tbool_not`
-- `tbool_or` (3 overloads)
-
-### `temporal/029_ttext_textfuncs.in.sql` — 1 missing of 4 addressable (75% covered)
-
-- `ttext_cat` (3 overloads)
-
-### `temporal/030_temporal_compops.in.sql` — 12 missing of 18 addressable (33% covered)
-
-- `always_eq` (12 overloads)
-- `always_ge` (9 overloads)
-- `always_gt` (9 overloads)
-- `always_le` (9 overloads)
-- `always_lt` (9 overloads)
-- `always_ne` (12 overloads)
-- `ever_eq` (12 overloads)
-- `ever_ge` (9 overloads)
-- `ever_gt` (9 overloads)
-- `ever_le` (9 overloads)
-- `ever_lt` (9 overloads)
-- `ever_ne` (12 overloads)
 
 ## Appendix B — Out of scope (PG-only, no DuckDB equivalent)
 
@@ -412,7 +377,7 @@ These families (cbuffer, npoint, pose, rgeo) are deferred until the active tempo
 | `cbuffer/150_cbuffer.in.sql` | 31 | 7 | 24 | 23% |
 | `cbuffer/151_cbufferset.in.sql` | 42 | 32 | 10 | 76% |
 | `cbuffer/152_tcbuffer.in.sql` | 84 | 65 | 19 | 77% |
-| `cbuffer/154_tcbuffer_compops.in.sql` | 6 | 2 | 4 | 33% |
+| `cbuffer/154_tcbuffer_compops.in.sql` | 6 | 6 | 0 | 100% |
 | `cbuffer/155_tcbuffer_spatialfuncs.in.sql` | 11 | 8 | 3 | 73% |
 | `cbuffer/158_tcbuffer_topops.in.sql` | 7 | 7 | 0 | 100% |
 | `cbuffer/159_tcbuffer_posops.in.sql` | 12 | 8 | 4 | 67% |
@@ -424,7 +389,7 @@ These families (cbuffer, npoint, pose, rgeo) are deferred until the active tempo
 | `npoint/081_npoint.in.sql` | 41 | 8 | 33 | 20% |
 | `npoint/082_npointset.in.sql` | 43 | 30 | 13 | 70% |
 | `npoint/083_tnpoint.in.sql` | 77 | 61 | 16 | 79% |
-| `npoint/085_tnpoint_compops.in.sql` | 6 | 2 | 4 | 33% |
+| `npoint/085_tnpoint_compops.in.sql` | 6 | 6 | 0 | 100% |
 | `npoint/087_tnpoint_spatialfuncs.in.sql` | 12 | 11 | 1 | 92% |
 | `npoint/089_tnpoint_topops.in.sql` | 7 | 7 | 0 | 100% |
 | `npoint/090_tnpoint_posops.in.sql` | 12 | 8 | 4 | 67% |
@@ -436,7 +401,7 @@ These families (cbuffer, npoint, pose, rgeo) are deferred until the active tempo
 | `pose/100_pose.in.sql` | 34 | 10 | 24 | 29% |
 | `pose/101_poseset.in.sql` | 46 | 33 | 13 | 72% |
 | `pose/102_tpose.in.sql` | 85 | 64 | 21 | 75% |
-| `pose/104_tpose_compops.in.sql` | 6 | 2 | 4 | 33% |
+| `pose/104_tpose_compops.in.sql` | 6 | 6 | 0 | 100% |
 | `pose/105_tpose_spatialfuncs.in.sql` | 8 | 7 | 1 | 88% |
 | `pose/108_tpose_topops.in.sql` | 7 | 7 | 0 | 100% |
 | `pose/109_tpose_posops.in.sql` | 16 | 8 | 8 | 50% |
@@ -444,7 +409,7 @@ These families (cbuffer, npoint, pose, rgeo) are deferred until the active tempo
 | `pose/113_tpose_distance.in.sql` | 4 | 4 | 0 | 100% |
 | `pose/114_tpose_indexes.in.sql` | 1 | 0 | 1 | 0% |
 | `rgeo/122_trgeo.in.sql` | 95 | 75 | 20 | 79% |
-| `rgeo/124_trgeo_compops.in.sql` | 6 | 2 | 4 | 33% |
+| `rgeo/124_trgeo_compops.in.sql` | 6 | 6 | 0 | 100% |
 | `rgeo/125_trgeo_spatialfuncs.in.sql` | 8 | 7 | 1 | 88% |
 | `rgeo/126_trgeo_tile.in.sql` | 3 | 3 | 0 | 100% |
 | `rgeo/127_trgeo_boxops.in.sql` | 13 | 8 | 5 | 62% |
@@ -455,5 +420,5 @@ These families (cbuffer, npoint, pose, rgeo) are deferred until the active tempo
 | `rgeo/133_trgeo_distance.in.sql` | 4 | 4 | 0 | 100% |
 | `rgeo/133_trgeo_vclip.in.sql` | 6 | 0 | 6 | 0% |
 | `rgeo/134_trgeo_indexes.in.sql` | 1 | 0 | 1 | 0% |
-| **TOTAL (deferred)** | **827** | **532** | **295** | **64%** |
+| **TOTAL (deferred)** | **827** | **548** | **279** | **66%** |
 

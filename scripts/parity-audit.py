@@ -104,6 +104,16 @@ REGISTER_SCALAR_RE = re.compile(r'ScalarFunction\s*\(\s*"([^"]+)"', re.IGNORECAS
 REGISTER_AGGR_RE = re.compile(r'AggregateFunction\s*\(\s*"([^"]+)"')
 REGISTER_TABLE_RE = re.compile(r'TableFunction\s*\(\s*"([^"]+)"')
 
+# Project macros that wrap registration calls under a fixed-name first
+# argument (e.g. `REG_EA("ever_eq", Ever_eq)` registers "ever_eq" via a
+# generic ScalarFunction template).  Without these, the audit misses the
+# names because the underlying ScalarFunction call uses the macro
+# parameter, not a literal string.
+REGISTER_MACRO_RE = re.compile(
+    r'\b(?:REG_EA|REG_EA_ORD|REG_SPATIAL_EA|REG_SPATIAL_TCMP|'
+    r'REG_TSPATIAL_OP|REG_TSPATIAL_TOPO)\s*\(\s*"([^"]+)"'
+)
+
 
 def collect_mobilitydb(mdb_root):
     sql_root = os.path.join(mdb_root, "mobilitydb", "sql")
@@ -143,7 +153,8 @@ def collect_mobilityduck(mduck_root):
         with open(cpp, errors="replace") as f:
             text = f.read()
         rel = os.path.relpath(cpp, src_root)
-        for regex in (REGISTER_SCALAR_RE, REGISTER_AGGR_RE, REGISTER_TABLE_RE):
+        for regex in (REGISTER_SCALAR_RE, REGISTER_AGGR_RE,
+                      REGISTER_TABLE_RE, REGISTER_MACRO_RE):
             for m in regex.finditer(text):
                 funcs[m.group(1)] += 1
                 files_for_func[m.group(1)].add(rel)
