@@ -1,6 +1,6 @@
 # MobilityDuck parity status — surface-level audit
 
-Generated 2026-04-30. **Active scope** (temporal + geo): 597/1261 names covered (47.3%). Deferred families (cbuffer, npoint, pose, rgeo) listed in an appendix and not counted in headline coverage.
+Generated 2026-05-10. **Active scope** (temporal + geo): 627/1263 names covered (49.6%). Deferred families (cbuffer, npoint, pose, rgeo) listed in an appendix and not counted in headline coverage.
 
 **Methodology**: parsed `CREATE FUNCTION` from `mobilitydb/sql/**/*.in.sql` and `RegisterFunction(ScalarFunction("name",...))` (plus aggregate / table-function variants) from `MobilityDuck/src/**/*.cpp`. Match is by **function name only**, case-insensitive. A name registered in MobilityDuck is treated as covering all its overloads; per-overload signature parity is not verified at this granularity.
 
@@ -18,13 +18,13 @@ Regenerate with `python3 scripts/parity-audit.py --mdb ../MobilityDB --mduck . -
 | `geo/050_geoset.in.sql` | 56 | 31 | 25 | 55% | 46 |
 | `geo/051_stbox.in.sql` | 83 | 59 | 24 | 71% | 29 |
 | `geo/052_tgeo.in.sql` | 80 | 58 | 22 | 72% | 12 |
-| `geo/052_tpoint.in.sql` | 78 | 59 | 19 | 76% | 12 |
-| `geo/053_tgeo_inout.in.sql` | 18 | 3 | 15 | 17% | 0 |
-| `geo/053_tpoint_inout.in.sql` | 18 | 3 | 15 | 17% | 0 |
+| `geo/052_tpoint.in.sql` | 78 | 63 | 15 | 81% | 12 |
+| `geo/053_tgeo_inout.in.sql` | 18 | 6 | 12 | 33% | 0 |
+| `geo/053_tpoint_inout.in.sql` | 18 | 18 | 0 | 100% | 0 |
 | `geo/054_tgeo_compops.in.sql` | 7 | 0 | 7 | 0% | 36 |
 | `geo/054_tpoint_compops.in.sql` | 6 | 0 | 6 | 0% | 36 |
-| `geo/056_tgeo_spatialfuncs.in.sql` | 17 | 10 | 7 | 59% | 0 |
-| `geo/056_tpoint_spatialfuncs.in.sql` | 28 | 22 | 6 | 79% | 0 |
+| `geo/056_tgeo_spatialfuncs.in.sql` | 17 | 11 | 6 | 65% | 0 |
+| `geo/056_tpoint_spatialfuncs.in.sql` | 30 | 23 | 7 | 77% | 0 |
 | `geo/058_tgeo_tile.in.sql` | 5 | 0 | 5 | 0% | 0 |
 | `geo/058_tpoint_tile.in.sql` | 11 | 0 | 11 | 0% | 0 |
 | `geo/060_tgeo_boxops.in.sql` | 13 | 5 | 8 | 38% | 50 |
@@ -44,7 +44,7 @@ Regenerate with `python3 scripts/parity-audit.py --mdb ../MobilityDB --mduck . -
 | `geo/073_tpoint_gist.in.sql` | 3 | 0 | 3 | 0% | 0 |
 | `geo/074_tgeo_spgist.in.sql` | 9 | 0 | 9 | 0% | 0 |
 | `geo/076_tgeo_analytics.in.sql` | 13 | 1 | 12 | 8% | 0 |
-| `geo/076_tpoint_analytics.in.sql` | 18 | 3 | 15 | 17% | 0 |
+| `geo/076_tpoint_analytics.in.sql` | 18 | 4 | 14 | 22% | 0 |
 | `geo/078_tpoint_datagen.in.sql` | 1 | 0 | 1 | 0% | 0 |
 | `temporal/001_set.in.sql` | 82 | 35 | 47 | 43% | 38 |
 | `temporal/002_set_ops.in.sql` | 11 | 11 | 0 | 100% | 176 |
@@ -57,9 +57,9 @@ Regenerate with `python3 scripts/parity-audit.py --mdb ../MobilityDB --mduck . -
 | `temporal/013_set_indexes.in.sql` | 10 | 0 | 10 | 0% | 0 |
 | `temporal/015_span_aggfuncs.in.sql` | 10 | 0 | 10 | 0% | 0 |
 | `temporal/019_geo_constructors.in.sql` | 7 | 0 | 7 | 0% | 0 |
-| `temporal/021_tbox.in.sql` | 60 | 48 | 12 | 80% | 21 |
+| `temporal/021_tbox.in.sql` | 60 | 52 | 8 | 87% | 21 |
 | `temporal/022_temporal.in.sql` | 117 | 76 | 41 | 65% | 24 |
-| `temporal/023_temporal_inout.in.sql` | 16 | 3 | 13 | 19% | 0 |
+| `temporal/023_temporal_inout.in.sql` | 16 | 4 | 12 | 25% | 0 |
 | `temporal/025_temporal_tile.in.sql` | 16 | 0 | 16 | 0% | 0 |
 | `temporal/026_tnumber_mathfuncs.in.sql` | 17 | 8 | 9 | 47% | 24 |
 | `temporal/028_tbool_boolops.in.sql` | 4 | 1 | 3 | 25% | 7 |
@@ -75,7 +75,7 @@ Regenerate with `python3 scripts/parity-audit.py --mdb ../MobilityDB --mduck . -
 | `temporal/044_temporal_spgist.in.sql` | 10 | 0 | 10 | 0% | 0 |
 | `temporal/046_temporal_analytics.in.sql` | 4 | 0 | 4 | 0% | 0 |
 | `temporal/999_oid_cache.in.sql` | 1 | 0 | 1 | 0% | 0 |
-| **TOTAL (active)** | **1261** | **597** | **664** | **47%** | — |
+| **TOTAL (active)** | **1263** | **627** | **636** | **50%** | — |
 
 ## Missing function names per active section
 
@@ -159,15 +159,11 @@ Regenerate with `python3 scripts/parity-audit.py --mdb ../MobilityDB --mduck . -
 - `tspatial_typmod_out`
 - `unnest` (2 overloads)
 
-### `geo/052_tpoint.in.sql` — 19 missing of 78 (76% covered)
+### `geo/052_tpoint.in.sql` — 15 missing of 78 (81% covered)
 
 - `temporal_hash` (2 overloads)
 - `temporal_out` (2 overloads)
 - `temporal_send` (2 overloads)
-- `tgeogpoint` (5 overloads)
-- `tgeogpointInst`
-- `tgeogpointSeq` (3 overloads)
-- `tgeogpointSeqSet` (3 overloads)
 - `tgeogpointSeqSetGaps`
 - `tgeogpoint_in`
 - `tgeogpoint_recv`
@@ -181,11 +177,8 @@ Regenerate with `python3 scripts/parity-audit.py --mdb ../MobilityDB --mduck . -
 - `tsample` (2 overloads)
 - `unnest` (2 overloads)
 
-### `geo/053_tgeo_inout.in.sql` — 15 missing of 18 (17% covered)
+### `geo/053_tgeo_inout.in.sql` — 12 missing of 18 (33% covered)
 
-- `asEWKB` (2 overloads)
-- `asHexEWKB` (2 overloads)
-- `asMFJSON` (2 overloads)
 - `tgeographyFromBinary`
 - `tgeographyFromEWKB`
 - `tgeographyFromEWKT`
@@ -199,32 +192,14 @@ Regenerate with `python3 scripts/parity-audit.py --mdb ../MobilityDB --mduck . -
 - `tgeometryFromMFJSON`
 - `tgeometryFromText`
 
-### `geo/053_tpoint_inout.in.sql` — 15 missing of 18 (17% covered)
-
-- `asEWKB` (2 overloads)
-- `asHexEWKB` (2 overloads)
-- `asMFJSON` (2 overloads)
-- `tgeogpointFromBinary`
-- `tgeogpointFromEWKB`
-- `tgeogpointFromEWKT`
-- `tgeogpointFromHexEWKB`
-- `tgeogpointFromMFJSON`
-- `tgeogpointFromText`
-- `tgeompointFromBinary`
-- `tgeompointFromEWKB`
-- `tgeompointFromEWKT`
-- `tgeompointFromHexEWKB`
-- `tgeompointFromMFJSON`
-- `tgeompointFromText`
-
 ### `geo/054_tgeo_compops.in.sql` — 7 missing of 7 (0% covered)
 
 - `always_eq` (6 overloads)
 - `always_ne` (6 overloads)
 - `ever_eq` (6 overloads)
 - `ever_ne` (6 overloads)
-- `tgeo_teq` (12 overloads)
-- `tgeo_tne` (12 overloads)
+- `tgeo_teq` (6 overloads)
+- `tgeo_tne` (6 overloads)
 - `tspatial_supportfn`
 
 ### `geo/054_tpoint_compops.in.sql` — 6 missing of 6 (0% covered)
@@ -233,25 +208,25 @@ Regenerate with `python3 scripts/parity-audit.py --mdb ../MobilityDB --mduck . -
 - `always_ne` (6 overloads)
 - `ever_eq` (6 overloads)
 - `ever_ne` (6 overloads)
-- `tgeo_teq` (12 overloads)
-- `tgeo_tne` (12 overloads)
+- `tgeo_teq` (6 overloads)
+- `tgeo_tne` (6 overloads)
 
-### `geo/056_tgeo_spatialfuncs.in.sql` — 7 missing of 17 (59% covered)
+### `geo/056_tgeo_spatialfuncs.in.sql` — 6 missing of 17 (65% covered)
 
 - `centroid` (2 overloads)
 - `convexHull`
 - `tCentroid`
-- `tgeogpoint`
 - `tgeography` (2 overloads)
 - `transformPipeline` (2 overloads)
 - `traversedArea` (2 overloads)
 
-### `geo/056_tpoint_spatialfuncs.in.sql` — 6 missing of 28 (79% covered)
+### `geo/056_tpoint_spatialfuncs.in.sql` — 7 missing of 30 (77% covered)
 
+- `atElevation`
 - `bearing` (8 overloads)
 - `convexHull`
+- `minusElevation`
 - `tdirection` (2 overloads)
-- `tgeogpoint`
 - `transformPipeline` (3 overloads)
 - `transform_gk` (2 overloads)
 
@@ -270,12 +245,12 @@ Regenerate with `python3 scripts/parity-audit.py --mdb ../MobilityDB --mduck . -
 - `getStboxTimeTile`
 - `spaceBoxes` (3 overloads)
 - `spaceSplit` (3 overloads)
-- `spaceTiles` (3 overloads)
+- `spaceTiles` (6 overloads)
 - `spaceTimeBoxes` (3 overloads)
 - `spaceTimeSplit` (3 overloads)
-- `spaceTimeTiles` (3 overloads)
+- `spaceTimeTiles` (6 overloads)
 - `timeBoxes`
-- `timeTiles`
+- `timeTiles` (2 overloads)
 
 ### `geo/060_tgeo_boxops.in.sql` — 8 missing of 13 (38% covered)
 
@@ -438,7 +413,7 @@ Regenerate with `python3 scripts/parity-audit.py --mdb ../MobilityDB --mduck . -
 - `translate` (2 overloads)
 - `transscale`
 
-### `geo/076_tpoint_analytics.in.sql` — 15 missing of 18 (17% covered)
+### `geo/076_tpoint_analytics.in.sql` — 14 missing of 18 (22% covered)
 
 - `affine` (2 overloads)
 - `asMVTGeom`
@@ -452,7 +427,6 @@ Regenerate with `python3 scripts/parity-audit.py --mdb ../MobilityDB --mduck . -
 - `rotateX`
 - `rotateY`
 - `rotateZ`
-- `tgeogpoint`
 - `translate` (2 overloads)
 - `transscale`
 
@@ -649,14 +623,10 @@ Regenerate with `python3 scripts/parity-audit.py --mdb ../MobilityDB --mduck . -
 - `point`
 - `polygon`
 
-### `temporal/021_tbox.in.sql` — 12 missing of 60 (80% covered)
+### `temporal/021_tbox.in.sql` — 8 missing of 60 (87% covered)
 
-- `tboxFromBinary`
-- `tboxFromHexWKB`
 - `tbox_extent_combinefn`
 - `tbox_extent_transfn`
-- `tbox_hash`
-- `tbox_hash_extended`
 - `tbox_in`
 - `tbox_out`
 - `tbox_recv`
@@ -708,9 +678,8 @@ Regenerate with `python3 scripts/parity-audit.py --mdb ../MobilityDB --mduck . -
 - `ttext_recv`
 - `unnest` (3 overloads)
 
-### `temporal/023_temporal_inout.in.sql` — 13 missing of 16 (19% covered)
+### `temporal/023_temporal_inout.in.sql` — 12 missing of 16 (25% covered)
 
-- `asMFJSON` (4 overloads)
 - `tboolFromBinary`
 - `tboolFromHexWKB`
 - `tboolFromMFJSON`
@@ -922,7 +891,7 @@ These families (cbuffer, npoint, pose, rgeo) are deferred until the active tempo
 |---|---:|---:|---:|---:|
 | `cbuffer/150_cbuffer.in.sql` | 31 | 7 | 24 | 23% |
 | `cbuffer/151_cbufferset.in.sql` | 42 | 32 | 10 | 76% |
-| `cbuffer/152_tcbuffer.in.sql` | 84 | 62 | 22 | 74% |
+| `cbuffer/152_tcbuffer.in.sql` | 84 | 64 | 20 | 76% |
 | `cbuffer/154_tcbuffer_compops.in.sql` | 6 | 0 | 6 | 0% |
 | `cbuffer/155_tcbuffer_spatialfuncs.in.sql` | 11 | 7 | 4 | 64% |
 | `cbuffer/158_tcbuffer_topops.in.sql` | 7 | 2 | 5 | 29% |
@@ -932,8 +901,8 @@ These families (cbuffer, npoint, pose, rgeo) are deferred until the active tempo
 | `cbuffer/162_tcbuffer_spatialrels.in.sql` | 13 | 11 | 2 | 85% |
 | `cbuffer/164_tcbuffer_tempspatialrels.in.sql` | 6 | 5 | 1 | 83% |
 | `cbuffer/166_tcbuffer_indexes.in.sql` | 1 | 0 | 1 | 0% |
-| `npoint/081_npoint.in.sql` | 41 | 6 | 35 | 15% |
-| `npoint/082_npointset.in.sql` | 43 | 29 | 14 | 67% |
+| `npoint/081_npoint.in.sql` | 41 | 8 | 33 | 20% |
+| `npoint/082_npointset.in.sql` | 43 | 30 | 13 | 70% |
 | `npoint/083_tnpoint.in.sql` | 77 | 60 | 17 | 78% |
 | `npoint/085_tnpoint_compops.in.sql` | 6 | 0 | 6 | 0% |
 | `npoint/087_tnpoint_spatialfuncs.in.sql` | 12 | 11 | 1 | 92% |
@@ -944,9 +913,9 @@ These families (cbuffer, npoint, pose, rgeo) are deferred until the active tempo
 | `npoint/093_tnpoint_distance.in.sql` | 4 | 2 | 2 | 50% |
 | `npoint/095_tnpoint_aggfuncs.in.sql` | 8 | 0 | 8 | 0% |
 | `npoint/098_tnpoint_indexes.in.sql` | 1 | 0 | 1 | 0% |
-| `pose/100_pose.in.sql` | 34 | 8 | 26 | 24% |
-| `pose/101_poseset.in.sql` | 46 | 32 | 14 | 70% |
-| `pose/102_tpose.in.sql` | 85 | 60 | 25 | 71% |
+| `pose/100_pose.in.sql` | 34 | 10 | 24 | 29% |
+| `pose/101_poseset.in.sql` | 46 | 33 | 13 | 72% |
+| `pose/102_tpose.in.sql` | 85 | 63 | 22 | 74% |
 | `pose/104_tpose_compops.in.sql` | 6 | 0 | 6 | 0% |
 | `pose/105_tpose_spatialfuncs.in.sql` | 8 | 7 | 1 | 88% |
 | `pose/108_tpose_topops.in.sql` | 7 | 2 | 5 | 29% |
@@ -954,14 +923,17 @@ These families (cbuffer, npoint, pose, rgeo) are deferred until the active tempo
 | `pose/111_tpose_aggfuncs.in.sql` | 7 | 0 | 7 | 0% |
 | `pose/113_tpose_distance.in.sql` | 4 | 2 | 2 | 50% |
 | `pose/114_tpose_indexes.in.sql` | 1 | 0 | 1 | 0% |
-| `rgeo/122_trgeo.in.sql` | 87 | 62 | 25 | 71% |
+| `rgeo/122_trgeo.in.sql` | 95 | 69 | 26 | 73% |
 | `rgeo/124_trgeo_compops.in.sql` | 6 | 0 | 6 | 0% |
 | `rgeo/125_trgeo_spatialfuncs.in.sql` | 8 | 7 | 1 | 88% |
+| `rgeo/126_trgeo_tile.in.sql` | 3 | 0 | 3 | 0% |
+| `rgeo/127_trgeo_boxops.in.sql` | 13 | 8 | 5 | 62% |
 | `rgeo/128_trgeo_topops.in.sql` | 5 | 0 | 5 | 0% |
-| `rgeo/129_trgeo_posops.in.sql` | 12 | 0 | 12 | 0% |
-| `rgeo/131_trgeo_aggfuncs.in.sql` | 7 | 0 | 7 | 0% |
+| `rgeo/129_trgeo_posops.in.sql` | 16 | 0 | 16 | 0% |
+| `rgeo/131_trgeo_aggfuncs.in.sql` | 8 | 0 | 8 | 0% |
+| `rgeo/132_trgeo_similarity.in.sql` | 5 | 2 | 3 | 40% |
 | `rgeo/133_trgeo_distance.in.sql` | 4 | 2 | 2 | 50% |
 | `rgeo/133_trgeo_vclip.in.sql` | 6 | 0 | 6 | 0% |
 | `rgeo/134_trgeo_indexes.in.sql` | 1 | 0 | 1 | 0% |
-| **TOTAL (deferred)** | **793** | **420** | **373** | **53%** |
+| **TOTAL (deferred)** | **827** | **448** | **379** | **54%** |
 
