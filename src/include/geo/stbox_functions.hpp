@@ -31,11 +31,27 @@ struct StboxFunctions {
     static void Stbox_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
-     * Constructor functions
+     * Dimensional constructor functions
+     * stboxX  — 2D (xmin/xmax/ymin/ymax)
+     * stboxZ  — 3D (xmin/xmax/ymin/ymax/zmin/zmax)
+     * stboxT  — time-only
+     * stboxXT — 2D + time
+     * stboxZT — 3D + time
+     * geodstboxZ / geodstboxT / geodstboxZT — geodetic variants
      ****************************************************/
-    // static void Stbox_constructor_x(DataChunk &args, ExpressionState &state, Vector &result);
-    // static void Stbox_constructor_z(DataChunk &args, ExpressionState &state, Vector &result);
-    // static void Stbox_constructor_t(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_constructor_x(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_constructor_z(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_constructor_t_ts(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_constructor_t_span(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_constructor_xt_ts(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_constructor_xt_span(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_constructor_zt_ts(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_constructor_zt_span(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Geodstbox_constructor_z(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Geodstbox_constructor_t_ts(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Geodstbox_constructor_t_span(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Geodstbox_constructor_zt_ts(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Geodstbox_constructor_zt_span(DataChunk &args, ExpressionState &state, Vector &result);
 
     static void Geo_timestamptz_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Geo_tstzspan_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);

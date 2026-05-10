@@ -94,7 +94,7 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
     //     )
     // );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "asText",
             {STBOX()},
@@ -102,6 +102,52 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_as_text
         )
     );
+
+    /* Dimensional constructors — stboxX/Z/T/XT/ZT and the geodstbox*
+     * variants.  All wrap MEOS stbox_make with the appropriate
+     * has-x/has-z/geodetic flags filled in. */
+    {
+        const auto STB = STBOX();
+        const auto D   = LogicalType::DOUBLE;
+        const auto I   = LogicalType::INTEGER;
+        const auto T   = LogicalType::TIMESTAMP_TZ;
+        const auto SP  = SpanTypes::TSTZSPAN();
+
+        // stboxX(xmin, xmax, ymin, ymax, srid)
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "stboxX", {D, D, D, D, I}, STB, StboxFunctions::Stbox_constructor_x));
+        // stboxZ(xmin, xmax, ymin, ymax, zmin, zmax, srid)
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "stboxZ", {D, D, D, D, D, D, I}, STB, StboxFunctions::Stbox_constructor_z));
+        // stboxT(timestamptz) and stboxT(tstzspan)
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "stboxT", {T},  STB, StboxFunctions::Stbox_constructor_t_ts));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "stboxT", {SP}, STB, StboxFunctions::Stbox_constructor_t_span));
+        // stboxXT(xmin, xmax, ymin, ymax, ts|span, srid)
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "stboxXT", {D, D, D, D, T,  I}, STB, StboxFunctions::Stbox_constructor_xt_ts));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "stboxXT", {D, D, D, D, SP, I}, STB, StboxFunctions::Stbox_constructor_xt_span));
+        // stboxZT(xmin, xmax, ymin, ymax, zmin, zmax, ts|span, srid)
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "stboxZT", {D, D, D, D, D, D, T,  I}, STB, StboxFunctions::Stbox_constructor_zt_ts));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "stboxZT", {D, D, D, D, D, D, SP, I}, STB, StboxFunctions::Stbox_constructor_zt_span));
+
+        // Geographic variants — geodetic flag set; SRID defaults to
+        // 4326 in the time-only forms (MobilityDB convention).
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "geodstboxZ", {D, D, D, D, D, D, I}, STB, StboxFunctions::Geodstbox_constructor_z));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "geodstboxT", {T},  STB, StboxFunctions::Geodstbox_constructor_t_ts));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "geodstboxT", {SP}, STB, StboxFunctions::Geodstbox_constructor_t_span));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "geodstboxZT", {D, D, D, D, D, D, T,  I}, STB, StboxFunctions::Geodstbox_constructor_zt_ts));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "geodstboxZT", {D, D, D, D, D, D, SP, I}, STB, StboxFunctions::Geodstbox_constructor_zt_span));
+    }
 
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
