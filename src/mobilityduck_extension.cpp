@@ -12,7 +12,6 @@
 #include "duckdb.hpp"
 #include "geo/tgeometry.hpp"
 #include "temporal/span.hpp"
-#include "temporal/span_aggregates.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
@@ -21,6 +20,7 @@
 #include "duckdb/main/extension/extension_loader.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include "index/rtree_module.hpp"
+#include "single_tile_getters.hpp"
 
 #include <mutex>
 #include <fstream>
@@ -232,6 +232,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TemporalTypes::RegisterCastFunctions(loader);
 	TemporalTypes::RegisterScalarFunctions(loader);
 	TemporalTypes::RegisterTemporalUnnestFunction(loader);
+	TemporalTypes::RegisterTemporalTileSplit(loader);
 
 	TboxType::RegisterType(loader);
 	TboxType::RegisterCastFunctions(loader);
@@ -244,11 +245,15 @@ static void LoadInternal(ExtensionLoader &loader) {
 	SpanTypes::RegisterScalarFunctions(loader);
 	SpanTypes::RegisterTypes(loader);
 	SpanTypes::RegisterCastFunctions(loader);
-	SpanAggregates::RegisterAggregateFunctions(loader);
+
+	// Tile getters return SpanTypes blobs and consume TBOX, so all those
+	// types must already be registered.
+	TemporalTypes::RegisterTileGetters(loader);
 
 	TgeompointType::RegisterType(loader);
 	TgeompointType::RegisterCastFunctions(loader);
 	TgeompointType::RegisterScalarFunctions(loader);
+	TgeompointType::RegisterTpointSplit(loader);
 
 	TGeometryTypes::RegisterScalarFunctions(loader);
 	TGeometryTypes::RegisterTypes(loader);
@@ -271,6 +276,10 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TRTreeModule::RegisterRTreeIndex(loader);
 	TRTreeModule::RegisterIndexScan(loader);
 	TRTreeModule::RegisterScanOptimizer(loader);
+
+	// Single-tile getters depend on TBOX, STBOX, and the spatial GEOMETRY
+	// type being registered first.
+	SingleTileGetters::RegisterScalarFunctions(loader);
 }
 
 void MobilityduckExtension::Load(ExtensionLoader &loader) {

@@ -70,13 +70,14 @@ set(EXTENSION_SOURCES
     src/temporal/set_functions.cpp
     src/temporal/span.cpp
     src/temporal/span_functions.cpp
-    src/temporal/span_aggregates.cpp
+    src/temporal/span_table_functions.cpp
     src/geo/geoset.cpp
     src/temporal/spanset.cpp
     src/temporal/spanset_functions.cpp
     src/geo/tgeometry.cpp
     src/geo/tgeometry_in_out.cpp
     src/index/rtree_module.cpp
+    src/single_tile_getters.cpp
     src/index/rtree_index_create_physical.cpp
     src/index/rtree_index_scan.cpp
     src/index/rtree_optimize_scan.cpp
