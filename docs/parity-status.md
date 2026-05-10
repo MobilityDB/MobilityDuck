@@ -1,6 +1,6 @@
 # MobilityDuck parity status — surface-level audit
 
-Generated 2026-05-10. **Active addressable scope** (temporal + geo, excluding PG-only helpers): 823/960 names covered (85.7%).
+Generated 2026-05-10. **Active addressable scope** (temporal + geo, excluding PG-only helpers): 835/960 names covered (87.0%).
 
 **Out of scope** (PG-only — no DuckDB equivalent exists): 303 names skipped — 84 from PG-only sections (GiST/SPGiST opclasses, set/span/spanset index files, `019_geo_constructors.in.sql` PG geometric types, `999_oid_cache.in.sql`) plus 219 PG helper functions inside active sections (`*_in/_out/_recv/_send`, `*_transfn/_combinefn/_finalfn/_serialize/_deserialize`, `*_sel/_joinsel/_supportfn/_analyze`, `*_typmod_in/_typmod_out`).  Listed in appendix B; not counted in the headline.
 
@@ -24,7 +24,7 @@ Per-section counts: `Addressable` = MDB names minus PG-only helpers (see appendi
 | `geo/051_stbox.in.sql` | 75 | 59 | 16 | 79% | 8 | 29 |
 | `geo/052_tgeo.in.sql` | 70 | 64 | 6 | 91% | 10 | 12 |
 | `geo/052_tpoint.in.sql` | 70 | 66 | 4 | 94% | 8 | 12 |
-| `geo/053_tgeo_inout.in.sql` | 18 | 6 | 12 | 33% | 0 | 0 |
+| `geo/053_tgeo_inout.in.sql` | 18 | 18 | 0 | 100% | 0 | 0 |
 | `geo/053_tpoint_inout.in.sql` | 18 | 18 | 0 | 100% | 0 | 0 |
 | `geo/054_tgeo_compops.in.sql` | 6 | 6 | 0 | 100% | 1 | 36 |
 | `geo/054_tpoint_compops.in.sql` | 6 | 6 | 0 | 100% | 0 | 36 |
@@ -70,7 +70,7 @@ Per-section counts: `Addressable` = MDB names minus PG-only helpers (see appendi
 | `temporal/040_temporal_aggfuncs.in.sql` | 0 | 0 | 0 | 0% | 40 | 0 |
 | `temporal/042_temporal_waggfuncs.in.sql` | 0 | 0 | 0 | 0% | 8 | 0 |
 | `temporal/046_temporal_analytics.in.sql` | 4 | 4 | 0 | 100% | 0 | 0 |
-| **TOTAL (active)** | **960** | **823** | **137** | **86%** | **219** | — |
+| **TOTAL (active)** | **960** | **835** | **125** | **87%** | **219** | — |
 
 ## Missing function names per active section
 
@@ -123,21 +123,6 @@ Per-section counts: `Addressable` = MDB names minus PG-only helpers (see appendi
 - `tgeogpointSeqSetGaps`
 - `tgeompointSeqSetGaps`
 - `unnest` (2 overloads)
-
-### `geo/053_tgeo_inout.in.sql` — 12 missing of 18 addressable (33% covered)
-
-- `tgeographyFromBinary`
-- `tgeographyFromEWKB`
-- `tgeographyFromEWKT`
-- `tgeographyFromHexEWKB`
-- `tgeographyFromMFJSON`
-- `tgeographyFromText`
-- `tgeometryFromBinary`
-- `tgeometryFromEWKB`
-- `tgeometryFromEWKT`
-- `tgeometryFromHexEWKB`
-- `tgeometryFromMFJSON`
-- `tgeometryFromText`
 
 ### `geo/056_tgeo_spatialfuncs.in.sql` — 2 missing of 17 addressable (88% covered)
 

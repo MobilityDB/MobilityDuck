@@ -4,6 +4,7 @@
 #include <regex>
 #include <string>
 #include <temporal/span.hpp>
+#include "mobilityduck/meos_exec_serial.hpp"
 
 extern "C" {
     #include <meos.h>
@@ -194,9 +195,61 @@ bool TgeographyFunctions::TgeographyToString(Vector &source, Vector &result, idx
     return true;   
 }
 
+// ---- Spatial-temporal parsers (Binary / HexWKB / MFJSON / Text) ----
+// Mirror of the helpers in tgeometry_in_out.cpp; per-type for MFJSON /
+// text since MEOS uses tgeography_from_mfjson / tgeography_in there.
+
+inline string_t StoreTempAsBlobGeog(Vector &result, Temporal *t) {
+    size_t sz = temporal_mem_size(t);
+    string_t stored = StringVector::AddStringOrBlob(
+        result, string_t(reinterpret_cast<const char *>(t), sz));
+    free(t);
+    return stored;
+}
+
+inline void TgeographyFromWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() == 0)
+                throw InvalidInputException("fromBinary: empty WKB input");
+            uint8_t *wkb = (uint8_t *)malloc(input.GetSize());
+            if (!wkb) throw InternalException("fromBinary: malloc failed");
+            memcpy(wkb, input.GetData(), input.GetSize());
+            Temporal *t = temporal_from_wkb(wkb, input.GetSize());
+            free(wkb);
+            if (!t) throw InvalidInputException("fromBinary: invalid MEOS-WKB");
+            return StoreTempAsBlobGeog(result, t);
+        });
+}
+
+inline void TgeographyFromHexWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            std::string hex(input.GetData(), input.GetSize());
+            Temporal *t = temporal_from_hexwkb(hex.c_str());
+            if (!t) throw InvalidInputException(
+                "fromHexWKB: invalid hex-encoded MEOS-WKB");
+            return StoreTempAsBlobGeog(result, t);
+        });
+}
+
+template <Temporal *(*FN)(const char *)>
+inline void TgeographyFromStringExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            std::string s(input.GetData(), input.GetSize());
+            Temporal *t = FN(s.c_str());
+            if (!t) throw InvalidInputException("from*: invalid input");
+            return StoreTempAsBlobGeog(result, t);
+        });
+}
+
 void TGeographyTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
     auto TgeographyAsText = ScalarFunction(
-            "asText", 
+            "asText",
             {TGeographyTypes::TGEOGRAPHY()},
             LogicalType::VARCHAR,
             Tspatial_as_text
@@ -210,6 +263,27 @@ void TGeographyTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
         Tspatial_as_ewkt
     );
     loader.RegisterFunction( TgeographyAsEWKT);
+
+    const auto B = LogicalType::BLOB;
+    const auto V = LogicalType::VARCHAR;
+    const auto T = TGeographyTypes::TGEOGRAPHY();
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("tgeographyFromBinary",  {B}, T, TgeographyFromWkbExec));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("tgeographyFromEWKB",    {B}, T, TgeographyFromWkbExec));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("tgeographyFromHexWKB",  {V}, T, TgeographyFromHexWkbExec));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("tgeographyFromHexEWKB", {V}, T, TgeographyFromHexWkbExec));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("tgeographyFromMFJSON",  {V}, T,
+                       TgeographyFromStringExec<&tgeography_from_mfjson>));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("tgeographyFromText",    {V}, T,
+                       TgeographyFromStringExec<&tgeography_in>));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("tgeographyFromEWKT",    {V}, T,
+                       TgeographyFromStringExec<&tgeography_in>));
 }
 
 
