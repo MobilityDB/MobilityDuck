@@ -1,0 +1,92 @@
+# name: test/sql/parity/026_single_tile_getters.test
+# description: Single-tile getters — getValueTile / getTBoxTimeTile /
+#              getValueTimeTile (tbox) and getSpaceTile / getStboxTimeTile /
+#              getSpaceTimeTile (stbox). Each returns the single tile/box
+#              that contains the input point in the (value, time, space)
+#              domain, given a tile grid configuration (size + origin).
+#              MobilityDB SQL surface lives in 025_temporal_tile.in.sql and
+#              058_tpoint_tile.in.sql.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# getValueTile(double, double [, double=0.0]) -> tbox
+# =============================================================================
+
+query I
+SELECT getValueTile(2.0, 2.5, 1.5)::VARCHAR;
+----
+TBOXFLOAT X([1.5, 4))
+
+# Default vorigin = 0.0
+query I
+SELECT getValueTile(2.0, 2.5)::VARCHAR;
+----
+TBOXFLOAT X([0, 2.5))
+
+# =============================================================================
+# getTBoxTimeTile(timestamptz, interval [, timestamptz='2000-01-03']) -> tbox
+# =============================================================================
+
+query I
+SELECT getTBoxTimeTile(TIMESTAMPTZ '2001-01-04', INTERVAL '1 day')::VARCHAR;
+----
+TBOX T([2001-01-03 01:00:00+01, 2001-01-04 01:00:00+01))
+
+# Explicit torigin overrides the default
+query I
+SELECT getTBoxTimeTile(TIMESTAMPTZ '2001-01-04', INTERVAL '1 week', TIMESTAMPTZ '2001-01-07')::VARCHAR;
+----
+TBOX T([2000-12-31 00:00:00+01, 2001-01-07 00:00:00+01))
+
+# =============================================================================
+# getValueTimeTile(double, timestamptz, double, interval
+#                  [, double=0.0, timestamptz='2000-01-03']) -> tbox
+# =============================================================================
+
+query I
+SELECT getValueTimeTile(2.0, TIMESTAMPTZ '2001-01-04', 2.5, INTERVAL '1 day')::VARCHAR;
+----
+TBOXFLOAT XT([0, 2.5),[2001-01-03 01:00:00+01, 2001-01-04 01:00:00+01))
+
+query I
+SELECT getValueTimeTile(2.0, TIMESTAMPTZ '2001-01-04', 2.5, INTERVAL '1 day', 1.5, TIMESTAMPTZ '2000-01-01')::VARCHAR;
+----
+TBOXFLOAT XT([1.5, 4),[2001-01-04 00:00:00+01, 2001-01-05 00:00:00+01))
+
+# =============================================================================
+# getSpaceTile(geom, xsize, ysize, zsize [, sorigin geom='Point(0 0 0)'])
+#  -> stbox
+# =============================================================================
+
+query I
+SELECT getSpaceTile(ST_Point(1.5, 2.5), 1.0, 1.0, 1.0)::VARCHAR;
+----
+STBOX X((1,2),(2,3))
+
+# Convenience uniform-xyz overload: getSpaceTile(geom, xsize)
+query I
+SELECT getSpaceTile(ST_Point(1.5, 2.5), 1.0)::VARCHAR;
+----
+STBOX X((1,2),(2,3))
+
+# =============================================================================
+# getStboxTimeTile(timestamptz, interval [, timestamptz='2000-01-03']) -> stbox
+# =============================================================================
+
+query I
+SELECT getStboxTimeTile(TIMESTAMPTZ '2001-01-04', INTERVAL '1 day')::VARCHAR;
+----
+STBOX T([2001-01-03 01:00:00+01, 2001-01-04 01:00:00+01))
+
+# =============================================================================
+# getSpaceTimeTile(geom, t, xsize, ysize, zsize, interval
+#                  [, sorigin='Point(0 0 0)', torigin='2000-01-03']) -> stbox
+# =============================================================================
+
+query I
+SELECT getSpaceTimeTile(ST_Point(1.5, 2.5), TIMESTAMPTZ '2001-01-04',
+  1.0, 1.0, 1.0, INTERVAL '1 day')::VARCHAR;
+----
+STBOX XT(((1,2),(2,3)),[2001-01-03 01:00:00+01, 2001-01-04 01:00:00+01))

@@ -79,7 +79,10 @@ struct TgeompointFunctions {
     static void Always_ne_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Teq_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tne_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Teq_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tne_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Teq_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tne_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Teq_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tne_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
@@ -155,12 +158,38 @@ struct TgeompointFunctions {
     static void Temporal_contains_tgeompoint_stbox(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
-     * Distance function
+     * Distance functions
      ****************************************************/
     static void Tdistance_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tdistance_named(DataChunk &args, ExpressionState &state, Vector &result);
     // static void gs_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void collect_gs(DataChunk &args, ExpressionState &state, Vector &result);
     static void distance_geo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* nearestApproachInstant / nearestApproachDistance / nad */
+    static void Nai_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nai_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nad_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nad_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Nad_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * Affine / translate / rotate / scale transforms
+     ****************************************************/
+    static void Tgeo_affine_12(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_affine_6(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_translate_3d(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_translate_2d(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_rotate_angle(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_rotate_angle_cx_cy(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_rotate_geom(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_rotateX(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_rotateY(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_transscale(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_scale_geom(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_scale_geom_origin(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_scale_xy(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_scale_xyz(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

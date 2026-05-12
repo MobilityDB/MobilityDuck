@@ -9,31 +9,31 @@ require mobilityduck
 query I
 SELECT text 'A' || ttext 'AA@2000-01-01';
 ----
-"AAA"@2000-01-01 00:00:00+00
+"AAA"@2000-01-01 00:00:00+01
 
 query I
 SELECT ttext 'AA@2000-01-01' || text 'A';
 ----
-"AAA"@2000-01-01 00:00:00+00
+"AAA"@2000-01-01 00:00:00+01
 
 query I
 SELECT ttext 'AA@2000-01-01' || ttext 'AA@2000-01-01';
 ----
-"AAAA"@2000-01-01 00:00:00+00
+"AAAA"@2000-01-01 00:00:00+01
 
 # Case functions
 
 query I
 SELECT lower(ttext '"AAA"@2000-01-01');
 ----
-"aaa"@2000-01-01 00:00:00+00
+"aaa"@2000-01-01 00:00:00+01
 
 query I
 SELECT upper(ttext '"aaa"@2000-01-01');
 ----
-"AAA"@2000-01-01 00:00:00+00
+"AAA"@2000-01-01 00:00:00+01
 
 query I
 SELECT initcap(ttext '"hello world"@2000-01-01');
 ----
-"Hello World"@2000-01-01 00:00:00+00
+"Hello World"@2000-01-01 00:00:00+01

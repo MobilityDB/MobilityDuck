@@ -12,8 +12,15 @@
 #include "geo/tgeogpoint.hpp"
 #include "duckdb.hpp"
 #include "geo/tgeometry.hpp"
+#include "geo/tgeometry_ops.hpp"
+#include "geo/tgeography.hpp"
+#include "geo/tgeography_ops.hpp"
+#include "geo/tgeogpoint.hpp"
+#include "geo/tgeogpoint_ops.hpp"
 #include "temporal/span.hpp"
 #include "temporal/span_aggregates.hpp"
+#include "temporal/temporal_aggregates.hpp"
+#include "geo/spatial_aggregates.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
@@ -22,6 +29,7 @@
 #include "duckdb/main/extension/extension_loader.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include "index/rtree_module.hpp"
+#include "single_tile_getters.hpp"
 
 #include <mutex>
 #include <fstream>
@@ -209,8 +217,22 @@ static void LoadInternal(ExtensionLoader &loader) {
 	static std::once_flag meos_init_flag;
     std::call_once(meos_init_flag, []() {
         meos_initialize();
+        /* Set the MEOS timezone to Europe/Brussels so that all temporal-type
+         * text I/O uses a consistent, named timezone on every platform.
+         * Brussels is a non-UTC zone that surfaces bugs hidden by UTC (e.g.
+         * off-by-one-hour errors in timestamp handling). */
+        meos_initialize_timezone("Europe/Brussels");
         meos_initialize_error_handler(&MobilityduckMeosErrorHandler);
     });
+
+    // Single-timezone model: ensure DuckDB's session timezone matches the
+    // MEOS timezone so bare TIMESTAMPTZ display agrees with MEOS composite
+    // type strings.  Auto-load ICU (without it, the test framework keeps
+    // session timezone at UTC) and set the TimeZone option to Brussels.
+    auto &db = loader.GetDatabaseInstance();
+    ExtensionHelper::AutoLoadExtension(db, "icu");
+    auto &config = DBConfig::GetConfig(db);
+    config.SetOptionByName("TimeZone", Value("Europe/Brussels"));
 
 
 	// Register scalar function: mobilityduck_openssl_version
@@ -229,6 +251,14 @@ static void LoadInternal(ExtensionLoader &loader) {
 	duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
 		"mobilityduck_full_version", {}, LogicalType::VARCHAR,
 		MobilityduckFullVersionScalarFun));
+	// Portable-SQL aliases — match MobilityDB's `mobilitydb_*` names so
+	// queries that probe for engine version work unchanged across both.
+	duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+		"mobilitydb_version", {}, LogicalType::VARCHAR,
+		MobilityduckVersionScalarFun));
+	duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+		"mobilitydb_full_version", {}, LogicalType::VARCHAR,
+		MobilityduckFullVersionScalarFun));
 
 	// Temporal and related types/functions
 	TemporalTypes::RegisterTypes(loader);
@@ -236,6 +266,9 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TemporalTypes::RegisterScalarFunctions(loader);
 	TemporalTypes::RegisterTemporalUnnestFunction(loader);
 	TemporalTypes::RegisterWkbFunctions(loader);
+	TemporalTypes::RegisterTemporalTileSplit(loader);
+	TemporalTypes::RegisterTnumberValueSplit(loader);
+	TemporalTypes::RegisterSimilarityPath(loader);
 
 	TboxType::RegisterType(loader);
 	TboxType::RegisterCastFunctions(loader);
@@ -249,11 +282,18 @@ static void LoadInternal(ExtensionLoader &loader) {
 	SpanTypes::RegisterTypes(loader);
 	SpanTypes::RegisterCastFunctions(loader);
 	SpanAggregates::RegisterAggregateFunctions(loader);
+	TemporalAggregates::RegisterAggregateFunctions(loader);
+
+	// Tile getters return SpanTypes blobs and consume TBOX, so all those
+	// types must already be registered.
+	TemporalTypes::RegisterTileGetters(loader);
 
 	TgeompointType::RegisterType(loader);
 	TgeompointType::RegisterCastFunctions(loader);
 	TgeompointType::RegisterScalarFunctions(loader);
 	TgeompointType::RegisterRoundtripIO(loader);
+	TgeompointType::RegisterTpointSplit(loader);
+	TgeompointType::RegisterAnalyticsViz(loader);
 
 	TgeogpointType::RegisterType(loader);
 	TgeogpointType::RegisterCastFunctions(loader);
@@ -264,6 +304,18 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TGeometryTypes::RegisterTypes(loader);
 	TGeometryTypes::RegisterCastFunctions(loader);
 	TGeometryTypes::RegisterScalarInOutFunctions(loader);
+	TGeometryOps::RegisterScalarFunctions(loader);
+
+	TGeographyTypes::RegisterTypes(loader);
+	TGeographyTypes::RegisterScalarFunctions(loader);
+	TGeographyTypes::RegisterCastFunctions(loader);
+	TGeographyTypes::RegisterScalarInOutFunctions(loader);
+	TGeographyOps::RegisterScalarFunctions(loader);
+
+	TGeogpointType::RegisterScalarFunctions(loader);
+	TGeogpointType::RegisterCastFunctions(loader);
+	TGeogpointType::RegisterScalarInOutFunctions(loader);
+	TGeogpointOps::RegisterScalarFunctions(loader);
 
 	SetTypes::RegisterTypes(loader);
 	SetTypes::RegisterCastFunctions(loader);
@@ -281,6 +333,10 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TRTreeModule::RegisterRTreeIndex(loader);
 	TRTreeModule::RegisterIndexScan(loader);
 	TRTreeModule::RegisterScanOptimizer(loader);
+
+	// Single-tile getters depend on TBOX, STBOX, and the spatial GEOMETRY
+	// type being registered first.
+	SingleTileGetters::RegisterScalarFunctions(loader);
 }
 
 void MobilityduckExtension::Load(ExtensionLoader &loader) {

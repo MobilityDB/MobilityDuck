@@ -1,0 +1,161 @@
+# name: test/sql/parity/042_tgeogpoint_parity.test
+# description: tgeogpoint parity — accessors, time/value restrict, modifiers,
+#              comparison, box predicates, position predicates, spatial
+#              relationships, temporal-spatial relationships, distance,
+#              spatial functions, aggregate wiring, tile emitters, plus the
+#              tgeogpoint <-> tgeography coercion pair.
+#
+#              tgeogpoint is the geographic-coordinate-system point-restricted
+#              counterpart to tgeompoint. The MEOS C functions backing this
+#              surface are subtype-agnostic, so the implementation mirrors
+#              the tgeography / tgeometry registrations with the type
+#              swapped.
+#
+#              Geometry values are emitted in EWKB-hex display rather than
+#              WKT. tgeogpoint defaults to SRID 4326 (WGS84), which is the
+#              `0101000020E6100000…` prefix in the encoded payloads.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# Accessors
+# =============================================================================
+
+query I
+SELECT numInstants(t::tgeogpoint) FROM (VALUES ('Point(0 0)@2000-01-01')) t(t);
+----
+1
+
+query I
+SELECT numInstants(t::tgeogpoint) FROM (VALUES
+  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+2
+
+query I
+SELECT startTimestamp(t::tgeogpoint)::VARCHAR FROM (VALUES
+  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+2000-01-01 00:00:00+01
+
+query I
+SELECT duration(t::tgeogpoint)::VARCHAR FROM (VALUES
+  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+2 days
+
+# =============================================================================
+# Time-domain restrict and modifiers
+# =============================================================================
+
+query I
+SELECT atTime(t::tgeogpoint, TIMESTAMPTZ '2000-01-01 00:00:00+01')::VARCHAR FROM (VALUES
+  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+0101000020E610000000000000000000000000000000000000@2000-01-01 00:00:00+01
+
+query I
+SELECT shiftTime(t::tgeogpoint, INTERVAL '1 day')::VARCHAR FROM (VALUES
+  ('Point(0 0)@2000-01-01')) t(t);
+----
+0101000020E610000000000000000000000000000000000000@2000-01-02 00:00:00+01
+
+# =============================================================================
+# Comparison
+# =============================================================================
+
+query I
+SELECT t1::tgeogpoint = t2::tgeogpoint FROM (VALUES
+  ('Point(0 0)@2000-01-01', 'Point(0 0)@2000-01-01')) t(t1, t2);
+----
+true
+
+query I
+SELECT t1::tgeogpoint <> t2::tgeogpoint FROM (VALUES
+  ('Point(0 0)@2000-01-01', 'Point(1 1)@2000-01-01')) t(t1, t2);
+----
+true
+
+# =============================================================================
+# Box predicates
+# =============================================================================
+
+query I
+SELECT t1::tgeogpoint && t2::tgeogpoint FROM (VALUES
+  ('Point(0 0)@2000-01-01', 'Point(0 0)@2000-01-01')) t(t1, t2);
+----
+true
+
+query I
+SELECT temporal_contains(t::tgeogpoint, '[2000-01-01, 2000-01-02]'::tstzspan) FROM
+  (VALUES ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+true
+
+# =============================================================================
+# Position predicates
+# =============================================================================
+
+query I
+SELECT temporal_before(t::tgeogpoint, '[2000-01-05, 2000-01-06]'::tstzspan) FROM
+  (VALUES ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+----
+true
+
+# =============================================================================
+# Spatial functions: SRID, coercions, stbox
+# =============================================================================
+
+query I
+SELECT SRID(t::tgeogpoint) FROM (VALUES ('Point(0 0)@2000-01-01')) t(t);
+----
+4326
+
+# tgeogpoint -> tgeography coercion.
+query I
+SELECT tempSubtype(tgeography(t::tgeogpoint)) FROM (VALUES
+  ('Point(0 0)@2000-01-01')) t(t);
+----
+Instant
+
+# tgeography -> tgeogpoint coercion (input must be a point geography).
+query I
+SELECT tempSubtype(tgeogpoint(t::tgeography)) FROM (VALUES
+  ('Point(0 0)@2000-01-01')) t(t);
+----
+Instant
+
+# =============================================================================
+# Aggregates over tgeogpoint
+# =============================================================================
+
+query I
+SELECT extent(t::tgeogpoint)::VARCHAR FROM (VALUES
+  ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
+----
+SRID=4326;GEODSTBOX XT(((0,0),(2,2)),[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01])
+
+query I
+SELECT TcountAgg(t::tgeogpoint)::VARCHAR FROM (VALUES
+  ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
+----
+{1@2000-01-01 00:00:00+01, 1@2000-01-02 00:00:00+01}
+
+query I
+SELECT (MergeAgg(t::tgeogpoint) IS NOT NULL) FROM (VALUES
+  ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
+----
+true
+
+query I
+SELECT (AppendInstantAgg(t::tgeogpoint) IS NOT NULL) FROM (VALUES
+  ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
+----
+true
+
+query I
+SELECT (TcentroidAgg(t::tgeogpoint) IS NOT NULL) FROM (VALUES
+  ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
+----
+true

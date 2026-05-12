@@ -109,8 +109,8 @@ struct TemporalFunctions {
     static void Temporal_shift_time(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_scale_time(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_shift_scale_time(DataChunk &args, ExpressionState &state, Vector &result);
-    // TODO: static void Temporal_tprecision
-    // TODO: static void Temporal_tsample
+    static void Temporal_tprecision(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_tsample(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Transformation functions
@@ -224,9 +224,51 @@ struct TemporalFunctions {
      * Unary tnumber functions
      ****************************************************/
     static void Tnumber_abs(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_tboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_split_n_tboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_split_each_n_tboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_delta_value(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_trend(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tfloat_exp(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tfloat_ln(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tfloat_log10(DataChunk &args, ExpressionState &state, Vector &result);
     // Temporal_derivative declared in the math-functions block below.
     static void Tfloat_degrees(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tfloat_radians(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * Temporal comparison predicates returning Temporal
+     * (temporal_teq / tne / tlt / tle / tgt / tge)
+     ****************************************************/
+#define DECL_TCMP(OP)                                                                              \
+    static void OP##_bool_tbool(DataChunk &args, ExpressionState &state, Vector &result);          \
+    static void OP##_tbool_bool(DataChunk &args, ExpressionState &state, Vector &result);          \
+    static void OP##_int_tint(DataChunk &args, ExpressionState &state, Vector &result);            \
+    static void OP##_tint_int(DataChunk &args, ExpressionState &state, Vector &result);            \
+    static void OP##_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);        \
+    static void OP##_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);        \
+    static void OP##_text_ttext(DataChunk &args, ExpressionState &state, Vector &result);          \
+    static void OP##_ttext_text(DataChunk &args, ExpressionState &state, Vector &result);          \
+    static void OP##_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+
+    DECL_TCMP(Teq)
+    DECL_TCMP(Tne)
+#undef DECL_TCMP
+
+#define DECL_TCMP_ORD(OP)                                                                          \
+    static void OP##_int_tint(DataChunk &args, ExpressionState &state, Vector &result);            \
+    static void OP##_tint_int(DataChunk &args, ExpressionState &state, Vector &result);            \
+    static void OP##_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);        \
+    static void OP##_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);        \
+    static void OP##_text_ttext(DataChunk &args, ExpressionState &state, Vector &result);          \
+    static void OP##_ttext_text(DataChunk &args, ExpressionState &state, Vector &result);          \
+    static void OP##_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+
+    DECL_TCMP_ORD(Tlt)
+    DECL_TCMP_ORD(Tle)
+    DECL_TCMP_ORD(Tgt)
+    DECL_TCMP_ORD(Tge)
+#undef DECL_TCMP_ORD
 
     /* ***************************************************
      * Distance operator on tnumber
@@ -248,14 +290,17 @@ struct TemporalFunctions {
     static void Contained_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
     static void Overlaps_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adjacent_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Same_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contains_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contained_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Overlaps_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adjacent_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Same_temporal_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contains_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contained_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result);
     static void Overlaps_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adjacent_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Same_tstzspan_temporal(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Temporal time-position predicates (<<#, #>>, &<#, #&>)
@@ -368,6 +413,8 @@ struct TemporalFunctions {
     static void Temporal_frechet_distance(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_dyntimewarp_distance(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_hausdorff_distance(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_frechet_path(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_dyntimewarp_path(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * tnumber × {numspan, tbox} topological predicates
@@ -377,18 +424,22 @@ struct TemporalFunctions {
     static void Contained_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Overlaps_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adjacent_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Same_tnumber_numspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contains_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contained_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
     static void Overlaps_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adjacent_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Same_numspan_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contains_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contained_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Overlaps_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adjacent_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Same_tnumber_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contains_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
     static void Contained_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
     static void Overlaps_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adjacent_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Same_tbox_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * tnumber × {numspan, tbox} position predicates
@@ -460,6 +511,22 @@ struct TemporalFunctions {
     static void Overback_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
+     * Time-axis position predicates on tspatial
+     ****************************************************/
+    static void Before_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void After_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overbefore_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overafter_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Before_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void After_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overbefore_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overafter_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Before_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void After_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overbefore_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Overafter_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
      * Text functions on ttext
      ****************************************************/
     static void Ttext_lower(DataChunk &args, ExpressionState &state, Vector &result);
@@ -492,6 +559,20 @@ struct TemporalFunctions {
      ****************************************************/
     static void Temporal_round(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_derivative(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * Analytics — trajectory/temporal simplification
+     ****************************************************/
+    static void Temporal_simplify_min_dist(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_simplify_min_tdelta(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_simplify_max_dist(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_simplify_dp(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* ***************************************************
+     * Serialization
+     ****************************************************/
+    static void Temporal_as_wkb(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Temporal_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

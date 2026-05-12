@@ -104,6 +104,18 @@ struct StboxFunctions {
     static void Same_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adjacent_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
 
+#define DECL_TSPATIAL_TOPO(OP)                                                                                  \
+    static void OP##_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);                   \
+    static void OP##_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);                   \
+    static void OP##_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
+
+    DECL_TSPATIAL_TOPO(Contains)
+    DECL_TSPATIAL_TOPO(Contained)
+    DECL_TSPATIAL_TOPO(Overlaps)
+    DECL_TSPATIAL_TOPO(Same)
+    DECL_TSPATIAL_TOPO(Adjacent)
+#undef DECL_TSPATIAL_TOPO
+
     /* ***************************************************
      * Position operators
      ****************************************************/
@@ -142,6 +154,17 @@ struct StboxFunctions {
     static void Stbox_gt(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_cmp(DataChunk &args, ExpressionState &state, Vector &result);
 
+    /* ***************************************************
+     * Tile / box emitters and single-tile getters
+     ****************************************************/
+    static void Stbox_space_tiles(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_time_tiles(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_space_time_tiles(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_space_boxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tgeo_space_time_boxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_get_space_tile(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_get_time_tile(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_get_space_time_tile(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 }

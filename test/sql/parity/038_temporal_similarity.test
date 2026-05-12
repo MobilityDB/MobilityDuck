@@ -1,46 +1,49 @@
 # name: test/sql/parity/038_temporal_similarity.test
-# description: MobilityDB regression file 038_temporal_similarity.test.sql adapted for MobilityDuck
+# description: MobilityDB regression files 038_temporal_similarity / 066_tpoint_similarity adapted
 # group: [sql]
 #
-# Whole file under `mode skip`: MobilityDuck does not register the
-# similarity-measure family — `frechetDistance`, `discreteFrechet`,
-# `dynTimeWarp` (DTW), `hausdorffDistance`, `similarityPath`. MEOS
-# symbols: temporal_frechet_distance, temporal_dyntimewarp_distance,
-# temporal_hausdorff_distance, temporal_similarity_path.
+# Covers similarity distance scalars and the path table functions for
+# tnumber × tnumber and tgeompoint × tgeompoint.
 
 require mobilityduck
 
-# Frechet distance
+# =============================================================================
+# Distance scalars
+# =============================================================================
 
 query I
-SELECT frechetDistance(tfloat '[1@2000-01-01, 2@2000-01-02]', tfloat '[2@2000-01-01, 3@2000-01-02]');
+SELECT round(frechetDistance(tfloat '[1@2000-01-01, 4@2000-01-04]', tfloat '[2@2000-01-01, 3@2000-01-03, 5@2000-01-04]')::numeric, 6);
 ----
-1
+1.000000
 
 query I
-SELECT discreteFrechet(tfloat '[1@2000-01-01, 2@2000-01-02]', tfloat '[2@2000-01-01, 3@2000-01-02]');
+SELECT round(dynTimeWarp(tint '[1@2000-01-01, 5@2000-01-05]', tint '[2@2000-01-01, 3@2000-01-03, 4@2000-01-05]')::numeric, 6);
 ----
-1
-
-# Dynamic time warping
+4.000000
 
 query I
-SELECT dynTimeWarp(tfloat '[1@2000-01-01, 2@2000-01-02]', tfloat '[2@2000-01-01, 3@2000-01-02]');
+SELECT round(frechetDistance(tgeompoint '[POINT(0 0)@2000-01-01, POINT(2 2)@2000-01-02]', tgeompoint '[POINT(1 1)@2000-01-01, POINT(3 3)@2000-01-02]')::numeric, 6);
 ----
-2
+1.414214
 
-# Hausdorff distance
+# =============================================================================
+# frechetDistancePath
+# =============================================================================
 
-query I
-SELECT hausdorffDistance(tfloat '[1@2000-01-01, 2@2000-01-02]', tfloat '[2@2000-01-01, 3@2000-01-02]');
-----
-1
-
-mode skip
-# similarityPath returns a relation (matched-pair indices) and needs
-# TableFunction infrastructure that MobilityDuck does not yet expose.
 query II
-SELECT * FROM similarityPath(tfloat '[1@2000-01-01]', tfloat '[2@2000-01-01]', 'frechet');
+SELECT i, j FROM frechetDistancePath(tfloat '[1@2000-01-01, 4@2000-01-04]', tfloat '[2@2000-01-01, 3@2000-01-03, 5@2000-01-04]') ORDER BY i, j;
 ----
-0  0
-mode unskip
+0	0
+1	1
+2	1
+
+# =============================================================================
+# dynTimeWarpPath
+# =============================================================================
+
+query II
+SELECT i, j FROM dynTimeWarpPath(tint '[1@2000-01-01, 5@2000-01-05]', tint '[2@2000-01-01, 3@2000-01-03, 4@2000-01-05]') ORDER BY i, j;
+----
+0	0
+1	0
+2	1

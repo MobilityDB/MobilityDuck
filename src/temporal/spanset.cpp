@@ -187,8 +187,21 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             );
         }
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("spanset", {LogicalType::LIST(child_type)}, spanset_type, SpansetFunctions::Spanset_constructor)                 
+        // asBinary / asHexWKB and *FromBinary / *FromHexWKB — spanset_as_wkb /
+        // spanset_from_wkb are subtype-agnostic; the format encodes the
+        // spanset type, so each per-type alias routes to the same executor.
+        const std::string ss_alias = StringUtil::Lower(spanset_type.ToString());
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("asBinary", {spanset_type}, LogicalType::BLOB,    SpansetFunctions::Spanset_as_binary));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("asHexWKB", {spanset_type}, LogicalType::VARCHAR, SpansetFunctions::Spanset_as_hexwkb));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction(ss_alias + "FromBinary", {LogicalType::BLOB},    spanset_type, SpansetFunctions::Spanset_from_binary));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction(ss_alias + "FromHexWKB", {LogicalType::VARCHAR}, spanset_type, SpansetFunctions::Spanset_from_hexwkb));
+
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("spanset", {LogicalType::LIST(child_type)}, spanset_type, SpansetFunctions::Spanset_constructor)
         );
 
         duckdb::RegisterSerializedScalarFunction(loader, 

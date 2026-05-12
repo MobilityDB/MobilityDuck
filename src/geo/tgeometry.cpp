@@ -1,9 +1,15 @@
 #include "geo/tgeometry.hpp"
+#include "geo/tgeompoint_functions.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/common/extension_type_info.hpp"
 #include <regex>
 #include <string>
 #include <temporal/span.hpp>
+#include "temporal/spanset.hpp"
+#include "temporal/set.hpp"
+#include "temporal/temporal_functions.hpp"
+#include "geo/stbox.hpp"
+#include "geo/geoset.hpp"
 #include<time_util.hpp>
 #include "geo_util.hpp"
 #include "spatial/spatial_types.hpp"
@@ -117,7 +123,7 @@ inline void Tgeoinst_constructor(DataChunk &args, ExpressionState &state, Vector
 }
 
 
-inline void Tsequence_from_base_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
+inline void Tgeometry_sequence_from_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
     const char* default_interp = "step";
     auto count = args.size();
     auto arg_count = args.ColumnCount();
@@ -249,7 +255,7 @@ TInstant **temparr_extract(Vector &tgeometry_arr_vec, list_entry_t list_entry, i
     return instants;
 }
 
-inline void Tsequence_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
+inline void Tgeometry_sequence_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
     // Default values
     const char* default_interp = "step";
     bool default_lower_inc = true;
@@ -1103,7 +1109,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         "TGEOMETRY", 
         {LogicalType::VARCHAR, SpanTypes::TSTZSPAN(), LogicalType::VARCHAR}, 
         TGeometryTypes::TGEOMETRY(),  
-        Tsequence_from_base_tstzspan
+        Tgeometry_sequence_from_tstzspan
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tgeometry_from_tstzspan_function);
 
@@ -1111,7 +1117,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         "TGEOMETRY", 
         {LogicalType::VARCHAR, SpanTypes::TSTZSPAN()}, 
         TGeometryTypes::TGEOMETRY(),  
-        Tsequence_from_base_tstzspan
+        Tgeometry_sequence_from_tstzspan
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tgeometry_from_tstzspan_default);
 
@@ -1119,7 +1125,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         "tgeometrySeq", 
         {LogicalType::LIST(TGeometryTypes::TGEOMETRY())},
         TGeometryTypes::TGEOMETRY(),
-        Tsequence_constructor
+        Tgeometry_sequence_constructor
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tgeometryseqarr_1param);
 
@@ -1127,7 +1133,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         "tgeometrySeq", 
         {LogicalType::LIST(TGeometryTypes::TGEOMETRY()), LogicalType::VARCHAR},
         TGeometryTypes::TGEOMETRY(),
-        Tsequence_constructor
+        Tgeometry_sequence_constructor
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tgeometryseqarr_2params);
 
@@ -1135,7 +1141,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         "tgeometrySeq", 
         {LogicalType::LIST(TGeometryTypes::TGEOMETRY()), LogicalType::VARCHAR, LogicalType::BOOLEAN},
         TGeometryTypes::TGEOMETRY(),
-        Tsequence_constructor
+        Tgeometry_sequence_constructor
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tgeometryseqarr_3params);
 
@@ -1143,7 +1149,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         "tgeometrySeq", 
         {LogicalType::LIST(TGeometryTypes::TGEOMETRY()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN},
         TGeometryTypes::TGEOMETRY(),
-        Tsequence_constructor
+        Tgeometry_sequence_constructor
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tgeometryseqarr_4params);
 
@@ -1256,11 +1262,234 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     auto tgeometry_gettimestamptz_function = ScalarFunction(
         "getTimestamp",
         {TGeometryTypes::TGEOMETRY()},
-        LogicalType::TIMESTAMP_TZ,  
+        LogicalType::TIMESTAMP_TZ,
         Tinstant_timestamptz);
     duckdb::RegisterSerializedScalarFunction(loader,  tgeometry_gettimestamptz_function);
-    
 
+
+    // ===================================================================
+    // Foundational tgeometry surface — accessors, time/value-restrict,
+    // modifiers, and comparison. The MEOS C functions delegated to here
+    // are subtype-agnostic (they take Temporal *), so we reuse the same
+    // generic handlers wired for tgeompoint in temporal_functions.cpp.
+    // ===================================================================
+
+    const LogicalType TGEOM = TGeometryTypes::TGEOMETRY();
+    const LogicalType GEOM  = GeoTypes::GEOMETRY();
+    const LogicalType TSTZ  = LogicalType::TIMESTAMP_TZ;
+    const LogicalType IVAL  = LogicalType::INTERVAL;
+    const LogicalType BIGI  = LogicalType::BIGINT;
+
+    // ---- Accessors ----
+    loader.RegisterFunction(ScalarFunction(
+        "valueSet", {TGEOM}, SpatialSetType::geomset(),
+        TemporalFunctions::Temporal_valueset));
+    loader.RegisterFunction(ScalarFunction(
+        "valueN", {TGEOM, BIGI}, GEOM,
+        TemporalFunctions::Temporal_value_n));
+    loader.RegisterFunction(ScalarFunction(
+        "valueAtTimestamp", {TGEOM, TSTZ}, GEOM,
+        TemporalFunctions::Temporal_value_at_timestamptz));
+    loader.RegisterFunction(ScalarFunction(
+        "getTime", {TGEOM}, SpansetTypes::tstzspanset(),
+        TemporalFunctions::Temporal_time));
+    loader.RegisterFunction(ScalarFunction(
+        "duration", {TGEOM}, IVAL,
+        TemporalFunctions::Temporal_duration));
+    loader.RegisterFunction(ScalarFunction(
+        "duration", {TGEOM, LogicalType::BOOLEAN}, IVAL,
+        TemporalFunctions::Temporal_duration));
+    loader.RegisterFunction(ScalarFunction(
+        "lowerInc", {TGEOM}, LogicalType::BOOLEAN,
+        TemporalFunctions::Temporal_lower_inc));
+    loader.RegisterFunction(ScalarFunction(
+        "upperInc", {TGEOM}, LogicalType::BOOLEAN,
+        TemporalFunctions::Temporal_upper_inc));
+    loader.RegisterFunction(ScalarFunction(
+        "numInstants", {TGEOM}, LogicalType::INTEGER,
+        TemporalFunctions::Temporal_num_instants));
+    loader.RegisterFunction(ScalarFunction(
+        "instants", {TGEOM}, LogicalType::LIST(TGEOM),
+        TemporalFunctions::Temporal_instants));
+    loader.RegisterFunction(ScalarFunction(
+        "numSequences", {TGEOM}, LogicalType::INTEGER,
+        TemporalFunctions::Temporal_num_sequences));
+    loader.RegisterFunction(ScalarFunction(
+        "sequences", {TGEOM}, LogicalType::LIST(TGEOM),
+        TemporalFunctions::Temporal_sequences));
+    loader.RegisterFunction(ScalarFunction(
+        "startSequence", {TGEOM}, TGEOM,
+        TemporalFunctions::Temporal_start_sequence));
+    loader.RegisterFunction(ScalarFunction(
+        "endSequence", {TGEOM}, TGEOM,
+        TemporalFunctions::Temporal_end_sequence));
+    loader.RegisterFunction(ScalarFunction(
+        "sequenceN", {TGEOM, LogicalType::INTEGER}, TGEOM,
+        TemporalFunctions::Temporal_sequence_n));
+    loader.RegisterFunction(ScalarFunction(
+        "numTimestamps", {TGEOM}, LogicalType::INTEGER,
+        TemporalFunctions::Temporal_num_timestamps));
+    loader.RegisterFunction(ScalarFunction(
+        "timestamps", {TGEOM}, LogicalType::LIST(TSTZ),
+        TemporalFunctions::Temporal_timestamps));
+    loader.RegisterFunction(ScalarFunction(
+        "startTimestamp", {TGEOM}, TSTZ,
+        TemporalFunctions::Temporal_start_timestamptz));
+    loader.RegisterFunction(ScalarFunction(
+        "endTimestamp", {TGEOM}, TSTZ,
+        TemporalFunctions::Temporal_end_timestamptz));
+    loader.RegisterFunction(ScalarFunction(
+        "timestampN", {TGEOM, LogicalType::INTEGER}, TSTZ,
+        TemporalFunctions::Temporal_timestamptz_n));
+    loader.RegisterFunction(ScalarFunction(
+        "segments", {TGEOM}, LogicalType::LIST(TGEOM),
+        TemporalFunctions::Temporal_segments));
+
+    // ---- Time-domain restrict / minus ----
+    for (const auto &t : std::vector<std::pair<LogicalType, scalar_function_t>>{
+             {TSTZ,                       TemporalFunctions::Temporal_at_timestamptz},
+             {SetTypes::tstzset(),        TemporalFunctions::Temporal_at_tstzset},
+             {SpanTypes::TSTZSPAN(),      TemporalFunctions::Temporal_at_tstzspan},
+             {SpansetTypes::tstzspanset(), TemporalFunctions::Temporal_at_tstzspanset}}) {
+        loader.RegisterFunction(ScalarFunction(
+            "atTime", {TGEOM, t.first}, TGEOM, t.second));
+    }
+    for (const auto &t : std::vector<std::pair<LogicalType, scalar_function_t>>{
+             {TSTZ,                       TemporalFunctions::Temporal_minus_timestamptz},
+             {SetTypes::tstzset(),        TemporalFunctions::Temporal_minus_tstzset},
+             {SpanTypes::TSTZSPAN(),      TemporalFunctions::Temporal_minus_tstzspan},
+             {SpansetTypes::tstzspanset(), TemporalFunctions::Temporal_minus_tstzspanset}}) {
+        loader.RegisterFunction(ScalarFunction(
+            "minusTime", {TGEOM, t.first}, TGEOM, t.second));
+    }
+
+    // beforeTimestamp / afterTimestamp accept timestamptz and tstzspan
+    loader.RegisterFunction(ScalarFunction(
+        "beforeTimestamp", {TGEOM, TSTZ}, TGEOM,
+        TemporalFunctions::Temporal_before_timestamptz));
+    loader.RegisterFunction(ScalarFunction(
+        "afterTimestamp", {TGEOM, TSTZ}, TGEOM,
+        TemporalFunctions::Temporal_after_timestamptz));
+
+    // ---- Value restrict ----
+    // atValues / minusValues over a single geometry funnel through
+    // tgeompoint-side handlers (subtype-agnostic — they call MEOS's
+    // tgeo_at_geom etc. under the hood) and over a geomset go through
+    // the temporal-functions multi-value handlers.
+    loader.RegisterFunction(ScalarFunction(
+        "atValues", {TGEOM, GEOM}, TGEOM,
+        TgeompointFunctions::Tgeompoint_at_value));
+    loader.RegisterFunction(ScalarFunction(
+        "atValues", {TGEOM, SpatialSetType::geomset()}, TGEOM,
+        TemporalFunctions::Temporal_at_values));
+    loader.RegisterFunction(ScalarFunction(
+        "minusValues", {TGEOM, GEOM}, TGEOM,
+        TemporalFunctions::Temporal_minus_value));
+    loader.RegisterFunction(ScalarFunction(
+        "minusValues", {TGEOM, SpatialSetType::geomset()}, TGEOM,
+        TemporalFunctions::Temporal_minus_value));
+
+    // ---- Spatial restrict (atGeometry / minusGeometry / atStbox / minusStbox)
+    // Reuse tgeompoint's Tgeo_* handlers — they operate on Temporal * and
+    // delegate to the subtype-agnostic MEOS `tgeo_at_geom` etc.
+    loader.RegisterFunction(ScalarFunction(
+        "atGeometry", {TGEOM, GEOM}, TGEOM,
+        TgeompointFunctions::Tgeo_at_geom));
+    loader.RegisterFunction(ScalarFunction(
+        "minusGeometry", {TGEOM, GEOM}, TGEOM,
+        TgeompointFunctions::Tgeo_minus_geom));
+    loader.RegisterFunction(ScalarFunction(
+        "minusStbox", {TGEOM, StboxType::STBOX()}, TGEOM,
+        TgeompointFunctions::Tgeo_minus_stbox));
+
+    // ---- Modifiers (shift / scale / shiftScale / append / insert / update /
+    // delete / round) ----
+    loader.RegisterFunction(ScalarFunction(
+        "shiftTime", {TGEOM, IVAL}, TGEOM,
+        TemporalFunctions::Temporal_shift_time));
+    loader.RegisterFunction(ScalarFunction(
+        "scaleTime", {TGEOM, IVAL}, TGEOM,
+        TemporalFunctions::Temporal_scale_time));
+    loader.RegisterFunction(ScalarFunction(
+        "shiftScaleTime", {TGEOM, IVAL, IVAL}, TGEOM,
+        TemporalFunctions::Temporal_shift_scale_time));
+    loader.RegisterFunction(ScalarFunction(
+        "appendInstant", {TGEOM, TGEOM}, TGEOM,
+        TemporalFunctions::Temporal_append_tinstant));
+    loader.RegisterFunction(ScalarFunction(
+        "appendSequence", {TGEOM, TGEOM}, TGEOM,
+        TemporalFunctions::Temporal_append_tsequence));
+    loader.RegisterFunction(ScalarFunction(
+        "insert", {TGEOM, TGEOM}, TGEOM,
+        TemporalFunctions::Temporal_insert));
+    loader.RegisterFunction(ScalarFunction(
+        "insert", {TGEOM, TGEOM, LogicalType::BOOLEAN}, TGEOM,
+        TemporalFunctions::Temporal_insert));
+    loader.RegisterFunction(ScalarFunction(
+        "update", {TGEOM, TGEOM}, TGEOM,
+        TemporalFunctions::Temporal_update));
+    loader.RegisterFunction(ScalarFunction(
+        "update", {TGEOM, TGEOM, LogicalType::BOOLEAN}, TGEOM,
+        TemporalFunctions::Temporal_update));
+    loader.RegisterFunction(ScalarFunction(
+        "deleteTime", {TGEOM, TSTZ}, TGEOM,
+        TemporalFunctions::Temporal_delete_timestamptz));
+    loader.RegisterFunction(ScalarFunction(
+        "deleteTime", {TGEOM, TSTZ, LogicalType::BOOLEAN}, TGEOM,
+        TemporalFunctions::Temporal_delete_timestamptz));
+    loader.RegisterFunction(ScalarFunction(
+        "deleteTime", {TGEOM, SetTypes::tstzset()}, TGEOM,
+        TemporalFunctions::Temporal_delete_tstzset));
+    loader.RegisterFunction(ScalarFunction(
+        "deleteTime", {TGEOM, SetTypes::tstzset(), LogicalType::BOOLEAN}, TGEOM,
+        TemporalFunctions::Temporal_delete_tstzset));
+    loader.RegisterFunction(ScalarFunction(
+        "deleteTime", {TGEOM, SpanTypes::TSTZSPAN()}, TGEOM,
+        TemporalFunctions::Temporal_delete_tstzspan));
+    loader.RegisterFunction(ScalarFunction(
+        "deleteTime", {TGEOM, SpanTypes::TSTZSPAN(), LogicalType::BOOLEAN}, TGEOM,
+        TemporalFunctions::Temporal_delete_tstzspan));
+    loader.RegisterFunction(ScalarFunction(
+        "deleteTime", {TGEOM, SpansetTypes::tstzspanset()}, TGEOM,
+        TemporalFunctions::Temporal_delete_tstzspanset));
+    loader.RegisterFunction(ScalarFunction(
+        "deleteTime", {TGEOM, SpansetTypes::tstzspanset(), LogicalType::BOOLEAN}, TGEOM,
+        TemporalFunctions::Temporal_delete_tstzspanset));
+
+    // ---- Comparison (named functions + operators) ----
+    struct CmpEntry {
+        const char *name;
+        scalar_function_t fn;
+    };
+    const std::vector<CmpEntry> named_cmps = {
+        {"temporal_eq", TemporalFunctions::Temporal_eq},
+        {"temporal_ne", TemporalFunctions::Temporal_ne},
+        {"temporal_lt", TemporalFunctions::Temporal_lt},
+        {"temporal_le", TemporalFunctions::Temporal_le},
+        {"temporal_gt", TemporalFunctions::Temporal_gt},
+        {"temporal_ge", TemporalFunctions::Temporal_ge},
+    };
+    for (const auto &c : named_cmps) {
+        loader.RegisterFunction(ScalarFunction(
+            c.name, {TGEOM, TGEOM}, LogicalType::BOOLEAN, c.fn));
+    }
+    loader.RegisterFunction(ScalarFunction(
+        "temporal_cmp", {TGEOM, TGEOM}, LogicalType::INTEGER,
+        TemporalFunctions::Temporal_cmp));
+
+    // Operator forms — mirror the registrations tgeompoint.cpp does.
+    const std::vector<CmpEntry> op_cmps = {
+        {"=",  TemporalFunctions::Temporal_eq},
+        {"<>", TemporalFunctions::Temporal_ne},
+        {"<",  TemporalFunctions::Temporal_lt},
+        {"<=", TemporalFunctions::Temporal_le},
+        {">",  TemporalFunctions::Temporal_gt},
+        {">=", TemporalFunctions::Temporal_ge},
+    };
+    for (const auto &c : op_cmps) {
+        loader.RegisterFunction(ScalarFunction(
+            c.name, {TGEOM, TGEOM}, LogicalType::BOOLEAN, c.fn));
+    }
 }
 
 void TGeometryTypes::RegisterTypes(ExtensionLoader &loader) {

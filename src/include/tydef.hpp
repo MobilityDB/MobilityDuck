@@ -6,10 +6,16 @@
 #include "duckdb/main/extension/extension_loader.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 
-extern "C" {    
-    #include <meos.h>    
-    #include <meos_internal.h>    
+extern "C" {
+    #include <meos.h>
+    #include <meos_internal.h>
 }
+
+// Forward-compat alias for the meosType → MeosType rename (MobilityDB
+// pr785-sync-script).  Vcpkg's MEOS exposes `MeosType`; existing
+// MobilityDuck code still uses `meosType`.  This alias bridges the two
+// without touching every reference site.
+using meosType = MeosType;
 
 namespace duckdb {
 

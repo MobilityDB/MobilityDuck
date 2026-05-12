@@ -133,6 +133,44 @@ void SetFunctions::Set_as_hexwkb(DataChunk &args, ExpressionState &state, Vector
     );
 }
 
+// --- *FromBinary parser (set_from_wkb is subtype-agnostic) ---
+void SetFunctions::Set_from_binary(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() == 0)
+                throw InvalidInputException("setFromBinary: empty WKB input");
+            uint8_t *wkb = (uint8_t *)malloc(input.GetSize());
+            if (!wkb) throw InternalException("setFromBinary: malloc failed");
+            memcpy(wkb, input.GetData(), input.GetSize());
+            Set *s = set_from_wkb(wkb, input.GetSize());
+            free(wkb);
+            if (!s) throw InvalidInputException(
+                "setFromBinary: invalid MEOS-WKB");
+            size_t sz = set_mem_size(s);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(s), sz));
+            free(s);
+            return stored;
+        });
+}
+
+void SetFunctions::Set_from_hexwkb(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            std::string hex(input.GetData(), input.GetSize());
+            Set *s = set_from_hexwkb(hex.c_str());
+            if (!s) throw InvalidInputException(
+                "setFromHexWKB: invalid hex-encoded MEOS-WKB");
+            size_t sz = set_mem_size(s);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(s), sz));
+            free(s);
+            return stored;
+        });
+}
+
 
 // --- Cast From String ---
 bool SetFunctions::Set_to_text(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
@@ -2783,14 +2821,14 @@ void SetFunctions::Distance_set_value(DataChunk &args, ExpressionState &state, V
         return;
     }
     if (alias == "tstzset") {
-        BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, double>(
+        BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, interval_t>(
             set_vec, val_vec, result, count,
-            [&](string_t blob, timestamp_tz_t ts, ValidityMask &mask, idx_t idx) -> double {
+            [&](string_t blob, timestamp_tz_t ts, ValidityMask &mask, idx_t idx) -> interval_t {
                 Set *s = CopySet(blob);
                 timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts);
-                double r = distance_set_timestamptz(s, (TimestampTz)ts_meos.value);
+                double secs = distance_set_timestamptz(s, (TimestampTz)ts_meos.value);
                 free(s);
-                return r;
+                return SecondsToInterval(secs);
             });
         return;
     }
@@ -2849,14 +2887,14 @@ void SetFunctions::Distance_value_set(DataChunk &args, ExpressionState &state, V
         return;
     }
     if (alias == "tstzset") {
-        BinaryExecutor::ExecuteWithNulls<timestamp_tz_t, string_t, double>(
+        BinaryExecutor::ExecuteWithNulls<timestamp_tz_t, string_t, interval_t>(
             val_vec, set_vec, result, count,
-            [&](timestamp_tz_t ts, string_t blob, ValidityMask &mask, idx_t idx) -> double {
+            [&](timestamp_tz_t ts, string_t blob, ValidityMask &mask, idx_t idx) -> interval_t {
                 Set *s = CopySet(blob);
                 timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts);
-                double r = distance_set_timestamptz(s, (TimestampTz)ts_meos.value);
+                double secs = distance_set_timestamptz(s, (TimestampTz)ts_meos.value);
                 free(s);
-                return r;
+                return SecondsToInterval(secs);
             });
         return;
     }
@@ -2920,15 +2958,15 @@ void SetFunctions::Distance_set_set(DataChunk &args, ExpressionState &state, Vec
         return;
     }
     if (alias == "tstzset") {
-        BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(
+        BinaryExecutor::ExecuteWithNulls<string_t, string_t, interval_t>(
             a, b, result, args.size(),
-            [&](string_t x, string_t y, ValidityMask &mask, idx_t idx) -> double {
+            [&](string_t x, string_t y, ValidityMask &mask, idx_t idx) -> interval_t {
                 Set *s1 = CopySet(x);
                 Set *s2 = CopySet(y);
-                double r = distance_tstzset_tstzset(s1, s2);
+                double secs = distance_tstzset_tstzset(s1, s2);
                 free(s1);
                 free(s2);
-                return r;
+                return SecondsToInterval(secs);
             });
         return;
     }

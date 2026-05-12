@@ -1,0 +1,119 @@
+# name: test/sql/parity/025_temporal_tile_getters.test
+# description: getBin (single-bin getters) and tbox tile emitters
+# group: [sql]
+#
+# Mirrors MobilityDB SQL surface for sql/temporal/025_temporal_tile.in.sql:
+#   - getBin(integer|bigint|float|date|timestamptz, size|duration, origin)
+#     returning the typed span containing the value.
+#   - valueTiles / timeTiles / valueTimeTiles emitters returning LIST(TBOX).
+#
+# Outputs differ from the MobilityDB manual example for the date variant:
+# the manual shows [2001-01-03, 2001-01-10) but the actual MEOS algorithm
+# (date_get_bin -> int_get_bin) produces [2001-01-01, 2001-01-08), which
+# is what we assert here.
+
+require mobilityduck
+
+# =============================================================================
+# getBin — numeric variants
+# =============================================================================
+
+query I
+SELECT getBin(2, 2, 0)::VARCHAR;
+----
+[2, 4)
+
+query I
+SELECT getBin(5::bigint, 2::bigint, 0::bigint)::VARCHAR;
+----
+[4, 6)
+
+query I
+SELECT getBin(2.0, 2.5, 1.5)::VARCHAR;
+----
+[1.5, 4)
+
+# =============================================================================
+# getBin — date / timestamptz
+# =============================================================================
+
+query I
+SELECT getBin(DATE '2001-01-04', INTERVAL '1 week', DATE '2000-01-03')::VARCHAR;
+----
+[2001-01-01, 2001-01-08)
+
+query I
+SELECT getBin(DATE '2001-01-04', INTERVAL '1 week', DATE '2001-01-07')::VARCHAR;
+----
+[2000-12-31, 2001-01-07)
+
+query I
+SELECT getBin(TIMESTAMPTZ '2001-01-04', INTERVAL '1 day', TIMESTAMPTZ '2000-01-03')::VARCHAR;
+----
+[2001-01-04 00:00:00+01, 2001-01-05 00:00:00+01)
+
+# =============================================================================
+# valueTiles — int / float dispatch via tbox->span.spantype
+# =============================================================================
+
+query I
+SELECT len(valueTiles(tbox 'TBOXINT XT([1,10],[2000-01-01,2000-01-10])', 3));
+----
+4
+
+query I
+SELECT (valueTiles(tbox 'TBOXINT XT([1,10],[2000-01-01,2000-01-10])', 3))[1]::VARCHAR;
+----
+TBOXINT X([0, 3))
+
+query I
+SELECT len(valueTiles(tbox 'TBOXFLOAT XT([0.0,5.5],[2000-01-01,2000-01-10])', 1.5));
+----
+4
+
+# =============================================================================
+# timeTiles — default torigin = 2000-01-03 (Monday)
+# =============================================================================
+
+query I
+SELECT len(timeTiles(tbox 'TBOXINT XT([1,10],[2000-01-01,2000-01-10])', INTERVAL '3 days'));
+----
+4
+
+query I
+SELECT (timeTiles(tbox 'TBOXINT XT([1,10],[2000-01-01,2000-01-10])', INTERVAL '3 days'))[1]::VARCHAR;
+----
+TBOXINT XT([1, 11),[1999-12-31 01:00:00+01, 2000-01-03 01:00:00+01))
+
+# Explicit torigin overrides the default
+query I
+SELECT (timeTiles(
+  tbox 'TBOXINT XT([1,10],[2000-01-01,2000-01-10])',
+  INTERVAL '3 days',
+  TIMESTAMPTZ '2000-01-01'
+))[1]::VARCHAR;
+----
+TBOXINT XT([1, 11),[2000-01-01 00:00:00+01, 2000-01-04 00:00:00+01))
+
+# =============================================================================
+# valueTimeTiles — cartesian of value tiles × time tiles
+# =============================================================================
+
+query I
+SELECT len(valueTimeTiles(tbox 'TBOXINT XT([1,10],[2000-01-01,2000-01-10])', 5, INTERVAL '5 days'));
+----
+9
+
+query I
+SELECT (valueTimeTiles(tbox 'TBOXINT XT([1,10],[2000-01-01,2000-01-10])', 5, INTERVAL '5 days'))[1]::VARCHAR;
+----
+TBOXINT XT([0, 5),[1999-12-29 01:00:00+01, 2000-01-03 01:00:00+01))
+
+query I
+SELECT len(valueTimeTiles(
+  tbox 'TBOXFLOAT XT([0.0,10.0],[2000-01-01,2000-01-10])',
+  2.5, INTERVAL '5 days', 0.0, TIMESTAMPTZ '2000-01-01'
+));
+----
+10
+

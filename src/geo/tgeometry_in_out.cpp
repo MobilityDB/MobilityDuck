@@ -195,9 +195,64 @@ bool TgeometryFunctions::TgeometryToString(Vector &source, Vector &result, idx_t
     return true;   
 }
 
+// ---- Spatial-temporal parsers (Binary / HexWKB / MFJSON / Text) ----
+// Used to register the `tgeometryFrom*` and `tgeographyFrom*` overloads.
+// `temporal_from_wkb` and `temporal_from_hexwkb` are subtype-agnostic;
+// `tgeometry_from_mfjson` / `tgeography_from_mfjson` and `tgeometry_in` /
+// `tgeography_in` are per-type.  The result is stored as a raw blob, the
+// same format every other temporal type uses.
+
+inline string_t StoreTempAsBlob(Vector &result, Temporal *t) {
+    size_t sz = temporal_mem_size(t);
+    string_t stored = StringVector::AddStringOrBlob(
+        result, string_t(reinterpret_cast<const char *>(t), sz));
+    free(t);
+    return stored;
+}
+
+inline void TspatialFromWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            if (input.GetSize() == 0)
+                throw InvalidInputException("fromBinary: empty WKB input");
+            uint8_t *wkb = (uint8_t *)malloc(input.GetSize());
+            if (!wkb) throw InternalException("fromBinary: malloc failed");
+            memcpy(wkb, input.GetData(), input.GetSize());
+            Temporal *t = temporal_from_wkb(wkb, input.GetSize());
+            free(wkb);
+            if (!t) throw InvalidInputException("fromBinary: invalid MEOS-WKB");
+            return StoreTempAsBlob(result, t);
+        });
+}
+
+inline void TspatialFromHexWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            std::string hex(input.GetData(), input.GetSize());
+            Temporal *t = temporal_from_hexwkb(hex.c_str());
+            if (!t) throw InvalidInputException(
+                "fromHexWKB: invalid hex-encoded MEOS-WKB");
+            return StoreTempAsBlob(result, t);
+        });
+}
+
+template <Temporal *(*FN)(const char *)>
+inline void TspatialFromStringExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            std::string s(input.GetData(), input.GetSize());
+            Temporal *t = FN(s.c_str());
+            if (!t) throw InvalidInputException("from*: invalid input");
+            return StoreTempAsBlob(result, t);
+        });
+}
+
 void TGeometryTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
     auto TgeometryAsText = ScalarFunction(
-            "asText", 
+            "asText",
             {TGeometryTypes::TGEOMETRY()},
             LogicalType::VARCHAR,
             Tspatial_as_text
@@ -211,6 +266,28 @@ void TGeometryTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
         Tspatial_as_ewkt
     );
     duckdb::RegisterSerializedScalarFunction(loader,  TgeometryAsEWKT);
+
+    // ---- tgeometryFromBinary / FromEWKB (auto-detects format) ----
+    const auto B = LogicalType::BLOB;
+    const auto V = LogicalType::VARCHAR;
+    const auto T = TGeometryTypes::TGEOMETRY();
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("tgeometryFromBinary", {B}, T, TspatialFromWkbExec));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("tgeometryFromEWKB",   {B}, T, TspatialFromWkbExec));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("tgeometryFromHexWKB",  {V}, T, TspatialFromHexWkbExec));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("tgeometryFromHexEWKB", {V}, T, TspatialFromHexWkbExec));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("tgeometryFromMFJSON", {V}, T,
+                       TspatialFromStringExec<&tgeometry_from_mfjson>));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("tgeometryFromText",   {V}, T,
+                       TspatialFromStringExec<&tgeometry_in>));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("tgeometryFromEWKT",   {V}, T,
+                       TspatialFromStringExec<&tgeometry_in>));
 }
 
 

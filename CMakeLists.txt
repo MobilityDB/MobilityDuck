@@ -60,6 +60,7 @@ set(EXTENSION_SOURCES
     src/mobilityduck_extension.cpp        
     src/temporal/temporal.cpp
     src/temporal/temporal_functions.cpp
+    src/temporal/temporal_aggregates.cpp
     src/temporal/tbox.cpp
     src/temporal/tbox_functions.cpp
     src/geo/stbox.cpp
@@ -73,12 +74,23 @@ set(EXTENSION_SOURCES
     src/temporal/span.cpp
     src/temporal/span_functions.cpp
     src/temporal/span_aggregates.cpp
+    src/temporal/temporal_aggregates.cpp
+    src/temporal/span_table_functions.cpp
     src/geo/geoset.cpp
+    src/geo/spatial_aggregates.cpp
     src/temporal/spanset.cpp
     src/temporal/spanset_functions.cpp
     src/geo/tgeometry.cpp
     src/geo/tgeometry_in_out.cpp
+    src/geo/tgeometry_ops.cpp
+    src/geo/tgeography.cpp
+    src/geo/tgeography_in_out.cpp
+    src/geo/tgeography_ops.cpp
+    src/geo/tgeogpoint.cpp
+    src/geo/tgeogpoint_in_out.cpp
+    src/geo/tgeogpoint_ops.cpp
     src/index/rtree_module.cpp
+    src/single_tile_getters.cpp
     src/index/rtree_index_create_physical.cpp
     src/index/rtree_index_scan.cpp
     src/index/rtree_optimize_scan.cpp

@@ -173,9 +173,23 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             );
         }
 
+        // asBinary / asHexWKB and the *FromBinary / *FromHexWKB constructors.
+        // span_as_wkb / span_from_wkb are subtype-agnostic; the format
+        // encodes the span type, so each per-type FromBinary alias routes
+        // to the same executor.
+        const std::string sp_alias = StringUtil::Lower(span_type.ToString());
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("asBinary", {span_type}, LogicalType::BLOB,    SpanFunctions::Span_as_binary));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("asHexWKB", {span_type}, LogicalType::VARCHAR, SpanFunctions::Span_as_hexwkb));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction(sp_alias + "FromBinary", {LogicalType::BLOB},    span_type, SpanFunctions::Span_from_binary));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction(sp_alias + "FromHexWKB", {LogicalType::VARCHAR}, span_type, SpanFunctions::Span_from_hexwkb));
+
         // Register span constructor functions
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(span_type.ToString(), {LogicalType::VARCHAR}, span_type, SpanFunctions::Span_constructor)                 
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction(span_type.ToString(), {LogicalType::VARCHAR}, span_type, SpanFunctions::Span_constructor)
         );
 
         duckdb::RegisterSerializedScalarFunction(loader, 
@@ -262,7 +276,9 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         }
         else if( span_type == SpanTypes::TSTZSPAN() ){
             duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("shift", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Tstzspan_shift)
-            ); 
+            );
+            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Tstzspan_shift)
+            );
 
             duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("expand", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Tstzspan_expand)
             );

@@ -1,0 +1,87 @@
+# name: test/sql/parity/025_temporal_tile_split.test
+# description: TableFunctions for temporal/025_temporal_tile — valueSplit /
+#              timeSplit / valueTimeSplit on tnumber (and timeSplit on the
+#              other temporal subtypes).  Set-returning splitters: each
+#              input row produces N output rows, one per (value[, time]) bin.
+# group: [sql]
+
+require mobilityduck
+
+# valueSplit on tint with size 2 -> bins 0 and 4
+
+query I
+SELECT count(*) FROM valueSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', 2);
+----
+2
+
+# valueSplit returns the bin start values
+
+query I
+SELECT number FROM valueSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', 2) ORDER BY number;
+----
+0
+4
+
+# valueSplit on tfloat
+
+query I
+SELECT count(*) FROM valueSplit(tfloat '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', 2.0);
+----
+3
+
+# valueSplit with explicit vorigin shifts the bin starts to bins {1, 5}
+
+query I
+SELECT count(*) FROM valueSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', 2, 1);
+----
+2
+
+query I
+SELECT array_agg(number ORDER BY number) FROM
+  valueSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', 2, 1);
+----
+[1, 5]
+
+# timeSplit on tfloat with 2-day duration -> 2 buckets
+
+query I
+SELECT count(*) FROM timeSplit(tfloat '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', INTERVAL '2 days');
+----
+2
+
+# timeSplit on tbool
+
+query I
+SELECT count(*) FROM timeSplit(tbool '[t@2000-01-01 00:00:00+00, f@2000-01-05 00:00:00+00]', INTERVAL '2 days');
+----
+2
+
+# timeSplit on ttext
+
+query I
+SELECT count(*) FROM timeSplit(ttext '["a"@2000-01-01 00:00:00+00, "b"@2000-01-05 00:00:00+00]', INTERVAL '2 days');
+----
+2
+
+# timeSplit with explicit torigin
+
+query I
+SELECT count(*) FROM timeSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', INTERVAL '2 days', TIMESTAMPTZ '2000-01-01 00:00:00+00');
+----
+2
+
+# valueTimeSplit cross-product (value × time bins)
+
+query I
+SELECT count(*) FROM valueTimeSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', 2, INTERVAL '2 days');
+----
+3
+
+query III
+SELECT value, time, tempSubtype(tint) FROM
+  valueTimeSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:00:00+00]', 2, INTERVAL '2 days')
+  ORDER BY value, time;
+----
+0	2000-01-01 01:00:00+01	SequenceSet
+0	2000-01-03 01:00:00+01	SequenceSet
+4	2000-01-05 01:00:00+01	SequenceSet
