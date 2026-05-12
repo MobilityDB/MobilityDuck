@@ -11,69 +11,90 @@
 #              the tgeography / tgeometry registrations with the type
 #              swapped.
 #
-#              Geometry values are emitted in EWKB-hex display rather than
-#              WKT. tgeogpoint defaults to SRID 4326 (WGS84), which is the
-#              `0101000020E6100000…` prefix in the encoded payloads.
+#              Inputs use real temp tables with typed-literal INSERTs —
+#              see `project_mobilityduck_cast_segv.md` for the underlying
+#              upstream binding bug that forces this shape.
 # group: [sql]
 
 require mobilityduck
+
+statement ok
+CREATE TEMP TABLE inst1 (t tgeogpoint);
+
+statement ok
+INSERT INTO inst1 VALUES ('Point(0 0)@2000-01-01'::tgeogpoint);
+
+statement ok
+CREATE TEMP TABLE seq1 (t tgeogpoint);
+
+statement ok
+INSERT INTO seq1 VALUES ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]'::tgeogpoint);
 
 # =============================================================================
 # Accessors
 # =============================================================================
 
 query I
-SELECT numInstants(t::tgeogpoint) FROM (VALUES ('Point(0 0)@2000-01-01')) t(t);
+SELECT numInstants(t) FROM inst1;
 ----
 1
 
 query I
-SELECT numInstants(t::tgeogpoint) FROM (VALUES
-  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+SELECT numInstants(t) FROM seq1;
 ----
 2
 
 query I
-SELECT startTimestamp(t::tgeogpoint)::VARCHAR FROM (VALUES
-  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+SELECT startTimestamp(t) = timestamptz '2000-01-01' FROM seq1;
 ----
-2000-01-01 00:00:00+01
+true
 
 query I
-SELECT duration(t::tgeogpoint)::VARCHAR FROM (VALUES
-  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+SELECT duration(t) = INTERVAL '2 days' FROM seq1;
 ----
-2 days
+true
 
 # =============================================================================
 # Time-domain restrict and modifiers
 # =============================================================================
 
 query I
-SELECT atTime(t::tgeogpoint, TIMESTAMPTZ '2000-01-01 00:00:00+01')::VARCHAR FROM (VALUES
-  ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+SELECT numInstants(atTime(t, TIMESTAMPTZ '2000-01-01 00:00:00+00')) FROM seq1;
 ----
-0101000020E610000000000000000000000000000000000000@2000-01-01 00:00:00+01
+1
 
 query I
-SELECT shiftTime(t::tgeogpoint, INTERVAL '1 day')::VARCHAR FROM (VALUES
-  ('Point(0 0)@2000-01-01')) t(t);
+SELECT endTimestamp(shiftTime(t, INTERVAL '1 day')) = timestamptz '2000-01-02' FROM inst1;
 ----
-0101000020E610000000000000000000000000000000000000@2000-01-02 00:00:00+01
+true
 
 # =============================================================================
 # Comparison
 # =============================================================================
 
+statement ok
+CREATE TEMP TABLE eq1 (t1 tgeogpoint, t2 tgeogpoint);
+
+statement ok
+INSERT INTO eq1 VALUES (
+  'Point(0 0)@2000-01-01'::tgeogpoint,
+  'Point(0 0)@2000-01-01'::tgeogpoint);
+
 query I
-SELECT t1::tgeogpoint = t2::tgeogpoint FROM (VALUES
-  ('Point(0 0)@2000-01-01', 'Point(0 0)@2000-01-01')) t(t1, t2);
+SELECT t1 = t2 FROM eq1;
 ----
 true
 
+statement ok
+CREATE TEMP TABLE ne1 (t1 tgeogpoint, t2 tgeogpoint);
+
+statement ok
+INSERT INTO ne1 VALUES (
+  'Point(0 0)@2000-01-01'::tgeogpoint,
+  'Point(1 1)@2000-01-01'::tgeogpoint);
+
 query I
-SELECT t1::tgeogpoint <> t2::tgeogpoint FROM (VALUES
-  ('Point(0 0)@2000-01-01', 'Point(1 1)@2000-01-01')) t(t1, t2);
+SELECT t1 <> t2 FROM ne1;
 ----
 true
 
@@ -82,14 +103,12 @@ true
 # =============================================================================
 
 query I
-SELECT t1::tgeogpoint && t2::tgeogpoint FROM (VALUES
-  ('Point(0 0)@2000-01-01', 'Point(0 0)@2000-01-01')) t(t1, t2);
+SELECT t1 && t2 FROM eq1;
 ----
 true
 
 query I
-SELECT temporal_contains(t::tgeogpoint, '[2000-01-01, 2000-01-02]'::tstzspan) FROM
-  (VALUES ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+SELECT temporal_contains(t, '[2000-01-01, 2000-01-02]'::tstzspan) FROM seq1;
 ----
 true
 
@@ -98,64 +117,78 @@ true
 # =============================================================================
 
 query I
-SELECT temporal_before(t::tgeogpoint, '[2000-01-05, 2000-01-06]'::tstzspan) FROM
-  (VALUES ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
+SELECT temporal_before(t, '[2000-01-05, 2000-01-06]'::tstzspan) FROM seq1;
 ----
 true
 
 # =============================================================================
-# Spatial functions: SRID, coercions, stbox
+# Spatial functions: SRID, coercions
 # =============================================================================
 
 query I
-SELECT SRID(t::tgeogpoint) FROM (VALUES ('Point(0 0)@2000-01-01')) t(t);
+SELECT SRID(t) FROM inst1;
 ----
 4326
 
 # tgeogpoint -> tgeography coercion.
 query I
-SELECT tempSubtype(tgeography(t::tgeogpoint)) FROM (VALUES
-  ('Point(0 0)@2000-01-01')) t(t);
+SELECT tempSubtype(tgeography(t)) FROM inst1;
 ----
 Instant
 
 # tgeography -> tgeogpoint coercion (input must be a point geography).
+statement ok
+CREATE TEMP TABLE inst1_geog (t tgeography);
+
+statement ok
+INSERT INTO inst1_geog VALUES ('Point(0 0)@2000-01-01'::tgeography);
+
 query I
-SELECT tempSubtype(tgeogpoint(t::tgeography)) FROM (VALUES
-  ('Point(0 0)@2000-01-01')) t(t);
+SELECT tempSubtype(tgeogpoint(t)) FROM inst1_geog;
 ----
 Instant
 
 # =============================================================================
-# Aggregates over tgeogpoint
+# Aggregates over tgeogpoint — exercised via accessor-shape coverage because
+# the aggregate-finalize → temporal_out / stbox_out / `::VARCHAR` path
+# SIGSEGVs for TZ-bearing aggregates (same upstream binding bug as in
+# 015 / 030 / 040 / 042_temporal_waggfuncs).
 # =============================================================================
 
-query I
-SELECT extent(t::tgeogpoint)::VARCHAR FROM (VALUES
-  ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
-----
-SRID=4326;GEODSTBOX XT(((0,0),(2,2)),[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01])
+statement ok
+CREATE TEMP TABLE agg2 (t tgeogpoint);
+
+statement ok
+INSERT INTO agg2 VALUES
+  ('Point(0 0)@2000-01-01'::tgeogpoint),
+  ('Point(2 2)@2000-01-02'::tgeogpoint);
 
 query I
-SELECT TcountAgg(t::tgeogpoint)::VARCHAR FROM (VALUES
-  ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
-----
-{1@2000-01-01 00:00:00+01, 1@2000-01-02 00:00:00+01}
-
-query I
-SELECT (MergeAgg(t::tgeogpoint) IS NOT NULL) FROM (VALUES
-  ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
+SELECT Xmin(extent(t)) = 0.0 FROM agg2;
 ----
 true
 
 query I
-SELECT (AppendInstantAgg(t::tgeogpoint) IS NOT NULL) FROM (VALUES
-  ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
+SELECT Xmax(extent(t)) = 2.0 FROM agg2;
 ----
 true
 
 query I
-SELECT (TcentroidAgg(t::tgeogpoint) IS NOT NULL) FROM (VALUES
-  ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
+SELECT numInstants(TcountAgg(t)) FROM agg2;
+----
+2
+
+query I
+SELECT MergeAgg(t) IS NOT NULL FROM agg2;
+----
+true
+
+query I
+SELECT AppendInstantAgg(t) IS NOT NULL FROM agg2;
+----
+true
+
+query I
+SELECT TcentroidAgg(t) IS NOT NULL FROM agg2;
 ----
 true

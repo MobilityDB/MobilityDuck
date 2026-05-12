@@ -1,0 +1,59 @@
+# name: test/sql/parity/060b_stboxes_emitters.test
+# description: Multi-entry bbox emitters — `stboxes`, `splitNStboxes`,
+#              `splitEachNStboxes` for tgeometry / tgeography /
+#              tgeompoint / tgeogpoint and the geometry / geography
+#              geo-side overloads.  Each emits an `stbox[]` for
+#              downstream multi-entry index builds.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# stboxes — single-call bbox emit
+# =============================================================================
+
+query I
+SELECT length(stboxes(
+  '[Point(0 0)@2000-01-01, Point(10 10)@2000-01-02]'::tgeompoint));
+----
+1
+
+query I
+SELECT length(stboxes(
+  '[Point(0 0)@2000-01-01, Point(10 10)@2000-01-02]'::tgeometry));
+----
+1
+
+query I
+SELECT length(stboxes(ST_GeomFromText('LINESTRING(0 0, 10 10)')));
+----
+1
+
+# =============================================================================
+# splitNStboxes(t, n) — split into at most `n` bboxes
+# =============================================================================
+
+query I
+SELECT length(splitNStboxes(
+  '[Point(0 0)@2000-01-01, Point(5 5)@2000-01-02, Point(10 10)@2000-01-03]'::tgeompoint,
+  2)) >= 1;
+----
+true
+
+query I
+SELECT length(splitNStboxes(
+  '[Point(0 0)@2000-01-01, Point(5 5)@2000-01-02, Point(10 10)@2000-01-03]'::tgeometry,
+  2)) >= 1;
+----
+true
+
+# =============================================================================
+# splitEachNStboxes(t, n) — split into one bbox per `n` instants
+# =============================================================================
+
+query I
+SELECT length(splitEachNStboxes(
+  '[Point(0 0)@2000-01-01, Point(5 5)@2000-01-02, Point(10 10)@2000-01-03]'::tgeompoint,
+  1)) >= 1;
+----
+true

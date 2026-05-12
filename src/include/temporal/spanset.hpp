@@ -31,7 +31,7 @@ struct SpansetTypes {
 };
 
 struct SpansetTypeMapping {
-    static meosType GetMeosTypeFromAlias(const std::string &alias);
+    static MeosType GetMeosTypeFromAlias(const std::string &alias);
     static LogicalType GetChildType(const LogicalType &type);
     static LogicalType GetBaseType(const LogicalType &type);
     static LogicalType GetSetType(const LogicalType &type);

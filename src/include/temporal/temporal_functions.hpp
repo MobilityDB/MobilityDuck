@@ -14,11 +14,11 @@ class ExtensionLoader;
 
 typedef struct {
     char *alias;
-    meosType temptype;
+    MeosType temptype;
 } alias_type_struct;
 
 struct TemporalHelpers {
-    static meosType GetTemptypeFromAlias(const char *alias);
+    static MeosType GetTemptypeFromAlias(const char *alias);
     static vector<Value> TempArrToArray(Temporal **temparr, int32_t count, LogicalType element_type);
 };
 
@@ -78,6 +78,8 @@ struct TemporalFunctions {
     static void Temporal_end_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_min_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_max_value(DataChunk &args, ExpressionState &state, Vector &result);
+    /* PG-equality 32-bit hash; routed for every temporal type. */
+    static void Temporal_hash(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_avg_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_value_n(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_num_instants(DataChunk &args, ExpressionState &state, Vector &result); 
@@ -551,7 +553,7 @@ struct TemporalFunctions {
      * Workaround functions
      ****************************************************/
     template <typename T>
-    static void Temporal_dump_common(DataChunk &args, Vector &result, meosType basetype);
+    static void Temporal_dump_common(DataChunk &args, Vector &result, MeosType basetype);
     static void Temporal_dump(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************

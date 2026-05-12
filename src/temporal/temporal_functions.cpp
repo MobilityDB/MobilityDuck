@@ -27,7 +27,7 @@ static const alias_type_struct DUCKDB_ALIAS_TYPE_CATALOG[] = {
     {(char*)"TGEOMETRY", T_TGEOMETRY}
 };
 
-meosType TemporalHelpers::GetTemptypeFromAlias(const char *alias) {
+MeosType TemporalHelpers::GetTemptypeFromAlias(const char *alias) {
     for (size_t i = 0; i < sizeof(DUCKDB_ALIAS_TYPE_CATALOG) / sizeof(DUCKDB_ALIAS_TYPE_CATALOG[0]); i++) {
         if (strcmp(alias, DUCKDB_ALIAS_TYPE_CATALOG[i].alias) == 0) {
             return DUCKDB_ALIAS_TYPE_CATALOG[i].temptype;
@@ -56,11 +56,15 @@ vector<Value> TemporalHelpers::TempArrToArray(Temporal **temparr, int32_t count,
 
 bool TemporalFunctions::Temporal_in(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     auto &target_type = result.GetType();
-    meosType temptype = TemporalHelpers::GetTemptypeFromAlias(target_type.GetAlias().c_str());
+    MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(target_type.GetAlias().c_str());
     bool success = true;
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
         source, result, count,
         [&](string_t input_string, ValidityMask &mask, idx_t idx) {
+            /* Defensive errno reset — MEOS state can leak between cast
+             * calls when the prior call's error path didn't fully
+             * unwind via the default `exit(EXIT_FAILURE)` path. */
+            meos_errno_reset();
             std::string input_str = input_string.GetString();
             Temporal *temp = temporal_in(input_str.c_str(), temptype);
             if (!temp) {
@@ -163,7 +167,7 @@ void TemporalFunctions::Tinstant_constructor_common(Vector &value, Vector &ts, V
     BinaryExecutor::Execute<T, timestamp_tz_t, string_t>(
         value, ts, result, count,
         [&](T value, timestamp_tz_t ts) {
-            meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
+            MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
             timestamp_tz_t meos_ts = DuckDBToMeosTimestamp(ts);
 
             Datum datum;
@@ -195,7 +199,7 @@ void TemporalFunctions::Tinstant_constructor_text(Vector &value, Vector &ts, Vec
     BinaryExecutor::Execute<string_t, timestamp_tz_t, string_t>(
         value, ts, result, count,
         [&](string_t value, timestamp_tz_t ts) {
-            meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
+            MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
             timestamp_tz_t meos_ts = DuckDBToMeosTimestamp(ts);
 
             std::string str = value.GetString();
@@ -243,7 +247,7 @@ void TemporalFunctions::Tsequence_constructor(DataChunk &args, ExpressionState &
     auto *list_entries = ListVector::GetData(array_vec);
     auto &child_vec = ListVector::GetEntry(array_vec);
 
-    meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
+    MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
     interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
     bool lower_inc = true;
     bool upper_inc = true;
@@ -410,7 +414,94 @@ void TemporalFunctions::Tsequenceset_constructor(DataChunk &args, ExpressionStat
     }
 }
 
-static string_t Tsequence_from_base_tstzset_impl(Datum datum, string_t set_blob, meosType temptype, Vector &result) {
+/* ***************************************************
+ * Tsequenceset_constructor_gaps — split LIST<temporal-instant> into a
+ * TSequenceSet of sequences at gaps that exceed maxt (interval) or
+ * maxdist (numeric/spatial distance).
+ *
+ * SQL signatures supported:
+ *   <type>SeqSetGaps(<type>[])                      // gaps = ∞ → 1 seq
+ *   <type>SeqSetGaps(<type>[], maxt INTERVAL)        // time gap only
+ *   <type>SeqSetGaps(<type>[], maxt INTERVAL, maxdist DOUBLE)
+ *
+ * Wraps MEOS tsequenceset_make_gaps; long-standing user request
+ * (closed MobilityDB issue #187 introduced the C function).
+ ****************************************************/
+void TemporalFunctions::Tsequenceset_constructor_gaps(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    const idx_t arg_count = args.ColumnCount();
+    auto &array_vec = args.data[0];
+    array_vec.Flatten(row_count);
+
+    MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
+    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
+
+    auto &child_vec = ListVector::GetEntry(array_vec);
+    child_vec.Flatten(ListVector::GetListSize(array_vec));
+    auto child_data = FlatVector::GetData<string_t>(child_vec);
+
+    UnaryExecutor::Execute<list_entry_t, string_t>(
+        array_vec, result, row_count,
+        [&](const list_entry_t &list) -> string_t {
+            const idx_t offset = list.offset;
+            const idx_t length = list.length;
+            if (length == 0) {
+                throw InvalidInputException(
+                    "SeqSetGaps: input array must contain at least one instant");
+            }
+
+            TInstant **instants = (TInstant **)malloc(length * sizeof(TInstant *));
+            if (!instants) throw InternalException("SeqSetGaps: malloc failed");
+            int valid = 0;
+            for (idx_t i = 0; i < length; i++) {
+                string_t blob = child_data[offset + i];
+                if (blob.GetSize() < sizeof(void *)) continue;
+                uint8_t *copy = (uint8_t *)malloc(blob.GetSize());
+                memcpy(copy, blob.GetData(), blob.GetSize());
+                instants[valid++] = reinterpret_cast<TInstant *>(copy);
+            }
+
+            // Optional maxt (Interval) and maxdist (DOUBLE).  When maxt
+            // is NULL or omitted the C function treats it as "no time
+            // gap"; when maxdist is 0.0 it treats it as "no distance
+            // gap".  The MEOS `::Interval` (PG's struct) is in the
+            // top-level namespace; DuckDB also defines `duckdb::Interval`,
+            // so the qualified `::Interval` selects the MEOS shape.
+            ::Interval maxt_iv = {0, 0, 0};
+            ::Interval *maxt_ptr = nullptr;
+            double maxdist = 0.0;
+            if (arg_count > 1 && !args.data[1].GetValue(0).IsNull()) {
+                interval_t iv = args.data[1].GetValue(0).GetValue<interval_t>();
+                maxt_iv.month = iv.months;
+                maxt_iv.day   = iv.days;
+                maxt_iv.time  = iv.micros;
+                maxt_ptr = &maxt_iv;
+            }
+            if (arg_count > 2 && !args.data[2].GetValue(0).IsNull()) {
+                maxdist = args.data[2].GetValue(0).GetValue<double>();
+            }
+
+            TSequenceSet *ss = tsequenceset_make_gaps(
+                instants, valid, interp, maxt_ptr, maxdist);
+            if (!ss) {
+                for (int j = 0; j < valid; j++) free(instants[j]);
+                free(instants);
+                throw InvalidInputException(
+                    "SeqSetGaps: tsequenceset_make_gaps returned NULL");
+            }
+
+            size_t sz = temporal_mem_size(reinterpret_cast<Temporal *>(ss));
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(ss), sz));
+            free(ss);
+            // tsequenceset_make_gaps takes ownership of the instants on
+            // success, so do NOT free instants[j] here.
+            free(instants);
+            return stored;
+        });
+}
+
+static string_t Tsequence_from_base_tstzset_impl(Datum datum, string_t set_blob, MeosType temptype, Vector &result) {
     size_t data_size = set_blob.GetSize();
     if (data_size < sizeof(void*)) {
         throw InvalidInputException("[Tsequence_from_base_tstzset] Invalid tstzset data: insufficient size");
@@ -440,7 +531,7 @@ static string_t Tsequence_from_base_tstzset_impl(Datum datum, string_t set_blob,
 void TemporalFunctions::Tsequence_from_base_tstzset(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     const auto &arg_type = args.data[0].GetType();
-    meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
+    MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
 
     if (arg_type.id() == LogicalTypeId::VARCHAR) {
         BinaryExecutor::Execute<string_t, string_t, string_t>(
@@ -485,7 +576,7 @@ void TemporalFunctions::Tsequence_from_base_tstzset(DataChunk &args, ExpressionS
     }
 }   
 
-static string_t Tsequence_from_base_tstzspan_impl(Datum datum, string_t span_blob, meosType temptype, interpType interp, Vector &result) {
+static string_t Tsequence_from_base_tstzspan_impl(Datum datum, string_t span_blob, MeosType temptype, interpType interp, Vector &result) {
     size_t data_size = span_blob.GetSize();
     if (data_size < sizeof(void*)) {
         throw InvalidInputException("[Tsequence_from_base_tstzspan] Invalid tstzspan data: insufficient size");
@@ -515,7 +606,7 @@ static string_t Tsequence_from_base_tstzspan_impl(Datum datum, string_t span_blo
 void TemporalFunctions::Tsequence_from_base_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     const auto &arg_type = args.data[0].GetType();
-    meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
+    MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
     interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
     if (args.ColumnCount() > 2) {
         auto &interp_child = args.data[2];
@@ -568,7 +659,7 @@ void TemporalFunctions::Tsequence_from_base_tstzspan(DataChunk &args, Expression
     }
 }
 
-static string_t Tsequenceset_from_base_tstzspanset_impl(Datum datum, string_t spanset_blob, meosType temptype, interpType interp, Vector &result) {
+static string_t Tsequenceset_from_base_tstzspanset_impl(Datum datum, string_t spanset_blob, MeosType temptype, interpType interp, Vector &result) {
     size_t data_size = spanset_blob.GetSize();
     if (data_size < sizeof(void*)) {
         throw InvalidInputException("[Tsequenceset_from_base_tstzspanset] Invalid tstzspanset data: insufficient size");
@@ -598,7 +689,7 @@ static string_t Tsequenceset_from_base_tstzspanset_impl(Datum datum, string_t sp
 void TemporalFunctions::Tsequenceset_from_base_tstzspanset(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     const auto &arg_type = args.data[0].GetType();
-    meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
+    MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
     interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
     if (args.ColumnCount() > 2) {
         auto &interp_child = args.data[2];
@@ -861,7 +952,7 @@ bool TemporalFunctions::Tfloat_to_tint_cast(Vector &source, Vector &result, idx_
     return true;
 }
 
-static inline string_t Tnumber_to_tbox_common(Datum datum, meosType basetype, Vector &result) {
+static inline string_t Tnumber_to_tbox_common(Datum datum, MeosType basetype, Vector &result) {
     TBox *tbox = number_tbox(datum, basetype);
     size_t tbox_size = sizeof(TBox);
     uint8_t *tbox_data = (uint8_t*)malloc(tbox_size);
@@ -910,7 +1001,7 @@ void TemporalFunctions::Tnumber_to_tbox(DataChunk &args, ExpressionState &state,
                 return Tnumber_temporal_to_tbox_common(input, result);
             });
     } else if (arg_type.id() == LogicalTypeId::DOUBLE || arg_type.id() == LogicalTypeId::FLOAT) {
-        meosType basetype = TemporalHelpers::GetTemptypeFromAlias(arg_type.GetAlias().c_str());
+        MeosType basetype = TemporalHelpers::GetTemptypeFromAlias(arg_type.GetAlias().c_str());
         UnaryExecutor::Execute<double, string_t>(
             args.data[0], result, count,
             [&](double value) {
@@ -918,7 +1009,7 @@ void TemporalFunctions::Tnumber_to_tbox(DataChunk &args, ExpressionState &state,
             });
     } else if (arg_type.id() == LogicalTypeId::INTEGER || arg_type.id() == LogicalTypeId::BIGINT ||
                arg_type.id() == LogicalTypeId::SMALLINT || arg_type.id() == LogicalTypeId::TINYINT) {
-        meosType basetype = TemporalHelpers::GetTemptypeFromAlias(arg_type.GetAlias().c_str());
+        MeosType basetype = TemporalHelpers::GetTemptypeFromAlias(arg_type.GetAlias().c_str());
         UnaryExecutor::Execute<int64_t, string_t>(
             args.data[0], result, count,
             [&](int64_t value) {
@@ -941,7 +1032,7 @@ bool TemporalFunctions::Tnumber_to_tbox_cast(Vector &source, Vector &result, idx
             }
         );
     } else if (source.GetType().id() == LogicalTypeId::DOUBLE) {
-        meosType basetype = TemporalHelpers::GetTemptypeFromAlias(source.GetType().GetAlias().c_str());
+        MeosType basetype = TemporalHelpers::GetTemptypeFromAlias(source.GetType().GetAlias().c_str());
         UnaryExecutor::Execute<double, string_t>(
             source, result, count,
             [&](double value) {
@@ -950,7 +1041,7 @@ bool TemporalFunctions::Tnumber_to_tbox_cast(Vector &source, Vector &result, idx
         );
     } else if (source.GetType().id() == LogicalTypeId::INTEGER || source.GetType().id() == LogicalTypeId::BIGINT ||
                source.GetType().id() == LogicalTypeId::SMALLINT || source.GetType().id() == LogicalTypeId::TINYINT) {
-        meosType basetype = TemporalHelpers::GetTemptypeFromAlias(source.GetType().GetAlias().c_str());
+        MeosType basetype = TemporalHelpers::GetTemptypeFromAlias(source.GetType().GetAlias().c_str());
         UnaryExecutor::Execute<int64_t, string_t>(
             source, result, count,
             [&](int64_t value) {
@@ -1121,7 +1212,7 @@ void TemporalFunctions::Temporal_valueset(DataChunk &args, ExpressionState &stat
             }
             int32_t count;
             Datum *values = temporal_values_p(temp, &count);
-            meosType basetype = temptype_basetype((meosType)temp->temptype);
+            MeosType basetype = temptype_basetype((MeosType)temp->temptype);
             if (temp->temptype == T_TBOOL) {
                 // TODO: handle tbool
             }
@@ -1187,6 +1278,24 @@ void TemporalFunctions::Temporal_end_value(DataChunk &args, ExpressionState &sta
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
+}
+
+/* PG-equality 32-bit hash for any temporal value.  `temporal_hash`
+ * is subtype-agnostic — the format encodes the basetype. */
+void TemporalFunctions::Temporal_hash(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, int32_t>(
+        args.data[0], result, args.size(),
+        [&](string_t blob) -> int32_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t *>(blob.GetData());
+            size_t sz = blob.GetSize();
+            uint8_t *copy = (uint8_t *) malloc(sz);
+            memcpy(copy, data, sz);
+            Temporal *t = reinterpret_cast<Temporal *>(copy);
+            uint32_t h = temporal_hash(t);
+            free(t);
+            return static_cast<int32_t>(h);
+        });
+    if (args.size() == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void TemporalFunctions::Temporal_min_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2416,7 +2525,7 @@ void TemporalFunctions::Temporal_set_interp(DataChunk &args, ExpressionState &st
 
 void TemporalFunctions::Temporal_append_tinstant(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
-    meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
+    MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
     interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
     if (args.ColumnCount() > 2) {
         auto &interp_child = args.data[2];
@@ -5806,7 +5915,7 @@ DEFINE_TCMP_NUMERIC(Tge, tge)
  ****************************************************/
 
 template <typename T>
-void TemporalFunctions::Temporal_dump_common(DataChunk &args, Vector &result, meosType basetype) {
+void TemporalFunctions::Temporal_dump_common(DataChunk &args, Vector &result, MeosType basetype) {
     auto count = args.size();
     auto &temp_vec = args.data[0];
     UnifiedVectorFormat temp_format;

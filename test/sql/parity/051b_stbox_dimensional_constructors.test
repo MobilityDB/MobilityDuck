@@ -1,0 +1,134 @@
+# name: test/sql/parity/051b_stbox_dimensional_constructors.test
+# description: Dimensional stbox constructors —
+#              stboxX (2D), stboxZ (3D), stboxT (time-only),
+#              stboxXT (2D + time), stboxZT (3D + time),
+#              and the geodstbox* geographic variants.  All wrap
+#              MEOS stbox_make with the appropriate has-x / has-z /
+#              geodetic flags.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# stboxX — 2D
+# =============================================================================
+
+query I
+SELECT hasX(stboxX(1, 3, 2, 4, 0));
+----
+true
+
+query I
+SELECT NOT hasZ(stboxX(1, 3, 2, 4, 0))
+   AND NOT hasT(stboxX(1, 3, 2, 4, 0));
+----
+true
+
+query IIII
+SELECT Xmin(stboxX(1, 3, 2, 4, 0)),
+       Xmax(stboxX(1, 3, 2, 4, 0)),
+       Ymin(stboxX(1, 3, 2, 4, 0)),
+       Ymax(stboxX(1, 3, 2, 4, 0));
+----
+1.0	3.0	2.0	4.0
+
+query I
+SELECT SRID(stboxX(1, 3, 2, 4, 4326));
+----
+4326
+
+# =============================================================================
+# stboxZ — 3D
+# =============================================================================
+
+query I
+SELECT hasX(stboxZ(1, 3, 2, 4, 5, 6, 0))
+   AND hasZ(stboxZ(1, 3, 2, 4, 5, 6, 0));
+----
+true
+
+query II
+SELECT Zmin(stboxZ(1, 3, 2, 4, 5, 6, 0)),
+       Zmax(stboxZ(1, 3, 2, 4, 5, 6, 0));
+----
+5.0	6.0
+
+# =============================================================================
+# stboxT — time-only
+# =============================================================================
+
+query I
+SELECT NOT hasX(stboxT(TIMESTAMPTZ '2000-01-01 00:00:00+00'))
+   AND     hasT(stboxT(TIMESTAMPTZ '2000-01-01 00:00:00+00'));
+----
+true
+
+# tstzspan overload — same predicates.
+query I
+SELECT NOT hasX(stboxT(tstzspan '[2000-01-01, 2000-01-02]'))
+   AND     hasT(stboxT(tstzspan '[2000-01-01, 2000-01-02]'));
+----
+true
+
+# =============================================================================
+# stboxXT — 2D + time
+# =============================================================================
+
+query I
+SELECT hasX(stboxXT(1, 3, 2, 4, TIMESTAMPTZ '2000-01-01 00:00:00+00', 0))
+   AND hasT(stboxXT(1, 3, 2, 4, TIMESTAMPTZ '2000-01-01 00:00:00+00', 0));
+----
+true
+
+query I
+SELECT hasX(stboxXT(1, 3, 2, 4, tstzspan '[2000-01-01, 2000-01-02]', 0))
+   AND hasT(stboxXT(1, 3, 2, 4, tstzspan '[2000-01-01, 2000-01-02]', 0));
+----
+true
+
+# =============================================================================
+# stboxZT — 3D + time
+# =============================================================================
+
+query I
+SELECT hasX(stboxZT(1, 3, 2, 4, 5, 6, TIMESTAMPTZ '2000-01-01 00:00:00+00', 0))
+   AND hasZ(stboxZT(1, 3, 2, 4, 5, 6, TIMESTAMPTZ '2000-01-01 00:00:00+00', 0))
+   AND hasT(stboxZT(1, 3, 2, 4, 5, 6, TIMESTAMPTZ '2000-01-01 00:00:00+00', 0));
+----
+true
+
+query I
+SELECT hasX(stboxZT(1, 3, 2, 4, 5, 6, tstzspan '[2000-01-01, 2000-01-02]', 0))
+   AND hasZ(stboxZT(1, 3, 2, 4, 5, 6, tstzspan '[2000-01-01, 2000-01-02]', 0))
+   AND hasT(stboxZT(1, 3, 2, 4, 5, 6, tstzspan '[2000-01-01, 2000-01-02]', 0));
+----
+true
+
+# =============================================================================
+# geodstbox* — geographic variants (geodetic = true)
+# =============================================================================
+
+query I
+SELECT isGeodetic(geodstboxZ(1, 3, 2, 4, 5, 6, 4326));
+----
+true
+
+query I
+SELECT isGeodetic(geodstboxT(TIMESTAMPTZ '2000-01-01 00:00:00+00'));
+----
+true
+
+query I
+SELECT isGeodetic(geodstboxT(tstzspan '[2000-01-01, 2000-01-02]'));
+----
+true
+
+query I
+SELECT isGeodetic(geodstboxZT(1, 3, 2, 4, 5, 6, TIMESTAMPTZ '2000-01-01 00:00:00+00', 4326));
+----
+true
+
+query I
+SELECT isGeodetic(geodstboxZT(1, 3, 2, 4, 5, 6, tstzspan '[2000-01-01, 2000-01-02]', 4326));
+----
+true

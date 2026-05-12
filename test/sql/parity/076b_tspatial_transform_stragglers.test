@@ -1,6 +1,10 @@
 # name: test/sql/parity/076b_tspatial_transform_stragglers.test
 # description: Tail of the affine-derived spatial transforms — rotate around
 #              a point geometry; 2D and 3D scale by doubles.
+#
+#              Assertions strip the TZ-bearing `HH:MM:SS+NN` segment from
+#              the text output via `regexp_replace`, so the test is
+#              TZ-neutral (per `feedback_tz_neutral_tests.md`).
 # group: [sql]
 
 require mobilityduck
@@ -9,27 +13,41 @@ require mobilityduck
 # pi rotation around (1, 0) maps (2, 0) -> (0, 0)
 
 query I
-SELECT asEWKT(round(rotate(tgeompoint '[POINT(2 0)@2000-01-01]', pi(), ST_GeomFromText('POINT(1 0)')), 6));
+SELECT regexp_replace(
+         asEWKT(round(rotate(tgeompoint '[POINT(2 0)@2000-01-01]',
+                              pi(),
+                              ST_GeomFromText('POINT(1 0)')), 6)),
+         ' 00:00:00\+\d+', '', 'g');
 ----
-[POINT(0 0)@2000-01-01 00:00:00+01]
+[POINT(0 0)@2000-01-01]
 
 # pi/2 rotation around (1, 1) maps (2, 1) -> (1, 2)
 
 query I
-SELECT asEWKT(round(rotate(tgeompoint '[POINT(2 1)@2000-01-01]', pi()/2, ST_GeomFromText('POINT(1 1)')), 6));
+SELECT regexp_replace(
+         asEWKT(round(rotate(tgeompoint '[POINT(2 1)@2000-01-01]',
+                              pi()/2,
+                              ST_GeomFromText('POINT(1 1)')), 6)),
+         ' 00:00:00\+\d+', '', 'g');
 ----
-[POINT(1 2)@2000-01-01 00:00:00+01]
+[POINT(1 2)@2000-01-01]
 
 # scale(tgeompoint, double, double) — 2D scale
 
 query I
-SELECT asEWKT(scale(tgeompoint '[POINT(2 3)@2000-01-01, POINT(4 5)@2000-01-02]', 10, 100));
+SELECT regexp_replace(
+         asEWKT(scale(tgeompoint '[POINT(2 3)@2000-01-01, POINT(4 5)@2000-01-02]',
+                      10, 100)),
+         ' 00:00:00\+\d+', '', 'g');
 ----
-[POINT(20 300)@2000-01-01 00:00:00+01, POINT(40 500)@2000-01-02 00:00:00+01]
+[POINT(20 300)@2000-01-01, POINT(40 500)@2000-01-02]
 
 # scale(tgeompoint, double, double, double) — 3D scale
 
 query I
-SELECT asEWKT(scale(tgeompoint '[POINT(2 3 4)@2000-01-01]', 10, 100, 1000));
+SELECT regexp_replace(
+         asEWKT(scale(tgeompoint '[POINT(2 3 4)@2000-01-01]',
+                      10, 100, 1000)),
+         ' 00:00:00\+\d+', '', 'g');
 ----
-[POINT Z (20 300 4000)@2000-01-01 00:00:00+01]
+[POINT Z (20 300 4000)@2000-01-01]

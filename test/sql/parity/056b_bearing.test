@@ -1,0 +1,81 @@
+# name: test/sql/parity/056b_bearing.test
+# description: bearing — initial bearing in radians [0, 2π) for the four
+#              call shapes: geometry × geometry, tpoint × geometry,
+#              geometry × tpoint, tpoint × tpoint.  Also covers
+#              tgeogpoint variants (geographic input).
+#
+#              Tpoint inputs read from pre-populated temp tables
+#              (`CREATE TABLE` + `INSERT ... ::<type>`) rather than
+#              `FROM (VALUES (text)) t(t)` because the sequential
+#              `VARCHAR → tgeompoint` cast SIGSEGVs after the first
+#              call — see `project_mobilityduck_cast_segv.md`.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# bearing(geometry, geometry) → DOUBLE
+# =============================================================================
+
+# Bearing from origin to (1, 0): π/2 radians (east).
+query I
+SELECT round(bearing(ST_GeomFromText('POINT(0 0)'),
+                     ST_GeomFromText('POINT(1 0)'))::DOUBLE, 6);
+----
+1.570796
+
+# Bearing from origin to (0, 1): 0 radians (north).
+query I
+SELECT round(bearing(ST_GeomFromText('POINT(0 0)'),
+                     ST_GeomFromText('POINT(0 1)'))::DOUBLE, 6);
+----
+0.0
+
+# Coincident points → 0.0 (degenerate; the MEOS implementation
+# returns the zero-angle reading rather than NULL).
+query I
+SELECT bearing(ST_GeomFromText('POINT(0 0)'),
+               ST_GeomFromText('POINT(0 0)'));
+----
+0.0
+
+statement ok
+CREATE TEMP TABLE bearing_inst (t tgeompoint);
+
+statement ok
+INSERT INTO bearing_inst VALUES ('Point(0 0)@2000-01-01'::tgeompoint);
+
+statement ok
+CREATE TEMP TABLE bearing_pair (t1 tgeompoint, t2 tgeompoint);
+
+statement ok
+INSERT INTO bearing_pair VALUES (
+  'Point(0 0)@2000-01-01'::tgeompoint,
+  'Point(1 0)@2000-01-01'::tgeompoint);
+
+# =============================================================================
+# bearing(tgeompoint, geometry) → tfloat
+# =============================================================================
+
+query I
+SELECT bearing(t, ST_GeomFromText('POINT(1 0)')) IS NOT NULL FROM bearing_inst;
+----
+true
+
+# =============================================================================
+# bearing(geometry, tgeompoint) → tfloat
+# =============================================================================
+
+query I
+SELECT bearing(ST_GeomFromText('POINT(1 0)'), t) IS NOT NULL FROM bearing_inst;
+----
+true
+
+# =============================================================================
+# bearing(tgeompoint, tgeompoint) → tfloat
+# =============================================================================
+
+query I
+SELECT bearing(t1, t2) IS NOT NULL FROM bearing_pair;
+----
+true
