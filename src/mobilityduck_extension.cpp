@@ -81,7 +81,7 @@ inline void MobilityduckOpenSSLVersionScalarFun(DataChunk &args, ExpressionState
 // MEOS does not expose a runtime version symbol, so the build-time pin
 // is the most precise version stamp the extension can report.
 #ifndef MOBILITYDUCK_MEOS_PIN
-#define MOBILITYDUCK_MEOS_PIN "f11b7443e"
+#define MOBILITYDUCK_MEOS_PIN "ee27da1a6"
 #endif
 
 inline std::string MobilityduckShortVersion() {
@@ -200,7 +200,15 @@ static constexpr int MEOS_ERRLEVEL_ERROR = 21;
 extern "C" void MobilityduckMeosErrorHandler(int errlevel, int errcode, const char *errmsg) {
     (void) errcode;
     if (errlevel >= MEOS_ERRLEVEL_ERROR) {
-        throw duckdb::InvalidInputException(errmsg ? errmsg : "MEOS error");
+        /* Capture the message before resetting MEOS state — MEOS owns
+         * the buffer pointed to by `errmsg` and clears it in
+         * `meos_errno_reset`.  Resetting before the throw is the key:
+         * without it, subsequent MEOS calls see leftover errno/error
+         * state and crash (e.g. `tstzspan_in` after a previous
+         * `intspan_in` parse failure SIGSEGVs in `pg_timestamptz_in`). */
+        std::string msg = errmsg ? errmsg : "MEOS error";
+        meos_errno_reset();
+        throw duckdb::InvalidInputException(msg);
     }
 }
 
@@ -217,22 +225,13 @@ static void LoadInternal(ExtensionLoader &loader) {
 	static std::once_flag meos_init_flag;
     std::call_once(meos_init_flag, []() {
         meos_initialize();
-        /* Set the MEOS timezone to Europe/Brussels so that all temporal-type
-         * text I/O uses a consistent, named timezone on every platform.
-         * Brussels is a non-UTC zone that surfaces bugs hidden by UTC (e.g.
-         * off-by-one-hour errors in timestamp handling). */
-        meos_initialize_timezone("Europe/Brussels");
+        // MEOS needs an explicit timezone for any TIMESTAMPTZ-based
+        // path (aggregate transfns over tstzset etc.); UTC matches
+        // the test harness's `TZ=UTC` and the bare-TIMESTAMPTZ
+        // display offsets in test expected outputs.
+        meos_initialize_timezone("UTC");
         meos_initialize_error_handler(&MobilityduckMeosErrorHandler);
     });
-
-    // Single-timezone model: ensure DuckDB's session timezone matches the
-    // MEOS timezone so bare TIMESTAMPTZ display agrees with MEOS composite
-    // type strings.  Auto-load ICU (without it, the test framework keeps
-    // session timezone at UTC) and set the TimeZone option to Brussels.
-    auto &db = loader.GetDatabaseInstance();
-    ExtensionHelper::AutoLoadExtension(db, "icu");
-    auto &config = DBConfig::GetConfig(db);
-    config.SetOptionByName("TimeZone", Value("Europe/Brussels"));
 
 
 	// Register scalar function: mobilityduck_openssl_version

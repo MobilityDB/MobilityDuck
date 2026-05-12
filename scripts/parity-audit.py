@@ -60,6 +60,21 @@ OUT_OF_SCOPE_SECTIONS = {
 
 # Function-name suffixes that mark PG-only helpers (no DuckDB analog).
 # Matched against the tail of the function name, case-insensitive.
+OUT_OF_SCOPE_NAMES = {
+    # PG-specific types — DuckDB has no equivalent.
+    "box2d", "box3d",          # PostGIS bbox types
+    "range", "multirange",     # PG range types — DuckDB uses LIST<struct>
+    # DuckDB built-in.  `unnest(LIST)` is a core SQL keyword in DuckDB,
+    # not registrable as a UDF.
+    "unnest",
+    # External-system bridges with no DuckDB equivalent.
+    "transform_gk",            # SECONDO platform connector
+    "create_trip",             # BerlinMOD synthetic-trajectory generator
+    # Removed in MobilityDB upstream; no longer carried as a parity target.
+    "_edisjoint",
+}
+
+
 OUT_OF_SCOPE_NAME_SUFFIXES = (
     # Aggregate plumbing — user-facing aggregate name is what we register.
     "_transfn",
@@ -84,8 +99,11 @@ OUT_OF_SCOPE_NAME_SUFFIXES = (
 
 
 def is_out_of_scope_name(fname):
-    """Return True for PG-only helper names (suffix match)."""
+    """Return True for PG-only helper names (suffix match) or for the
+    explicit out-of-scope names listed above."""
     lower = fname.lower()
+    if lower in OUT_OF_SCOPE_NAMES:
+        return True
     # All suffixes start with `_`, so a non-empty prefix means the suffix
     # matched a "<base>_<suffix>" shape (e.g. tnumber_in, temporal_sel).
     for suf in OUT_OF_SCOPE_NAME_SUFFIXES:
@@ -100,9 +118,20 @@ CREATE_FUNC_RE = re.compile(
 )
 CREATE_OP_RE = re.compile(r"CREATE\s+OPERATOR\s+(\S+)\s*\(", re.IGNORECASE)
 
-REGISTER_SCALAR_RE = re.compile(r'ScalarFunction\s*\(\s*"([^"]+)"', re.IGNORECASE)
-REGISTER_AGGR_RE = re.compile(r'AggregateFunction\s*\(\s*"([^"]+)"')
-REGISTER_TABLE_RE = re.compile(r'TableFunction\s*\(\s*"([^"]+)"')
+# Strip SQL `--` line comments before matching, so that
+# `-- CREATE FUNCTION tdirection(...)` placeholder lines do not
+# inflate the missing-functions list.
+SQL_LINE_COMMENT_RE = re.compile(r"--[^\n]*")
+
+# Match both the direct-call form (`ScalarFunction("name", …)`) and
+# the variable-declaration form (`TableFunction fn("name", …)` /
+# `ScalarFunction sf("name", …)`).  The `(?:[A-Za-z_]\w*\s+)?` cluster
+# eats an optional variable name (no capture) before the open paren so
+# table-function names declared as locals (e.g. valueSplit, spaceSplit,
+# spaceTimeSplit, tempUnnest, SetUnnest) are still picked up.
+REGISTER_SCALAR_RE = re.compile(r'ScalarFunction\s+(?:[A-Za-z_]\w*)?\s*\(\s*"([^"]+)"|ScalarFunction\s*\(\s*"([^"]+)"', re.IGNORECASE)
+REGISTER_AGGR_RE = re.compile(r'AggregateFunction\s+(?:[A-Za-z_]\w*)?\s*\(\s*"([^"]+)"|AggregateFunction\s*\(\s*"([^"]+)"')
+REGISTER_TABLE_RE = re.compile(r'TableFunction\s+(?:[A-Za-z_]\w*)?\s*\(\s*"([^"]+)"|TableFunction\s*\(\s*"([^"]+)"')
 
 # Project macros that wrap registration calls under a fixed-name first
 # argument (e.g. `REG_EA("ever_eq", Ever_eq)` registers "ever_eq" via a
@@ -127,6 +156,12 @@ DYNAMIC_REGISTERED = {
     # Per-subtype constructors registered through the
     # TemporalTypes::RegisterScalarFunctions loop.
     "tbool", "tint", "tfloat", "ttext",
+    # Per-subtype constructor names registered via the same loop
+    # (alias + "Inst" / "Seq" / "SeqSet" / "SeqSetGaps").
+    "tboolInst", "tboolSeq", "tboolSeqSet", "tboolSeqSetGaps",
+    "tintInst",  "tintSeq",  "tintSeqSet",  "tintSeqSetGaps",
+    "tfloatInst","tfloatSeq","tfloatSeqSet","tfloatSeqSetGaps",
+    "ttextInst", "ttextSeq", "ttextSeqSet", "ttextSeqSetGaps",
     # Accessors registered through RegisterTemporalDatumAccessor.
     "minValue", "maxValue", "getValue", "startValue", "endValue",
     # Binary / HexWKB / MFJSON parsers registered through
@@ -174,6 +209,7 @@ def collect_mobilitydb(mdb_root):
             rel = os.path.relpath(sql, sql_root)
             with open(sql) as f:
                 text = f.read()
+            text = SQL_LINE_COMMENT_RE.sub("", text)
             funcs = collections.Counter()
             for m in CREATE_FUNC_RE.finditer(text):
                 funcs[m.group(1)] += 1
@@ -198,8 +234,12 @@ def collect_mobilityduck(mduck_root):
         for regex in (REGISTER_SCALAR_RE, REGISTER_AGGR_RE,
                       REGISTER_TABLE_RE, REGISTER_MACRO_RE):
             for m in regex.finditer(text):
-                funcs[m.group(1)] += 1
-                files_for_func[m.group(1)].add(rel)
+                # Alternation produces multiple groups; use the first non-empty one.
+                name = next((g for g in m.groups() if g), None)
+                if not name:
+                    continue
+                funcs[name] += 1
+                files_for_func[name].add(rel)
     # Synthesize known dynamically-registered names so the audit
     # reflects reality (see DYNAMIC_REGISTERED comment above).
     for name in DYNAMIC_REGISTERED:

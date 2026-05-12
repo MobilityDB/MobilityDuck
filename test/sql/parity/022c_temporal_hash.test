@@ -1,0 +1,58 @@
+# name: test/sql/parity/022c_temporal_hash.test
+# description: temporal_hash PG-equality 32-bit hash for every temporal
+#              type (tbool / tint / tfloat / ttext / tgeometry /
+#              tgeography / tgeompoint / tgeogpoint).  `temporal_hash`
+#              is subtype-agnostic — the format encodes the basetype.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# Same value hashes to the same int32
+# =============================================================================
+
+query I
+SELECT temporal_hash('1@2000-01-01'::tint) =
+       temporal_hash('1@2000-01-01'::tint);
+----
+true
+
+query I
+SELECT temporal_hash('1.0@2000-01-01'::tfloat) =
+       temporal_hash('1.0@2000-01-01'::tfloat);
+----
+true
+
+query I
+SELECT temporal_hash('true@2000-01-01'::tbool) =
+       temporal_hash('true@2000-01-01'::tbool);
+----
+true
+
+query I
+SELECT temporal_hash('AA@2000-01-01'::ttext) =
+       temporal_hash('AA@2000-01-01'::ttext);
+----
+true
+
+query I
+SELECT temporal_hash('Point(1 2)@2000-01-01'::tgeompoint) =
+       temporal_hash('Point(1 2)@2000-01-01'::tgeompoint);
+----
+true
+
+query I
+SELECT temporal_hash('Point(1 2)@2000-01-01'::tgeometry) =
+       temporal_hash('Point(1 2)@2000-01-01'::tgeometry);
+----
+true
+
+# =============================================================================
+# Different values produce different hashes (high probability)
+# =============================================================================
+
+query I
+SELECT temporal_hash('1@2000-01-01'::tint) !=
+       temporal_hash('2@2000-01-01'::tint);
+----
+true

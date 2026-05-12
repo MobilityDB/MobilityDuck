@@ -212,6 +212,18 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
+    // tgeogpointSeqSetGaps — geographic-distance variant of the gaps
+    // constructor.  Three overloads.
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "tgeogpointSeqSetGaps", {LogicalType::LIST(TGEOGPOINT())},
+        TGEOGPOINT(), TemporalFunctions::Tsequenceset_constructor_gaps));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "tgeogpointSeqSetGaps", {LogicalType::LIST(TGEOGPOINT()), LogicalType::INTERVAL},
+        TGEOGPOINT(), TemporalFunctions::Tsequenceset_constructor_gaps));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "tgeogpointSeqSetGaps", {LogicalType::LIST(TGEOGPOINT()), LogicalType::INTERVAL, LogicalType::DOUBLE},
+        TGEOGPOINT(), TemporalFunctions::Tsequenceset_constructor_gaps));
+
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "stbox",
@@ -1722,6 +1734,16 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::ShortestLine_tgeo_tgeo
         )
     );
+
+    /* bearing — initial bearing in radians [0, 2π) for geographic points */
+    {
+        const auto TG = TGEOGPOINT();
+        const auto G  = GeoTypes::GEOMETRY();
+        const auto TF = TemporalTypes::TFLOAT();
+        const auto D  = LogicalType::DOUBLE;
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("bearing", {TG, G},  TF, TgeompointFunctions::Bearing_tpoint_geo));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("bearing", {G, TG},  TF, TgeompointFunctions::Bearing_geo_tpoint));
+    }
 }
 
 /* ***************************************************

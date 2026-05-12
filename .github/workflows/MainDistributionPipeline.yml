@@ -36,12 +36,14 @@ jobs:
       extension_name: mobilityduck
       ci_tools_version: v1.4.4
       vcpkg_commit: c27eeddba73f608f10605d80bc0144c1166f8fb7
-      # Windows is excluded because the MEOS vcpkg port does not currently
-      # build under MSVC or MinGW: it pulls in PostgreSQL-derived sources
-      # that depend on POSIX-only headers (e.g. <dirent.h>) and GCC-only
-      # attribute syntax (`__attribute__((unused))`). Re-enable once the
-      # MEOS port grows Windows support.
-      exclude_archs: windows_amd64;windows_amd64_mingw;linux_amd64_musl
+      # Windows / linux_amd64_musl / wasm_* are excluded because the
+      # MEOS vcpkg port does not currently build there: Windows pulls in
+      # POSIX-only headers (e.g. <dirent.h>) and GCC-only attribute syntax,
+      # and the Wasm/emscripten targets fail to compile PostgreSQL's port
+      # code (`pg_bitutils.h` cannot pick an integer type matching
+      # `uint64_t` under the emscripten ABI).  Re-enable once the MEOS
+      # port grows targets for those toolchains.
+      exclude_archs: windows_amd64;windows_amd64_mingw;linux_amd64_musl;wasm_mvp;wasm_eh;wasm_threads
 
   duckdb-latest-deploy:
     needs: duckdb-latest-build
@@ -52,9 +54,11 @@ jobs:
       ci_tools_version: v1.4.4
       extension_name: mobilityduck
       deploy_latest: ${{ startsWith(github.ref, 'refs/heads/v') || github.ref == 'refs/heads/main' }}
-      # Windows is excluded because the MEOS vcpkg port does not currently
-      # build under MSVC or MinGW: it pulls in PostgreSQL-derived sources
-      # that depend on POSIX-only headers (e.g. <dirent.h>) and GCC-only
-      # attribute syntax (`__attribute__((unused))`). Re-enable once the
-      # MEOS port grows Windows support.
-      exclude_archs: windows_amd64;windows_amd64_mingw;linux_amd64_musl
+      # Windows / linux_amd64_musl / wasm_* are excluded because the
+      # MEOS vcpkg port does not currently build there: Windows pulls in
+      # POSIX-only headers (e.g. <dirent.h>) and GCC-only attribute syntax,
+      # and the Wasm/emscripten targets fail to compile PostgreSQL's port
+      # code (`pg_bitutils.h` cannot pick an integer type matching
+      # `uint64_t` under the emscripten ABI).  Re-enable once the MEOS
+      # port grows targets for those toolchains.
+      exclude_archs: windows_amd64;windows_amd64_mingw;linux_amd64_musl;wasm_mvp;wasm_eh;wasm_threads

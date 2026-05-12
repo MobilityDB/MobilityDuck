@@ -386,33 +386,35 @@ idx_t TRTreeIndex::Scan(IndexScanState &state, Vector &result) const {
     return output_idx;
 }
 
-vector<row_t> TRTreeIndex::Search(const void *query_box, RTreeSearchOp op) const {  
+vector<row_t> TRTreeIndex::Search(const void *query_box, RTreeSearchOp op) const {
     vector<row_t> results;
-    
+
     if (!rtree_ || !query_box) {
         return results;
     }
 
-    int count = 0;
-    int *ids = nullptr;
-    
+    /* `rtree_search` writes `int` row ids into a caller-owned
+     * `MeosArray` and returns the hit count. */
+    MeosArray *hits = meos_array_create(sizeof(int));
+    if (!hits) {
+        return results;
+    }
     try {
-        ids = rtree_search(rtree_, op, query_box, &count);
-        
-        if (ids && count > 0) {
+        int count = rtree_search(rtree_, op, query_box, hits);
+        if (count > 0) {
             results.reserve(count);
             for (int i = 0; i < count; i++) {
-                results.push_back(static_cast<row_t>(ids[i]));
+                int *id = (int *) meos_array_get(hits, i);
+                if (id) {
+                    results.push_back(static_cast<row_t>(*id));
+                }
             }
         }
     } catch (...) {
         fprintf(stderr, "Exception during rtree_search\n");
     }
-    
-    if (ids) {
-        free(ids);
-    }
-    
+    meos_array_destroy_free(hits);
+
     return results;
 }
 //------------------------------------------------------------------------------

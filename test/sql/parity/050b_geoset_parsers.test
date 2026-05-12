@@ -1,0 +1,77 @@
+# name: test/sql/parity/050b_geoset_parsers.test
+# description: geomsetFromText / geomsetFromEWKT / geomsetFromBinary /
+#              geomsetFromEWKB / geomsetFromHexWKB and the four
+#              `geogset` siblings — full I/O round-trip parsers for
+#              the geomset / geogset spatial-set types.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# geomset — Text round-trip via asText / geomsetFromText / geomsetFromEWKT
+# =============================================================================
+
+query I
+SELECT asText(geomsetFromText('{POINT(1 1), POINT(2 2)}'));
+----
+{"POINT(1 1)", "POINT(2 2)"}
+
+query I
+SELECT asText(geomsetFromEWKT('SRID=4326;{POINT(1 1), POINT(2 2)}'));
+----
+{"POINT(1 1)", "POINT(2 2)"}
+
+# =============================================================================
+# geomset — Binary / EWKB / HexWKB round-trip
+# =============================================================================
+
+# Round-trip via HexWKB — produce → parse → asText must match.
+query I
+SELECT asText(geomsetFromHexWKB(asHexWKB(geomsetFromText('{POINT(1 1), POINT(2 2)}'))));
+----
+{"POINT(1 1)", "POINT(2 2)"}
+
+# Round-trip via Binary.
+query I
+SELECT asText(geomsetFromBinary(asBinary(geomsetFromText('{POINT(1 1), POINT(2 2)}'))));
+----
+{"POINT(1 1)", "POINT(2 2)"}
+
+# Round-trip via EWKB (same wire format as Binary).
+query I
+SELECT asText(geomsetFromEWKB(asBinary(geomsetFromText('{POINT(1 1), POINT(2 2)}'))));
+----
+{"POINT(1 1)", "POINT(2 2)"}
+
+# =============================================================================
+# geogset — Text round-trip
+# =============================================================================
+
+query I
+SELECT asText(geogsetFromText('{POINT(1 1), POINT(2 2)}'));
+----
+{"POINT(1 1)", "POINT(2 2)"}
+
+query I
+SELECT asText(geogsetFromEWKT('SRID=4326;{POINT(1 1), POINT(2 2)}'));
+----
+{"POINT(1 1)", "POINT(2 2)"}
+
+# =============================================================================
+# geogset — Binary / EWKB / HexWKB round-trip
+# =============================================================================
+
+query I
+SELECT asText(geogsetFromHexWKB(asHexWKB(geogsetFromText('{POINT(1 1), POINT(2 2)}'))));
+----
+{"POINT(1 1)", "POINT(2 2)"}
+
+query I
+SELECT asText(geogsetFromBinary(asBinary(geogsetFromText('{POINT(1 1), POINT(2 2)}'))));
+----
+{"POINT(1 1)", "POINT(2 2)"}
+
+query I
+SELECT asText(geogsetFromEWKB(asBinary(geogsetFromText('{POINT(1 1), POINT(2 2)}'))));
+----
+{"POINT(1 1)", "POINT(2 2)"}
