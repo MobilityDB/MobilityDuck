@@ -38,6 +38,7 @@ struct SpatialSetFunctions{
     static void Spatialset_srid(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spatialset_set_srid(DataChunk &args, ExpressionState &state, Vector &result_vec);
     static void Spatialset_transform(DataChunk &args, ExpressionState &state, Vector &result_vec);
+    static void Spatialset_transform_pipeline(DataChunk &args, ExpressionState &state, Vector &result_vec);
     static void Set_start_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_end_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_num_values(DataChunk &args, ExpressionState &state, Vector &result);

@@ -1551,6 +1551,48 @@ void TgeompointFunctions::Tspatial_transform(DataChunk &args, ExpressionState &s
     }
 }
 
+/* transformPipeline(<tspatial>, pipeline text, srid int = 0, is_forward bool = true)
+ *
+ * Apply a PROJ pipeline string to a temporal spatial value.  srid is
+ * the target SRID; is_forward selects forward vs inverse application
+ * of the pipeline.  Default srid=0 / is_forward=true follow MobilityDB.
+ */
+void TgeompointFunctions::Tspatial_transform_pipeline(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_temp = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_pipe = FlatVector::GetData<string_t>(args.data[1]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto &v1 = FlatVector::Validity(args.data[1]);
+    auto out_data = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row) || !v1.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        int32_t srid = (cc > 2) ? FlatVector::GetData<int32_t>(args.data[2])[row] : 0;
+        bool is_fwd = (cc > 3) ? FlatVector::GetData<bool>(args.data[3])[row]    : true;
+        size_t sz = in_temp[row].GetSize();
+        uint8_t *copy = (uint8_t *) malloc(sz);
+        memcpy(copy, in_temp[row].GetData(), sz);
+        Temporal *t = reinterpret_cast<Temporal *>(copy);
+        std::string pipe = in_pipe[row].GetString();
+        Temporal *ret = tspatial_transform_pipeline(t, pipe.c_str(), srid, is_fwd);
+        free(t);
+        if (!ret) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        size_t rsz = temporal_mem_size(ret);
+        string_t blob(reinterpret_cast<const char *>(ret), rsz);
+        out_data[row] = StringVector::AddStringOrBlob(result, blob);
+        free(ret);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 /* ***************************************************
  * Spatial relationships
  ****************************************************/

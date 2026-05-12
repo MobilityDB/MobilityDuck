@@ -106,6 +106,7 @@ struct TgeompointFunctions {
     static void Tgeo_at_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tgeo_minus_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tspatial_transform(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tspatial_transform_pipeline(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Spatial relationships

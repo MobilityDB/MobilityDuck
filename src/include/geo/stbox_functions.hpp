@@ -99,7 +99,9 @@ struct StboxFunctions {
     static void Stbox_hash(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_hash_extended(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_srid(DataChunk &args, ExpressionState &state, Vector &result);
-    // TODO static void Stbox_perimeter(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_perimeter(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_quad_split(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_transform_pipeline(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
      * Transformation functions
      ****************************************************/

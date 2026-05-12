@@ -393,6 +393,43 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         ScalarFunction("SRID", {STBOX()}, LogicalType::INTEGER,
                        StboxFunctions::Stbox_srid));
 
+    // perimeter(stbox [, spheroid bool]) — sum of edge lengths.
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("perimeter", {STBOX()}, LogicalType::DOUBLE,
+                       StboxFunctions::Stbox_perimeter));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("perimeter", {STBOX(), LogicalType::BOOLEAN},
+                       LogicalType::DOUBLE, StboxFunctions::Stbox_perimeter));
+
+    // quadSplit(stbox) — split the spatial extent into four quadrants
+    // (each with the original time span), returning an stbox[].
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("quadSplit", {STBOX()},
+                       LogicalType::LIST(STBOX()),
+                       StboxFunctions::Stbox_quad_split));
+
+    // geography(stbox) — same C entrypoint as `geometry(stbox)`; DuckDB
+    // has no separate geography type so both routes produce a GEOMETRY
+    // blob.  Registered for naming parity with MobilityDB.
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("geography", {STBOX()}, GeoTypes::GEOMETRY(),
+                       StboxFunctions::Stbox_to_geo));
+
+    // transformPipeline(stbox, pipeline text, srid int = 0,
+    //                   is_forward bool = true)
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("transformPipeline",
+                       {STBOX(), LogicalType::VARCHAR},
+                       STBOX(), StboxFunctions::Stbox_transform_pipeline));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("transformPipeline",
+                       {STBOX(), LogicalType::VARCHAR, LogicalType::INTEGER},
+                       STBOX(), StboxFunctions::Stbox_transform_pipeline));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("transformPipeline",
+                       {STBOX(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN},
+                       STBOX(), StboxFunctions::Stbox_transform_pipeline));
+
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "shiftTime",
