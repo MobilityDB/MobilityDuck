@@ -229,6 +229,15 @@ struct TemporalFunctions {
     static void Tnumber_tboxes(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_split_n_tboxes(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_split_each_n_tboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    /* ***************************************************
+     * Temporal-tile family — bin / box emitters
+     ****************************************************/
+    static void Temporal_time_bins(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tint_value_bins(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tfloat_value_bins(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_time_boxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_value_boxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tnumber_value_time_boxes(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_delta_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_trend(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tfloat_exp(DataChunk &args, ExpressionState &state, Vector &result);

@@ -1,0 +1,44 @@
+# name: test/sql/parity/051d_stbox_perimeter_quadsplit.test
+# description: stbox accessors and emitters added to close the
+#              `051_stbox.in.sql` parity gap: `perimeter`,
+#              `quadSplit`, and the `geography(stbox)` naming alias.
+# group: [sql]
+
+require mobilityduck
+
+# perimeter(stbox) — Cartesian, planar.  3×4 rectangle = 14.0.
+query I
+SELECT perimeter(stbox 'STBOX X((1,1),(4,5))');
+----
+14.000000
+
+# perimeter(stbox, spheroid bool) — spheroid flag is forwarded to
+# MEOS; on a non-geodetic box the spheroid path falls back to the
+# planar measure, so the result is identical.
+query I
+SELECT perimeter(stbox 'STBOX X((1,1),(4,5))', false);
+----
+14.000000
+
+# quadSplit(stbox) — four quadrants.
+query I
+SELECT len(quadSplit(stbox 'STBOX X((0,0),(10,10))'));
+----
+4
+
+# Each quadrant covers a quarter of the spatial extent — the union
+# of the four xmin/xmax values is {0, 5, 10}.
+query I
+SELECT count(DISTINCT Xmin(q))
+FROM (SELECT unnest(quadSplit(stbox 'STBOX X((0,0),(10,10))')) AS q);
+----
+2
+
+# geography(stbox) — naming alias for `geometry(stbox)`.  DuckDB has
+# no separate geography type so both produce a GEOMETRY blob with
+# identical bytes.
+query I
+SELECT ST_AsText(geography(stbox 'STBOX X((0,0),(1,1))'))
+     = ST_AsText(geometry (stbox 'STBOX X((0,0),(1,1))'));
+----
+true

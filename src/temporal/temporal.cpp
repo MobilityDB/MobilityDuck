@@ -1879,6 +1879,72 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         }
     }
 
+    // Temporal-tile family — bin / box emitters.
+    //
+    //   timeBins(<any-temp>, interval [, timestamptz]) → tstzspan[]
+    //   valueBins(tint,  int    [, int])               → intspan[]
+    //   valueBins(tfloat,double [, double])            → floatspan[]
+    //   timeBoxes(tnumber, interval [, timestamptz])   → tbox[]
+    //   valueBoxes(tnumber, vsize [, vorigin])         → tbox[]
+    //   valueTimeBoxes(tnumber, vsize, interval [, vorigin, torigin]) → tbox[]
+    //
+    // Defaults match MobilityDB: `torigin = '2000-01-03 +0:00:00'`
+    // (Monday epoch), `vorigin = 0`.
+    {
+        auto tstzspan_list = LogicalType::LIST(SpanTypes::TSTZSPAN());
+        auto intspan_list  = LogicalType::LIST(SpanTypes::INTSPAN());
+        auto floatspan_list = LogicalType::LIST(SpanTypes::FLOATSPAN());
+        auto tbox_list = LogicalType::LIST(TboxType::TBOX());
+
+        // timeBins for the four base temporal types.
+        for (auto &t : {TemporalTypes::TBOOL(), TemporalTypes::TINT(),
+                        TemporalTypes::TFLOAT(), TemporalTypes::TTEXT()}) {
+            duckdb::RegisterSerializedScalarFunction(loader,
+                ScalarFunction("timeBins", {t, LogicalType::INTERVAL},
+                               tstzspan_list, TemporalFunctions::Temporal_time_bins));
+            duckdb::RegisterSerializedScalarFunction(loader,
+                ScalarFunction("timeBins", {t, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ},
+                               tstzspan_list, TemporalFunctions::Temporal_time_bins));
+        }
+
+        // valueBins per-type.
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("valueBins", {TemporalTypes::TINT(), LogicalType::INTEGER},
+                           intspan_list, TemporalFunctions::Tint_value_bins));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("valueBins", {TemporalTypes::TINT(), LogicalType::INTEGER, LogicalType::INTEGER},
+                           intspan_list, TemporalFunctions::Tint_value_bins));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("valueBins", {TemporalTypes::TFLOAT(), LogicalType::DOUBLE},
+                           floatspan_list, TemporalFunctions::Tfloat_value_bins));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("valueBins", {TemporalTypes::TFLOAT(), LogicalType::DOUBLE, LogicalType::DOUBLE},
+                           floatspan_list, TemporalFunctions::Tfloat_value_bins));
+
+        // timeBoxes / valueBoxes / valueTimeBoxes for tnumber.
+        for (auto &t : {TemporalTypes::TINT(), TemporalTypes::TFLOAT()}) {
+            const auto vt = (t == TemporalTypes::TINT()) ? LogicalType::INTEGER : LogicalType::DOUBLE;
+            duckdb::RegisterSerializedScalarFunction(loader,
+                ScalarFunction("timeBoxes", {t, LogicalType::INTERVAL},
+                               tbox_list, TemporalFunctions::Tnumber_time_boxes));
+            duckdb::RegisterSerializedScalarFunction(loader,
+                ScalarFunction("timeBoxes", {t, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ},
+                               tbox_list, TemporalFunctions::Tnumber_time_boxes));
+            duckdb::RegisterSerializedScalarFunction(loader,
+                ScalarFunction("valueBoxes", {t, vt},
+                               tbox_list, TemporalFunctions::Tnumber_value_boxes));
+            duckdb::RegisterSerializedScalarFunction(loader,
+                ScalarFunction("valueBoxes", {t, vt, vt},
+                               tbox_list, TemporalFunctions::Tnumber_value_boxes));
+            duckdb::RegisterSerializedScalarFunction(loader,
+                ScalarFunction("valueTimeBoxes", {t, vt, LogicalType::INTERVAL},
+                               tbox_list, TemporalFunctions::Tnumber_value_time_boxes));
+            duckdb::RegisterSerializedScalarFunction(loader,
+                ScalarFunction("valueTimeBoxes", {t, vt, LogicalType::INTERVAL, vt, LogicalType::TIMESTAMP_TZ},
+                               tbox_list, TemporalFunctions::Tnumber_value_time_boxes));
+        }
+    }
+
     // tspatial × {stbox, tspatial} position predicates.
     //
     // For each direction (left/right/below/above/front/back and the over*

@@ -1226,6 +1226,21 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
+    // transformPipeline(tgeogpoint, pipeline text, srid int = 0,
+    //                   is_forward bool = true)
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("transformPipeline",
+                       {TGEOGPOINT(), LogicalType::VARCHAR},
+                       TGEOGPOINT(), TgeompointFunctions::Tspatial_transform_pipeline));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("transformPipeline",
+                       {TGEOGPOINT(), LogicalType::VARCHAR, LogicalType::INTEGER},
+                       TGEOGPOINT(), TgeompointFunctions::Tspatial_transform_pipeline));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("transformPipeline",
+                       {TGEOGPOINT(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN},
+                       TGEOGPOINT(), TgeompointFunctions::Tspatial_transform_pipeline));
+
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "round",
@@ -1936,6 +1951,66 @@ void TgeogpointType::RegisterRoundtripIO(ExtensionLoader &loader) {
 
     /* tgeogpointFromMFJSON */
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tgeogpointFromMFJSON", {V}, T, TgeogFromMfjsonExec));
+
+    /* geography(tgeogpoint [, segmentize bool]) -> geometry
+     * Trajectory of the temporal geographic point.  Same MEOS call as
+     * `geometry(tgeompoint)` (`tpoint_tfloat_to_geomeas` with a NULL
+     * measure); DuckDB has no separate geography type so the result is
+     * a GEOMETRY blob carrying the underlying geog.
+     */
+    const auto G = GeoTypes::GEOMETRY();
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("geography", {T},     G,
+        [](DataChunk &args, ExpressionState &state, Vector &result) {
+            const idx_t row_count = args.size();
+            args.data[0].Flatten(row_count);
+            auto in_temp = FlatVector::GetData<string_t>(args.data[0]);
+            auto &v0 = FlatVector::Validity(args.data[0]);
+            auto out_data = FlatVector::GetData<string_t>(result);
+            auto &out_validity = FlatVector::Validity(result);
+            for (idx_t row = 0; row < row_count; row++) {
+                if (!v0.RowIsValid(row)) { out_validity.SetInvalid(row); continue; }
+                Temporal *t = GeogBlobToTemp(in_temp[row]);
+                GSERIALIZED *geom = nullptr;
+                bool ok = tpoint_tfloat_to_geomeas(t, nullptr, false, &geom);
+                free(t);
+                if (!ok || !geom) {
+                    out_validity.SetInvalid(row);
+                    if (geom) free(geom);
+                    continue;
+                }
+                string_t enc = GSerializedToGeometry(geom, state, result);
+                out_data[row] = StringVector::AddStringOrBlob(result, enc);
+                free(geom);
+            }
+            if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("geography", {T, BL}, G,
+        [](DataChunk &args, ExpressionState &state, Vector &result) {
+            const idx_t row_count = args.size();
+            args.data[0].Flatten(row_count);
+            args.data[1].Flatten(row_count);
+            auto in_temp = FlatVector::GetData<string_t>(args.data[0]);
+            auto in_seg = FlatVector::GetData<bool>(args.data[1]);
+            auto &v0 = FlatVector::Validity(args.data[0]);
+            auto out_data = FlatVector::GetData<string_t>(result);
+            auto &out_validity = FlatVector::Validity(result);
+            for (idx_t row = 0; row < row_count; row++) {
+                if (!v0.RowIsValid(row)) { out_validity.SetInvalid(row); continue; }
+                Temporal *t = GeogBlobToTemp(in_temp[row]);
+                GSERIALIZED *geom = nullptr;
+                bool ok = tpoint_tfloat_to_geomeas(t, nullptr, in_seg[row], &geom);
+                free(t);
+                if (!ok || !geom) {
+                    out_validity.SetInvalid(row);
+                    if (geom) free(geom);
+                    continue;
+                }
+                string_t enc = GSerializedToGeometry(geom, state, result);
+                out_data[row] = StringVector::AddStringOrBlob(result, enc);
+                free(geom);
+            }
+            if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+        }));
 }
 
 // ============================================================
