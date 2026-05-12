@@ -10,6 +10,7 @@
       "geos",
       "proj",
       "json-c",
-      "gsl"
+      "gsl",
+      "h3"
     ]
   }
