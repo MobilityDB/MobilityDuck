@@ -244,7 +244,7 @@ void TemporalFunctions::Tsequence_constructor(DataChunk &args, ExpressionState &
     auto &child_vec = ListVector::GetEntry(array_vec);
 
     meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
-    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
+    interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;
     bool lower_inc = true;
     bool upper_inc = true;
     
@@ -516,7 +516,7 @@ void TemporalFunctions::Tsequence_from_base_tstzspan(DataChunk &args, Expression
     auto count = args.size();
     const auto &arg_type = args.data[0].GetType();
     meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
-    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
+    interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;
     if (args.ColumnCount() > 2) {
         auto &interp_child = args.data[2];
         interp_child.Flatten(count);
@@ -599,7 +599,7 @@ void TemporalFunctions::Tsequenceset_from_base_tstzspanset(DataChunk &args, Expr
     auto count = args.size();
     const auto &arg_type = args.data[0].GetType();
     meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
-    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
+    interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;
     if (args.ColumnCount() > 2) {
         auto &interp_child = args.data[2];
         interp_child.Flatten(count);
@@ -2417,7 +2417,7 @@ void TemporalFunctions::Temporal_set_interp(DataChunk &args, ExpressionState &st
 void TemporalFunctions::Temporal_append_tinstant(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
-    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
+    interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;
     if (args.ColumnCount() > 2) {
         auto &interp_child = args.data[2];
         interp_child.Flatten(count);
