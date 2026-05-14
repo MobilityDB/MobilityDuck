@@ -50,11 +50,11 @@ TRTreeIndex::TRTreeIndex(const string &name, IndexConstraintType constraint_type
     auto &type = unbound_expressions[0]->return_type;
     
     if (type == StboxType::STBOX()) {
-        bbox_type = T_STBOX;
+        bbox_meostype = T_STBOX;
         bbox_size_ = sizeof(STBox);
         rtree_ = rtree_create_stbox();
     } else if (type == SpanTypes::TSTZSPAN()) {
-        bbox_type = T_TSTZSPAN;
+        bbox_meostype = T_TSTZSPAN;
         bbox_size_ = sizeof(Span);  
         rtree_ = rtree_create_tstzspan();
     } else {
@@ -250,7 +250,7 @@ void TRTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifier
             box = malloc(data_size);
             memcpy(box, data, data_size);
 
-            if (bbox_type == T_STBOX) {
+            if (bbox_meostype == T_STBOX) {
                 STBox *stbox = (STBox*)box;
                 int32_t box_srid = stbox_srid(stbox);
                 if (box_srid != 0) {
@@ -303,7 +303,7 @@ unique_ptr<IndexScanState> TRTreeIndex::InitializeScan(const void* query_blob, s
     
     auto state = make_uniq<TRTreeIndexScanState>();
     
-    if (operation == "@>" && bbox_type == T_TSTZSPAN) {
+    if (operation == "@>" && bbox_meostype == T_TSTZSPAN) {
         if (blob_size != sizeof(timestamp_tz_t)) {
             throw InvalidInputException("Invalid query box size for @> operation. Expected " + 
                                       std::to_string(sizeof(timestamp_tz_t)) + 
@@ -332,7 +332,7 @@ unique_ptr<IndexScanState> TRTreeIndex::InitializeScan(const void* query_blob, s
         state->query_box = malloc(blob_size);
         memcpy(state->query_box, data, blob_size);
 
-        if (bbox_type == T_STBOX) {
+        if (bbox_meostype == T_STBOX) {
             STBox *stbox = (STBox*)state->query_box;
             int32_t query_srid = stbox_srid(stbox);
             if (query_srid != 0) {
@@ -348,7 +348,7 @@ unique_ptr<IndexScanState> TRTreeIndex::InitializeScan(const void* query_blob, s
         
     } else {
         throw InvalidInputException("Unsupported R-Tree operation: " + operation + 
-                                  " for bbox_type: " + std::to_string(bbox_type));
+                                  " for bbox_type: " + std::to_string(bbox_meostype));
     }
     
     if (rtree_) {
@@ -461,9 +461,9 @@ bool TRTreeIndex::TryMatchDistanceFunction(const unique_ptr<Expression> &expr,
 unique_ptr<ExpressionMatcher> TRTreeIndex::MakeFunctionMatcher() const {
     unordered_set<string> supported_functions;
 
-    if (bbox_type == T_STBOX) {
+    if (bbox_meostype == T_STBOX) {
         supported_functions = {"&&"};
-    } else if (bbox_type == T_TSTZSPAN) {
+    } else if (bbox_meostype == T_TSTZSPAN) {
         supported_functions = {"&&", "@>"};
     } else {
         supported_functions = {"&&"};
@@ -475,9 +475,9 @@ unique_ptr<ExpressionMatcher> TRTreeIndex::MakeFunctionMatcher() const {
     matcher->policy = SetMatcher::Policy::UNORDERED;
 
     LogicalType index_type;
-    if (bbox_type == T_STBOX) {
+    if (bbox_meostype == T_STBOX) {
         index_type = StboxType::STBOX();
-    } else if (bbox_type == T_TSTZSPAN) {
+    } else if (bbox_meostype == T_TSTZSPAN) {
         index_type = SpanTypes::TSTZSPAN();
     } else {
         index_type = LogicalType::BLOB;
