@@ -1188,16 +1188,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "minusGeometry",
-            {TGEOMPOINT(), GeoTypes::GEOMETRY(), SpanTypes::FLOATSPAN()},
-            TGEOMPOINT(),
-            TgeompointFunctions::Tgeo_minus_geom
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "atStbox",
             {TGEOMPOINT(), StboxType::STBOX()},
@@ -1479,7 +1470,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Temporal-spatial relationships
      ****************************************************/
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tContains",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1487,17 +1478,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Tcontains_geo_tgeo
         )
     );
-    
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "tContains",
-            {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::BOOLEAN},
-            TemporalTypes::TBOOL(),
-            TgeompointFunctions::Tcontains_geo_tgeo
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tDisjoint",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1506,16 +1488,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "tDisjoint",
-            {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::BOOLEAN},
-            TemporalTypes::TBOOL(),
-            TgeompointFunctions::Tdisjoint_tgeo_geo
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tDisjoint",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1524,43 +1497,16 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "tDisjoint",
-            {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::BOOLEAN},
-            TemporalTypes::TBOOL(),
-            TgeompointFunctions::Tdisjoint_geo_tgeo
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "tDisjoint",
-            {TGEOMPOINT(), TGEOMPOINT(), LogicalType::BOOLEAN},
-            TemporalTypes::TBOOL(),
-            TgeompointFunctions::Tdisjoint_tgeo_tgeo  
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tDisjoint",
             {TGEOMPOINT(), TGEOMPOINT()},
             TemporalTypes::TBOOL(),
-            TgeompointFunctions::Tdisjoint_tgeo_tgeo  
+            TgeompointFunctions::Tdisjoint_tgeo_tgeo
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "tIntersects",
-            {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::BOOLEAN},
-            TemporalTypes::TBOOL(),
-            TgeompointFunctions::Tintersects_geo_tgeo
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tIntersects",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1569,16 +1515,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "tIntersects",
-            {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::BOOLEAN},
-            TemporalTypes::TBOOL(),
-            TgeompointFunctions::Tintersects_tgeo_geo
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tIntersects",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1587,15 +1524,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "tIntersects",
-            {TGEOMPOINT(), TGEOMPOINT(), LogicalType::BOOLEAN},
-            TemporalTypes::TBOOL(),
-            TgeompointFunctions::Tintersects_tgeo_tgeo
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tIntersects",
             {TGEOMPOINT(), TGEOMPOINT()},
@@ -1604,15 +1533,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "tTouches",
-            {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::BOOLEAN},
-            TemporalTypes::TBOOL(),
-            TgeompointFunctions::Ttouches_geo_tgeo
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tTouches",
             {GeoTypes::GEOMETRY(), TGEOMPOINT()},
@@ -1620,15 +1541,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Ttouches_geo_tgeo
         )
     );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "tTouches",
-            {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::BOOLEAN},
-            TemporalTypes::TBOOL(),
-            TgeompointFunctions::Ttouches_tgeo_geo
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
+
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tTouches",
             {TGEOMPOINT(), GeoTypes::GEOMETRY()},
@@ -1636,7 +1550,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Ttouches_tgeo_geo
         )
     );
-    duckdb::RegisterSerializedScalarFunction(loader, 
+
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tDwithin",
             {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::DOUBLE},
@@ -1645,25 +1560,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "tDwithin",
-            {GeoTypes::GEOMETRY(), TGEOMPOINT(), LogicalType::DOUBLE, LogicalType::BOOLEAN},
-            TemporalTypes::TBOOL(),
-            TgeompointFunctions::Tdwithin_geo_tgeo
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "tDwithin",
-            {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE, LogicalType::BOOLEAN},
-            TemporalTypes::TBOOL(),
-            TgeompointFunctions::Tdwithin_tgeo_geo
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tDwithin",
             {TGEOMPOINT(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE},
@@ -1672,19 +1569,10 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tDwithin",
             {TGEOMPOINT(), TGEOMPOINT(), LogicalType::DOUBLE},
-            TemporalTypes::TBOOL(),
-            TgeompointFunctions::Tdwithin_tgeo_tgeo
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "tDwithin",
-            {TGEOMPOINT(), TGEOMPOINT(), LogicalType::DOUBLE, LogicalType::BOOLEAN},
             TemporalTypes::TBOOL(),
             TgeompointFunctions::Tdwithin_tgeo_tgeo
         )

@@ -698,7 +698,7 @@ SELECT tContains(geometry 'Point(1 1)', tgeompoint 'Point(1 1)@2000-01-01');
 t@2000-01-01 00:00:00+01
 
 query I 
-SELECT tContains(geometry 'Point(1 1)', tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]', true);
+SELECT atValues(tContains(geometry 'Point(1 1)', tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]'), true);
 ----
 {[t@2000-01-01 00:00:00+01], [t@2000-01-03 00:00:00+01]}
 
@@ -713,7 +713,7 @@ SELECT tDisjoint(geometry 'Point(1 1)', tgeompoint '{[Point(1 1)@2000-01-01, Poi
 {[f@2000-01-01 00:00:00+01], (t@2000-01-01 00:00:00+01, f@2000-01-03 00:00:00+01], [t@2000-01-04 00:00:00+01, t@2000-01-05 00:00:00+01]}
 
 query I 
-SELECT tDisjoint(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03], [Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', tgeompoint 'Point(1 1)@2000-01-01', false);
+SELECT atValues(tDisjoint(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03], [Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', tgeompoint 'Point(1 1)@2000-01-01'), false);
 ----
 f@2000-01-01 00:00:00+01
 
@@ -723,7 +723,7 @@ SELECT tIntersects(tgeompoint '{Point(1 1 1)@2000-01-01, Point(2 2 2)@2000-01-02
 {f@2000-01-01 00:00:00+01, t@2000-01-02 00:00:00+01, f@2000-01-03 00:00:00+01}
 
 query I 
-SELECT tIntersects(tgeompoint 'Point(1 1)@2000-01-01', geometry 'Point(1 1)', true);
+SELECT atValues(tIntersects(tgeompoint 'Point(1 1)@2000-01-01', geometry 'Point(1 1)'), true);
 ----
 t@2000-01-01 00:00:00+01
 
@@ -733,7 +733,7 @@ SELECT tTouches(geometry 'Point(1 1)', tgeompoint '{[Point(1 1)@2000-01-01, Poin
 {[f@2000-01-01 00:00:00+01, f@2000-01-03 00:00:00+01], [f@2000-01-04 00:00:00+01, f@2000-01-05 00:00:00+01]}
 
 query I 
-SELECT tTouches(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}', geometry 'Point(1 1)', true);
+SELECT atValues(tTouches(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}', geometry 'Point(1 1)'), true);
 ----
 NULL
 
