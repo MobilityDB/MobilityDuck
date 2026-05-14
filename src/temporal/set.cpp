@@ -60,8 +60,8 @@ const std::vector<LogicalType> &SetTypes::AllTypes() {
     return types;
 }
 
-meosType SetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
-    static const std::unordered_map<std::string, meosType> alias_to_type = {
+MeosType SetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
+    static const std::unordered_map<std::string, MeosType> alias_to_type = {
         {"intset", T_INTSET},
         {"bigintset", T_BIGINTSET},
         {"floatset", T_FLOATSET},
@@ -815,10 +815,10 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 // --- Unnest ---
 struct SetUnnestBindData : public TableFunctionData {
     string_t blob;
-    meosType set_type;
+    MeosType set_type;
     LogicalType return_type;
 
-    SetUnnestBindData(string_t blob, meosType set_type, LogicalType return_type)
+    SetUnnestBindData(string_t blob, MeosType set_type, LogicalType return_type)
         : blob(std::move(blob)), set_type(set_type), return_type(std::move(return_type)) {}
 };
 
