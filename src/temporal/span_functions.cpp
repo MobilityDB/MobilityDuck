@@ -88,7 +88,7 @@ bool SpanFunctions::Text_to_span(Vector &source, Vector &result, idx_t count, Ca
     std::string type_alias = result_type.GetAlias();
     
     // Map the alias to the correct MEOS type
-    meosType target_meos_type = SpanTypeMapping::GetMeosTypeFromAlias(type_alias);
+    MeosType target_meos_type = SpanTypeMapping::GetMeosTypeFromAlias(type_alias);
     
     if (target_meos_type == T_UNKNOWN) {
         throw InvalidInputException("Unknown span type: " + type_alias);
@@ -203,7 +203,7 @@ void SpanFunctions::Span_constructor(DataChunk &args, ExpressionState &state, Ve
     auto &result_type = result.GetType();
     std::string type_alias = result_type.GetAlias();
     
-    meosType target_meos_type = SpanTypeMapping::GetMeosTypeFromAlias(type_alias);
+    MeosType target_meos_type = SpanTypeMapping::GetMeosTypeFromAlias(type_alias);
     
     if (target_meos_type == T_UNKNOWN) {
         throw InvalidInputException("Unknown span type: " + type_alias);
@@ -239,9 +239,9 @@ void SpanFunctions::Span_constructor(DataChunk &args, ExpressionState &state, Ve
 
 
 // --- Span binary constructor ---
-static string_t Span_make_blob(Datum lower_dat, Datum upper_dat, bool lower_inc, bool upper_inc, meosType span_type,
+static string_t Span_make_blob(Datum lower_dat, Datum upper_dat, bool lower_inc, bool upper_inc, MeosType span_type,
                                Vector &result) {
-    meosType basetype = spantype_basetype(span_type);
+    MeosType basetype = spantype_basetype(span_type);
     Span *span = span_make(lower_dat, upper_dat, lower_inc, upper_inc, basetype);
     if (span == NULL) {
         throw InvalidInputException("Failed to create span from bounds");
@@ -260,7 +260,7 @@ void SpanFunctions::Span_binary_constructor(DataChunk &args, ExpressionState &st
     Vector *args3 = args.ColumnCount() == 4 ? &args.data[3] : nullptr;
 
     auto out_type = result.GetType();
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
     const idx_t count = args.size();
 
     switch (span_type) {
@@ -369,7 +369,7 @@ static inline void Write_span(Vector &result, idx_t row, Span *s) {
     free(s);
 }
 
-static void Value_to_span_core(Vector &source, Vector &result, idx_t count, meosType base_type){
+static void Value_to_span_core(Vector &source, Vector &result, idx_t count, MeosType base_type){
     source.Flatten(count);
     result.SetVectorType(VectorType::FLAT_VECTOR);
 
@@ -440,16 +440,16 @@ static void Value_to_span_core(Vector &source, Vector &result, idx_t count, meos
 void SpanFunctions::Value_to_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &source = args.data[0];
     auto out_type = result.GetType();
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
-    meosType base_type = spantype_basetype(span_type);
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
+    MeosType base_type = spantype_basetype(span_type);
 
     Value_to_span_core(source, result, args.size(), base_type);
 
 }
 
 bool SpanFunctions::Value_to_span_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(result.GetType().GetAlias());
-    meosType base_type = spantype_basetype(span_type);
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(result.GetType().GetAlias());
+    MeosType base_type = spantype_basetype(span_type);
     Value_to_span_core(source, result, count, base_type);
     return true;
 }
@@ -1054,7 +1054,7 @@ void SpanFunctions::Tstzspan_duration(DataChunk &args, ExpressionState &state, V
         });
 }
 
-static inline string_t Numspan_expand_common(const string_t &blob, Datum value, meosType validate_span_type, Vector &result) {
+static inline string_t Numspan_expand_common(const string_t &blob, Datum value, MeosType validate_span_type, Vector &result) {
     const uint8_t *data = (const uint8_t *)blob.GetData();
     size_t size = blob.GetSize();
     
@@ -1100,7 +1100,7 @@ static inline string_t Tstzspan_expand_common(const string_t &blob, interval_t d
 void SpanFunctions::Numspan_expand(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
     auto out_type  = result.GetType();    
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
     
     switch (span_type) {
         case T_INTSPAN: { // expand(intspan, integer) -> intspan
@@ -1146,7 +1146,7 @@ void SpanFunctions::Numspan_expand(DataChunk &args, ExpressionState &state, Vect
 void SpanFunctions::Tstzspan_expand(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
     auto out_type  = result.GetType();    
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
     BinaryExecutor::Execute<string_t, interval_t, string_t>(
         span_vec, args.data[1], result, args.size(),
         [&](string_t blob, interval_t value) -> string_t {
@@ -1158,7 +1158,7 @@ void SpanFunctions::Tstzspan_expand(DataChunk &args, ExpressionState &state, Vec
 }
 
 static inline string_t Numspan_shift_common(const string_t &blob, Datum shift_datum,
-                                        meosType validate_span_type, Vector &result) {
+                                        MeosType validate_span_type, Vector &result) {
     const uint8_t *data = (const uint8_t *)blob.GetData();
     size_t size = blob.GetSize();
     
@@ -1206,7 +1206,7 @@ static inline string_t Tstzspan_shift_common(const string_t &blob, interval_t du
 void SpanFunctions::Numspan_shift(DataChunk &args, ExpressionState &state, Vector &result) {    
     auto &span_vec = args.data[0];
     auto out_type  = result.GetType();    
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
     
     switch (span_type) {
         case T_INTSPAN: { // shift(intspan, integer) -> intspan
@@ -1249,7 +1249,7 @@ void SpanFunctions::Numspan_shift(DataChunk &args, ExpressionState &state, Vecto
 void SpanFunctions::Tstzspan_shift(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
     auto out_type  = result.GetType();    
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
     BinaryExecutor::Execute<string_t, interval_t, string_t>(
         span_vec, args.data[1], result, args.size(),
         [&](string_t blob, interval_t shift_interval) -> string_t {
@@ -1261,7 +1261,7 @@ void SpanFunctions::Tstzspan_shift(DataChunk &args, ExpressionState &state, Vect
 }
 
 static inline string_t Numspan_scale_common(const string_t &blob, Datum scale_datum,
-                                        meosType validate_span_type, Vector &result) {
+                                        MeosType validate_span_type, Vector &result) {
     const uint8_t *data = (const uint8_t *)blob.GetData();
     size_t size = blob.GetSize();
     
@@ -1288,7 +1288,7 @@ static inline string_t Numspan_scale_common(const string_t &blob, Datum scale_da
 void SpanFunctions::Numspan_scale(DataChunk &args, ExpressionState &state, Vector &result) {    
     auto &span_vec = args.data[0];
     auto out_type  = result.GetType();    
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
     
     switch (span_type) {
         case T_INTSPAN: { // scale(intspan, integer) -> intspan
@@ -1351,7 +1351,7 @@ static inline string_t Tstzspan_scale_common(const string_t &blob, interval_t du
 void SpanFunctions::Tstzspan_scale(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
     auto out_type  = result.GetType();    
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
     BinaryExecutor::Execute<string_t, interval_t, string_t>(
         span_vec, args.data[1], result, args.size(),
         [&](string_t blob, interval_t scale_interval) -> string_t {
@@ -1386,7 +1386,7 @@ static inline string_t Tstzspan_shift_scale_common(const string_t &blob, interva
 }
 
 static inline string_t Numspan_shift_scale_common(const string_t &blob, Datum shift_datum, Datum scale_datum,
-                                                 meosType validate_span_type, Vector &result) {
+                                                 MeosType validate_span_type, Vector &result) {
     const uint8_t *data = (const uint8_t *)blob.GetData();
     size_t size = blob.GetSize();
 
@@ -1423,7 +1423,7 @@ static inline string_t Numspan_shift_scale_common(const string_t &blob, Datum sh
 void SpanFunctions::Numspan_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
     auto out_type = result.GetType();
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
 
     switch (span_type) {
         case T_INTSPAN: {
@@ -1863,7 +1863,7 @@ void SpanFunctions::Span_cmp(DataChunk &args, ExpressionState &state, Vector &re
 // --- OPERATOR: span @> value ---
 void SpanFunctions::Contains_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
     
     switch (span_type){
         case T_INTSPAN: { // intspan @> integer
@@ -2009,7 +2009,7 @@ void SpanFunctions::Contains_span_span(DataChunk &args, ExpressionState &state, 
 // --- OPERATOR: value <@ span ---
 void SpanFunctions::Contained_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[1];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
     
     switch (span_type){
         case T_INTSPAN: { // integer <@ intspan
@@ -2194,7 +2194,7 @@ void SpanFunctions::Overlaps_span_span(DataChunk &args, ExpressionState &state, 
 // --- OPERATOR: value -|- span---
 void SpanFunctions::Adjacent_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[1];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
     
     switch (span_type){
         case T_INTSPAN: { // integer -|- intspan
@@ -2306,7 +2306,7 @@ void SpanFunctions::Adjacent_value_span(DataChunk &args, ExpressionState &state,
 // --- OPERATOR: span -|- value ---
 void SpanFunctions::Adjacent_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
     
     switch (span_type){
         case T_INTSPAN: { // intspan -|- integer
@@ -2454,7 +2454,7 @@ void SpanFunctions::Adjacent_span_span(DataChunk &args, ExpressionState &state, 
 // --- OPERATOR: value << span ---
 void SpanFunctions::Left_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[1];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
     
     switch (span_type){
         case T_INTSPAN: { // integer << intspan
@@ -2565,7 +2565,7 @@ void SpanFunctions::Left_value_span(DataChunk &args, ExpressionState &state, Vec
 // --- OPERATOR: span << value ---
 void SpanFunctions::Left_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
     
     switch (span_type){
         case T_INTSPAN: { // intspan << integer
@@ -2709,7 +2709,7 @@ void SpanFunctions::Left_span_span(DataChunk &args, ExpressionState &state, Vect
 // --- OPERATOR: value >> span ---
 void SpanFunctions::Right_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[1];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
     
     switch (span_type){
         case T_INTSPAN: { // integer >> intspan
@@ -2820,7 +2820,7 @@ void SpanFunctions::Right_value_span(DataChunk &args, ExpressionState &state, Ve
 // --- OPERATOR: span >> value ---
 void SpanFunctions::Right_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // intspan >> integer
             BinaryExecutor::Execute<string_t, int32_t, bool>(
@@ -2964,7 +2964,7 @@ void SpanFunctions::Right_span_span(DataChunk &args, ExpressionState &state, Vec
 // ---OPERATOR: value &< span ---
 void SpanFunctions::Overleft_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[1];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
     
     switch (span_type){
         case T_INTSPAN: { // integer &< intspan
@@ -3075,7 +3075,7 @@ void SpanFunctions::Overleft_value_span(DataChunk &args, ExpressionState &state,
 // ---OPERATOR: span &< value ---
 void SpanFunctions::Overleft_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // intspan &< integer
             BinaryExecutor::Execute<string_t, int32_t, bool>(
@@ -3220,7 +3220,7 @@ void SpanFunctions::Overleft_span_span(DataChunk &args, ExpressionState &state, 
 // --- OPERATOR: value &> span ---
 void SpanFunctions::Overright_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[1];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // integer &> intspan
             BinaryExecutor::Execute<int32_t, string_t, bool>(
@@ -3331,7 +3331,7 @@ void SpanFunctions::Overright_value_span(DataChunk &args, ExpressionState &state
 // --- OPERATOR: span &> value ---
 void SpanFunctions::Overright_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // intspan &> integer
             BinaryExecutor::Execute<string_t, int32_t, bool>(
@@ -3476,7 +3476,7 @@ void SpanFunctions::Overright_span_span(DataChunk &args, ExpressionState &state,
 // --- SET OPERATOR ---
 void SpanFunctions::Union_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[1];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // integer + intspan
             BinaryExecutor::Execute<int32_t, string_t, string_t>(
@@ -3621,7 +3621,7 @@ void SpanFunctions::Union_value_span(DataChunk &args, ExpressionState &state, Ve
 
 void SpanFunctions::Union_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // intspan + integer
             BinaryExecutor::Execute<string_t, int32_t, string_t>(
@@ -3802,7 +3802,7 @@ void SpanFunctions::Union_span_span(DataChunk &args, ExpressionState &state, Vec
 // --- OPERATOR: INTERSECTION ---
 void SpanFunctions::Intersection_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[1];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // integer * intspan
             BinaryExecutor::Execute<int32_t, string_t, string_t>(
@@ -3967,7 +3967,7 @@ void SpanFunctions::Intersection_value_span(DataChunk &args, ExpressionState &st
 
 void SpanFunctions::Intersection_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // intspan * integer
             BinaryExecutor::Execute<string_t, int32_t, string_t>(
@@ -4182,7 +4182,7 @@ void SpanFunctions::Intersection_span_span(DataChunk &args, ExpressionState &sta
 // --- OPERATOR: MINUS ---
 void SpanFunctions::Minus_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[1];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // integer - intspan
             BinaryExecutor::Execute<int32_t, string_t, string_t>(
@@ -4347,7 +4347,7 @@ void SpanFunctions::Minus_value_span(DataChunk &args, ExpressionState &state, Ve
 
 void SpanFunctions::Minus_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // intspan - integer
             BinaryExecutor::Execute<string_t, int32_t, string_t>(
@@ -4562,7 +4562,7 @@ void SpanFunctions::Minus_span_span(DataChunk &args, ExpressionState &state, Vec
 //--- DISTANCE FUNCTIONS ---
 void SpanFunctions::Distance_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // distance between intspan and integer
             BinaryExecutor::Execute<string_t, int32_t, double>(
@@ -4673,7 +4673,7 @@ void SpanFunctions::Distance_span_value(DataChunk &args, ExpressionState &state,
 
 void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[1];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // distance between integer and intspan
             BinaryExecutor::Execute<int32_t, string_t, double>(
@@ -4783,7 +4783,7 @@ void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state,
 
 void SpanFunctions::Distance_span_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span1_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span1_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span1_vec.GetType().GetAlias());
 
     if (span_type == T_TSTZSPAN) {
         BinaryExecutor::ExecuteWithNulls<string_t, string_t, interval_t>(
