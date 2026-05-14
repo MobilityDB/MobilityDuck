@@ -70,7 +70,7 @@ public:
 
     bool TryMatchDistanceFunction(const unique_ptr<Expression> &expr, vector<reference<Expression>> &bindings) const;
 
-    MeosType GetBboxType() const { return bbox_type_; }
+    meosType GetBboxType() const { return bbox_type; }
     size_t GetBboxSize() const { return bbox_size_; }
 
 
@@ -84,7 +84,7 @@ private:
     RTree *rtree_;
     void *boxes;
 
-    MeosType bbox_type_;
+    meosType bbox_type;
     size_t bbox_size_;
 
     size_t current_size_ = 0;
