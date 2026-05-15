@@ -172,6 +172,8 @@ struct TgeompointFunctions {
     static void Nad_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Nad_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Nad_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Mindistance_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Mindistance_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Affine / translate / rotate / scale transforms

@@ -3608,6 +3608,52 @@ void TgeompointFunctions::Nad_tgeo_tgeo(DataChunk &args, ExpressionState &state,
 }
 
 /* ***************************************************
+ * minDistance — minimum spatial distance over the union of temporal
+ * extents (MobilityDB #1007). The (tgeo, geo) overloads reuse the NAD
+ * kernel since NAD reduces to spatial-min when one argument has no
+ * time dimension. The (tgeo, tgeo) overload calls the threshold-aware
+ * kernel with DBL_MAX so every call computes the exact per-pair
+ * minimum; wrap with the built-in MIN aggregate for the canonical
+ * GROUP-BY-over-cross-join shape.
+ ****************************************************/
+
+void TgeompointFunctions::Mindistance_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [](string_t tblob, string_t gblob, ValidityMask &mask, idx_t idx) -> double {
+            size_t tsz = tblob.GetSize();
+            uint8_t *tcopy = (uint8_t *)malloc(tsz);
+            memcpy(tcopy, tblob.GetData(), tsz);
+            Temporal *temp = reinterpret_cast<Temporal *>(tcopy);
+            GSERIALIZED *gs = GeometryToGSerialized(gblob, 0);
+            if (!gs) { free(temp); mask.SetInvalid(idx); return 0.0; }
+            double d = nad_tgeo_geo(temp, gs);
+            free(temp); free(gs);
+            if (d == DBL_MAX) { mask.SetInvalid(idx); return 0.0; }
+            return d;
+        }
+    );
+}
+
+void TgeompointFunctions::Mindistance_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [](string_t gblob, string_t tblob, ValidityMask &mask, idx_t idx) -> double {
+            size_t tsz = tblob.GetSize();
+            uint8_t *tcopy = (uint8_t *)malloc(tsz);
+            memcpy(tcopy, tblob.GetData(), tsz);
+            Temporal *temp = reinterpret_cast<Temporal *>(tcopy);
+            GSERIALIZED *gs = GeometryToGSerialized(gblob, 0);
+            if (!gs) { free(temp); mask.SetInvalid(idx); return 0.0; }
+            double d = nad_tgeo_geo(temp, gs);
+            free(temp); free(gs);
+            if (d == DBL_MAX) { mask.SetInvalid(idx); return 0.0; }
+            return d;
+        }
+    );
+}
+
+/* ***************************************************
  * Affine/translate/rotate/rotateX/Y/Z/transscale/scale transforms
  * All build an AFFINE struct and delegate to tgeo_affine (or tgeo_scale).
  ****************************************************/

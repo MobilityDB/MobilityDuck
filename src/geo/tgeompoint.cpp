@@ -1716,6 +1716,13 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nad", {G, TG}, D, TgeompointFunctions::Nad_geo_tgeo));
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nad", {TG, TG}, D, TgeompointFunctions::Nad_tgeo_tgeo));
 
+        /* minDistance(tgeo, geometry) — spatial minimum to a static geometry,
+           which reduces to the nearest-approach distance.  The (tgeo, tgeo)
+           cross-pair minimum is the set-set minDistance(tgeompoint[],
+           tgeompoint[]); the per-pair value is nearestApproachDistance. */
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("minDistance", {TG, G}, D, TgeompointFunctions::Mindistance_tgeo_geo));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("minDistance", {G, TG}, D, TgeompointFunctions::Mindistance_geo_tgeo));
+
         /* affine (12-arg and 6-arg) */
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("affine",
             {TG, D, D, D, D, D, D, D, D, D, D, D, D}, TG,
