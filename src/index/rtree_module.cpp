@@ -531,7 +531,14 @@ unique_ptr<ExpressionMatcher> TRTreeIndex::MakeFunctionMatcher() const {
     unordered_set<string> supported_functions;
 
     if (bbox_meostype == T_STBOX) {
-        supported_functions = {"&&"};
+        // && is the exact bbox predicate; the spatial-rel functions are
+        // lossy supersets whose bbox prefilter the index serves while the
+        // original predicate is rechecked exactly above the scan by the
+        // recheck PhysicalFilter (the scan reports supports_pushdown_type
+        // = false; see RTreeIndexScanSupportsPushdownType). Mirrors
+        // MobilityDB's tspatial_supportfn, in function form.
+        supported_functions = {"&&", "eIntersects", "eContains",
+                               "eDisjoint", "eTouches"};
     } else if (bbox_meostype == T_TSTZSPAN) {
         supported_functions = {"&&", "@>"};
     } else {

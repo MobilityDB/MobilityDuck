@@ -125,14 +125,30 @@ static void RTreeIndexScanExecute(ClientContext &context, TableFunctionInput &da
 //-------------------------------------------------------------------------
 // Get Function
 //-------------------------------------------------------------------------
+
+// The R-tree probe narrows rows by bounding-box overlap only. For an exact
+// predicate (&&, @>) that is the answer; for a lossy predicate (the
+// spatial-rel functions, whose bbox is only a superset) the original
+// predicate must still be evaluated or the scan would emit false positives.
+// Reporting that this scan can apply no pushed expression filter makes
+// DuckDB keep every pushed predicate as an exact recheck PhysicalFilter
+// directly above the scan (execution/physical_plan/plan_get.cpp rebuilds it
+// via ExpressionFilter::ToExpression). This is the lossy-index-always-
+// rechecks contract of PostGIS GiST and MobilityDB's tspatial_supportfn:
+// the index is a prefilter, the recheck is correctness.
+static bool RTreeIndexScanSupportsPushdownType(const FunctionData &, idx_t) {
+	return false;
+}
+
 TableFunction TRTreeIndexScanFunction::GetFunction() {
 	TableFunction func("mobility rtree index", {}, RTreeIndexScanExecute);
 	func.init_global = RTreeIndexScanInitGlobal;
-    
+
     func.get_bind_info = TRTreeIndexScanBindInfo;
-    
+
     func.projection_pushdown = true;
-    func.filter_pushdown = false; 
+    func.filter_pushdown = false;
+    func.supports_pushdown_type = RTreeIndexScanSupportsPushdownType;
 	return func;
 }
 
