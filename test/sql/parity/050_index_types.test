@@ -283,3 +283,80 @@ statement error
 CREATE INDEX i_unsupported ON idx_unsupported USING TRTREE (x);
 ----
 TRTREE index supports
+
+# =============================================================================
+# Multi-entry (MEST) indexing on temporal columns.
+#
+# A temporal column is indexed as up to max_boxes tight per-segment
+# bounding boxes per row. This must (a) never produce false negatives,
+# (b) return each row exactly once even when many of its per-segment
+# boxes overlap the query (dedup), and (c) behave identically for the
+# default split, an explicit max_boxes, and the degenerate max_boxes = 1
+# single-box index.
+# =============================================================================
+
+statement ok
+CREATE TABLE idx_mest(t tgeompoint);
+
+# trip 1: a wiggly zig-zag with a large X-extent (many tight segments);
+# trip 2: a small trip far away.
+statement ok
+INSERT INTO idx_mest VALUES
+  ('[Point(0 0)@2000-01-01, Point(10 0)@2000-01-02, Point(0 0)@2000-01-03, Point(10 0)@2000-01-04, Point(0 0)@2000-01-05]'::tgeompoint),
+  ('[Point(1000 1000)@2000-01-01, Point(1001 1001)@2000-01-02]'::tgeompoint);
+
+statement ok
+CREATE INDEX i_mest ON idx_mest USING TRTREE (t);
+
+# Query box covers the whole zig-zag and therefore overlaps many of
+# trip 1's per-segment boxes: it must still come back exactly once.
+query I
+SELECT count(*) FROM idx_mest WHERE t && 'STBOX X((-1,-1),(11,11))'::stbox;
+----
+1
+
+# Disjoint from both trips: a true negative for single-box and MEST alike.
+query I
+SELECT count(*) FROM idx_mest WHERE t && 'STBOX X((100,100),(200,200))'::stbox;
+----
+0
+
+# Near trip 2 only.
+query I
+SELECT count(*) FROM idx_mest WHERE t && 'STBOX X((999,999),(1002,1002))'::stbox;
+----
+1
+
+statement ok
+DROP INDEX i_mest;
+
+# Explicit, tighter split: same correct results, no false negatives.
+statement ok
+CREATE INDEX i_mest ON idx_mest USING TRTREE (t) WITH (max_boxes = 16);
+
+query I
+SELECT count(*) FROM idx_mest WHERE t && 'STBOX X((-1,-1),(11,11))'::stbox;
+----
+1
+
+query I
+SELECT count(*) FROM idx_mest WHERE t && 'STBOX X((100,100),(200,200))'::stbox;
+----
+0
+
+statement ok
+DROP INDEX i_mest;
+
+# Degenerate single-box index (pre-MEST behaviour) via the option.
+statement ok
+CREATE INDEX i_mest ON idx_mest USING TRTREE (t) WITH (max_boxes = 1);
+
+query I
+SELECT count(*) FROM idx_mest WHERE t && 'STBOX X((-1,-1),(11,11))'::stbox;
+----
+1
+
+query I
+SELECT count(*) FROM idx_mest WHERE t && 'STBOX X((999,999),(1002,1002))'::stbox;
+----
+1

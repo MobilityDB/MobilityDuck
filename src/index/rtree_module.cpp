@@ -121,7 +121,14 @@ TRTreeIndex::TRTreeIndex(const string &name, IndexConstraintType constraint_type
     if (!rtree_) {
         throw InternalException("Failed to create MEOS RTree");
     }
-    
+
+    // MEST split bound: WITH (max_boxes = N). Default 8; N <= 1 reproduces
+    // the pre-MEST single-box index. Only affects temporal columns.
+    auto mb_it = options_.find("max_boxes");
+    if (mb_it != options_.end() && !mb_it->second.IsNull()) {
+        max_boxes_ = mb_it->second.GetValue<int32_t>();
+    }
+
     function_matcher = MakeFunctionMatcher();
 }
 
@@ -312,25 +319,26 @@ void TRTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifier
 
         if (indexes_temporal) {
             const Temporal *temp = reinterpret_cast<const Temporal *>(data);
-            // For temporal-spatial types extract the bbox and strip the
-            // SRID so index keys agree with the SRID-stripped query box
-            // used at search time (InitializeScan strips it too).
+            const int id = static_cast<int>(row_data[i]);
+            // Multi-entry (MEST): index the temporal as up to max_boxes_
+            // tight per-segment bounding boxes sharing this id. The
+            // splitter degenerates to a single minimum bounding box when
+            // max_boxes_ <= 1 or the value is an instant, byte-identical
+            // to the pre-MEST single-box path.
             if (bbox_meostype == T_STBOX) {
-                STBox *box = tspatial_to_stbox(temp);
-                if (!box) {
+                // Temporal-spatial: SRID-normalise to 0 before splitting so
+                // every produced stbox carries SRID 0, matching the
+                // SRID-stripped query box (InitializeScan strips it too).
+                // ensure_same_srid would otherwise reject the overlap.
+                Temporal *temp0 = tspatial_set_srid(temp, 0);
+                if (!temp0) {
                     continue;
                 }
-                if (stbox_srid(box) != 0) {
-                    STBox *normalized = stbox_set_srid(box, 0);
-                    if (normalized) {
-                        free(box);
-                        box = normalized;
-                    }
-                }
-                rtree_insert(rtree_, box, static_cast<int>(row_data[i]));
-                free(box);
+                rtree_insert_temporal_split(rtree_, temp0, id, max_boxes_);
+                free(temp0);
             } else {
-                rtree_insert_temporal(rtree_, temp, static_cast<int>(row_data[i]));
+                // tbox / tstzspan bbox: no SRID, split directly.
+                rtree_insert_temporal_split(rtree_, temp, id, max_boxes_);
             }
             continue;
         }
@@ -486,9 +494,18 @@ vector<row_t> TRTreeIndex::Search(const void *query_box, RTreeSearchOp op) const
 
         if (count > 0) {
             results.reserve(count);
+            // Multi-entry (MEST) leaves return the same id once per
+            // overlapping per-segment box. Emit each row exactly once;
+            // duplicates would otherwise surface as duplicate rows in the
+            // index scan. Harmless no-op for single-box indexes.
+            unordered_set<row_t> seen;
+            seen.reserve(count);
             for (int i = 0; i < count; i++) {
                 int *id = static_cast<int *>(meos_array_get(ids, i));
-                results.push_back(static_cast<row_t>(*id));
+                row_t rid = static_cast<row_t>(*id);
+                if (seen.insert(rid).second) {
+                    results.push_back(rid);
+                }
             }
         }
     } catch (...) {
