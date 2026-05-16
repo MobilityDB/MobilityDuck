@@ -1,0 +1,285 @@
+# name: test/sql/parity/050_index_types.test
+# description: TRTREE index parity — coverage of every column type the index
+#              supports: STBOX, TBOX, the 5 span types (intspan, bigintspan,
+#              floatspan, datespan, tstzspan) and the 8 temporal types
+#              (tint, tfloat, tbool, ttext, tgeompoint, tgeogpoint,
+#              tgeometry, tgeography).
+#
+#              Each block builds a TRTREE index over a small fixture and
+#              fires a query whose `&&` predicate must hit exactly one row.
+#              The index is therefore exercised end-to-end: CREATE INDEX
+#              builds it via the parallel construct path, and the optimizer
+#              rewrites the predicate into an index scan.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# Box types
+# =============================================================================
+
+statement ok
+CREATE TABLE idx_stbox(b stbox);
+
+statement ok
+INSERT INTO idx_stbox VALUES ('STBOX X((0,0),(3,3))'::stbox), ('STBOX X((10,10),(13,13))'::stbox);
+
+statement ok
+CREATE INDEX i_stbox ON idx_stbox USING TRTREE (b);
+
+query I
+SELECT count(*) FROM idx_stbox WHERE b && 'STBOX X((1,1),(2,2))'::stbox;
+----
+1
+
+statement ok
+CREATE TABLE idx_tbox(b tbox);
+
+statement ok
+INSERT INTO idx_tbox VALUES
+  ('TBOXFLOAT XT([0,3], [2000-01-01, 2000-01-03])'::tbox),
+  ('TBOXFLOAT XT([10,13], [2001-01-01, 2001-01-03])'::tbox);
+
+statement ok
+CREATE INDEX i_tbox ON idx_tbox USING TRTREE (b);
+
+query I
+SELECT count(*) FROM idx_tbox WHERE b && 'TBOXFLOAT XT([1,2], [2000-01-02, 2000-01-02])'::tbox;
+----
+1
+
+# =============================================================================
+# Span types
+# =============================================================================
+
+statement ok
+CREATE TABLE idx_intspan(s intspan);
+
+statement ok
+INSERT INTO idx_intspan VALUES ('[1,5]'::intspan), ('[10,15]'::intspan);
+
+statement ok
+CREATE INDEX i_intspan ON idx_intspan USING TRTREE (s);
+
+query I
+SELECT count(*) FROM idx_intspan WHERE s && '[2,3]'::intspan;
+----
+1
+
+statement ok
+CREATE TABLE idx_bigintspan(s bigintspan);
+
+statement ok
+INSERT INTO idx_bigintspan VALUES ('[1,5]'::bigintspan), ('[10,15]'::bigintspan);
+
+statement ok
+CREATE INDEX i_bigintspan ON idx_bigintspan USING TRTREE (s);
+
+query I
+SELECT count(*) FROM idx_bigintspan WHERE s && '[2,3]'::bigintspan;
+----
+1
+
+statement ok
+CREATE TABLE idx_floatspan(s floatspan);
+
+statement ok
+INSERT INTO idx_floatspan VALUES ('[1.0,5.0]'::floatspan), ('[10.0,15.0]'::floatspan);
+
+statement ok
+CREATE INDEX i_floatspan ON idx_floatspan USING TRTREE (s);
+
+query I
+SELECT count(*) FROM idx_floatspan WHERE s && '[2.0,3.0]'::floatspan;
+----
+1
+
+statement ok
+CREATE TABLE idx_datespan(s datespan);
+
+statement ok
+INSERT INTO idx_datespan VALUES
+  ('[2000-01-01, 2000-01-05]'::datespan),
+  ('[2001-01-01, 2001-01-05]'::datespan);
+
+statement ok
+CREATE INDEX i_datespan ON idx_datespan USING TRTREE (s);
+
+query I
+SELECT count(*) FROM idx_datespan WHERE s && '[2000-01-02, 2000-01-03]'::datespan;
+----
+1
+
+statement ok
+CREATE TABLE idx_tstzspan(s tstzspan);
+
+statement ok
+INSERT INTO idx_tstzspan VALUES
+  ('[2000-01-01, 2000-01-05]'::tstzspan),
+  ('[2001-01-01, 2001-01-05]'::tstzspan);
+
+statement ok
+CREATE INDEX i_tstzspan ON idx_tstzspan USING TRTREE (s);
+
+query I
+SELECT count(*) FROM idx_tstzspan WHERE s && '[2000-01-02, 2000-01-03]'::tstzspan;
+----
+1
+
+# =============================================================================
+# Temporal numeric / non-spatial types
+# =============================================================================
+
+statement ok
+CREATE TABLE idx_tint(t tint);
+
+statement ok
+INSERT INTO idx_tint VALUES ('1@2000-01-01'::tint), ('5@2001-01-01'::tint);
+
+statement ok
+CREATE INDEX i_tint ON idx_tint USING TRTREE (t);
+
+query I
+SELECT count(*) FROM idx_tint
+  WHERE t && 'TBOXINT XT([0,2], [2000-01-01, 2000-01-02])'::tbox;
+----
+1
+
+statement ok
+CREATE TABLE idx_tfloat(t tfloat);
+
+statement ok
+INSERT INTO idx_tfloat VALUES ('1.0@2000-01-01'::tfloat), ('5.0@2001-01-01'::tfloat);
+
+statement ok
+CREATE INDEX i_tfloat ON idx_tfloat USING TRTREE (t);
+
+query I
+SELECT count(*) FROM idx_tfloat
+  WHERE t && 'TBOXFLOAT XT([0,2], [2000-01-01, 2000-01-02])'::tbox;
+----
+1
+
+statement ok
+CREATE TABLE idx_tbool(t tbool);
+
+statement ok
+INSERT INTO idx_tbool VALUES ('true@2000-01-01'::tbool), ('false@2001-01-01'::tbool);
+
+statement ok
+CREATE INDEX i_tbool ON idx_tbool USING TRTREE (t);
+
+query I
+SELECT count(*) FROM idx_tbool WHERE t && '[2000-01-01, 2000-01-02]'::tstzspan;
+----
+1
+
+statement ok
+CREATE TABLE idx_ttext(t ttext);
+
+statement ok
+INSERT INTO idx_ttext VALUES ('"a"@2000-01-01'::ttext), ('"b"@2001-01-01'::ttext);
+
+statement ok
+CREATE INDEX i_ttext ON idx_ttext USING TRTREE (t);
+
+query I
+SELECT count(*) FROM idx_ttext WHERE t && '[2000-01-01, 2000-01-02]'::tstzspan;
+----
+1
+
+# =============================================================================
+# Temporal-spatial types — Cartesian
+# =============================================================================
+
+statement ok
+CREATE TABLE idx_tgeompoint(t tgeompoint);
+
+statement ok
+INSERT INTO idx_tgeompoint VALUES
+  ('Point(0 0)@2000-01-01'::tgeompoint),
+  ('Point(10 10)@2001-01-01'::tgeompoint);
+
+statement ok
+CREATE INDEX i_tgeompoint ON idx_tgeompoint USING TRTREE (t);
+
+query I
+SELECT count(*) FROM idx_tgeompoint
+  WHERE t && 'STBOX XT(((-1,-1),(1,1)),[2000-01-01, 2000-01-02])'::stbox;
+----
+1
+
+statement ok
+CREATE TABLE idx_tgeometry(t tgeometry);
+
+statement ok
+INSERT INTO idx_tgeometry VALUES
+  ('Point(0 0)@2000-01-01'::tgeometry),
+  ('Point(10 10)@2001-01-01'::tgeometry);
+
+statement ok
+CREATE INDEX i_tgeometry ON idx_tgeometry USING TRTREE (t);
+
+query I
+SELECT count(*) FROM idx_tgeometry
+  WHERE t && 'STBOX XT(((-1,-1),(1,1)),[2000-01-01, 2000-01-02])'::stbox;
+----
+1
+
+# =============================================================================
+# Temporal-spatial types — geographic (SRID 4326 by default)
+# =============================================================================
+
+statement ok
+CREATE TABLE idx_tgeogpoint(t tgeogpoint);
+
+statement ok
+INSERT INTO idx_tgeogpoint VALUES
+  ('Point(0 0)@2000-01-01'::tgeogpoint),
+  ('Point(10 10)@2001-01-01'::tgeogpoint);
+
+statement ok
+CREATE INDEX i_tgeogpoint ON idx_tgeogpoint USING TRTREE (t);
+
+query I
+SELECT count(*) FROM idx_tgeogpoint
+  WHERE t && 'GEODSTBOX XT(((-1,-1),(1,1)),[2000-01-01, 2000-01-02])'::stbox;
+----
+1
+
+statement ok
+CREATE TABLE idx_tgeography(t tgeography);
+
+statement ok
+INSERT INTO idx_tgeography VALUES
+  ('Point(0 0)@2000-01-01'::tgeography),
+  ('Point(10 10)@2001-01-01'::tgeography);
+
+statement ok
+CREATE INDEX i_tgeography ON idx_tgeography USING TRTREE (t);
+
+query I
+SELECT count(*) FROM idx_tgeography
+  WHERE t && 'GEODSTBOX XT(((-1,-1),(1,1)),[2000-01-01, 2000-01-02])'::stbox;
+----
+1
+
+# =============================================================================
+# Unsupported column type — regression for the original report.
+#
+# TRTREE over a non-bbox, non-temporal column used to throw a DuckDB
+# InternalException, which the engine renders as the generic
+# "assertion failure within DuckDB" crash message. It must now surface
+# as a clean Binder Error instead.
+# =============================================================================
+
+statement ok
+CREATE TABLE idx_unsupported(x integer);
+
+statement ok
+INSERT INTO idx_unsupported VALUES (1), (2);
+
+statement error
+CREATE INDEX i_unsupported ON idx_unsupported USING TRTREE (x);
+----
+TRTREE index supports

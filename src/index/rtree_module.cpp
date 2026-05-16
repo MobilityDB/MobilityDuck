@@ -27,6 +27,13 @@
 #include "duckdb/optimizer/matcher/expression_matcher.hpp"
 #include "index/rtree_module.hpp"
 #include "geo/stbox.hpp"
+#include "geo/tgeompoint.hpp"
+#include "geo/tgeometry.hpp"
+#include "geo/tgeography.hpp"
+#include "geo/tgeogpoint.hpp"
+#include "temporal/span.hpp"
+#include "temporal/tbox.hpp"
+#include "temporal/temporal.hpp"
 #include "index/rtree_index_create_physical.hpp"
 #include "time_util.hpp"
 
@@ -48,17 +55,67 @@ TRTreeIndex::TRTreeIndex(const string &name, IndexConstraintType constraint_type
     
     
     auto &type = unbound_expressions[0]->return_type;
-    
+    column_type_ = type;
+
+    // The R-tree's bbox flavour is determined by the indexed column's type.
+    // Span / box types are stored directly (`rtree_insert` with the raw
+    // bytes); temporal types are bbox-extracted at insert time (spatial
+    // temporals via tspatial_to_stbox, the rest via rtree_insert_temporal).
     if (type == StboxType::STBOX()) {
         bbox_meostype = T_STBOX;
         bbox_size_ = sizeof(STBox);
         rtree_ = rtree_create_stbox();
+    } else if (type == TboxType::TBOX()) {
+        bbox_meostype = T_TBOX;
+        bbox_size_ = sizeof(TBox);
+        rtree_ = rtree_create_tbox();
     } else if (type == SpanTypes::TSTZSPAN()) {
         bbox_meostype = T_TSTZSPAN;
-        bbox_size_ = sizeof(Span);  
+        bbox_size_ = sizeof(Span);
         rtree_ = rtree_create_tstzspan();
+    } else if (type == SpanTypes::INTSPAN()) {
+        bbox_meostype = T_INTSPAN;
+        bbox_size_ = sizeof(Span);
+        rtree_ = rtree_create_intspan();
+    } else if (type == SpanTypes::BIGINTSPAN()) {
+        bbox_meostype = T_BIGINTSPAN;
+        bbox_size_ = sizeof(Span);
+        rtree_ = rtree_create_bigintspan();
+    } else if (type == SpanTypes::FLOATSPAN()) {
+        bbox_meostype = T_FLOATSPAN;
+        bbox_size_ = sizeof(Span);
+        rtree_ = rtree_create_floatspan();
+    } else if (type == SpanTypes::DATESPAN()) {
+        bbox_meostype = T_DATESPAN;
+        bbox_size_ = sizeof(Span);
+        rtree_ = rtree_create_datespan();
+    } else if (type == TemporalTypes::TINT() || type == TemporalTypes::TFLOAT()) {
+        // Temporal numbers: bbox is a tbox.
+        bbox_meostype = T_TBOX;
+        bbox_size_ = sizeof(TBox);
+        rtree_ = rtree_create_tbox();
+    } else if (type == TemporalTypes::TBOOL() || type == TemporalTypes::TTEXT()) {
+        // Non-numeric, non-spatial temporals: bbox is the time span only.
+        bbox_meostype = T_TSTZSPAN;
+        bbox_size_ = sizeof(Span);
+        rtree_ = rtree_create_tstzspan();
+    } else if (type == TgeompointType::TGEOMPOINT() ||
+               type == TGeometryTypes::TGEOMETRY() ||
+               type == TGeographyTypes::TGEOGRAPHY() ||
+               type == TGeogpointType::TGEOGPOINT()) {
+        // Temporal-spatial types: bbox is an stbox.
+        bbox_meostype = T_STBOX;
+        bbox_size_ = sizeof(STBox);
+        rtree_ = rtree_create_stbox();
     } else {
-        throw InternalException("RTree index only supports STBOX and TSTZSPAN types, got: " + type.ToString());
+        // Unsupported indexed column type. This is user input, not an
+        // internal invariant, so raise a clean BinderException rather than
+        // an InternalException (which DuckDB renders as the generic
+        // "assertion failure within DuckDB" crash message).
+        throw BinderException(
+            "TRTREE index supports stbox, tbox, the 5 span types, and the "
+            "temporal types (tint, tfloat, tbool, ttext, tgeompoint, "
+            "tgeogpoint, tgeometry, tgeography). Got: " + type.ToString());
     }
     
     if (!rtree_) {
@@ -103,23 +160,22 @@ PhysicalOperator &TRTreeIndex::CreatePlan(PlanIndexInput &input) {
         select_list.push_back(std::move(expression));
     }
     
-    // new_column_types.emplace_back(LogicalType::ROW_TYPE);
-    // select_list.push_back(
-    //     make_uniq<BoundReferenceExpression>(LogicalType::ROW_TYPE, create_index.info->scan_types.size() - 1));
+    LogicalType row_type = LogicalType::ROW_TYPE;
+    new_column_types.push_back(row_type);
+    select_list.push_back(
+        make_uniq<BoundReferenceExpression>(row_type, create_index.info->scan_types.size() - 1));
 
-    auto &projection = planner.Make<PhysicalProjection>(new_column_types, std::move(select_list), 
+    auto &projection = planner.Make<PhysicalProjection>(new_column_types, std::move(select_list),
                                                        create_index.estimated_cardinality);
     projection.children.push_back(input.table_scan);
 
-
     auto &physical_create_index = planner.Make<PhysicalCreateTRTreeIndex>(
-        create_index.types, create_index.table, create_index.info->column_ids, 
-        std::move(create_index.info), std::move(create_index.unbound_expressions), 
+        create_index.types, create_index.table, create_index.info->column_ids,
+        std::move(create_index.info), std::move(create_index.unbound_expressions),
         create_index.estimated_cardinality);
-    
+
     physical_create_index.children.push_back(projection);
     return physical_create_index;
-    return input.table_scan;
 }
 
 //------------------------------------------------------------------------------
@@ -224,58 +280,88 @@ void TRTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifier
     if (vector.GetVectorType() != VectorType::FLAT_VECTOR) {
         vector.Flatten(expression_result.size());
     }
-    
-    auto vector_type = vector.GetType();
-    
 
-    void* boxes = malloc(bbox_size_ * expression_result.size());
-    
+    // True if the indexed column holds a Temporal value (the bbox is
+    // derived per-row at insert time). False if the column already holds a
+    // span / tbox / stbox blob whose bytes are the bbox itself.
+    const bool indexes_temporal =
+        column_type_ == TemporalTypes::TINT() ||
+        column_type_ == TemporalTypes::TFLOAT() ||
+        column_type_ == TemporalTypes::TBOOL() ||
+        column_type_ == TemporalTypes::TTEXT() ||
+        column_type_ == TgeompointType::TGEOMPOINT() ||
+        column_type_ == TGeometryTypes::TGEOMETRY() ||
+        column_type_ == TGeographyTypes::TGEOGRAPHY() ||
+        column_type_ == TGeogpointType::TGEOGPOINT();
+
+    void *boxes = indexes_temporal ? nullptr
+                                   : malloc(bbox_size_ * expression_result.size());
+
     for (idx_t i = 0; i < expression_result.size(); i++) {
         if (FlatVector::IsNull(vector, i)) {
-            continue; 
+            continue;
         }
 
-        void *box = nullptr;
-        
-        if (vector_type.id() == LogicalTypeId::BLOB) {
-            auto blob_data = FlatVector::GetData<string_t>(vector)[i];
-            const uint8_t *data = reinterpret_cast<const uint8_t*>(blob_data.GetData());
-            size_t data_size = blob_data.GetSize();
-            
-           
-            if (data_size != bbox_size_) {
-                continue;
-            }
-                        
-            box = malloc(data_size);
-            memcpy(box, data, data_size);
+        if (vector.GetType().id() != LogicalTypeId::BLOB) {
+            continue;
+        }
 
+        auto blob_data = FlatVector::GetData<string_t>(vector)[i];
+        const uint8_t *data = reinterpret_cast<const uint8_t *>(blob_data.GetData());
+        size_t data_size = blob_data.GetSize();
+
+        if (indexes_temporal) {
+            const Temporal *temp = reinterpret_cast<const Temporal *>(data);
+            // For temporal-spatial types extract the bbox and strip the
+            // SRID so index keys agree with the SRID-stripped query box
+            // used at search time (InitializeScan strips it too).
             if (bbox_meostype == T_STBOX) {
-                STBox *stbox = (STBox*)box;
-                int32_t box_srid = stbox_srid(stbox);
-                if (box_srid != 0) {
-                    STBox *normalized_box = stbox_set_srid(stbox, 0);
-                    if (normalized_box) {
+                STBox *box = tspatial_to_stbox(temp);
+                if (!box) {
+                    continue;
+                }
+                if (stbox_srid(box) != 0) {
+                    STBox *normalized = stbox_set_srid(box, 0);
+                    if (normalized) {
                         free(box);
-                        box = normalized_box;
+                        box = normalized;
                     }
                 }
+                rtree_insert(rtree_, box, static_cast<int>(row_data[i]));
+                free(box);
+            } else {
+                rtree_insert_temporal(rtree_, temp, static_cast<int>(row_data[i]));
             }
-        } else { 
             continue;
         }
 
-        if (box == nullptr) {
+        // Box / span blob: the bytes ARE the bbox.
+        if (data_size != bbox_size_) {
             continue;
         }
-        
-        void* target = (char*)boxes + (i * bbox_size_);
+
+        void *box = malloc(data_size);
+        memcpy(box, data, data_size);
+
+        if (bbox_meostype == T_STBOX) {
+            STBox *stbox = (STBox *) box;
+            int32_t box_srid = stbox_srid(stbox);
+            if (box_srid != 0) {
+                STBox *normalized_box = stbox_set_srid(stbox, 0);
+                if (normalized_box) {
+                    free(box);
+                    box = normalized_box;
+                }
+            }
+        }
+
+        void *target = (char *) boxes + (i * bbox_size_);
         memcpy(target, box, bbox_size_);
-        rtree_insert(rtree_, target, static_cast<int64_t>(row_data[i]));
+        rtree_insert(rtree_, target, static_cast<int>(row_data[i]));
         free(box);
     }
-    
-    free(boxes);
+
+    if (boxes) free(boxes);
 }
 
 
@@ -474,21 +560,15 @@ unique_ptr<ExpressionMatcher> TRTreeIndex::MakeFunctionMatcher() const {
     matcher->expr_type = make_uniq<SpecificExpressionTypeMatcher>(ExpressionType::BOUND_FUNCTION);
     matcher->policy = SetMatcher::Policy::UNORDERED;
 
-    LogicalType index_type;
-    if (bbox_meostype == T_STBOX) {
-        index_type = StboxType::STBOX();
-    } else if (bbox_meostype == T_TSTZSPAN) {
-        index_type = SpanTypes::TSTZSPAN();
-    } else {
-        index_type = LogicalType::BLOB;
-    }
-
-    // Left operand
+    // The left operand is the indexed column, so the matcher must accept
+    // the column's actual type, not the bbox type. A tgeompoint column
+    // with an R-tree over its bbox still appears as tgeompoint in the
+    // predicate AST.
     auto lhs_matcher = make_uniq<ExpressionMatcher>();
-    lhs_matcher->type = make_uniq<SpecificTypeMatcher>(index_type); 
+    lhs_matcher->type = make_uniq<SpecificTypeMatcher>(column_type_);
     matcher->matchers.push_back(std::move(lhs_matcher));
 
-    // Right operand
+    // Right operand: any type (constant bbox, span, or temporal expr).
     auto rhs_matcher = make_uniq<ExpressionMatcher>();
     matcher->matchers.push_back(std::move(rhs_matcher));
 
