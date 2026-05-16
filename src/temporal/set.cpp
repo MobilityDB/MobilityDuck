@@ -945,6 +945,14 @@ static inline Set *date_to_set_duckdb(DateADT d) {
     return date_to_set(ToMeosDate(duckdb::date_t(d)));
 }
 
+// macOS LP64: int64 (long) and int64_t (long long) are the same width but
+// distinct types, so clang rejects passing bigint_to_set where a
+// Set *(*)(int64_t) is expected as a non-type template arg. The cast is a
+// no-op on Linux. See SetUnionScalarFunction<int64_t, ...> below.
+static inline Set *bigint_to_set_duckdb(int64_t i) {
+    return bigint_to_set(static_cast<int64>(i));
+}
+
 struct SetPtrState {
     Set *accumulated;
 };
@@ -1069,7 +1077,7 @@ void SetTypes::RegisterSetUnionAgg(ExtensionLoader &loader) {
             LogicalType::INTEGER, SetTypes::intset()));
     set_union_set.AddFunction(
         AggregateFunction::UnaryAggregateDestructor<SetPtrState, int64_t, string_t,
-            SetUnionScalarFunction<int64_t, bigint_to_set>>(
+            SetUnionScalarFunction<int64_t, bigint_to_set_duckdb>>(
             LogicalType::BIGINT, SetTypes::bigintset()));
     set_union_set.AddFunction(
         AggregateFunction::UnaryAggregateDestructor<SetPtrState, double, string_t,
