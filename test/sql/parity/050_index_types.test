@@ -360,3 +360,72 @@ query I
 SELECT count(*) FROM idx_mest WHERE t && 'STBOX X((999,999),(1002,1002))'::stbox;
 ----
 1
+
+# =============================================================================
+# Spatial-relationship predicate pushdown (supportfn-equivalent).
+#
+# A predicate like eIntersects(trip, <const geometry>) is lossy: its bbox
+# is only a superset of the true answer. The optimizer rewrites the scan to
+# probe the TRTREE with the synthesized bbox &&, and the original predicate
+# is rechecked exactly above the scan. The decisive regression is that the
+# index must NOT leak a row whose bbox overlaps the query geometry but which
+# does not actually intersect it (a missing recheck would return 2, not 1).
+# =============================================================================
+
+statement ok
+CREATE TABLE idx_srel(t tgeompoint);
+
+# A: an L-shaped path. Its bbox X[0,10] Y[0,10] overlaps the query polygon
+#    P = Polygon((4 4,6 4,6 6,4 6,4 4)), but the path runs along y=0 then
+#    x=10 and never enters P  -> bbox-overlap false positive.
+# B: a vertical path through x=5 that crosses P                -> true match.
+# C: a far-away path, bbox-disjoint from P                     -> true miss.
+statement ok
+INSERT INTO idx_srel VALUES
+  ('[Point(0 0)@2000-01-01, Point(10 0)@2000-01-02, Point(10 10)@2000-01-03]'::tgeompoint),
+  ('[Point(5 0)@2000-01-01, Point(5 10)@2000-01-02]'::tgeompoint),
+  ('[Point(100 100)@2000-01-01, Point(101 101)@2000-01-02]'::tgeompoint);
+
+# Ground truth without an index: only B intersects P.
+query I
+SELECT count(*) FROM idx_srel
+  WHERE eIntersects(t, geometry 'Polygon((4 4, 6 4, 6 6, 4 6, 4 4))');
+----
+1
+
+query I
+SELECT count(*) FROM idx_srel
+  WHERE NOT eIntersects(t, geometry 'Polygon((4 4, 6 4, 6 6, 4 6, 4 4))');
+----
+2
+
+statement ok
+CREATE INDEX i_srel ON idx_srel USING TRTREE (t);
+
+# Same answer with the index: the bbox-overlap bait A is dropped by the
+# exact recheck. A regression to a missing recheck would return 2.
+query I
+SELECT count(*) FROM idx_srel
+  WHERE eIntersects(t, geometry 'Polygon((4 4, 6 4, 6 6, 4 6, 4 4))');
+----
+1
+
+# A polygon whose bbox is disjoint from every row: clean true negative.
+query I
+SELECT count(*) FROM idx_srel
+  WHERE eIntersects(t, geometry 'Polygon((50 50, 51 50, 51 51, 50 51, 50 50))');
+----
+0
+
+statement ok
+DROP INDEX i_srel;
+
+# Same soundness under MEST multi-entry indexing.
+statement ok
+CREATE INDEX i_srel ON idx_srel USING TRTREE (t) WITH (max_boxes = 8);
+
+query I
+SELECT count(*) FROM idx_srel
+  WHERE eIntersects(t, geometry 'Polygon((4 4, 6 4, 6 6, 4 6, 4 4))');
+----
+1
