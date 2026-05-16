@@ -321,25 +321,16 @@ void TRTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifier
             const Temporal *temp = reinterpret_cast<const Temporal *>(data);
             const int id = static_cast<int>(row_data[i]);
             // Multi-entry (MEST): index the temporal as up to max_boxes_
-            // tight per-segment bounding boxes sharing this id. The
-            // splitter degenerates to a single minimum bounding box when
-            // max_boxes_ <= 1 or the value is an instant, byte-identical
-            // to the pre-MEST single-box path.
-            if (bbox_meostype == T_STBOX) {
-                // Temporal-spatial: SRID-normalise to 0 before splitting so
-                // every produced stbox carries SRID 0, matching the
-                // SRID-stripped query box (InitializeScan strips it too).
-                // ensure_same_srid would otherwise reject the overlap.
-                Temporal *temp0 = tspatial_set_srid(temp, 0);
-                if (!temp0) {
-                    continue;
-                }
-                rtree_insert_temporal_split(rtree_, temp0, id, max_boxes_);
-                free(temp0);
-            } else {
-                // tbox / tstzspan bbox: no SRID, split directly.
-                rtree_insert_temporal_split(rtree_, temp, id, max_boxes_);
-            }
+            // tight per-segment bounding boxes sharing this id; the
+            // splitter degenerates to a single minimum bounding box for
+            // instants or max_boxes_ <= 1, byte-identical to the pre-MEST
+            // single-box path. The produced boxes carry the temporal's
+            // own SRID, exactly like rtree_insert_temporal /
+            // tspatial_to_stbox. Do NOT pre-normalise the SRID:
+            // tspatial_set_srid(temp, 0) makes the SRID "unknown" and the
+            // stbox conversion inside the splitter then raises
+            // "The SRID cannot be unknown" at index-build time.
+            rtree_insert_temporal_split(rtree_, temp, id, max_boxes_);
             continue;
         }
 
