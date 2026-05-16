@@ -288,8 +288,8 @@ void TGeographyTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
 
 
 void TGeographyTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    loader.RegisterCastFunction( LogicalType::VARCHAR, TGeographyTypes::TGEOGRAPHY(), TgeographyFunctions::StringToTgeography);
-    loader.RegisterCastFunction( TGeographyTypes::TGEOGRAPHY(), LogicalType::VARCHAR, TgeographyFunctions::TgeographyToString);
+    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, TGeographyTypes::TGEOGRAPHY(), TgeographyFunctions::StringToTgeography);
+    RegisterMeosCastFunction(loader, TGeographyTypes::TGEOGRAPHY(), LogicalType::VARCHAR, TgeographyFunctions::TgeographyToString);
 }
 
 }

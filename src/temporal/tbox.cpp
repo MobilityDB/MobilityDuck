@@ -27,103 +27,103 @@ void TboxType::RegisterType(ExtensionLoader &loader) {
 }
 
 void TboxType::RegisterCastFunctions(ExtensionLoader &loader) {
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         LogicalType::VARCHAR,
         TBOX(),
         TboxFunctions::Tbox_in
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         TBOX(),
         LogicalType::VARCHAR,
         TboxFunctions::Tbox_out
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         LogicalType::INTEGER,
         TBOX(),
         TboxFunctions::Number_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         LogicalType::DOUBLE,
         TBOX(),
         TboxFunctions::Number_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         LogicalType::TIMESTAMP_TZ,
         TBOX(),
         TboxFunctions::Timestamptz_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         SetTypes::intset(),
         TBOX(),
         TboxFunctions::Set_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         SetTypes::floatset(),
         TBOX(),
         TboxFunctions::Set_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         SetTypes::tstzset(),
         TBOX(),
         TboxFunctions::Set_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         SpanTypes::INTSPAN(),
         TBOX(),
         TboxFunctions::Span_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         SpanTypes::FLOATSPAN(),
         TBOX(),
         TboxFunctions::Span_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         SpanTypes::TSTZSPAN(),
         TBOX(),
         TboxFunctions::Span_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         TBOX(),
         SpanTypes::INTSPAN(),
         TboxFunctions::Tbox_to_intspan_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         TBOX(),
         SpanTypes::FLOATSPAN(),
         TboxFunctions::Tbox_to_floatspan_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         TBOX(),
         SpanTypes::TSTZSPAN(),
         TboxFunctions::Tbox_to_tstzspan_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         SpansetTypes::intspanset(),
         TBOX(),
         TboxFunctions::Spanset_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         SpansetTypes::floatspanset(),
         TBOX(),
         TboxFunctions::Spanset_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         SpansetTypes::tstzspanset(),
         TBOX(),
         TboxFunctions::Spanset_to_tbox_cast

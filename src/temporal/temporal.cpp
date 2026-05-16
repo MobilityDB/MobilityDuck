@@ -69,13 +69,13 @@ LogicalType TemporalTypes::GetBaseTypeFromAlias(const char *alias) {
 
 void TemporalTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     for (auto &type : TemporalTypes::AllTypes()) {
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader,
             LogicalType::VARCHAR,
             type,
             TemporalFunctions::Temporal_in
         );
 
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader,
             type,
             LogicalType::VARCHAR,
             TemporalFunctions::Temporal_out
@@ -90,37 +90,37 @@ void TemporalTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     //     );
     // }
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         LogicalType::BLOB,
         SpansetTypes::tstzspanset(),
         TemporalFunctions::Blob_to_tstzspanset
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         TemporalTypes::TBOOL(),
         TemporalTypes::TINT(),
         TemporalFunctions::Tbool_to_tint_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         TemporalTypes::TINT(),
         TemporalTypes::TFLOAT(),
         TemporalFunctions::Tint_to_tfloat_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         TemporalTypes::TFLOAT(),
         TemporalTypes::TINT(),
         TemporalFunctions::Tfloat_to_tint_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         TemporalTypes::TINT(),
         TboxType::TBOX(),
         TemporalFunctions::Tnumber_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         TemporalTypes::TFLOAT(),
         TboxType::TBOX(),
         TemporalFunctions::Tnumber_to_tbox_cast

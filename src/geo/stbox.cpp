@@ -27,43 +27,43 @@ void StboxType::RegisterType(ExtensionLoader &loader) {
 }
 
 void StboxType::RegisterCastFunctions(ExtensionLoader &loader) {
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         LogicalType::VARCHAR,
         STBOX(),
         StboxFunctions::Stbox_in_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         STBOX(),
         LogicalType::VARCHAR,
         StboxFunctions::Stbox_out
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         GeoTypes::GEOMETRY(),
         STBOX(),
         StboxFunctions::Geo_to_stbox_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         LogicalType::TIMESTAMP_TZ,
         STBOX(),
         StboxFunctions::Timestamptz_to_stbox_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         SetTypes::tstzset(),
         STBOX(),
         StboxFunctions::Tstzset_to_stbox_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         SpanTypes::TSTZSPAN(),
         STBOX(),
         StboxFunctions::Tstzspan_to_stbox_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         SpansetTypes::tstzspanset(),
         STBOX(),
         StboxFunctions::Tstzspanset_to_stbox_cast

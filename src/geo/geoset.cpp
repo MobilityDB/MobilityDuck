@@ -36,12 +36,12 @@ void SpatialSetType::RegisterTypes(ExtensionLoader &loader){
 }
 
 void SpatialSetType::RegisterCastFunctions(ExtensionLoader &loader) {        
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         LogicalType::VARCHAR, 
         SpatialSetType::geomset(),                                    
         SpatialSetFunctions::Text_to_geoset   
     );     
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader,
         LogicalType::VARCHAR, 
         SpatialSetType::geogset(),                                    
         SpatialSetFunctions::Text_to_geoset   
