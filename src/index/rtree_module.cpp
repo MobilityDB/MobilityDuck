@@ -229,16 +229,11 @@ ErrorData TRTreeIndex::Insert(IndexLock &lock, DataChunk &data, Vector &row_ids)
             box = (STBox*)malloc(stbox_size);
             
             memcpy(box, stbox_data, stbox_size);
-            
-            int32_t box_srid = stbox_srid(box);
-            if (box_srid != 0) {
-                STBox *normalized_box = stbox_set_srid(box, 0);
-                if (normalized_box) {
-                    free(box);
-                    box = normalized_box;
-                }
-            }
-        } 
+            // No SRID normalisation: index keys keep their natural SRID
+            // and && requires matching SRID, mirroring MobilityDB/PostGIS
+            // GiST. Normalising here but not at search time (or vice
+            // versa) makes ensure_same_srid reject every overlap.
+        }
         else { 
             continue;
         }
@@ -341,18 +336,9 @@ void TRTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifier
 
         void *box = malloc(data_size);
         memcpy(box, data, data_size);
-
-        if (bbox_meostype == T_STBOX) {
-            STBox *stbox = (STBox *) box;
-            int32_t box_srid = stbox_srid(stbox);
-            if (box_srid != 0) {
-                STBox *normalized_box = stbox_set_srid(stbox, 0);
-                if (normalized_box) {
-                    free(box);
-                    box = normalized_box;
-                }
-            }
-        }
+        // No SRID normalisation (see Construct/InitializeScan): keep the
+        // natural SRID so index keys and the query box agree; && requires
+        // matching SRID, mirroring MobilityDB/PostGIS GiST.
 
         void *target = (char *) boxes + (i * bbox_size_);
         memcpy(target, box, bbox_size_);
@@ -416,21 +402,10 @@ unique_ptr<IndexScanState> TRTreeIndex::InitializeScan(const void* query_blob, s
         
         state->query_box = malloc(blob_size);
         memcpy(state->query_box, data, blob_size);
+        // No SRID normalisation: the query box keeps its natural SRID so
+        // it matches the index keys (which also keep theirs); && requires
+        // matching SRID, mirroring MobilityDB/PostGIS GiST.
 
-        if (bbox_meostype == T_STBOX) {
-            STBox *stbox = (STBox*)state->query_box;
-            int32_t query_srid = stbox_srid(stbox);
-            if (query_srid != 0) {
-                STBox *normalized_query = stbox_set_srid(stbox, 0);
-                if (normalized_query) {
-                    free(state->query_box);
-                    state->query_box = malloc(blob_size);
-                    memcpy(state->query_box, normalized_query, blob_size);
-                    free(normalized_query);
-                }
-            }
-        }
-        
     } else {
         throw InvalidInputException("Unsupported R-Tree operation: " + operation + 
                                   " for bbox_type: " + std::to_string(bbox_meostype));
