@@ -86,6 +86,7 @@ private:
 
     MeosType bbox_meostype;
     size_t bbox_size_;
+    LogicalType column_type_;
 
     size_t current_size_ = 0;
     size_t current_capacity_ = 0;
