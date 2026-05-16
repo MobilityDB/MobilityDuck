@@ -21,6 +21,13 @@ vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}"
     OPTIONS
         -DMEOS=ON
+        # Opt-in MEOS modules required to port the extended temporal types
+        # (tcbuffer, tnpoint, tpose, trgeometry) into MobilityDuck. RGEO is a
+        # dependent option that requires POSE.
+        -DCBUFFER=ON
+        -DNPOINT=ON
+        -DPOSE=ON
+        -DRGEO=ON
         -DBUILD_SHARED_LIBS=ON
         -DCMAKE_C_FLAGS="-Dsession_timezone=meos_session_timezone"
         -DCMAKE_CXX_FLAGS="-Dsession_timezone=meos_session_timezone"
