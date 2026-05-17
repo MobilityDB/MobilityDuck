@@ -203,7 +203,7 @@ inline void Tpose_sequence_from_tstzspan(DataChunk &args, ExpressionState &state
     }
 }
 
-TInstant **temparr_extract_np(Vector &tpose_arr_vec, list_entry_t list_entry, int *count) {
+TInstant **temparr_extract_ps(Vector &tpose_arr_vec, list_entry_t list_entry, int *count) {
     auto &child_vector = ListVector::GetEntry(tpose_arr_vec);
     auto list_size = list_entry.length;
     auto list_offset = list_entry.offset;
@@ -345,7 +345,7 @@ inline void Tpose_sequence_constructor(DataChunk &args, ExpressionState &state, 
 
             // Extract array elements
             int element_count;
-            TInstant **instants = temparr_extract_np(tpose_arr_vec, list_entry, &element_count);
+            TInstant **instants = temparr_extract_ps(tpose_arr_vec, list_entry, &element_count);
 
             if (!instants || element_count == 0) {
                 result_validity.SetInvalid(i);
