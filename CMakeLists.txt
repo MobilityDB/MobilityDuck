@@ -93,6 +93,8 @@ set(EXTENSION_SOURCES
     src/geo/tnpoint_in_out.cpp
     src/geo/tpose.cpp
     src/geo/tpose_in_out.cpp
+    src/geo/trgeo.cpp
+    src/geo/trgeo_in_out.cpp
     src/geo/tgeogpoint.cpp
     src/geo/tgeogpoint_in_out.cpp
     src/geo/tgeogpoint_ops.cpp
