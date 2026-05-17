@@ -57,7 +57,8 @@ include_directories(duckdb-spatial/src/spatial)
 
 set(EXTENSION_SOURCES
     src/spatial_ref_sys_csv.inc
-    src/mobilityduck_extension.cpp        
+    src/ways_csv.inc
+    src/mobilityduck_extension.cpp
     src/temporal/temporal.cpp
     src/temporal/temporal_functions.cpp
     src/temporal/temporal_aggregates.cpp
@@ -88,6 +89,8 @@ set(EXTENSION_SOURCES
     src/geo/tgeography_ops.cpp
     src/geo/tcbuffer.cpp
     src/geo/tcbuffer_in_out.cpp
+    src/geo/tnpoint.cpp
+    src/geo/tnpoint_in_out.cpp
     src/geo/tgeogpoint.cpp
     src/geo/tgeogpoint_in_out.cpp
     src/geo/tgeogpoint_ops.cpp

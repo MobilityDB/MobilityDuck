@@ -1,13 +1,24 @@
-# TEMPORARY PROVISIONAL PIN. The core tcbuffer port is a clean clone that
-# binds the tcbuffer MF-JSON I/O (tcbufferFromMFJSON). That MEOS surface
-# only exists on MobilityDB PR #1051 (feat/tcbuffer-mfjson), not yet on
-# MobilityDB/MobilityDB master, so the pin points at that PR's head commit
-# on the contributor fork. This is provisional pending the #134 -> #145
-# MobilityDuck chain plus PR #1051 merging into MobilityDB master.
+# TEMPORARY PROVISIONAL PIN. The core tcbuffer and tnpoint ports are
+# clean clones that bind the per-type MF-JSON I/O: tcbufferFromMFJSON
+# needs the tcbuffer MF-JSON support from MobilityDB PR #1051
+# (feat/tcbuffer-mfjson), and tnpointFromMFJSON needs the network-point
+# MF-JSON support from MobilityDB PR #951 (split/tnpoint-mfjson-io,
+# wired through the generic temporal_from_mfjson dispatch). Neither is
+# on MobilityDB/MobilityDB master yet, so the pin points at an
+# integration branch on the contributor fork that composes both PRs on
+# top of MobilityDB master: estebanzimanyi/MobilityDB
+# meos-mduck-ports-tcbuffer-tnpoint = cherry-pick #1051
+# (e624027f5b59f483476c8e5c26471f9e252a5e61) then #951
+# (800f80bfdc8dc4ce86516aacb85e48131bcf7454); the two only collide in
+# disjoint #if CBUFFER vs #if NPOINT blocks of type_in.c / type_out.c
+# and were union-merged with no logic change. This is provisional
+# pending the #134 -> #145 MobilityDuck chain plus PRs #1051 and #951
+# merging into MobilityDB master.
 #
-# Flip-to-merged-master recipe (apply once #1051 is merged AND #145 has
-# landed): set REPO back to MobilityDB/MobilityDB, set REF to the merged
-# master commit that includes the tcbuffer MF-JSON change, and recompute
+# Flip-to-merged-master recipe (apply once #1051 AND #951 are merged AND
+# #145 has landed): set REPO back to MobilityDB/MobilityDB, set REF to
+# the merged master commit that includes both MF-JSON changes, and
+# recompute
 #   curl -sL https://github.com/MobilityDB/MobilityDB/archive/<sha>.tar.gz | sha512sum
 # for SHA512. Then delete this comment block. The OPTIONS below (the #145
 # CBUFFER/NPOINT/POSE/RGEO enablers) are unchanged by this pin and compose
@@ -15,8 +26,8 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO estebanzimanyi/MobilityDB
-    REF e624027f5b59f483476c8e5c26471f9e252a5e61
-    SHA512 6c1d82b7a3ca8c121ecf0766609ff71c38f678dd18a116591d9e4d295eec3f12b6d338321a460dd046c9e3805311137a22a427f1fe4dee75b4e5c0bd6a822ea7
+    REF 1a4f498b1689fdcbe77ae0bbaf8b53df1eb59554
+    SHA512 da7c32c8f02b684dd8f68315ad1d128a59aa2027deae971b6fe94cba2de9303ca53b30676c98ba4e48a6721ab181007ce58ca4263ce2037554f171af6eca2f7a
 )
 
 vcpkg_replace_string(

@@ -16,6 +16,7 @@
 #include "geo/tgeography.hpp"
 #include "geo/tgeography_ops.hpp"
 #include "geo/tcbuffer.hpp"
+#include "geo/tnpoint.hpp"
 #include "geo/tgeogpoint.hpp"
 #include "geo/tgeogpoint_ops.hpp"
 #include "temporal/span.hpp"
@@ -62,6 +63,12 @@ extern "C" {
 
 namespace duckdb {
 #include "spatial_ref_sys_csv.inc"
+// The tnpoint network model resolves route geometries from a ways CSV
+// file. MEOS hardcodes its path (/usr/local/share/ways1000.csv) and,
+// unlike the spatial_ref_sys CSV, exposes no setter to redirect it. The
+// canonical ways1000.csv is embedded here and materialized at that path
+// on load so temporal network points work without an external dataset.
+#include "ways_csv.inc"
 
 // =====================================================================
 // 2. Utility: version scalar functions
@@ -166,6 +173,31 @@ static std::string EnsureEmbeddedSridCsvOnDisk() {
     return path;
 }
 
+// MEOS reads the ways CSV from a hardcoded path with no setter, so the
+// embedded copy must be materialized at exactly that path. Best-effort:
+// if the file is already present or the path is not writable (e.g. a
+// read-only /usr/local/share), leave it untouched — route-bearing
+// tnpoint operations then degrade to a clear MEOS "cannot open the ways
+// CSV file" error rather than crashing the process.
+static const char *const MDUCK_WAYS_CSV_PATH = "/usr/local/share/ways1000.csv";
+
+static void EnsureEmbeddedWaysCsvOnDisk() {
+    static std::once_flag once;
+    std::call_once(once, [] {
+        if (file_exists(MDUCK_WAYS_CSV_PATH)) {
+            return;
+        }
+        std::ofstream out(MDUCK_WAYS_CSV_PATH, std::ios::binary);
+        if (!out) {
+            return;
+        }
+        out.write(
+            reinterpret_cast<const char *>(ways1000_csv),
+            static_cast<std::streamsize>(ways1000_csv_len)
+        );
+    });
+}
+
 // Configure MEOS exactly once with a CSV path
 static void ConfigureMeosSridCsvOnce() {
     static std::once_flag once;
@@ -212,6 +244,10 @@ extern "C" void MobilityduckMeosErrorHandler(int errlevel, int errcode, const ch
 static void LoadInternal(ExtensionLoader &loader) {
 	// Configure MEOS SRID CSV once (env / embedded)
 	ConfigureMeosSridCsvOnce();
+
+	// Materialize the embedded ways CSV at the MEOS-hardcoded path so the
+	// tnpoint network model can resolve route geometries.
+	EnsureEmbeddedWaysCsvOnDisk();
 
 	// Initialize MEOS once and install our error handler so MEOS errors
 	// become DuckDB exceptions instead of exit()ing the process.
@@ -317,6 +353,11 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TCBufferTypes::RegisterTypes(loader);
 	TCBufferTypes::RegisterCastFunctions(loader);
 	TCBufferTypes::RegisterScalarInOutFunctions(loader);
+
+	TNpointTypes::RegisterScalarFunctions(loader);
+	TNpointTypes::RegisterTypes(loader);
+	TNpointTypes::RegisterCastFunctions(loader);
+	TNpointTypes::RegisterScalarInOutFunctions(loader);
 
 	TGeogpointType::RegisterScalarFunctions(loader);
 	TGeogpointType::RegisterCastFunctions(loader);
