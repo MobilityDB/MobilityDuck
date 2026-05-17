@@ -20,7 +20,17 @@ extern "C" {
     #include <meos_geo.h>
     #include <meos_internal.h>
     #include <meos_internal_geo.h>
-    #include <meos_rgeo.h>
+    // meos_rgeo.h is deliberately NOT included: it is the only extended
+    // module header that declares an Interval-typed prototype
+    // (trgeo_append_tinstant), and at this namespace scope the MEOS
+    // `typedef struct Interval Interval` (from meos.h) collides with
+    // `duckdb::Interval` (from tydef.hpp), making the reference
+    // ambiguous. This port only needs four trgeo symbols, declared
+    // locally as extern prototypes instead.
+    extern char *trgeo_out(const Temporal *temp);
+    extern GSERIALIZED *trgeo_geom(const Temporal *temp);
+    extern GSERIALIZED *trgeo_start_value(const Temporal *temp);
+    extern GSERIALIZED *trgeo_end_value(const Temporal *temp);
     // The temporal rigid geometry text/EWKT parser. trgeo_in and
     // trgeo_from_mfjson are MEOS inline (#if MEOS) wrappers with no
     // linkable symbol and are not declared in the installed

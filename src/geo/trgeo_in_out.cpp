@@ -11,7 +11,11 @@ extern "C" {
     #include <meos_geo.h>
     #include <meos_internal.h>
     #include <meos_internal_geo.h>
-    #include <meos_rgeo.h>
+    // meos_rgeo.h is deliberately NOT included: its Interval-typed
+    // trgeo_append_tinstant prototype makes `Interval` ambiguous against
+    // duckdb::Interval at this namespace scope (see geo/trgeo.cpp). Only
+    // trgeo_out is needed here; declared locally.
+    extern char *trgeo_out(const Temporal *temp);
     // See geo/trgeo.cpp: trgeo_in is a MEOS inline (#if MEOS) wrapper
     // with no linkable symbol and is not declared in the installed
     // meos_rgeo.h. This port routes text/EWKT input through the
