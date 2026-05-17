@@ -17,6 +17,7 @@
 #include "geo/tgeography_ops.hpp"
 #include "geo/tcbuffer.hpp"
 #include "geo/tnpoint.hpp"
+#include "geo/tpose.hpp"
 #include "geo/tgeogpoint.hpp"
 #include "geo/tgeogpoint_ops.hpp"
 #include "temporal/span.hpp"
@@ -358,6 +359,11 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TNpointTypes::RegisterTypes(loader);
 	TNpointTypes::RegisterCastFunctions(loader);
 	TNpointTypes::RegisterScalarInOutFunctions(loader);
+
+	TPoseTypes::RegisterScalarFunctions(loader);
+	TPoseTypes::RegisterTypes(loader);
+	TPoseTypes::RegisterCastFunctions(loader);
+	TPoseTypes::RegisterScalarInOutFunctions(loader);
 
 	TGeogpointType::RegisterScalarFunctions(loader);
 	TGeogpointType::RegisterCastFunctions(loader);

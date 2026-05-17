@@ -1,0 +1,203 @@
+# name: test/sql/tpose.test
+# description: Core tpose type port — construction, text/EWKT/MFJSON I/O
+#              and basic accessors. The tpose value is a Pose (a 2D point
+#              plus a rotation angle; 3D adds a quaternion).
+# group: [sql]
+
+require mobilityduck
+
+# Test tpose constructor with parentheses
+query I
+SELECT asText(tpose('Pose(Point(1 1), 0.5)@2000-01-01'));
+----
+Pose(POINT(1 1),0.5)@2000-01-01 00:00:00+01
+
+# Test tpose constructor without parentheses
+query I
+SELECT asText(tpose 'Pose(Point(1 1), 0.5)@2000-01-01');
+----
+Pose(POINT(1 1),0.5)@2000-01-01 00:00:00+01
+
+# Test asText with continuous sequence
+query I
+SELECT asText(tpose '[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02, Pose(Point(1 1), 0.5)@2000-01-03]');
+----
+[Pose(POINT(1 1),0.2)@2000-01-01 00:00:00+01, Pose(POINT(1 1),0.4)@2000-01-02 00:00:00+01, Pose(POINT(1 1),0.5)@2000-01-03 00:00:00+01]
+
+# Test asText with discrete sequence
+query I
+SELECT asText(tpose '{Pose(Point(1 1), 0.3)@2000-01-01, Pose(Point(1 1), 0.5)@2000-01-02}');
+----
+{Pose(POINT(1 1),0.3)@2000-01-01 00:00:00+01, Pose(POINT(1 1),0.5)@2000-01-02 00:00:00+01}
+
+# Test asEWKT is non-null
+query I
+SELECT asEWKT(tpose 'Pose(Point(1 1), 0.5)@2000-01-01') IS NOT NULL;
+----
+true
+
+# Test value-and-timestamp constructor round-trips
+query I
+SELECT tpose('Pose(Point(1 1), 0.5)', timestamptz '2012-01-01 08:00:00')
+     = tpose 'Pose(Point(1 1), 0.5)@2012-01-01 08:00:00';
+----
+true
+
+# Test value-and-tstzspan constructor produces a 2-instant sequence
+query I
+SELECT numInstants(tpose('Pose(Point(1 1), 0.5)', tstzspan '[2001-01-01, 2001-01-02]'));
+----
+2
+
+# Test value-and-tstzspan constructor with linear interpolation
+query I
+SELECT interp(tpose('Pose(Point(1 1), 0.5)', tstzspan '[2001-01-01, 2001-01-02]', 'linear'));
+----
+Linear
+
+# Test MFJSON input via the FromMFJSON constructor reconstructs the value
+# (the canonical MEOS schema: typestring MovingPose, value object with a
+# {lat,lon} position and a rotation for the 2D case).
+query I
+SELECT asText(tposeFromMFJSON('{"type":"MovingPose","values":[{"position":{"lat":1,"lon":1},"rotation":0.5}],"datetimes":["2000-01-01T00:00:00+01"],"interpolation":"None"}'))
+     = asText(tpose 'Pose(Point(1 1), 0.5)@2000-01-01');
+----
+true
+
+# Test asMFJSON / FromMFJSON round-trip is identity (format-agnostic)
+query I
+SELECT asText(tposeFromMFJSON(asMFJSON(tpose 'Pose(Point(1 1), 0.5)@2000-01-01')))
+     = asText(tpose 'Pose(Point(1 1), 0.5)@2000-01-01');
+----
+true
+
+# Test MFJSON round-trip for a continuous sequence
+query I
+SELECT asText(tposeFromMFJSON(asMFJSON(
+         tpose '[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02, Pose(Point(1 1), 0.5)@2000-01-03]')))
+     = asText(tpose '[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02, Pose(Point(1 1), 0.5)@2000-01-03]');
+----
+true
+
+# Test tposeFromText constructor
+query I
+SELECT asText(tposeFromText('Pose(Point(1 1), 0.5)@2000-01-01')) IS NOT NULL;
+----
+true
+
+# Test binary round-trip is identity
+query I
+SELECT asText(tposeFromBinary(asBinary(tpose 'Pose(Point(1 1), 0.5)@2000-01-01')))
+     = asText(tpose 'Pose(Point(1 1), 0.5)@2000-01-01');
+----
+true
+
+# Test timeSpan function
+query I
+SELECT timeSpan(tpose '[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-03]');
+----
+[2000-01-01 00:00:00+01, 2000-01-03 00:00:00+01]
+
+# Test setInterp with discrete interpolation
+query I
+SELECT tempSubtype(setInterp(tpose '[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02]', 'discrete'));
+----
+Sequence
+
+# Test merge function
+query I
+SELECT numInstants(merge(
+  tpose '[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.3)@2000-01-02]',
+  tpose '[Pose(Point(1 1), 0.3)@2000-01-02, Pose(Point(1 1), 0.5)@2000-01-03]'));
+----
+3
+
+# Test tempSubtype with instant
+query I
+SELECT tempSubtype(tpose 'Pose(Point(1 1), 0.5)@2000-01-01');
+----
+Instant
+
+# Test tempSubtype with discrete sequence
+query I
+SELECT tempSubtype(tpose '{Pose(Point(1 1), 0.3)@2000-01-01, Pose(Point(1 1), 0.5)@2000-01-02}');
+----
+Sequence
+
+# Test tempSubtype with continuous sequence
+query I
+SELECT tempSubtype(tpose '[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02]');
+----
+Sequence
+
+# Test tempSubtype with sequence set
+query I
+SELECT tempSubtype(tpose '{[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02], [Pose(Point(2 2), 0.6)@2000-01-04, Pose(Point(2 2), 0.6)@2000-01-05]}');
+----
+SequenceSet
+
+# Test memSize is positive
+query I
+SELECT memSize(tpose 'Pose(Point(1 1), 0.5)@2000-01-01') > 0;
+----
+true
+
+# Test interp accessor
+query I
+SELECT interp(tpose '[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02]');
+----
+Linear
+
+# Test getValue returns the pose value text
+query I
+SELECT getValue(tpose 'Pose(Point(1 1), 0.5)@2000-01-01');
+----
+Pose(POINT(1 1),0.5)
+
+# Test startValue
+query I
+SELECT startValue(tpose '[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02]');
+----
+Pose(POINT(1 1),0.2)
+
+# Test endValue
+query I
+SELECT endValue(tpose '[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02]');
+----
+Pose(POINT(1 1),0.4)
+
+# Test startInstant
+query I
+SELECT asText(startInstant(tpose '[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02]'));
+----
+Pose(POINT(1 1),0.2)@2000-01-01 00:00:00+01
+
+# Test endInstant
+query I
+SELECT asText(endInstant(tpose '[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02]'));
+----
+Pose(POINT(1 1),0.4)@2000-01-02 00:00:00+01
+
+# Test instantN
+query I
+SELECT asText(instantN(tpose '[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02]', 1));
+----
+Pose(POINT(1 1),0.2)@2000-01-01 00:00:00+01
+
+# Test getTimestamp function
+query I
+SELECT getTimestamp(tpose 'Pose(Point(1 1), 0.5)@2023-01-01 10:00:00+00');
+----
+2023-01-01 11:00:00+01
+
+# Test numInstants generic accessor
+query I
+SELECT numInstants(tpose '[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02, Pose(Point(1 1), 0.5)@2000-01-03]');
+----
+3
+
+# Test duration generic accessor
+query I
+SELECT duration(tpose '[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-03]');
+----
+2 days

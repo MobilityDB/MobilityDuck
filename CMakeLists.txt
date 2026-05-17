@@ -91,6 +91,8 @@ set(EXTENSION_SOURCES
     src/geo/tcbuffer_in_out.cpp
     src/geo/tnpoint.cpp
     src/geo/tnpoint_in_out.cpp
+    src/geo/tpose.cpp
+    src/geo/tpose_in_out.cpp
     src/geo/tgeogpoint.cpp
     src/geo/tgeogpoint_in_out.cpp
     src/geo/tgeogpoint_ops.cpp
