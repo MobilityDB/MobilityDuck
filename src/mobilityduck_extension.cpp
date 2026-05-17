@@ -15,6 +15,7 @@
 #include "geo/tgeometry_ops.hpp"
 #include "geo/tgeography.hpp"
 #include "geo/tgeography_ops.hpp"
+#include "geo/tcbuffer.hpp"
 #include "geo/tgeogpoint.hpp"
 #include "geo/tgeogpoint_ops.hpp"
 #include "temporal/span.hpp"
@@ -311,6 +312,11 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TGeographyTypes::RegisterCastFunctions(loader);
 	TGeographyTypes::RegisterScalarInOutFunctions(loader);
 	TGeographyOps::RegisterScalarFunctions(loader);
+
+	TCBufferTypes::RegisterScalarFunctions(loader);
+	TCBufferTypes::RegisterTypes(loader);
+	TCBufferTypes::RegisterCastFunctions(loader);
+	TCBufferTypes::RegisterScalarInOutFunctions(loader);
 
 	TGeogpointType::RegisterScalarFunctions(loader);
 	TGeogpointType::RegisterCastFunctions(loader);

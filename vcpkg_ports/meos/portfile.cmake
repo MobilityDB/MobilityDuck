@@ -1,8 +1,22 @@
+# TEMPORARY PROVISIONAL PIN. The core tcbuffer port is a clean clone that
+# binds the tcbuffer MF-JSON I/O (tcbufferFromMFJSON). That MEOS surface
+# only exists on MobilityDB PR #1051 (feat/tcbuffer-mfjson), not yet on
+# MobilityDB/MobilityDB master, so the pin points at that PR's head commit
+# on the contributor fork. This is provisional pending the #134 -> #145
+# MobilityDuck chain plus PR #1051 merging into MobilityDB master.
+#
+# Flip-to-merged-master recipe (apply once #1051 is merged AND #145 has
+# landed): set REPO back to MobilityDB/MobilityDB, set REF to the merged
+# master commit that includes the tcbuffer MF-JSON change, and recompute
+#   curl -sL https://github.com/MobilityDB/MobilityDB/archive/<sha>.tar.gz | sha512sum
+# for SHA512. Then delete this comment block. The OPTIONS below (the #145
+# CBUFFER/NPOINT/POSE/RGEO enablers) are unchanged by this pin and compose
+# with any REPO/REF/SHA512.
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
-    REPO MobilityDB/MobilityDB
-    REF dd4ccd3c2812af88716a318764c837fa5354c5f4
-    SHA512 4e2e7077a5bd3bce0681047448352b3c6a784aad15e89f2a65feb01b71a6329ffc926079c6ae2dccb8510b797d92b2c4c6a9e0e89ecf737997eabe1880e22a14
+    REPO estebanzimanyi/MobilityDB
+    REF e624027f5b59f483476c8e5c26471f9e252a5e61
+    SHA512 6c1d82b7a3ca8c121ecf0766609ff71c38f678dd18a116591d9e4d295eec3f12b6d338321a460dd046c9e3805311137a22a427f1fe4dee75b4e5c0bd6a822ea7
 )
 
 vcpkg_replace_string(
