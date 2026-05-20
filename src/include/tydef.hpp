@@ -11,11 +11,27 @@ extern "C" {
     #include <meos_internal.h>
 }
 
-// Forward-compat alias for the meosType → MeosType rename (MobilityDB
-// pr785-sync-script).  Vcpkg's MEOS exposes `MeosType`; existing
-// MobilityDuck code still uses `meosType`.  This alias bridges the two
-// without touching every reference site.
-using meosType = MeosType;
+// MEOS naming history: `meosType` is the **pre-consolidation** spelling
+// and `MeosType` is the **post-consolidation** target (the rename is
+// part of the upstream consolidation sweep, not yet reached by the
+// vcpkg pin).  The current pin
+// (`vcpkg_ports/meos/portfile.cmake` REF f11b7443ee98…) is still
+// pre-consolidation and exposes `meosType` — see
+// meos/include/temporal/meos_catalog.h, where line 121 declares
+// `} meosType;`.  MobilityDuck's source consistently uses
+// `meosType` (verified via `grep -rn '\bmeosType\b' src/`), which
+// matches the pin, so no alias is needed today.
+//
+// An earlier version of this file added `using meosType = MeosType;`
+// as a forward-looking bridge for the eventual consolidation bump.
+// That alias references `MeosType`, which the current pin does NOT
+// yet expose, so it broke the build:
+//   "'MeosType' does not name a type; did you mean 'meosType'?".
+//
+// When the MEOS pin is bumped past the consolidation point, restore
+// a bridge here (`using meosType = MeosType;` becomes valid then) or
+// sweep the source `meosType → MeosType` in one PR — whichever the
+// project prefers at that time.
 
 namespace duckdb {
 
