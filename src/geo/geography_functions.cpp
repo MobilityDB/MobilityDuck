@@ -15,6 +15,8 @@
 #include "common.hpp"
 #include "geo/geography.hpp"
 #include "geo/geography_functions.hpp"
+#include "geo_util.hpp"
+#include "spatial/spatial_types.hpp"
 #include "tydef.hpp"
 
 #include "duckdb/common/types/blob.hpp"
@@ -173,6 +175,55 @@ void GeographyFunctions::ST_GeogFromBinary(DataChunk &args, ExpressionState &sta
     }
 }
 
+// ----- GEOMETRY <-> GEOGRAPHY casts --------------------------------------
+
+// GEOMETRY (sgl serde) -> GEOGRAPHY (raw GSERIALIZED, geodetic flag set).
+// `GeometryToGSerialized` parses the WKB the sgl serde emits via
+// `WKBWriter::Write`; SRID 0 lets the WKB header carry the SRID. The
+// geodetic flag is set explicitly on the resulting GSERIALIZED.
+bool GeographyFunctions::Geometry_to_geography_cast(Vector &source, Vector &result,
+                                                     idx_t count, CastParameters &) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        source, result, count,
+        [&](string_t geom_blob) -> string_t {
+            GSERIALIZED *gs = GeometryToGSerialized(geom_blob, /*srid=*/ 0);
+            MEOS_FLAGS_SET_GEODETIC(gs->gflags, true);
+            string_t blob = SerializeGserializedToBlob(gs, result);
+            free(gs);
+            return blob;
+        }
+    );
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+    return true;
+}
+
+// GEOGRAPHY (raw GSERIALIZED) -> GEOMETRY (sgl serde). The geodetic flag
+// is cleared so downstream GEOMETRY consumers see a flat geometry; SRID
+// is preserved (it lives in the GSERIALIZED header).
+bool GeographyFunctions::Geography_to_geometry_cast(Vector &source, Vector &result,
+                                                     idx_t count, CastParameters &) {
+    // A per-call arena is sufficient: each sgl serialization writes into
+    // a fresh DuckDB string_t via `StringVector::EmptyString`, the arena
+    // backs only the intermediate sgl geometry graph.
+    ArenaAllocator arena(Allocator::DefaultAllocator());
+    UnaryExecutor::Execute<string_t, string_t>(
+        source, result, count,
+        [&](string_t geog_blob) -> string_t {
+            GSERIALIZED *gs = DeserializeBlobToGserialized(geog_blob);
+            MEOS_FLAGS_SET_GEODETIC(gs->gflags, false);
+            string_t out = GSerializedToGeometry(gs, arena, result);
+            free(gs);
+            return out;
+        }
+    );
+    if (count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+    return true;
+}
+
 // ----- Registration ------------------------------------------------------
 
 void GeographyFunctions::RegisterScalarFunctions(ExtensionLoader &loader) {
@@ -196,6 +247,17 @@ void GeographyFunctions::RegisterScalarFunctions(ExtensionLoader &loader) {
                        {LogicalType::BLOB},
                        GeographyType::GEOGRAPHY(),
                        ST_GeogFromBinary));
+}
+
+void GeographyFunctions::RegisterCastFunctions(ExtensionLoader &loader) {
+    loader.RegisterCastFunction(
+        GeoTypes::GEOMETRY(),
+        GeographyType::GEOGRAPHY(),
+        Geometry_to_geography_cast);
+    loader.RegisterCastFunction(
+        GeographyType::GEOGRAPHY(),
+        GeoTypes::GEOMETRY(),
+        Geography_to_geometry_cast);
 }
 
 } // namespace duckdb

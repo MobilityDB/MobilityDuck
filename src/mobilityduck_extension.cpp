@@ -281,10 +281,11 @@ static void LoadInternal(ExtensionLoader &loader) {
 	StboxType::RegisterScalarFunctions(loader);
 
 	// `GEOGRAPHY` LogicalType + I/O UDFs (ST_GeogFromText / ST_AsText /
-	// ST_AsBinary / ST_GeogFromBinary).  Casts and operations land in
-	// follow-up PRs.  See `doc/geography-boundary.md`.
+	// ST_AsBinary / ST_GeogFromBinary) + GEOMETRY <-> GEOGRAPHY casts.
+	// Operations land in a follow-up PR.  See `doc/geography-boundary.md`.
 	GeographyType::RegisterType(loader);
 	GeographyFunctions::RegisterScalarFunctions(loader);
+	GeographyFunctions::RegisterCastFunctions(loader);
 
 	SpanTypes::RegisterScalarFunctions(loader);
 	SpanTypes::RegisterTypes(loader);
