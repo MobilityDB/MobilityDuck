@@ -152,10 +152,19 @@ void SpanFunctions::Span_as_hexwkb(DataChunk &args, ExpressionState &state, Vect
             Span *s = reinterpret_cast<Span *>(copy);
             size_t hex_size = 0;
             char *hex = span_as_hexwkb(s, WKB_EXTENDED, &hex_size);
-            (void)hex_size;
             free(copy);
             if (!hex) throw InternalException("asHexWKB: span_as_hexwkb failed");
-            string_t stored = StringVector::AddString(result, hex);
+            // Diagnostic: hex strings must be even-length. See
+            // src/geo/tgeompoint.cpp TgeoAsHexWkbExec for context.
+            size_t actual = strlen(hex);
+            if (actual % 2 != 0) {
+                std::string diag = "asHexWKB: span_as_hexwkb produced odd-length string: "
+                                   "strlen=" + std::to_string(actual) +
+                                   " sz=" + std::to_string(hex_size);
+                free(hex);
+                throw InternalException(diag);
+            }
+            string_t stored = StringVector::AddString(result, hex, actual);
             free(hex);
             return stored;
         });

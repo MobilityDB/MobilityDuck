@@ -1933,10 +1933,25 @@ void TgeoAsHexWkbExec(DataChunk &args, ExpressionState &state, Vector &result, u
             Temporal *t = BlobToTemp(input);
             size_t sz = 0;
             char *hex = temporal_as_hexwkb(t, variant, &sz);
-            (void) sz;
             free(t);
             if (!hex) throw InternalException("temporal_as_hexwkb returned null");
-            string_t stored = StringVector::AddString(result, hex);
+            // Diagnostic: hex strings must be even-length (2 chars / byte).
+            // The macOS-arm64 CI on PRs #126/#130 has been failing with
+            // "Invalid hex string, length (69)" from DuckDB's decoder, which
+            // implies the producer is occasionally emitting odd-length output
+            // on that platform. Report both `strlen` and `sz` so the next
+            // failure pinpoints whether MEOS itself produced the odd length
+            // or whether something downstream truncates at an embedded null.
+            size_t actual = strlen(hex);
+            if (actual % 2 != 0) {
+                std::string diag = "temporal_as_hexwkb produced odd-length string: "
+                                   "strlen=" + std::to_string(actual) +
+                                   " sz=" + std::to_string(sz) +
+                                   " variant=" + std::to_string((int) variant);
+                free(hex);
+                throw InternalException(diag);
+            }
+            string_t stored = StringVector::AddString(result, hex, actual);
             free(hex);
             return stored;
         });
