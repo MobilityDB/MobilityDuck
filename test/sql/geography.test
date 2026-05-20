@@ -1,0 +1,21 @@
+# Sanity test for the GEOGRAPHY LogicalType registration.  The full I/O
+# surface (ST_GeogFromText, ST_AsText, ST_AsBinary, ST_GeogFromBinary) and
+# the cast matrix (GEOMETRY <-> GEOGRAPHY, GEOGRAPHY <-> TGEOGPOINT) land in
+# follow-up PRs.  This file verifies only that the type alias is registered
+# and parses as a column type.
+
+require mobilityduck
+
+statement ok
+CREATE TABLE geography_sanity (g GEOGRAPHY);
+
+statement ok
+INSERT INTO geography_sanity VALUES (NULL);
+
+query I
+SELECT g FROM geography_sanity;
+----
+NULL
+
+statement ok
+DROP TABLE geography_sanity;
