@@ -121,12 +121,21 @@ void SetFunctions::Set_as_hexwkb(DataChunk &args, ExpressionState &state, Vector
             Set *s = reinterpret_cast<Set *>(data_copy);
             size_t hex_size = 0;
             char *hex = set_as_hexwkb(s, WKB_EXTENDED, &hex_size);
-            (void)hex_size;
             free(data_copy);
             if (!hex) {
                 throw InternalException("asHexWKB: set_as_hexwkb failed");
             }
-            string_t stored = StringVector::AddString(result, hex);
+            // Diagnostic: hex strings must be even-length. See
+            // src/geo/tgeompoint.cpp TgeoAsHexWkbExec for context.
+            size_t actual = strlen(hex);
+            if (actual % 2 != 0) {
+                std::string diag = "asHexWKB: set_as_hexwkb produced odd-length string: "
+                                   "strlen=" + std::to_string(actual) +
+                                   " sz=" + std::to_string(hex_size);
+                free(hex);
+                throw InternalException(diag);
+            }
+            string_t stored = StringVector::AddString(result, hex, actual);
             free(hex);
             return stored;
         }

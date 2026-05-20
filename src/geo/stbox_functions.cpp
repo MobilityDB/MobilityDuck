@@ -310,8 +310,18 @@ void StboxFunctions::Stbox_as_hexwkb(DataChunk &args, ExpressionState &state, Ve
                 throw InternalException("Failure in Stbox_as_hexwkb: unable to cast stbox to hexwkb");
                 return string_t();
             }
-            string_t ret_str(wkb);
-            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            // Diagnostic: hex strings must be even-length. See
+            // src/geo/tgeompoint.cpp TgeoAsHexWkbExec for context.
+            size_t actual = strlen(wkb);
+            if (actual % 2 != 0) {
+                std::string diag = "Stbox_as_hexwkb produced odd-length string: "
+                                   "strlen=" + std::to_string(actual) +
+                                   " sz=" + std::to_string(wkb_size);
+                free(wkb);
+                free(stbox);
+                throw InternalException(diag);
+            }
+            string_t stored_data = StringVector::AddStringOrBlob(result, wkb, actual);
             free(wkb);
             free(stbox);
             return stored_data;
