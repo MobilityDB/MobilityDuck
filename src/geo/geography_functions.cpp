@@ -15,6 +15,7 @@
 #include "common.hpp"
 #include "geo/geography.hpp"
 #include "geo/geography_functions.hpp"
+#include "geo/tgeogpoint.hpp"
 #include "geo_util.hpp"
 #include "spatial/spatial_types.hpp"
 #include "tydef.hpp"
@@ -224,6 +225,75 @@ bool GeographyFunctions::Geography_to_geometry_cast(Vector &source, Vector &resu
     return true;
 }
 
+// ----- Scalar operations -------------------------------------------------
+
+// Read a Temporal* from the binary input vector (mirrors the existing
+// pattern in tgeogpoint_functions.cpp). The caller owns the returned
+// pointer.
+static Temporal *DeserializeBlobToTemporal(string_t input) {
+    size_t data_size = input.GetSize();
+    uint8_t *buf = static_cast<uint8_t *>(malloc(data_size));
+    if (!buf) {
+        throw InternalException("GeographyFunctions: failed to allocate %zu bytes for Temporal", data_size);
+    }
+    std::memcpy(buf, input.GetData(), data_size);
+    return reinterpret_cast<Temporal *>(buf);
+}
+
+void GeographyFunctions::ST_Length(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, double>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> double {
+            GSERIALIZED *gs = DeserializeBlobToGserialized(input);
+            // use_spheroid=true: WGS84 ellipsoidal geodesics, matching the
+            // MEOS-on-Postgres default for the geography flavour.
+            double length = geog_length(gs, /*use_spheroid=*/ true);
+            free(gs);
+            return length;
+        }
+    );
+}
+
+void GeographyFunctions::ST_Area(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, double>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> double {
+            GSERIALIZED *gs = DeserializeBlobToGserialized(input);
+            double area = geog_area(gs, /*use_spheroid=*/ true);
+            free(gs);
+            return area;
+        }
+    );
+}
+
+void GeographyFunctions::EIntersects_tgeo_geog(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t temp_blob, string_t geog_blob) -> bool {
+            Temporal *temp = DeserializeBlobToTemporal(temp_blob);
+            GSERIALIZED *gs = DeserializeBlobToGserialized(geog_blob);
+            int r = eintersects_tgeo_geo(temp, gs);
+            free(gs);
+            free(temp);
+            return r == 1;
+        }
+    );
+}
+
+void GeographyFunctions::NAD_tgeo_geog(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t temp_blob, string_t geog_blob) -> double {
+            Temporal *temp = DeserializeBlobToTemporal(temp_blob);
+            GSERIALIZED *gs = DeserializeBlobToGserialized(geog_blob);
+            double d = nad_tgeo_geo(temp, gs);
+            free(gs);
+            free(temp);
+            return d;
+        }
+    );
+}
+
 // ----- Registration ------------------------------------------------------
 
 void GeographyFunctions::RegisterScalarFunctions(ExtensionLoader &loader) {
@@ -247,6 +317,26 @@ void GeographyFunctions::RegisterScalarFunctions(ExtensionLoader &loader) {
                        {LogicalType::BLOB},
                        GeographyType::GEOGRAPHY(),
                        ST_GeogFromBinary));
+    loader.RegisterFunction(
+        ScalarFunction("ST_Length",
+                       {GeographyType::GEOGRAPHY()},
+                       LogicalType::DOUBLE,
+                       ST_Length));
+    loader.RegisterFunction(
+        ScalarFunction("ST_Area",
+                       {GeographyType::GEOGRAPHY()},
+                       LogicalType::DOUBLE,
+                       ST_Area));
+    loader.RegisterFunction(
+        ScalarFunction("eIntersects",
+                       {TGeogpointType::TGEOGPOINT(), GeographyType::GEOGRAPHY()},
+                       LogicalType::BOOLEAN,
+                       EIntersects_tgeo_geog));
+    loader.RegisterFunction(
+        ScalarFunction("nearestApproachDistance",
+                       {TGeogpointType::TGEOGPOINT(), GeographyType::GEOGRAPHY()},
+                       LogicalType::DOUBLE,
+                       NAD_tgeo_geog));
 }
 
 void GeographyFunctions::RegisterCastFunctions(ExtensionLoader &loader) {

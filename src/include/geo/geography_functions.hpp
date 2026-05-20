@@ -47,6 +47,20 @@ struct GeographyFunctions {
     static bool Geography_to_geometry_cast(Vector &source, Vector &result,
                                            idx_t count, CastParameters &parameters);
 
+    // Scalar geodetic operations — all thin shims over MEOS exports.
+
+    // GEOGRAPHY -> DOUBLE: MEOS `geog_length(gs, use_spheroid=true)`.
+    static void ST_Length(DataChunk &args, ExpressionState &state, Vector &result);
+
+    // GEOGRAPHY -> DOUBLE: MEOS `geog_area(gs, use_spheroid=true)`.
+    static void ST_Area(DataChunk &args, ExpressionState &state, Vector &result);
+
+    // (TGEOGPOINT, GEOGRAPHY) -> BOOLEAN: MEOS `eintersects_tgeo_geo`.
+    static void EIntersects_tgeo_geog(DataChunk &args, ExpressionState &state, Vector &result);
+
+    // (TGEOGPOINT, GEOGRAPHY) -> DOUBLE: MEOS `nad_tgeo_geo`.
+    static void NAD_tgeo_geog(DataChunk &args, ExpressionState &state, Vector &result);
+
     static void RegisterScalarFunctions(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
 };
