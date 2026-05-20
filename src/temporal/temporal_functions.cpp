@@ -6105,8 +6105,20 @@ void TemporalFunctions::Temporal_as_hexwkb(DataChunk &args, ExpressionState &sta
                 free(temp);
                 throw InternalException("[Temporal_as_hexwkb] temporal_as_hexwkb returned NULL");
             }
-            std::string ret(hex);
-            string_t stored = StringVector::AddStringOrBlob(result, ret);
+            // Diagnostic: hex strings must be even-length (2 chars / byte).
+            // See tgeompoint.cpp TgeoAsHexWkbExec for context on the
+            // macOS-arm64 "Invalid hex string, length (69)" failure.
+            size_t actual = strlen(hex);
+            if (actual % 2 != 0) {
+                std::string diag = "[Temporal_as_hexwkb] odd-length string: "
+                                   "strlen=" + std::to_string(actual) +
+                                   " sz=" + std::to_string(hex_size) +
+                                   " variant=" + std::to_string((int) variant);
+                free(hex);
+                free(temp);
+                throw InternalException(diag);
+            }
+            string_t stored = StringVector::AddStringOrBlob(result, hex, actual);
 
             free(hex);
             free(temp);
