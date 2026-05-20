@@ -94,6 +94,7 @@ set(EXTENSION_SOURCES
     src/index/rtree_index_create_physical.cpp
     src/index/rtree_index_scan.cpp
     src/index/rtree_optimize_scan.cpp
+    src/temporal/temporal_parquet.cpp
 )
 
 build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})

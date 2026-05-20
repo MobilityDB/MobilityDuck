@@ -30,6 +30,7 @@
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include "index/rtree_module.hpp"
 #include "single_tile_getters.hpp"
+#include "temporal/temporal_parquet.hpp"
 
 #include <mutex>
 #include <fstream>
@@ -337,6 +338,9 @@ static void LoadInternal(ExtensionLoader &loader) {
 	// Single-tile getters depend on TBOX, STBOX, and the spatial GEOMETRY
 	// type being registered first.
 	SingleTileGetters::RegisterScalarFunctions(loader);
+
+	// TemporalParquet footer helper for COPY ... TO '*.parquet' KV_METADATA.
+	TemporalParquetFunctions::Register(loader);
 }
 
 void MobilityduckExtension::Load(ExtensionLoader &loader) {
