@@ -43,7 +43,10 @@ struct SpansetFunctions{
     static void Floatspanset_to_intspanset(DataChunk &args, ExpressionState &state, Vector &result);
     static void Datespanset_to_tstzspanset(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tstzspanset_to_datespanset(DataChunk &args, ExpressionState &state, Vector &result);
-    // TODO: Multirange functions
+    // No Multirange functions: PostgreSQL's `MULTIRANGE` has no DuckDB
+    // analogue.  In MEOS's closed algebra `SPANSET` is the canonical
+    // multi-interval type; the `multirange_to_spanset` convertor lives
+    // only in the MobilityDB PG extension (PG↔MEOS boundary), not here.
 
     // Accessor functions
     static void Spanset_mem_size(DataChunk &args, ExpressionState &state, Vector &result);

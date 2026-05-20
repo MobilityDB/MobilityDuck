@@ -25,8 +25,11 @@ struct SpanFunctions {
     static bool Datespan_to_tstzspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Tstzspan_to_datespan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Set_to_span_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    // TODO (Type Range): static bool Range_to_span_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    // TODO (Type Range): static bool Span_to_range_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    // No Range_to_span_cast / Span_to_range_cast: PostgreSQL's `RANGE`
+    // type has no DuckDB analogue.  In MEOS's closed algebra `SPAN` is
+    // the canonical interval type; the `range_to_span` / `span_to_range`
+    // convertors live only in the MobilityDB PG extension (PG↔MEOS
+    // boundary layer), not in any other binding.
     // scalar functions
     static void Span_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void Span_as_binary(DataChunk &args, ExpressionState &state, Vector &result);
@@ -44,8 +47,8 @@ struct SpanFunctions {
     static void Set_spans(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_split_n_spans(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_split_each_n_spans(DataChunk &args, ExpressionState &state, Vector &result);
-    // TODO (Type Range): static void Range_to_span(DataChunk &args, ExpressionState &state, Vector &result);
-    // TODO (Type Range): static void Span_to_range(DataChunk &args, ExpressionState &state, Vector &result);
+    // No Range_to_span / Span_to_range: see the cast section above —
+    // RANGE is PG-specific; convertors live in the MobilityDB PG extension.
         // accessors
     static void Span_lower(DataChunk &args, ExpressionState &state, Vector &result);
     static void Span_upper(DataChunk &args, ExpressionState &state, Vector &result);
