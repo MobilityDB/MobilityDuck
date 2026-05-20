@@ -81,7 +81,7 @@ inline void MobilityduckOpenSSLVersionScalarFun(DataChunk &args, ExpressionState
 // MEOS does not expose a runtime version symbol, so the build-time pin
 // is the most precise version stamp the extension can report.
 #ifndef MOBILITYDUCK_MEOS_PIN
-#define MOBILITYDUCK_MEOS_PIN "f11b7443e"
+#define MOBILITYDUCK_MEOS_PIN "80c24f46d (1.4-integration)"
 #endif
 
 inline std::string MobilityduckShortVersion() {
