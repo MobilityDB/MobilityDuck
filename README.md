@@ -21,6 +21,14 @@ MobilityDuck because of properties of DuckDB's parser, type system, or
 extension model. These cases — and the named-function workarounds where one
 exists — are documented in [`docs/DuckDB-Parity-Gaps.md`](docs/DuckDB-Parity-Gaps.md).
 
+### For contributors and reviewers
+
+- Reviewing a pull request?  See the
+  [PR Reviewer Guide](doc/contributing/reviewer-guide.md) — tier ranking,
+  dependency chains and the standards checklist.  Reviewers landing in
+  any of the three platform repos (MobilityDB / MobilityDuck /
+  MobilitySpark) find the same canonical structure at the same path.
+
 ---
 ## 1. Requirements
 MobilityDuck needs some dependencies(including MEOS) which can be installed through VCPKG. Run the following to enable it: 
