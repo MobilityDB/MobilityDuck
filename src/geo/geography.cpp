@@ -5,7 +5,13 @@
 // Casts (GEOMETRY ⇄ GEOGRAPHY, GEOGRAPHY ⇄ TGEOGPOINT) and the I/O UDFs
 // (ST_GeogFromText, ST_AsText, ST_AsBinary, ST_GeogFromBinary) land in
 // follow-up PRs that build on this registration.
+//
+// Include order mirrors the existing static-type pattern (see stbox.cpp):
+// meos_wrapper_simple.hpp first so meos.h's Interval/Timestamp typedefs land
+// in C linkage before any DuckDB header pulls in the duckdb:: variants.
+#include "meos_wrapper_simple.hpp"
 
+#include "common.hpp"
 #include "geo/geography.hpp"
 
 #include "duckdb/common/types.hpp"
