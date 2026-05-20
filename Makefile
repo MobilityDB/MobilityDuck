@@ -11,9 +11,32 @@ include extension-ci-tools/makefiles/duckdb_extension.Makefile
 # both MEOS (meos_initialize_timezone) and DuckDB (DBConfig::SetOptionByName
 # "TimeZone") to Europe/Brussels.  Tests pass on any OS timezone — the
 # extension is the single source of truth, no TZ env var needed.
+#
+# LoadInternal also calls ExtensionHelper::AutoLoadExtension(db, "icu") so
+# the timezone option is honoured. Autoload looks for the extension on disk
+# at $HOME/.duckdb/extensions/<duckdb_version>/<platform>/icu.duckdb_extension
+# and falls back to a hub download. Inside the linux_amd64 test docker
+# container that path is empty and there is no network egress, so the
+# autoload fails. We copy the icu.duckdb_extension that was built locally
+# as part of this extension's build (declared in extension_config.cmake)
+# into the expected path before running the unittester.
+DUCKDB_VERSION_TAG := v1.4.4
+
+define stage_icu
+	@if [ -f ./build/$(1)/extension/icu/icu.duckdb_extension ]; then \
+	  platform=$$(uname -m | sed 's/x86_64/linux_amd64/;s/aarch64/linux_arm64/'); \
+	  target=$$HOME/.duckdb/extensions/$(DUCKDB_VERSION_TAG)/$$platform; \
+	  mkdir -p "$$target" && cp -f ./build/$(1)/extension/icu/icu.duckdb_extension "$$target/" && \
+	  echo "Staged icu.duckdb_extension at $$target/"; \
+	fi
+endef
+
 test_release_internal:
+	$(call stage_icu,release)
 	./build/release/$(TEST_PATH) "$(PROJ_DIR)test/*"
 test_debug_internal:
+	$(call stage_icu,debug)
 	./build/debug/$(TEST_PATH) "$(PROJ_DIR)test/*"
 test_reldebug_internal:
+	$(call stage_icu,reldebug)
 	./build/reldebug/$(TEST_PATH) "$(PROJ_DIR)test/*"
