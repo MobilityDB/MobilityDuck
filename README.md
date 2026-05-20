@@ -99,7 +99,7 @@ MobilityDuck$ ./build/release/duckdb [name of db].db
 
 ### 3.2. DuckDB shell without built-in extension
 
-If DuckDB is available on your machine ([installed independently](https://duckdb.org/install/), unrelated to MobilityDuck) and can be called by ```duckdb```, the MobilityDuck extension binary can be loaded later. **Prerequisite**: the independent DuckDB version and the DuckDB version of the build must be identical. The latest version of MobilityDuck is built with DuckDB v1.4.4 (long-term support), the binaries for which can be obtained from [the v1.4.4 release](https://github.com/duckdb/duckdb/releases/tag/v1.4.4).
+If DuckDB is available on your machine ([installed independently](https://duckdb.org/install/), unrelated to MobilityDuck) and can be called by ```duckdb```, the MobilityDuck extension binary can be loaded later. **Prerequisite**: the independent DuckDB version and the DuckDB version of the build must be identical. The latest version of MobilityDuck is built against DuckDB v1.4.4 (LTS, the ecosystem alignment target) by default; v1.5.2 is also supported as an opt-in track. See [`doc/multi-duckdb-version.md`](doc/multi-duckdb-version.md) for the per-version manifest and how to switch the working tree. The DuckDB v1.4.4 binaries are available at [the v1.4.4 release](https://github.com/duckdb/duckdb/releases/tag/v1.4.4).
 
 If you build MobilityDuck from source code, the loadable extension binary is available at ```./build/release/extension/mobilityduck/mobilityduck.duckdb_extension```.
 

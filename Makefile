@@ -4,6 +4,23 @@ PROJ_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 EXT_NAME=mobilityduck
 EXT_CONFIG=${PROJ_DIR}extension_config.cmake
 
+# Multi-DuckDB-version selector (foundation; CI matrix is a follow-up).
+#
+# The committed submodule SHAs target the LTS line.  To build against
+# another supported DuckDB version, run:
+#
+#     make set-duckdb-version DUCKDB_VERSION=v1.5.2
+#
+# which delegates to scripts/select-duckdb-version.sh and switches the
+# duckdb / duckdb-spatial / extension-ci-tools submodules in lockstep.
+# Same pattern as MobilityDB-on-Postgres compiling against PG 13-18 from
+# one source tree.  See doc/multi-duckdb-version.md for the full design.
+DUCKDB_VERSION ?= v1.4.4
+
+.PHONY: set-duckdb-version
+set-duckdb-version:
+	@$(PROJ_DIR)scripts/select-duckdb-version.sh $(DUCKDB_VERSION)
+
 # Include the Makefile from extension-ci-tools
 include extension-ci-tools/makefiles/duckdb_extension.Makefile
 
