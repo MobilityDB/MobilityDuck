@@ -111,3 +111,91 @@ SELECT
   );
 ----
 true	false	0.0
+
+# --- NULL propagation ----------------------------------------------------
+#
+# Every UDF over GEOGRAPHY honours DuckDB's NULL semantics: a NULL input
+# produces NULL output without invoking the MEOS shim.
+
+query IIII
+SELECT
+  ST_AsText(CAST(NULL AS GEOGRAPHY)),
+  ST_Length(CAST(NULL AS GEOGRAPHY)),
+  ST_Area(CAST(NULL AS GEOGRAPHY)),
+  ST_AsBinary(CAST(NULL AS GEOGRAPHY));
+----
+NULL	NULL	NULL	NULL
+
+# ST_GeogFromText on a NULL string returns NULL.
+query I
+SELECT ST_GeogFromText(NULL) IS NULL;
+----
+true
+
+# --- Tabular round-trip via INSERT / SELECT ------------------------------
+#
+# Storage of GEOGRAPHY values as a column of the DuckDB native types.
+
+statement ok
+CREATE TABLE cities (name VARCHAR, loc GEOGRAPHY);
+
+statement ok
+INSERT INTO cities VALUES
+  ('Brussels',  ST_GeogFromText('SRID=4326;POINT(4.35   50.85)')),
+  ('Paris',     ST_GeogFromText('SRID=4326;POINT(2.35   48.86)')),
+  ('Amsterdam', ST_GeogFromText('SRID=4326;POINT(4.90   52.37)')),
+  (NULL,        NULL);
+
+query II
+SELECT name, ST_AsText(loc) FROM cities ORDER BY name NULLS LAST;
+----
+Amsterdam	SRID=4326;POINT(4.9 52.37)
+Brussels	SRID=4326;POINT(4.35 50.85)
+Paris	SRID=4326;POINT(2.35 48.86)
+NULL	NULL
+
+# COUNT a column that is partially NULL.
+query II
+SELECT COUNT(*) AS total, COUNT(loc) AS non_null FROM cities;
+----
+4	3
+
+statement ok
+DROP TABLE cities;
+
+# --- Numeric ground truth: a larger polygon (Belgium-sized) --------------
+#
+# A coarse Belgium-shaped quadrilateral. The value is MEOS-on-Postgres
+# ground truth (use_spheroid=true).  Tolerates platform-dependent ulp
+# variation by rounding.
+
+query I
+SELECT ROUND(
+  ST_Area(ST_GeogFromText(
+    'SRID=4326;POLYGON((2.5 49.5, 6.4 49.5, 6.4 51.5, 2.5 51.5, 2.5 49.5))'
+  )) / 1e6
+)
+----
+61538.0
+
+# A ~315 km LINESTRING from Brussels to Paris.
+query I
+SELECT ROUND(ST_Length(ST_GeogFromText(
+  'SRID=4326;LINESTRING(4.35 50.85, 2.35 48.86)'
+)) / 1000)
+----
+264
+
+# --- Round-trip semantic equality through EWKB ---------------------------
+#
+# A POINT round-tripped through EWKB is semantically identical: the EWKT
+# projection matches.  The underlying GSERIALIZED layout may differ in
+# byte padding between `geog_in` and `geo_from_ewkb`, so equality is
+# tested at the EWKT level.
+
+query I
+SELECT
+  ST_AsText(ST_GeogFromText('SRID=4326;POINT(4.35 50.85)')) =
+  ST_AsText(ST_GeogFromBinary(ST_AsBinary(ST_GeogFromText('SRID=4326;POINT(4.35 50.85)'))));
+----
+true
