@@ -1,10 +1,11 @@
-# Sanity test for the GEOGRAPHY LogicalType registration.  The full I/O
-# surface (ST_GeogFromText, ST_AsText, ST_AsBinary, ST_GeogFromBinary) and
-# the cast matrix (GEOMETRY <-> GEOGRAPHY, GEOGRAPHY <-> TGEOGPOINT) land in
-# follow-up PRs.  This file verifies only that the type alias is registered
-# and parses as a column type.
+# GEOGRAPHY LogicalType + I/O surface.  Covers:
+#   - Type alias registration (column type, NULL handling)
+#   - ST_GeogFromText / ST_AsText round-trip via EWKT
+#   - ST_AsBinary / ST_GeogFromBinary round-trip via EWKB
 
 require mobilityduck
+
+# --- Type alias registration ---------------------------------------------
 
 statement ok
 CREATE TABLE geography_sanity (g GEOGRAPHY);
@@ -19,3 +20,22 @@ NULL
 
 statement ok
 DROP TABLE geography_sanity;
+
+# --- ST_GeogFromText / ST_AsText round-trip ------------------------------
+
+query I
+SELECT ST_AsText(ST_GeogFromText('SRID=4326;POINT(4.35 50.85)'));
+----
+SRID=4326;POINT(4.35 50.85)
+
+query I
+SELECT ST_AsText(ST_GeogFromText('SRID=4326;LINESTRING(4.35 50.85, 4.40 50.90)'));
+----
+SRID=4326;LINESTRING(4.35 50.85,4.4 50.9)
+
+# --- ST_AsBinary / ST_GeogFromBinary round-trip --------------------------
+
+query I
+SELECT ST_AsText(ST_GeogFromBinary(ST_AsBinary(ST_GeogFromText('SRID=4326;POINT(4.35 50.85)'))));
+----
+SRID=4326;POINT(4.35 50.85)

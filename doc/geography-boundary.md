@@ -137,7 +137,7 @@ Closed-algebra producers (`spaceTimeSplit`, `valueSet`, `eIntersection`) preserv
 | TemporalParquet footer support for `"base_type": "geography"` | `tools/temporal_parquet.py` | Already supports arbitrary `base_type` strings; the consumer reads the alias verbatim |
 | Tests for round-trip, value-equality, cast-matrix, length/area numeric checks | `test/sql/geography.test` (planned) | Pending |
 
-The retirement of the old `Spherical_lonlat_rect_area_m2` / `Geodetic_stbox_footprint_area` workaround (which previously approximated geodetic area in the binding because MEOS-1.3 `stbox_area` could SIGSEGV) is in [PR #165](https://github.com/MobilityDB/MobilityDuck/pull/165); the present design assumes that workaround is gone.
+Geodetic `stbox_area` is honoured directly by MEOS; the binding does not approximate. [PR #165](https://github.com/MobilityDB/MobilityDuck/pull/165) removes the `Spherical_lonlat_rect_area_m2` / `Geodetic_stbox_footprint_area` paths so the binding owns no geodetic semantics.
 
 ## Pending work
 
