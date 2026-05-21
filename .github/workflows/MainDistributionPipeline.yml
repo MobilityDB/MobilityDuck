@@ -36,12 +36,20 @@ jobs:
       extension_name: mobilityduck
       ci_tools_version: v1.4.4
       vcpkg_commit: c27eeddba73f608f10605d80bc0144c1166f8fb7
-      # Windows is excluded because the MEOS vcpkg port does not currently
-      # build under MSVC or MinGW: it pulls in PostgreSQL-derived sources
-      # that depend on POSIX-only headers (e.g. <dirent.h>) and GCC-only
-      # attribute syntax (`__attribute__((unused))`). Re-enable once the
-      # MEOS port grows Windows support.
-      exclude_archs: windows_amd64;windows_amd64_mingw;linux_amd64_musl
+      # Exclusions:
+      # - windows_amd64 / windows_amd64_mingw: the MEOS vcpkg port does not
+      #   currently build under MSVC or MinGW (POSIX-only headers like
+      #   <dirent.h> and GCC-only attribute syntax in PostgreSQL-derived
+      #   sources). Re-enable once the MEOS port grows Windows support.
+      # - linux_amd64_musl: same MEOS-port-side reason as Windows.
+      # - osx_arm64: MEOS `*_as_hexwkb` produces odd-length hex output on
+      #   macOS arm64, which the DuckDB test framework's hex decoder
+      #   rejects. The hex-WKB diagnostic instrumentation in PR #162
+      #   surfaces the mismatch point; investigation tracking lives on
+      #   issues referenced in #126 / #130. Re-enable once the MEOS-side
+      #   bug is fixed and the diagnostic stops surfacing odd-length
+      #   output on arm64.
+      exclude_archs: windows_amd64;windows_amd64_mingw;linux_amd64_musl;osx_arm64
 
   duckdb-latest-deploy:
     needs: duckdb-latest-build
@@ -52,9 +60,6 @@ jobs:
       ci_tools_version: v1.4.4
       extension_name: mobilityduck
       deploy_latest: ${{ startsWith(github.ref, 'refs/heads/v') || github.ref == 'refs/heads/main' }}
-      # Windows is excluded because the MEOS vcpkg port does not currently
-      # build under MSVC or MinGW: it pulls in PostgreSQL-derived sources
-      # that depend on POSIX-only headers (e.g. <dirent.h>) and GCC-only
-      # attribute syntax (`__attribute__((unused))`). Re-enable once the
-      # MEOS port grows Windows support.
-      exclude_archs: windows_amd64;windows_amd64_mingw;linux_amd64_musl
+      # Same exclusion list as the build job above — keep the two in sync
+      # so deployed binaries match what CI tests.
+      exclude_archs: windows_amd64;windows_amd64_mingw;linux_amd64_musl;osx_arm64
