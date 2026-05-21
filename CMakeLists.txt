@@ -37,6 +37,25 @@ endif()
 # MEOS from overlay port
 find_package(MEOS CONFIG REQUIRED)
 
+# h3 — transitively needed because `meos_h3.h` includes `<h3api.h>`.
+# vcpkg's h3 port installs the header at `include/h3/h3api.h` (under
+# a subdirectory).  `find_package(h3 CONFIG)` finds the import target
+# but its `INTERFACE_INCLUDE_DIRECTORIES` only contains `include/`,
+# not `include/h3/`.  Probe the header directly with `find_path` and
+# add the resolved directory to the global include path so the
+# `#include <h3api.h>` in `meos_h3.h` resolves.
+find_package(h3 CONFIG)
+if(h3_FOUND)
+    message(STATUS "Found h3 (CONFIG): version ${h3_VERSION}")
+endif()
+find_path(H3_INCLUDE_DIR NAMES h3api.h PATH_SUFFIXES h3)
+if(H3_INCLUDE_DIR)
+    include_directories(${H3_INCLUDE_DIR})
+    message(STATUS "Found h3 include dir: ${H3_INCLUDE_DIR}")
+else()
+    message(WARNING "h3api.h not found; the th3index extension surface will fail to compile")
+endif()
+
 if(TARGET GEOS::geos_c)
   set(GEOS_TGT GEOS::geos_c)
 elseif(TARGET GEOS::geos)
@@ -89,6 +108,7 @@ set(EXTENSION_SOURCES
     src/geo/tgeogpoint.cpp
     src/geo/tgeogpoint_in_out.cpp
     src/geo/tgeogpoint_ops.cpp
+    src/h3/th3index.cpp
     src/index/rtree_module.cpp
     src/single_tile_getters.cpp
     src/index/rtree_index_create_physical.cpp
@@ -114,6 +134,10 @@ endif()
 # -----------------------------
 # Link libraries 
 # -----------------------------
+if(TARGET h3::h3)
+    set(H3_TGT h3::h3)
+endif()
+
 target_link_libraries(${EXTENSION_NAME}
   MEOS::meos
   ${GEOS_TGT}
@@ -121,6 +145,7 @@ target_link_libraries(${EXTENSION_NAME}
   GSL::gsl
   GSL::gslcblas
   ${JSONC_TGT}
+  ${H3_TGT}
   OpenSSL::SSL
   OpenSSL::Crypto
 )
@@ -132,6 +157,7 @@ target_link_libraries(${LOADABLE_EXTENSION_NAME}
   GSL::gsl
   GSL::gslcblas
   ${JSONC_TGT}
+  ${H3_TGT}
   OpenSSL::SSL
   OpenSSL::Crypto
 )

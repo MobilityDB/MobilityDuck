@@ -1,0 +1,38 @@
+# name: test/sql/parity/076b_tpoint_geometry_geography.test
+# description: `geometry(tgeompoint [, segmentize bool])` and
+#              `geography(tgeogpoint [, segmentize bool])` — convert
+#              a temporal point into its trajectory linestring with
+#              an M coordinate carrying the epoch timestamp.
+#
+#              These are the trajectory-with-M flavour of the same MEOS
+#              entrypoint (`tpoint_tfloat_to_geomeas`) backing
+#              `geoMeasure`; passing a NULL measure produces a
+#              geometry/geography rather than a measure-bearing one.
+# group: [sql]
+
+require mobilityduck
+
+# Default form — single linestring with epoch-second M.
+query I
+SELECT ST_AsText(geometry(tgeompoint '[Point(0 0)@2000-01-01, Point(3 4)@2000-01-02]'));
+----
+LINESTRING M (0 0 946684800, 3 4 946771200)
+
+# segmentize=true — same output for a 2-instant trajectory.
+query I
+SELECT ST_AsText(geometry(tgeompoint '[Point(0 0)@2000-01-01, Point(3 4)@2000-01-02]', true));
+----
+LINESTRING M (0 0 946684800, 3 4 946771200)
+
+# Geographic counterpart — MEOS keeps the SRID-aware geography in the
+# blob; DuckDB has no separate geography type so the result is a
+# GEOMETRY-aliased blob with the geodetic flag set inside.
+query I
+SELECT ST_AsText(geography(tgeogpoint '[Point(4 50)@2026-01-01, Point(5 51)@2026-01-02]'));
+----
+LINESTRING M (4 50 1767225600, 5 51 1767312000)
+
+query I
+SELECT ST_AsText(geography(tgeogpoint '[Point(4 50)@2026-01-01, Point(5 51)@2026-01-02]', false));
+----
+LINESTRING M (4 50 1767225600, 5 51 1767312000)

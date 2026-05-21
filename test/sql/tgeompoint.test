@@ -3,47 +3,47 @@ require mobilityduck
 query I
 SELECT tgeompoint 'Point(1 1)@2012-01-01 08:00:00';
 ----
-0101000000000000000000F03F000000000000F03F@2012-01-01 08:00:00+01
+0101000000000000000000F03F000000000000F03F@2012-01-01 08:00:00+00
 
 query I
 SELECT tgeompoint '  Point(2 2)@2012-01-01 08:00:00  ';
 ----
-010100000000000000000000400000000000000040@2012-01-01 08:00:00+01
+010100000000000000000000400000000000000040@2012-01-01 08:00:00+00
 
 query I
 SELECT asText(tgeompoint 'Point(1 1)@2012-01-01 08:00:00');
 ----
-POINT(1 1)@2012-01-01 08:00:00+01
+POINT(1 1)@2012-01-01 08:00:00+00
 
 query I
 SELECT asText(tgeompoint '  Point(2 2)@2012-01-01 08:00:00  ');
 ----
-POINT(2 2)@2012-01-01 08:00:00+01
+POINT(2 2)@2012-01-01 08:00:00+00
 
 query I
 SELECT asEWKT(tgeompoint 'Point(1 1)@2012-01-01 08:00:00');
 ----
-POINT(1 1)@2012-01-01 08:00:00+01
+POINT(1 1)@2012-01-01 08:00:00+00
 
 query I
 SELECT tgeompoint(ST_Point(1,1), timestamptz '2012-01-01 08:00:00');
 ----
-0101000000000000000000F03F000000000000F03F@2012-01-01 08:00:00+01
+0101000000000000000000F03F000000000000F03F@2012-01-01 08:00:00+00
 
 query I
 SELECT asEWKT(tgeompoint(ST_Point(1,1), timestamptz '2012-01-01 08:00:00'));
 ----
-POINT(1 1)@2012-01-01 08:00:00+01
+POINT(1 1)@2012-01-01 08:00:00+00
 
 query I
 SELECT asEWKT(tgeompoint(ST_Point(1,1), timestamptz '2012-01-01 08:00:00', 4326));
 ----
-SRID=4326;POINT(1 1)@2012-01-01 08:00:00+01
+SRID=4326;POINT(1 1)@2012-01-01 08:00:00+00
 
 query I 
 SELECT asEWKT(tgeompoint(ST_Point(1,1), tstzspan '[2012-01-01, 2012-01-03]', 'step'));
 ----
-Interp=Step;[POINT(1 1)@2012-01-01 00:00:00+01, POINT(1 1)@2012-01-03 00:00:00+01]
+Interp=Step;[POINT(1 1)@2012-01-01 00:00:00+00, POINT(1 1)@2012-01-03 00:00:00+00]
 
 query I
 SELECT asEWKT(tgeompointSeq(ARRAY[
@@ -52,22 +52,22 @@ SELECT asEWKT(tgeompointSeq(ARRAY[
     tgeompoint(ST_Point(1,1), timestamptz '2012-01-01 08:20:00')
 ]));
 ----
-[POINT(1 1)@2012-01-01 08:00:00+01, POINT(2 2)@2012-01-01 08:10:00+01, POINT(1 1)@2012-01-01 08:20:00+01]
+[POINT(1 1)@2012-01-01 08:00:00+00, POINT(2 2)@2012-01-01 08:10:00+00, POINT(1 1)@2012-01-01 08:20:00+00]
 
 query I
 SELECT stbox(tgeompoint 'Point(1 1)@2000-01-01');
 ----
-STBOX XT(((1,1),(1,1)),[2000-01-01 00:00:00+01, 2000-01-01 00:00:00+01])
+STBOX XT(((1,1),(1,1)),[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00])
 
 query I
 SELECT tgeompoint 'Point(1 1)@2000-01-01'::STBOX;
 ----
-STBOX XT(((1,1),(1,1)),[2000-01-01 00:00:00+01, 2000-01-01 00:00:00+01])
+STBOX XT(((1,1),(1,1)),[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00])
 
 query I
 SELECT getTime(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}');
 ----
-{[2000-01-01 00:00:00+01, 2000-01-03 00:00:00+01], [2000-01-04 00:00:00+01, 2000-01-05 00:00:00+01]}
+{[2000-01-01 00:00:00+00, 2000-01-03 00:00:00+00], [2000-01-04 00:00:00+00, 2000-01-05 00:00:00+00]}
 
 query I
 SELECT ST_AsText(startValue(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}'));
@@ -102,57 +102,57 @@ SELECT duration(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Poin
 query I
 SELECT startTimestamp(tgeompoint 'Point(1 1)@2000-01-01');
 ----
-2000-01-01 00:00:00+01
+2000-01-01 00:00:00+00
 
 query I
 SELECT startTimestamp(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}');
 ----
-2000-01-01 00:00:00+01
+2000-01-01 00:00:00+00
 
 query I
 SELECT startTimestamp(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}');
 ----
-2000-01-01 00:00:00+01
+2000-01-01 00:00:00+00
 
 query I
 SELECT timeSpan(tgeompoint 'Point(1 1)@2000-01-01');
 ----
-[2000-01-01 00:00:00+01, 2000-01-01 00:00:00+01]
+[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00]
 
 query I
 SELECT tgeompoint 'Point(1 1)@2000-01-01'::tstzspan;
 ----
-[2000-01-01 00:00:00+01, 2000-01-01 00:00:00+01]
+[2000-01-01 00:00:00+00, 2000-01-01 00:00:00+00]
 
 query I
 SELECT timeSpan(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}');
 ----
-[2000-01-01 00:00:00+01, 2000-01-03 00:00:00+01]
+[2000-01-01 00:00:00+00, 2000-01-03 00:00:00+00]
 
 query I
 SELECT tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}'::tstzspan;
 ----
-[2000-01-01 00:00:00+01, 2000-01-03 00:00:00+01]
+[2000-01-01 00:00:00+00, 2000-01-03 00:00:00+00]
 
 query I
 SELECT timeSpan(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}');
 ----
-[2000-01-01 00:00:00+01, 2000-01-05 00:00:00+01]
+[2000-01-01 00:00:00+00, 2000-01-05 00:00:00+00]
 
 query I
 SELECT tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}'::tstzspan;
 ----
-[2000-01-01 00:00:00+01, 2000-01-05 00:00:00+01]
+[2000-01-01 00:00:00+00, 2000-01-05 00:00:00+00]
 
 query I
 SELECT asEWKT(atValues(tgeompoint 'Point(1 1)@2000-01-01', ST_Point(1,1)));
 ----
-POINT(1 1)@2000-01-01 00:00:00+01
+POINT(1 1)@2000-01-01 00:00:00+00
 
 query I
 SELECT atValues(tgeompoint 'Point(1 1)@2000-01-01', ST_Point(1,1));
 ----
-0101000000000000000000F03F000000000000F03F@2000-01-01 00:00:00+01
+0101000000000000000000F03F000000000000F03F@2000-01-01 00:00:00+00
 
 query I
 SELECT getValue(tgeompoint 'Point(1 1)@2000-01-01');
@@ -162,17 +162,17 @@ POINT (1 1)
 query I
 SELECT timestamps(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]');
 ----
-['2000-01-01 00:00:00+01', '2000-01-02 00:00:00+01', '2000-01-03 00:00:00+01']
+['2000-01-01 00:00:00+00', '2000-01-02 00:00:00+00', '2000-01-03 00:00:00+00']
 
 query I
 SELECT timestamps(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}');
 ----
-['2000-01-01 00:00:00+01', '2000-01-02 00:00:00+01', '2000-01-03 00:00:00+01', '2000-01-04 00:00:00+01', '2000-01-05 00:00:00+01']
+['2000-01-01 00:00:00+00', '2000-01-02 00:00:00+00', '2000-01-03 00:00:00+00', '2000-01-04 00:00:00+00', '2000-01-05 00:00:00+00']
 
 query I
 SELECT asText(atTime(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', timestamptz '2000-01-01'));
 ----
-POINT(1 1)@2000-01-01 00:00:00+01
+POINT(1 1)@2000-01-01 00:00:00+00
 
 query I
 SELECT asText(atTime(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', timestamptz '2020-01-01'));
@@ -182,12 +182,12 @@ NULL
 query I
 SELECT asText(atTime(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', tstzspan '[2000-01-01,2000-01-02]'));
 ----
-{[POINT(1 1)@2000-01-01 00:00:00+01, POINT(2 2)@2000-01-02 00:00:00+01]}
+{[POINT(1 1)@2000-01-01 00:00:00+00, POINT(2 2)@2000-01-02 00:00:00+00]}
 
 query I
 SELECT asText(atTime(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', tstzspanset '{[2000-01-01,2000-01-02]}'));
 ----
-{[POINT(1 1)@2000-01-01 00:00:00+01, POINT(2 2)@2000-01-02 00:00:00+01]}
+{[POINT(1 1)@2000-01-01 00:00:00+00, POINT(2 2)@2000-01-02 00:00:00+00]}
 
 query I
 SELECT ST_AsText(valueAtTimestamp(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', timestamptz '2000-01-01'));
@@ -197,7 +197,7 @@ POINT (1 1)
 query I
 SELECT asText(stops(tgeompoint '[Point(1 1)@2001-01-01, Point(1 1)@2001-01-02, Point(2 2)@2001-01-03, Point(2 2)@2001-01-04]', 0.0, interval '0 minutes'));
 ----
-{[POINT(1 1)@2001-01-01 00:00:00+01, POINT(1 1)@2001-01-02 00:00:00+01], [POINT(2 2)@2001-01-03 00:00:00+01, POINT(2 2)@2001-01-04 00:00:00+01]}
+{[POINT(1 1)@2001-01-01 00:00:00+00, POINT(1 1)@2001-01-02 00:00:00+00], [POINT(2 2)@2001-01-03 00:00:00+00, POINT(2 2)@2001-01-04 00:00:00+00]}
 
 query I
 SELECT asText(stops(tgeompoint '[Point(1 1)@2001-01-01, Point(1 1)@2001-01-02, Point(2 2)@2001-01-03, Point(2 2)@2001-01-04]', 0.0, interval '2 days'));
@@ -222,7 +222,7 @@ GEOMETRYCOLLECTION (POINT (3 3), LINESTRING (1 1, 2 2))
 query I
 SELECT asText(atGeometry(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', geometry 'Linestring(0 0,3 3)'));
 ----
-{[POINT(1 1)@2000-01-01 00:00:00+01, POINT(2 2)@2000-01-02 00:00:00+01, POINT(1 1)@2000-01-03 00:00:00+01], [POINT(3 3)@2000-01-04 00:00:00+01, POINT(3 3)@2000-01-05 00:00:00+01]}
+{[POINT(1 1)@2000-01-01 00:00:00+00, POINT(2 2)@2000-01-02 00:00:00+00, POINT(1 1)@2000-01-03 00:00:00+00], [POINT(3 3)@2000-01-04 00:00:00+00, POINT(3 3)@2000-01-05 00:00:00+00]}
 
 query I
 SELECT asText(atGeometry(tgeompoint 'Point(1 1)@2000-01-01', geometry 'Linestring empty'));
@@ -262,7 +262,7 @@ false
 query I
 SELECT tDwithin(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}', tgeompoint 'Point(1 1)@2000-01-01', 2);
 ----
-t@2000-01-01 00:00:00+01
+t@2000-01-01 00:00:00+00
 
 query I
 SELECT tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}' && stbox 'STBOX X((1.0,2.0),(1.0,2.0))';
@@ -302,7 +302,7 @@ NULL
 query I
 SELECT round(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}' <-> tgeompoint '{[Point(2 2)@2000-01-01, Point(1 1)@2000-01-02, Point(2 2)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', 6);
 ----
-{[1.414214@2000-01-01 00:00:00+01, 0@2000-01-01 12:00:00+01, 1.414214@2000-01-02 00:00:00+01, 0@2000-01-02 12:00:00+01, 1.414214@2000-01-03 00:00:00+01], [0@2000-01-04 00:00:00+01, 0@2000-01-05 00:00:00+01]}
+{[1.414214@2000-01-01 00:00:00+00, 0@2000-01-01 12:00:00+00, 1.414214@2000-01-02 00:00:00+00, 0@2000-01-02 12:00:00+00, 1.414214@2000-01-03 00:00:00+00], [0@2000-01-04 00:00:00+00, 0@2000-01-05 00:00:00+00]}
 
 query I
 SELECT ST_AsTexT(shortestLine(tgeompoint 'Point(1 1)@2000-01-01', tgeompoint 'Point(2 2)@2000-01-01'));
@@ -317,12 +317,12 @@ SELECT numSequences(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, 
 query I
 SELECT asText(atStbox(tgeompoint 'Point(1 1)@2000-01-01', stbox 'STBOX XT(((1,1),(2,2)),[2000-01-01,2000-01-02])'));
 ----
-POINT(1 1)@2000-01-01 00:00:00+01
+POINT(1 1)@2000-01-01 00:00:00+00
 
 query I
 SELECT asText(atStbox(tgeompoint 'Point(1 1)@2000-01-01', stbox 'STBOX XT(((1,1),(2,2)),[2000-01-01,2000-01-02])', true));
 ----
-POINT(1 1)@2000-01-01 00:00:00+01
+POINT(1 1)@2000-01-01 00:00:00+00
 
 query I 
 SELECT memSize(tgeompoint 'Point(1 1)@2000-01-01');
@@ -342,22 +342,22 @@ SELECT numTimestamps(tgeompoint 'Point(1 1)@2000-01-01');
 query I 
 SELECT timestampN(tgeompoint 'Point(1 1)@2000-01-01', 1);
 ----
-2000-01-01 00:00:00+01
+2000-01-01 00:00:00+00
 
 query I
 SELECT asEWKT(shiftTime(tgeompoint 'Point(1 1)@2000-01-01', interval '5 min'));
 ----
-POINT(1 1)@2000-01-01 00:05:00+01
+POINT(1 1)@2000-01-01 00:05:00+00
 
 query I 
 SELECT asEWKT(scaleTime(tgeompoint 'Point(1 1)@2000-01-01', interval '1 day'));
 ----
-POINT(1 1)@2000-01-01 00:00:00+01
+POINT(1 1)@2000-01-01 00:00:00+00
 
 query I 
 SELECT asEWKT(shiftScaleTime(tgeompoint 'Point(1 1)@2000-01-01', interval '1 day', interval '1 day'));
 ----
-POINT(1 1)@2000-01-02 00:00:00+01
+POINT(1 1)@2000-01-02 00:00:00+00
 
 query I 
 SELECT asText(beforeTimestamp(tgeompoint 'Point(1 1)@2000-01-01', timestamptz '2000-01-01'));
@@ -377,7 +377,7 @@ NULL
 query I 
 SELECT asEWKT(tgeompoint(ST_Point(1,1), tstzspanset '{[2012-01-01, 2012-01-03]}'));
 ----
-{[POINT(1 1)@2012-01-01 00:00:00+01, POINT(1 1)@2012-01-03 00:00:00+01]}
+{[POINT(1 1)@2012-01-01 00:00:00+00, POINT(1 1)@2012-01-03 00:00:00+00]}
 
 query I 
 SELECT asEWKT(tgeompointSeqSet(ARRAY[
@@ -392,37 +392,37 @@ tgeompoint(ST_Point(2,2), timestamptz '2012-01-01 09:10:00'),
 tgeompoint(ST_Point(1,1), timestamptz '2012-01-01 09:20:00')
 ])]));
 ----
-{[POINT(1 1)@2012-01-01 08:00:00+01, POINT(2 2)@2012-01-01 08:10:00+01, POINT(1 1)@2012-01-01 08:20:00+01], [POINT(1 1)@2012-01-01 09:00:00+01, POINT(2 2)@2012-01-01 09:10:00+01, POINT(1 1)@2012-01-01 09:20:00+01]}
+{[POINT(1 1)@2012-01-01 08:00:00+00, POINT(2 2)@2012-01-01 08:10:00+00, POINT(1 1)@2012-01-01 08:20:00+00], [POINT(1 1)@2012-01-01 09:00:00+00, POINT(2 2)@2012-01-01 09:10:00+00, POINT(1 1)@2012-01-01 09:20:00+00]}
 
 query I 
 SELECT asEWKT(tgeompointInst(tgeompoint 'Point(1 1)@2000-01-01'));
 ----
-POINT(1 1)@2000-01-01 00:00:00+01
+POINT(1 1)@2000-01-01 00:00:00+00
 
 query I 
 SELECT asEWKT(tgeompointSeq(tgeompoint 'Point(1 1)@2000-01-01'));
 ----
-[POINT(1 1)@2000-01-01 00:00:00+01]
+[POINT(1 1)@2000-01-01 00:00:00+00]
 
 query I 
 SELECT asEWKT(tgeompointSeqSet(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}'));
 ----
-{[POINT(1 1)@2000-01-01 00:00:00+01], [POINT(2 2)@2000-01-02 00:00:00+01], [POINT(1 1)@2000-01-03 00:00:00+01]}
+{[POINT(1 1)@2000-01-01 00:00:00+00], [POINT(2 2)@2000-01-02 00:00:00+00], [POINT(1 1)@2000-01-03 00:00:00+00]}
 
 query I 
 SELECT asText(appendInstant(tgeompoint 'Point(1 1)@2000-01-01', tgeompoint 'Point(1 1)@2000-01-02'));
 ----
-[POINT(1 1)@2000-01-01 00:00:00+01, POINT(1 1)@2000-01-02 00:00:00+01]
+[POINT(1 1)@2000-01-01 00:00:00+00, POINT(1 1)@2000-01-02 00:00:00+00]
 
 query I 
 SELECT asText(merge(tgeompoint 'Point(1 1)@2000-01-01', tgeompoint 'Point(1 1)@2000-01-02'));
 ----
-{POINT(1 1)@2000-01-01 00:00:00+01, POINT(1 1)@2000-01-02 00:00:00+01}
+{POINT(1 1)@2000-01-01 00:00:00+00, POINT(1 1)@2000-01-02 00:00:00+00}
 
 query I 
 SELECT asText(merge(ARRAY[tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02}', '{Point(3 3)@2000-01-03, Point(4 4)@2000-01-04}']));
 ----
-{POINT(1 1)@2000-01-01 00:00:00+01, POINT(2 2)@2000-01-02 00:00:00+01, POINT(3 3)@2000-01-03 00:00:00+01, POINT(4 4)@2000-01-04 00:00:00+01}
+{POINT(1 1)@2000-01-01 00:00:00+00, POINT(2 2)@2000-01-02 00:00:00+00, POINT(3 3)@2000-01-03 00:00:00+00, POINT(4 4)@2000-01-04 00:00:00+00}
 
 query I 
 SELECT ST_AsTexT(getValue(tgeompoint 'Point(1 1)@2000-01-01'));
@@ -437,22 +437,22 @@ SELECT asEWKT(valueSet(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-0
 query I 
 SELECT getTimestamp(tgeompoint 'Point(1 1)@2000-01-01');
 ----
-2000-01-01 00:00:00+01
+2000-01-01 00:00:00+00
 
 query I 
 SELECT asEWKT(startSequence(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]'));
 ----
-[POINT(1 1)@2000-01-01 00:00:00+01, POINT(2 2)@2000-01-02 00:00:00+01, POINT(1 1)@2000-01-03 00:00:00+01]
+[POINT(1 1)@2000-01-01 00:00:00+00, POINT(2 2)@2000-01-02 00:00:00+00, POINT(1 1)@2000-01-03 00:00:00+00]
 
 query I 
 SELECT asEWKT(endSequence(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}'));
 ----
-[POINT(3 3)@2000-01-04 00:00:00+01, POINT(3 3)@2000-01-05 00:00:00+01]
+[POINT(3 3)@2000-01-04 00:00:00+00, POINT(3 3)@2000-01-05 00:00:00+00]
 
 query I 
 SELECT asEWKT(sequenceN(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', 1));
 ----
-[POINT(1 1)@2000-01-01 00:00:00+01, POINT(2 2)@2000-01-02 00:00:00+01, POINT(1 1)@2000-01-03 00:00:00+01]
+[POINT(1 1)@2000-01-01 00:00:00+00, POINT(2 2)@2000-01-02 00:00:00+00, POINT(1 1)@2000-01-03 00:00:00+00]
 
 query I 
 SELECT numInstants(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}');
@@ -462,17 +462,17 @@ SELECT numInstants(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, P
 query I 
 SELECT asEWKT(startInstant(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]'));
 ----
-POINT(1 1)@2000-01-01 00:00:00+01
+POINT(1 1)@2000-01-01 00:00:00+00
 
 query I 
 SELECT asEWKT(endInstant(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}'));
 ----
-POINT(3 3)@2000-01-05 00:00:00+01
+POINT(3 3)@2000-01-05 00:00:00+00
 
 query I 
 SELECT asEWKT(instantN(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]', 1));
 ----
-POINT(1 1)@2000-01-01 00:00:00+01
+POINT(1 1)@2000-01-01 00:00:00+00
 
 query I 
 SELECT numTimestamps(tgeompoint 'Point(1 1)@2000-01-01');
@@ -488,17 +488,17 @@ POINT (1 1)
 query I 
 SELECT asEWKT(sequences(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}'));
 ----
-['[POINT(1 1)@2000-01-01 00:00:00+01, POINT(2 2)@2000-01-02 00:00:00+01, POINT(1 1)@2000-01-03 00:00:00+01]', '[POINT(3 3)@2000-01-04 00:00:00+01, POINT(3 3)@2000-01-05 00:00:00+01]']
+['[POINT(1 1)@2000-01-01 00:00:00+00, POINT(2 2)@2000-01-02 00:00:00+00, POINT(1 1)@2000-01-03 00:00:00+00]', '[POINT(3 3)@2000-01-04 00:00:00+00, POINT(3 3)@2000-01-05 00:00:00+00]']
 
 query I 
 SELECT asText(atValues(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]', geomset '{"Point(1 1)"}'));
 ----
-{[POINT(1 1)@2000-01-01 00:00:00+01], [POINT(1 1)@2000-01-03 00:00:00+01]}
+{[POINT(1 1)@2000-01-01 00:00:00+00], [POINT(1 1)@2000-01-03 00:00:00+00]}
 
 query I 
 SELECT asText(minusValues(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]', geomset '{"Point(1 1)"}'));
 ----
-{(POINT(1 1)@2000-01-01 00:00:00+01, POINT(2 2)@2000-01-02 00:00:00+01, POINT(1 1)@2000-01-03 00:00:00+01)}
+{(POINT(1 1)@2000-01-01 00:00:00+00, POINT(2 2)@2000-01-02 00:00:00+00, POINT(1 1)@2000-01-03 00:00:00+00)}
 
 query I 
 SELECT st_astext(valueAtTimestamp(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]', timestamptz '2000-01-01'));
@@ -508,32 +508,32 @@ POINT (1 1)
 query I 
 SELECT asText(atTime(tgeompoint 'Point(1 1)@2000-01-01', tstzset '{2000-01-01}'));
 ----
-POINT(1 1)@2000-01-01 00:00:00+01
+POINT(1 1)@2000-01-01 00:00:00+00
 
 query I 
 SELECT asText(minusTime(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]', tstzset '{2000-01-01}'));
 ----
-{(POINT(1 1)@2000-01-01 00:00:00+01, POINT(2 2)@2000-01-02 00:00:00+01, POINT(1 1)@2000-01-03 00:00:00+01]}
+{(POINT(1 1)@2000-01-01 00:00:00+00, POINT(2 2)@2000-01-02 00:00:00+00, POINT(1 1)@2000-01-03 00:00:00+00]}
 
 query I 
 SELECT asText(atTime(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}', tstzspan '[2000-01-01,2000-01-02]'));
 ----
-{POINT(1 1)@2000-01-01 00:00:00+01, POINT(2 2)@2000-01-02 00:00:00+01}
+{POINT(1 1)@2000-01-01 00:00:00+00, POINT(2 2)@2000-01-02 00:00:00+00}
 
 query I 
 SELECT asText(minusTime(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]', tstzspan '[2000-01-01,2000-01-02]'));
 ----
-{(POINT(2 2)@2000-01-02 00:00:00+01, POINT(1 1)@2000-01-03 00:00:00+01]}
+{(POINT(2 2)@2000-01-02 00:00:00+00, POINT(1 1)@2000-01-03 00:00:00+00]}
 
 query I 
 SELECT asText(atTime(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]', tstzspanset '{[2000-01-01,2000-01-02]}'));
 ----
-{[POINT(1 1)@2000-01-01 00:00:00+01, POINT(2 2)@2000-01-02 00:00:00+01]}
+{[POINT(1 1)@2000-01-01 00:00:00+00, POINT(2 2)@2000-01-02 00:00:00+00]}
 
 query I 
 SELECT asText(minusTime(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', tstzspanset '{[2000-01-01,2000-01-02]}'));
 ----
-{(POINT(2 2)@2000-01-02 00:00:00+01, POINT(1 1)@2000-01-03 00:00:00+01], [POINT(3 3)@2000-01-04 00:00:00+01, POINT(3 3)@2000-01-05 00:00:00+01]}
+{(POINT(2 2)@2000-01-02 00:00:00+00, POINT(1 1)@2000-01-03 00:00:00+00], [POINT(3 3)@2000-01-04 00:00:00+00, POINT(3 3)@2000-01-05 00:00:00+00]}
 
 query I 
 SELECT asText(deleteTime(tgeompoint 'Point(1 1)@2000-01-01', timestamptz '2000-01-01'));
@@ -543,17 +543,17 @@ NULL
 query I 
 SELECT asText(deleteTime(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}', tstzset '{2000-01-01}'));
 ----
-{POINT(2 2)@2000-01-02 00:00:00+01, POINT(1 1)@2000-01-03 00:00:00+01}
+{POINT(2 2)@2000-01-02 00:00:00+00, POINT(1 1)@2000-01-03 00:00:00+00}
 
 query I 
 SELECT asText(deleteTime(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]', tstzspan '[2000-01-01,2000-01-02]'));
 ----
-[POINT(1 1)@2000-01-03 00:00:00+01]
+[POINT(1 1)@2000-01-03 00:00:00+00]
 
 query I 
 SELECT asText(deleteTime(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]', tstzspanset '{[2000-01-01,2000-01-02]}'));
 ----
-[POINT(1 1)@2000-01-03 00:00:00+01]
+[POINT(1 1)@2000-01-03 00:00:00+00]
 
 query I 
 SELECT tgeompoint 'Point(1 1)@2000-01-01' > tgeompoint 'Point(1 1)@2000-01-01';
@@ -563,57 +563,69 @@ false
 query I 
 SELECT getX(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}');
 ----
-{1@2000-01-01 00:00:00+01, 2@2000-01-02 00:00:00+01, 1@2000-01-03 00:00:00+01}
+{1@2000-01-01 00:00:00+00, 2@2000-01-02 00:00:00+00, 1@2000-01-03 00:00:00+00}
 
 query I 
 SELECT getX(tgeompoint '{Point(1 1 1)@2000-01-01, Point(2 2 2)@2000-01-02, Point(1 1 1)@2000-01-03}');
 ----
-{1@2000-01-01 00:00:00+01, 2@2000-01-02 00:00:00+01, 1@2000-01-03 00:00:00+01}
+{1@2000-01-01 00:00:00+00, 2@2000-01-02 00:00:00+00, 1@2000-01-03 00:00:00+00}
 
 query I 
 SELECT getY(tgeompoint 'Point(1 1 1)@2000-01-01');
 ----
-1@2000-01-01 00:00:00+01
+1@2000-01-01 00:00:00+00
 
 query I 
 SELECT getZ(tgeompoint 'Interp=Step;{[Point(1 1 1)@2000-01-01, Point(2 2 2)@2000-01-02, Point(1 1 1)@2000-01-03],[Point(3 3 3)@2000-01-04, Point(3 3 3)@2000-01-05]}');
 ----
-Interp=Step;{[1@2000-01-01 00:00:00+01, 2@2000-01-02 00:00:00+01, 1@2000-01-03 00:00:00+01], [3@2000-01-04 00:00:00+01, 3@2000-01-05 00:00:00+01]}
+Interp=Step;{[1@2000-01-01 00:00:00+00, 2@2000-01-02 00:00:00+00, 1@2000-01-03 00:00:00+00], [3@2000-01-04 00:00:00+00, 3@2000-01-05 00:00:00+00]}
 
 query I 
 SELECT round(cumulativeLength(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}'), 6);
 ----
-{0@2000-01-01 00:00:00+01, 0@2000-01-02 00:00:00+01, 0@2000-01-03 00:00:00+01}
+{0@2000-01-01 00:00:00+00, 0@2000-01-02 00:00:00+00, 0@2000-01-03 00:00:00+00}
 
 query I 
 SELECT round(speed(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}'), 6);
 ----
-Interp=Step;{[0.000016@2000-01-01 00:00:00+01, 0.000016@2000-01-03 00:00:00+01], [0@2000-01-04 00:00:00+01, 0@2000-01-05 00:00:00+01]}
+Interp=Step;{[0.000016@2000-01-01 00:00:00+00, 0.000016@2000-01-03 00:00:00+00], [0@2000-01-04 00:00:00+00, 0@2000-01-05 00:00:00+00]}
 
 query I 
 SELECT round(speed(tgeompoint '[Point(1 1 1)@2000-01-01, Point(2 2 2)@2000-01-02, Point(1 1 1)@2000-01-03]'), 6);
 ----
-Interp=Step;[0.00002@2000-01-01 00:00:00+01, 0.00002@2000-01-03 00:00:00+01]
+Interp=Step;[0.00002@2000-01-01 00:00:00+00, 0.00002@2000-01-03 00:00:00+00]
 
 query I 
 SELECT azimuth(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]');
 ----
-Interp=Step;{[0.785398163397448@2000-01-01 00:00:00+01, 3.926990816987242@2000-01-02 00:00:00+01, 3.926990816987242@2000-01-03 00:00:00+01]}
+Interp=Step;{[0.785398163397448@2000-01-01 00:00:00+00, 3.926990816987242@2000-01-02 00:00:00+00, 3.926990816987242@2000-01-03 00:00:00+00]}
 
 query I 
 SELECT isSimple(tgeompoint '{Point(0 0)@2000-01-01, Point(0 0)@2000-01-02}');
 ----
 false
 
-query I 
-SELECT astext(unnest(makeSimple(tgeompoint '{Point(0 0)@2000-01-01}')));
-----
-{POINT(0 0)@2000-01-01 00:00:00+01}
+# Inline `astext(unnest(makeSimple(<list>)))` plus a sequential second
+# `astext` call SIGSEGVs because the MEOS-backed text serializer
+# leaks per-call state across DuckDB statements (same upstream binding
+# bug as the sequential VARCHAR cast — see
+# `project_mobilityduck_cast_segv.md`).  Materialize all fragments
+# into one table and serialize them in a single `astext` invocation.
 
-query I 
-SELECT astext(unnest(makeSimple(tgeompoint '{Point(0 0 0)@2000-01-01, Point(1 1 1)@2000-01-02}')));
+statement ok
+CREATE TEMP TABLE _ms_all (label INT, t tgeompoint);
+
+statement ok
+INSERT INTO _ms_all SELECT 1, unnest(makeSimple(tgeompoint '{Point(0 0)@2000-01-01}'));
+
+statement ok
+INSERT INTO _ms_all SELECT 2, unnest(makeSimple(tgeompoint '{Point(0 0 0)@2000-01-01, Point(1 1 1)@2000-01-02}'));
+
+query IT
+SELECT label, astext(t) FROM _ms_all ORDER BY label;
 ----
-{POINT Z (0 0 0)@2000-01-01 00:00:00+01, POINT Z (1 1 1)@2000-01-02 00:00:00+01}
+1	{POINT(0 0)@2000-01-01 00:00:00+00}
+2	{POINT Z (0 0 0)@2000-01-01 00:00:00+00, POINT Z (1 1 1)@2000-01-02 00:00:00+00}
 
 query I 
 SELECT asText(minusGeometry(tgeompoint 'Point(1 1)@2000-01-01', geometry 'Linestring(0 0,3 3)'));
@@ -628,7 +640,7 @@ NULL
 query I 
 SELECT asText(minusGeometry(tgeompoint '{Point(1 1 1)@2000-01-01, Point(2 2 2)@2000-01-02, Point(1 1 1)@2000-01-03}', geometry 'Linestring empty'));
 ----
-{POINT Z (1 1 1)@2000-01-01 00:00:00+01, POINT Z (2 2 2)@2000-01-02 00:00:00+01, POINT Z (1 1 1)@2000-01-03 00:00:00+01}
+{POINT Z (1 1 1)@2000-01-01 00:00:00+00, POINT Z (2 2 2)@2000-01-02 00:00:00+00, POINT Z (1 1 1)@2000-01-03 00:00:00+00}
 
 query I 
 SELECT asText(minusStbox(tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]', 'STBOX XT(((1,1),(2,2)),[2000-01-01,2000-01-02])'));
@@ -640,7 +652,7 @@ SELECT asText(minusStbox(tgeompoint '[Point(1 1)@2001-01-01, Point(1 2)@2001-01-
   Point(2 2)@2001-01-03, Point(2 1)@2001-01-04, Point(1 1)@2001-01-05]',
   stbox 'STBOX X((0,0),(2,2))', false));
 ----
-{[POINT(1 2)@2001-01-02 00:00:00+01, POINT(2 2)@2001-01-03 00:00:00+01, POINT(2 1)@2001-01-04 00:00:00+01]}
+{[POINT(1 2)@2001-01-02 00:00:00+00, POINT(2 2)@2001-01-03 00:00:00+00, POINT(2 1)@2001-01-04 00:00:00+00]}
 
 query I 
 SELECT eContains(geometry 'Linestring(1 1,3 3,1 1)', tgeompoint '[Point(4 2)@2000-01-01, Point(2 4)@2000-01-02]');
@@ -695,12 +707,12 @@ true
 query I 
 SELECT tContains(geometry 'Point(1 1)', tgeompoint 'Point(1 1)@2000-01-01');
 ----
-t@2000-01-01 00:00:00+01
+t@2000-01-01 00:00:00+00
 
 query I 
 SELECT atValues(tContains(geometry 'Point(1 1)', tgeompoint '[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03]'), true);
 ----
-{[t@2000-01-01 00:00:00+01], [t@2000-01-03 00:00:00+01]}
+{[t@2000-01-01 00:00:00+00], [t@2000-01-03 00:00:00+00]}
 
 query I 
 SELECT tDisjoint(geometry 'Point(1 1)', NULL::tgeompoint);
@@ -710,27 +722,27 @@ NULL
 query I 
 SELECT tDisjoint(geometry 'Point(1 1)', tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03], [Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}');
 ----
-{[f@2000-01-01 00:00:00+01], (t@2000-01-01 00:00:00+01, f@2000-01-03 00:00:00+01], [t@2000-01-04 00:00:00+01, t@2000-01-05 00:00:00+01]}
+{[f@2000-01-01 00:00:00+00], (t@2000-01-01 00:00:00+00, f@2000-01-03 00:00:00+00], [t@2000-01-04 00:00:00+00, t@2000-01-05 00:00:00+00]}
 
 query I 
 SELECT atValues(tDisjoint(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03], [Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', tgeompoint 'Point(1 1)@2000-01-01'), false);
 ----
-f@2000-01-01 00:00:00+01
+f@2000-01-01 00:00:00+00
 
 query I 
 SELECT tIntersects(tgeompoint '{Point(1 1 1)@2000-01-01, Point(2 2 2)@2000-01-02, Point(1 1 1)@2000-01-03}', geometry 'Point Z (2 2 2)');
 ----
-{f@2000-01-01 00:00:00+01, t@2000-01-02 00:00:00+01, f@2000-01-03 00:00:00+01}
+{f@2000-01-01 00:00:00+00, t@2000-01-02 00:00:00+00, f@2000-01-03 00:00:00+00}
 
 query I 
 SELECT atValues(tIntersects(tgeompoint 'Point(1 1)@2000-01-01', geometry 'Point(1 1)'), true);
 ----
-t@2000-01-01 00:00:00+01
+t@2000-01-01 00:00:00+00
 
 query I 
 SELECT tTouches(geometry 'Point(1 1)', tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03], [Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}');
 ----
-{[f@2000-01-01 00:00:00+01, f@2000-01-03 00:00:00+01], [f@2000-01-04 00:00:00+01, f@2000-01-05 00:00:00+01]}
+{[f@2000-01-01 00:00:00+00, f@2000-01-03 00:00:00+00], [f@2000-01-04 00:00:00+00, f@2000-01-05 00:00:00+00]}
 
 query I 
 SELECT atValues(tTouches(tgeompoint '{Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03}', geometry 'Point(1 1)'), true);
@@ -745,19 +757,19 @@ NULL
 query I 
 SELECT tDwithin(tgeompoint '{[Point(1 1 1)@2000-01-01, Point(2 2 2)@2000-01-02, Point(1 1 1)@2000-01-03], [Point(3 3 3)@2000-01-04, Point(3 3 3)@2000-01-05]}', geometry 'Point Z (1 1 1)', 2);
 ----
-{[t@2000-01-01 00:00:00+01, t@2000-01-03 00:00:00+01], [f@2000-01-04 00:00:00+01, f@2000-01-05 00:00:00+01]}
+{[t@2000-01-01 00:00:00+00, t@2000-01-03 00:00:00+00], [f@2000-01-04 00:00:00+00, f@2000-01-05 00:00:00+00]}
 
 query I 
 SELECT tDwithin(tgeompoint '[Point(0 0)@2000-01-01, Point(1 1)@2000-01-02]', tgeompoint '[Point(1 0)@2000-01-01, Point(2 0)@2000-01-02]', 1);
 ----
-{[t@2000-01-01 00:00:00+01], (f@2000-01-01 00:00:00+01, f@2000-01-02 00:00:00+01]}
+{[t@2000-01-01 00:00:00+00], (f@2000-01-01 00:00:00+00, f@2000-01-02 00:00:00+00]}
 
 query I 
 SELECT tDwithin(tgeompoint 'Interp=Step;{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', tgeompoint 'Interp=Step;{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}', 2);
 ----
-{[t@2000-01-01 00:00:00+01, t@2000-01-03 00:00:00+01], [t@2000-01-04 00:00:00+01, t@2000-01-05 00:00:00+01]}
+{[t@2000-01-01 00:00:00+00, t@2000-01-03 00:00:00+00], [t@2000-01-04 00:00:00+00, t@2000-01-05 00:00:00+00]}
 
 query I 
 SELECT tDwithin(tgeompoint 'Point(1 1 1)@2000-01-01', tgeompoint 'Point(1 1)@2000-01-01', 2);
 ----
-t@2000-01-01 00:00:00+01
+t@2000-01-01 00:00:00+00

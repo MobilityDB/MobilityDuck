@@ -336,6 +336,284 @@ void StboxFunctions::Stbox_as_hexwkb(DataChunk &args, ExpressionState &state, Ve
  * Constructor functions
  ****************************************************/
 
+namespace {
+
+// Pack a freshly-built STBox into a DuckDB blob and free the source.
+inline string_t StboxToBlob(Vector &result, STBox *box) {
+    size_t sz = sizeof(STBox);
+    string_t stored = StringVector::AddStringOrBlob(
+        result, string_t(reinterpret_cast<const char *>(box), sz));
+    free(box);
+    return stored;
+}
+
+// Build a Span (TimestampTz, single-instant or range) for the time
+// component of stboxT / stboxXT / stboxZT.  Caller frees.
+inline Span *MakeTstzSpanInstant(timestamp_tz_t ts_duckdb) {
+    timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts_duckdb);
+    return tstzspan_make((TimestampTz) ts_meos.value,
+                         (TimestampTz) ts_meos.value, true, true);
+}
+
+// Cast the input span blob into a heap-owned Span* the caller can pass
+// directly to stbox_make.
+inline Span *CopyTstzSpanFromBlob(string_t span_blob) {
+    if (span_blob.GetSize() < sizeof(Span))
+        throw InvalidInputException("invalid TSTZSPAN blob");
+    Span *s = (Span *)malloc(sizeof(Span));
+    memcpy(s, span_blob.GetData(), sizeof(Span));
+    return s;
+}
+
+} // anonymous namespace
+
+void StboxFunctions::Stbox_constructor_x(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t count = args.size();
+    args.data[0].Flatten(count); args.data[1].Flatten(count);
+    args.data[2].Flatten(count); args.data[3].Flatten(count);
+    args.data[4].Flatten(count);
+    auto xmin = FlatVector::GetData<double>(args.data[0]);
+    auto xmax = FlatVector::GetData<double>(args.data[1]);
+    auto ymin = FlatVector::GetData<double>(args.data[2]);
+    auto ymax = FlatVector::GetData<double>(args.data[3]);
+    auto srid = FlatVector::GetData<int32_t>(args.data[4]);
+    auto out  = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < count; i++) {
+        STBox *b = stbox_make(true, false, false, srid[i],
+                              xmin[i], xmax[i], ymin[i], ymax[i], 0, 0, NULL);
+        if (!b) throw InvalidInputException("stboxX: stbox_make failed");
+        out[i] = StboxToBlob(result, b);
+    }
+}
+
+void StboxFunctions::Stbox_constructor_z(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(count);
+    auto xmin = FlatVector::GetData<double>(args.data[0]);
+    auto xmax = FlatVector::GetData<double>(args.data[1]);
+    auto ymin = FlatVector::GetData<double>(args.data[2]);
+    auto ymax = FlatVector::GetData<double>(args.data[3]);
+    auto zmin = FlatVector::GetData<double>(args.data[4]);
+    auto zmax = FlatVector::GetData<double>(args.data[5]);
+    auto srid = FlatVector::GetData<int32_t>(args.data[6]);
+    auto out  = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < count; i++) {
+        STBox *b = stbox_make(true, true, false, srid[i],
+                              xmin[i], xmax[i], ymin[i], ymax[i],
+                              zmin[i], zmax[i], NULL);
+        if (!b) throw InvalidInputException("stboxZ: stbox_make failed");
+        out[i] = StboxToBlob(result, b);
+    }
+}
+
+void StboxFunctions::Stbox_constructor_t_ts(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<timestamp_tz_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](timestamp_tz_t ts) -> string_t {
+            Span *p = MakeTstzSpanInstant(ts);
+            STBox *b = stbox_make(false, false, false, 0,
+                                  0, 0, 0, 0, 0, 0, p);
+            free(p);
+            if (!b) throw InvalidInputException("stboxT: stbox_make failed");
+            return StboxToBlob(result, b);
+        });
+}
+
+void StboxFunctions::Stbox_constructor_t_span(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t span_blob) -> string_t {
+            Span *p = CopyTstzSpanFromBlob(span_blob);
+            STBox *b = stbox_make(false, false, false, 0,
+                                  0, 0, 0, 0, 0, 0, p);
+            free(p);
+            if (!b) throw InvalidInputException("stboxT: stbox_make failed");
+            return StboxToBlob(result, b);
+        });
+}
+
+void StboxFunctions::Stbox_constructor_xt_ts(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(count);
+    auto xmin = FlatVector::GetData<double>(args.data[0]);
+    auto xmax = FlatVector::GetData<double>(args.data[1]);
+    auto ymin = FlatVector::GetData<double>(args.data[2]);
+    auto ymax = FlatVector::GetData<double>(args.data[3]);
+    auto ts   = FlatVector::GetData<timestamp_tz_t>(args.data[4]);
+    auto srid = FlatVector::GetData<int32_t>(args.data[5]);
+    auto out  = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < count; i++) {
+        Span *p = MakeTstzSpanInstant(ts[i]);
+        STBox *b = stbox_make(true, false, false, srid[i],
+                              xmin[i], xmax[i], ymin[i], ymax[i], 0, 0, p);
+        free(p);
+        if (!b) throw InvalidInputException("stboxXT: stbox_make failed");
+        out[i] = StboxToBlob(result, b);
+    }
+}
+
+void StboxFunctions::Stbox_constructor_xt_span(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(count);
+    auto xmin = FlatVector::GetData<double>(args.data[0]);
+    auto xmax = FlatVector::GetData<double>(args.data[1]);
+    auto ymin = FlatVector::GetData<double>(args.data[2]);
+    auto ymax = FlatVector::GetData<double>(args.data[3]);
+    auto sp   = FlatVector::GetData<string_t>(args.data[4]);
+    auto srid = FlatVector::GetData<int32_t>(args.data[5]);
+    auto out  = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < count; i++) {
+        Span *p = CopyTstzSpanFromBlob(sp[i]);
+        STBox *b = stbox_make(true, false, false, srid[i],
+                              xmin[i], xmax[i], ymin[i], ymax[i], 0, 0, p);
+        free(p);
+        if (!b) throw InvalidInputException("stboxXT: stbox_make failed");
+        out[i] = StboxToBlob(result, b);
+    }
+}
+
+void StboxFunctions::Stbox_constructor_zt_ts(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(count);
+    auto xmin = FlatVector::GetData<double>(args.data[0]);
+    auto xmax = FlatVector::GetData<double>(args.data[1]);
+    auto ymin = FlatVector::GetData<double>(args.data[2]);
+    auto ymax = FlatVector::GetData<double>(args.data[3]);
+    auto zmin = FlatVector::GetData<double>(args.data[4]);
+    auto zmax = FlatVector::GetData<double>(args.data[5]);
+    auto ts   = FlatVector::GetData<timestamp_tz_t>(args.data[6]);
+    auto srid = FlatVector::GetData<int32_t>(args.data[7]);
+    auto out  = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < count; i++) {
+        Span *p = MakeTstzSpanInstant(ts[i]);
+        STBox *b = stbox_make(true, true, false, srid[i],
+                              xmin[i], xmax[i], ymin[i], ymax[i],
+                              zmin[i], zmax[i], p);
+        free(p);
+        if (!b) throw InvalidInputException("stboxZT: stbox_make failed");
+        out[i] = StboxToBlob(result, b);
+    }
+}
+
+void StboxFunctions::Stbox_constructor_zt_span(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(count);
+    auto xmin = FlatVector::GetData<double>(args.data[0]);
+    auto xmax = FlatVector::GetData<double>(args.data[1]);
+    auto ymin = FlatVector::GetData<double>(args.data[2]);
+    auto ymax = FlatVector::GetData<double>(args.data[3]);
+    auto zmin = FlatVector::GetData<double>(args.data[4]);
+    auto zmax = FlatVector::GetData<double>(args.data[5]);
+    auto sp   = FlatVector::GetData<string_t>(args.data[6]);
+    auto srid = FlatVector::GetData<int32_t>(args.data[7]);
+    auto out  = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < count; i++) {
+        Span *p = CopyTstzSpanFromBlob(sp[i]);
+        STBox *b = stbox_make(true, true, false, srid[i],
+                              xmin[i], xmax[i], ymin[i], ymax[i],
+                              zmin[i], zmax[i], p);
+        free(p);
+        if (!b) throw InvalidInputException("stboxZT: stbox_make failed");
+        out[i] = StboxToBlob(result, b);
+    }
+}
+
+/* Geographic variants — geodetic=true.  No geodstboxX (the 2D-only
+ * geodetic stbox is degenerate on a sphere; MobilityDB exposes
+ * geodstboxZ / geodstboxT / geodstboxZT only). */
+
+void StboxFunctions::Geodstbox_constructor_z(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(count);
+    auto xmin = FlatVector::GetData<double>(args.data[0]);
+    auto xmax = FlatVector::GetData<double>(args.data[1]);
+    auto ymin = FlatVector::GetData<double>(args.data[2]);
+    auto ymax = FlatVector::GetData<double>(args.data[3]);
+    auto zmin = FlatVector::GetData<double>(args.data[4]);
+    auto zmax = FlatVector::GetData<double>(args.data[5]);
+    auto srid = FlatVector::GetData<int32_t>(args.data[6]);
+    auto out  = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < count; i++) {
+        STBox *b = stbox_make(true, true, true, srid[i],
+                              xmin[i], xmax[i], ymin[i], ymax[i],
+                              zmin[i], zmax[i], NULL);
+        if (!b) throw InvalidInputException("geodstboxZ: stbox_make failed");
+        out[i] = StboxToBlob(result, b);
+    }
+}
+
+void StboxFunctions::Geodstbox_constructor_t_ts(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<timestamp_tz_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](timestamp_tz_t ts) -> string_t {
+            Span *p = MakeTstzSpanInstant(ts);
+            STBox *b = stbox_make(false, false, true, 4326,
+                                  0, 0, 0, 0, 0, 0, p);
+            free(p);
+            if (!b) throw InvalidInputException("geodstboxT: stbox_make failed");
+            return StboxToBlob(result, b);
+        });
+}
+
+void StboxFunctions::Geodstbox_constructor_t_span(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t span_blob) -> string_t {
+            Span *p = CopyTstzSpanFromBlob(span_blob);
+            STBox *b = stbox_make(false, false, true, 4326,
+                                  0, 0, 0, 0, 0, 0, p);
+            free(p);
+            if (!b) throw InvalidInputException("geodstboxT: stbox_make failed");
+            return StboxToBlob(result, b);
+        });
+}
+
+void StboxFunctions::Geodstbox_constructor_zt_ts(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(count);
+    auto xmin = FlatVector::GetData<double>(args.data[0]);
+    auto xmax = FlatVector::GetData<double>(args.data[1]);
+    auto ymin = FlatVector::GetData<double>(args.data[2]);
+    auto ymax = FlatVector::GetData<double>(args.data[3]);
+    auto zmin = FlatVector::GetData<double>(args.data[4]);
+    auto zmax = FlatVector::GetData<double>(args.data[5]);
+    auto ts   = FlatVector::GetData<timestamp_tz_t>(args.data[6]);
+    auto srid = FlatVector::GetData<int32_t>(args.data[7]);
+    auto out  = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < count; i++) {
+        Span *p = MakeTstzSpanInstant(ts[i]);
+        STBox *b = stbox_make(true, true, true, srid[i],
+                              xmin[i], xmax[i], ymin[i], ymax[i],
+                              zmin[i], zmax[i], p);
+        free(p);
+        if (!b) throw InvalidInputException("geodstboxZT: stbox_make failed");
+        out[i] = StboxToBlob(result, b);
+    }
+}
+
+void StboxFunctions::Geodstbox_constructor_zt_span(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(count);
+    auto xmin = FlatVector::GetData<double>(args.data[0]);
+    auto xmax = FlatVector::GetData<double>(args.data[1]);
+    auto ymin = FlatVector::GetData<double>(args.data[2]);
+    auto ymax = FlatVector::GetData<double>(args.data[3]);
+    auto zmin = FlatVector::GetData<double>(args.data[4]);
+    auto zmax = FlatVector::GetData<double>(args.data[5]);
+    auto sp   = FlatVector::GetData<string_t>(args.data[6]);
+    auto srid = FlatVector::GetData<int32_t>(args.data[7]);
+    auto out  = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < count; i++) {
+        Span *p = CopyTstzSpanFromBlob(sp[i]);
+        STBox *b = stbox_make(true, true, true, srid[i],
+                              xmin[i], xmax[i], ymin[i], ymax[i],
+                              zmin[i], zmax[i], p);
+        free(p);
+        if (!b) throw InvalidInputException("geodstboxZT: stbox_make failed");
+        out[i] = StboxToBlob(result, b);
+    }
+}
+
 void StboxFunctions::Geo_timestamptz_to_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
@@ -1171,6 +1449,72 @@ void StboxFunctions::Stbox_area(DataChunk &args, ExpressionState &state, Vector 
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
+}
+
+/* ***************************************************
+ * Hash functions — `stbox_hash(stbox)` returns the PG-compatible
+ * 32-bit hash of the bbox; `stbox_hash_extended(stbox, seed)` returns
+ * the 64-bit extended hash with the caller-supplied seed.  Both are
+ * needed for hash-equality predicates and hash partitioning.
+ ****************************************************/
+void StboxFunctions::Stbox_hash(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, int32_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input_stbox) -> int32_t {
+            STBox *box = (STBox *) malloc(sizeof(STBox));
+            memcpy(box, input_stbox.GetData(), sizeof(STBox));
+            uint32_t h = stbox_hash(box);
+            free(box);
+            return static_cast<int32_t>(h);
+        });
+    if (args.size() == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void StboxFunctions::Stbox_hash_extended(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, int64_t, int64_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_stbox, int64_t seed) -> int64_t {
+            STBox *box = (STBox *) malloc(sizeof(STBox));
+            memcpy(box, input_stbox.GetData(), sizeof(STBox));
+            uint64_t h = stbox_hash_extended(box, static_cast<uint64_t>(seed));
+            free(box);
+            return static_cast<int64_t>(h);
+        });
+}
+
+void StboxFunctions::Stbox_srid(DataChunk &args, ExpressionState &state, Vector &result) {
+    UnaryExecutor::Execute<string_t, int32_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input_stbox) -> int32_t {
+            STBox *box = (STBox *) malloc(sizeof(STBox));
+            memcpy(box, input_stbox.GetData(), sizeof(STBox));
+            int32_t srid = stbox_srid(box);
+            free(box);
+            return srid;
+        });
+    if (args.size() == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void StboxFunctions::Stbox_perimeter(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    args.data[0].Flatten(row_count);
+    const bool has_spheroid = args.ColumnCount() > 1;
+    if (has_spheroid) args.data[1].Flatten(row_count);
+    auto in_box = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_sph = has_spheroid ? FlatVector::GetData<bool>(args.data[1]) : nullptr;
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto out_data = FlatVector::GetData<double>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row)) { out_validity.SetInvalid(row); continue; }
+        if (in_box[row].GetSize() != sizeof(STBox)) {
+            throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+        }
+        STBox box;
+        memcpy(&box, in_box[row].GetData(), sizeof(STBox));
+        out_data[row] = stbox_perimeter(&box, in_sph ? in_sph[row] : false);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void StboxFunctions::Stbox_volume(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3102,6 +3446,231 @@ void StboxFunctions::Tgeo_space_time_boxes(DataChunk &args, ExpressionState &sta
         STBox *boxes = tgeo_space_time_boxes(temp, in_xsz[row], in_ysz[row], in_zsz[row],
                                               &mi, origin, torigin, false, border, &count);
         free(temp); free(origin);
+        EmitStboxList(result, row, list_entries, boxes, count, total);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+/* ***************************************************
+ * Multi-entry bbox emitters — `stboxes`, `splitNStboxes`,
+ * `splitEachNStboxes`.  All wrap MEOS's `tgeo_*` (Temporal *) or
+ * `geo_*` (GSERIALIZED *) emitters, returning an `stbox[]` of the
+ * computed bounding boxes.
+ ****************************************************/
+
+void StboxFunctions::Tspatial_stboxes(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    args.data[0].Flatten(row_count);
+    auto in_temp = FlatVector::GetData<string_t>(args.data[0]);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        Temporal *temp = BlobToTempTile(in_temp[row]);
+        int count = 0;
+        STBox *boxes = tgeo_stboxes(temp, &count);
+        free(temp);
+        EmitStboxList(result, row, list_entries, boxes, count, total);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void StboxFunctions::Geo_stboxes(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    args.data[0].Flatten(row_count);
+    auto in_geo = FlatVector::GetData<string_t>(args.data[0]);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        GSERIALIZED *gs = GeometryToGSerialized(in_geo[row], 0);
+        if (!gs) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        int count = 0;
+        STBox *boxes = geo_stboxes(gs, &count);
+        free(gs);
+        EmitStboxList(result, row, list_entries, boxes, count, total);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void StboxFunctions::Tspatial_split_n_stboxes(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    args.data[0].Flatten(row_count);
+    args.data[1].Flatten(row_count);
+    auto in_temp = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_n = FlatVector::GetData<int32_t>(args.data[1]);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        Temporal *temp = BlobToTempTile(in_temp[row]);
+        int count = 0;
+        STBox *boxes = tgeo_split_n_stboxes(temp, in_n[row], &count);
+        free(temp);
+        EmitStboxList(result, row, list_entries, boxes, count, total);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void StboxFunctions::Tspatial_split_each_n_stboxes(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    args.data[0].Flatten(row_count);
+    args.data[1].Flatten(row_count);
+    auto in_temp = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_n = FlatVector::GetData<int32_t>(args.data[1]);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        Temporal *temp = BlobToTempTile(in_temp[row]);
+        int count = 0;
+        STBox *boxes = tgeo_split_each_n_stboxes(temp, in_n[row], &count);
+        free(temp);
+        EmitStboxList(result, row, list_entries, boxes, count, total);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void StboxFunctions::Geo_split_n_stboxes(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    args.data[0].Flatten(row_count);
+    args.data[1].Flatten(row_count);
+    auto in_geo = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_n = FlatVector::GetData<int32_t>(args.data[1]);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        GSERIALIZED *gs = GeometryToGSerialized(in_geo[row], 0);
+        if (!gs) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        int count = 0;
+        STBox *boxes = geo_split_n_stboxes(gs, in_n[row], &count);
+        free(gs);
+        EmitStboxList(result, row, list_entries, boxes, count, total);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void StboxFunctions::Geo_split_each_n_stboxes(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    args.data[0].Flatten(row_count);
+    args.data[1].Flatten(row_count);
+    auto in_geo = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_n = FlatVector::GetData<int32_t>(args.data[1]);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        GSERIALIZED *gs = GeometryToGSerialized(in_geo[row], 0);
+        if (!gs) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        int count = 0;
+        STBox *boxes = geo_split_each_n_stboxes(gs, in_n[row], &count);
+        free(gs);
+        EmitStboxList(result, row, list_entries, boxes, count, total);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+/* transformPipeline(stbox, pipeline text, srid int = 0, is_forward bool = true)
+ * Apply a PROJ pipeline string to an stbox.
+ */
+void StboxFunctions::Stbox_transform_pipeline(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_box = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_pipe = FlatVector::GetData<string_t>(args.data[1]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto &v1 = FlatVector::Validity(args.data[1]);
+    auto out_data = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row) || !v1.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        if (in_box[row].GetSize() != sizeof(STBox)) {
+            throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+        }
+        STBox box;
+        memcpy(&box, in_box[row].GetData(), sizeof(STBox));
+        int32_t srid = (cc > 2) ? FlatVector::GetData<int32_t>(args.data[2])[row] : 0;
+        bool is_fwd = (cc > 3) ? FlatVector::GetData<bool>(args.data[3])[row]    : true;
+        std::string pipe = in_pipe[row].GetString();
+        STBox *ret = stbox_transform_pipeline(&box, pipe.c_str(), srid, is_fwd);
+        if (!ret) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        string_t blob(reinterpret_cast<const char *>(ret), sizeof(STBox));
+        out_data[row] = StringVector::AddStringOrBlob(result, blob);
+        free(ret);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void StboxFunctions::Stbox_quad_split(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    args.data[0].Flatten(row_count);
+    auto in_box = FlatVector::GetData<string_t>(args.data[0]);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        if (in_box[row].GetSize() != sizeof(STBox)) {
+            throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+        }
+        STBox box;
+        memcpy(&box, in_box[row].GetData(), sizeof(STBox));
+        int count = 0;
+        STBox *boxes = stbox_quad_split(&box, &count);
         EmitStboxList(result, row, list_entries, boxes, count, total);
     }
     if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);

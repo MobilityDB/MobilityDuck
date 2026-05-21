@@ -1,0 +1,32 @@
+# name: test/sql/parity/051c_stbox_hash_iohex.test
+# description: stbox_hash / stbox_hash_extended PG-equality hashes,
+#              stboxFromHexWKB parser, and asHexWKB(stbox) output —
+#              full hash + hex-WKB round-trip surface for stbox.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# stbox_hash / stbox_hash_extended — same value hashes equal
+# =============================================================================
+
+query I
+SELECT stbox_hash('STBOX X((0,0),(10,10))'::stbox) =
+       stbox_hash('STBOX X((0,0),(10,10))'::stbox);
+----
+true
+
+query I
+SELECT stbox_hash_extended('STBOX X((0,0),(10,10))'::stbox, 0::BIGINT) =
+       stbox_hash_extended('STBOX X((0,0),(10,10))'::stbox, 0::BIGINT);
+----
+true
+
+# =============================================================================
+# stboxFromHexWKB / asHexWKB round-trip
+# =============================================================================
+
+query I
+SELECT asText(stboxFromHexWKB(asHexWKB('STBOX X((0,0),(10,10))'::stbox)));
+----
+STBOX X((0,0),(10,10))

@@ -89,7 +89,16 @@ struct SpansetFunctions{
     static void Spanset_spans(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spanset_split_n_spans(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spanset_split_each_n_spans(DataChunk &args, ExpressionState &state, Vector &result);
-    
+
+    // time_distance — temporal-distance between a tstzspanset and
+    // a timestamptz / tstzspan / tstzspanset.  Five overloads dispatch
+    // to MEOS `distance_spanset_timestamptz` /
+    // `distance_tstzspanset_tstzspan` / `distance_tstzspanset_tstzspanset`.
+    static void Time_distance_value_spanset(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Time_distance_span_spanset(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Time_distance_spanset_value(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Time_distance_spanset_span(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Time_distance_spanset_spanset(DataChunk &args, ExpressionState &state, Vector &result);
 
     // Comparison functions
     static void Spanset_eq(DataChunk &args, ExpressionState &state, Vector &result);

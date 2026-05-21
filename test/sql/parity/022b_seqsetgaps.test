@@ -1,0 +1,98 @@
+# name: test/sql/parity/022b_seqsetgaps.test
+# description: <type>SeqSetGaps — split a list of temporal instants into
+#              a TSequenceSet of sequences whenever a gap exceeds maxt
+#              (interval) or maxdist (numeric / spatial distance).
+#              Wraps MEOS tsequenceset_make_gaps.
+#              Long-standing user request — closed MobilityDB issue #187.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# tboolSeqSetGaps — bool, no maxdist
+# =============================================================================
+
+# Without a maxt, the result has 1 sequence covering all instants.
+query I
+SELECT numSequences(tboolSeqSetGaps(
+    [tbool 'true@2000-01-01', tbool 'false@2000-01-02', tbool 'true@2000-01-03']));
+----
+1
+
+# With a 1-day maxt and a 3-day gap, the result splits into 2 sequences.
+query I
+SELECT numSequences(tboolSeqSetGaps(
+    [tbool 'true@2000-01-01', tbool 'false@2000-01-02', tbool 'true@2000-01-10'],
+    INTERVAL '1 day'));
+----
+2
+
+# =============================================================================
+# tintSeqSetGaps — numeric, supports maxdist
+# =============================================================================
+
+query I
+SELECT numSequences(tintSeqSetGaps(
+    [tint '1@2000-01-01', tint '2@2000-01-02', tint '3@2000-01-03']));
+----
+1
+
+# 3-arg form: maxt + maxdist.  A maxdist of 0.5 with consecutive integer
+# values 1 → 2 → 3 (delta = 1 each step) splits into 3 single-instant
+# sequences.
+query I
+SELECT numSequences(tintSeqSetGaps(
+    [tint '1@2000-01-01', tint '2@2000-01-02', tint '3@2000-01-03'],
+    INTERVAL '1 month',
+    0.5));
+----
+3
+
+# =============================================================================
+# tfloatSeqSetGaps — numeric, supports maxdist
+# =============================================================================
+
+query I
+SELECT numSequences(tfloatSeqSetGaps(
+    [tfloat '1.0@2000-01-01', tfloat '2.0@2000-01-02', tfloat '3.0@2000-01-03'],
+    INTERVAL '1 month',
+    1.5));
+----
+1
+
+# =============================================================================
+# ttextSeqSetGaps — text, no maxdist
+# =============================================================================
+
+query I
+SELECT numSequences(ttextSeqSetGaps(
+    [ttext '"a"@2000-01-01', ttext '"b"@2000-01-02']));
+----
+1
+
+# =============================================================================
+# tgeometrySeqSetGaps — spatial, supports maxdist
+# =============================================================================
+
+query I
+SELECT numSequences(tgeometrySeqSetGaps(
+    [tgeometry 'Point(0 0)@2000-01-01',
+     tgeometry 'Point(1 1)@2000-01-02',
+     tgeometry 'Point(2 2)@2000-01-03']));
+----
+1
+
+# =============================================================================
+# tgeompointSeqSetGaps — spatial-point, supports maxdist
+# =============================================================================
+
+# A 0.1 maxdist with consecutive points 1m apart splits aggressively.
+query I
+SELECT numSequences(tgeompointSeqSetGaps(
+    [tgeompoint 'Point(0 0)@2000-01-01',
+     tgeompoint 'Point(1 0)@2000-01-02',
+     tgeompoint 'Point(2 0)@2000-01-03'],
+    INTERVAL '1 month',
+    0.1));
+----
+3

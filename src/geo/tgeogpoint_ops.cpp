@@ -238,9 +238,11 @@ void TgeoTgeoDistIntExec(DataChunk &args, ExpressionState &, Vector &result) {
 }
 
 // ====================================================================
-// Temporal-relation Temporal→Temporal helpers — `restr=false`,
-// `atvalue=false` are the SQL defaults that produce a temporal value
-// covering the whole input duration.
+// Temporal-relation Temporal→Temporal helpers.  The MEOS exports
+// `t{contains,disjoint,intersects,touches,dwithin}_*` produce a tbool
+// covering the whole input duration; restriction is composed at the
+// call site when the SQL surface needs it (see Tcontains_geo_tgeo
+// in tgeompoint_functions.cpp).
 // ====================================================================
 
 inline string_t TemporalToBlob(Vector &result, Temporal *t) {

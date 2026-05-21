@@ -945,6 +945,13 @@ static inline Set *date_to_set_duckdb(DateADT d) {
     return date_to_set(ToMeosDate(duckdb::date_t(d)));
 }
 
+// MEOS `int64` is `long`; on macOS (LP64) `int64_t` is `long long`.
+// Same width, distinct types — go through a forwarding wrapper so the
+// template instantiates with a `int64_t`-typed function pointer.
+static inline Set *bigint_to_set_duckdb(int64_t i) {
+    return bigint_to_set(static_cast<int64>(i));
+}
+
 struct SetPtrState {
     Set *accumulated;
 };
@@ -1069,7 +1076,7 @@ void SetTypes::RegisterSetUnionAgg(ExtensionLoader &loader) {
             LogicalType::INTEGER, SetTypes::intset()));
     set_union_set.AddFunction(
         AggregateFunction::UnaryAggregateDestructor<SetPtrState, int64_t, string_t,
-            SetUnionScalarFunction<int64_t, bigint_to_set>>(
+            SetUnionScalarFunction<int64_t, bigint_to_set_duckdb>>(
             LogicalType::BIGINT, SetTypes::bigintset()));
     set_union_set.AddFunction(
         AggregateFunction::UnaryAggregateDestructor<SetPtrState, double, string_t,

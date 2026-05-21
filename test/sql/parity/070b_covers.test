@@ -1,0 +1,120 @@
+# name: test/sql/parity/070b_covers.test
+# description: eCovers (BOOLEAN), aCovers (BOOLEAN) and tCovers (tbool)
+#              for tgeometry / tgeography / tgeompoint across the three
+#              call shapes (geometry × tgeo, tgeo × geometry, tgeo × tgeo).
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# eCovers — geometry × tgeompoint
+# =============================================================================
+
+# A 5×5 polygon at the origin covers a tgeompoint at (2, 2).
+query I
+SELECT eCovers(
+  ST_GeomFromText('POLYGON((0 0, 0 5, 5 5, 5 0, 0 0))'),
+  'Point(2 2)@2000-01-01'::tgeompoint);
+----
+true
+
+# eCovers — tgeompoint × geometry — a single point covers itself.
+query I
+SELECT eCovers('Point(2 2)@2000-01-01'::tgeompoint,
+               ST_GeomFromText('POINT(2 2)'));
+----
+true
+
+# eCovers — tgeompoint × tgeompoint — identity.
+query I
+SELECT eCovers('Point(2 2)@2000-01-01'::tgeompoint,
+               'Point(2 2)@2000-01-01'::tgeompoint);
+----
+true
+
+# =============================================================================
+# tCovers — temporal coverage (returns tbool, IS NOT NULL is timezone-neutral)
+# =============================================================================
+
+query I
+SELECT tCovers(
+  ST_GeomFromText('POLYGON((0 0, 0 5, 5 5, 5 0, 0 0))'),
+  'Point(2 2)@2000-01-01'::tgeompoint) IS NOT NULL;
+----
+true
+
+query I
+SELECT tCovers('Point(2 2)@2000-01-01'::tgeompoint,
+               'Point(2 2)@2000-01-01'::tgeompoint) IS NOT NULL;
+----
+true
+
+# =============================================================================
+# eCovers / tCovers — tgeometry surface
+# =============================================================================
+
+query I
+SELECT eCovers(
+  ST_GeomFromText('POLYGON((0 0, 0 5, 5 5, 5 0, 0 0))'),
+  'Point(2 2)@2000-01-01'::tgeometry);
+----
+true
+
+query I
+SELECT tCovers(
+  ST_GeomFromText('POLYGON((0 0, 0 5, 5 5, 5 0, 0 0))'),
+  'Point(2 2)@2000-01-01'::tgeometry) IS NOT NULL;
+----
+true
+
+# =============================================================================
+# aCovers — always-covers; same boolean shape as eCovers but every
+# instant must satisfy the relation.
+# =============================================================================
+
+# Polygon covers every instant of a single-instant tgeompoint.
+query I
+SELECT aCovers(
+  ST_GeomFromText('POLYGON((0 0, 0 5, 5 5, 5 0, 0 0))'),
+  'Point(2 2)@2000-01-01'::tgeompoint);
+----
+true
+
+# tgeompoint × geometry — a single point covers itself always.
+query I
+SELECT aCovers('Point(2 2)@2000-01-01'::tgeompoint,
+               ST_GeomFromText('POINT(2 2)'));
+----
+true
+
+# tgeompoint × tgeompoint — identity always covers.
+query I
+SELECT aCovers('Point(2 2)@2000-01-01'::tgeompoint,
+               'Point(2 2)@2000-01-01'::tgeompoint);
+----
+true
+
+# tgeometry surface — geometry × tgeometry.
+query I
+SELECT aCovers(
+  ST_GeomFromText('POLYGON((0 0, 0 5, 5 5, 5 0, 0 0))'),
+  'Point(2 2)@2000-01-01'::tgeometry);
+----
+true
+
+# Negative case — a 1×1 polygon does not always cover a sequence that
+# leaves it.  Two-instant trajectory: (2,2)@t1 stays inside, (10,10)@t2
+# is outside, so eCovers=true but aCovers=false.
+query I
+SELECT eCovers(
+  ST_GeomFromText('POLYGON((0 0, 0 5, 5 5, 5 0, 0 0))'),
+  '[Point(2 2)@2000-01-01, Point(10 10)@2000-01-02]'::tgeompoint);
+----
+true
+
+query I
+SELECT aCovers(
+  ST_GeomFromText('POLYGON((0 0, 0 5, 5 5, 5 0, 0 0))'),
+  '[Point(2 2)@2000-01-01, Point(10 10)@2000-01-02]'::tgeompoint);
+----
+false

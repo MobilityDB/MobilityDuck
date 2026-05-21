@@ -1,4 +1,5 @@
 #include "geo/geoset.hpp"
+#include "temporal/set_functions.hpp"
 #include "tydef.hpp"
 #include "geo_util.hpp"
 #include "duckdb/common/types/data_chunk.hpp"
@@ -111,11 +112,28 @@ void SpatialSetType::RegisterScalarFunctions(ExtensionLoader &loader) {
         {SpatialSetType::geomset(), LogicalType::INTEGER}, SpatialSetType::geomset(), SpatialSetFunctions::Spatialset_transform));
     
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
-		"transform", 
+		"transform",
         {SpatialSetType::geogset(), LogicalType::INTEGER}, SpatialSetType::geogset(), SpatialSetFunctions::Spatialset_transform));
 
+    // transformPipeline(<geomset|geogset>, pipeline text, srid int = 0,
+    //                   is_forward bool = true)
+    for (auto &set_type : {SpatialSetType::geomset(), SpatialSetType::geogset()}) {
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "transformPipeline",
+            {set_type, LogicalType::VARCHAR},
+            set_type, SpatialSetFunctions::Spatialset_transform_pipeline));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "transformPipeline",
+            {set_type, LogicalType::VARCHAR, LogicalType::INTEGER},
+            set_type, SpatialSetFunctions::Spatialset_transform_pipeline));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "transformPipeline",
+            {set_type, LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN},
+            set_type, SpatialSetFunctions::Spatialset_transform_pipeline));
+    }
+
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
-		"startValue", {SpatialSetType::geomset()},  
+		"startValue", {SpatialSetType::geomset()},
 		GeoTypes::GEOMETRY(),
 		SpatialSetFunctions::Set_start_value
 	));    
@@ -143,6 +161,44 @@ void SpatialSetType::RegisterScalarFunctions(ExtensionLoader &loader) {
         SpatialSetType::geomset(),
         SpatialSetFunctions::Geomset_constructor
     ));
+
+    // Binary / EWKB / HexWKB / Text / EWKT parsers — route to the
+    // subtype-agnostic MEOS `set_from_wkb` / `set_from_hexwkb` /
+    // `set_in` dispatchers.  The format encodes (or the caller-side
+    // basetype dictates) the target type.
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geomsetFromBinary", {LogicalType::BLOB},    SpatialSetType::geomset(), SetFunctions::Set_from_binary));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geomsetFromEWKB",   {LogicalType::BLOB},    SpatialSetType::geomset(), SetFunctions::Set_from_binary));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geomsetFromHexWKB", {LogicalType::VARCHAR}, SpatialSetType::geomset(), SetFunctions::Set_from_hexwkb));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geomsetFromText",   {LogicalType::VARCHAR}, SpatialSetType::geomset(), SpatialSetFunctions::Geomset_from_text));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geomsetFromEWKT",   {LogicalType::VARCHAR}, SpatialSetType::geomset(), SpatialSetFunctions::Geomset_from_text));
+
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geogsetFromBinary", {LogicalType::BLOB},    SpatialSetType::geogset(), SetFunctions::Set_from_binary));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geogsetFromEWKB",   {LogicalType::BLOB},    SpatialSetType::geogset(), SetFunctions::Set_from_binary));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geogsetFromHexWKB", {LogicalType::VARCHAR}, SpatialSetType::geogset(), SetFunctions::Set_from_hexwkb));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geogsetFromText",   {LogicalType::VARCHAR}, SpatialSetType::geogset(), SpatialSetFunctions::Geogset_from_text));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geogsetFromEWKT",   {LogicalType::VARCHAR}, SpatialSetType::geogset(), SpatialSetFunctions::Geogset_from_text));
+
+    // asBinary / asHexWKB for geomset / geogset — output side of the
+    // I/O round-trip.  `set_as_wkb` / `set_as_hexwkb` are
+    // subtype-agnostic; the format encodes the source basetype.
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "asBinary", {SpatialSetType::geomset()}, LogicalType::BLOB, SetFunctions::Set_as_binary));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "asBinary", {SpatialSetType::geogset()}, LogicalType::BLOB, SetFunctions::Set_as_binary));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "asHexWKB", {SpatialSetType::geomset()}, LogicalType::VARCHAR, SetFunctions::Set_as_hexwkb));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "asHexWKB", {SpatialSetType::geogset()}, LogicalType::VARCHAR, SetFunctions::Set_as_hexwkb));
 }
 
 // --- Constructor: set(LIST(GEOMETRY)) -> geomset ---
@@ -209,6 +265,41 @@ bool SpatialSetFunctions::Text_to_geoset(Vector &source, Vector &result, idx_t c
 
     result.SetVectorType(VectorType::FLAT_VECTOR);
     return true;
+}
+
+// --- WKT/EWKT parsers ---
+// `geomsetFromText` / `geomsetFromEWKT` route here when the result type
+// is geomset; `geogsetFromText` / `geogsetFromEWKT` route via the
+// geogset variant.  `set_in` is the MEOS dispatcher that handles both
+// WKT and EWKT input for spatial-set basetypes.
+
+namespace {
+
+inline void GeosetFromTextImpl(DataChunk &args, Vector &result, meosType basetype, const char *func_name) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            std::string s(input.GetData(), input.GetSize());
+            Set *r = set_in(s.c_str(), basetype);
+            if (!r) {
+                throw InvalidInputException(std::string(func_name) + ": invalid input");
+            }
+            size_t sz = set_mem_size(r);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(r), sz));
+            free(r);
+            return stored;
+        });
+}
+
+} // namespace
+
+void SpatialSetFunctions::Geomset_from_text(DataChunk &args, ExpressionState &state, Vector &result) {
+    GeosetFromTextImpl(args, result, T_GEOMSET, "geomsetFromText/EWKT");
+}
+
+void SpatialSetFunctions::Geogset_from_text(DataChunk &args, ExpressionState &state, Vector &result) {
+    GeosetFromTextImpl(args, result, T_GEOGSET, "geogsetFromText/EWKT");
 }
 
 // --- asText ---
@@ -375,6 +466,44 @@ void SpatialSetFunctions::Spatialset_transform(DataChunk &args, ExpressionState 
         result_data[i] = StringVector::AddStringOrBlob(result_vec, (const char*)result, total_size);                        
         free(result);		
 	}
+}
+
+/* transformPipeline(<spatial-set>, pipeline text, srid int = 0,
+ *                    is_forward bool = true)
+ * Apply a PROJ pipeline string to every element of the spatial set.
+ */
+void SpatialSetFunctions::Spatialset_transform_pipeline(DataChunk &args, ExpressionState &state, Vector &result_vec) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_set = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_pipe = FlatVector::GetData<string_t>(args.data[1]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto &v1 = FlatVector::Validity(args.data[1]);
+    auto out_data = FlatVector::GetData<string_t>(result_vec);
+    auto &out_validity = FlatVector::Validity(result_vec);
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row) || !v1.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        size_t sz = in_set[row].GetSize();
+        Set *s = (Set *) malloc(sz);
+        memcpy(s, in_set[row].GetData(), sz);
+        int32_t srid = (cc > 2) ? FlatVector::GetData<int32_t>(args.data[2])[row] : 0;
+        bool is_fwd = (cc > 3) ? FlatVector::GetData<bool>(args.data[3])[row]    : true;
+        std::string pipe = in_pipe[row].GetString();
+        Set *ret = spatialset_transform_pipeline(s, pipe.c_str(), srid, is_fwd);
+        free(s);
+        if (!ret) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        size_t rsz = set_mem_size(ret);
+        out_data[row] = StringVector::AddStringOrBlob(result_vec, (const char *) ret, rsz);
+        free(ret);
+    }
+    if (row_count == 1) result_vec.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 // --- startValue ---

@@ -106,6 +106,7 @@ struct TgeompointFunctions {
     static void Tgeo_at_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tgeo_minus_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tspatial_transform(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tspatial_transform_pipeline(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Spatial relationships
@@ -134,10 +135,26 @@ struct TgeompointFunctions {
     static void Adwithin_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adwithin_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Adwithin_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ecovers_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ecovers_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Ecovers_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    /* aCovers (always covers) — `temporal_min_value(tcovers(...)) == TRUE`. */
+    static void Acovers_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Acovers_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Acovers_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    /* Elevation restriction — `atElevation(tpoint, floatspan)` and
+     * `minusElevation(tpoint, floatspan)`.  Orthogonal to the geometry
+     * restriction (`atGeometry` / `minusGeometry`); compose at the
+     * SQL surface when both apply. */
+    static void Tpoint_at_elevation(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tpoint_minus_elevation(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
      * Temporal-spatial relationships
      ****************************************************/
     static void Tcontains_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tcovers_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tcovers_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tcovers_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tdisjoint_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tdisjoint_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tdisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
@@ -165,6 +182,12 @@ struct TgeompointFunctions {
     // static void gs_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void collect_gs(DataChunk &args, ExpressionState &state, Vector &result);
     static void distance_geo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* bearing — initial bearing in radians [0, 2π) */
+    static void Bearing_geo_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Bearing_geo_tpoint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Bearing_tpoint_geo(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Bearing_tpoint_tpoint(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* nearestApproachInstant / nearestApproachDistance / nad */
     static void Nai_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);

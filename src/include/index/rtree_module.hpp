@@ -70,7 +70,7 @@ public:
 
     bool TryMatchDistanceFunction(const unique_ptr<Expression> &expr, vector<reference<Expression>> &bindings) const;
 
-    MeosType GetBboxType() const { return bbox_meostype; }
+    MeosType GetBboxType() const { return bbox_type_; }
     size_t GetBboxSize() const { return bbox_size_; }
 
 
@@ -84,14 +84,8 @@ private:
     RTree *rtree_;
     void *boxes;
 
-    MeosType bbox_meostype;
+    MeosType bbox_type_;
     size_t bbox_size_;
-    LogicalType column_type_;
-    // Multi-entry (MEST) split bound for temporal columns: each temporal
-    // value is indexed as up to this many tight per-segment bounding
-    // boxes. <= 1 degenerates to the single minimum bounding box (the
-    // pre-MEST behaviour). Tunable via WITH (max_boxes = N) on the index.
-    int max_boxes_ = 8;
 
     size_t current_size_ = 0;
     size_t current_capacity_ = 0;

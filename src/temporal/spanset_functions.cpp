@@ -1999,4 +1999,79 @@ void SpansetFunctions::Spanset_cmp(DataChunk &args, ExpressionState &state, Vect
     }
 }
 
-} // namespace duckdb   
+/* ***************************************************
+ * time_distance — temporal distance between a tstzspanset and a
+ * timestamptz / tstzspan / tstzspanset.  Wraps the MEOS exports
+ * `distance_spanset_timestamptz`, `distance_tstzspanset_tstzspan`,
+ * `distance_tstzspanset_tstzspanset`.  The (timestamptz, tstzspanset)
+ * and (tstzspan, tstzspanset) overloads swap arguments before the
+ * MEOS call to reuse the same exports.
+ ****************************************************/
+
+void SpansetFunctions::Time_distance_spanset_value(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, timestamp_tz_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t ss_blob, timestamp_tz_t t) -> double {
+            SpanSet *ss = (SpanSet *) malloc(ss_blob.GetSize());
+            memcpy(ss, ss_blob.GetData(), ss_blob.GetSize());
+            double r = distance_spanset_timestamptz(ss, ToMeosTimestamp(t));
+            free(ss);
+            return r;
+        });
+}
+
+void SpansetFunctions::Time_distance_value_spanset(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<timestamp_tz_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](timestamp_tz_t t, string_t ss_blob) -> double {
+            SpanSet *ss = (SpanSet *) malloc(ss_blob.GetSize());
+            memcpy(ss, ss_blob.GetData(), ss_blob.GetSize());
+            double r = distance_spanset_timestamptz(ss, ToMeosTimestamp(t));
+            free(ss);
+            return r;
+        });
+}
+
+void SpansetFunctions::Time_distance_spanset_span(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t ss_blob, string_t s_blob) -> double {
+            SpanSet *ss = (SpanSet *) malloc(ss_blob.GetSize());
+            memcpy(ss, ss_blob.GetData(), ss_blob.GetSize());
+            Span *s = (Span *) malloc(sizeof(Span));
+            memcpy(s, s_blob.GetData(), sizeof(Span));
+            double r = distance_tstzspanset_tstzspan(ss, s);
+            free(ss); free(s);
+            return r;
+        });
+}
+
+void SpansetFunctions::Time_distance_span_spanset(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t s_blob, string_t ss_blob) -> double {
+            Span *s = (Span *) malloc(sizeof(Span));
+            memcpy(s, s_blob.GetData(), sizeof(Span));
+            SpanSet *ss = (SpanSet *) malloc(ss_blob.GetSize());
+            memcpy(ss, ss_blob.GetData(), ss_blob.GetSize());
+            double r = distance_tstzspanset_tstzspan(ss, s);
+            free(s); free(ss);
+            return r;
+        });
+}
+
+void SpansetFunctions::Time_distance_spanset_spanset(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::Execute<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a_blob, string_t b_blob) -> double {
+            SpanSet *a = (SpanSet *) malloc(a_blob.GetSize());
+            memcpy(a, a_blob.GetData(), a_blob.GetSize());
+            SpanSet *b = (SpanSet *) malloc(b_blob.GetSize());
+            memcpy(b, b_blob.GetData(), b_blob.GetSize());
+            double r = distance_tstzspanset_tstzspanset(a, b);
+            free(a); free(b);
+            return r;
+        });
+}
+
+} // namespace duckdb

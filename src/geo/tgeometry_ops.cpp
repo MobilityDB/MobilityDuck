@@ -239,9 +239,11 @@ void TgeoTgeoDistIntExec(DataChunk &args, ExpressionState &, Vector &result) {
 }
 
 // ====================================================================
-// Temporal-relation Temporal→Temporal helpers — `restr=false`,
-// `atvalue=false` are the SQL defaults that produce a temporal value
-// covering the whole input duration.
+// Temporal-relation Temporal→Temporal helpers.  The MEOS exports
+// `t{contains,disjoint,intersects,touches,dwithin}_*` produce a tbool
+// covering the whole input duration; restriction is composed at the
+// call site when the SQL surface needs it (see Tcontains_geo_tgeo
+// in tgeompoint_functions.cpp).
 // ====================================================================
 
 inline string_t TemporalToBlob(Vector &result, Temporal *t) {
@@ -431,6 +433,36 @@ void TspatialTransformExec(DataChunk &args, ExpressionState &, Vector &result) {
             if (!r) throw InvalidInputException("transform failed");
             return TemporalToBlob(result, r);
         });
+}
+
+void TspatialTransformPipelineExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_temp = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_pipe = FlatVector::GetData<string_t>(args.data[1]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto &v1 = FlatVector::Validity(args.data[1]);
+    auto out_data = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row) || !v1.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        int32_t srid = (cc > 2) ? FlatVector::GetData<int32_t>(args.data[2])[row] : 0;
+        bool is_fwd = (cc > 3) ? FlatVector::GetData<bool>(args.data[3])[row]    : true;
+        Temporal *t = DecodeTemporalCopy(in_temp[row]);
+        std::string pipe = in_pipe[row].GetString();
+        Temporal *r = tspatial_transform_pipeline(t, pipe.c_str(), srid, is_fwd);
+        free(t);
+        if (!r) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        out_data[row] = TemporalToBlob(result, r);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void TspatialToStboxExec(DataChunk &args, ExpressionState &, Vector &result) {
@@ -764,6 +796,18 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction(
         "transform", {TGEOM, INT32}, TGEOM, TspatialTransformExec));
 
+    // transformPipeline(tgeometry, pipeline text, srid int = 0,
+    //                   is_forward bool = true)
+    loader.RegisterFunction(ScalarFunction(
+        "transformPipeline", {TGEOM, LogicalType::VARCHAR}, TGEOM,
+        TspatialTransformPipelineExec));
+    loader.RegisterFunction(ScalarFunction(
+        "transformPipeline", {TGEOM, LogicalType::VARCHAR, INT32}, TGEOM,
+        TspatialTransformPipelineExec));
+    loader.RegisterFunction(ScalarFunction(
+        "transformPipeline", {TGEOM, LogicalType::VARCHAR, INT32, LogicalType::BOOLEAN}, TGEOM,
+        TspatialTransformPipelineExec));
+
     // tgeometry → stbox is a cast in the SQL surface; expose it as a
     // function for now to keep the implementation a single template.
     loader.RegisterFunction(ScalarFunction(
@@ -986,6 +1030,18 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     REG_TCMP("temporal_teq", Teq)
     REG_TCMP("temporal_tne", Tne)
 #undef REG_TCMP
+
+    // eCovers (BOOLEAN), aCovers (BOOLEAN) and tCovers (tbool) —
+    // covering relationships for tgeometry.
+    loader.RegisterFunction(ScalarFunction("eCovers", {GEOM, TGEOM},  LogicalType::BOOLEAN, TgeompointFunctions::Ecovers_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction("eCovers", {TGEOM, GEOM},  LogicalType::BOOLEAN, TgeompointFunctions::Ecovers_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("eCovers", {TGEOM, TGEOM}, LogicalType::BOOLEAN, TgeompointFunctions::Ecovers_tgeo_tgeo));
+    loader.RegisterFunction(ScalarFunction("aCovers", {GEOM, TGEOM},  LogicalType::BOOLEAN, TgeompointFunctions::Acovers_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction("aCovers", {TGEOM, GEOM},  LogicalType::BOOLEAN, TgeompointFunctions::Acovers_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("aCovers", {TGEOM, TGEOM}, LogicalType::BOOLEAN, TgeompointFunctions::Acovers_tgeo_tgeo));
+    loader.RegisterFunction(ScalarFunction("tCovers", {GEOM, TGEOM},  TemporalTypes::TBOOL(), TgeompointFunctions::Tcovers_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction("tCovers", {TGEOM, GEOM},  TemporalTypes::TBOOL(), TgeompointFunctions::Tcovers_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("tCovers", {TGEOM, TGEOM}, TemporalTypes::TBOOL(), TgeompointFunctions::Tcovers_tgeo_tgeo));
 }
 
 } // namespace duckdb
