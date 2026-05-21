@@ -83,6 +83,7 @@ set(EXTENSION_SOURCES
     src/temporal/tbox.cpp
     src/temporal/tbox_functions.cpp
     src/geo/geography.cpp
+    src/geo/geography_functions.cpp
     src/geo/stbox.cpp
     src/geo/stbox_functions.cpp
     src/geo/tgeompoint.cpp
