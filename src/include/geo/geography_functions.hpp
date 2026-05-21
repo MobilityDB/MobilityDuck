@@ -37,7 +37,18 @@ struct GeographyFunctions {
     // EWKB does not lose it.
     static void ST_GeogFromBinary(DataChunk &args, ExpressionState &state, Vector &result);
 
+    // GEOMETRY -> GEOGRAPHY cast: read sgl GEOMETRY, lift to GSERIALIZED,
+    // re-flag geodetic, store as GEOGRAPHY BLOB.
+    static bool Geometry_to_geography_cast(Vector &source, Vector &result,
+                                           idx_t count, CastParameters &parameters);
+
+    // GEOGRAPHY -> GEOMETRY cast: read GSERIALIZED from BLOB, clear the
+    // geodetic flag, emit sgl GEOMETRY via the existing helper.
+    static bool Geography_to_geometry_cast(Vector &source, Vector &result,
+                                           idx_t count, CastParameters &parameters);
+
     static void RegisterScalarFunctions(ExtensionLoader &loader);
+    static void RegisterCastFunctions(ExtensionLoader &loader);
 };
 
 } // namespace duckdb

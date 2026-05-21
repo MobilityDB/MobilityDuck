@@ -1,9 +1,12 @@
-# GEOGRAPHY LogicalType + I/O surface.  Covers:
+# GEOGRAPHY LogicalType + I/O surface + casts.  Covers:
 #   - Type alias registration (column type, NULL handling)
 #   - ST_GeogFromText / ST_AsText round-trip via EWKT
 #   - ST_AsBinary / ST_GeogFromBinary round-trip via EWKB
+#   - GEOMETRY <-> GEOGRAPHY explicit casts
 
 require mobilityduck
+
+require spatial
 
 # --- Type alias registration ---------------------------------------------
 
@@ -39,3 +42,20 @@ query I
 SELECT ST_AsText(ST_GeogFromBinary(ST_AsBinary(ST_GeogFromText('SRID=4326;POINT(4.35 50.85)'))));
 ----
 SRID=4326;POINT(4.35 50.85)
+
+# --- GEOMETRY <-> GEOGRAPHY casts ----------------------------------------
+#
+# Both directions reuse the underlying GSERIALIZED; the cast toggles the
+# geodetic flag.  DuckDB-Spatial GEOMETRY has no SRID slot, so a round-trip
+# via GEOMETRY drops the SRID prefix (a value-equivalent geodetic
+# round-trip is provided by EWKT / EWKB above).
+
+query I
+SELECT ST_AsText(CAST(ST_GeomFromText('POINT(4.35 50.85)') AS GEOGRAPHY));
+----
+POINT(4.35 50.85)
+
+query I
+SELECT ST_AsText(CAST(CAST(ST_GeogFromText('SRID=4326;POINT(4.35 50.85)') AS GEOMETRY) AS GEOGRAPHY));
+----
+POINT(4.35 50.85)
