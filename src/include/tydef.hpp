@@ -32,6 +32,12 @@ extern "C" {
 // a bridge here (`using meosType = MeosType;` becomes valid then) or
 // sweep the source `meosType → MeosType` in one PR — whichever the
 // project prefers at that time.
+//
+// The integration branch (this branch) restores the bridge so the
+// existing 100+ `meosType` call sites compile against the
+// post-consolidation MEOS pin without a tree-wide sed.  Drop this
+// alias when the rename sweep is done.
+using meosType = MeosType;
 
 namespace duckdb {
 
