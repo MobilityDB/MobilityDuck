@@ -135,6 +135,7 @@ Closed-algebra producers (`spaceTimeSplit`, `valueSet`, `eIntersection`) preserv
 | `GEOGRAPHY` LogicalType + ST_GeogFromText / ST_AsText / ST_AsBinary / ST_GeogFromBinary | `src/geo/geography.{cpp,hpp}` + `src/geo/geography_functions.{cpp,hpp}` | Available |
 | Explicit casts `GEOMETRY` ⇄ `GEOGRAPHY` | `src/geo/geography_functions.cpp` | Available (cast drops SRID via DuckDB-Spatial GEOMETRY which has no SRID slot; EWKT/EWKB round-trip preserves SRID) |
 | `TGEOGPOINT(GEOGRAPHY, TIMESTAMPTZ)` constructor + `GEOGRAPHY`-typed `tgeogpoint_*` overloads | Inherits the explicit cast; `TGEOGPOINT(GEOMETRY, …)` is already registered | Available transparently via the cast |
+| `ST_Length(GEOGRAPHY)` / `ST_Area(GEOGRAPHY)` / `eIntersects(TGEOGPOINT, GEOGRAPHY)` / `nearestApproachDistance(TGEOGPOINT, GEOGRAPHY)` | `src/geo/geography_functions.cpp` (thin shims over MEOS `geog_length` / `geog_area` / `eintersects_tgeo_geo` / `nad_tgeo_geo`) | Available |
 | TemporalParquet footer support for `"base_type": "geography"` | `tools/temporal_parquet.py` | Already supports arbitrary `base_type` strings; the consumer reads the alias verbatim |
 | Tests for round-trip, value-equality, cast-matrix, length/area numeric checks | `test/sql/geography.test` (planned) | Pending |
 
@@ -144,7 +145,6 @@ Geodetic `stbox_area` is honoured directly by MEOS; the binding does not approxi
 
 | Item | LoC | Notes |
 |---|---|---|
-| `ST_Length(GEOGRAPHY)` / `ST_Area(GEOGRAPHY)` / `eIntersects(TGEOGPOINT, GEOGRAPHY)` / `nearestApproachDistance` overloads | ~50 | Thin shims over MEOS `geog_length` / `geog_area` / `eintersects_tgeo_geo` / `nad_tgeo_geo` |
 | Full `test/sql/geography.test` matrix | ~200 | Round-trip, cast-matrix, numeric checks against MEOS-on-Postgres ground truth |
 
 The cost is bounded because every line of geodetic semantics already exists in MEOS; the binding just labels and routes.

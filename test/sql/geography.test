@@ -59,3 +59,55 @@ query I
 SELECT ST_AsText(CAST(CAST(ST_GeogFromText('SRID=4326;POINT(4.35 50.85)') AS GEOMETRY) AS GEOGRAPHY));
 ----
 POINT(4.35 50.85)
+
+# --- Geodetic operations: ST_Length / ST_Area ----------------------------
+#
+# Numeric values are MEOS-on-Postgres ground truth (use_spheroid=true).
+
+# A degenerate single-point LINESTRING has zero geodesic length.
+query I
+SELECT ST_Length(ST_GeogFromText('SRID=4326;LINESTRING(4.35 50.85, 4.35 50.85)'));
+----
+0.0
+
+# A short geodesic between Brussels Midi and a point ~5 km north.
+query I
+SELECT ROUND(ST_Length(ST_GeogFromText('SRID=4326;LINESTRING(4.35 50.85, 4.35 50.90)')))
+----
+5562
+
+# A degenerate POINT has zero geodesic area.
+query I
+SELECT ST_Area(ST_GeogFromText('SRID=4326;POINT(4.35 50.85)'));
+----
+0.0
+
+# A small triangle in Brussels — area in m^2 on the WGS84 ellipsoid.
+query I
+SELECT ROUND(ST_Area(ST_GeogFromText('SRID=4326;POLYGON((4.35 50.85, 4.40 50.85, 4.35 50.90, 4.35 50.85))')))
+----
+9792944.0
+
+# --- TGEOGPOINT × GEOGRAPHY operations: eIntersects / nad ----------------
+#
+# A temporal point that passes through (4.35, 50.85) at t0:
+# - eIntersects with the start endpoint  => true
+# - eIntersects with a far-away point    => false
+# - nearestApproachDistance to the start => 0.0
+
+query III
+SELECT
+  eIntersects(
+    CAST('SRID=4326;[POINT(4.35 50.85)@2020-01-01, POINT(4.40 50.90)@2020-01-02]' AS TGEOGPOINT),
+    ST_GeogFromText('SRID=4326;POINT(4.35 50.85)')
+  ),
+  eIntersects(
+    CAST('SRID=4326;[POINT(4.35 50.85)@2020-01-01, POINT(4.40 50.90)@2020-01-02]' AS TGEOGPOINT),
+    ST_GeogFromText('SRID=4326;POINT(10.00 50.85)')
+  ),
+  nearestApproachDistance(
+    CAST('SRID=4326;[POINT(4.35 50.85)@2020-01-01, POINT(4.40 50.90)@2020-01-02]' AS TGEOGPOINT),
+    ST_GeogFromText('SRID=4326;POINT(4.35 50.85)')
+  );
+----
+true	false	0.0
