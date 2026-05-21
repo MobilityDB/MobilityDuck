@@ -69,6 +69,7 @@ DatumGetFloat8(Datum X)
 
 #define DatumGetInt32(X) ((int32) (X))
 #define DatumGetInt64(X) ((int64) (X))
+#define DatumGetBool(X) ((bool) (((int64) (X)) != 0))
 #define DatumGetCString(X) ((char *) DatumGetPointer(X))
 #define CStringGetDatum(X) PointerGetDatum(X)
 #define DatumGetPointer(X) ((Pointer) (X))
