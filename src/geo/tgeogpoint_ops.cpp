@@ -136,10 +136,23 @@ template <int (*FN)(const Temporal *, const GSERIALIZED *)>
 void TgeoGeoIntExec(DataChunk &args, ExpressionState &, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
         args.data[0], args.data[1], result, args.size(),
-        [&](string_t t_blob, string_t g_blob, ValidityMask &mask, idx_t idx) {
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) {
+            // DuckDB's alias-erased function resolution can route either
+            // (TGEO*, GEOM) or (GEOM, TGEO*) calls into this executor (see
+            // BlobLooksLikeTemporal in geo_util.hpp). Detect which blob is
+            // actually the Temporal so the rest of the body sees the
+            // expected (t_blob, g_blob) order.
+            const bool a_is_temporal = BlobLooksLikeTemporal(a);
+            string_t t_blob = a_is_temporal ? a : b;
+            string_t g_blob = a_is_temporal ? b : a;
             Temporal *t = DecodeTemporalCopy(t_blob);
             int32 srid = tspatial_srid(t);
             GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
+            }
             int r = FN(t, gs);
             free(t); free(gs);
             if (r < 0) { mask.SetInvalid(idx); return false; }

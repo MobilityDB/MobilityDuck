@@ -60,8 +60,8 @@ const std::vector<LogicalType> &SetTypes::AllTypes() {
     return types;
 }
 
-MeosType SetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
-    static const std::unordered_map<std::string, MeosType> alias_to_type = {
+meosType SetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
+    static const std::unordered_map<std::string, meosType> alias_to_type = {
         {"intset", T_INTSET},
         {"bigintset", T_BIGINTSET},
         {"floatset", T_FLOATSET},
@@ -815,10 +815,10 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 // --- Unnest ---
 struct SetUnnestBindData : public TableFunctionData {
     string_t blob;
-    MeosType set_type;
+    meosType set_type;
     LogicalType return_type;
 
-    SetUnnestBindData(string_t blob, MeosType set_type, LogicalType return_type)
+    SetUnnestBindData(string_t blob, meosType set_type, LogicalType return_type)
         : blob(std::move(blob)), set_type(set_type), return_type(std::move(return_type)) {}
 };
 
@@ -945,9 +945,10 @@ static inline Set *date_to_set_duckdb(DateADT d) {
     return date_to_set(ToMeosDate(duckdb::date_t(d)));
 }
 
-// MEOS `int64` is `long`; on macOS (LP64) `int64_t` is `long long`.
-// Same width, distinct types — go through a forwarding wrapper so the
-// template instantiates with a `int64_t`-typed function pointer.
+// macOS LP64: int64 (long) and int64_t (long long) are the same width but
+// distinct types, so clang rejects passing bigint_to_set where a
+// Set *(*)(int64_t) is expected as a non-type template arg. The cast is a
+// no-op on Linux. See SetUnionScalarFunction<int64_t, ...> below.
 static inline Set *bigint_to_set_duckdb(int64_t i) {
     return bigint_to_set(static_cast<int64>(i));
 }
