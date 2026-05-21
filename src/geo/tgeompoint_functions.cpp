@@ -23,6 +23,13 @@
 
 namespace duckdb {
 
+// MEOS Datum is uintptr_t; the post-consolidation pin no longer exports
+// the PostgreSQL DatumGetBool macro into the public headers consumed here.
+// Local shim mirrors PostgreSQL's definition (a Datum is "true" iff non-zero).
+#ifndef DatumGetBool
+#define DatumGetBool(X) ((bool) (((Datum) (X)) != 0))
+#endif
+
 namespace {
 
 inline int ea_disjoint_geo_tgeo_dispatch(const GSERIALIZED *gs, const Temporal *temp, bool ever) {
