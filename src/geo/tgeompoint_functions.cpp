@@ -1216,6 +1216,50 @@ void TgeompointFunctions::Tpoint_trajectory_gs(DataChunk &args, ExpressionState 
     }
 }
 
+/* ***************************************************
+ * Elevation restriction — `atElevation(tpoint, floatspan)` and
+ * `minusElevation(tpoint, floatspan)`.  Orthogonal to the geometry
+ * restriction; compose `atGeometry` + `atElevation` (or the minus
+ * variants) at the SQL surface when both apply.
+ ****************************************************/
+
+namespace {
+
+inline string_t TpointElevationExec(string_t t_blob, string_t s_blob, ValidityMask &mask, idx_t idx,
+                                    Vector &result, Temporal *(*FN)(const Temporal *, const Span *)) {
+    uint8_t *t_copy = (uint8_t *) malloc(t_blob.GetSize());
+    memcpy(t_copy, t_blob.GetData(), t_blob.GetSize());
+    Temporal *t = reinterpret_cast<Temporal *>(t_copy);
+    Span *s = (Span *) malloc(sizeof(Span));
+    memcpy(s, s_blob.GetData(), sizeof(Span));
+    Temporal *r = FN(t, s);
+    free(t); free(s);
+    if (!r) { mask.SetInvalid(idx); return string_t(); }
+    size_t sz = temporal_mem_size(r);
+    string_t stored = StringVector::AddStringOrBlob(
+        result, string_t(reinterpret_cast<const char *>(r), sz));
+    free(r);
+    return stored;
+}
+
+} // namespace
+
+void TgeompointFunctions::Tpoint_at_elevation(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t t_blob, string_t s_blob, ValidityMask &mask, idx_t idx) -> string_t {
+            return TpointElevationExec(t_blob, s_blob, mask, idx, result, tpoint_at_elevation);
+        });
+}
+
+void TgeompointFunctions::Tpoint_minus_elevation(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t t_blob, string_t s_blob, ValidityMask &mask, idx_t idx) -> string_t {
+            return TpointElevationExec(t_blob, s_blob, mask, idx, result, tpoint_minus_elevation);
+        });
+}
+
 void TgeompointFunctions::Tgeo_at_geom(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
@@ -1264,45 +1308,85 @@ void TgeompointFunctions::Tgeo_at_geom(DataChunk &args, ExpressionState &state, 
 void TgeompointFunctions::Tgeo_minus_geom(DataChunk &args, ExpressionState &state, Vector &result) {
 	const idx_t count = args.size();
 
-	BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
-	    args.data[0], args.data[1], result, count,
-	    [&](string_t tgeom_blob, string_t geometry_blob, ValidityMask &mask, idx_t idx) -> string_t {
-		    const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
-		    size_t tgeom_data_size = tgeom_blob.GetSize();
-		    if (tgeom_data_size < sizeof(void *)) {
-			    throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
-		    }
-		    uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
-		    memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
-		    Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
-		    if (!tgeom) {
-			    free(tgeom_data_copy);
-			    throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
-		    }
+	auto minus_geom_common = [&](string_t tgeom_blob, string_t geometry_blob, const Span *zspan,
+	                             ValidityMask &mask, idx_t idx) -> string_t {
+		const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
+		size_t tgeom_data_size = tgeom_blob.GetSize();
+		if (tgeom_data_size < sizeof(void *)) {
+			throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
+		}
+		uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
+		memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
+		Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
+		if (!tgeom) {
+			free(tgeom_data_copy);
+			throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+		}
 
-		    int32 srid = tspatial_srid(tgeom);
-		    GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
-		    if (!gs) {
-			    free(tgeom);
-			    throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
-		    }
+		int32 srid = tspatial_srid(tgeom);
+		GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
+		if (!gs) {
+			free(tgeom);
+			throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+		}
 
-		    Temporal *ret = tgeo_minus_geom(tgeom, gs);
-		    free(tgeom);
-		    free(gs);
-		    if (!ret) {
-			    mask.SetInvalid(idx);
-			    return string_t();
-		    }
-		    size_t ret_size = temporal_mem_size(ret);
-		    uint8_t *ret_data = (uint8_t *)malloc(ret_size);
-		    memcpy(ret_data, ret, ret_size);
-		    string_t ret_string(reinterpret_cast<const char *>(ret_data), ret_size);
-		    string_t stored_data = StringVector::AddStringOrBlob(result, ret_string);
-		    free(ret_data);
-		    free(ret);
-		    return stored_data;
-	    });
+		/* Geometry restriction (`tgeo_minus_geom`) and elevation
+		 * restriction (`tpoint_minus_elevation`) are orthogonal
+		 * surfaces; compose them when both apply. */
+		if (zspan) {
+			free(tgeom);
+			free(gs);
+			throw InvalidInputException(
+				"minusGeometry takes no zspan; compose "
+				"`minusGeometry` with `minusElevation`.");
+		}
+		Temporal *ret = tgeo_minus_geom(tgeom, gs);
+		free(tgeom);
+		free(gs);
+		if (!ret) {
+			mask.SetInvalid(idx);
+			return string_t();
+		}
+		size_t ret_size = temporal_mem_size(ret);
+		uint8_t *ret_data = (uint8_t *)malloc(ret_size);
+		memcpy(ret_data, ret, ret_size);
+		string_t ret_string(reinterpret_cast<const char *>(ret_data), ret_size);
+		string_t stored_data = StringVector::AddStringOrBlob(result, ret_string);
+		free(ret_data);
+		free(ret);
+		return stored_data;
+	};
+
+	if (args.ColumnCount() == 2) {
+		BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+		    args.data[0], args.data[1], result, count,
+		    [&](string_t tgeom_blob, string_t geometry_blob, ValidityMask &mask, idx_t idx) -> string_t {
+			    return minus_geom_common(tgeom_blob, geometry_blob, nullptr, mask, idx);
+		    });
+	} else if (args.ColumnCount() == 3) {
+		TernaryExecutor::ExecuteWithNulls<string_t, string_t, string_t, string_t>(
+		    args.data[0], args.data[1], args.data[2], result, count,
+		    [&](string_t tgeom_blob, string_t geometry_blob, string_t span_blob, ValidityMask &mask,
+		        idx_t idx) -> string_t {
+			    size_t span_size = span_blob.GetSize();
+			    if (span_size < sizeof(void *)) {
+				    throw InvalidInputException("Invalid floatspan data: insufficient size");
+			    }
+			    uint8_t *span_copy = (uint8_t *)malloc(span_size);
+			    memcpy(span_copy, span_blob.GetData(), span_size);
+			    Span *zspan = reinterpret_cast<Span *>(span_copy);
+			    try {
+				    string_t out = minus_geom_common(tgeom_blob, geometry_blob, zspan, mask, idx);
+				    free(span_copy);
+				    return out;
+			    } catch (...) {
+				    free(span_copy);
+				    throw;
+			    }
+		    });
+	} else {
+		throw InternalException("Tgeo_minus_geom: expected 2 or 3 arguments");
+	}
 
 	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
@@ -1465,6 +1549,48 @@ void TgeompointFunctions::Tspatial_transform(DataChunk &args, ExpressionState &s
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
+}
+
+/* transformPipeline(<tspatial>, pipeline text, srid int = 0, is_forward bool = true)
+ *
+ * Apply a PROJ pipeline string to a temporal spatial value.  srid is
+ * the target SRID; is_forward selects forward vs inverse application
+ * of the pipeline.  Default srid=0 / is_forward=true follow MobilityDB.
+ */
+void TgeompointFunctions::Tspatial_transform_pipeline(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_temp = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_pipe = FlatVector::GetData<string_t>(args.data[1]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto &v1 = FlatVector::Validity(args.data[1]);
+    auto out_data = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row) || !v1.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        int32_t srid = (cc > 2) ? FlatVector::GetData<int32_t>(args.data[2])[row] : 0;
+        bool is_fwd = (cc > 3) ? FlatVector::GetData<bool>(args.data[3])[row]    : true;
+        size_t sz = in_temp[row].GetSize();
+        uint8_t *copy = (uint8_t *) malloc(sz);
+        memcpy(copy, in_temp[row].GetData(), sz);
+        Temporal *t = reinterpret_cast<Temporal *>(copy);
+        std::string pipe = in_pipe[row].GetString();
+        Temporal *ret = tspatial_transform_pipeline(t, pipe.c_str(), srid, is_fwd);
+        free(t);
+        if (!ret) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        size_t rsz = temporal_mem_size(ret);
+        string_t blob(reinterpret_cast<const char *>(ret), rsz);
+        out_data[row] = StringVector::AddStringOrBlob(result, blob);
+        free(ret);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 /* ***************************************************
@@ -2389,45 +2515,262 @@ void TgeompointFunctions::Adwithin_tgeo_tgeo(DataChunk &args, ExpressionState &s
  ****************************************************/
 void TgeompointFunctions::Tcontains_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
     const idx_t count = args.size();
-    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
-        args.data[0], args.data[1], result, count,
-        [&](string_t geometry_blob, string_t tgeom_blob, ValidityMask &mask, idx_t idx) -> string_t {
-            int32 srid = 0;
-            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
-            if (!gs) {
-                throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
-            }
+    auto eval = [&](string_t geometry_blob, string_t tgeom_blob, bool restr, bool at_value, ValidityMask &mask,
+                    idx_t idx) -> string_t {
+        int32 srid = 0;
+        GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
+        if (!gs) {
+            throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
+        }
 
-            const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
-            size_t tgeom_data_size = tgeom_blob.GetSize();
-            uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
-            memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
-            Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
-            if (!tgeom) {
-                free(tgeom_data_copy);
-                free(gs);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
-            }
-
-            Temporal *ret = tcontains_geo_tgeo(gs, tgeom);
-            free(tgeom);
+        const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
+        size_t tgeom_data_size = tgeom_blob.GetSize();
+        uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
+        memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
+        Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
+        if (!tgeom) {
+            free(tgeom_data_copy);
             free(gs);
-            if (!ret) {
-                mask.SetInvalid(idx);
-                return string_t();
-            }
-            size_t ret_size = temporal_mem_size(ret);
-            string_t stored_data =
-                StringVector::AddStringOrBlob(result, reinterpret_cast<const char *>(ret), ret_size);
+            throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+        }
+
+        Temporal *ret = tcontains_geo_tgeo(gs, tgeom);
+
+        if (ret && restr) {
+
+            Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
             free(ret);
-            return stored_data;
-        });
+
+            ret = restricted;
+
+        }
+        free(tgeom);
+        free(gs);
+        if (!ret) {
+            mask.SetInvalid(idx);
+            return string_t();
+        }
+        size_t ret_size = temporal_mem_size(ret);
+        string_t stored_data =
+            StringVector::AddStringOrBlob(result, reinterpret_cast<const char *>(ret), ret_size);
+        free(ret);
+        return stored_data;
+    };
+
+    if (args.ColumnCount() == 2) {
+        BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+            args.data[0], args.data[1], result, count,
+            [&](string_t geometry_blob, string_t tgeom_blob, ValidityMask &mask, idx_t idx) -> string_t {
+                return eval(geometry_blob, tgeom_blob, false, false, mask, idx);
+            });
+    } else if (args.ColumnCount() == 3) {
+        TernaryExecutor::ExecuteWithNulls<string_t, string_t, bool, string_t>(
+            args.data[0], args.data[1], args.data[2], result, count,
+            [&](string_t geometry_blob, string_t tgeom_blob, bool at_value, ValidityMask &mask,
+                idx_t idx) -> string_t {
+                return eval(geometry_blob, tgeom_blob, true, at_value, mask, idx);
+            });
+    } else {
+        throw InternalException("Tcontains_geo_tgeo: expected 2 or 3 arguments");
+    }
     if (count == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
 
+/* ***************************************************
+ * eCovers / tCovers — covering relationships
+ *
+ * acovers_*_tgeo is not exported by the MEOS public API at present;
+ * tracked as upstream MEOS gap.  When MEOS exposes the symbol, the
+ * matching aCovers_* wrappers can be added by mirroring the pattern
+ * below.
+ ****************************************************/
+
+void TgeompointFunctions::Ecovers_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t g_blob, string_t t_blob, ValidityMask &mask, idx_t idx) -> bool {
+            uint8_t *t_copy = (uint8_t *)malloc(t_blob.GetSize());
+            memcpy(t_copy, t_blob.GetData(), t_blob.GetSize());
+            Temporal *t = reinterpret_cast<Temporal *>(t_copy);
+            int32 srid = tspatial_srid(t);
+            GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
+            if (!gs) { free(t); throw InvalidInputException("eCovers: invalid geometry"); }
+            int r = ecovers_geo_tgeo(gs, t);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+void TgeompointFunctions::Ecovers_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t t_blob, string_t g_blob, ValidityMask &mask, idx_t idx) -> bool {
+            uint8_t *t_copy = (uint8_t *)malloc(t_blob.GetSize());
+            memcpy(t_copy, t_blob.GetData(), t_blob.GetSize());
+            Temporal *t = reinterpret_cast<Temporal *>(t_copy);
+            int32 srid = tspatial_srid(t);
+            GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
+            if (!gs) { free(t); throw InvalidInputException("eCovers: invalid geometry"); }
+            int r = ecovers_tgeo_geo(t, gs);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+void TgeompointFunctions::Ecovers_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t t1_blob, string_t t2_blob, ValidityMask &mask, idx_t idx) -> bool {
+            uint8_t *c1 = (uint8_t *)malloc(t1_blob.GetSize());
+            memcpy(c1, t1_blob.GetData(), t1_blob.GetSize());
+            uint8_t *c2 = (uint8_t *)malloc(t2_blob.GetSize());
+            memcpy(c2, t2_blob.GetData(), t2_blob.GetSize());
+            int r = ecovers_tgeo_tgeo(
+                reinterpret_cast<Temporal *>(c1), reinterpret_cast<Temporal *>(c2));
+            free(c1); free(c2);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+void TgeompointFunctions::Tcovers_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t g_blob, string_t t_blob, ValidityMask &mask, idx_t idx) -> string_t {
+            uint8_t *t_copy = (uint8_t *)malloc(t_blob.GetSize());
+            memcpy(t_copy, t_blob.GetData(), t_blob.GetSize());
+            Temporal *t = reinterpret_cast<Temporal *>(t_copy);
+            int32 srid = tspatial_srid(t);
+            GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
+            if (!gs) { free(t); throw InvalidInputException("tCovers: invalid geometry"); }
+            Temporal *r = tcovers_geo_tgeo(gs, t);
+            free(t); free(gs);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            size_t sz = temporal_mem_size(r);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(r), sz));
+            free(r);
+            return stored;
+        });
+}
+
+void TgeompointFunctions::Tcovers_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t t_blob, string_t g_blob, ValidityMask &mask, idx_t idx) -> string_t {
+            uint8_t *t_copy = (uint8_t *)malloc(t_blob.GetSize());
+            memcpy(t_copy, t_blob.GetData(), t_blob.GetSize());
+            Temporal *t = reinterpret_cast<Temporal *>(t_copy);
+            int32 srid = tspatial_srid(t);
+            GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
+            if (!gs) { free(t); throw InvalidInputException("tCovers: invalid geometry"); }
+            Temporal *r = tcovers_tgeo_geo(t, gs);
+            free(t); free(gs);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            size_t sz = temporal_mem_size(r);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(r), sz));
+            free(r);
+            return stored;
+        });
+}
+
+void TgeompointFunctions::Tcovers_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t t1_blob, string_t t2_blob, ValidityMask &mask, idx_t idx) -> string_t {
+            uint8_t *c1 = (uint8_t *)malloc(t1_blob.GetSize());
+            memcpy(c1, t1_blob.GetData(), t1_blob.GetSize());
+            uint8_t *c2 = (uint8_t *)malloc(t2_blob.GetSize());
+            memcpy(c2, t2_blob.GetData(), t2_blob.GetSize());
+            Temporal *r = tcovers_tgeo_tgeo(
+                reinterpret_cast<Temporal *>(c1), reinterpret_cast<Temporal *>(c2));
+            free(c1); free(c2);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            size_t sz = temporal_mem_size(r);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(r), sz));
+            free(r);
+            return stored;
+        });
+}
+
+/* ***************************************************
+ * aCovers — always-covers relationship.
+ *
+ * Defined as `temporal_min_value(tcovers(...)) == TRUE`.  For a tbool,
+ * temporal_min_value returns FALSE if any instant is FALSE and TRUE
+ * if every instant is TRUE — semantically identical to "always covers".
+ ****************************************************/
+
+void TgeompointFunctions::Acovers_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t g_blob, string_t t_blob, ValidityMask &mask, idx_t idx) -> bool {
+            uint8_t *t_copy = (uint8_t *)malloc(t_blob.GetSize());
+            memcpy(t_copy, t_blob.GetData(), t_blob.GetSize());
+            Temporal *t = reinterpret_cast<Temporal *>(t_copy);
+            int32 srid = tspatial_srid(t);
+            GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
+            if (!gs) { free(t); throw InvalidInputException("aCovers: invalid geometry"); }
+            Temporal *tcov = tcovers_geo_tgeo(gs, t);
+            free(t); free(gs);
+            if (!tcov) { mask.SetInvalid(idx); return false; }
+            Datum minv = temporal_min_value(tcov);
+            free(tcov);
+            return DatumGetBool(minv);
+        });
+}
+
+void TgeompointFunctions::Acovers_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t t_blob, string_t g_blob, ValidityMask &mask, idx_t idx) -> bool {
+            uint8_t *t_copy = (uint8_t *)malloc(t_blob.GetSize());
+            memcpy(t_copy, t_blob.GetData(), t_blob.GetSize());
+            Temporal *t = reinterpret_cast<Temporal *>(t_copy);
+            int32 srid = tspatial_srid(t);
+            GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
+            if (!gs) { free(t); throw InvalidInputException("aCovers: invalid geometry"); }
+            Temporal *tcov = tcovers_tgeo_geo(t, gs);
+            free(t); free(gs);
+            if (!tcov) { mask.SetInvalid(idx); return false; }
+            Datum minv = temporal_min_value(tcov);
+            free(tcov);
+            return DatumGetBool(minv);
+        });
+}
+
+void TgeompointFunctions::Acovers_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t t1_blob, string_t t2_blob, ValidityMask &mask, idx_t idx) -> bool {
+            uint8_t *c1 = (uint8_t *)malloc(t1_blob.GetSize());
+            memcpy(c1, t1_blob.GetData(), t1_blob.GetSize());
+            uint8_t *c2 = (uint8_t *)malloc(t2_blob.GetSize());
+            memcpy(c2, t2_blob.GetData(), t2_blob.GetSize());
+            Temporal *tcov = tcovers_tgeo_tgeo(
+                reinterpret_cast<Temporal *>(c1), reinterpret_cast<Temporal *>(c2));
+            free(c1); free(c2);
+            if (!tcov) { mask.SetInvalid(idx); return false; }
+            Datum minv = temporal_min_value(tcov);
+            free(tcov);
+            return DatumGetBool(minv);
+        });
+}
+
 void TgeompointFunctions::Tdisjoint_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    bool at_value = false;
+    bool restr = false;
+    if (args.ColumnCount() > 2){
+        at_value = args.data[2].GetValue(0).GetValue<bool>();
+        restr = true;
+    }
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t geometry_blob, string_t tgeom_blob, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2449,6 +2792,16 @@ void TgeompointFunctions::Tdisjoint_geo_tgeo(DataChunk &args, ExpressionState &s
             }
 
             Temporal *ret = tdisjoint_geo_tgeo(gs, tgeom);
+
+            if (ret && restr) {
+
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+                free(ret);
+
+                ret = restricted;
+
+            }
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2467,6 +2820,12 @@ void TgeompointFunctions::Tdisjoint_geo_tgeo(DataChunk &args, ExpressionState &s
 }
 
 void TgeompointFunctions::Tdisjoint_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    bool at_value = false;
+    bool restr = false;
+    if (args.ColumnCount() > 2){
+        at_value = args.data[2].GetValue(0).GetValue<bool>();
+        restr = true;
+    }
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t tgeom_blob, string_t geometry_blob, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2488,6 +2847,16 @@ void TgeompointFunctions::Tdisjoint_tgeo_geo(DataChunk &args, ExpressionState &s
             }
 
             Temporal *ret = tdisjoint_tgeo_geo(tgeom, gs);
+
+            if (ret && restr) {
+
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+                free(ret);
+
+                ret = restricted;
+
+            }
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2506,6 +2875,12 @@ void TgeompointFunctions::Tdisjoint_tgeo_geo(DataChunk &args, ExpressionState &s
 }
 
 void TgeompointFunctions::Tdisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    bool at_value = false;
+    bool restr = false;
+    if (args.ColumnCount() > 2){
+        at_value = args.data[2].GetValue(0).GetValue<bool>();
+        restr = true;
+    }
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t tgeom1_blob, string_t tgeom2_blob, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2531,6 +2906,16 @@ void TgeompointFunctions::Tdisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &
             }
 
             Temporal *ret = tdisjoint_tgeo_tgeo(tgeom1, tgeom2);
+
+            if (ret && restr) {
+
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+                free(ret);
+
+                ret = restricted;
+
+            }
             free(tgeom1);
             free(tgeom2);
             if (!ret) {
@@ -2549,6 +2934,12 @@ void TgeompointFunctions::Tdisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &
 }
 
 void TgeompointFunctions::Tintersects_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    bool at_value = false;
+    bool restr = false;
+    if (args.ColumnCount() > 2){
+        at_value = args.data[2].GetValue(0).GetValue<bool>();
+        restr = true; 
+    }
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t geometry_blob, string_t tgeom_blob, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2570,6 +2961,16 @@ void TgeompointFunctions::Tintersects_geo_tgeo(DataChunk &args, ExpressionState 
             }
 
             Temporal *ret = tintersects_geo_tgeo(gs, tgeom);
+
+            if (ret && restr) {
+
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+                free(ret);
+
+                ret = restricted;
+
+            }
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2588,6 +2989,12 @@ void TgeompointFunctions::Tintersects_geo_tgeo(DataChunk &args, ExpressionState 
 }
 
 void TgeompointFunctions::Tintersects_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    bool at_value = false;
+    bool restr = false;
+    if (args.ColumnCount() > 2){
+        at_value = args.data[2].GetValue(0).GetValue<bool>();
+        restr = true; 
+    }
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t tgeom_blob, string_t geometry_blob, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2609,6 +3016,16 @@ void TgeompointFunctions::Tintersects_tgeo_geo(DataChunk &args, ExpressionState 
             }
 
             Temporal *ret = tintersects_tgeo_geo(tgeom, gs);
+
+            if (ret && restr) {
+
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+                free(ret);
+
+                ret = restricted;
+
+            }
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2627,6 +3044,12 @@ void TgeompointFunctions::Tintersects_tgeo_geo(DataChunk &args, ExpressionState 
 }
 
 void TgeompointFunctions::Tintersects_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    bool at_value = false;
+    bool restr = false;
+    if (args.ColumnCount() > 2){
+        at_value = args.data[2].GetValue(0).GetValue<bool>();
+        restr = true; 
+    }
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t tgeom1_blob, string_t tgeom2_blob, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2652,6 +3075,16 @@ void TgeompointFunctions::Tintersects_tgeo_tgeo(DataChunk &args, ExpressionState
             }
 
             Temporal *ret = tintersects_tgeo_tgeo(tgeom1, tgeom2);
+
+            if (ret && restr) {
+
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+                free(ret);
+
+                ret = restricted;
+
+            }
             free(tgeom1);
             free(tgeom2);
             if (!ret) {
@@ -2670,6 +3103,12 @@ void TgeompointFunctions::Tintersects_tgeo_tgeo(DataChunk &args, ExpressionState
 }
 
 void TgeompointFunctions::Ttouches_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    bool at_value = false;
+    bool restr = false;
+    if (args.ColumnCount() > 2){
+        at_value = args.data[2].GetValue(0).GetValue<bool>();
+        restr = true; 
+    }
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t geometry_blob, string_t tgeom_blob, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2691,6 +3130,16 @@ void TgeompointFunctions::Ttouches_geo_tgeo(DataChunk &args, ExpressionState &st
             }
 
             Temporal *ret = ttouches_geo_tgeo(gs, tgeom);
+
+            if (ret && restr) {
+
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+                free(ret);
+
+                ret = restricted;
+
+            }
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2709,6 +3158,12 @@ void TgeompointFunctions::Ttouches_geo_tgeo(DataChunk &args, ExpressionState &st
 }
 
 void TgeompointFunctions::Ttouches_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    bool at_value = false;
+    bool restr = false;
+    if (args.ColumnCount() > 2){
+        at_value = args.data[2].GetValue(0).GetValue<bool>();
+        restr = true; 
+    }
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t tgeom_blob, string_t geometry_blob, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2730,6 +3185,16 @@ void TgeompointFunctions::Ttouches_tgeo_geo(DataChunk &args, ExpressionState &st
             }
 
             Temporal *ret = ttouches_tgeo_geo(tgeom, gs);
+
+            if (ret && restr) {
+
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+                free(ret);
+
+                ret = restricted;
+
+            }
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2748,6 +3213,12 @@ void TgeompointFunctions::Ttouches_tgeo_geo(DataChunk &args, ExpressionState &st
 }
 
 void TgeompointFunctions::Tdwithin_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    bool at_value = false;
+    bool restr = false;
+    if (args.ColumnCount() > 3) {
+        at_value = args.data[3].GetValue(0).GetValue<bool>();
+        restr = true;
+    }
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, string_t>(
         args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t tgeom1_blob, string_t tgeom2_blob, double dist, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2772,6 +3243,11 @@ void TgeompointFunctions::Tdwithin_tgeo_tgeo(DataChunk &args, ExpressionState &s
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
             Temporal *ret = tdwithin_tgeo_tgeo(tgeom1, tgeom2, dist);
+            if (ret && restr) {
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+                free(ret);
+                ret = restricted;
+            }
             if (!ret) {
                 free(tgeom1);
                 free(tgeom2);
@@ -2792,6 +3268,12 @@ void TgeompointFunctions::Tdwithin_tgeo_tgeo(DataChunk &args, ExpressionState &s
 }
 
 void TgeompointFunctions::Tdwithin_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    bool at_value = false;
+    bool restr = false;
+    if (args.ColumnCount() > 3) {
+        at_value = args.data[3].GetValue(0).GetValue<bool>();
+        restr = true;
+    }
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, string_t>(
         args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t tgeom_blob, string_t geometry_blob, double dist, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2813,6 +3295,16 @@ void TgeompointFunctions::Tdwithin_tgeo_geo(DataChunk &args, ExpressionState &st
             }
 
             Temporal *ret = tdwithin_tgeo_geo(tgeom, gs, dist);
+
+            if (ret && restr) {
+
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+                free(ret);
+
+                ret = restricted;
+
+            }
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2831,6 +3323,12 @@ void TgeompointFunctions::Tdwithin_tgeo_geo(DataChunk &args, ExpressionState &st
 }
 
 void TgeompointFunctions::Tdwithin_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
+    bool at_value = false;
+    bool restr = false;
+    if (args.ColumnCount() > 3) {
+        at_value = args.data[3].GetValue(0).GetValue<bool>();
+        restr = true;
+    }
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, string_t>(
         args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t geometry_blob, string_t tgeom_blob, double dist, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2852,6 +3350,16 @@ void TgeompointFunctions::Tdwithin_geo_tgeo(DataChunk &args, ExpressionState &st
             }
 
             Temporal *ret = tdwithin_geo_tgeo(gs, tgeom, dist);
+
+            if (ret && restr) {
+
+                Temporal *restricted = temporal_restrict_value(ret, (Datum)at_value, true);
+
+                free(ret);
+
+                ret = restricted;
+
+            }
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -3481,6 +3989,91 @@ void TgeompointFunctions::Tgeo_scale_xyz(DataChunk &args, ExpressionState &state
 
 void TgeompointFunctions::Tdistance_named(DataChunk &args, ExpressionState &state, Vector &result) {
     TgeompointFunctions::Tdistance_tgeo_tgeo(args, state, result);
+}
+
+/* ***************************************************
+ * bearing — initial bearing in radians [0, 2π)
+ ****************************************************/
+
+void TgeompointFunctions::Bearing_geo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t g1_blob, string_t g2_blob, ValidityMask &mask, idx_t idx) -> double {
+            GSERIALIZED *g1 = GeometryToGSerialized(g1_blob, 0);
+            GSERIALIZED *g2 = GeometryToGSerialized(g2_blob, 0);
+            if (!g1 || !g2) {
+                if (g1) free(g1);
+                if (g2) free(g2);
+                throw InvalidInputException("bearing: invalid geometry input");
+            }
+            double r = 0.0;
+            bool ok = bearing_point_point(g1, g2, &r);
+            free(g1); free(g2);
+            if (!ok) { mask.SetInvalid(idx); return 0.0; }
+            return r;
+        });
+}
+
+void TgeompointFunctions::Bearing_tpoint_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t t_blob, string_t g_blob, ValidityMask &mask, idx_t idx) -> string_t {
+            uint8_t *t_copy = (uint8_t *)malloc(t_blob.GetSize());
+            memcpy(t_copy, t_blob.GetData(), t_blob.GetSize());
+            Temporal *t = reinterpret_cast<Temporal *>(t_copy);
+            int32 srid = tspatial_srid(t);
+            GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
+            if (!gs) { free(t); throw InvalidInputException("bearing: invalid geometry"); }
+            Temporal *r = bearing_tpoint_point(t, gs, false);
+            free(t); free(gs);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            size_t sz = temporal_mem_size(r);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(r), sz));
+            free(r);
+            return stored;
+        });
+}
+
+void TgeompointFunctions::Bearing_geo_tpoint(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t g_blob, string_t t_blob, ValidityMask &mask, idx_t idx) -> string_t {
+            uint8_t *t_copy = (uint8_t *)malloc(t_blob.GetSize());
+            memcpy(t_copy, t_blob.GetData(), t_blob.GetSize());
+            Temporal *t = reinterpret_cast<Temporal *>(t_copy);
+            int32 srid = tspatial_srid(t);
+            GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
+            if (!gs) { free(t); throw InvalidInputException("bearing: invalid geometry"); }
+            Temporal *r = bearing_tpoint_point(t, gs, true);
+            free(t); free(gs);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            size_t sz = temporal_mem_size(r);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(r), sz));
+            free(r);
+            return stored;
+        });
+}
+
+void TgeompointFunctions::Bearing_tpoint_tpoint(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t t1_blob, string_t t2_blob, ValidityMask &mask, idx_t idx) -> string_t {
+            uint8_t *c1 = (uint8_t *)malloc(t1_blob.GetSize());
+            memcpy(c1, t1_blob.GetData(), t1_blob.GetSize());
+            uint8_t *c2 = (uint8_t *)malloc(t2_blob.GetSize());
+            memcpy(c2, t2_blob.GetData(), t2_blob.GetSize());
+            Temporal *r = bearing_tpoint_tpoint(
+                reinterpret_cast<Temporal *>(c1), reinterpret_cast<Temporal *>(c2));
+            free(c1); free(c2);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            size_t sz = temporal_mem_size(r);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(r), sz));
+            free(r);
+            return stored;
+        });
 }
 
 /* ***************************************************
