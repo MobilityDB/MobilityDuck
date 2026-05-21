@@ -17,7 +17,6 @@
 #include "geo/tgeography_ops.hpp"
 #include "geo/tgeogpoint.hpp"
 #include "geo/tgeogpoint_ops.hpp"
-#include "h3/th3index.hpp"
 #include "temporal/span.hpp"
 #include "temporal/span_aggregates.hpp"
 #include "temporal/temporal_aggregates.hpp"
@@ -31,7 +30,6 @@
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include "index/rtree_module.hpp"
 #include "single_tile_getters.hpp"
-#include "temporal/temporal_parquet.hpp"
 
 #include <mutex>
 #include <fstream>
@@ -83,7 +81,7 @@ inline void MobilityduckOpenSSLVersionScalarFun(DataChunk &args, ExpressionState
 // MEOS does not expose a runtime version symbol, so the build-time pin
 // is the most precise version stamp the extension can report.
 #ifndef MOBILITYDUCK_MEOS_PIN
-#define MOBILITYDUCK_MEOS_PIN "ee27da1a6"
+#define MOBILITYDUCK_MEOS_PIN "f11b7443e"
 #endif
 
 inline std::string MobilityduckShortVersion() {
@@ -202,15 +200,7 @@ static constexpr int MEOS_ERRLEVEL_ERROR = 21;
 extern "C" void MobilityduckMeosErrorHandler(int errlevel, int errcode, const char *errmsg) {
     (void) errcode;
     if (errlevel >= MEOS_ERRLEVEL_ERROR) {
-        /* Capture the message before resetting MEOS state — MEOS owns
-         * the buffer pointed to by `errmsg` and clears it in
-         * `meos_errno_reset`.  Resetting before the throw is the key:
-         * without it, subsequent MEOS calls see leftover errno/error
-         * state and crash (e.g. `tstzspan_in` after a previous
-         * `intspan_in` parse failure SIGSEGVs in `pg_timestamptz_in`). */
-        std::string msg = errmsg ? errmsg : "MEOS error";
-        meos_errno_reset();
-        throw duckdb::InvalidInputException(msg);
+        throw duckdb::InvalidInputException(errmsg ? errmsg : "MEOS error");
     }
 }
 
@@ -227,13 +217,31 @@ static void LoadInternal(ExtensionLoader &loader) {
 	static std::once_flag meos_init_flag;
     std::call_once(meos_init_flag, []() {
         meos_initialize();
-        // MEOS needs an explicit timezone for any TIMESTAMPTZ-based
-        // path (aggregate transfns over tstzset etc.); UTC matches
-        // the test harness's `TZ=UTC` and the bare-TIMESTAMPTZ
-        // display offsets in test expected outputs.
-        meos_initialize_timezone("UTC");
+        /* Set the MEOS timezone to Europe/Brussels so that all temporal-type
+         * text I/O uses a consistent, named timezone on every platform.
+         * Brussels is a non-UTC zone that surfaces bugs hidden by UTC (e.g.
+         * off-by-one-hour errors in timestamp handling).
+         *
+         * Skip the timezone init when no IANA timezone database is present
+         * on the system (Alpine/musl images, minimal containers, edge
+         * devices).  Without `/usr/share/zoneinfo`, MEOS's pgtz code
+         * fails on `opendir`; skipping the timezone init lets the
+         * extension load against UTC instead of erroring at startup. */
+        struct stat tz_st {};
+        if (stat("/usr/share/zoneinfo", &tz_st) == 0 && (tz_st.st_mode & S_IFDIR)) {
+            meos_initialize_timezone("Europe/Brussels");
+        }
         meos_initialize_error_handler(&MobilityduckMeosErrorHandler);
     });
+
+    // Single-timezone model: ensure DuckDB's session timezone matches the
+    // MEOS timezone so bare TIMESTAMPTZ display agrees with MEOS composite
+    // type strings.  Auto-load ICU (without it, the test framework keeps
+    // session timezone at UTC) and set the TimeZone option to Brussels.
+    auto &db = loader.GetDatabaseInstance();
+    ExtensionHelper::AutoLoadExtension(db, "icu");
+    auto &config = DBConfig::GetConfig(db);
+    config.SetOptionByName("TimeZone", Value("Europe/Brussels"));
 
 
 	// Register scalar function: mobilityduck_openssl_version
@@ -327,10 +335,6 @@ static void LoadInternal(ExtensionLoader &loader) {
 	SpatialSetType::RegisterCastFunctions(loader);
 	SpatialSetType::RegisterScalarFunctions(loader);
 
-	H3IndexTypes::RegisterTypes(loader);
-	H3IndexTypes::RegisterCastFunctions(loader);
-	H3IndexTypes::RegisterScalarFunctions(loader);
-
 	SpansetTypes::RegisterTypes(loader);
 	SpansetTypes::RegisterCastFunctions(loader);
 	SpansetTypes::RegisterScalarFunctions(loader);
@@ -342,9 +346,6 @@ static void LoadInternal(ExtensionLoader &loader) {
 	// Single-tile getters depend on TBOX, STBOX, and the spatial GEOMETRY
 	// type being registered first.
 	SingleTileGetters::RegisterScalarFunctions(loader);
-
-	// TemporalParquet footer helper for COPY ... TO '*.parquet' KV_METADATA.
-	TemporalParquetFunctions::Register(loader);
 }
 
 void MobilityduckExtension::Load(ExtensionLoader &loader) {
