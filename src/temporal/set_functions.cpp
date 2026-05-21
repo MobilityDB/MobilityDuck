@@ -216,7 +216,7 @@ bool SetFunctions::Text_to_set(Vector &source, Vector &result, idx_t count, Cast
     result.SetVectorType(VectorType::FLAT_VECTOR);
 
     auto target_type = result.GetType();
-    meosType set_type = SetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
+    MeosType set_type = SetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
 
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
@@ -310,7 +310,7 @@ void SetFunctions::Set_constructor(DataChunk &args, ExpressionState &state, Vect
                 }
             }
 
-            meosType base_type = settype_basetype(meos_type);            
+            MeosType base_type = settype_basetype(meos_type);            
             Set *s = set_make_free(values, (int)length, base_type, true);
                         
             size_t size = set_mem_size(s);            
@@ -329,7 +329,7 @@ static inline void Write_set(Vector &result, idx_t row, Set *s) {
     free(s);
 }
 
-static inline void Value_to_set_core(Vector &source, Vector &result, idx_t count, meosType base_type) {
+static inline void Value_to_set_core(Vector &source, Vector &result, idx_t count, MeosType base_type) {
     source.Flatten(count);
     result.SetVectorType(VectorType::FLAT_VECTOR);
     
@@ -418,8 +418,8 @@ static inline void Value_to_set_core(Vector &source, Vector &result, idx_t count
 
 bool SetFunctions::Value_to_set_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     auto target_type = result.GetType();
-    meosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
-    meosType base_type = settype_basetype(set_type);
+    MeosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
+    MeosType base_type = settype_basetype(set_type);
 
     Value_to_set_core(source, result, count, base_type);
     return true;
@@ -429,8 +429,8 @@ bool SetFunctions::Value_to_set_cast(Vector &source, Vector &result, idx_t count
 void SetFunctions::Value_to_set(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &source = args.data[0];
     auto out_type = result.GetType();
-    meosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
-    meosType base_type = settype_basetype(set_type);
+    MeosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
+    MeosType base_type = settype_basetype(set_type);
 
     Value_to_set_core(source, result, args.size(), base_type);
 }
@@ -969,7 +969,7 @@ void SetFunctions::Set_values(DataChunk &args, ExpressionState &state, Vector &r
 void SetFunctions::Numset_shift(DataChunk &args, ExpressionState &state, Vector &result) {    
     auto &set_vec  = args.data[0];
     auto out_type  = result.GetType();    
-    meosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    MeosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
 
     switch (set_type) {
         case T_INTSET: { // shift(intset, integer) -> intset
@@ -1044,7 +1044,7 @@ void SetFunctions::Tstzset_shift(DataChunk &args, ExpressionState &state, Vector
 void SetFunctions::Numset_scale(DataChunk &args, ExpressionState &state, Vector &result){
     auto &set_vec  = args.data[0];
     auto out_type  = result.GetType();    
-    meosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    MeosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
 
     switch (set_type) {
         case T_INTSET: { // scale(intset, integer) -> intset
@@ -1122,7 +1122,7 @@ void SetFunctions::Numset_shift_scale(DataChunk &args, ExpressionState &state, V
     auto &wd_vec  = args.data[2];
 
     auto out_type  = result.GetType();
-    meosType set_type = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
+    MeosType set_type = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
 
     switch (set_type) {
         case T_INTSET: { // shift_scale(intset, integer, integer) -> intset

@@ -84,7 +84,7 @@ bool TboxFunctions::Tbox_out(Vector &source, Vector &result, idx_t count, CastPa
 }
 
 template <typename TA>
-void TboxFunctions::NumberTimestamptzToTboxExecutor(Vector &value, Vector &t, meosType basetype, Vector &result, idx_t count) {
+void TboxFunctions::NumberTimestamptzToTboxExecutor(Vector &value, Vector &t, MeosType basetype, Vector &result, idx_t count) {
     BinaryExecutor::Execute<TA, timestamp_tz_t, string_t>(
         value, t, result, count,
         [&](TA value, timestamp_tz_t t) {
@@ -150,7 +150,7 @@ void TboxFunctions::Numspan_timestamptz_to_tbox(DataChunk &args, ExpressionState
 }
 
 template <typename TA>
-void TboxFunctions::NumberTstzspanToTboxExecutor(Vector &value, Vector &span_str, meosType basetype, Vector &result, idx_t count) {
+void TboxFunctions::NumberTstzspanToTboxExecutor(Vector &value, Vector &span_str, MeosType basetype, Vector &result, idx_t count) {
     BinaryExecutor::Execute<TA, string_t, string_t>(
         value, span_str, result, count,
         [&](TA value, string_t span_str) {
@@ -234,7 +234,7 @@ void TboxFunctions::Numspan_tstzspan_to_tbox(DataChunk &args, ExpressionState &s
 }
 
 template <typename TA>
-void TboxFunctions::NumberToTboxExecutor(Vector &value, meosType basetype, Vector &result, idx_t count) {
+void TboxFunctions::NumberToTboxExecutor(Vector &value, MeosType basetype, Vector &result, idx_t count) {
     UnaryExecutor::Execute<TA, string_t>(
         value, result, count,
         [&](TA value) {
@@ -1007,7 +1007,7 @@ void TboxFunctions::Tbox_shift_scale_time(DataChunk &args, ExpressionState &stat
 }
 
 template <typename TB>
-void TboxFunctions::TboxExpandValueExecutor(Vector &tbox, Vector &value, meosType basetype, Vector &result, idx_t count) {
+void TboxFunctions::TboxExpandValueExecutor(Vector &tbox, Vector &value, MeosType basetype, Vector &result, idx_t count) {
     BinaryExecutor::ExecuteWithNulls<string_t, TB, string_t>(
         tbox, value, result, count,
         [&](string_t tbox_str, TB value, ValidityMask &mask, idx_t idx) {
