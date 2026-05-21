@@ -11,6 +11,35 @@
 
 namespace duckdb {
 
+// Defensive arg-order detection for spatial-relation executors.
+//
+// DuckDB function resolution treats GEOMETRY, TGEOMPOINT, TGEOGPOINT,
+// TGEOMETRY, TGEOGRAPHY as alias-equivalent because each is a
+// LogicalType::BLOB with an alias label. For a call like
+// `eIntersects(GEOMETRY, TGEOGPOINT)`, every two-arg `eIntersects`
+// overload (declared as {GEOMETRY, TGEO*} / {TGEO*, GEOMETRY} /
+// {TGEO*, TGEO*}) scores equally at the BLOB level — earlier-registered
+// wins, so the executor that runs may be the wrong direction.
+//
+// A Temporal blob's layout is `{ int32 vl_len_; uint8 temptype; uint8
+// subtype; int16 flags; ... }`. We probe byte 4 (temptype) against
+// `tspatial_type` — a pure predicate returning true only for
+// T_TGEOMPOINT / T_TGEOGPOINT / T_TGEOMETRY / T_TGEOGRAPHY / T_TRGEOMETRY.
+// A DuckDB GEOMETRY blob's byte 4 sits in its WKB header and never
+// matches one of those MeosType enum values.
+//
+// Confirmed via gdb backtrace: the constant-folder calls TgeoGeoIntExec
+// which assumes args.data[0]=Temporal — wrong when alias-erasure routes
+// a (GEOMETRY, TGEOGPOINT) call here. This probe lets us silently swap
+// roles instead of failing inside MEOS's tspatial_srid.
+inline bool BlobLooksLikeTemporal(string_t blob) {
+    if (blob.GetSize() < sizeof(Temporal)) {
+        return false;
+    }
+    uint8_t temptype = static_cast<uint8_t>(blob.GetData()[4]);
+    return tspatial_type(static_cast<meosType>(temptype));
+}
+
 inline GSERIALIZED* GeometryToGSerialized(string_t geometry_blob, int32_t srid) {
     vector<data_t> wkb_buffer;
     WKBWriter::Write(geometry_blob, wkb_buffer);

@@ -44,7 +44,7 @@ struct BinsBindData : public FunctionData {
         r->blob = blob;
         r->vsize = vsize;
         r->vorigin = vorigin;
-        return r;
+        return unique_ptr<FunctionData>(std::move(r));
     }
     bool Equals(const FunctionData &other_p) const override {
         auto &other = other_p.Cast<BinsBindData>();
