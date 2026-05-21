@@ -124,6 +124,35 @@ Within the shell, load MobilityDuck by calling ```LOAD``` and the path to the ex
 
 <center><img src="doc/images/guide/3_2_0.png" width=350/></center>
 
+#### 3.2.1. DuckDB version alignment for GeoArrow 1.1 / GeoParquet 1.1
+
+The v1.4.4 LTS target above is also the ecosystem alignment target
+for [GeoArrow 1.1](https://geoarrow.org/) and
+[GeoParquet 1.1](https://geoparquet.org/releases/v1.1.0/). DuckDB
+v1.4.4's bundled `spatial` extension exposes the full set of spatial
+functions (`ST_Intersects`, `ST_MakeEnvelope`, `ST_Point`, `ST_Within`,
+`ST_Contains`, …) needed to exploit GeoParquet's `covering.bbox` and
+GeoArrow's native-coordinate encodings.
+
+Adopters running DuckDB v1.5.x may observe that the *bundled* `spatial`
+extension on v1.5.2 ships a reduced surface (missing `ST_Intersects`,
+`ST_MakeEnvelope`, and the related spatial functions). Until
+[`duckdb/duckdb-spatial`](https://github.com/duckdb/duckdb-spatial)'s
+in-progress `v1.5-variegata` port ships into the bundled extension,
+bbox-based row-group pruning on GeoParquet 1.1 still works on v1.5.x
+via a **scalar-AND-chain on the `covering.bbox` struct fields** — no
+spatial extension required:
+
+```sql
+WHERE "covering.bbox".xmax >= :x_min AND "covering.bbox".xmin <= :x_max
+  AND "covering.bbox".ymax >= :y_min AND "covering.bbox".ymin <= :y_max
+```
+
+The scalar path prunes row-groups identically to the spatial-aware
+path and runs faster on a synthetic bbox-pruning workload (no per-row
+geometry construction). Reach for the bundled spatial extension only
+for richer geometry-aware queries that go beyond bbox pruning.
+
 ### 3.3. Python API
 
 The extension binary can be helpful if you want to use MobilityDuck in Python via DuckDB’s [Python API](https://duckdb.org/docs/stable/clients/python/overview). **Prerequisite**: the version of the DuckDB Python client and the DuckDB version of the build must be identical.
