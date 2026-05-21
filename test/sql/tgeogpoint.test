@@ -4,15 +4,20 @@ require mobilityduck
 # Construction
 # ──────────────────────────────────────────────────────────────────────────────
 
+# MobilityDuck initializes MEOS with `Europe/Brussels` timezone at extension
+# load time (see `mobilityduck_extension.cpp` ConfigureMeosSridCsvOnce path).
+# Brussels is UTC+1 in winter (no DST); test fixtures use January dates so
+# the offset is deterministically `+01`.  See `docs/testing-tz-neutral-policy.md`.
+
 query I
 SELECT asText(TGEOGPOINT(ST_Point(1, 2), to_timestamp(946684800)));
 ----
-POINT(1 2)@2000-01-01 00:00:00+00
+POINT(1 2)@2000-01-01 01:00:00+01
 
 query I
 SELECT asEWKT(TGEOGPOINT(ST_Point(1, 2), to_timestamp(946684800)));
 ----
-SRID=4326;POINT(1 2)@2000-01-01 00:00:00+00
+SRID=4326;POINT(1 2)@2000-01-01 01:00:00+01
 
 query I
 SELECT asText(tgeogpointSeq(ARRAY[
@@ -20,12 +25,12 @@ SELECT asText(tgeogpointSeq(ARRAY[
     TGEOGPOINT(ST_Point(0, 1), to_timestamp(946771200))
 ]));
 ----
-[POINT(0 0)@2000-01-01 00:00:00+00, POINT(0 1)@2000-01-02 00:00:00+00]
+[POINT(0 0)@2000-01-01 01:00:00+01, POINT(0 1)@2000-01-02 01:00:00+01]
 
 query I
 SELECT asText(tgeogpoint 'SRID=4326;Point(1 2)@2000-01-01');
 ----
-POINT(1 2)@2000-01-01 00:00:00+00
+POINT(1 2)@2000-01-01 00:00:00+01
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Geodetic length — must return metres, not degrees
