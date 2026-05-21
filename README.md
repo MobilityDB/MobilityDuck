@@ -21,13 +21,11 @@ MobilityDuck because of properties of DuckDB's parser, type system, or
 extension model. These cases — and the named-function workarounds where one
 exists — are documented in [`docs/DuckDB-Parity-Gaps.md`](docs/DuckDB-Parity-Gaps.md).
 
-### For contributors and reviewers
-
-- Reviewing a pull request?  See the
-  [PR Reviewer Guide](doc/contributing/reviewer-guide.md) — tier ranking,
-  dependency chains and the standards checklist.  Reviewers landing in
-  any of the three platform repos (MobilityDB / MobilityDuck /
-  MobilitySpark) find the same canonical structure at the same path.
+Geodetic geography values cross the DuckDB columnar boundary via a dedicated
+`GEOGRAPHY` LogicalType that MobilityDuck registers in addition to the bundled
+DuckDB Spatial `GEOMETRY`. The design — closed-algebra inside MEOS, thin
+boundary layer in the binding, and TemporalParquet round-trip preservation of
+the geodetic flag — is documented in [`doc/geography-boundary.md`](doc/geography-boundary.md).
 
 ---
 ## 1. Requirements

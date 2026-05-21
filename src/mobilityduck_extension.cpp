@@ -7,6 +7,7 @@
 #include "temporal/temporal_functions.hpp"
 #include "temporal/temporal.hpp"
 #include "temporal/tbox.hpp"
+#include "geo/geography.hpp"
 #include "geo/stbox.hpp"
 #include "geo/tgeompoint.hpp"
 #include "geo/tgeogpoint.hpp"
@@ -286,6 +287,10 @@ static void LoadInternal(ExtensionLoader &loader) {
 	StboxType::RegisterType(loader);
 	StboxType::RegisterCastFunctions(loader);
 	StboxType::RegisterScalarFunctions(loader);
+
+	// `GEOGRAPHY` LogicalType — alias-only registration; casts and I/O UDFs
+	// land in follow-up PRs.  See `doc/geography-boundary.md`.
+	GeographyType::RegisterType(loader);
 
 	SpanTypes::RegisterScalarFunctions(loader);
 	SpanTypes::RegisterTypes(loader);
