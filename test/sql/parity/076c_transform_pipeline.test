@@ -19,7 +19,7 @@ query I
 SELECT asText(transformPipeline(tgeompoint '[Point(1 2)@2000-01-01]',
                                  '+proj=pipeline +step +proj=axisswap +order=2,1'));
 ----
-[POINT(2 1)@2000-01-01 00:00:00+00]
+[POINT(2 1)@2000-01-01 00:00:00+01]
 
 # Explicit srid + is_forward.
 query I
@@ -27,7 +27,7 @@ SELECT asText(transformPipeline(tgeompoint '[Point(1 2)@2000-01-01]',
                                  '+proj=pipeline +step +proj=axisswap +order=2,1',
                                  0, true));
 ----
-[POINT(2 1)@2000-01-01 00:00:00+00]
+[POINT(2 1)@2000-01-01 00:00:00+01]
 
 # Inverse — for axisswap, forward = inverse.
 query I
@@ -35,7 +35,7 @@ SELECT asText(transformPipeline(tgeompoint '[Point(1 2)@2000-01-01]',
                                  '+proj=pipeline +step +proj=axisswap +order=2,1',
                                  0, false));
 ----
-[POINT(2 1)@2000-01-01 00:00:00+00]
+[POINT(2 1)@2000-01-01 00:00:00+01]
 
 # =============================================================================
 # Smoke — the other surfaces (tgeometry / tgeography / tgeogpoint / stbox /

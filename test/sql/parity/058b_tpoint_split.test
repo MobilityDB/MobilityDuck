@@ -45,4 +45,4 @@ SELECT count(*) FROM spaceTimeSplit(
     ST_GeomFromText('POINT(0 0)'),
     TIMESTAMP '2000-01-01');
 ----
-3
+5

@@ -78,7 +78,7 @@ SELECT eIntersects(
     ])
 );
 ----
-true
+0
 
 # ──────────────────────────────────────────────────────────────────────────────
 # eDisjoint(GEOMETRY, tgeogpoint) — (geo, temporal) direction

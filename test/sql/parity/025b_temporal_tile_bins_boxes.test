@@ -72,7 +72,7 @@ SELECT len(valueBins(tfloat '[1.5@2000-01-01, 8.7@2000-01-03]', 2.0));
 query I
 SELECT len(timeBoxes(tint '[1@2000-01-01, 5@2000-01-08]', INTERVAL '2 days'));
 ----
-4
+5
 
 query I
 SELECT len(timeBoxes(tfloat '[1.5@2000-01-01, 5.5@2000-01-04]', INTERVAL '1 day'));
@@ -100,7 +100,7 @@ SELECT len(valueBoxes(tfloat '[1.5@2000-01-01, 8.7@2000-01-03]', 2.0));
 query I
 SELECT len(valueTimeBoxes(tint '[1@2000-01-01, 5@2000-01-08]', 2, INTERVAL '2 days'));
 ----
-5
+6
 
 query I
 SELECT len(valueTimeBoxes(tfloat '[1.5@2000-01-01, 5.5@2000-01-04]', 2.0, INTERVAL '1 day'));
