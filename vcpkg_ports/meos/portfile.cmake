@@ -1,8 +1,8 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO estebanzimanyi/MobilityDB
-    REF b183b12ee6922d949ee2b03c44b3a169e9708e73
-    SHA512 6610240e45e6f292f0f8db2b462e7b0d4b0174027c6ae0ef08918ba41b5d200ca99de37c6a1042e5f8591306f57886f9fd5052b5cc68abfbe2702dd5860bb4e6
+    REF dfdd25545dde07e5b5ae6771da500a3bdb81ee7d
+    SHA512 80091ba952bea195c61fd82d0e700bc3a608f60fd4a5bc6d9f4ae480df94ef5bcbabadf178ffac3ee8e7684b64db0c17b416d2d18f9c11125ade530757ab9c05
 )
 
 vcpkg_replace_string(
