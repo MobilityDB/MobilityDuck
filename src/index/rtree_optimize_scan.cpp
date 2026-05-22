@@ -17,9 +17,6 @@
 #include "index/rtree_module.hpp"
 #include "index/rtree_index_scan.hpp"
 #include "time_util.hpp"
-#include "geo_util.hpp"
-#include <unordered_set>
-#include <string>
 
 
 
@@ -87,82 +84,41 @@ private:
                 }
 
                 const auto &constant = const_expr->Cast<BoundConstantExpression>();
-
-                static const std::unordered_set<std::string> spatial_rel_fns =
-                    {"eIntersects", "eContains", "eDisjoint", "eTouches"};
-                const bool is_spatial_rel =
-                    spatial_rel_fns.count(function_name) > 0;
-
+                
                 void *query_box = nullptr;
                 size_t box_size = 0;
-
-                if (is_spatial_rel) {
-                    // supportfn-equivalent (mirrors MobilityDB
-                    // tspatial_supportfn): the predicate is a lossy spatial
-                    // relationship; synthesize its bbox && prefilter from the
-                    // constant geometry argument. The original spatial-rel
-                    // predicate is rechecked exactly above the index scan
-                    // (the scan reports supports_pushdown_type = false, so
-                    // plan_get.cpp keeps it as a recheck PhysicalFilter), so
-                    // the bbox superset never drops nor wrongly keeps a row.
-                    if (constant.value.type().id() != LogicalTypeId::BLOB) {
-                        return false;
-                    }
-                    auto blob_data = constant.value.GetValueUnsafe<duckdb::string_t>();
-                    GSERIALIZED *gs = GeometryToGSerialized(blob_data, 0);
-                    if (!gs) {
-                        return false;
-                    }
-                    STBox *box = geo_to_stbox(gs);
-                    free(gs);
-                    if (!box) {
-                        return false;
-                    }
-                    box_size = sizeof(STBox);
-                    query_box = malloc(box_size);
-                    if (query_box) {
-                        memcpy(query_box, box, box_size);
-                    }
-                    free(box);
-                }
-                else if (constant.value.type().id() == LogicalTypeId::BLOB) {
-
+                
+                if (constant.value.type().id() == LogicalTypeId::BLOB) {
+                    
                     auto blob_data = constant.value.GetValueUnsafe<duckdb::string_t>();
 
                    const uint8_t *data = reinterpret_cast<const uint8_t *>(blob_data.GetDataUnsafe());
                     box_size = blob_data.GetSize();
-
+                    
                     query_box = malloc(box_size);
                     memcpy(query_box, data, box_size);
-
+                    
                 }
                 else if (constant.value.type().id() == LogicalTypeId::TIMESTAMP_TZ) {
                     auto timestamp_duckdb = constant.value.GetValueUnsafe<timestamp_tz_t>();
-
+    
                     timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(timestamp_duckdb);
-
+                    
                     box_size = sizeof(timestamp_tz_t);
                     query_box = malloc(box_size);
-
+                    
                     if (query_box) {
                         memcpy(query_box, &ts_meos, box_size);
                     }
                 }
-
+                
 
                 if (!query_box) {
                     return false;
                 }
 
-                // The index probe is always a bbox overlap; a spatial-rel
-                // name is only the recognition key, not an index operation.
-                // Exactness is restored by the recheck PhysicalFilter that
-                // plan_get.cpp builds above this scan (see
-                // RTreeIndexScanSupportsPushdownType).
-                const string index_op =
-                    is_spatial_rel ? string("&&") : function_name;
                 bind_data = make_uniq<TRTreeIndexScanBindData>(
-                    duck_table, rtree_index, 1000, query_box, box_size, index_op);
+                    duck_table, rtree_index, 1000, query_box, box_size, function_name);
                 return true;
             });
             

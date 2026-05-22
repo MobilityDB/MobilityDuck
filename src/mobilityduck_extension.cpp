@@ -6,6 +6,7 @@
 #include "geo/geoset.hpp"
 #include "temporal/temporal_functions.hpp"
 #include "temporal/temporal.hpp"
+#include "temporal/temporal_parquet.hpp"
 #include "temporal/tbox.hpp"
 #include "geo/geography.hpp"
 #include "geo/geography_functions.hpp"
@@ -280,6 +281,8 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TemporalTypes::RegisterTemporalTileSplit(loader);
 	TemporalTypes::RegisterTnumberValueSplit(loader);
 	TemporalTypes::RegisterSimilarityPath(loader);
+	// TemporalParquet footer helper for COPY ... TO '*.parquet' KV_METADATA.
+	TemporalParquetFunctions::Register(loader);
 
 	TboxType::RegisterType(loader);
 	TboxType::RegisterCastFunctions(loader);

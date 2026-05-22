@@ -69,13 +69,13 @@ LogicalType TemporalTypes::GetBaseTypeFromAlias(const char *alias) {
 
 void TemporalTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     for (auto &type : TemporalTypes::AllTypes()) {
-        RegisterMeosCastFunction(loader,
+        loader.RegisterCastFunction(
             LogicalType::VARCHAR,
             type,
             TemporalFunctions::Temporal_in
         );
 
-        RegisterMeosCastFunction(loader,
+        loader.RegisterCastFunction(
             type,
             LogicalType::VARCHAR,
             TemporalFunctions::Temporal_out
@@ -90,37 +90,37 @@ void TemporalTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     //     );
     // }
 
-    RegisterMeosCastFunction(loader,
+    loader.RegisterCastFunction(
         LogicalType::BLOB,
         SpansetTypes::tstzspanset(),
         TemporalFunctions::Blob_to_tstzspanset
     );
 
-    RegisterMeosCastFunction(loader,
+    loader.RegisterCastFunction(
         TemporalTypes::TBOOL(),
         TemporalTypes::TINT(),
         TemporalFunctions::Tbool_to_tint_cast
     );
 
-    RegisterMeosCastFunction(loader,
+    loader.RegisterCastFunction(
         TemporalTypes::TINT(),
         TemporalTypes::TFLOAT(),
         TemporalFunctions::Tint_to_tfloat_cast
     );
 
-    RegisterMeosCastFunction(loader,
+    loader.RegisterCastFunction(
         TemporalTypes::TFLOAT(),
         TemporalTypes::TINT(),
         TemporalFunctions::Tfloat_to_tint_cast
     );
 
-    RegisterMeosCastFunction(loader,
+    loader.RegisterCastFunction(
         TemporalTypes::TINT(),
         TboxType::TBOX(),
         TemporalFunctions::Tnumber_to_tbox_cast
     );
 
-    RegisterMeosCastFunction(loader,
+    loader.RegisterCastFunction(
         TemporalTypes::TFLOAT(),
         TboxType::TBOX(),
         TemporalFunctions::Tnumber_to_tbox_cast
@@ -2930,7 +2930,7 @@ void TemporalTypes::RegisterTemporalTileSplit(ExtensionLoader &loader) {
 
 struct TnumberValueSplitBindData : public TableFunctionData {
     string_t blob;
-    MeosType temptype;
+    meosType temptype;
     LogicalType base_type;     // BIGINT for tint, DOUBLE for tfloat
     LogicalType temporal_type; // TINT or TFLOAT
     double size;
