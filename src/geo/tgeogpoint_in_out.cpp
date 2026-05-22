@@ -2,6 +2,7 @@
 #include "geo/tgeogpoint_functions.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/common/extension_type_info.hpp"
+#include "mobilityduck/meos_exec_serial.hpp"
 #include <regex>
 #include <string>
 #include <temporal/span.hpp>
@@ -215,8 +216,8 @@ void TGeogpointType::RegisterScalarInOutFunctions(ExtensionLoader &loader){
 
 
 void TGeogpointType::RegisterCastFunctions(ExtensionLoader &loader) {
-    loader.RegisterCastFunction( LogicalType::VARCHAR, TGeogpointType::TGEOGPOINT(), TgeogpointFunctions::StringToTgeogpoint);
-    loader.RegisterCastFunction( TGeogpointType::TGEOGPOINT(), LogicalType::VARCHAR, TgeogpointFunctions::TgeogpointToString);
+    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, TGeogpointType::TGEOGPOINT(), TgeogpointFunctions::StringToTgeogpoint);
+    RegisterMeosCastFunction(loader, TGeogpointType::TGEOGPOINT(), LogicalType::VARCHAR, TgeogpointFunctions::TgeogpointToString);
 }
 
 }

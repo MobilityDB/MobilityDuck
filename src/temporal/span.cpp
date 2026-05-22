@@ -89,68 +89,68 @@ LogicalType SpanTypeMapping::GetChildType(const LogicalType &type) {
 // Register all cast functions 
 void SpanTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     for (const auto &span_type : SpanTypes::AllTypes()) {
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader,
             span_type,                      
             LogicalType::VARCHAR,   
             SpanFunctions::Span_to_text   
         ); // Blob to text
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader,
             LogicalType::VARCHAR, 
             span_type,                                    
             SpanFunctions::Text_to_span   
         ); // text to blob
         
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader,
             SpanTypes::INTSPAN(),
             SpanTypes::FLOATSPAN(),
             SpanFunctions::Intspan_to_floatspan_cast // intspan -> floatspan 
         );
 
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader,
             SpanTypes::FLOATSPAN(),
             SpanTypes::INTSPAN(),
             SpanFunctions::Floatspan_to_intspan_cast // floatspan -> intspan
         );
         
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader,
             SpanTypes::DATESPAN(),
             SpanTypes::TSTZSPAN(),
             SpanFunctions::Datespan_to_tstzspan_cast // datespan -> tstzspan
         );
         
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader,
             SpanTypes::TSTZSPAN(),
             SpanTypes::DATESPAN(),
             SpanFunctions::Tstzspan_to_datespan_cast // tstzspan -> datespan 
         );
 
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader,
             SetTypes::intset(),
             SpanTypes::INTSPAN(),
             SpanFunctions::Set_to_span_cast // intset -> intspan
          );
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader,
             SetTypes::bigintset(),
             SpanTypes::BIGINTSPAN(),
             SpanFunctions::Set_to_span_cast // bigintset -> bigintspan
          );
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader,
             SetTypes::floatset(),
             SpanTypes::FLOATSPAN(),
             SpanFunctions::Set_to_span_cast // floatset -> floatspan
          );
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader,
             SetTypes::tstzset(),
             SpanTypes::TSTZSPAN(),
             SpanFunctions::Set_to_span_cast // tstzset -> tstzspan
          );
 
         // Scalar value -> span casts
-        loader.RegisterCastFunction(LogicalType::INTEGER,      SpanTypes::INTSPAN(),    SpanFunctions::Value_to_span_cast);
-        loader.RegisterCastFunction(LogicalType::BIGINT,       SpanTypes::BIGINTSPAN(), SpanFunctions::Value_to_span_cast);
-        loader.RegisterCastFunction(LogicalType::DOUBLE,       SpanTypes::FLOATSPAN(),  SpanFunctions::Value_to_span_cast);
-        loader.RegisterCastFunction(LogicalType::DATE,         SpanTypes::DATESPAN(),   SpanFunctions::Value_to_span_cast);
-        loader.RegisterCastFunction(LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN(),   SpanFunctions::Value_to_span_cast);
+        RegisterMeosCastFunction(loader, LogicalType::INTEGER,      SpanTypes::INTSPAN(),    SpanFunctions::Value_to_span_cast);
+        RegisterMeosCastFunction(loader, LogicalType::BIGINT,       SpanTypes::BIGINTSPAN(), SpanFunctions::Value_to_span_cast);
+        RegisterMeosCastFunction(loader, LogicalType::DOUBLE,       SpanTypes::FLOATSPAN(),  SpanFunctions::Value_to_span_cast);
+        RegisterMeosCastFunction(loader, LogicalType::DATE,         SpanTypes::DATESPAN(),   SpanFunctions::Value_to_span_cast);
+        RegisterMeosCastFunction(loader, LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN(),   SpanFunctions::Value_to_span_cast);
     }
 }
 

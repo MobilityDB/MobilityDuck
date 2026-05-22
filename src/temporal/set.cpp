@@ -93,43 +93,43 @@ LogicalType SetTypeMapping::GetChildType(const LogicalType &type) {
 // Register all cast functions 
 void SetTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     for (const auto &set_type : SetTypes::AllTypes()) {
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader,
             set_type,                      
             LogicalType::VARCHAR,   
             SetFunctions::Set_to_text   
         ); // Blob to text
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader,
             LogicalType::VARCHAR, 
             set_type,                                    
             SetFunctions::Text_to_set   
         ); // text to blob
         
         auto base_type = SetTypeMapping::GetChildType(set_type);
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader,
             base_type,
             set_type,
             SetFunctions::Value_to_set_cast // set from base type
         );
 
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader,
             SetTypes::intset(),
             SetTypes::floatset(),
             SetFunctions::Intset_to_floatset_cast // intset -> floatset 
         );
 
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader,
             SetTypes::floatset(),
             SetTypes::intset(),
             SetFunctions::Floatset_to_intset_cast // floatset --> intset
         );
         
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader,
             SetTypes::dateset(),
             SetTypes::tstzset(),
             SetFunctions::Dateset_to_tstzset_cast // dateset -> tstzset
         );
         
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader,
             SetTypes::tstzset(),
             SetTypes::dateset(),
             SetFunctions::Tstzset_to_dateset_cast // tstz -> dateset 
