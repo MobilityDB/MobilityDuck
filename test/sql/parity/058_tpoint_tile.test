@@ -28,6 +28,34 @@ SELECT len(spaceTimeTiles(stbox 'STBOX XT(((0, 0), (10, 10)), [2000-01-01, 2000-
 ----
 27
 
+# timeTiles taking a tgeompoint directly: derives the stbox over the
+# 2000-01-01..2000-01-05 span and tiles it by 1 day -> 5 tiles (border-inc).
+# Mirrors MobilityDB's timeTiles(stbox($1), ...) convenience overload.
+
+query I
+SELECT len(timeTiles(tgeompoint '[POINT(0 0)@2000-01-01, POINT(10 10)@2000-01-05]', INTERVAL '1 day'));
+----
+5
+
+# The tgeogpoint overload is registered for surface parity with
+# MobilityDB's timeTiles(tgeogpoint), but, exactly as in MobilityDB, the
+# underlying stbox_time_tiles rejects a geodetic bounding box
+# (ensure_not_geodetic): spatiotemporal tiling is defined on planar
+# coordinates only.  We assert the genuine MEOS error rather than
+# masking the geodetic gap.
+
+statement error
+SELECT len(timeTiles(tgeogpoint '[POINT(0 0)@2000-01-01, POINT(10 10)@2000-01-05]', INTERVAL '1 day'));
+----
+Only planar coordinates supported
+
+# Explicit torigin argument is accepted.
+
+query I
+SELECT len(timeTiles(tgeompoint '[POINT(0 0)@2000-01-01, POINT(10 10)@2000-01-05]', INTERVAL '1 day', TIMESTAMP '2000-01-03'));
+----
+5
+
 # spaceBoxes on a tgeompoint trajectory -> at least 1 covering box
 
 query I

@@ -1076,6 +1076,17 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         loader.RegisterFunction(ScalarFunction("splitEachNStboxes", {TGG, INT32}, LB, StboxFunctions::Tspatial_split_each_n_stboxes));
         loader.RegisterFunction(ScalarFunction("splitEachNStboxes", {G,   INT32}, LB, StboxFunctions::Geo_split_each_n_stboxes));
 
+        // timeTiles(t, duration[, torigin tstz[, borderInc bool]]) taking a
+        // temporal point directly — derives the bounding stbox and delegates
+        // to stbox_time_tiles, matching MobilityDB's tgeompoint / tgeogpoint
+        // `timeTiles(stbox($1), ...)` SQL convenience overloads.
+        loader.RegisterFunction(ScalarFunction("timeTiles", {P,   I},          LB, StboxFunctions::Tspatial_time_tiles));
+        loader.RegisterFunction(ScalarFunction("timeTiles", {P,   I, TS},      LB, StboxFunctions::Tspatial_time_tiles));
+        loader.RegisterFunction(ScalarFunction("timeTiles", {P,   I, TS, BB},  LB, StboxFunctions::Tspatial_time_tiles));
+        loader.RegisterFunction(ScalarFunction("timeTiles", {TGP, I},          LB, StboxFunctions::Tspatial_time_tiles));
+        loader.RegisterFunction(ScalarFunction("timeTiles", {TGP, I, TS},      LB, StboxFunctions::Tspatial_time_tiles));
+        loader.RegisterFunction(ScalarFunction("timeTiles", {TGP, I, TS, BB},  LB, StboxFunctions::Tspatial_time_tiles));
+
         // getSpaceTile(point geometry, xsz, ysz, zsz[, sorigin])
         loader.RegisterFunction(ScalarFunction("getSpaceTile", {G, D, D, D},     B, StboxFunctions::Stbox_get_space_tile));
         loader.RegisterFunction(ScalarFunction("getSpaceTile", {G, D, D, D, G},  B, StboxFunctions::Stbox_get_space_tile));

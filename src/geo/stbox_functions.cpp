@@ -3325,6 +3325,47 @@ void StboxFunctions::Stbox_time_tiles(DataChunk &args, ExpressionState &state, V
     if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
+// timeTiles(t, duration[, torigin[, borderInc]]) for a temporal spatial
+// value.  MobilityDB defines this as the SQL composition
+// `timeTiles(stbox($1), $2, $3, $4)`; we replicate it in one pass by
+// deriving the bounding stbox via tspatial_to_stbox and delegating to
+// stbox_time_tiles.
+void StboxFunctions::Tspatial_time_tiles(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_temp = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_dur  = FlatVector::GetData<interval_t>(args.data[1]);
+    const bool has_torigin = cc > 2;
+    const bool has_border  = cc > 3;
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        Temporal *temp = BlobToTempTile(in_temp[row]);
+        STBox *bounds = tspatial_to_stbox(temp);
+        free(temp);
+        MeosInterval mi = IntervaltToInterval(in_dur[row]);
+        TimestampTz torigin = 0;
+        if (has_torigin) {
+            timestamp_tz_t t = FlatVector::GetData<timestamp_tz_t>(args.data[2])[row];
+            torigin = (TimestampTz) DuckDBToMeosTimestamp(t).value;
+        }
+        bool border = has_border ? FlatVector::GetData<bool>(args.data[3])[row] : true;
+        int count = 0;
+        STBox *boxes = stbox_time_tiles(bounds, &mi, torigin, border, &count);
+        free(bounds);
+        EmitStboxList(result, row, list_entries, boxes, count, total);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 void StboxFunctions::Stbox_space_time_tiles(DataChunk &args, ExpressionState &state, Vector &result) {
     const idx_t row_count = args.size();
     for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);

@@ -181,6 +181,11 @@ struct StboxFunctions {
     static void Stbox_space_tiles(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_time_tiles(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_space_time_tiles(DataChunk &args, ExpressionState &state, Vector &result);
+    /* `timeTiles(t, duration[, torigin[, borderInc]])` for a temporal
+     * spatial value — derives the bounding stbox via `tspatial_to_stbox`
+     * and delegates to `stbox_time_tiles`, mirroring MobilityDB's
+     * `timeTiles(stbox($1), ...)` SQL composition. */
+    static void Tspatial_time_tiles(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tgeo_space_boxes(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tgeo_space_time_boxes(DataChunk &args, ExpressionState &state, Vector &result);
     /* Multi-entry bbox emitters — `stboxes(t)`, `splitNStboxes(t, n)`,
