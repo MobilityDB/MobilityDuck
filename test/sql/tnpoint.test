@@ -1,0 +1,226 @@
+# name: test/sql/tnpoint.test
+# description: Core tnpoint type port — construction, text/EWKT/MFJSON I/O
+#              and basic accessors. The tnpoint value is an Npoint
+#              (route id + relative position), a network-relative
+#              reference resolved against the embedded ways CSV.
+# group: [sql]
+
+require mobilityduck
+
+# Test tnpoint constructor with parentheses
+query I
+SELECT asText(tnpoint('Npoint(1, 0.5)@2000-01-01'));
+----
+NPoint(1,0.5)@2000-01-01 00:00:00+01
+
+# Test tnpoint constructor without parentheses
+query I
+SELECT asText(tnpoint 'Npoint(1, 0.5)@2000-01-01');
+----
+NPoint(1,0.5)@2000-01-01 00:00:00+01
+
+# Test asText with continuous sequence
+query I
+SELECT asText(tnpoint '[Npoint(1, 0.2)@2000-01-01, Npoint(1, 0.4)@2000-01-02, Npoint(1, 0.5)@2000-01-03]');
+----
+[NPoint(1,0.2)@2000-01-01 00:00:00+01, NPoint(1,0.4)@2000-01-02 00:00:00+01, NPoint(1,0.5)@2000-01-03 00:00:00+01]
+
+# Test asText with discrete sequence
+query I
+SELECT asText(tnpoint '{Npoint(1, 0.3)@2000-01-01, Npoint(1, 0.5)@2000-01-02}');
+----
+{NPoint(1,0.3)@2000-01-01 00:00:00+01, NPoint(1,0.5)@2000-01-02 00:00:00+01}
+
+# Test asEWKT — npoints carry the ways-network SRID (5676), which EWKT
+# prefixes (asText omits it).
+query I
+SELECT asEWKT(tnpoint 'Npoint(1, 0.5)@2000-01-01');
+----
+SRID=5676;NPoint(1,0.5)@2000-01-01 00:00:00+01
+
+# Test value-and-timestamp constructor round-trips
+query I
+SELECT tnpoint('Npoint(1, 0.5)', timestamptz '2012-01-01 08:00:00')
+     = tnpoint 'Npoint(1, 0.5)@2012-01-01 08:00:00';
+----
+true
+
+# Test value-and-tstzspan constructor produces a 2-instant sequence
+query I
+SELECT numInstants(tnpoint('Npoint(1, 0.5)', tstzspan '[2001-01-01, 2001-01-02]'));
+----
+2
+
+# Test value-and-tstzspan constructor with linear interpolation
+query I
+SELECT interp(tnpoint('Npoint(1, 0.5)', tstzspan '[2001-01-01, 2001-01-02]', 'linear'));
+----
+Linear
+
+# Test tnpointSeq with linear interpolation and bounds
+query I
+SELECT asText(tnpointSeq(ARRAY[tnpoint 'Npoint(1, 0.2)@2001-01-01', 'Npoint(1, 0.4)@2001-01-02'], 'linear', 'true','true'));
+----
+[NPoint(1,0.2)@2001-01-01 00:00:00+01, NPoint(1,0.4)@2001-01-02 00:00:00+01]
+
+# Test tnpointSeq with default parameters
+query I
+SELECT asText(tnpointSeq(ARRAY[tnpoint 'Npoint(1, 0.2)@2001-01-01', 'Npoint(1, 0.4)@2001-01-02']));
+----
+[NPoint(1,0.2)@2001-01-01 00:00:00+01, NPoint(1,0.4)@2001-01-02 00:00:00+01]
+
+# Test tnpointSeq with discrete interpolation
+query I
+SELECT asText(tnpointSeq(ARRAY[tnpoint 'Npoint(1, 0.2)@2001-01-01', 'Npoint(1, 0.4)@2001-01-02'], 'discrete'));
+----
+{NPoint(1,0.2)@2001-01-01 00:00:00+01, NPoint(1,0.4)@2001-01-02 00:00:00+01}
+
+# Test MFJSON input via the FromMFJSON constructor reconstructs the value
+# (the #951 MFJSON schema: typestring MovingNetworkPoint, value object
+#  {"route":rid,"position":pos}, routed through the generic dispatch).
+query I
+SELECT tnpointFromMFJSON('{"type":"MovingNetworkPoint","values":[{"route":1,"position":0.5}],"datetimes":["2000-01-01T00:00:00+01"],"interpolation":"None"}')
+     = tnpoint 'Npoint(1, 0.5)@2000-01-01';
+----
+true
+
+# Test MFJSON input round-trip for a continuous sequence
+query I
+SELECT tnpointFromMFJSON('{"type":"MovingNetworkPoint","values":[{"route":1,"position":0.2},{"route":1,"position":0.4}],"datetimes":["2000-01-01T00:00:00+01","2000-01-02T00:00:00+01"],"lower_inc":true,"upper_inc":true,"interpolation":"Linear"}')
+     = tnpoint '[Npoint(1, 0.2)@2000-01-01, Npoint(1, 0.4)@2000-01-02]';
+----
+true
+
+# Test tnpointFromText constructor
+query I
+SELECT tnpointFromText('Npoint(1, 0.5)@2000-01-01')
+     = tnpoint 'Npoint(1, 0.5)@2000-01-01';
+----
+true
+
+# Test tnpointFromEWKT constructor
+query I
+SELECT tnpointFromEWKT('Npoint(1, 0.5)@2000-01-01')
+     = tnpoint 'Npoint(1, 0.5)@2000-01-01';
+----
+true
+
+# Test timeSpan function
+query I
+SELECT timeSpan(tnpoint 'Npoint(1, 0.5)@2023-01-01 10:00:00+00');
+----
+[2023-01-01 11:00:00+01, 2023-01-01 11:00:00+01]
+
+# Test tnpointInst function
+query I
+SELECT asText(tnpointInst(tnpoint 'Npoint(1, 0.5)@2023-01-01 10:00:00+00'));
+----
+NPoint(1,0.5)@2023-01-01 11:00:00+01
+
+# Test setInterp with discrete interpolation
+query I
+SELECT asEWKT(setInterp(tnpoint 'Npoint(1, 0.5)@2000-01-01', 'discrete'));
+----
+SRID=5676;{NPoint(1,0.5)@2000-01-01 00:00:00+01}
+
+# Test merge function
+query I
+SELECT asText(merge(tnpoint 'Npoint(1, 0.5)@2000-01-01', tnpoint 'Npoint(1, 0.5)@2000-01-02'));
+----
+{NPoint(1,0.5)@2000-01-01 00:00:00+01, NPoint(1,0.5)@2000-01-02 00:00:00+01}
+
+# Test tempSubtype with instant
+query I
+SELECT tempSubtype(tnpoint 'Npoint(1, 0.5)@2000-01-01');
+----
+Instant
+
+# Test tempSubtype with discrete sequence
+query I
+SELECT tempSubtype(tnpoint '{Npoint(1, 0.3)@2000-01-01, Npoint(1, 0.5)@2000-01-02}');
+----
+Sequence
+
+# Test tempSubtype with continuous sequence
+query I
+SELECT tempSubtype(tnpoint '[Npoint(1, 0.2)@2000-01-01, Npoint(1, 0.4)@2000-01-02]');
+----
+Sequence
+
+# Test tempSubtype with sequence set
+query I
+SELECT tempSubtype(tnpoint '{[Npoint(1, 0.2)@2000-01-01, Npoint(1, 0.4)@2000-01-02],[Npoint(2, 0.6)@2000-01-03, Npoint(2, 0.6)@2000-01-04]}');
+----
+SequenceSet
+
+# Test memSize is positive
+query I
+SELECT memSize(tnpoint 'Npoint(1, 0.5)@2000-01-01') > 0;
+----
+true
+
+# Test interp accessor
+query I
+SELECT interp(tnpoint '[Npoint(1, 0.2)@2000-01-01, Npoint(1, 0.4)@2000-01-02]');
+----
+Linear
+
+# Test getValue function returns the npoint value text
+query I
+SELECT getValue(tnpoint 'Npoint(1, 0.5)@2000-01-01');
+----
+NPoint(1,0.5)
+
+# Test startValue function
+query I
+SELECT startValue(tnpoint '[Npoint(1, 0.2)@2000-01-01, Npoint(1, 0.4)@2000-01-02, Npoint(1, 0.5)@2000-01-03]');
+----
+NPoint(1,0.2)
+
+# Test endValue function
+query I
+SELECT endValue(tnpoint '[Npoint(1, 0.2)@2000-01-01, Npoint(1, 0.4)@2000-01-02, Npoint(1, 0.5)@2000-01-03]');
+----
+NPoint(1,0.5)
+
+# Test route accessor is the single route the network point traverses
+query I
+SELECT route(tnpoint 'Npoint(3, 0.5)@2000-01-01');
+----
+3
+
+# Test startInstant
+query I
+SELECT asText(startInstant(tnpoint '[Npoint(1, 0.2)@2000-01-01, Npoint(1, 0.4)@2000-01-02]'));
+----
+NPoint(1,0.2)@2000-01-01 00:00:00+01
+
+# Test endInstant
+query I
+SELECT asText(endInstant(tnpoint '[Npoint(1, 0.2)@2000-01-01, Npoint(1, 0.4)@2000-01-02]'));
+----
+NPoint(1,0.4)@2000-01-02 00:00:00+01
+
+# Test instantN
+query I
+SELECT asText(instantN(tnpoint '[Npoint(1, 0.2)@2000-01-01, Npoint(1, 0.4)@2000-01-02]', 1));
+----
+NPoint(1,0.2)@2000-01-01 00:00:00+01
+
+# Test getTimestamp function
+query I
+SELECT getTimestamp(tnpoint 'Npoint(1, 0.5)@2023-01-01 10:00:00+00');
+----
+2023-01-01 11:00:00+01
+
+# Test numInstants generic accessor
+query I
+SELECT numInstants(tnpoint '[Npoint(1, 0.2)@2000-01-01, Npoint(1, 0.4)@2000-01-02, Npoint(1, 0.5)@2000-01-03]');
+----
+3
+
+# Test duration generic accessor
+query I
+SELECT duration(tnpoint '[Npoint(1, 0.2)@2000-01-01, Npoint(1, 0.4)@2000-01-03]');
+----
+2 days

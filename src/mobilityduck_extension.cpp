@@ -14,6 +14,12 @@
 #if CBUFFER
 #include "geo/tcbuffer.hpp"
 #endif
+#if NPOINT
+#include "geo/tnpoint.hpp"
+// MEOS resolves tnpoint route geometries from a ways CSV at a hardcoded path;
+// the canonical ways1000.csv is embedded and materialized there on load.
+#include "ways_csv.inc"
+#endif
 #include "geo/tgeometry.hpp"
 #include "geo/tgeometry_ops.hpp"
 #include "geo/tgeography.hpp"
@@ -212,6 +218,31 @@ extern "C" void MobilityduckMeosErrorHandler(int errlevel, int errcode, const ch
 // 5. Extension load logic
 // =====================================================================
 
+#if NPOINT
+// MEOS reads the ways CSV from a hardcoded path with no setter, so the embedded
+// copy is materialized there. Best-effort: if the file already exists or the
+// path is not writable, leave it — route-bearing tnpoint operations then return
+// a clear MEOS "cannot open the ways CSV file" error rather than crashing.
+static const char *const MDUCK_WAYS_CSV_PATH = "/usr/local/share/ways1000.csv";
+
+static void EnsureEmbeddedWaysCsvOnDisk() {
+    static std::once_flag once;
+    std::call_once(once, [] {
+        if (file_exists(MDUCK_WAYS_CSV_PATH)) {
+            return;
+        }
+        std::ofstream out(MDUCK_WAYS_CSV_PATH, std::ios::binary);
+        if (!out) {
+            return;
+        }
+        out.write(
+            reinterpret_cast<const char *>(ways1000_csv),
+            static_cast<std::streamsize>(ways1000_csv_len)
+        );
+    });
+}
+#endif
+
 static void LoadInternal(ExtensionLoader &loader) {
 	// Configure MEOS SRID CSV once (env / embedded)
 	ConfigureMeosSridCsvOnce();
@@ -341,6 +372,16 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TCBufferTypes::RegisterCastFunctions(loader);
 	TCBufferTypes::RegisterScalarFunctions(loader);
 	TCBufferTypes::RegisterScalarInOutFunctions(loader);
+#endif
+
+	// Extended temporal type tnpoint (requires the MEOS NPOINT module and the
+	// embedded ways CSV materialized above).
+#if NPOINT
+	EnsureEmbeddedWaysCsvOnDisk();
+	TNpointTypes::RegisterTypes(loader);
+	TNpointTypes::RegisterCastFunctions(loader);
+	TNpointTypes::RegisterScalarFunctions(loader);
+	TNpointTypes::RegisterScalarInOutFunctions(loader);
 #endif
 
 	SetTypes::RegisterTypes(loader);
