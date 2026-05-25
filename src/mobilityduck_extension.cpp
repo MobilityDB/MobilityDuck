@@ -20,6 +20,7 @@
 #include "geo/tgeography_ops.hpp"
 #include "geo/tgeogpoint.hpp"
 #include "geo/tgeogpoint_ops.hpp"
+#include "h3/th3index.hpp"
 #include "temporal/span.hpp"
 #include "temporal/span_aggregates.hpp"
 #include "temporal/temporal_aggregates.hpp"
@@ -365,6 +366,12 @@ static void LoadInternal(ExtensionLoader &loader) {
 	SpansetTypes::RegisterTypes(loader);
 	SpansetTypes::RegisterCastFunctions(loader);
 	SpansetTypes::RegisterScalarFunctions(loader);
+
+	// th3index — H3 cell-index type + scalar API (folded from PR #178; the
+	// merge brought src/h3/th3index.cpp but omitted these registration calls).
+	H3IndexTypes::RegisterTypes(loader);
+	H3IndexTypes::RegisterCastFunctions(loader);
+	H3IndexTypes::RegisterScalarFunctions(loader);
 
 	TRTreeModule::RegisterRTreeIndex(loader);
 	TRTreeModule::RegisterIndexScan(loader);
