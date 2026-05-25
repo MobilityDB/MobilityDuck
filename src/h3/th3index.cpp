@@ -11,6 +11,8 @@
 #include "temporal/temporal.hpp"
 #include "geo/tgeompoint.hpp"
 #include "geo/tgeogpoint.hpp"
+#include "geo_util.hpp"
+#include "spatial/spatial_types.hpp"
 #include "tydef.hpp"
 #include "duckdb/common/types/data_chunk.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
@@ -74,9 +76,16 @@ LogicalType H3IndexTypes::TH3INDEX() {
     return type;
 }
 
+LogicalType H3IndexTypes::H3INDEXSET() {
+    auto type = LogicalType(LogicalTypeId::BLOB);
+    type.SetAlias("H3INDEXSET");
+    return type;
+}
+
 void H3IndexTypes::RegisterTypes(ExtensionLoader &loader) {
     loader.RegisterType("H3INDEX", H3INDEX());
     loader.RegisterType("TH3INDEX", TH3INDEX());
+    loader.RegisterType("H3INDEXSET", H3INDEXSET());
 }
 
 void H3IndexTypes::RegisterCastFunctions(ExtensionLoader &loader) {
@@ -110,6 +119,22 @@ inline string_t TempToBlob(Vector &result, Temporal *t) {
 
 /* TINT → BIGINT result for the int-returning H3 predicates. */
 inline bool IntToBool(int r) { return r != 0; }
+
+inline Set *BlobToSet(string_t blob) {
+    size_t sz = blob.GetSize();
+    uint8_t *copy = (uint8_t *) malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return reinterpret_cast<Set *>(copy);
+}
+
+inline string_t SetToBlob(Vector &result, Set *s) {
+    if (!s) return string_t();
+    size_t sz = set_mem_size(s);
+    string_t out = StringVector::AddStringOrBlob(
+        result, string_t(reinterpret_cast<const char *>(s), sz));
+    free(s);
+    return out;
+}
 
 } // namespace
 
@@ -545,6 +570,45 @@ TH3_T_T_T_TEMP(Tne_th3index_th3index,  tne_th3index_th3index)
 #undef TH3_T_T_T_TEMP
 
 /* =====================================================================
+ * Static geometry → h3indexset, and h3indexset × th3index prefilter
+ * ===================================================================== */
+
+void H3IndexFunctions::Geo_to_h3index_set(DataChunk &args, ExpressionState &state,
+    Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t geom_blob, int32_t resolution, ValidityMask &mask,
+            idx_t idx) -> string_t {
+            /* H3 cells are inherently geographic (WGS84).  The DuckDB
+             * spatial GEOMETRY blob has no embedded SRID, so callers
+             * must pass a geometry in EPSG:4326 coordinates (e.g.
+             * `ST_Transform(geom, 'EPSG:4326')`).  We mark the
+             * GSERIALIZED with SRID 4326 explicitly. */
+            GSERIALIZED *gs = GeometryToGSerialized(geom_blob, 4326);
+            if (!gs) { mask.SetInvalid(idx); return string_t(); }
+            Set *s = geo_to_h3index_set(gs, resolution);
+            free(gs);
+            if (!s) { mask.SetInvalid(idx); return string_t(); }
+            return SetToBlob(result, s);
+        });
+}
+
+void H3IndexFunctions::Ever_intersects_h3index_set_th3index(DataChunk &args,
+    ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t set_blob, string_t temp_blob, ValidityMask &mask,
+            idx_t idx) -> bool {
+            Set *s = BlobToSet(set_blob);
+            Temporal *t = BlobToTemp(temp_blob);
+            int r = ever_eq_anyof_h3indexset_th3index(s, t);
+            free(s); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return IntToBool(r);
+        });
+}
+
+/* =====================================================================
  * Registration
  * ===================================================================== */
 
@@ -706,6 +770,17 @@ void H3IndexTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "tgeogpointGreatCircleDistance", {TgeogpointType::TGEOGPOINT(), TgeogpointType::TGEOGPOINT(), V},
         TemporalTypes::TFLOAT(), H3IndexFunctions::Tgeogpoint_great_circle_distance));
+
+    /* --- Static geometry h3 prefilter for trip × static cross-joins --- */
+    const auto H3SET = H3INDEXSET();
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geoToH3IndexSet",
+        {GeoTypes::GEOMETRY(), LogicalType::INTEGER},
+        H3SET, H3IndexFunctions::Geo_to_h3index_set));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "everIntersectsH3IndexSet_Th3Index",
+        {H3SET, TH3}, LogicalType::BOOLEAN,
+        H3IndexFunctions::Ever_intersects_h3index_set_th3index));
 }
 
 } // namespace duckdb
