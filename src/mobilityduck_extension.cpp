@@ -11,6 +11,9 @@
 #include "geo/tgeompoint.hpp"
 #include "geo/tgeogpoint.hpp"
 #include "duckdb.hpp"
+#if CBUFFER
+#include "geo/tcbuffer.hpp"
+#endif
 #include "geo/tgeometry.hpp"
 #include "geo/tgeometry_ops.hpp"
 #include "geo/tgeography.hpp"
@@ -331,6 +334,14 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TGeogpointType::RegisterCastFunctions(loader);
 	TGeogpointType::RegisterScalarInOutFunctions(loader);
 	TGeogpointOps::RegisterScalarFunctions(loader);
+
+	// Extended temporal type tcbuffer (requires the MEOS CBUFFER module).
+#if CBUFFER
+	TCBufferTypes::RegisterTypes(loader);
+	TCBufferTypes::RegisterCastFunctions(loader);
+	TCBufferTypes::RegisterScalarFunctions(loader);
+	TCBufferTypes::RegisterScalarInOutFunctions(loader);
+#endif
 
 	SetTypes::RegisterTypes(loader);
 	SetTypes::RegisterCastFunctions(loader);

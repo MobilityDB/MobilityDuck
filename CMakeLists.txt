@@ -97,6 +97,17 @@ set(EXTENSION_SOURCES
     src/index/rtree_optimize_scan.cpp
 )
 
+# Extended temporal type families, each gated by a config flag that mirrors the
+# corresponding MEOS build module (vcpkg_ports/meos/portfile.cmake). Disabling a
+# flag drops the family's sources and its registration (see LoadInternal).
+option(CBUFFER "Build the tcbuffer temporal type" ON)
+if(CBUFFER)
+  add_definitions(-DCBUFFER=1)
+  list(APPEND EXTENSION_SOURCES
+    src/geo/tcbuffer.cpp
+    src/geo/tcbuffer_in_out.cpp)
+endif()
+
 build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
 build_loadable_extension(${TARGET_NAME} "" ${EXTENSION_SOURCES})
 
