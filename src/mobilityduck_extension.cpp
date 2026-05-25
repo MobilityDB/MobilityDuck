@@ -20,6 +20,9 @@
 // the canonical ways1000.csv is embedded and materialized there on load.
 #include "ways_csv.inc"
 #endif
+#if POSE
+#include "geo/tpose.hpp"
+#endif
 #include "geo/tgeometry.hpp"
 #include "geo/tgeometry_ops.hpp"
 #include "geo/tgeography.hpp"
@@ -382,6 +385,14 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TNpointTypes::RegisterCastFunctions(loader);
 	TNpointTypes::RegisterScalarFunctions(loader);
 	TNpointTypes::RegisterScalarInOutFunctions(loader);
+#endif
+
+	// Extended temporal type tpose (requires the MEOS POSE module).
+#if POSE
+	TPoseTypes::RegisterTypes(loader);
+	TPoseTypes::RegisterCastFunctions(loader);
+	TPoseTypes::RegisterScalarFunctions(loader);
+	TPoseTypes::RegisterScalarInOutFunctions(loader);
 #endif
 
 	SetTypes::RegisterTypes(loader);
