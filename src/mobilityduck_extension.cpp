@@ -37,6 +37,7 @@
 #include <mutex>
 #include <fstream>
 #include <cstdlib>
+#include <cstdio>
 #include <string>
 
 #if defined(_WIN32)
@@ -239,12 +240,26 @@ static void LoadInternal(ExtensionLoader &loader) {
 
     // Single-timezone model: ensure DuckDB's session timezone matches the
     // MEOS timezone so bare TIMESTAMPTZ display agrees with MEOS composite
-    // type strings.  Auto-load ICU (without it, the test framework keeps
-    // session timezone at UTC) and set the TimeZone option to Brussels.
+    // type strings.  This needs ICU for the named "Europe/Brussels" zone.
+    //
+    // If ICU cannot be auto-loaded (no on-disk copy AND no network egress:
+    // CI docker images, edge/musl deployments, offline installs), degrade
+    // gracefully to the session default (UTC) instead of failing the whole
+    // extension load.  Mirrors the MEOS-side zoneinfo guard above; tests that
+    // assert Brussels display stage ICU locally via the Makefile's stage_icu.
     auto &db = loader.GetDatabaseInstance();
-    ExtensionHelper::AutoLoadExtension(db, "icu");
-    auto &config = DBConfig::GetConfig(db);
-    config.SetOptionByName("TimeZone", Value("Europe/Brussels"));
+    try {
+        ExtensionHelper::AutoLoadExtension(db, "icu");
+        auto &config = DBConfig::GetConfig(db);
+        config.SetOptionByName("TimeZone", Value("Europe/Brussels"));
+    } catch (const std::exception &e) {
+        // ICU unavailable: leave the session timezone at its default.
+        // Temporal-type text I/O is unaffected; only bare TIMESTAMPTZ display
+        // falls back to UTC.
+        fprintf(stderr,
+                "mobilityduck: ICU not available (%s); session timezone left "
+                "at default instead of Europe/Brussels.\n", e.what());
+    }
 
 
 	// Register scalar function: mobilityduck_openssl_version
