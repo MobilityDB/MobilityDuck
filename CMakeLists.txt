@@ -107,6 +107,14 @@ if(CBUFFER)
     src/geo/tcbuffer_in_out.cpp)
 endif()
 
+option(NPOINT "Build the tnpoint temporal type" ON)
+if(NPOINT)
+  add_definitions(-DNPOINT=1)
+  list(APPEND EXTENSION_SOURCES
+    src/geo/tnpoint.cpp
+    src/geo/tnpoint_in_out.cpp)
+endif()
+
 build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
 build_loadable_extension(${TARGET_NAME} "" ${EXTENSION_SOURCES})
 
