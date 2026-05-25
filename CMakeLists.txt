@@ -90,6 +90,8 @@ set(EXTENSION_SOURCES
     src/geo/tgeompoint_functions.cpp
     src/geo/tgeogpoint.cpp
     src/geo/tgeogpoint_functions.cpp
+    src/geo/tcbuffer.cpp
+    src/geo/tcbuffer_in_out.cpp
     src/temporal/set.cpp
     src/temporal/set_functions.cpp
     src/temporal/span.cpp
