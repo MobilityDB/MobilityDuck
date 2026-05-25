@@ -16,6 +16,7 @@
 #include "duckdb.hpp"
 #include "geo/tcbuffer.hpp"
 #include "geo/tnpoint.hpp"
+#include "geo/tpose.hpp"
 #include "geo/tgeometry.hpp"
 #include "geo/tgeometry_ops.hpp"
 #include "geo/tgeography.hpp"
@@ -403,6 +404,12 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TNpointTypes::RegisterTypes(loader);
 	TNpointTypes::RegisterCastFunctions(loader);
 	TNpointTypes::RegisterScalarInOutFunctions(loader);
+
+	// Extended temporal type tpose (requires the MEOS POSE module).
+	TPoseTypes::RegisterScalarFunctions(loader);
+	TPoseTypes::RegisterTypes(loader);
+	TPoseTypes::RegisterCastFunctions(loader);
+	TPoseTypes::RegisterScalarInOutFunctions(loader);
 
 	SetTypes::RegisterTypes(loader);
 	SetTypes::RegisterCastFunctions(loader);

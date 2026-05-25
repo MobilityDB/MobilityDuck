@@ -94,6 +94,8 @@ set(EXTENSION_SOURCES
     src/geo/tcbuffer_in_out.cpp
     src/geo/tnpoint.cpp
     src/geo/tnpoint_in_out.cpp
+    src/geo/tpose.cpp
+    src/geo/tpose_in_out.cpp
     src/temporal/set.cpp
     src/temporal/set_functions.cpp
     src/temporal/span.cpp
