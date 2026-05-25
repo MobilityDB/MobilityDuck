@@ -115,6 +115,14 @@ if(NPOINT)
     src/geo/tnpoint_in_out.cpp)
 endif()
 
+option(POSE "Build the tpose temporal type" ON)
+if(POSE)
+  add_definitions(-DPOSE=1)
+  list(APPEND EXTENSION_SOURCES
+    src/geo/tpose.cpp
+    src/geo/tpose_in_out.cpp)
+endif()
+
 build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
 build_loadable_extension(${TARGET_NAME} "" ${EXTENSION_SOURCES})
 
