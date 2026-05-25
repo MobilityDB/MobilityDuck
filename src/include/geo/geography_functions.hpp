@@ -26,7 +26,7 @@ struct GeographyFunctions {
     // re-sets the geodetic flag.
     static void ST_AsText(DataChunk &args, ExpressionState &state, Vector &result);
 
-    // GEOGRAPHY -> BLOB: MEOS `geo_as_ewkb(gs, endian, &size)`.  Output is
+    // GEOGRAPHY -> BLOB: MEOS `geo_as_wkb(gs, endian, &size)`.  Output is
     // standard EWKB (SRID-prefixed but without MEOS's geodetic flag) — a
     // round-trip via `ST_GeogFromBinary` re-asserts geodetic-ness from
     // the SRID.

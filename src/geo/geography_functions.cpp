@@ -127,12 +127,13 @@ void GeographyFunctions::ST_AsBinary(DataChunk &args, ExpressionState &state, Ve
         [&](string_t input) -> string_t {
             GSERIALIZED *gs = DeserializeBlobToGserialized(input);
             size_t wkb_size = 0;
-            // NULL endian => default platform endianness (NDR / little
-            // on x86_64 / arm64).
-            uint8_t *wkb = geo_as_ewkb(gs, /*endian=*/ nullptr, &wkb_size);
+            // WKB_EXTENDED variant (EWKB, default platform endianness),
+            // preserving the prior geo_as_ewkb behaviour after the
+            // geo_as_ewkb -> geo_as_wkb(variant) MEOS API consolidation.
+            uint8_t *wkb = geo_as_wkb(gs, WKB_EXTENDED, &wkb_size);
             if (!wkb || wkb_size == 0) {
                 free(gs);
-                throw InternalException("ST_AsBinary: MEOS geo_as_ewkb returned empty buffer");
+                throw InternalException("ST_AsBinary: MEOS geo_as_wkb returned empty buffer");
             }
             string_t blob(reinterpret_cast<const char *>(wkb), wkb_size);
             string_t stored = StringVector::AddStringOrBlob(result, blob);

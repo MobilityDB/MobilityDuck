@@ -49,7 +49,7 @@ true
 query I
 SELECT 1.0 -|- floatspan '[1, 3]';
 ----
-0
+1
 
 query I
 SELECT 1.0 -|- floatspan '(1, 3]';
@@ -59,7 +59,7 @@ true
 query I
 SELECT floatspan '[1, 3]' -|- 1.0;
 ----
-0
+1
 
 query I
 SELECT floatspan '[1, 3]' -|- floatspan '[1, 3]';

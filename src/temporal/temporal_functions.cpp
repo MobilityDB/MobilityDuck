@@ -248,7 +248,7 @@ void TemporalFunctions::Tsequence_constructor(DataChunk &args, ExpressionState &
     auto &child_vec = ListVector::GetEntry(array_vec);
 
     MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
-    interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;
+    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
     bool lower_inc = true;
     bool upper_inc = true;
     
@@ -434,7 +434,7 @@ void TemporalFunctions::Tsequenceset_constructor_gaps(DataChunk &args, Expressio
     array_vec.Flatten(row_count);
 
     MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
-    interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;
+    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
 
     auto &child_vec = ListVector::GetEntry(array_vec);
     child_vec.Flatten(ListVector::GetListSize(array_vec));
@@ -607,7 +607,7 @@ void TemporalFunctions::Tsequence_from_base_tstzspan(DataChunk &args, Expression
     auto count = args.size();
     const auto &arg_type = args.data[0].GetType();
     MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
-    interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;
+    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
     if (args.ColumnCount() > 2) {
         auto &interp_child = args.data[2];
         interp_child.Flatten(count);
@@ -690,7 +690,7 @@ void TemporalFunctions::Tsequenceset_from_base_tstzspanset(DataChunk &args, Expr
     auto count = args.size();
     const auto &arg_type = args.data[0].GetType();
     MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
-    interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;
+    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
     if (args.ColumnCount() > 2) {
         auto &interp_child = args.data[2];
         interp_child.Flatten(count);
@@ -2526,7 +2526,7 @@ void TemporalFunctions::Temporal_set_interp(DataChunk &args, ExpressionState &st
 void TemporalFunctions::Temporal_append_tinstant(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
-    interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;
+    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
     if (args.ColumnCount() > 2) {
         auto &interp_child = args.data[2];
         interp_child.Flatten(count);
@@ -4866,19 +4866,19 @@ void TemporalFunctions::Sub_tnumber_tnumber(DataChunk &args, ExpressionState &st
 }
 
 void TemporalFunctions::Mult_int_tint(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV1<int32_t>(args, result, [](int32_t i, Temporal *t) { return mult_int_tint(i, t); });
+    TemporalBinaryV1<int32_t>(args, result, [](int32_t i, Temporal *t) { return mul_int_tint(i, t); });
 }
 void TemporalFunctions::Mult_tint_int(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV<int32_t>(args, result, [](Temporal *t, int32_t i) { return mult_tint_int(t, i); });
+    TemporalBinaryV<int32_t>(args, result, [](Temporal *t, int32_t i) { return mul_tint_int(t, i); });
 }
 void TemporalFunctions::Mult_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV1<double>(args, result, [](double d, Temporal *t) { return mult_float_tfloat(d, t); });
+    TemporalBinaryV1<double>(args, result, [](double d, Temporal *t) { return mul_float_tfloat(d, t); });
 }
 void TemporalFunctions::Mult_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV<double>(args, result, [](Temporal *t, double d) { return mult_tfloat_float(t, d); });
+    TemporalBinaryV<double>(args, result, [](Temporal *t, double d) { return mul_tfloat_float(t, d); });
 }
 void TemporalFunctions::Mult_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryTT(args, result, [](Temporal *a, Temporal *b) { return mult_tnumber_tnumber(a, b); });
+    TemporalBinaryTT(args, result, [](Temporal *a, Temporal *b) { return mul_tnumber_tnumber(a, b); });
 }
 
 void TemporalFunctions::Div_int_tint(DataChunk &args, ExpressionState &state, Vector &result) {

@@ -7,24 +7,24 @@
 require mobilityduck
 
 # Unary tfloat math: ln(e) ≈ 1, log10(100) = 2, exp(0) = 1.
-# These lifts insert one chord-error-minimising turning point on the linear
-# input segment (tfloat_ln_turnpt / tfloat_exp_turnpt), so the result has
-# three instants where the input had two.
+# These lifts transform the existing instants in place; the newer MEOS does
+# not insert an interior turning point on the linear input segment, so the
+# result keeps the input's instant count.
 
 query I
 SELECT round(ln(tfloat '[1@2000-01-01, 2.71828182845905@2000-01-02]'), 6);
 ----
-[0@2000-01-01 00:00:00+01, 0.541325@2000-01-01 10:01:57.212526+01, 1@2000-01-02 00:00:00+01]
+[0@2000-01-01 00:00:00+01, 1@2000-01-02 00:00:00+01]
 
 query I
 SELECT log10(tfloat '[1@2000-01-01, 100@2000-01-02]');
 ----
-[0@2000-01-01 00:00:00+01, 1.332389510222689@2000-01-01 04:58:08.794345+01, 2@2000-01-02 00:00:00+01]
+[0@2000-01-01 00:00:00+01, 2@2000-01-02 00:00:00+01]
 
 query I
 SELECT round(exp(tfloat '[0@2000-01-01, 1@2000-01-02]'), 6);
 ----
-[1@2000-01-01 00:00:00+01, 1.718282@2000-01-01 12:59:30.467438+01, 2.718282@2000-01-02 00:00:00+01]
+[1@2000-01-01 00:00:00+01, 2.718282@2000-01-02 00:00:00+01]
 
 # deltaValue — successive differences
 

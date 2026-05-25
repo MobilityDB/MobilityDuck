@@ -61,7 +61,7 @@ inline string_t GSerializedToGeometry(const GSERIALIZED *gs, ArenaAllocator &are
     }
 
     size_t ewkb_size = 0;
-    auto *ewkb_data = geo_as_ewkb(gs, NULL, &ewkb_size);
+    auto *ewkb_data = geo_as_wkb(gs, WKB_EXTENDED, &ewkb_size);
     if (!ewkb_data || ewkb_size == 0) {
         throw InvalidInputException("Failed to convert GSERIALIZED to EWKB");
     }

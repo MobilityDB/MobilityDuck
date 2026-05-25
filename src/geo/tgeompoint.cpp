@@ -2342,7 +2342,7 @@ unique_ptr<GlobalTableFunctionState> SpaceSplitInitCommon(ClientContext &context
         /* Capture the spaceBin as EWKB; defer DuckDB-spatial encoding to Exec
          * (where we have an arena allocator scoped to the result vector). */
         size_t wkb_sz = 0;
-        uint8_t *wkb = geo_as_ewkb(bins[i], nullptr, &wkb_sz);
+        uint8_t *wkb = geo_as_wkb(bins[i], WKB_EXTENDED, &wkb_sz);
         if (wkb) {
             state->space_ewkb.emplace_back(wkb, wkb + wkb_sz);
             free(wkb);

@@ -1,8 +1,12 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO estebanzimanyi/MobilityDB
-    REF dfdd25545dde07e5b5ae6771da500a3bdb81ee7d
-    SHA512 80091ba952bea195c61fd82d0e700bc3a608f60fd4a5bc6d9f4ae480df94ef5bcbabadf178ffac3ee8e7684b64db0c17b416d2d18f9c11125ade530757ab9c05
+    # MobilityDB accumulate/parity-1.4 tip (PR #22) — carries the h3indexset
+    # static-geometry API (geo_to_h3index_set, ever_eq_anyof_h3indexset_th3index)
+    # and the extended-type C API (tcbuffer_from_mfjson, …) that the older
+    # dfdd2554 pin lacked.
+    REF bb659c69381a1d44ea6c9cfd32207cdae8f80f3a
+    SHA512 15e635cef54845a3b2f1d03c568cbbafa26cf8b27a4f47ec1a5d6f61597ff83f3485dc12a0dd61dcb56afd924889f2e8ac0f02e0dc19bf8609d2e89dbaa9aae9
 )
 
 vcpkg_replace_string(

@@ -404,7 +404,7 @@ inline string_t StboxToBlob(Vector &result, STBox *box) {
 inline string_t GeoToBlobAsHex(Vector &result, GSERIALIZED *gs) {
     if (!gs) return string_t();
     size_t sz = 0;
-    uint8_t *ewkb = geo_as_ewkb(gs, NULL, &sz);
+    uint8_t *ewkb = geo_as_wkb(gs, WKB_EXTENDED, &sz);
     string_t out = StringVector::AddStringOrBlob(
         result, reinterpret_cast<const char *>(ewkb), sz);
     free(ewkb);
