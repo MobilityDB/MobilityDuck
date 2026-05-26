@@ -31,6 +31,7 @@
 #include "geo/tgeography.hpp"
 #include "geo/tgeography_ops.hpp"
 #include "pointcloud/tpcpoint.hpp"
+#include "pointcloud/tpcpatch.hpp"
 #include "geo/tgeogpoint.hpp"
 #include "geo/tgeogpoint_ops.hpp"
 #include "temporal/span.hpp"
@@ -412,6 +413,12 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TPcpointTypes::RegisterTypes(loader);
 	TPcpointTypes::RegisterCastFunctions(loader);
 	TPcpointTypes::RegisterScalarInOutFunctions(loader);
+
+	// Extended temporal type tpcpatch (requires the MEOS POINTCLOUD module).
+	TPcpatchTypes::RegisterScalarFunctions(loader);
+	TPcpatchTypes::RegisterTypes(loader);
+	TPcpatchTypes::RegisterCastFunctions(loader);
+	TPcpatchTypes::RegisterScalarInOutFunctions(loader);
 
 	SetTypes::RegisterTypes(loader);
 	SetTypes::RegisterCastFunctions(loader);
