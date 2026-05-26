@@ -149,6 +149,22 @@ if(NOT _MEOS_H3_INC)
     message(FATAL_ERROR "MEOS port: cannot locate vcpkg-installed h3api.h under ${CURRENT_INSTALLED_DIR}/include or ${CURRENT_INSTALLED_DIR}/include/h3")
 endif()
 
+# Newer C compilers (CI's GCC 14 / gcc-toolset-14 on Linux and AppleClang 17
+# on macOS) promote several long-standing C laxities to hard errors by default:
+# implicit-function-declaration, incompatible-pointer-types, int-conversion.
+# The pinned MEOS builds cleanly on GCC 11 (these are warnings there) but its
+# postgres-vendored code and a few internal call sites rely on those laxities,
+# so the build fails on the newer toolchains. Downgrade exactly that C-permerror
+# set back to warnings. These -Wno-error flags are honoured by BOTH GCC and
+# Clang (unlike -fpermissive, which Clang silently ignores for C, leaving the
+# macOS build broken). add_compile_options is inherited by every MEOS target
+# defined afterwards.
+vcpkg_replace_string(
+    "${SOURCE_PATH}/CMakeLists.txt"
+    "add_compile_definitions(_USE_MATH_DEFINES)"
+    "add_compile_definitions(_USE_MATH_DEFINES)\nadd_compile_options(-Wno-error=implicit-function-declaration -Wno-error=incompatible-pointer-types -Wno-error=int-conversion)"
+)
+
 vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}"
     OPTIONS
