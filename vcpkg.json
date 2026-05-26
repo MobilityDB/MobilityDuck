@@ -8,6 +8,7 @@
           "vcpkg-cmake",
           "openssl",
           "zlib",
+          "libxml2",
           "expat",
           {
             "name": "sqlite3",
