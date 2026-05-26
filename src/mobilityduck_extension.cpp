@@ -30,6 +30,7 @@
 #include "geo/tgeometry_ops.hpp"
 #include "geo/tgeography.hpp"
 #include "geo/tgeography_ops.hpp"
+#include "pointcloud/tpcpoint.hpp"
 #include "geo/tgeogpoint.hpp"
 #include "geo/tgeogpoint_ops.hpp"
 #include "temporal/span.hpp"
@@ -405,6 +406,12 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TRGeometryTypes::RegisterScalarFunctions(loader);
 	TRGeometryTypes::RegisterScalarInOutFunctions(loader);
 #endif
+
+	// Extended temporal type tpcpoint (requires the MEOS POINTCLOUD module).
+	TPcpointTypes::RegisterScalarFunctions(loader);
+	TPcpointTypes::RegisterTypes(loader);
+	TPcpointTypes::RegisterCastFunctions(loader);
+	TPcpointTypes::RegisterScalarInOutFunctions(loader);
 
 	SetTypes::RegisterTypes(loader);
 	SetTypes::RegisterCastFunctions(loader);
