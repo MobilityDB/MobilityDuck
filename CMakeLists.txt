@@ -123,6 +123,14 @@ if(POSE)
     src/geo/tpose_in_out.cpp)
 endif()
 
+option(RGEO "Build the trgeometry temporal type" ON)
+if(RGEO)
+  add_definitions(-DRGEO=1)
+  list(APPEND EXTENSION_SOURCES
+    src/rgeo/trgeometry.cpp
+    src/rgeo/trgeometry_in_out.cpp)
+endif()
+
 build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
 build_loadable_extension(${TARGET_NAME} "" ${EXTENSION_SOURCES})
 

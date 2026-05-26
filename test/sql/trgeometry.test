@@ -1,0 +1,201 @@
+# name: test/sql/trgeometry.test
+# description: Core trgeometry type port — construction, text/EWKT/MFJSON
+#              I/O and basic accessors. A trgeometry value is a moving
+#              rigid geometry: a reference geometry rigidly rotated and
+#              translated over time by an embedded temporal pose, written
+#              as 'Geometry;Pose@timestamp'.
+# group: [sql]
+
+require mobilityduck
+
+# Test trgeometry constructor with parentheses (instant)
+query I
+SELECT asText(trgeometry('Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01'));
+----
+POLYGON((1 1,2 2,3 1,1 1));Pose(POINT(1 1),0.5)@2000-01-01 00:00:00+01
+
+# Test trgeometry constructor without parentheses
+query I
+SELECT asText(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01');
+----
+POLYGON((1 1,2 2,3 1,1 1));Pose(POINT(1 1),0.5)@2000-01-01 00:00:00+01
+
+# Test asText with continuous sequence
+query I
+SELECT asText(trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02, Pose(Point(1 1), 0.5)@2000-01-03]');
+----
+POLYGON((1 1,2 2,3 1,1 1));[Pose(POINT(1 1),0.2)@2000-01-01 00:00:00+01, Pose(POINT(1 1),0.4)@2000-01-02 00:00:00+01, Pose(POINT(1 1),0.5)@2000-01-03 00:00:00+01]
+
+# Test asText with discrete sequence
+query I
+SELECT asText(trgeometry 'Polygon((1 1,2 2,3 1,1 1));{Pose(Point(1 1), 0.3)@2000-01-01, Pose(Point(1 1), 0.5)@2000-01-02}');
+----
+POLYGON((1 1,2 2,3 1,1 1));{Pose(POINT(1 1),0.3)@2000-01-01 00:00:00+01, Pose(POINT(1 1),0.5)@2000-01-02 00:00:00+01}
+
+# Test asEWKT is non-null
+query I
+SELECT asEWKT(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01') IS NOT NULL;
+----
+true
+
+# Test geometry/pose/timestamptz instant constructor round-trips
+query I
+SELECT trgeometry(geometry 'Polygon((1 1,2 2,3 1,1 1))', 'Pose(Point(1 1), 0.5)', timestamptz '2000-01-01')
+     = trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01';
+----
+true
+
+# Test geometry/tpose constructor builds a moving rigid geometry that
+# round-trips against the canonical text form
+query I
+SELECT trgeometry(geometry 'Polygon((1 1,2 2,3 1,1 1))',
+                   tpose '[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02]')
+     = trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02]';
+----
+true
+
+# Test the reference geometry accessor
+query I
+SELECT ST_AsText(geometry(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01'));
+----
+POLYGON ((1 1, 2 2, 3 1, 1 1))
+
+# Test MFJSON round-trip is identity (format-agnostic)
+query I
+SELECT asText(trgeometryFromMFJSON(asMFJSON(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01')))
+     = asText(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01');
+----
+true
+
+# Test MFJSON round-trip for a continuous sequence
+query I
+SELECT asText(trgeometryFromMFJSON(asMFJSON(
+         trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02]')))
+     = asText(trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02]');
+----
+true
+
+# Test trgeometryFromText constructor
+query I
+SELECT asText(trgeometryFromText('Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01')) IS NOT NULL;
+----
+true
+
+# Test binary round-trip is identity
+query I
+SELECT asText(trgeometryFromBinary(asBinary(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01')))
+     = asText(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01');
+----
+true
+
+# Test timeSpan function
+query I
+SELECT timeSpan(trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-03]');
+----
+[2000-01-01 00:00:00+01, 2000-01-03 00:00:00+01]
+
+# Test setInterp with discrete interpolation. A multi-instant continuous
+# sequence cannot be discretized (it would drop the span semantics, MEOS
+# errors), so lift an instant to a one-element discrete sequence.
+query I
+SELECT tempSubtype(setInterp(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.2)@2000-01-01', 'discrete'));
+----
+Sequence
+
+# Test merge function
+query I
+SELECT numInstants(merge(
+  trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.3)@2000-01-02]',
+  trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1), 0.3)@2000-01-02, Pose(Point(1 1), 0.5)@2000-01-03]'));
+----
+3
+
+# Test tempSubtype with instant
+query I
+SELECT tempSubtype(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01');
+----
+Instant
+
+# Test tempSubtype with discrete sequence
+query I
+SELECT tempSubtype(trgeometry 'Polygon((1 1,2 2,3 1,1 1));{Pose(Point(1 1), 0.3)@2000-01-01, Pose(Point(1 1), 0.5)@2000-01-02}');
+----
+Sequence
+
+# Test tempSubtype with continuous sequence
+query I
+SELECT tempSubtype(trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02]');
+----
+Sequence
+
+# Test tempSubtype with sequence set
+query I
+SELECT tempSubtype(trgeometry 'Polygon((1 1,2 2,3 1,1 1));{[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02], [Pose(Point(2 2), 0.6)@2000-01-04, Pose(Point(2 2), 0.6)@2000-01-05]}');
+----
+SequenceSet
+
+# Test memSize is positive
+query I
+SELECT memSize(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01') > 0;
+----
+true
+
+# Test interp accessor
+query I
+SELECT interp(trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02]');
+----
+Linear
+
+# Test getValue returns the pose value text
+query I
+SELECT getValue(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01');
+----
+Pose(POINT(1 1),0.5)
+
+# Test startValue surfaces a non-null moved rigid-geometry snapshot
+query I
+SELECT startValue(trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02]') IS NOT NULL;
+----
+true
+
+# Test endValue surfaces a non-null moved rigid-geometry snapshot
+query I
+SELECT endValue(trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02]') IS NOT NULL;
+----
+true
+
+# Test startInstant
+query I
+SELECT asText(startInstant(trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02]'));
+----
+POLYGON((1 1,2 2,3 1,1 1));Pose(POINT(1 1),0.2)@2000-01-01 00:00:00+01
+
+# Test endInstant
+query I
+SELECT asText(endInstant(trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02]'));
+----
+POLYGON((1 1,2 2,3 1,1 1));Pose(POINT(1 1),0.4)@2000-01-02 00:00:00+01
+
+# Test instantN
+query I
+SELECT asText(instantN(trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02]', 1));
+----
+POLYGON((1 1,2 2,3 1,1 1));Pose(POINT(1 1),0.2)@2000-01-01 00:00:00+01
+
+# Test getTimestamp function
+query I
+SELECT getTimestamp(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2023-01-01 10:00:00+00');
+----
+2023-01-01 11:00:00+01
+
+# Test numInstants generic accessor
+query I
+SELECT numInstants(trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-02, Pose(Point(1 1), 0.5)@2000-01-03]');
+----
+3
+
+# Test duration generic accessor
+query I
+SELECT duration(trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1), 0.2)@2000-01-01, Pose(Point(1 1), 0.4)@2000-01-03]');
+----
+2 days

@@ -23,6 +23,9 @@
 #if POSE
 #include "geo/tpose.hpp"
 #endif
+#if RGEO
+#include "rgeo/trgeometry.hpp"
+#endif
 #include "geo/tgeometry.hpp"
 #include "geo/tgeometry_ops.hpp"
 #include "geo/tgeography.hpp"
@@ -393,6 +396,14 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TPoseTypes::RegisterTypes(loader);
 	TPoseTypes::RegisterCastFunctions(loader);
 	TPoseTypes::RegisterScalarInOutFunctions(loader);
+#endif
+
+	// Extended temporal type trgeometry (requires the MEOS RGEO module).
+#if RGEO
+	TRGeometryTypes::RegisterScalarFunctions(loader);
+	TRGeometryTypes::RegisterTypes(loader);
+	TRGeometryTypes::RegisterCastFunctions(loader);
+	TRGeometryTypes::RegisterScalarInOutFunctions(loader);
 #endif
 
 	SetTypes::RegisterTypes(loader);
