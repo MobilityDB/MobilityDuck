@@ -269,6 +269,87 @@ inline void TnpointFromMFJSONExec(DataChunk &args, ExpressionState &, Vector &re
         });
 }
 
+// Output serialization for tnpoint: asMFJSON (temporal_as_mfjson) and
+// asBinary/asEWKB/asHexWKB/asHexEWKB (temporal_as_wkb / temporal_as_hexwkb).
+// MobilityDB exposes all of these for tnpoint; the #150 port shipped only the
+// From* parsers. Uniquely named per the ODR caveat. WKB_BASE (no SRID) is
+// local; WKB_EXTENDED from meos_geo.h.
+constexpr uint8_t WKB_BASE = 0x00;
+
+static Temporal *TnpointBlobToTemp(const string_t &blob) {
+    uint8_t *copy = (uint8_t *)malloc(blob.GetSize());
+    if (!copy) throw InternalException("tnpoint blob->temporal: malloc failed");
+    memcpy(copy, blob.GetData(), blob.GetSize());
+    return reinterpret_cast<Temporal *>(copy);
+}
+
+void TnpointAsMfjsonExec(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    auto in = FlatVector::GetData<string_t>(args.data[0]);
+    auto out_data = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    const idx_t cc = args.ColumnCount();
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        Temporal *t = TnpointBlobToTemp(in[row]);
+        bool with_bbox = (cc > 1) ? FlatVector::GetData<bool>(args.data[1])[row] : false;
+        int flags     = (cc > 2) ? FlatVector::GetData<int32_t>(args.data[2])[row] : 0;
+        int precision = (cc > 3) ? FlatVector::GetData<int32_t>(args.data[3])[row] : 15;
+        std::string srs;
+        const char *srs_cstr = nullptr;
+        if (cc > 4) {
+            string_t s = FlatVector::GetData<string_t>(args.data[4])[row];
+            srs.assign(s.GetData(), s.GetSize());
+            srs_cstr = srs.empty() ? nullptr : srs.c_str();
+        }
+        char *json = temporal_as_mfjson(t, with_bbox, flags, precision, srs_cstr);
+        free(t);
+        if (!json) { out_validity.SetInvalid(row); continue; }
+        out_data[row] = StringVector::AddString(result, json);
+        free(json);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void TnpointAsWkbExec(DataChunk &args, ExpressionState &state, Vector &result, uint8_t variant) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            Temporal *t = TnpointBlobToTemp(input);
+            size_t sz = 0;
+            uint8_t *wkb = temporal_as_wkb(t, variant, &sz);
+            free(t);
+            if (!wkb || sz == 0) {
+                if (wkb) free(wkb);
+                throw InternalException("temporal_as_wkb returned null");
+            }
+            string_t blob(reinterpret_cast<const char *>(wkb), sz);
+            string_t stored = StringVector::AddStringOrBlob(result, blob);
+            free(wkb);
+            return stored;
+        });
+}
+
+void TnpointAsHexWkbExec(DataChunk &args, ExpressionState &state, Vector &result, uint8_t variant) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            Temporal *t = TnpointBlobToTemp(input);
+            size_t sz = 0;
+            char *hex = temporal_as_hexwkb(t, variant, &sz);
+            (void) sz;
+            free(t);
+            if (!hex) throw InternalException("temporal_as_hexwkb returned null");
+            string_t stored = StringVector::AddString(result, hex);
+            free(hex);
+            return stored;
+        });
+}
+
 void TNpointTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
     auto TnpointAsText = ScalarFunction(
             "asText",
@@ -290,6 +371,31 @@ void TNpointTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
     const auto B = LogicalType::BLOB;
     const auto V = LogicalType::VARCHAR;
     const auto T = TNpointTypes::TNPOINT();
+    const auto BL = LogicalType::BOOLEAN;
+    const auto I = LogicalType::INTEGER;
+
+    // asMFJSON(tnpoint[, with_bbox[, flags[, precision[, srs]]]])
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("asMFJSON", {T},              V, TnpointAsMfjsonExec));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("asMFJSON", {T, BL},          V, TnpointAsMfjsonExec));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("asMFJSON", {T, BL, I},       V, TnpointAsMfjsonExec));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("asMFJSON", {T, BL, I, I},    V, TnpointAsMfjsonExec));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("asMFJSON", {T, BL, I, I, V}, V, TnpointAsMfjsonExec));
+
+    // asBinary / asEWKB and asHexWKB / asHexEWKB
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("asBinary", {T}, B,
+        [](DataChunk &a, ExpressionState &s, Vector &r) { TnpointAsWkbExec(a, s, r, WKB_BASE); }));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB",   {T}, B,
+        [](DataChunk &a, ExpressionState &s, Vector &r) { TnpointAsWkbExec(a, s, r, WKB_EXTENDED); }));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("asHexWKB",  {T}, V,
+        [](DataChunk &a, ExpressionState &s, Vector &r) { TnpointAsHexWkbExec(a, s, r, WKB_BASE); }));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {T}, V,
+        [](DataChunk &a, ExpressionState &s, Vector &r) { TnpointAsHexWkbExec(a, s, r, WKB_EXTENDED); }));
+
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction("tnpointFromBinary", {B}, T, TspatialFromWkbExec));
     duckdb::RegisterSerializedScalarFunction(loader,

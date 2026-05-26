@@ -236,3 +236,18 @@ query I
 SELECT duration(tcbuffer '[Cbuffer(Point(1 1), 0.2)@2000-01-01, Cbuffer(Point(2 2), 0.4)@2000-01-03]');
 ----
 2 days
+
+# Output serialization (asMFJSON / asBinary) round-trips through the matching
+# FromMFJSON / FromBinary parsers as the identity (MobilityDB exposes these
+# emitters for tcbuffer; the #148 port shipped only the parsers).
+query I
+SELECT asText(tcbufferFromMFJSON(asMFJSON(tcbuffer 'Cbuffer(Point(1 1), 0.5)@2000-01-01')))
+     = asText(tcbuffer 'Cbuffer(Point(1 1), 0.5)@2000-01-01');
+----
+true
+
+query I
+SELECT asText(tcbufferFromBinary(asBinary(tcbuffer 'Cbuffer(Point(1 1), 0.5)@2000-01-01')))
+     = asText(tcbuffer 'Cbuffer(Point(1 1), 0.5)@2000-01-01');
+----
+true
