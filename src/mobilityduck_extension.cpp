@@ -17,6 +17,7 @@
 #include "geo/tcbuffer.hpp"
 #include "geo/tnpoint.hpp"
 #include "geo/tpose.hpp"
+#include "rgeo/trgeometry.hpp"
 #include "geo/tgeometry.hpp"
 #include "geo/tgeometry_ops.hpp"
 #include "geo/tgeography.hpp"
@@ -410,6 +411,12 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TPoseTypes::RegisterTypes(loader);
 	TPoseTypes::RegisterCastFunctions(loader);
 	TPoseTypes::RegisterScalarInOutFunctions(loader);
+
+	// Extended temporal type trgeometry (requires the MEOS RGEO module).
+	TRGeometryTypes::RegisterScalarFunctions(loader);
+	TRGeometryTypes::RegisterTypes(loader);
+	TRGeometryTypes::RegisterCastFunctions(loader);
+	TRGeometryTypes::RegisterScalarInOutFunctions(loader);
 
 	SetTypes::RegisterTypes(loader);
 	SetTypes::RegisterCastFunctions(loader);
