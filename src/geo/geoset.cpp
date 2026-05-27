@@ -275,7 +275,7 @@ bool SpatialSetFunctions::Text_to_geoset(Vector &source, Vector &result, idx_t c
 
 namespace {
 
-inline void GeosetFromTextImpl(DataChunk &args, Vector &result, meosType basetype, const char *func_name) {
+inline void GeosetFromTextImpl(DataChunk &args, Vector &result, MeosType basetype, const char *func_name) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) -> string_t {

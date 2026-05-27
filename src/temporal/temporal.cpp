@@ -2930,7 +2930,7 @@ void TemporalTypes::RegisterTemporalTileSplit(ExtensionLoader &loader) {
 
 struct TnumberValueSplitBindData : public TableFunctionData {
     string_t blob;
-    meosType temptype;
+    MeosType temptype;
     LogicalType base_type;     // BIGINT for tint, DOUBLE for tfloat
     LogicalType temporal_type; // TINT or TFLOAT
     double size;
