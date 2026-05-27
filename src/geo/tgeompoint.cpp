@@ -2018,10 +2018,20 @@ void TgeoAsHexWkbExec(DataChunk &args, ExpressionState &state, Vector &result, u
             Temporal *t = BlobToTemp(input);
             size_t sz = 0;
             char *hex = temporal_as_hexwkb(t, variant, &sz);
-            (void) sz;
             free(t);
             if (!hex) throw InternalException("temporal_as_hexwkb returned null");
-            string_t stored = StringVector::AddString(result, hex);
+            // Diagnostic (#170): hex-WKB must be even-length. If the producer
+            // emits odd output, report strlen vs the sz out-param (which counts
+            // the trailing null) so we can tell which side is wrong on arm64.
+            size_t actual = strlen(hex);
+            if (actual % 2 != 0) {
+                std::string diag = "asHexWKB: temporal_as_hexwkb produced odd-length string: "
+                                   "strlen=" + std::to_string(actual) +
+                                   " sz=" + std::to_string(sz);
+                free(hex);
+                throw InternalException(diag);
+            }
+            string_t stored = StringVector::AddString(result, hex, actual);
             free(hex);
             return stored;
         });
