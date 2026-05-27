@@ -165,6 +165,16 @@ vcpkg_replace_string(
     "add_compile_definitions(_USE_MATH_DEFINES)\nadd_compile_options(-Wno-error=implicit-function-declaration -Wno-error=incompatible-pointer-types -Wno-error=int-conversion)"
 )
 
+# DIAGNOSTIC (#170, NOT for merge): make the PostGIS hex parser reveal the
+# offending string when it rejects an odd-length hex on macOS arm64. The
+# error message already surfaces in CI; appending the buffer tells us exactly
+# which value (and therefore which producer/test) is malformed on arm64.
+vcpkg_replace_string(
+    "${SOURCE_PATH}/postgis/liblwgeom/lwin_wkb.c"
+    "lwerror(\"Invalid hex string, length (%zu) has to be a multiple of two!\", hexsize)"
+    "lwerror(\"Invalid hex string, length (%zu) has to be a multiple of two! hex=[%.200s]\", hexsize, hexbuf)"
+)
+
 # Upstream MEOS-standalone gap: meos/include/pointcloud/{pcpoint,pcpatch}.h
 # define DatumGetPcpointP / DatumGetPcpatchP via PG_DETOAST_DATUM
 # UNCONDITIONALLY, unlike every other type header (temporal.h etc.) which
