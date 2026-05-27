@@ -191,8 +191,13 @@ void StboxFunctions::Stbox_from_hexwkb(DataChunk &args, ExpressionState &state, 
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input_hexwkb) -> string_t {
-            char *hexwkb = (char*)input_hexwkb.GetData();
-            STBox *stbox = stbox_from_hexwkb(hexwkb);
+            // string_t::GetData() is not NUL-terminated, but stbox_from_hexwkb()
+            // strlen()s its argument; reading the raw pointer overruns the buffer
+            // on allocators that leave the trailing byte non-zero (macOS arm64),
+            // yielding a spurious "Invalid hex string, length (...)" (#170). Copy
+            // into a NUL-terminated std::string first, as the sibling consumers do.
+            std::string hexwkb = input_hexwkb.GetString();
+            STBox *stbox = stbox_from_hexwkb(hexwkb.c_str());
             if (!stbox) {
                 throw InternalException("Failure in Stbox_from_hexwkb: unable to cast hexwkb to stbox");
                 return string_t();
