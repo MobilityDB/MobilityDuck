@@ -165,14 +165,18 @@ vcpkg_replace_string(
     "add_compile_definitions(_USE_MATH_DEFINES)\nadd_compile_options(-Wno-error=implicit-function-declaration -Wno-error=incompatible-pointer-types -Wno-error=int-conversion)"
 )
 
-# DIAGNOSTIC (#170, NOT for merge): make the PostGIS hex parser reveal the
-# offending string when it rejects an odd-length hex on macOS arm64. The
-# error message already surfaces in CI; appending the buffer tells us exactly
-# which value (and therefore which producer/test) is malformed on arm64.
+# DIAGNOSTIC (#170, NOT for merge): when the PostGIS hex parser rejects an
+# odd-length hex on macOS arm64, dump a backtrace + the offending string so
+# the CI log reveals exactly which producer/caller built the bad hex.
+vcpkg_replace_string(
+    "${SOURCE_PATH}/postgis/liblwgeom/lwin_wkb.c"
+    "#include <math.h>\n#include <limits.h>"
+    "#include <math.h>\n#include <limits.h>\n#include <stdio.h>\n#include <execinfo.h>"
+)
 vcpkg_replace_string(
     "${SOURCE_PATH}/postgis/liblwgeom/lwin_wkb.c"
     "lwerror(\"Invalid hex string, length (%zu) has to be a multiple of two!\", hexsize)"
-    "lwerror(\"Invalid hex string, length (%zu) has to be a multiple of two! hex=[%.200s]\", hexsize, hexbuf)"
+    "do { void *_bt[40]; int _n = backtrace(_bt, 40); char **_s = backtrace_symbols(_bt, _n); fprintf(stderr, \"[#170 DIAG] odd hexsize=%zu hex=[%.200s]\\n\", hexsize, hexbuf); for (int _k = 0; _k < _n; _k++) fprintf(stderr, \"[#170 BT] %s\\n\", _s[_k]); free(_s); lwerror(\"Invalid hex string, length (%zu) has to be a multiple of two!\", hexsize); } while (0)"
 )
 
 # Upstream MEOS-standalone gap: meos/include/pointcloud/{pcpoint,pcpatch}.h
