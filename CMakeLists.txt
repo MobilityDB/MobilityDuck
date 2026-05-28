@@ -136,6 +136,25 @@ target_link_libraries(${LOADABLE_EXTENSION_NAME}
 )
 
 # -----------------------------
+# Developer build speed
+# -----------------------------
+# Parse the heavy, stable DuckDB and MEOS headers once per build instead of in
+# every translation unit.
+target_precompile_headers(${EXTENSION_NAME} PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/include/mobilityduck_pch.hpp")
+target_precompile_headers(${LOADABLE_EXTENSION_NAME} PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/include/mobilityduck_pch.hpp")
+
+# Link the extension with mold when it is installed: relinking the extension
+# dominates the cost of a single-file change, and mold relinks far faster than
+# the default linker. Falls back to the default linker when mold is absent.
+find_program(MOLD_LINKER mold)
+if(MOLD_LINKER)
+  target_link_options(${EXTENSION_NAME} PRIVATE -fuse-ld=mold)
+  target_link_options(${LOADABLE_EXTENSION_NAME} PRIVATE -fuse-ld=mold)
+endif()
+
+# -----------------------------
 # Install (static & loadable)
 # -----------------------------
 install(

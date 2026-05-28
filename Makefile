@@ -52,3 +52,15 @@ test_debug_internal:
 test_reldebug_internal:
 	$(call stage_icu,reldebug)
 	./build/reldebug/$(TEST_PATH) "$(PROJ_DIR)test/*"
+
+# Fast developer iteration: rebuild ONLY the MobilityDuck extension against the
+# already-configured DuckDB build and vcpkg dependencies.  Run a full `make`
+# (release) / `make debug` once; thereafter `make ext` / `make ext_debug`
+# recompiles just the changed MobilityDuck translation units and relinks
+# build/<config>/extension/mobilityduck/mobilityduck.duckdb_extension without
+# rebuilding DuckDB, spatial, icu, parquet or the vcpkg packages.  See BUILDING.md.
+.PHONY: ext ext_debug
+ext:
+	cmake --build build/release --target mobilityduck_loadable_extension --parallel
+ext_debug:
+	cmake --build build/debug --target mobilityduck_loadable_extension --parallel
