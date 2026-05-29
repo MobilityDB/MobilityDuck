@@ -1139,9 +1139,6 @@ void SpanFunctions::Numspan_expand(DataChunk &args, ExpressionState &state, Vect
         default:
             throw NotImplementedException("expand(<span>): unsupported span type");
     }
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void SpanFunctions::Tstzspan_expand(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1153,9 +1150,6 @@ void SpanFunctions::Tstzspan_expand(DataChunk &args, ExpressionState &state, Vec
         [&](string_t blob, interval_t value) -> string_t {
             return Tstzspan_expand_common(blob, value, result);
         });        
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 static inline string_t Numspan_shift_common(const string_t &blob, Datum shift_datum,
@@ -1256,9 +1250,6 @@ void SpanFunctions::Tstzspan_shift(DataChunk &args, ExpressionState &state, Vect
         [&](string_t blob, interval_t shift_interval) -> string_t {
             return Tstzspan_shift_common(blob, shift_interval, result);
         });
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 static inline string_t Numspan_scale_common(const string_t &blob, Datum scale_datum,
@@ -1358,9 +1349,6 @@ void SpanFunctions::Tstzspan_scale(DataChunk &args, ExpressionState &state, Vect
         [&](string_t blob, interval_t scale_interval) -> string_t {
             return Tstzspan_scale_common(blob, scale_interval, result);
         });
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 static inline string_t Tstzspan_shift_scale_common(const string_t &blob, interval_t shift_iv, interval_t scale_iv,
@@ -1463,9 +1451,6 @@ void SpanFunctions::Numspan_shift_scale(DataChunk &args, ExpressionState &state,
         default:
             throw NotImplementedException("shiftScale(<span>): unsupported span type for this overload");
     }
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void SpanFunctions::Tstzspan_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1475,9 +1460,6 @@ void SpanFunctions::Tstzspan_shift_scale(DataChunk &args, ExpressionState &state
         [&](string_t blob, interval_t shift, interval_t scale) -> string_t {
             return Tstzspan_shift_scale_common(blob, shift, scale, result);
         });
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void SpanFunctions::Floatspan_floor(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1538,9 +1520,6 @@ void SpanFunctions::Float_round(DataChunk &args, ExpressionState &state, Vector 
             [&](double_t float_value) -> double_t {
                 return float_round(float_value, 0);
             });
-    }
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
 
@@ -1677,9 +1656,6 @@ void SpanFunctions::Span_eq(DataChunk &args, ExpressionState &state, Vector &res
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 // --- OPERATOR: span <> span ---
 void SpanFunctions::Span_ne(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1707,9 +1683,6 @@ void SpanFunctions::Span_ne(DataChunk &args, ExpressionState &state, Vector &res
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 // --- OPERATOR: span < span ---
 void SpanFunctions::Span_lt(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1737,9 +1710,6 @@ void SpanFunctions::Span_lt(DataChunk &args, ExpressionState &state, Vector &res
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 // --- OPERATOR: span <= span ---
 void SpanFunctions::Span_le(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1767,9 +1737,6 @@ void SpanFunctions::Span_le(DataChunk &args, ExpressionState &state, Vector &res
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void SpanFunctions::Span_gt(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1797,9 +1764,6 @@ void SpanFunctions::Span_gt(DataChunk &args, ExpressionState &state, Vector &res
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 // --- OPERATOR: span >= span ---
 void SpanFunctions::Span_ge(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1827,9 +1791,6 @@ void SpanFunctions::Span_ge(DataChunk &args, ExpressionState &state, Vector &res
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void SpanFunctions::Span_cmp(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1857,9 +1818,6 @@ void SpanFunctions::Span_cmp(DataChunk &args, ExpressionState &state, Vector &re
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 // --- OPERATOR: span @> value ---
 void SpanFunctions::Contains_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2001,9 +1959,6 @@ void SpanFunctions::Contains_span_span(DataChunk &args, ExpressionState &state, 
             return ret;
     }
 );
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
@@ -2114,9 +2069,6 @@ void SpanFunctions::Contained_value_span(DataChunk &args, ExpressionState &state
         default:
             throw NotImplementedException("value <@ SPAN: unsupported span type");
     }
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 // --- OPERATOR: span <@ span ---
@@ -2151,9 +2103,6 @@ void SpanFunctions::Contained_span_span(DataChunk &args, ExpressionState &state,
             return ret;
     }
 );
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 // --- OPERATOR: span && span ---
@@ -2187,9 +2136,6 @@ void SpanFunctions::Overlaps_span_span(DataChunk &args, ExpressionState &state, 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 // --- OPERATOR: value -|- span---
@@ -2298,9 +2244,6 @@ void SpanFunctions::Adjacent_value_span(DataChunk &args, ExpressionState &state,
         }
         default:
             throw NotImplementedException("value -|- SPAN: unsupported span type");
-    }
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
 
@@ -2411,9 +2354,6 @@ void SpanFunctions::Adjacent_span_value(DataChunk &args, ExpressionState &state,
         default:
             throw NotImplementedException("SPAN -|- value: unsupported span type");
     }
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 // --- OPERATOR: span -|- span ---
@@ -2445,9 +2385,6 @@ void SpanFunctions::Adjacent_span_span(DataChunk &args, ExpressionState &state, 
             return ret;
         }
     );
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 // --- POSITION OPERATORS ---
@@ -2559,9 +2496,6 @@ void SpanFunctions::Left_value_span(DataChunk &args, ExpressionState &state, Vec
         default:
             throw NotImplementedException("value << SPAN: unsupported span type");
     }
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 // --- OPERATOR: span << value ---
 void SpanFunctions::Left_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2670,9 +2604,6 @@ void SpanFunctions::Left_span_value(DataChunk &args, ExpressionState &state, Vec
         default:
             throw NotImplementedException("SPAN << value: unsupported span type");
     }
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 // --- OPERATOR: span << span ---
 void SpanFunctions::Left_span_span(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2703,9 +2634,6 @@ void SpanFunctions::Left_span_span(DataChunk &args, ExpressionState &state, Vect
             return ret;
         }
     );
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 // --- OPERATOR: value >> span ---
 void SpanFunctions::Right_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2814,9 +2742,6 @@ void SpanFunctions::Right_value_span(DataChunk &args, ExpressionState &state, Ve
         default:
             throw NotImplementedException("value >> SPAN: unsupported span type");
     }
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 // --- OPERATOR: span >> value ---
 void SpanFunctions::Right_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2924,9 +2849,6 @@ void SpanFunctions::Right_span_value(DataChunk &args, ExpressionState &state, Ve
         default:
             throw NotImplementedException("SPAN >> value: unsupported span type");
     }
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 // --- OPERATOR: span >> span ---
 void SpanFunctions::Right_span_span(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2957,9 +2879,6 @@ void SpanFunctions::Right_span_span(DataChunk &args, ExpressionState &state, Vec
             return ret;
         }
     );
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 // ---OPERATOR: value &< span ---
@@ -3069,9 +2988,6 @@ void SpanFunctions::Overleft_value_span(DataChunk &args, ExpressionState &state,
         default:
             throw NotImplementedException("value &< SPAN: unsupported span type");
     }
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 // ---OPERATOR: span &< value ---
 void SpanFunctions::Overleft_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3179,9 +3095,6 @@ void SpanFunctions::Overleft_span_value(DataChunk &args, ExpressionState &state,
         default:
             throw NotImplementedException("SPAN &< value: unsupported span type");
     }
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }   
 
 // ---OPERATOR: span &< span ---
@@ -3213,9 +3126,6 @@ void SpanFunctions::Overleft_span_span(DataChunk &args, ExpressionState &state, 
             return ret;
         }
     );
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 // --- OPERATOR: value &> span ---
@@ -3323,9 +3233,6 @@ void SpanFunctions::Overright_value_span(DataChunk &args, ExpressionState &state
         }
         default:
             throw NotImplementedException("value &> SPAN: unsupported span type");
-    }
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }   
 
@@ -3435,9 +3342,6 @@ void SpanFunctions::Overright_span_value(DataChunk &args, ExpressionState &state
         default:
             throw NotImplementedException("SPAN &> value: unsupported span type");
     }
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }   
 
 // --- OPERATOR: span &> span ---
@@ -3469,9 +3373,6 @@ void SpanFunctions::Overright_span_span(DataChunk &args, ExpressionState &state,
             return ret;
         }
     );
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 // --- SET OPERATOR ---
@@ -3613,9 +3514,6 @@ void SpanFunctions::Union_value_span(DataChunk &args, ExpressionState &state, Ve
         }
         default:
             throw NotImplementedException("value + SPAN: unsupported span type");
-    }
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
 }
@@ -3759,9 +3657,6 @@ void SpanFunctions::Union_span_value(DataChunk &args, ExpressionState &state, Ve
         default:
             throw NotImplementedException("SPAN + value: unsupported span type");
     }
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 }
 
@@ -3796,9 +3691,6 @@ void SpanFunctions::Union_span_span(DataChunk &args, ExpressionState &state, Vec
             return stored_data;
         }
     );
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 // --- OPERATOR: INTERSECTION ---
 void SpanFunctions::Intersection_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3960,9 +3852,6 @@ void SpanFunctions::Intersection_value_span(DataChunk &args, ExpressionState &st
         }
         default:
             throw NotImplementedException("value * SPAN: unsupported span type");
-    }
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
 
@@ -4126,9 +4015,6 @@ void SpanFunctions::Intersection_span_value(DataChunk &args, ExpressionState &st
         default:
             throw NotImplementedException("SPAN * value: unsupported span type");
     }
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void SpanFunctions::Intersection_span_span(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -4175,9 +4061,6 @@ void SpanFunctions::Intersection_span_span(DataChunk &args, ExpressionState &sta
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 // --- OPERATOR: MINUS ---
@@ -4341,9 +4224,6 @@ void SpanFunctions::Minus_value_span(DataChunk &args, ExpressionState &state, Ve
         default:
             throw NotImplementedException("value - SPAN: unsupported span type");
     }
-     if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void SpanFunctions::Minus_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -4505,9 +4385,6 @@ void SpanFunctions::Minus_span_value(DataChunk &args, ExpressionState &state, Ve
         default:
             throw NotImplementedException("SPAN - value: unsupported span type");   
         }
-        if (args.size() == 1) {
-            result.SetVectorType(VectorType::CONSTANT_VECTOR);
-        }
     }
 }
 
@@ -4555,9 +4432,6 @@ void SpanFunctions::Minus_span_span(DataChunk &args, ExpressionState &state, Vec
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 //--- DISTANCE FUNCTIONS ---
@@ -4667,9 +4541,6 @@ void SpanFunctions::Distance_span_value(DataChunk &args, ExpressionState &state,
             throw NotImplementedException("distance between SPAN and value: unsupported span type");    
 
     }
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -4777,9 +4648,6 @@ void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state,
         default:
             throw NotImplementedException("distance between value and SPAN: unsupported span type");
     }
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void SpanFunctions::Distance_span_span(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -4830,9 +4698,6 @@ void SpanFunctions::Distance_span_span(DataChunk &args, ExpressionState &state, 
                 return distance;
             }
         );
-    }
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
 

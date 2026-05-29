@@ -1,4 +1,5 @@
 #include "meos_wrapper_simple.hpp"
+#include "temporal/temporal_blob.hpp"
 #include "common.hpp"
 
 #include "geo/stbox_functions.hpp"
@@ -50,7 +51,7 @@ inline STBox *Stbox_geodetic_xy_copy(const STBox *box) {
                       0.0, 0.0, stbox_hast(box) ? &box->period : nullptr);
 }
 
-inline void Stbox_normalize_geodetic_srid(STBox *box) {
+static void Stbox_normalize_geodetic_srid(STBox *box) {
     if ((stbox_isgeodetic(box) || MEOS_FLAGS_GET_GEODETIC(box->flags)) && box->srid == 0) {
         box->srid = 4326;
     }
@@ -62,7 +63,7 @@ inline void Stbox_normalize_geodetic_srid(STBox *box) {
  * In/out functions: VARCHAR <-> STBOX
  ****************************************************/
 
-inline void Stbox_in_common(Vector &source, Vector &result, idx_t count) {
+static void Stbox_in_common(Vector &source, Vector &result, idx_t count) {
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
         source, result, count,
         [&](string_t input_string, ValidityMask &mask, idx_t idx) -> string_t {
@@ -91,9 +92,6 @@ inline void Stbox_in_common(Vector &source, Vector &result, idx_t count) {
             return stored_data;
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 bool StboxFunctions::Stbox_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
@@ -135,9 +133,6 @@ bool StboxFunctions::Stbox_out(Vector &source, Vector &result, idx_t count, Cast
             return stored_data;
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
     return success;
 }
 
@@ -182,9 +177,6 @@ void StboxFunctions::Stbox_from_wkb(DataChunk &args, ExpressionState &state, Vec
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_from_hexwkb(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -213,9 +205,6 @@ void StboxFunctions::Stbox_from_hexwkb(DataChunk &args, ExpressionState &state, 
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -247,9 +236,6 @@ void StboxFunctions::Stbox_as_text(DataChunk &args, ExpressionState &state, Vect
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_as_wkb(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -282,9 +268,6 @@ void StboxFunctions::Stbox_as_wkb(DataChunk &args, ExpressionState &state, Vecto
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -317,9 +300,6 @@ void StboxFunctions::Stbox_as_hexwkb(DataChunk &args, ExpressionState &state, Ve
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
@@ -360,9 +340,6 @@ void StboxFunctions::Geo_timestamptz_to_stbox(DataChunk &args, ExpressionState &
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Geo_tstzspan_to_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -420,9 +397,6 @@ void StboxFunctions::Geo_tstzspan_to_stbox(DataChunk &args, ExpressionState &sta
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
@@ -462,9 +436,6 @@ void StboxFunctions::Geo_to_stbox_common(Vector &source, Vector &result, idx_t c
             return stored_data;
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Geo_to_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -515,9 +486,6 @@ bool StboxFunctions::Geo_to_stbox_cast(Vector &source, Vector &result, idx_t cou
             return stored_result;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 static void Timestamptz_to_stbox_common(Vector &source, Vector &result, idx_t count) {
@@ -543,9 +511,6 @@ static void Timestamptz_to_stbox_common(Vector &source, Vector &result, idx_t co
             return stored_data;
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Timestamptz_to_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -594,9 +559,6 @@ static void Tstzset_to_stbox_common(Vector &source, Vector &result, idx_t count)
             return stored_data;
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Tstzset_to_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -645,9 +607,6 @@ static void Tstzspan_to_stbox_common(Vector &source, Vector &result, idx_t count
             return stored_data;
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Tstzspan_to_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -732,9 +691,6 @@ void StboxFunctions::Stbox_hasx(DataChunk &args, ExpressionState &state, Vector 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_hasz(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -758,9 +714,6 @@ void StboxFunctions::Stbox_hasz(DataChunk &args, ExpressionState &state, Vector 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_hast(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -807,9 +760,6 @@ void StboxFunctions::Stbox_isgeodetic(DataChunk &args, ExpressionState &state, V
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_xmin(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -838,9 +788,6 @@ void StboxFunctions::Stbox_xmin(DataChunk &args, ExpressionState &state, Vector 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_xmax(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -870,9 +817,6 @@ void StboxFunctions::Stbox_xmax(DataChunk &args, ExpressionState &state, Vector 
         }
     );
 
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_ymin(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -901,9 +845,6 @@ void StboxFunctions::Stbox_ymin(DataChunk &args, ExpressionState &state, Vector 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_ymax(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -932,9 +873,6 @@ void StboxFunctions::Stbox_ymax(DataChunk &args, ExpressionState &state, Vector 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_zmin(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -963,9 +901,6 @@ void StboxFunctions::Stbox_zmin(DataChunk &args, ExpressionState &state, Vector 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_zmax(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -994,9 +929,6 @@ void StboxFunctions::Stbox_zmax(DataChunk &args, ExpressionState &state, Vector 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_tmin(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1026,9 +958,6 @@ void StboxFunctions::Stbox_tmin(DataChunk &args, ExpressionState &state, Vector 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_tmax(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1058,9 +987,6 @@ void StboxFunctions::Stbox_tmax(DataChunk &args, ExpressionState &state, Vector 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_tmin_inc(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1089,9 +1015,6 @@ void StboxFunctions::Stbox_tmin_inc(DataChunk &args, ExpressionState &state, Vec
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_tmax_inc(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1120,9 +1043,6 @@ void StboxFunctions::Stbox_tmax_inc(DataChunk &args, ExpressionState &state, Vec
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_area(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1158,9 +1078,6 @@ void StboxFunctions::Stbox_area(DataChunk &args, ExpressionState &state, Vector 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_volume(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1189,9 +1106,6 @@ void StboxFunctions::Stbox_volume(DataChunk &args, ExpressionState &state, Vecto
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
@@ -1228,9 +1142,6 @@ void StboxFunctions::Stbox_shift_time(DataChunk &args, ExpressionState &state, V
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_scale_time(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1264,9 +1175,6 @@ void StboxFunctions::Stbox_scale_time(DataChunk &args, ExpressionState &state, V
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_shift_scale_time(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1300,9 +1208,6 @@ void StboxFunctions::Stbox_shift_scale_time(DataChunk &args, ExpressionState &st
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_get_space(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1334,9 +1239,6 @@ void StboxFunctions::Stbox_get_space(DataChunk &args, ExpressionState &state, Ve
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_expand_time(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1370,9 +1272,6 @@ void StboxFunctions::Stbox_expand_time(DataChunk &args, ExpressionState &state, 
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_expand_space(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1414,9 +1313,6 @@ void StboxFunctions::Stbox_expand_space(DataChunk &args, ExpressionState &state,
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
@@ -1468,9 +1364,6 @@ void StboxFunctions::Overlaps_stbox_stbox(DataChunk &args, ExpressionState &stat
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Contains_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1518,9 +1411,6 @@ void StboxFunctions::Contains_stbox_stbox(DataChunk &args, ExpressionState &stat
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Contained_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1568,9 +1458,6 @@ void StboxFunctions::Contained_stbox_stbox(DataChunk &args, ExpressionState &sta
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Same_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1618,9 +1505,6 @@ void StboxFunctions::Same_stbox_stbox(DataChunk &args, ExpressionState &state, V
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Adjacent_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1668,9 +1552,6 @@ void StboxFunctions::Adjacent_stbox_stbox(DataChunk &args, ExpressionState &stat
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Left_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1718,9 +1599,6 @@ void StboxFunctions::Left_stbox_stbox(DataChunk &args, ExpressionState &state, V
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Overleft_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1768,9 +1646,6 @@ void StboxFunctions::Overleft_stbox_stbox(DataChunk &args, ExpressionState &stat
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Right_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1818,9 +1693,6 @@ void StboxFunctions::Right_stbox_stbox(DataChunk &args, ExpressionState &state, 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Overright_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1868,9 +1740,6 @@ void StboxFunctions::Overright_stbox_stbox(DataChunk &args, ExpressionState &sta
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Below_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1918,9 +1787,6 @@ void StboxFunctions::Below_stbox_stbox(DataChunk &args, ExpressionState &state, 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Overbelow_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1968,9 +1834,6 @@ void StboxFunctions::Overbelow_stbox_stbox(DataChunk &args, ExpressionState &sta
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Above_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2018,9 +1881,6 @@ void StboxFunctions::Above_stbox_stbox(DataChunk &args, ExpressionState &state, 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Overabove_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2068,9 +1928,6 @@ void StboxFunctions::Overabove_stbox_stbox(DataChunk &args, ExpressionState &sta
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Before_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2118,9 +1975,6 @@ void StboxFunctions::Before_stbox_stbox(DataChunk &args, ExpressionState &state,
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Overbefore_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2168,9 +2022,6 @@ void StboxFunctions::Overbefore_stbox_stbox(DataChunk &args, ExpressionState &st
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::After_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2218,9 +2069,6 @@ void StboxFunctions::After_stbox_stbox(DataChunk &args, ExpressionState &state, 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Overafter_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2268,9 +2116,6 @@ void StboxFunctions::Overafter_stbox_stbox(DataChunk &args, ExpressionState &sta
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Front_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2318,9 +2163,6 @@ void StboxFunctions::Front_stbox_stbox(DataChunk &args, ExpressionState &state, 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Overfront_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2368,9 +2210,6 @@ void StboxFunctions::Overfront_stbox_stbox(DataChunk &args, ExpressionState &sta
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Back_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2418,9 +2257,6 @@ void StboxFunctions::Back_stbox_stbox(DataChunk &args, ExpressionState &state, V
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Overback_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2468,9 +2304,6 @@ void StboxFunctions::Overback_stbox_stbox(DataChunk &args, ExpressionState &stat
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Union_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2536,9 +2369,6 @@ void StboxFunctions::Union_stbox_stbox(DataChunk &args, ExpressionState &state, 
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Intersection_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2604,9 +2434,6 @@ void StboxFunctions::Intersection_stbox_stbox(DataChunk &args, ExpressionState &
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 // Comparison operators
@@ -2637,9 +2464,6 @@ void StboxFunctions::Stbox_eq(DataChunk &args, ExpressionState &state, Vector &r
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_ne(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2669,9 +2493,6 @@ void StboxFunctions::Stbox_ne(DataChunk &args, ExpressionState &state, Vector &r
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_le(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2701,9 +2522,6 @@ void StboxFunctions::Stbox_le(DataChunk &args, ExpressionState &state, Vector &r
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_lt(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2733,9 +2551,6 @@ void StboxFunctions::Stbox_lt(DataChunk &args, ExpressionState &state, Vector &r
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_ge(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2765,9 +2580,6 @@ void StboxFunctions::Stbox_ge(DataChunk &args, ExpressionState &state, Vector &r
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_gt(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2797,9 +2609,6 @@ void StboxFunctions::Stbox_gt(DataChunk &args, ExpressionState &state, Vector &r
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void StboxFunctions::Stbox_cmp(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2829,9 +2638,6 @@ void StboxFunctions::Stbox_cmp(DataChunk &args, ExpressionState &state, Vector &
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
@@ -2854,12 +2660,6 @@ inline Temporal *BlobToTempTile(string_t b) {
     return reinterpret_cast<Temporal *>(copy);
 }
 
-inline Temporal *BlobToTemp(string_t b) {
-    size_t sz = b.GetSize();
-    uint8_t *copy = (uint8_t *)malloc(sz);
-    memcpy(copy, b.GetData(), sz);
-    return reinterpret_cast<Temporal *>(copy);
-}
 
 string_t StboxToResultBlob(Vector &result, const STBox *box) {
     string_t blob(reinterpret_cast<const char *>(box), sizeof(STBox));
@@ -2934,7 +2734,6 @@ void StboxFunctions::Stbox_space_tiles(DataChunk &args, ExpressionState &state, 
         free(bounds); free(origin);
         EmitStboxList(result, row, list_entries, boxes, count, total);
     }
-    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void StboxFunctions::Stbox_time_tiles(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2968,7 +2767,6 @@ void StboxFunctions::Stbox_time_tiles(DataChunk &args, ExpressionState &state, V
         free(bounds);
         EmitStboxList(result, row, list_entries, boxes, count, total);
     }
-    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void StboxFunctions::Stbox_space_time_tiles(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3012,7 +2810,6 @@ void StboxFunctions::Stbox_space_time_tiles(DataChunk &args, ExpressionState &st
         free(bounds); free(origin);
         EmitStboxList(result, row, list_entries, boxes, count, total);
     }
-    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void StboxFunctions::Tgeo_space_boxes(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3049,7 +2846,6 @@ void StboxFunctions::Tgeo_space_boxes(DataChunk &args, ExpressionState &state, V
         free(temp); free(origin);
         EmitStboxList(result, row, list_entries, boxes, count, total);
     }
-    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void StboxFunctions::Tgeo_space_time_boxes(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3094,7 +2890,6 @@ void StboxFunctions::Tgeo_space_time_boxes(DataChunk &args, ExpressionState &sta
         free(temp); free(origin);
         EmitStboxList(result, row, list_entries, boxes, count, total);
     }
-    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void StboxFunctions::Stbox_get_space_tile(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3132,7 +2927,6 @@ void StboxFunctions::Stbox_get_space_tile(DataChunk &args, ExpressionState &stat
         out_data[row] = StboxToResultBlob(result, box);
         free(box);
     }
-    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void StboxFunctions::Stbox_get_time_tile(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3165,7 +2959,6 @@ void StboxFunctions::Stbox_get_time_tile(DataChunk &args, ExpressionState &state
         out_data[row] = StboxToResultBlob(result, box);
         free(box);
     }
-    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void StboxFunctions::Stbox_get_space_time_tile(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3214,7 +3007,6 @@ void StboxFunctions::Stbox_get_space_time_tile(DataChunk &args, ExpressionState 
         out_data[row] = StboxToResultBlob(result, box);
         free(box);
     }
-    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 #define DEFINE_TSPATIAL_TOPO(OP, MEOS)                                                                                                       \
@@ -3222,7 +3014,7 @@ void StboxFunctions::OP##_tspatial_stbox(DataChunk &args, ExpressionState &state
     BinaryExecutor::Execute<string_t, string_t, bool>(                                                                                       \
         args.data[0], args.data[1], result, args.size(),                                                                                     \
         [](string_t bt, string_t bs) -> bool {                                                                                               \
-            Temporal *t = BlobToTemp(bt);                                                                                                    \
+            Temporal *t = BlobToTemporal(bt);                                                                                                    \
             STBox    *s = BlobToStbox(bs);                                                                                                   \
             bool r = MEOS##_tspatial_stbox(t, s);                                                                                            \
             free(t); free(s);                                                                                                                \
@@ -3234,7 +3026,7 @@ void StboxFunctions::OP##_stbox_tspatial(DataChunk &args, ExpressionState &state
         args.data[0], args.data[1], result, args.size(),                                                                                     \
         [](string_t bs, string_t bt) -> bool {                                                                                               \
             STBox    *s = BlobToStbox(bs);                                                                                                   \
-            Temporal *t = BlobToTemp(bt);                                                                                                    \
+            Temporal *t = BlobToTemporal(bt);                                                                                                    \
             bool r = MEOS##_stbox_tspatial(s, t);                                                                                            \
             free(s); free(t);                                                                                                                \
             return r;                                                                                                                        \
@@ -3244,8 +3036,8 @@ void StboxFunctions::OP##_tspatial_tspatial(DataChunk &args, ExpressionState &st
     BinaryExecutor::Execute<string_t, string_t, bool>(                                                                                       \
         args.data[0], args.data[1], result, args.size(),                                                                                     \
         [](string_t b1, string_t b2) -> bool {                                                                                               \
-            Temporal *t1 = BlobToTemp(b1);                                                                                                   \
-            Temporal *t2 = BlobToTemp(b2);                                                                                                   \
+            Temporal *t1 = BlobToTemporal(b1);                                                                                                   \
+            Temporal *t2 = BlobToTemporal(b2);                                                                                                   \
             bool r = MEOS##_tspatial_tspatial(t1, t2);                                                                                       \
             free(t1); free(t2);                                                                                                              \
             return r;                                                                                                                        \

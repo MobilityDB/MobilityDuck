@@ -16,7 +16,7 @@ extern "C" {
 
 namespace duckdb {
 
-inline void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_geom_vec = args.data[0];
 
@@ -43,7 +43,7 @@ inline void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &re
                 throw InvalidInputException("Invalid TGEOGPOINT data: null pointer");
             }
 
-            char *str = tspatial_as_text(temp, 0);
+            char *str = tspatial_as_text(temp, 15);
             
             if (!str) {
                 free(data_copy);
@@ -60,12 +60,9 @@ inline void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &re
         }
     );
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
-inline void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_geom_vec = args.data[0];
 
@@ -93,7 +90,7 @@ inline void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &re
                 throw InvalidInputException("Invalid TGEOGPOINT data: null pointer");
             }
 
-            char *ewkt = tspatial_as_ewkt(temp, 0);
+            char *ewkt = tspatial_as_ewkt(temp, 15);
             
             if (!ewkt) {
                 free(data_copy);
@@ -111,9 +108,6 @@ inline void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &re
         }
     );
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
@@ -146,9 +140,6 @@ bool TgeogpointFunctions::StringToTgeogpoint(Vector &source, Vector &result, idx
             return stored_data;
         });
         
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
     return true;
 }
 
@@ -190,9 +181,6 @@ bool TgeogpointFunctions::TgeogpointToString(Vector &source, Vector &result, idx
             return stored_result;
         });
         
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
     return true;   
 }
 

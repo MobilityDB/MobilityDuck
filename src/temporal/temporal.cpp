@@ -2241,7 +2241,7 @@ void GetBinDateExec(DataChunk &args, ExpressionState &, Vector &result) {
 
 // ----- tbox tile emitters: LIST(TBOX) outputs -----
 
-inline void EmitTboxList(Vector &result, idx_t row_idx, TBox *tiles, int count,
+static void EmitTboxList(Vector &result, idx_t row_idx, TBox *tiles, int count,
                          idx_t &total_offset, list_entry_t *list_entries,
                          Vector &child_vector, ValidityMask &result_validity) {
     if (!tiles || count <= 0) {

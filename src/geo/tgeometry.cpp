@@ -35,7 +35,7 @@ LogicalType TGeometryTypes::TGEOMETRY() {
  * Constructors
 */
 
-inline void Tgeo_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Tgeo_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_geom_vec = args.data[0];
     
@@ -68,12 +68,9 @@ inline void Tgeo_constructor(DataChunk &args, ExpressionState &state, Vector &re
             return stored_data;
         });
     
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
-inline void Tgeoinst_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Tgeoinst_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &value_vec = args.data[0];
     auto &t_vec = args.data[1];
@@ -117,13 +114,10 @@ inline void Tgeoinst_constructor(DataChunk &args, ExpressionState &state, Vector
 
         });
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
-inline void Tgeometry_sequence_from_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Tgeometry_sequence_from_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
     const char* default_interp = "step";
     auto count = args.size();
     auto arg_count = args.ColumnCount();
@@ -188,9 +182,6 @@ inline void Tgeometry_sequence_from_tstzspan(DataChunk &args, ExpressionState &s
 
         });
 
-    if (count == 1){
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 TInstant **temparr_extract(Vector &tgeometry_arr_vec, list_entry_t list_entry, int *count) {
@@ -255,7 +246,7 @@ TInstant **temparr_extract(Vector &tgeometry_arr_vec, list_entry_t list_entry, i
     return instants;
 }
 
-inline void Tgeometry_sequence_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Tgeometry_sequence_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
     // Default values
     const char* default_interp = "step";
     bool default_lower_inc = true;
@@ -389,9 +380,6 @@ inline void Tgeometry_sequence_constructor(DataChunk &args, ExpressionState &sta
         }
     }
     
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
@@ -401,7 +389,7 @@ inline void Tgeometry_sequence_constructor(DataChunk &args, ExpressionState &sta
  * Conversions
 */
 
-inline void Temporal_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Temporal_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_geom_vec = args.data[0];
 
@@ -442,16 +430,13 @@ inline void Temporal_to_tstzspan(DataChunk &args, ExpressionState &state, Vector
         }
     );
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /*
  * Transformations
 */
 
-inline void Temporal_to_tinstant(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Temporal_to_tinstant(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_geom_vec = args.data[0];
 
@@ -491,13 +476,10 @@ inline void Temporal_to_tinstant(DataChunk &args, ExpressionState &state, Vector
         }
     );
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
-inline void Temporal_set_interp(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Temporal_set_interp(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &tgeom_vec = args.data[0];
     auto &interp_vec = args.data[1];
@@ -542,13 +524,10 @@ inline void Temporal_set_interp(DataChunk &args, ExpressionState &state, Vector 
             return stored_data;
         });
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
-inline void Temporal_merge(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Temporal_merge(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &tgeom1_vec = args.data[0];
     auto &tgeom2_vec = args.data[1];
@@ -596,9 +575,6 @@ inline void Temporal_merge(DataChunk &args, ExpressionState &state, Vector &resu
             return stored_data;
         });
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
@@ -606,7 +582,7 @@ inline void Temporal_merge(DataChunk &args, ExpressionState &state, Vector &resu
  * Accessor Functions
 */
 
-inline void Temporal_subtype(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Temporal_subtype(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &tgeom_vec = args.data[0];
 
@@ -633,15 +609,12 @@ inline void Temporal_subtype(DataChunk &args, ExpressionState &state, Vector &re
             return stored_result;
         });
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
 
 
-inline void Temporal_interp(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Temporal_interp(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &tgeom_vec = args.data[0];
 
@@ -670,12 +643,9 @@ inline void Temporal_interp(DataChunk &args, ExpressionState &state, Vector &res
             return stored_result;
         });
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
-inline void Temporal_mem_size(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Temporal_mem_size(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &tgeom_vec = args.data[0];
 
@@ -697,12 +667,9 @@ inline void Temporal_mem_size(DataChunk &args, ExpressionState &state, Vector &r
             return static_cast<int32_t>(mem_size);
         });
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
-inline void Tinstant_value(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Tinstant_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_vec = args.data[0];
     
@@ -726,14 +693,11 @@ inline void Tinstant_value(DataChunk &args, ExpressionState &state, Vector &resu
             return stored_result;
         });
     
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
 
-inline void Temporal_start_value(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Temporal_start_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_vec = args.data[0];
     
@@ -756,13 +720,10 @@ inline void Temporal_start_value(DataChunk &args, ExpressionState &state, Vector
             return stored_result;
         });
     
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
-inline void Temporal_end_value(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Temporal_end_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_vec = args.data[0];
     
@@ -786,13 +747,10 @@ inline void Temporal_end_value(DataChunk &args, ExpressionState &state, Vector &
             return stored_result;
         });
     
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
-inline void Temporal_lower_inc(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Temporal_lower_inc(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_vec = args.data[0];
 
@@ -810,12 +768,9 @@ inline void Temporal_lower_inc(DataChunk &args, ExpressionState &state, Vector &
             return stored_result;
         });
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
-inline void Temporal_upper_inc(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Temporal_upper_inc(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_vec = args.data[0];
 
@@ -833,12 +788,9 @@ inline void Temporal_upper_inc(DataChunk &args, ExpressionState &state, Vector &
             return stored_result;
         });
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
-inline void Temporal_start_instant(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Temporal_start_instant(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_vec = args.data[0];
 
@@ -875,12 +827,9 @@ inline void Temporal_start_instant(DataChunk &args, ExpressionState &state, Vect
             return stored_result;
         });
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
-inline void Temporal_end_instant(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Temporal_end_instant(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_vec = args.data[0];
 
@@ -917,15 +866,12 @@ inline void Temporal_end_instant(DataChunk &args, ExpressionState &state, Vector
             return stored_result;
         });
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
 
 
-inline void Temporal_instant_n(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Temporal_instant_n(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &tgeom_vec = args.data[0];
     auto &n_vec = args.data[1];
@@ -962,13 +908,10 @@ inline void Temporal_instant_n(DataChunk &args, ExpressionState &state, Vector &
             return stored_result;
         });
     
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
-inline void Tinstant_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Tinstant_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_geom_vec = args.data[0];
 
@@ -1006,12 +949,9 @@ inline void Tinstant_timestamptz(DataChunk &args, ExpressionState &state, Vector
         }
     );
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
-inline void ExecuteTGeometrySeq(DataChunk &args, ExpressionState &state, Vector &result) {
+static void ExecuteTGeometrySeq(DataChunk &args, ExpressionState &state, Vector &result) {
     const char* default_interp = "step";
     auto count = args.size();
     auto &tgeometry_vec = args.data[0];
@@ -1080,9 +1020,6 @@ inline void ExecuteTGeometrySeq(DataChunk &args, ExpressionState &state, Vector 
             return stored_data;
         });
     
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 

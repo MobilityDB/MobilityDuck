@@ -153,9 +153,6 @@ static void spatialarr_wkt_array(DataChunk &args, ExpressionState &state, Vector
 
 	ListVector::SetListSize(result, total_offset);
 
-	if (row_count == 1) {
-		result.SetVectorType(VectorType::CONSTANT_VECTOR);
-	}
 }
 
 } // namespace
@@ -192,9 +189,6 @@ bool TgeompointFunctions::Tpoint_in(Vector &source, Vector &result, idx_t count,
             return stored_data;
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
     return true;
 }
 
@@ -228,9 +222,6 @@ void TgeompointFunctions::Tspatial_as_text(DataChunk &args, ExpressionState &sta
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -263,9 +254,6 @@ void TgeompointFunctions::Tspatial_as_ewkt(DataChunk &args, ExpressionState &sta
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Spatialarr_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -318,12 +306,9 @@ void TgeompointFunctions::Tpointinst_constructor(DataChunk &args, ExpressionStat
             free(ret_data);
             return stored_data;
         });
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
-inline void Tspatial_to_stbox_common(Vector &source, Vector &result, idx_t count) {
+static void Tspatial_to_stbox_common(Vector &source, Vector &result, idx_t count) {
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
         [&](string_t input_blob) -> string_t {
@@ -361,9 +346,6 @@ inline void Tspatial_to_stbox_common(Vector &source, Vector &result, idx_t count
             return stored_data;
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tspatial_to_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -405,9 +387,6 @@ void TgeompointFunctions::Tgeompoint_start_value(DataChunk &args, ExpressionStat
             return stored_result;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tgeompoint_end_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -440,9 +419,6 @@ void TgeompointFunctions::Tgeompoint_end_value(DataChunk &args, ExpressionState 
             return stored_result;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tgeompoint_sequence_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -549,16 +525,13 @@ void TgeompointFunctions::Tgeompoint_sequence_constructor(DataChunk &args, Expre
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
  * Conversion functions
  ****************************************************/
 
-inline void Temporal_to_tstzspan_common(Vector &source, Vector &result, idx_t count) {
+static void Temporal_to_tstzspan_common(Vector &source, Vector &result, idx_t count) {
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
         [&](string_t input_blob) {
@@ -588,9 +561,6 @@ inline void Temporal_to_tstzspan_common(Vector &source, Vector &result, idx_t co
             return stored_data;
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Temporal_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -639,9 +609,6 @@ void TgeompointFunctions::Tgeompoint_value(DataChunk &args, ExpressionState &sta
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
@@ -692,9 +659,6 @@ void TgeompointFunctions::Tgeompoint_at_value(DataChunk &args, ExpressionState &
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tgeompoint_value_at_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -733,9 +697,6 @@ void TgeompointFunctions::Tgeompoint_value_at_timestamptz(DataChunk &args, Expre
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
@@ -773,9 +734,6 @@ void TgeompointFunctions::Tgeompoint_stops(DataChunk &args, ExpressionState &sta
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
@@ -809,9 +767,6 @@ void TgeompointFunctions::Tpoint_get_x(DataChunk &args, ExpressionState &state, 
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tpoint_get_y(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -842,9 +797,6 @@ void TgeompointFunctions::Tpoint_get_y(DataChunk &args, ExpressionState &state, 
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tpoint_get_z(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -875,9 +827,6 @@ void TgeompointFunctions::Tpoint_get_z(DataChunk &args, ExpressionState &state, 
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tpoint_length(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -898,9 +847,6 @@ void TgeompointFunctions::Tpoint_length(DataChunk &args, ExpressionState &state,
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tpoint_cumulative_length(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -931,9 +877,6 @@ void TgeompointFunctions::Tpoint_cumulative_length(DataChunk &args, ExpressionSt
             return stored_result;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tpoint_twcentroid(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -960,9 +903,6 @@ void TgeompointFunctions::Tpoint_twcentroid(DataChunk &args, ExpressionState &st
             return stored_result;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tpoint_direction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -988,9 +928,6 @@ void TgeompointFunctions::Tpoint_direction(DataChunk &args, ExpressionState &sta
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tpoint_azimuth(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1021,9 +958,6 @@ void TgeompointFunctions::Tpoint_azimuth(DataChunk &args, ExpressionState &state
             return stored_result;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tpoint_angular_difference(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1054,9 +988,6 @@ void TgeompointFunctions::Tpoint_angular_difference(DataChunk &args, ExpressionS
             return stored_result;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tpoint_is_simple(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1077,72 +1008,68 @@ void TgeompointFunctions::Tpoint_is_simple(DataChunk &args, ExpressionState &sta
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tpoint_make_simple(DataChunk &args, ExpressionState &state, Vector &result) {
-	idx_t total_count = 0;
-	UnaryExecutor::Execute<string_t, list_entry_t>(
-	    args.data[0], result, args.size(),
-	    [&](string_t input_blob) -> list_entry_t {
-		    const uint8_t *data = reinterpret_cast<const uint8_t *>(input_blob.GetData());
-		    size_t data_size = input_blob.GetSize();
-		    if (data_size < sizeof(void *)) {
-			    throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
-		    }
-		    uint8_t *data_copy = (uint8_t *)malloc(data_size);
-		    memcpy(data_copy, data, data_size);
-		    Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
-		    if (!temp) {
-			    free(data_copy);
-			    throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
-		    }
+	const idx_t count = args.size();
 
-		    int frag_count = 0;
-		    Temporal **fragments = tpoint_make_simple(temp, &frag_count);
-		    free(data_copy);
+	UnifiedVectorFormat in;
+	args.data[0].ToUnifiedFormat(count, in);
+	auto in_data = UnifiedVectorFormat::GetData<string_t>(in);
 
-		    if (!fragments || frag_count <= 0) {
-			    if (fragments) {
-				    free(fragments);
-			    }
-			    throw InvalidInputException("makeSimple: failed to split temporal point");
-		    }
+	auto list_data = FlatVector::GetData<list_entry_t>(result);
+	auto &result_validity = FlatVector::Validity(result);
+	auto &child_vec = ListVector::GetEntry(result);
+	idx_t offset = 0;
 
-		    const list_entry_t entry(total_count, static_cast<uint64_t>(frag_count));
-		    total_count += frag_count;
-		    ListVector::Reserve(result, total_count);
+	for (idx_t row = 0; row < count; row++) {
+		const idx_t idx = in.sel->get_index(row);
+		if (!in.validity.RowIsValid(idx)) {
+			result_validity.SetInvalid(row);
+			continue;
+		}
 
-		    auto &child_vec = ListVector::GetEntry(result);
-		    auto child_data = FlatVector::GetData<string_t>(child_vec);
+		const string_t &input_blob = in_data[idx];
+		size_t data_size = input_blob.GetSize();
+		if (data_size < sizeof(void *)) {
+			throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
+		}
+		uint8_t *data_copy = (uint8_t *)malloc(data_size);
+		memcpy(data_copy, input_blob.GetData(), data_size);
+		Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
 
-		    for (int i = 0; i < frag_count; i++) {
-			    Temporal *frag = fragments[i];
-			    if (!frag) {
-				    for (int k = i; k < frag_count; k++) {
-					    if (fragments[k]) {
-						    free(fragments[k]);
-					    }
-				    }
-				    free(fragments);
-				    throw InvalidInputException("makeSimple: null fragment in result array");
-			    }
-			    size_t frag_size = temporal_mem_size(frag);
-			    uint8_t *frag_buf = (uint8_t *)malloc(frag_size);
-			    memcpy(frag_buf, frag, frag_size);
-			    string_t frag_blob(reinterpret_cast<const char *>(frag_buf), frag_size);
-			    string_t stored = StringVector::AddStringOrBlob(child_vec, frag_blob);
-			    free(frag_buf);
-			    free(frag);
-			    child_data[entry.offset + static_cast<idx_t>(i)] = stored;
-		    }
-		    free(fragments);
-		    return entry;
-	    });
-	ListVector::SetListSize(result, total_count);
-	if (args.size() == 1) {
+		int frag_count = 0;
+		Temporal **fragments = tpoint_make_simple(temp, &frag_count);
+		if (!fragments || frag_count <= 0) {
+			free(data_copy);
+			if (fragments) {
+				free(fragments);
+			}
+			throw InvalidInputException("makeSimple: failed to split temporal point");
+		}
+
+		// Reserve the child capacity for this row's fragments, then re-fetch the
+		// child data pointer: Reserve may reallocate the child's data array.
+		ListVector::Reserve(result, offset + frag_count);
+		auto child_data = FlatVector::GetData<string_t>(child_vec);
+
+		for (int i = 0; i < frag_count; i++) {
+			Temporal *frag = fragments[i];
+			size_t frag_size = temporal_mem_size(frag);
+			child_data[offset + static_cast<idx_t>(i)] =
+			    StringVector::AddStringOrBlob(child_vec,
+			                                  string_t(reinterpret_cast<const char *>(frag), frag_size));
+			free(frag);
+		}
+		free(fragments);
+		free(data_copy);
+
+		list_data[row] = list_entry_t(offset, static_cast<uint64_t>(frag_count));
+		offset += frag_count;
+	}
+
+	ListVector::SetListSize(result, offset);
+	if (args.AllConstant()) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
 	}
 }
@@ -1175,9 +1102,6 @@ void TgeompointFunctions::Tpoint_trajectory(DataChunk &args, ExpressionState &st
             return stored_result;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tpoint_trajectory_gs(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1211,9 +1135,6 @@ void TgeompointFunctions::Tpoint_trajectory_gs(DataChunk &args, ExpressionState 
             return stored_result;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tgeo_at_geom(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1256,9 +1177,6 @@ void TgeompointFunctions::Tgeo_at_geom(DataChunk &args, ExpressionState &state, 
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tgeo_minus_geom(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1304,9 +1222,6 @@ void TgeompointFunctions::Tgeo_minus_geom(DataChunk &args, ExpressionState &stat
 		    return stored_data;
 	    });
 
-	if (count == 1) {
-		result.SetVectorType(VectorType::CONSTANT_VECTOR);
-	}
 }
 
 void TgeompointFunctions::Tgeo_minus_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1357,9 +1272,6 @@ void TgeompointFunctions::Tgeo_minus_stbox(DataChunk &args, ExpressionState &sta
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tgeo_at_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1419,9 +1331,6 @@ void TgeompointFunctions::Tgeo_at_stbox(DataChunk &args, ExpressionState &state,
                 return run(tgeom_blob, stbox_blob, border_inc, mask, idx);
             });
     }
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tspatial_transform(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1462,9 +1371,6 @@ void TgeompointFunctions::Tspatial_transform(DataChunk &args, ExpressionState &s
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
@@ -1501,9 +1407,6 @@ void TgeompointFunctions::Econtains_geo_tgeo(DataChunk &args, ExpressionState &s
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Acontains_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1537,9 +1440,6 @@ void TgeompointFunctions::Acontains_geo_tgeo(DataChunk &args, ExpressionState &s
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Edisjoint_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1576,9 +1476,6 @@ void TgeompointFunctions::Edisjoint_geo_tgeo(DataChunk &args, ExpressionState &s
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Edisjoint_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1615,9 +1512,6 @@ void TgeompointFunctions::Edisjoint_tgeo_geo(DataChunk &args, ExpressionState &s
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Edisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1655,9 +1549,6 @@ void TgeompointFunctions::Edisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Adisjoint_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1695,9 +1586,6 @@ void TgeompointFunctions::Adisjoint_geo_tgeo(DataChunk &args, ExpressionState &s
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Adisjoint_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1734,9 +1622,6 @@ void TgeompointFunctions::Adisjoint_tgeo_geo(DataChunk &args, ExpressionState &s
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Adisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1775,9 +1660,6 @@ void TgeompointFunctions::Adisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Eintersects_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1815,9 +1697,6 @@ void TgeompointFunctions::Eintersects_tgeo_tgeo(DataChunk &args, ExpressionState
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Eintersects_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1851,9 +1730,6 @@ void TgeompointFunctions::Eintersects_geo_tgeo(DataChunk &args, ExpressionState 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Eintersects_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1887,9 +1763,6 @@ void TgeompointFunctions::Eintersects_tgeo_geo(DataChunk &args, ExpressionState 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Aintersects_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1922,9 +1795,6 @@ void TgeompointFunctions::Aintersects_geo_tgeo(DataChunk &args, ExpressionState 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Aintersects_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1958,9 +1828,6 @@ void TgeompointFunctions::Aintersects_tgeo_geo(DataChunk &args, ExpressionState 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Aintersects_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1998,9 +1865,6 @@ void TgeompointFunctions::Aintersects_tgeo_tgeo(DataChunk &args, ExpressionState
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Etouches_geo_tpoint(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2036,9 +1900,6 @@ void TgeompointFunctions::Etouches_geo_tpoint(DataChunk &args, ExpressionState &
 		    }
 		    return ret;
 	    });
-	if (args.size() == 1) {
-		result.SetVectorType(VectorType::CONSTANT_VECTOR);
-	}
 }
 
 void TgeompointFunctions::Atouches_geo_tpoint(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2074,9 +1935,6 @@ void TgeompointFunctions::Atouches_geo_tpoint(DataChunk &args, ExpressionState &
 		    }
 		    return ret;
 	    });
-	if (args.size() == 1) {
-		result.SetVectorType(VectorType::CONSTANT_VECTOR);
-	}
 }
 
 void TgeompointFunctions::Etouches_tpoint_geo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2110,9 +1968,6 @@ void TgeompointFunctions::Etouches_tpoint_geo(DataChunk &args, ExpressionState &
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Atouches_tpoint_geo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2146,9 +2001,6 @@ void TgeompointFunctions::Atouches_tpoint_geo(DataChunk &args, ExpressionState &
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Edwithin_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2186,9 +2038,6 @@ void TgeompointFunctions::Edwithin_tgeo_tgeo(DataChunk &args, ExpressionState &s
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Edwithin_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2222,9 +2071,6 @@ void TgeompointFunctions::Edwithin_tgeo_geo(DataChunk &args, ExpressionState &st
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Edwithin_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2261,9 +2107,6 @@ void TgeompointFunctions::Edwithin_geo_tgeo(DataChunk &args, ExpressionState &st
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Adwithin_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2300,9 +2143,6 @@ void TgeompointFunctions::Adwithin_tgeo_geo(DataChunk &args, ExpressionState &st
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Adwithin_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2339,9 +2179,6 @@ void TgeompointFunctions::Adwithin_geo_tgeo(DataChunk &args, ExpressionState &st
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Adwithin_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2379,9 +2216,6 @@ void TgeompointFunctions::Adwithin_tgeo_tgeo(DataChunk &args, ExpressionState &s
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
@@ -2422,9 +2256,6 @@ void TgeompointFunctions::Tcontains_geo_tgeo(DataChunk &args, ExpressionState &s
             free(ret);
             return stored_data;
         });
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tdisjoint_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2461,9 +2292,6 @@ void TgeompointFunctions::Tdisjoint_geo_tgeo(DataChunk &args, ExpressionState &s
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tdisjoint_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2500,9 +2328,6 @@ void TgeompointFunctions::Tdisjoint_tgeo_geo(DataChunk &args, ExpressionState &s
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tdisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2543,9 +2368,6 @@ void TgeompointFunctions::Tdisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tintersects_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2582,9 +2404,6 @@ void TgeompointFunctions::Tintersects_geo_tgeo(DataChunk &args, ExpressionState 
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tintersects_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2621,9 +2440,6 @@ void TgeompointFunctions::Tintersects_tgeo_geo(DataChunk &args, ExpressionState 
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tintersects_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2664,9 +2480,6 @@ void TgeompointFunctions::Tintersects_tgeo_tgeo(DataChunk &args, ExpressionState
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Ttouches_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2703,9 +2516,6 @@ void TgeompointFunctions::Ttouches_geo_tgeo(DataChunk &args, ExpressionState &st
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Ttouches_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2742,9 +2552,6 @@ void TgeompointFunctions::Ttouches_tgeo_geo(DataChunk &args, ExpressionState &st
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tdwithin_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2786,9 +2593,6 @@ void TgeompointFunctions::Tdwithin_tgeo_tgeo(DataChunk &args, ExpressionState &s
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tdwithin_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2825,9 +2629,6 @@ void TgeompointFunctions::Tdwithin_tgeo_geo(DataChunk &args, ExpressionState &st
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tdwithin_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2864,9 +2665,6 @@ void TgeompointFunctions::Tdwithin_geo_tgeo(DataChunk &args, ExpressionState &st
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::ShortestLine_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2908,9 +2706,6 @@ void TgeompointFunctions::ShortestLine_tgeo_tgeo(DataChunk &args, ExpressionStat
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
@@ -2947,9 +2742,6 @@ void TgeompointFunctions::Temporal_overlaps_tgeompoint_stbox(DataChunk &args, Ex
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Temporal_overlaps_tgeompoint_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2982,9 +2774,6 @@ void TgeompointFunctions::Temporal_overlaps_tgeompoint_tstzspan(DataChunk &args,
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Temporal_contains_tgeompoint_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3017,9 +2806,6 @@ void TgeompointFunctions::Temporal_contains_tgeompoint_stbox(DataChunk &args, Ex
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
@@ -3070,9 +2856,6 @@ void TgeompointFunctions::Tdistance_tgeo_tgeo(DataChunk &args, ExpressionState &
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 // void TgeompointFunctions::gs_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3171,9 +2954,6 @@ void TgeompointFunctions::collect_gs(DataChunk &args, ExpressionState &state, Ve
             return stored_result;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::distance_geo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3207,9 +2987,6 @@ void TgeompointFunctions::distance_geo_geo(DataChunk &args, ExpressionState &sta
             return distance;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
@@ -3406,9 +3183,6 @@ void TgeompointFunctions::Tgeo_rotate_geom(DataChunk &args, ExpressionState &sta
 
         out_data[row] = ApplyAffineToTgeoStraggler(result, in_data[row], m);
     }
-    if (row_count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TgeompointFunctions::Tgeo_scale_xy(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3434,9 +3208,6 @@ void TgeompointFunctions::Tgeo_scale_xy(DataChunk &args, ExpressionState &state,
         m.afac = sx_data[row];
         m.efac = sy_data[row];
         out_data[row] = ApplyAffineToTgeoStraggler(result, in_data[row], m);
-    }
-    if (row_count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
 
@@ -3468,9 +3239,6 @@ void TgeompointFunctions::Tgeo_scale_xyz(DataChunk &args, ExpressionState &state
         m.efac = sy_data[row];
         m.ifac = sz_data[row];
         out_data[row] = ApplyAffineToTgeoStraggler(result, in_data[row], m);
-    }
-    if (row_count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
 
@@ -3525,7 +3293,6 @@ void TgeompointFunctions::Nai_tgeo_geo(DataChunk &args, ExpressionState &state, 
         if (!inst) { outv.SetInvalid(i); continue; }
         out[i] = NaiToHex(result, inst);
     }
-    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void TgeompointFunctions::Nai_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3551,7 +3318,6 @@ void TgeompointFunctions::Nai_geo_tgeo(DataChunk &args, ExpressionState &state, 
         if (!inst) { outv.SetInvalid(i); continue; }
         out[i] = NaiToHex(result, inst);
     }
-    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void TgeompointFunctions::Nad_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3668,7 +3434,6 @@ void TgeompointFunctions::Tgeo_affine_12(DataChunk &args, ExpressionState &state
         m.xoff = xoff[i]; m.yoff = yoff[i]; m.zoff = zoff[i];
         out[i] = ApplyAffineToTgeo(result, in[i], m);
     }
-    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void TgeompointFunctions::Tgeo_affine_6(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3693,7 +3458,6 @@ void TgeompointFunctions::Tgeo_affine_6(DataChunk &args, ExpressionState &state,
         m.xoff = xoff[i]; m.yoff = yoff[i];
         out[i] = ApplyAffineToTgeo(result, in[i], m);
     }
-    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void TgeompointFunctions::Tgeo_translate_3d(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3713,7 +3477,6 @@ void TgeompointFunctions::Tgeo_translate_3d(DataChunk &args, ExpressionState &st
         m.xoff = dx[i]; m.yoff = dy[i]; m.zoff = dz[i];
         out[i] = ApplyAffineToTgeo(result, in[i], m);
     }
-    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void TgeompointFunctions::Tgeo_translate_2d(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3732,7 +3495,6 @@ void TgeompointFunctions::Tgeo_translate_2d(DataChunk &args, ExpressionState &st
         m.xoff = dx[i]; m.yoff = dy[i];
         out[i] = ApplyAffineToTgeo(result, in[i], m);
     }
-    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void TgeompointFunctions::Tgeo_rotate_angle(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3752,7 +3514,6 @@ void TgeompointFunctions::Tgeo_rotate_angle(DataChunk &args, ExpressionState &st
         m.dfac = s; m.efac =  c;
         out[i] = ApplyAffineToTgeo(result, in[i], m);
     }
-    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void TgeompointFunctions::Tgeo_rotate_angle_cx_cy(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3777,7 +3538,6 @@ void TgeompointFunctions::Tgeo_rotate_angle_cx_cy(DataChunk &args, ExpressionSta
         m.yoff = cy - s * cx - c * cy;
         out[i] = ApplyAffineToTgeo(result, in[i], m);
     }
-    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void TgeompointFunctions::Tgeo_rotateX(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3798,7 +3558,6 @@ void TgeompointFunctions::Tgeo_rotateX(DataChunk &args, ExpressionState &state, 
         m.hfac = s; m.ifac =  c;
         out[i] = ApplyAffineToTgeo(result, in[i], m);
     }
-    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void TgeompointFunctions::Tgeo_rotateY(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3819,7 +3578,6 @@ void TgeompointFunctions::Tgeo_rotateY(DataChunk &args, ExpressionState &state, 
         m.gfac = -s; m.ifac = c;
         out[i] = ApplyAffineToTgeo(result, in[i], m);
     }
-    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void TgeompointFunctions::Tgeo_transscale(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3841,7 +3599,6 @@ void TgeompointFunctions::Tgeo_transscale(DataChunk &args, ExpressionState &stat
         m.xoff = dx[i] * sx[i]; m.yoff = dy[i] * sy[i];
         out[i] = ApplyAffineToTgeo(result, in[i], m);
     }
-    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void TgeompointFunctions::Tgeo_scale_geom(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3871,7 +3628,6 @@ void TgeompointFunctions::Tgeo_scale_geom(DataChunk &args, ExpressionState &stat
         out[i] = StringVector::AddStringOrBlob(result, string_t(reinterpret_cast<const char *>(rbuf), rsz));
         free(rbuf); free(ret);
     }
-    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void TgeompointFunctions::Tgeo_scale_geom_origin(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3904,7 +3660,6 @@ void TgeompointFunctions::Tgeo_scale_geom_origin(DataChunk &args, ExpressionStat
         out[i] = StringVector::AddStringOrBlob(result, string_t(reinterpret_cast<const char *>(rbuf), rsz));
         free(rbuf); free(ret);
     }
-    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 } // namespace duckdb
