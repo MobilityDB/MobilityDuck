@@ -1,8 +1,8 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO estebanzimanyi/MobilityDB
-    REF a8178dc9d56d841d0eb5025a7e8717c8d25a1d0f
-    SHA512 030a144bb3247695702dd2de11f4c389ed28c6eb0186e6988a489e2b00e9801179ba8f27bcbcd81ae89e398a7277ed7f9ff7058dbf15f5db322ae4644365c560
+    REF 345710da851b16c5c34647b1c37de1ef6655ba61
+    SHA512 a42d90bbdd35f59d322014c4ccd6f715cd52772e93c28ee53f973c4c0e72920a596bb8d5a9e74041b58331b3d6ce9e9f223b113877f1c8ce7eda456cba5a7243
 )
 
 vcpkg_replace_string(
@@ -22,6 +22,9 @@ vcpkg_cmake_configure(
     OPTIONS
         -DMEOS=ON
         -DBUILD_SHARED_LIBS=ON
+        # Build only the MEOS library, not the MEOS C test binaries: those link
+        # the GEOS C++ API, which the arm64-linux vcpkg triplet does not carry.
+        -DBUILD_TESTING=OFF
         -DCMAKE_C_FLAGS="-Dsession_timezone=meos_session_timezone"
         -DCMAKE_CXX_FLAGS="-Dsession_timezone=meos_session_timezone"
 
