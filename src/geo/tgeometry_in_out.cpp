@@ -1,4 +1,5 @@
 #include "geo/tgeometry.hpp"
+#include "temporal/temporal_blob.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/common/extension_type_info.hpp"
 #include <regex>
@@ -15,7 +16,7 @@ extern "C" {
 
 namespace duckdb {
 
-inline void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_geom_vec = args.data[0];
 
@@ -42,7 +43,7 @@ inline void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &re
                 throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
             }
 
-            char *str = tspatial_as_text(temp, 0);
+            char *str = tspatial_as_text(temp, 15);
             
             if (!str) {
                 free(data_copy);
@@ -59,12 +60,9 @@ inline void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &re
         }
     );
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
-inline void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_geom_vec = args.data[0];
 
@@ -92,7 +90,7 @@ inline void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &re
                 throw InvalidInputException("Invalid TGEOMETRY data: null pointer");
             }
 
-            char *ewkt = tspatial_as_ewkt(temp, 0);
+            char *ewkt = tspatial_as_ewkt(temp, 15);
             
             if (!ewkt) {
                 free(data_copy);
@@ -110,9 +108,6 @@ inline void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &re
         }
     );
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
@@ -145,9 +140,6 @@ bool TgeometryFunctions::StringToTgeometry(Vector &source, Vector &result, idx_t
             return stored_data;
         });
         
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
     return true;
 }
 
@@ -189,9 +181,6 @@ bool TgeometryFunctions::TgeometryToString(Vector &source, Vector &result, idx_t
             return stored_result;
         });
         
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
     return true;   
 }
 
@@ -202,15 +191,8 @@ bool TgeometryFunctions::TgeometryToString(Vector &source, Vector &result, idx_t
 // `tgeography_in` are per-type.  The result is stored as a raw blob, the
 // same format every other temporal type uses.
 
-inline string_t StoreTempAsBlob(Vector &result, Temporal *t) {
-    size_t sz = temporal_mem_size(t);
-    string_t stored = StringVector::AddStringOrBlob(
-        result, string_t(reinterpret_cast<const char *>(t), sz));
-    free(t);
-    return stored;
-}
 
-inline void TspatialFromWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+static void TspatialFromWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) -> string_t {
@@ -222,11 +204,11 @@ inline void TspatialFromWkbExec(DataChunk &args, ExpressionState &, Vector &resu
             Temporal *t = temporal_from_wkb(wkb, input.GetSize());
             free(wkb);
             if (!t) throw InvalidInputException("fromBinary: invalid MEOS-WKB");
-            return StoreTempAsBlob(result, t);
+            return TemporalToBlob(result, t);
         });
 }
 
-inline void TspatialFromHexWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+static void TspatialFromHexWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) -> string_t {
@@ -234,19 +216,19 @@ inline void TspatialFromHexWkbExec(DataChunk &args, ExpressionState &, Vector &r
             Temporal *t = temporal_from_hexwkb(hex.c_str());
             if (!t) throw InvalidInputException(
                 "fromHexWKB: invalid hex-encoded MEOS-WKB");
-            return StoreTempAsBlob(result, t);
+            return TemporalToBlob(result, t);
         });
 }
 
 template <Temporal *(*FN)(const char *)>
-inline void TspatialFromStringExec(DataChunk &args, ExpressionState &, Vector &result) {
+static void TspatialFromStringExec(DataChunk &args, ExpressionState &, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) -> string_t {
             std::string s(input.GetData(), input.GetSize());
             Temporal *t = FN(s.c_str());
             if (!t) throw InvalidInputException("from*: invalid input");
-            return StoreTempAsBlob(result, t);
+            return TemporalToBlob(result, t);
         });
 }
 

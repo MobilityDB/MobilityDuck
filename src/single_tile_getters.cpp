@@ -85,7 +85,6 @@ void GetValueTileExec(DataChunk &args, ExpressionState &, Vector &result) {
             result, reinterpret_cast<const char *>(tbox), sizeof(TBox));
         free(tbox);
     }
-    if (count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 // =====================================================================
@@ -130,7 +129,6 @@ void GetTBoxTimeTileExec(DataChunk &args, ExpressionState &, Vector &result) {
             result, reinterpret_cast<const char *>(tbox), sizeof(TBox));
         free(tbox);
     }
-    if (count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 // =====================================================================
@@ -184,7 +182,6 @@ void GetValueTimeTileExec(DataChunk &args, ExpressionState &, Vector &result) {
             result, reinterpret_cast<const char *>(tbox), sizeof(TBox));
         free(tbox);
     }
-    if (count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 // =====================================================================
@@ -244,7 +241,6 @@ void GetSpaceTileExec(DataChunk &args, ExpressionState &, Vector &result) {
             result, reinterpret_cast<const char *>(stbox), sizeof(STBox));
         free(stbox);
     }
-    if (count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 // getStboxTimeTile(timestamptz, interval [, timestamptz='2000-01-03']) -> stbox
@@ -281,7 +277,6 @@ void GetStboxTimeTileExec(DataChunk &args, ExpressionState &, Vector &result) {
             result, reinterpret_cast<const char *>(stbox), sizeof(STBox));
         free(stbox);
     }
-    if (count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 // getSpaceTimeTile(geom, t, xsize, ysize, zsize, interval
@@ -338,7 +333,6 @@ void GetSpaceTimeTileExec(DataChunk &args, ExpressionState &, Vector &result) {
             result, reinterpret_cast<const char *>(stbox), sizeof(STBox));
         free(stbox);
     }
-    if (count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 // Convenience overload: getSpaceTile(geom, xsize) — uniform xyz, default origin.

@@ -44,9 +44,6 @@ bool TgeogpointFunctions::Tpoint_in(Vector &source, Vector &result, idx_t count,
             return stored_data;
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
     return true;
 }
 
@@ -89,9 +86,6 @@ void TgeogpointFunctions::Tpointinst_constructor(DataChunk &args, ExpressionStat
             free(ret_data);
             return stored_data;
         });
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 } // namespace duckdb

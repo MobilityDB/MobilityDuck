@@ -664,7 +664,7 @@ struct SpanSetState {
 };
 
 template <class STATE>
-inline void SpanSetCombine(STATE &source, STATE &target) {
+static void SpanSetCombine(STATE &source, STATE &target) {
     if (!source.value) return;
     if (!target.value) {
         target.value = source.value;
@@ -681,7 +681,7 @@ inline void SpanSetCombine(STATE &source, STATE &target) {
 }
 
 template <class T, class STATE>
-inline void SpanSetFinalize(STATE &state, T &target, AggregateFinalizeData &fd) {
+static void SpanSetFinalize(STATE &state, T &target, AggregateFinalizeData &fd) {
     if (!state.value) { fd.ReturnNull(); return; }
     // spanset_union_finalfn frees the state internally on the success
     // path, so clear the pointer first to prevent Destroy from
@@ -695,7 +695,7 @@ inline void SpanSetFinalize(STATE &state, T &target, AggregateFinalizeData &fd) 
 }
 
 template <class STATE>
-inline void SpanSetDestroy(STATE &state) {
+static void SpanSetDestroy(STATE &state) {
     if (state.value) {
         free(state.value);
         state.value = nullptr;
@@ -773,7 +773,7 @@ struct SetAggState {
 };
 
 template <class STATE>
-inline void SetCombine(STATE &source, STATE &target) {
+static void SetCombine(STATE &source, STATE &target) {
     if (!source.value) return;
     if (!target.value) {
         target.value = source.value;
@@ -788,7 +788,7 @@ inline void SetCombine(STATE &source, STATE &target) {
 }
 
 template <class T, class STATE>
-inline void SetFinalize(STATE &state, T &target, AggregateFinalizeData &fd) {
+static void SetFinalize(STATE &state, T &target, AggregateFinalizeData &fd) {
     if (!state.value) { fd.ReturnNull(); return; }
     // set_union_finalfn frees the state internally on the success path.
     Set *result = set_union_finalfn(state.value);
@@ -800,7 +800,7 @@ inline void SetFinalize(STATE &state, T &target, AggregateFinalizeData &fd) {
 }
 
 template <class STATE>
-inline void SetDestroy(STATE &state) {
+static void SetDestroy(STATE &state) {
     if (state.value) {
         free(state.value);
         state.value = nullptr;
