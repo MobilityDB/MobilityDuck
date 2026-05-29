@@ -7,13 +7,13 @@
 # (tint / tfloat) on either side. The error surfaces as
 # `+(tstzset, TIMESTAMP WITH TIME ZONE) -> tstzset` (DuckDB picks an
 # unrelated overload). MEOS symbols: tnumber_add_tnumber,
-# tnumber_sub_tnumber, tnumber_mult_tnumber, tnumber_div_tnumber, plus
+# tnumber_sub_tnumber, tnumber_mul_tnumber, tnumber_div_tnumber, plus
 # the value-tnumber and tnumber-value variants for each of the four
 # operators.
 #
 # The full surface to cover:
 #   value op tnumber, tnumber op value, tnumber op tnumber
-#   for + (add), - (sub), * (mult), / (div)
+#   for + (add), - (sub), * (mul), / (div)
 #   x both (tint, tfloat) base types
 #   = 24 ScalarFunction registrations per operator, 96 total.
 # Plus unary functions: abs, deg, rad, atan, derivative.

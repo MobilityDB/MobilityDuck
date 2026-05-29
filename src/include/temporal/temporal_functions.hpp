@@ -209,11 +209,11 @@ struct TemporalFunctions {
     static void Sub_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
     static void Sub_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
     static void Sub_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Mult_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Mult_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Mult_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Mult_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Mult_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Mul_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Mul_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Mul_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Mul_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Mul_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
     static void Div_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
     static void Div_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
     static void Div_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);

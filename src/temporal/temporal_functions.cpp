@@ -4756,19 +4756,19 @@ void TemporalFunctions::Sub_tnumber_tnumber(DataChunk &args, ExpressionState &st
     TemporalBinaryTT(args, result, [](Temporal *a, Temporal *b) { return sub_tnumber_tnumber(a, b); });
 }
 
-void TemporalFunctions::Mult_int_tint(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Mul_int_tint(DataChunk &args, ExpressionState &state, Vector &result) {
     TemporalBinaryV1<int32_t>(args, result, [](int32_t i, Temporal *t) { return mul_int_tint(i, t); });
 }
-void TemporalFunctions::Mult_tint_int(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Mul_tint_int(DataChunk &args, ExpressionState &state, Vector &result) {
     TemporalBinaryV<int32_t>(args, result, [](Temporal *t, int32_t i) { return mul_tint_int(t, i); });
 }
-void TemporalFunctions::Mult_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Mul_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result) {
     TemporalBinaryV1<double>(args, result, [](double d, Temporal *t) { return mul_float_tfloat(d, t); });
 }
-void TemporalFunctions::Mult_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Mul_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result) {
     TemporalBinaryV<double>(args, result, [](Temporal *t, double d) { return mul_tfloat_float(t, d); });
 }
-void TemporalFunctions::Mult_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result) {
+void TemporalFunctions::Mul_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result) {
     TemporalBinaryTT(args, result, [](Temporal *a, Temporal *b) { return mul_tnumber_tnumber(a, b); });
 }
 

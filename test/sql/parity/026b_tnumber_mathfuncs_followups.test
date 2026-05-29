@@ -57,7 +57,7 @@ SELECT tnumber_sub(tfloat '[10@2000-01-01]', 5.0);
 [5@2000-01-01 00:00:00+01]
 
 query I
-SELECT tnumber_mult(2.0, tfloat '[3@2000-01-01]');
+SELECT tnumber_mul(2.0, tfloat '[3@2000-01-01]');
 ----
 [6@2000-01-01 00:00:00+01]
 
@@ -74,7 +74,7 @@ SELECT tnumber_add(tfloat '[3@2000-01-01]', 4.0) = (tfloat '[3@2000-01-01]' + 4.
 true
 
 query I
-SELECT tnumber_mult(tint '[5@2000-01-01]', tint '[2@2000-01-01]')
+SELECT tnumber_mul(tint '[5@2000-01-01]', tint '[2@2000-01-01]')
      = (tint '[5@2000-01-01]' * tint '[2@2000-01-01]');
 ----
 true
