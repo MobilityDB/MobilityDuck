@@ -292,8 +292,8 @@ void TGeometryTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
 
 
 void TGeometryTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    loader.RegisterCastFunction( LogicalType::VARCHAR, TGeometryTypes::TGEOMETRY(), TgeometryFunctions::StringToTgeometry);
-    loader.RegisterCastFunction( TGeometryTypes::TGEOMETRY(), LogicalType::VARCHAR, TgeometryFunctions::TgeometryToString);
+    RegisterMeosCastFunction(loader,  LogicalType::VARCHAR, TGeometryTypes::TGEOMETRY(), TgeometryFunctions::StringToTgeometry);
+    RegisterMeosCastFunction(loader,  TGeometryTypes::TGEOMETRY(), LogicalType::VARCHAR, TgeometryFunctions::TgeometryToString);
 }
 
 }

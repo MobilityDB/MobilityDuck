@@ -34,25 +34,25 @@ void TgeompointType::RegisterType(ExtensionLoader &loader) {
 }
 
 void TgeompointType::RegisterCastFunctions(ExtensionLoader &loader) {
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader, 
         LogicalType::VARCHAR,
         TGEOMPOINT(),
         TgeompointFunctions::Tpoint_in
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader, 
         TGEOMPOINT(),
         LogicalType::VARCHAR,
         TemporalFunctions::Temporal_out
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader, 
         TGEOMPOINT(),
         StboxType::STBOX(),
         TgeompointFunctions::Tspatial_to_stbox_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader, 
         TGEOMPOINT(),
         SpanTypes::TSTZSPAN(),
         TgeompointFunctions::Temporal_to_tstzspan_cast
