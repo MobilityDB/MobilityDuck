@@ -121,7 +121,14 @@ TRTreeIndex::TRTreeIndex(const string &name, IndexConstraintType constraint_type
     if (!rtree_) {
         throw InternalException("Failed to create MEOS RTree");
     }
-    
+
+    // MEST split bound: WITH (max_boxes = N). Default 8; N <= 1 reproduces
+    // the pre-MEST single-box index. Only affects temporal columns.
+    auto mb_it = options_.find("max_boxes");
+    if (mb_it != options_.end() && !mb_it->second.IsNull()) {
+        max_boxes_ = mb_it->second.GetValue<int32_t>();
+    }
+
     function_matcher = MakeFunctionMatcher();
 }
 
@@ -222,16 +229,11 @@ ErrorData TRTreeIndex::Insert(IndexLock &lock, DataChunk &data, Vector &row_ids)
             box = (STBox*)malloc(stbox_size);
             
             memcpy(box, stbox_data, stbox_size);
-            
-            int32_t box_srid = stbox_srid(box);
-            if (box_srid != 0) {
-                STBox *normalized_box = stbox_set_srid(box, 0);
-                if (normalized_box) {
-                    free(box);
-                    box = normalized_box;
-                }
-            }
-        } 
+            // No SRID normalisation: index keys keep their natural SRID
+            // and && requires matching SRID, mirroring MobilityDB/PostGIS
+            // GiST. Normalising here but not at search time (or vice
+            // versa) makes ensure_same_srid reject every overlap.
+        }
         else { 
             continue;
         }
@@ -312,26 +314,18 @@ void TRTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifier
 
         if (indexes_temporal) {
             const Temporal *temp = reinterpret_cast<const Temporal *>(data);
-            // For temporal-spatial types extract the bbox and strip the
-            // SRID so index keys agree with the SRID-stripped query box
-            // used at search time (InitializeScan strips it too).
-            if (bbox_meostype == T_STBOX) {
-                STBox *box = tspatial_to_stbox(temp);
-                if (!box) {
-                    continue;
-                }
-                if (stbox_srid(box) != 0) {
-                    STBox *normalized = stbox_set_srid(box, 0);
-                    if (normalized) {
-                        free(box);
-                        box = normalized;
-                    }
-                }
-                rtree_insert(rtree_, box, static_cast<int>(row_data[i]));
-                free(box);
-            } else {
-                rtree_insert_temporal(rtree_, temp, static_cast<int>(row_data[i]));
-            }
+            const int id = static_cast<int>(row_data[i]);
+            // Multi-entry (MEST): index the temporal as up to max_boxes_
+            // tight per-segment bounding boxes sharing this id; the
+            // splitter degenerates to a single minimum bounding box for
+            // instants or max_boxes_ <= 1, byte-identical to the pre-MEST
+            // single-box path. The produced boxes carry the temporal's
+            // own SRID, exactly like rtree_insert_temporal /
+            // tspatial_to_stbox. Do NOT pre-normalise the SRID:
+            // tspatial_set_srid(temp, 0) makes the SRID "unknown" and the
+            // stbox conversion inside the splitter then raises
+            // "The SRID cannot be unknown" at index-build time.
+            rtree_insert_temporal_split(rtree_, temp, id, max_boxes_);
             continue;
         }
 
@@ -342,18 +336,9 @@ void TRTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifier
 
         void *box = malloc(data_size);
         memcpy(box, data, data_size);
-
-        if (bbox_meostype == T_STBOX) {
-            STBox *stbox = (STBox *) box;
-            int32_t box_srid = stbox_srid(stbox);
-            if (box_srid != 0) {
-                STBox *normalized_box = stbox_set_srid(stbox, 0);
-                if (normalized_box) {
-                    free(box);
-                    box = normalized_box;
-                }
-            }
-        }
+        // No SRID normalisation (see Construct/InitializeScan): keep the
+        // natural SRID so index keys and the query box agree; && requires
+        // matching SRID, mirroring MobilityDB/PostGIS GiST.
 
         void *target = (char *) boxes + (i * bbox_size_);
         memcpy(target, box, bbox_size_);
@@ -417,21 +402,10 @@ unique_ptr<IndexScanState> TRTreeIndex::InitializeScan(const void* query_blob, s
         
         state->query_box = malloc(blob_size);
         memcpy(state->query_box, data, blob_size);
+        // No SRID normalisation: the query box keeps its natural SRID so
+        // it matches the index keys (which also keep theirs); && requires
+        // matching SRID, mirroring MobilityDB/PostGIS GiST.
 
-        if (bbox_meostype == T_STBOX) {
-            STBox *stbox = (STBox*)state->query_box;
-            int32_t query_srid = stbox_srid(stbox);
-            if (query_srid != 0) {
-                STBox *normalized_query = stbox_set_srid(stbox, 0);
-                if (normalized_query) {
-                    free(state->query_box);
-                    state->query_box = malloc(blob_size);
-                    memcpy(state->query_box, normalized_query, blob_size);
-                    free(normalized_query);
-                }
-            }
-        }
-        
     } else {
         throw InvalidInputException("Unsupported R-Tree operation: " + operation + 
                                   " for bbox_type: " + std::to_string(bbox_meostype));
@@ -486,9 +460,18 @@ vector<row_t> TRTreeIndex::Search(const void *query_box, RTreeSearchOp op) const
 
         if (count > 0) {
             results.reserve(count);
+            // Multi-entry (MEST) leaves return the same id once per
+            // overlapping per-segment box. Emit each row exactly once;
+            // duplicates would otherwise surface as duplicate rows in the
+            // index scan. Harmless no-op for single-box indexes.
+            unordered_set<row_t> seen;
+            seen.reserve(count);
             for (int i = 0; i < count; i++) {
                 int *id = static_cast<int *>(meos_array_get(ids, i));
-                results.push_back(static_cast<row_t>(*id));
+                row_t rid = static_cast<row_t>(*id);
+                if (seen.insert(rid).second) {
+                    results.push_back(rid);
+                }
             }
         }
     } catch (...) {

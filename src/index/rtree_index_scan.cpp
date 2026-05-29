@@ -28,12 +28,17 @@ BindInfo TRTreeIndexScanBindInfo(const optional_ptr<FunctionData> bind_data_p) {
 struct RTreeIndexScanGlobalState : public GlobalTableFunctionState {
 	DataChunk all_columns;
 	vector<idx_t> projection_ids;
+	vector<LogicalType> scanned_types;
 	ColumnFetchState fetch_state;
 	TableScanState local_storage_state;
 	vector<StorageIndex> column_ids;
 
 	unique_ptr<IndexScanState> index_state;
-	Vector row_ids = Vector(LogicalType::ROW_TYPE);
+	// rowid is BIGINT. Use the LogicalTypeId enumerator, never the
+	// LogicalType::ROW_TYPE static const member: ODR-using it from this
+	// extension TU emits a second definition that clashes with libduckdb
+	// ("multiple definition of duckdb::LogicalType::ROW_TYPE" at link).
+	Vector row_ids = Vector(LogicalType(LogicalTypeId::BIGINT));
 };
 
 static unique_ptr<GlobalTableFunctionState> RTreeIndexScanInitGlobal(ClientContext &context,
@@ -50,8 +55,22 @@ static unique_ptr<GlobalTableFunctionState> RTreeIndexScanInitGlobal(ClientConte
 		storage_t col_id = id;
 		if (id != DConstants::INVALID_INDEX) {
 			col_id = bind_data.table.GetColumn(LogicalIndex(id)).StorageOid();
+			result->scanned_types.push_back(bind_data.table.GetColumn(LogicalIndex(id)).Type());
+		} else {
+			// rowid column: BIGINT (see row_ids note re: ROW_TYPE ODR clash)
+			result->scanned_types.emplace_back(LogicalType(LogicalTypeId::BIGINT));
 		}
 		result->column_ids.emplace_back(col_id);
+	}
+
+	// Honour projection pushdown exactly like DuckDB's table_scan: when the
+	// optimizer removes filter-only columns, fetch the full scanned set into
+	// all_columns (which MUST be initialized with the scanned column types,
+	// else Fetch hits "Expected vector of type X, found Y") and reference
+	// the projected subset out of it.
+	if (input.CanRemoveFilterColumns()) {
+		result->projection_ids = input.projection_ids;
+		result->all_columns.Initialize(context, result->scanned_types);
 	}
 
 	// Initialize the storage scan state
