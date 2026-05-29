@@ -4,6 +4,15 @@ PROJ_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 EXT_NAME=mobilityduck
 EXT_CONFIG=${PROJ_DIR}extension_config.cmake
 
+# Build the extension in parallel. The included ci-tools makefile runs
+# `cmake --build` with no `-j` and the default Unix Makefiles generator, so the
+# extension otherwise compiles on a single core. `cmake --build` honours the
+# CMAKE_BUILD_PARALLEL_LEVEL environment variable, and make's `export`
+# propagates it into the build (including the in-Docker CI build). An
+# externally-set value takes precedence.
+CMAKE_BUILD_PARALLEL_LEVEL ?= $(shell nproc 2>/dev/null || echo 4)
+export CMAKE_BUILD_PARALLEL_LEVEL
+
 # Include the Makefile from extension-ci-tools
 include extension-ci-tools/makefiles/duckdb_extension.Makefile
 
