@@ -1,4 +1,5 @@
 #include "meos_wrapper_simple.hpp"
+#include "temporal/temporal_blob.hpp"
 
 #include "common.hpp"
 #include "geo/tgeompoint.hpp"
@@ -1775,12 +1776,6 @@ namespace {
 constexpr uint8_t WKB_BASE = 0x00;
 /* WKB_EXTENDED is provided by meos_geo.h as #define WKB_EXTENDED 0x04 */
 
-inline Temporal *BlobToTemp(string_t b) {
-    size_t sz = b.GetSize();
-    uint8_t *copy = (uint8_t *)malloc(sz);
-    memcpy(copy, b.GetData(), sz);
-    return reinterpret_cast<Temporal *>(copy);
-}
 
 inline Temporal *BlobToTempMVT(string_t b) {
     size_t sz = b.GetSize();
@@ -1799,7 +1794,7 @@ void TgeoAsWkbExec(DataChunk &args, ExpressionState &state, Vector &result, uint
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) -> string_t {
-            Temporal *t = BlobToTemp(input);
+            Temporal *t = BlobToTemporal(input);
             size_t sz = 0;
             uint8_t *wkb = temporal_as_wkb(t, variant, &sz);
             free(t);
@@ -1818,7 +1813,7 @@ void TgeoAsHexWkbExec(DataChunk &args, ExpressionState &state, Vector &result, u
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) -> string_t {
-            Temporal *t = BlobToTemp(input);
+            Temporal *t = BlobToTemporal(input);
             size_t sz = 0;
             char *hex = temporal_as_hexwkb(t, variant, &sz);
             (void) sz;
@@ -1873,7 +1868,7 @@ void TgeoAsMfjsonExec(DataChunk &args, ExpressionState &state, Vector &result) {
             out_validity.SetInvalid(row);
             continue;
         }
-        Temporal *t = BlobToTemp(in[row]);
+        Temporal *t = BlobToTemporal(in[row]);
         bool with_bbox = (cc > 1) ? FlatVector::GetData<bool>(args.data[1])[row] : false;
         int flags = (cc > 2) ? FlatVector::GetData<int32_t>(args.data[2])[row] : 0;
         int precision = (cc > 3) ? FlatVector::GetData<int32_t>(args.data[3])[row] : 15;
@@ -1893,7 +1888,6 @@ void TgeoAsMfjsonExec(DataChunk &args, ExpressionState &state, Vector &result) {
         out_data[row] = StringVector::AddString(result, json);
         free(json);
     }
-    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 inline STBox *BlobToStboxMVT(string_t b) {
@@ -1969,7 +1963,6 @@ void TgeoAsMVTGeomExec(DataChunk &args, ExpressionState &state, Vector &result) 
         }
         if (times) free(times);
     }
-    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void TgeoFromMfjsonExec(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2261,7 +2254,6 @@ void TgeoGeoMeasureExec(DataChunk &args, ExpressionState &state, Vector &result)
         out_data[row] = StringVector::AddStringOrBlob(result, enc);
         free(geom);
     }
-    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 } // namespace

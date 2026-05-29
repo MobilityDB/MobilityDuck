@@ -1,4 +1,5 @@
 #include "rgeo/trgeometry.hpp"
+#include "temporal/temporal_blob.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/common/extension_type_info.hpp"
 #include <regex>
@@ -46,7 +47,7 @@ static inline Temporal *trgeometry_parse_wkt(const char *str) {
     return trgeo_parse(&p, T_TRGEOMETRY);
 }
 
-inline void Trgeometry_as_text_exec(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Trgeometry_as_text_exec(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_geom_vec = args.data[0];
 
@@ -93,12 +94,9 @@ inline void Trgeometry_as_text_exec(DataChunk &args, ExpressionState &state, Vec
         }
     );
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
-inline void Trgeometry_as_ewkt_exec(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Trgeometry_as_ewkt_exec(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_geom_vec = args.data[0];
 
@@ -147,9 +145,6 @@ inline void Trgeometry_as_ewkt_exec(DataChunk &args, ExpressionState &state, Vec
         }
     );
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
@@ -182,9 +177,6 @@ bool TrgeometryFunctions::StringToTrgeometry(Vector &source, Vector &result, idx
             return stored_data;
         });
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
     return true;
 }
 
@@ -226,9 +218,6 @@ bool TrgeometryFunctions::TrgeometryToString(Vector &source, Vector &result, idx
             return stored_result;
         });
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
     return true;
 }
 
@@ -241,15 +230,8 @@ bool TrgeometryFunctions::TrgeometryToString(Vector &source, Vector &result, idx
 // template rather than a tspatial_parse work-around).  The result is
 // stored as a raw blob, the same format every other temporal type uses.
 
-inline string_t StoreTempAsBlob(Vector &result, Temporal *t) {
-    size_t sz = temporal_mem_size(t);
-    string_t stored = StringVector::AddStringOrBlob(
-        result, string_t(reinterpret_cast<const char *>(t), sz));
-    free(t);
-    return stored;
-}
 
-inline void TspatialFromWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+static void TspatialFromWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) -> string_t {
@@ -261,11 +243,11 @@ inline void TspatialFromWkbExec(DataChunk &args, ExpressionState &, Vector &resu
             Temporal *t = temporal_from_wkb(wkb, input.GetSize());
             free(wkb);
             if (!t) throw InvalidInputException("fromBinary: invalid MEOS-WKB");
-            return StoreTempAsBlob(result, t);
+            return TemporalToBlob(result, t);
         });
 }
 
-inline void TspatialFromHexWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+static void TspatialFromHexWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) -> string_t {
@@ -273,18 +255,32 @@ inline void TspatialFromHexWkbExec(DataChunk &args, ExpressionState &, Vector &r
             Temporal *t = temporal_from_hexwkb(hex.c_str());
             if (!t) throw InvalidInputException(
                 "fromHexWKB: invalid hex-encoded MEOS-WKB");
-            return StoreTempAsBlob(result, t);
+            return TemporalToBlob(result, t);
         });
 }
 
-inline void TrgeometryFromTextExec(DataChunk &args, ExpressionState &, Vector &result) {
+static void TrgeometryFromTextExec(DataChunk &args, ExpressionState &, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) -> string_t {
             std::string s(input.GetData(), input.GetSize());
             Temporal *t = trgeometry_parse_wkt(s.c_str());
             if (!t) throw InvalidInputException("from*: invalid input");
-            return StoreTempAsBlob(result, t);
+            return TemporalToBlob(result, t);
+        });
+}
+
+static void TrgeometryFromMFJSONExec(DataChunk &args, ExpressionState &, Vector &result) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            std::string s(input.GetData(), input.GetSize());
+            // trgeometry has no dedicated *_from_mfjson symbol; route through
+            // the generic dispatch with the T_TRGEOMETRY temporal type, the
+            // same path the canonical MobilityDB SQL binds.
+            Temporal *t = temporal_from_mfjson(s.c_str(), T_TRGEOMETRY);
+            if (!t) throw InvalidInputException("fromMFJSON: invalid input");
+            return TemporalToBlob(result, t);
         });
 }
 
@@ -332,7 +328,6 @@ void TrgeometryAsMfjsonExec(DataChunk &args, ExpressionState &state, Vector &res
         out_data[row] = StringVector::AddString(result, json);
         free(json);
     }
-    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void TrgeometryAsWkbExec(DataChunk &args, ExpressionState &state, Vector &result, uint8_t variant) {
@@ -425,6 +420,8 @@ void TRGeometryTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction("trgeometryFromHexEWKB", {V}, T, TspatialFromHexWkbExec));
     duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("trgeometryFromMFJSON", {V}, T, TrgeometryFromMFJSONExec));
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction("trgeometryFromText",   {V}, T, TrgeometryFromTextExec));
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction("trgeometryFromEWKT",   {V}, T, TrgeometryFromTextExec));
@@ -432,8 +429,8 @@ void TRGeometryTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
 
 
 void TRGeometryTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    loader.RegisterCastFunction( LogicalType::VARCHAR, TRGeometryTypes::TRGEOMETRY(), TrgeometryFunctions::StringToTrgeometry);
-    loader.RegisterCastFunction( TRGeometryTypes::TRGEOMETRY(), LogicalType::VARCHAR, TrgeometryFunctions::TrgeometryToString);
+    RegisterMeosCastFunction(loader,  LogicalType::VARCHAR, TRGeometryTypes::TRGEOMETRY(), TrgeometryFunctions::StringToTrgeometry);
+    RegisterMeosCastFunction(loader,  TRGeometryTypes::TRGEOMETRY(), LogicalType::VARCHAR, TrgeometryFunctions::TrgeometryToString);
 }
 
 }

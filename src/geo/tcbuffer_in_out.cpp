@@ -1,4 +1,5 @@
 #include "geo/tcbuffer.hpp"
+#include "temporal/temporal_blob.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/common/extension_type_info.hpp"
 #include <regex>
@@ -16,7 +17,7 @@ extern "C" {
 
 namespace duckdb {
 
-inline void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_geom_vec = args.data[0];
 
@@ -62,12 +63,9 @@ inline void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &re
         }
     );
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
-inline void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_geom_vec = args.data[0];
 
@@ -115,9 +113,6 @@ inline void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &re
         }
     );
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
@@ -150,9 +145,6 @@ bool TcbufferFunctions::StringToTcbuffer(Vector &source, Vector &result, idx_t c
             return stored_data;
         });
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
     return true;
 }
 
@@ -194,9 +186,6 @@ bool TcbufferFunctions::TcbufferToString(Vector &source, Vector &result, idx_t c
             return stored_result;
         });
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
     return true;
 }
 
@@ -206,15 +195,8 @@ bool TcbufferFunctions::TcbufferToString(Vector &source, Vector &result, idx_t c
 // `tcbuffer_from_mfjson` and `tcbuffer_in` are per-type.  The result is
 // stored as a raw blob, the same format every other temporal type uses.
 
-inline string_t StoreTempAsBlob(Vector &result, Temporal *t) {
-    size_t sz = temporal_mem_size(t);
-    string_t stored = StringVector::AddStringOrBlob(
-        result, string_t(reinterpret_cast<const char *>(t), sz));
-    free(t);
-    return stored;
-}
 
-inline void TspatialFromWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+static void TspatialFromWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) -> string_t {
@@ -226,11 +208,11 @@ inline void TspatialFromWkbExec(DataChunk &args, ExpressionState &, Vector &resu
             Temporal *t = temporal_from_wkb(wkb, input.GetSize());
             free(wkb);
             if (!t) throw InvalidInputException("fromBinary: invalid MEOS-WKB");
-            return StoreTempAsBlob(result, t);
+            return TemporalToBlob(result, t);
         });
 }
 
-inline void TspatialFromHexWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+static void TspatialFromHexWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) -> string_t {
@@ -238,19 +220,19 @@ inline void TspatialFromHexWkbExec(DataChunk &args, ExpressionState &, Vector &r
             Temporal *t = temporal_from_hexwkb(hex.c_str());
             if (!t) throw InvalidInputException(
                 "fromHexWKB: invalid hex-encoded MEOS-WKB");
-            return StoreTempAsBlob(result, t);
+            return TemporalToBlob(result, t);
         });
 }
 
 template <Temporal *(*FN)(const char *)>
-inline void TspatialFromStringExec(DataChunk &args, ExpressionState &, Vector &result) {
+static void TspatialFromStringExec(DataChunk &args, ExpressionState &, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) -> string_t {
             std::string s(input.GetData(), input.GetSize());
             Temporal *t = FN(s.c_str());
             if (!t) throw InvalidInputException("from*: invalid input");
-            return StoreTempAsBlob(result, t);
+            return TemporalToBlob(result, t);
         });
 }
 
@@ -284,6 +266,9 @@ void TCBufferTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction("tcbufferFromHexEWKB", {V}, T, TspatialFromHexWkbExec));
     duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("tcbufferFromMFJSON", {V}, T,
+                       TspatialFromStringExec<&tcbuffer_from_mfjson>));
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction("tcbufferFromText",   {V}, T,
                        TspatialFromStringExec<&tcbuffer_in>));
     duckdb::RegisterSerializedScalarFunction(loader,
@@ -293,8 +278,8 @@ void TCBufferTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
 
 
 void TCBufferTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    loader.RegisterCastFunction( LogicalType::VARCHAR, TCBufferTypes::TCBUFFER(), TcbufferFunctions::StringToTcbuffer);
-    loader.RegisterCastFunction( TCBufferTypes::TCBUFFER(), LogicalType::VARCHAR, TcbufferFunctions::TcbufferToString);
+    RegisterMeosCastFunction(loader,  LogicalType::VARCHAR, TCBufferTypes::TCBUFFER(), TcbufferFunctions::StringToTcbuffer);
+    RegisterMeosCastFunction(loader,  TCBufferTypes::TCBUFFER(), LogicalType::VARCHAR, TcbufferFunctions::TcbufferToString);
 }
 
 }

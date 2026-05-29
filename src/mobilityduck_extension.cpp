@@ -82,7 +82,7 @@ namespace duckdb {
 // 2. Utility: version scalar functions
 // =====================================================================
 
-inline void MobilityduckOpenSSLVersionScalarFun(DataChunk &args, ExpressionState &state, Vector &result) {
+static void MobilityduckOpenSSLVersionScalarFun(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &name_vector = args.data[0];
 	UnaryExecutor::Execute<string_t, string_t>(name_vector, result, args.size(), [&](string_t name) {
 		return StringVector::AddString(
@@ -126,12 +126,12 @@ inline std::string MobilityduckFullVersion() {
 	return out;
 }
 
-inline void MobilityduckVersionScalarFun(DataChunk &args, ExpressionState &state, Vector &result) {
+static void MobilityduckVersionScalarFun(DataChunk &args, ExpressionState &state, Vector &result) {
 	const std::string s = MobilityduckShortVersion();
 	result.Reference(Value(s));
 }
 
-inline void MobilityduckFullVersionScalarFun(DataChunk &args, ExpressionState &state, Vector &result) {
+static void MobilityduckFullVersionScalarFun(DataChunk &args, ExpressionState &state, Vector &result) {
 	const std::string s = MobilityduckFullVersion();
 	result.Reference(Value(s));
 }

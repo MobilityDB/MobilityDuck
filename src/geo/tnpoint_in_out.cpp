@@ -1,4 +1,5 @@
 #include "geo/tnpoint.hpp"
+#include "temporal/temporal_blob.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/common/extension_type_info.hpp"
 #include <regex>
@@ -16,7 +17,7 @@ extern "C" {
 
 namespace duckdb {
 
-inline void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_geom_vec = args.data[0];
 
@@ -43,7 +44,7 @@ inline void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &re
                 throw InvalidInputException("Invalid TNPOINT data: null pointer");
             }
 
-            char *str = tspatial_as_text(temp, 0);
+            char *str = tspatial_as_text(temp, 15);
 
             if (!str) {
                 free(data_copy);
@@ -60,12 +61,9 @@ inline void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &re
         }
     );
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
-inline void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &input_geom_vec = args.data[0];
 
@@ -93,7 +91,7 @@ inline void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &re
                 throw InvalidInputException("Invalid TNPOINT data: null pointer");
             }
 
-            char *ewkt = tspatial_as_ewkt(temp, 0);
+            char *ewkt = tspatial_as_ewkt(temp, 15);
 
             if (!ewkt) {
                 free(data_copy);
@@ -111,9 +109,6 @@ inline void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &re
         }
     );
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
@@ -146,9 +141,6 @@ bool TnpointFunctions::StringToTnpoint(Vector &source, Vector &result, idx_t cou
             return stored_data;
         });
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
     return true;
 }
 
@@ -190,9 +182,6 @@ bool TnpointFunctions::TnpointToString(Vector &source, Vector &result, idx_t cou
             return stored_result;
         });
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
     return true;
 }
 
@@ -208,15 +197,8 @@ bool TnpointFunctions::TnpointToString(Vector &source, Vector &result, idx_t cou
 // generic Temporal_from_mfjson handler.  The result is stored as a raw
 // blob, the same format every other temporal type uses.
 
-inline string_t StoreTempAsBlob(Vector &result, Temporal *t) {
-    size_t sz = temporal_mem_size(t);
-    string_t stored = StringVector::AddStringOrBlob(
-        result, string_t(reinterpret_cast<const char *>(t), sz));
-    free(t);
-    return stored;
-}
 
-inline void TspatialFromWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+static void TspatialFromWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) -> string_t {
@@ -228,11 +210,11 @@ inline void TspatialFromWkbExec(DataChunk &args, ExpressionState &, Vector &resu
             Temporal *t = temporal_from_wkb(wkb, input.GetSize());
             free(wkb);
             if (!t) throw InvalidInputException("fromBinary: invalid MEOS-WKB");
-            return StoreTempAsBlob(result, t);
+            return TemporalToBlob(result, t);
         });
 }
 
-inline void TspatialFromHexWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
+static void TspatialFromHexWkbExec(DataChunk &args, ExpressionState &, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) -> string_t {
@@ -240,22 +222,22 @@ inline void TspatialFromHexWkbExec(DataChunk &args, ExpressionState &, Vector &r
             Temporal *t = temporal_from_hexwkb(hex.c_str());
             if (!t) throw InvalidInputException(
                 "fromHexWKB: invalid hex-encoded MEOS-WKB");
-            return StoreTempAsBlob(result, t);
+            return TemporalToBlob(result, t);
         });
 }
 
-inline void TnpointFromTextExec(DataChunk &args, ExpressionState &, Vector &result) {
+static void TnpointFromTextExec(DataChunk &args, ExpressionState &, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) -> string_t {
             std::string s(input.GetData(), input.GetSize());
             Temporal *t = tnpoint_in(s.c_str());
             if (!t) throw InvalidInputException("from*: invalid input");
-            return StoreTempAsBlob(result, t);
+            return TemporalToBlob(result, t);
         });
 }
 
-inline void TnpointFromMFJSONExec(DataChunk &args, ExpressionState &, Vector &result) {
+static void TnpointFromMFJSONExec(DataChunk &args, ExpressionState &, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t input) -> string_t {
@@ -265,7 +247,7 @@ inline void TnpointFromMFJSONExec(DataChunk &args, ExpressionState &, Vector &re
             // same path the canonical MobilityDB SQL binds.
             Temporal *t = temporal_from_mfjson(s.c_str(), T_TNPOINT);
             if (!t) throw InvalidInputException("fromMFJSON: invalid input");
-            return StoreTempAsBlob(result, t);
+            return TemporalToBlob(result, t);
         });
 }
 
@@ -308,8 +290,8 @@ void TNpointTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
 
 
 void TNpointTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    loader.RegisterCastFunction( LogicalType::VARCHAR, TNpointTypes::TNPOINT(), TnpointFunctions::StringToTnpoint);
-    loader.RegisterCastFunction( TNpointTypes::TNPOINT(), LogicalType::VARCHAR, TnpointFunctions::TnpointToString);
+    RegisterMeosCastFunction(loader,  LogicalType::VARCHAR, TNpointTypes::TNPOINT(), TnpointFunctions::StringToTnpoint);
+    RegisterMeosCastFunction(loader,  TNpointTypes::TNPOINT(), LogicalType::VARCHAR, TnpointFunctions::TnpointToString);
 }
 
 }

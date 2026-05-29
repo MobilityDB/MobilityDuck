@@ -1256,9 +1256,6 @@ void SpansetFunctions::Tstzspanset_shift(DataChunk &args, ExpressionState &state
         [&](string_t blob, interval_t shift_interval) -> string_t {
             return Tstzspanset_shift_common(blob, shift_interval, result);
         });
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 static inline string_t Numspanset_scale_common(const string_t &blob, Datum scale_datum,
@@ -1357,9 +1354,6 @@ void SpansetFunctions::Tstzspanset_scale(DataChunk &args, ExpressionState &state
         [&](string_t blob, interval_t scale_interval) -> string_t {
             return Tstzspanset_scale_common(blob, scale_interval, result);
         });
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 static inline string_t Tstzspanset_shift_scale_common(const string_t &blob, interval_t shift_iv, interval_t scale_iv,
@@ -1462,9 +1456,6 @@ void SpansetFunctions::Numspanset_shift_scale(DataChunk &args, ExpressionState &
         default:
             throw NotImplementedException("shiftScale(<spanset>): unsupported spanset type for this overload");
     }
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void SpansetFunctions::Tstzspanset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1474,9 +1465,6 @@ void SpansetFunctions::Tstzspanset_shift_scale(DataChunk &args, ExpressionState 
         [&](string_t blob, interval_t shift, interval_t scale) -> string_t {
             return Tstzspanset_shift_scale_common(blob, shift, scale, result);
         });
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void SpansetFunctions::Floatspanset_floor(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1805,9 +1793,6 @@ void SpansetFunctions::Spanset_eq(DataChunk &args, ExpressionState &state, Vecto
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 // --- OPERATOR: spanset <> spanset ---
 void SpansetFunctions::Spanset_ne(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1835,9 +1820,6 @@ void SpansetFunctions::Spanset_ne(DataChunk &args, ExpressionState &state, Vecto
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 // --- OPERATOR: spanset < spanset ---
 void SpansetFunctions::Spanset_lt(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1865,9 +1847,6 @@ void SpansetFunctions::Spanset_lt(DataChunk &args, ExpressionState &state, Vecto
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 // --- OPERATOR: spanset <= spanset---
 void SpansetFunctions::Spanset_le(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1895,9 +1874,6 @@ void SpansetFunctions::Spanset_le(DataChunk &args, ExpressionState &state, Vecto
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void SpansetFunctions::Spanset_gt(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1925,9 +1901,6 @@ void SpansetFunctions::Spanset_gt(DataChunk &args, ExpressionState &state, Vecto
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 // --- OPERATOR: span >= span ---
 void SpansetFunctions::Spanset_ge(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1955,9 +1928,6 @@ void SpansetFunctions::Spanset_ge(DataChunk &args, ExpressionState &state, Vecto
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void SpansetFunctions::Spanset_cmp(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1985,9 +1955,6 @@ void SpansetFunctions::Spanset_cmp(DataChunk &args, ExpressionState &state, Vect
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 } // namespace duckdb   

@@ -1,6 +1,7 @@
 #include "meos_wrapper_simple.hpp"
 #include "common.hpp"
 #include "temporal/temporal_functions.hpp"
+#include "temporal/temporal_blob.hpp"
 #include "temporal/spanset.hpp"
 #include "geo_util.hpp"
 
@@ -186,9 +187,6 @@ void TemporalFunctions::Tinstant_constructor_common(Vector &value, Vector &ts, V
             return stored_data;
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Tinstant_constructor_text(Vector &value, Vector &ts, Vector &result, idx_t count) {
@@ -214,9 +212,6 @@ void TemporalFunctions::Tinstant_constructor_text(Vector &value, Vector &ts, Vec
             return stored_data;
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Tinstant_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -339,9 +334,6 @@ void TemporalFunctions::Tsequence_constructor(DataChunk &args, ExpressionState &
             return stored_data;
         }
     );
-    if (row_count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Tsequenceset_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -405,9 +397,6 @@ void TemporalFunctions::Tsequenceset_constructor(DataChunk &args, ExpressionStat
             return stored_data;
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 static string_t Tsequence_from_base_tstzset_impl(Datum datum, string_t set_blob, MeosType temptype, Vector &result) {
@@ -480,9 +469,6 @@ void TemporalFunctions::Tsequence_from_base_tstzset(DataChunk &args, ExpressionS
         throw InvalidInputException("Invalid argument type for Tsequence_from_base_tstzset: " + arg_type.ToString());
     }
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }   
 
 static string_t Tsequence_from_base_tstzspan_impl(Datum datum, string_t span_blob, MeosType temptype, interpType interp, Vector &result) {
@@ -563,9 +549,6 @@ void TemporalFunctions::Tsequence_from_base_tstzspan(DataChunk &args, Expression
         throw InvalidInputException("Invalid argument type for Tsequence_from_base_tstzspan: " + arg_type.ToString());
     }
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 static string_t Tsequenceset_from_base_tstzspanset_impl(Datum datum, string_t spanset_blob, MeosType temptype, interpType interp, Vector &result) {
@@ -646,9 +629,6 @@ void TemporalFunctions::Tsequenceset_from_base_tstzspanset(DataChunk &args, Expr
         throw InvalidInputException("Invalid argument type for Tsequenceset_from_base_tstzspanset: " + arg_type.ToString());
     }
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 /* ***************************************************
  * Conversion functions: [TYPE] -> Temporal
@@ -684,9 +664,6 @@ void TemporalFunctions::Temporal_to_tstzspan(DataChunk &args, ExpressionState &s
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Tnumber_to_span(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -718,9 +695,6 @@ void TemporalFunctions::Tnumber_to_span(DataChunk &args, ExpressionState &state,
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 static string_t Tbool_to_tint_common(string_t input, Vector &result) {
@@ -927,9 +901,6 @@ void TemporalFunctions::Tnumber_to_tbox(DataChunk &args, ExpressionState &state,
     } else {
         throw InvalidInputException("Invalid argument type for Tnumber_to_tbox: " + arg_type.ToString());
     }
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 bool TemporalFunctions::Tnumber_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
@@ -973,9 +944,6 @@ void TemporalFunctions::Temporal_enforce_typmod(DataChunk &args, ExpressionState
             return StringVector::AddStringOrBlob(result, input);
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 bool TemporalFunctions::Temporal_enforce_typmod_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
@@ -1020,9 +988,6 @@ void TemporalFunctions::Temporal_subtype(DataChunk &args, ExpressionState &state
             return string_t(str);
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_interp(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1046,9 +1011,6 @@ void TemporalFunctions::Temporal_interp(DataChunk &args, ExpressionState &state,
             return string_t(str);
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_mem_size(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1072,9 +1034,6 @@ void TemporalFunctions::Temporal_mem_size(DataChunk &args, ExpressionState &stat
             return (int32_t)mem_size;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Tinstant_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1098,9 +1057,6 @@ void TemporalFunctions::Tinstant_value(DataChunk &args, ExpressionState &state, 
             return (int64_t)ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_valueset(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1132,9 +1088,6 @@ void TemporalFunctions::Temporal_valueset(DataChunk &args, ExpressionState &stat
             return blob;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_start_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1158,9 +1111,6 @@ void TemporalFunctions::Temporal_start_value(DataChunk &args, ExpressionState &s
             return (int64_t)ret;
     }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_end_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1184,9 +1134,6 @@ void TemporalFunctions::Temporal_end_value(DataChunk &args, ExpressionState &sta
             return (int64_t)ret;
     }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_min_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1210,9 +1157,6 @@ void TemporalFunctions::Temporal_min_value(DataChunk &args, ExpressionState &sta
             return (int64_t)ret;
     }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_max_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1236,9 +1180,6 @@ void TemporalFunctions::Temporal_max_value(DataChunk &args, ExpressionState &sta
             return (int64_t)ret;
     }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_value_n(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1363,9 +1304,6 @@ void TemporalFunctions::Temporal_value_n(DataChunk &args, ExpressionState &state
         );
     }
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_num_instants(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1389,9 +1327,6 @@ void TemporalFunctions::Temporal_num_instants(DataChunk &args, ExpressionState &
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_min_instant(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1423,9 +1358,6 @@ void TemporalFunctions::Temporal_min_instant(DataChunk &args, ExpressionState &s
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_max_instant(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1457,9 +1389,6 @@ void TemporalFunctions::Temporal_max_instant(DataChunk &args, ExpressionState &s
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Tinstant_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1484,9 +1413,6 @@ void TemporalFunctions::Tinstant_timestamptz(DataChunk &args, ExpressionState &s
             return duckdb_ts;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_time(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1518,9 +1444,6 @@ void TemporalFunctions::Temporal_time(DataChunk &args, ExpressionState &state, V
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_duration(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1554,9 +1477,6 @@ void TemporalFunctions::Temporal_duration(DataChunk &args, ExpressionState &stat
             return duckdb_interval;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_sequences(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1628,9 +1548,6 @@ void TemporalFunctions::Temporal_start_timestamptz(DataChunk &args, ExpressionSt
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_end_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1655,9 +1572,6 @@ void TemporalFunctions::Temporal_end_timestamptz(DataChunk &args, ExpressionStat
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_timestamps(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1770,9 +1684,6 @@ void TemporalFunctions::Temporal_num_sequences(DataChunk &args, ExpressionState 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_lower_inc(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1796,9 +1707,6 @@ void TemporalFunctions::Temporal_lower_inc(DataChunk &args, ExpressionState &sta
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_upper_inc(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1822,9 +1730,6 @@ void TemporalFunctions::Temporal_upper_inc(DataChunk &args, ExpressionState &sta
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_start_instant(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1855,9 +1760,6 @@ void TemporalFunctions::Temporal_start_instant(DataChunk &args, ExpressionState 
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_end_instant(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1888,9 +1790,6 @@ void TemporalFunctions::Temporal_end_instant(DataChunk &args, ExpressionState &s
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_instant_n(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1921,9 +1820,6 @@ void TemporalFunctions::Temporal_instant_n(DataChunk &args, ExpressionState &sta
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_num_timestamps(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1947,9 +1843,6 @@ void TemporalFunctions::Temporal_num_timestamps(DataChunk &args, ExpressionState
             return ret;
         }    
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
@@ -1980,9 +1873,6 @@ void TemporalFunctions::Temporal_timestamptz_n(DataChunk &args, ExpressionState 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_start_sequence(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2013,9 +1903,6 @@ void TemporalFunctions::Temporal_start_sequence(DataChunk &args, ExpressionState
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
@@ -2047,9 +1934,6 @@ void TemporalFunctions::Temporal_end_sequence(DataChunk &args, ExpressionState &
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_sequence_n(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2080,9 +1964,6 @@ void TemporalFunctions::Temporal_sequence_n(DataChunk &args, ExpressionState &st
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_segments(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2168,9 +2049,6 @@ void TemporalFunctions::Temporal_shift_time(DataChunk &args, ExpressionState &st
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_scale_time(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2204,9 +2082,6 @@ void TemporalFunctions::Temporal_scale_time(DataChunk &args, ExpressionState &st
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_shift_scale_time(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2240,9 +2115,6 @@ void TemporalFunctions::Temporal_shift_scale_time(DataChunk &args, ExpressionSta
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
@@ -2282,9 +2154,6 @@ void TemporalFunctions::Temporal_to_tinstant(DataChunk &args, ExpressionState &s
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_to_tsequence(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2324,9 +2193,6 @@ void TemporalFunctions::Temporal_to_tsequence(DataChunk &args, ExpressionState &
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_to_tsequenceset(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2366,9 +2232,6 @@ void TemporalFunctions::Temporal_to_tsequenceset(DataChunk &args, ExpressionStat
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_set_interp(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2409,9 +2272,6 @@ void TemporalFunctions::Temporal_set_interp(DataChunk &args, ExpressionState &st
             return stored_data;
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_append_tinstant(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2464,9 +2324,6 @@ void TemporalFunctions::Temporal_append_tinstant(DataChunk &args, ExpressionStat
             return stored_data;
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_append_tsequence(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2510,9 +2367,6 @@ void TemporalFunctions::Temporal_append_tsequence(DataChunk &args, ExpressionSta
             return stored_data;
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_merge(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2553,9 +2407,6 @@ void TemporalFunctions::Temporal_merge(DataChunk &args, ExpressionState &state, 
             return stored_data;
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_merge_array(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2609,9 +2460,6 @@ void TemporalFunctions::Temporal_merge_array(DataChunk &args, ExpressionState &s
             return stored_data;
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Tnumber_shift_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2643,9 +2491,6 @@ void TemporalFunctions::Tnumber_shift_value(DataChunk &args, ExpressionState &st
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Tnumber_scale_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2677,9 +2522,6 @@ void TemporalFunctions::Tnumber_scale_value(DataChunk &args, ExpressionState &st
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Tnumber_shift_scale_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2711,9 +2553,6 @@ void TemporalFunctions::Tnumber_shift_scale_value(DataChunk &args, ExpressionSta
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
@@ -2820,9 +2659,6 @@ static void temporal_at_minus_values_dispatch(DataChunk &args, ExpressionState &
         throw InvalidInputException("Invalid argument type for atValues/minusValues: " + val_type.ToString());
     }
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_at_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2873,9 +2709,6 @@ void TemporalFunctions::Temporal_at_timestamptz(DataChunk &args, ExpressionState
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_at_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2925,9 +2758,6 @@ void TemporalFunctions::Temporal_at_tstzspan(DataChunk &args, ExpressionState &s
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_at_tstzspanset(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2977,9 +2807,6 @@ void TemporalFunctions::Temporal_at_tstzspanset(DataChunk &args, ExpressionState
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Tnumber_at_span(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3029,9 +2856,6 @@ void TemporalFunctions::Tnumber_at_span(DataChunk &args, ExpressionState &state,
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_at_min(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3069,9 +2893,6 @@ void TemporalFunctions::Temporal_at_min(DataChunk &args, ExpressionState &state,
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_minus_min(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3100,9 +2921,6 @@ void TemporalFunctions::Temporal_minus_min(DataChunk &args, ExpressionState &sta
             return stored;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_at_max(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3131,9 +2949,6 @@ void TemporalFunctions::Temporal_at_max(DataChunk &args, ExpressionState &state,
             return stored;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_minus_max(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3162,9 +2977,6 @@ void TemporalFunctions::Temporal_minus_max(DataChunk &args, ExpressionState &sta
             return stored;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Tnumber_minus_span(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3205,9 +3017,6 @@ void TemporalFunctions::Tnumber_minus_span(DataChunk &args, ExpressionState &sta
             return stored;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Tnumber_at_spanset(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3248,9 +3057,6 @@ void TemporalFunctions::Tnumber_at_spanset(DataChunk &args, ExpressionState &sta
             return stored;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Tnumber_minus_spanset(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3291,9 +3097,6 @@ void TemporalFunctions::Tnumber_minus_spanset(DataChunk &args, ExpressionState &
             return stored;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Tnumber_at_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3331,9 +3134,6 @@ void TemporalFunctions::Tnumber_at_tbox(DataChunk &args, ExpressionState &state,
             return stored;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Tnumber_minus_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3371,9 +3171,6 @@ void TemporalFunctions::Tnumber_minus_tbox(DataChunk &args, ExpressionState &sta
             return stored;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_minus_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3403,9 +3200,6 @@ void TemporalFunctions::Temporal_minus_timestamptz(DataChunk &args, ExpressionSt
             return stored;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_value_at_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3531,9 +3325,6 @@ void TemporalFunctions::Temporal_value_at_timestamptz(DataChunk &args, Expressio
         throw InvalidInputException("Unsupported result type for valueAtTimestamp");
     }
 
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_at_tstzset(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3573,9 +3364,6 @@ void TemporalFunctions::Temporal_at_tstzset(DataChunk &args, ExpressionState &st
             return stored;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_minus_tstzset(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3615,9 +3403,6 @@ void TemporalFunctions::Temporal_minus_tstzset(DataChunk &args, ExpressionState 
             return stored;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_minus_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3658,9 +3443,6 @@ void TemporalFunctions::Temporal_minus_tstzspan(DataChunk &args, ExpressionState
             return stored;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_minus_tstzspanset(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3701,9 +3483,6 @@ void TemporalFunctions::Temporal_minus_tstzspanset(DataChunk &args, ExpressionSt
             return stored;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_before_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3741,9 +3520,6 @@ void TemporalFunctions::Temporal_before_timestamptz(DataChunk &args, ExpressionS
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_after_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3781,9 +3557,6 @@ void TemporalFunctions::Temporal_after_timestamptz(DataChunk &args, ExpressionSt
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Tnumber_valuespans(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3818,9 +3591,6 @@ void TemporalFunctions::Tnumber_valuespans(DataChunk &args, ExpressionState &sta
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Tnumber_avg_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3844,9 +3614,6 @@ void TemporalFunctions::Tnumber_avg_value(DataChunk &args, ExpressionState &stat
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 /* ***************************************************
  * Modification Functions
@@ -3900,9 +3667,6 @@ void TemporalFunctions::Temporal_insert(DataChunk &args, ExpressionState &state,
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_update(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3953,9 +3717,6 @@ void TemporalFunctions::Temporal_update(DataChunk &args, ExpressionState &state,
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_delete_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -3993,9 +3754,6 @@ void TemporalFunctions::Temporal_delete_timestamptz(DataChunk &args, ExpressionS
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_delete_tstzset(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -4047,9 +3805,6 @@ void TemporalFunctions::Temporal_delete_tstzset(DataChunk &args, ExpressionState
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_delete_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -4100,9 +3855,6 @@ void TemporalFunctions::Temporal_delete_tstzspan(DataChunk &args, ExpressionStat
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_delete_tstzspanset(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -4154,9 +3906,6 @@ void TemporalFunctions::Temporal_delete_tstzspanset(DataChunk &args, ExpressionS
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 
@@ -4198,9 +3947,6 @@ void TemporalFunctions::Temporal_segm_min_duration(DataChunk &args, ExpressionSt
             return stored;
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_segm_max_duration(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -4238,9 +3984,6 @@ void TemporalFunctions::Temporal_segm_max_duration(DataChunk &args, ExpressionSt
             return stored;
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
@@ -4266,9 +4009,6 @@ void TemporalFunctions::Tnumber_integral(DataChunk &args, ExpressionState &state
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Tnumber_twavg(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -4291,9 +4031,6 @@ void TemporalFunctions::Tnumber_twavg(DataChunk &args, ExpressionState &state, V
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 /* ***************************************************
  * Comparison operators
@@ -4332,9 +4069,6 @@ void TemporalFunctions::Temporal_eq(DataChunk &args, ExpressionState &state, Vec
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_ne(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -4371,9 +4105,6 @@ void TemporalFunctions::Temporal_ne(DataChunk &args, ExpressionState &state, Vec
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_le(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -4410,9 +4141,6 @@ void TemporalFunctions::Temporal_le(DataChunk &args, ExpressionState &state, Vec
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_lt(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -4449,9 +4177,6 @@ void TemporalFunctions::Temporal_lt(DataChunk &args, ExpressionState &state, Vec
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_ge(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -4488,9 +4213,6 @@ void TemporalFunctions::Temporal_ge(DataChunk &args, ExpressionState &state, Vec
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 void TemporalFunctions::Temporal_gt(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
@@ -4526,9 +4248,6 @@ void TemporalFunctions::Temporal_gt(DataChunk &args, ExpressionState &state, Vec
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_cmp(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -4565,9 +4284,6 @@ void TemporalFunctions::Temporal_cmp(DataChunk &args, ExpressionState &state, Ve
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
@@ -4608,9 +4324,6 @@ void TemporalFunctions::Tbool_when_true(DataChunk &args, ExpressionState &state,
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
@@ -4618,22 +4331,6 @@ void TemporalFunctions::Tbool_when_true(DataChunk &args, ExpressionState &state,
  ****************************************************/
 
 namespace {
-
-// Helper: Temporal* -> string_t result blob
-inline string_t TemporalToBlob(Vector &result, Temporal *t) {
-    size_t sz = temporal_mem_size(t);
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)t, sz);
-    free(t);
-    return out;
-}
-
-// Helper: copy string_t blob into a malloc'd Temporal*
-inline Temporal *BlobToTemporal(string_t blob) {
-    size_t sz = blob.GetSize();
-    uint8_t *copy = (uint8_t *)malloc(sz);
-    memcpy(copy, blob.GetData(), sz);
-    return reinterpret_cast<Temporal *>(copy);
-}
 
 template <typename Fn>
 void TemporalUnary(DataChunk &args, Vector &result, Fn fn) {
@@ -4866,9 +4563,6 @@ void RunTboxesEmit(DataChunk &args, Vector &result, Producer produce, bool has_n
         }
         total += count;
         free(boxes);
-    }
-    if (row_count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
 
@@ -5302,9 +4996,6 @@ void RunSimilarityPath(DataChunk &args, Vector &result,
         total += count;
         free(matches);
     }
-    if (row_count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
     (void) fn_name;
 }
 
@@ -5635,7 +5326,6 @@ void TemporalFunctions::Temporal_tprecision(DataChunk &args, ExpressionState &st
         out_data[row] = StringVector::AddStringOrBlob(result, blob);
         free(r);
     }
-    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 void TemporalFunctions::Temporal_tsample(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -5684,7 +5374,6 @@ void TemporalFunctions::Temporal_tsample(DataChunk &args, ExpressionState &state
         out_data[row] = StringVector::AddStringOrBlob(result, blob);
         free(r);
     }
-    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 /* ***************************************************
@@ -5902,9 +5591,6 @@ void TemporalFunctions::Temporal_dump_common(DataChunk &args, Vector &result, Me
         free(extracted_values);
         free(temp);
     }
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_dump(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -5978,9 +5664,6 @@ void TemporalFunctions::Temporal_round(DataChunk &args, ExpressionState &state, 
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_derivative(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -6013,9 +5696,6 @@ void TemporalFunctions::Temporal_derivative(DataChunk &args, ExpressionState &st
             return stored_data;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
@@ -6072,9 +5752,6 @@ void TemporalFunctions::Temporal_as_wkb(DataChunk &args, ExpressionState &state,
             free(temp);
             return stored;
         });
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TemporalFunctions::Temporal_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -6112,9 +5789,6 @@ void TemporalFunctions::Temporal_as_hexwkb(DataChunk &args, ExpressionState &sta
             free(temp);
             return stored;
         });
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 } // namespace duckdb

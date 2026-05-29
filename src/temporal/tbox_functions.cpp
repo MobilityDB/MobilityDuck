@@ -105,9 +105,6 @@ void TboxFunctions::NumberTimestamptzToTboxExecutor(Vector &value, Vector &t, Me
             return MallocBlobToResult(result, tbox_data, tbox_size);
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Number_timestamptz_to_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -144,9 +141,6 @@ void TboxFunctions::Numspan_timestamptz_to_tbox(DataChunk &args, ExpressionState
             return MallocBlobToResult(result, tbox_data, tbox_size);
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 template <typename TA>
@@ -179,9 +173,6 @@ void TboxFunctions::NumberTstzspanToTboxExecutor(Vector &value, Vector &span_str
             return MallocBlobToResult(result, tbox_data, tbox_size);
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Number_tstzspan_to_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -228,9 +219,6 @@ void TboxFunctions::Numspan_tstzspan_to_tbox(DataChunk &args, ExpressionState &s
             return MallocBlobToResult(result, tbox_data, tbox_size);
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 template <typename TA>
@@ -254,9 +242,6 @@ void TboxFunctions::NumberToTboxExecutor(Vector &value, MeosType basetype, Vecto
             return MallocBlobToResult(result, tbox_data, tbox_size);
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Number_to_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -297,9 +282,6 @@ void TboxFunctions::TimestamptzToTboxExecutor(Vector &value, Vector &result, idx
             return MallocBlobToResult(result, tbox_data, tbox_size);
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Timestamptz_to_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -332,9 +314,6 @@ void TboxFunctions::SetToTboxExecutor(Vector &value, Vector &result, idx_t count
             return MallocBlobToResult(result, tbox_data, tbox_size);
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Set_to_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -367,9 +346,6 @@ void TboxFunctions::SpanToTboxExecutor(Vector &value, Vector &result, idx_t coun
             return MallocBlobToResult(result, tbox_data, tbox_size);
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Span_to_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -402,9 +378,6 @@ void TboxFunctions::TboxToIntspanExecutor(Vector &value, Vector &result, idx_t c
             return MallocBlobToResult(result, span_data, span_size);
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_to_intspan(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -437,9 +410,6 @@ void TboxFunctions::TboxToFloatspanExecutor(Vector &value, Vector &result, idx_t
             return MallocBlobToResult(result, span_data, span_size);
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_to_floatspan(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -472,9 +442,6 @@ void TboxFunctions::TboxToTstzspanExecutor(Vector &value, Vector &result, idx_t 
             return MallocBlobToResult(result, span_data, span_size);
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -507,9 +474,6 @@ void TboxFunctions::SpansetToTboxExecutor(Vector &value, Vector &result, idx_t c
             return MallocBlobToResult(result, tbox_data, tbox_size);
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Spanset_to_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -538,9 +502,6 @@ void TboxFunctions::Tbox_hasx(DataChunk &args, ExpressionState &state, Vector &r
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_hast(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -560,9 +521,6 @@ void TboxFunctions::Tbox_hast(DataChunk &args, ExpressionState &state, Vector &r
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_xmin(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -587,9 +545,6 @@ void TboxFunctions::Tbox_xmin(DataChunk &args, ExpressionState &state, Vector &r
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_xmin_inc(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -614,9 +569,6 @@ void TboxFunctions::Tbox_xmin_inc(DataChunk &args, ExpressionState &state, Vecto
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_xmax(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -641,9 +593,6 @@ void TboxFunctions::Tbox_xmax(DataChunk &args, ExpressionState &state, Vector &r
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_xmax_inc(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -668,9 +617,6 @@ void TboxFunctions::Tbox_xmax_inc(DataChunk &args, ExpressionState &state, Vecto
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_tmin(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -696,9 +642,6 @@ void TboxFunctions::Tbox_tmin(DataChunk &args, ExpressionState &state, Vector &r
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_tmin_inc(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -723,9 +666,6 @@ void TboxFunctions::Tbox_tmin_inc(DataChunk &args, ExpressionState &state, Vecto
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_tmax(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -751,9 +691,6 @@ void TboxFunctions::Tbox_tmax(DataChunk &args, ExpressionState &state, Vector &r
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_tmax_inc(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -778,9 +715,6 @@ void TboxFunctions::Tbox_tmax_inc(DataChunk &args, ExpressionState &state, Vecto
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 template <typename TB>
@@ -813,9 +747,6 @@ void TboxFunctions::TboxShiftValueExecutor(Vector &tbox, Vector &shift, LogicalT
             return MallocBlobToResult(result, shifted_tbox_data, shifted_tbox_size);
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_shift_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -851,9 +782,6 @@ void TboxFunctions::Tbox_shift_time(DataChunk &args, ExpressionState &state, Vec
             return MallocBlobToResult(result, shifted_tbox_data, shifted_tbox_size);
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 template <typename TB>
@@ -886,9 +814,6 @@ void TboxFunctions::TboxScaleValueExecutor(Vector &tbox, Vector &width, LogicalT
             return MallocBlobToResult(result, scaled_tbox_data, scaled_tbox_size);
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_scale_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -924,9 +849,6 @@ void TboxFunctions::Tbox_scale_time(DataChunk &args, ExpressionState &state, Vec
             return MallocBlobToResult(result, scaled_tbox_data, scaled_tbox_size);
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 template <typename TB>
@@ -962,9 +884,6 @@ void TboxFunctions::TboxShiftScaleValueExecutor(Vector &tbox, Vector &shift, Vec
             return MallocBlobToResult(result, shifted_scaled_tbox_data, shifted_scaled_tbox_size);
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_shift_scale_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1001,9 +920,6 @@ void TboxFunctions::Tbox_shift_scale_time(DataChunk &args, ExpressionState &stat
             return MallocBlobToResult(result, shifted_scaled_tbox_data, shifted_scaled_tbox_size);
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 template <typename TB>
@@ -1041,9 +957,6 @@ void TboxFunctions::TboxExpandValueExecutor(Vector &tbox, Vector &value, MeosTyp
             return MallocBlobToResult(result, ret_data, ret_size);
         }
     );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_expand_value(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1084,9 +997,6 @@ void TboxFunctions::Tbox_expand_time(DataChunk &args, ExpressionState &state, Ve
             return MallocBlobToResult(result, ret_data, ret_size);
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_round(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1133,9 +1043,6 @@ void TboxFunctions::Tbox_round(DataChunk &args, ExpressionState &state, Vector &
             }
         );
     }
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Contains_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1165,9 +1072,6 @@ void TboxFunctions::Contains_tbox_tbox(DataChunk &args, ExpressionState &state, 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Contained_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1197,9 +1101,6 @@ void TboxFunctions::Contained_tbox_tbox(DataChunk &args, ExpressionState &state,
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Overlaps_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1229,9 +1130,6 @@ void TboxFunctions::Overlaps_tbox_tbox(DataChunk &args, ExpressionState &state, 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Adjacent_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1261,9 +1159,6 @@ void TboxFunctions::Adjacent_tbox_tbox(DataChunk &args, ExpressionState &state, 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Same_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1293,9 +1188,6 @@ void TboxFunctions::Same_tbox_tbox(DataChunk &args, ExpressionState &state, Vect
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Left_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1325,9 +1217,6 @@ void TboxFunctions::Left_tbox_tbox(DataChunk &args, ExpressionState &state, Vect
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Overleft_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1357,9 +1246,6 @@ void TboxFunctions::Overleft_tbox_tbox(DataChunk &args, ExpressionState &state, 
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Right_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1389,9 +1275,6 @@ void TboxFunctions::Right_tbox_tbox(DataChunk &args, ExpressionState &state, Vec
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Overright_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {  
@@ -1421,9 +1304,6 @@ void TboxFunctions::Overright_tbox_tbox(DataChunk &args, ExpressionState &state,
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Before_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1453,9 +1333,6 @@ void TboxFunctions::Before_tbox_tbox(DataChunk &args, ExpressionState &state, Ve
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Overbefore_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1485,9 +1362,6 @@ void TboxFunctions::Overbefore_tbox_tbox(DataChunk &args, ExpressionState &state
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::After_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1517,9 +1391,6 @@ void TboxFunctions::After_tbox_tbox(DataChunk &args, ExpressionState &state, Vec
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Overafter_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1549,9 +1420,6 @@ void TboxFunctions::Overafter_tbox_tbox(DataChunk &args, ExpressionState &state,
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Union_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1590,9 +1458,6 @@ void TboxFunctions::Union_tbox_tbox(DataChunk &args, ExpressionState &state, Vec
             return MallocBlobToResult(result, ret_data, ret_size);
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Intersection_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1631,9 +1496,6 @@ void TboxFunctions::Intersection_tbox_tbox(DataChunk &args, ExpressionState &sta
             return MallocBlobToResult(result, ret_data, ret_size);
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 // Comparison operators
@@ -1664,9 +1526,6 @@ void TboxFunctions::Tbox_eq(DataChunk &args, ExpressionState &state, Vector &res
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_ne(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1696,9 +1555,6 @@ void TboxFunctions::Tbox_ne(DataChunk &args, ExpressionState &state, Vector &res
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_lt(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1728,9 +1584,6 @@ void TboxFunctions::Tbox_lt(DataChunk &args, ExpressionState &state, Vector &res
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_le(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1760,9 +1613,6 @@ void TboxFunctions::Tbox_le(DataChunk &args, ExpressionState &state, Vector &res
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_gt(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1792,9 +1642,6 @@ void TboxFunctions::Tbox_gt(DataChunk &args, ExpressionState &state, Vector &res
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_ge(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1824,9 +1671,6 @@ void TboxFunctions::Tbox_ge(DataChunk &args, ExpressionState &state, Vector &res
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_cmp(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1856,9 +1700,6 @@ void TboxFunctions::Tbox_cmp(DataChunk &args, ExpressionState &state, Vector &re
             return ret;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
@@ -1888,9 +1729,6 @@ void TboxFunctions::Tbox_as_wkb(DataChunk &args, ExpressionState &state, Vector 
             return stored;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1915,9 +1753,6 @@ void TboxFunctions::Tbox_as_hexwkb(DataChunk &args, ExpressionState &state, Vect
             return stored;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_from_wkb(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1944,9 +1779,6 @@ void TboxFunctions::Tbox_from_wkb(DataChunk &args, ExpressionState &state, Vecto
             return stored;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_from_hexwkb(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1968,9 +1800,6 @@ void TboxFunctions::Tbox_from_hexwkb(DataChunk &args, ExpressionState &state, Ve
             return stored;
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_hash(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1988,9 +1817,6 @@ void TboxFunctions::Tbox_hash(DataChunk &args, ExpressionState &state, Vector &r
             return static_cast<int32_t>(h);
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 void TboxFunctions::Tbox_hash_extended(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -2008,9 +1834,6 @@ void TboxFunctions::Tbox_hash_extended(DataChunk &args, ExpressionState &state, 
             return static_cast<int64_t>(h);
         }
     );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 } // namespace duckdb

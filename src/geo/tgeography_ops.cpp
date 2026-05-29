@@ -3,6 +3,7 @@
 // purely registration-and-glue; the heavy lifting stays in libmeos.
 
 #include "meos_wrapper_simple.hpp"
+#include "temporal/temporal_blob.hpp"
 
 #include "common.hpp"
 #include "geo/tgeography.hpp"
@@ -35,20 +36,14 @@ namespace {
 // Argument-decoding helpers
 // ====================================================================
 
-inline Temporal *DecodeTemporalCopy(string_t blob) {
-    size_t sz = blob.GetSize();
-    Temporal *t = (Temporal *) malloc(sz);
-    memcpy(t, blob.GetData(), sz);
-    return t;
-}
 
-inline STBox *DecodeStboxCopy(string_t blob) {
+static STBox *DecodeStboxCopy(string_t blob) {
     STBox *b = (STBox *) malloc(sizeof(STBox));
     memcpy(b, blob.GetData(), sizeof(STBox));
     return b;
 }
 
-inline Span *DecodeSpanCopy(string_t blob) {
+static Span *DecodeSpanCopy(string_t blob) {
     Span *s = (Span *) malloc(sizeof(Span));
     memcpy(s, blob.GetData(), sizeof(Span));
     return s;
@@ -63,7 +58,7 @@ void TspatialStboxBoolExec(DataChunk &args, ExpressionState &, Vector &result) {
     BinaryExecutor::Execute<string_t, string_t, bool>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t t_blob, string_t b_blob) {
-            Temporal *t = DecodeTemporalCopy(t_blob);
+            Temporal *t = BlobToTemporal(t_blob);
             STBox *b = DecodeStboxCopy(b_blob);
             bool r = FN(t, b);
             free(t); free(b);
@@ -82,7 +77,7 @@ void StboxTspatialBoolExec(DataChunk &args, ExpressionState &, Vector &result) {
         args.data[0], args.data[1], result, args.size(),
         [&](string_t b_blob, string_t t_blob) {
             STBox *b = DecodeStboxCopy(b_blob);
-            Temporal *t = DecodeTemporalCopy(t_blob);
+            Temporal *t = BlobToTemporal(t_blob);
             bool r = FN(t, b);
             free(t); free(b);
             return r;
@@ -94,8 +89,8 @@ void TspatialTspatialBoolExec(DataChunk &args, ExpressionState &, Vector &result
     BinaryExecutor::Execute<string_t, string_t, bool>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b) {
-            Temporal *t1 = DecodeTemporalCopy(a);
-            Temporal *t2 = DecodeTemporalCopy(b);
+            Temporal *t1 = BlobToTemporal(a);
+            Temporal *t2 = BlobToTemporal(b);
             bool r = FN(t1, t2);
             free(t1); free(t2);
             return r;
@@ -107,7 +102,7 @@ void TemporalTstzspanBoolExec(DataChunk &args, ExpressionState &, Vector &result
     BinaryExecutor::Execute<string_t, string_t, bool>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t t_blob, string_t s_blob) {
-            Temporal *t = DecodeTemporalCopy(t_blob);
+            Temporal *t = BlobToTemporal(t_blob);
             Span *s = DecodeSpanCopy(s_blob);
             bool r = FN(t, s);
             free(t); free(s);
@@ -121,7 +116,7 @@ void TstzspanTemporalBoolExec(DataChunk &args, ExpressionState &, Vector &result
         args.data[0], args.data[1], result, args.size(),
         [&](string_t s_blob, string_t t_blob) {
             Span *s = DecodeSpanCopy(s_blob);
-            Temporal *t = DecodeTemporalCopy(t_blob);
+            Temporal *t = BlobToTemporal(t_blob);
             bool r = FN(s, t);
             free(t); free(s);
             return r;
@@ -138,7 +133,7 @@ void TgeoGeoIntExec(DataChunk &args, ExpressionState &, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t t_blob, string_t g_blob, ValidityMask &mask, idx_t idx) {
-            Temporal *t = DecodeTemporalCopy(t_blob);
+            Temporal *t = BlobToTemporal(t_blob);
             int32 srid = tspatial_srid(t);
             GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
             int r = FN(t, gs);
@@ -153,7 +148,7 @@ void GeoTgeoIntExec(DataChunk &args, ExpressionState &, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t g_blob, string_t t_blob, ValidityMask &mask, idx_t idx) {
-            Temporal *t = DecodeTemporalCopy(t_blob);
+            Temporal *t = BlobToTemporal(t_blob);
             int32 srid = tspatial_srid(t);
             GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
             int r = FN(gs, t);
@@ -168,8 +163,8 @@ void TgeoTgeoIntExec(DataChunk &args, ExpressionState &, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) {
-            Temporal *t1 = DecodeTemporalCopy(a);
-            Temporal *t2 = DecodeTemporalCopy(b);
+            Temporal *t1 = BlobToTemporal(a);
+            Temporal *t2 = BlobToTemporal(b);
             int r = FN(t1, t2);
             free(t1); free(t2);
             if (r < 0) { mask.SetInvalid(idx); return false; }
@@ -182,7 +177,7 @@ void TgeoGeoDistIntExec(DataChunk &args, ExpressionState &, Vector &result) {
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, bool>(
         args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t t_blob, string_t g_blob, double dist, ValidityMask &mask, idx_t idx) {
-            Temporal *t = DecodeTemporalCopy(t_blob);
+            Temporal *t = BlobToTemporal(t_blob);
             int32 srid = tspatial_srid(t);
             GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
             int r = FN(t, gs, dist);
@@ -197,7 +192,7 @@ void GeoTgeoDistIntExec(DataChunk &args, ExpressionState &, Vector &result) {
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, bool>(
         args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t g_blob, string_t t_blob, double dist, ValidityMask &mask, idx_t idx) {
-            Temporal *t = DecodeTemporalCopy(t_blob);
+            Temporal *t = BlobToTemporal(t_blob);
             int32 srid = tspatial_srid(t);
             GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
             int r = FN(gs, t, dist);
@@ -214,7 +209,7 @@ void GeoTgeoDistIntExec_FromTgeoGeo(DataChunk &args, ExpressionState &, Vector &
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, bool>(
         args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t g_blob, string_t t_blob, double dist, ValidityMask &mask, idx_t idx) {
-            Temporal *t = DecodeTemporalCopy(t_blob);
+            Temporal *t = BlobToTemporal(t_blob);
             int32 srid = tspatial_srid(t);
             GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
             int r = FN(t, gs, dist);
@@ -229,8 +224,8 @@ void TgeoTgeoDistIntExec(DataChunk &args, ExpressionState &, Vector &result) {
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, bool>(
         args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t a, string_t b, double dist, ValidityMask &mask, idx_t idx) {
-            Temporal *t1 = DecodeTemporalCopy(a);
-            Temporal *t2 = DecodeTemporalCopy(b);
+            Temporal *t1 = BlobToTemporal(a);
+            Temporal *t2 = BlobToTemporal(b);
             int r = FN(t1, t2, dist);
             free(t1); free(t2);
             if (r < 0) { mask.SetInvalid(idx); return false; }
@@ -244,20 +239,13 @@ void TgeoTgeoDistIntExec(DataChunk &args, ExpressionState &, Vector &result) {
 // covering the whole input duration.
 // ====================================================================
 
-inline string_t TemporalToBlob(Vector &result, Temporal *t) {
-    size_t sz = temporal_mem_size(t);
-    string_t out = StringVector::AddStringOrBlob(
-        result, reinterpret_cast<const char *>(t), sz);
-    free(t);
-    return out;
-}
 
 template <Temporal *(*FN)(const Temporal *, const GSERIALIZED *)>
 void TgeoGeoTempExec(DataChunk &args, ExpressionState &, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t t_blob, string_t g_blob, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = DecodeTemporalCopy(t_blob);
+            Temporal *t = BlobToTemporal(t_blob);
             int32 srid = tspatial_srid(t);
             GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
             Temporal *r = FN(t, gs);
@@ -272,7 +260,7 @@ void GeoTgeoTempExec(DataChunk &args, ExpressionState &, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t g_blob, string_t t_blob, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = DecodeTemporalCopy(t_blob);
+            Temporal *t = BlobToTemporal(t_blob);
             int32 srid = tspatial_srid(t);
             GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
             Temporal *r = FN(gs, t);
@@ -287,8 +275,8 @@ void TgeoTgeoTempExec(DataChunk &args, ExpressionState &, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t1 = DecodeTemporalCopy(a);
-            Temporal *t2 = DecodeTemporalCopy(b);
+            Temporal *t1 = BlobToTemporal(a);
+            Temporal *t2 = BlobToTemporal(b);
             Temporal *r = FN(t1, t2);
             free(t1); free(t2);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
@@ -302,7 +290,7 @@ void TgeoGeoDistTempExec(DataChunk &args, ExpressionState &, Vector &result) {
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, string_t>(
         args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t t_blob, string_t g_blob, double dist, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = DecodeTemporalCopy(t_blob);
+            Temporal *t = BlobToTemporal(t_blob);
             int32 srid = tspatial_srid(t);
             GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
             Temporal *r = FN(t, gs, dist);
@@ -317,7 +305,7 @@ void GeoTgeoDistTempExec(DataChunk &args, ExpressionState &, Vector &result) {
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, string_t>(
         args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t g_blob, string_t t_blob, double dist, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = DecodeTemporalCopy(t_blob);
+            Temporal *t = BlobToTemporal(t_blob);
             int32 srid = tspatial_srid(t);
             GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
             Temporal *r = FN(gs, t, dist);
@@ -332,8 +320,8 @@ void TgeoTgeoDistTempExec(DataChunk &args, ExpressionState &, Vector &result) {
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, string_t>(
         args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t a, string_t b, double dist, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t1 = DecodeTemporalCopy(a);
-            Temporal *t2 = DecodeTemporalCopy(b);
+            Temporal *t1 = BlobToTemporal(a);
+            Temporal *t2 = BlobToTemporal(b);
             Temporal *r = FN(t1, t2, dist);
             free(t1); free(t2);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
@@ -350,7 +338,7 @@ void TgeoGeoDistanceExec(DataChunk &args, ExpressionState &, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t t_blob, string_t g_blob, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = DecodeTemporalCopy(t_blob);
+            Temporal *t = BlobToTemporal(t_blob);
             int32 srid = tspatial_srid(t);
             GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
             Temporal *r = FN(t, gs);
@@ -365,8 +353,8 @@ void TgeoTgeoDistanceExec(DataChunk &args, ExpressionState &, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t1 = DecodeTemporalCopy(a);
-            Temporal *t2 = DecodeTemporalCopy(b);
+            Temporal *t1 = BlobToTemporal(a);
+            Temporal *t2 = BlobToTemporal(b);
             Temporal *r = FN(t1, t2);
             free(t1); free(t2);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
@@ -380,14 +368,14 @@ void TgeoTgeoDistanceExec(DataChunk &args, ExpressionState &, Vector &result) {
 // tgeography <-> tgeogpoint coercions.
 // ====================================================================
 
-inline string_t StboxToBlob(Vector &result, STBox *box) {
+static string_t StboxToBlob(Vector &result, STBox *box) {
     string_t out = StringVector::AddStringOrBlob(
         result, reinterpret_cast<const char *>(box), sizeof(STBox));
     free(box);
     return out;
 }
 
-inline string_t GeoToBlobAsHex(Vector &result, GSERIALIZED *gs) {
+static string_t GeoToBlobAsHex(Vector &result, GSERIALIZED *gs) {
     if (!gs) return string_t();
     size_t sz = 0;
     uint8_t *ewkb = geo_as_ewkb(gs, NULL, &sz);
@@ -402,7 +390,7 @@ void TspatialSridExec(DataChunk &args, ExpressionState &, Vector &result) {
     UnaryExecutor::Execute<string_t, int32_t>(
         args.data[0], result, args.size(),
         [&](string_t blob) {
-            Temporal *t = DecodeTemporalCopy(blob);
+            Temporal *t = BlobToTemporal(blob);
             int32_t srid = tspatial_srid(t);
             free(t);
             return srid;
@@ -413,7 +401,7 @@ void TspatialSetSridExec(DataChunk &args, ExpressionState &, Vector &result) {
     BinaryExecutor::Execute<string_t, int32_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t blob, int32_t srid) {
-            Temporal *t = DecodeTemporalCopy(blob);
+            Temporal *t = BlobToTemporal(blob);
             Temporal *r = tspatial_set_srid(t, srid);
             free(t);
             if (!r) throw InvalidInputException("setSRID failed");
@@ -425,7 +413,7 @@ void TspatialTransformExec(DataChunk &args, ExpressionState &, Vector &result) {
     BinaryExecutor::Execute<string_t, int32_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t blob, int32_t srid) {
-            Temporal *t = DecodeTemporalCopy(blob);
+            Temporal *t = BlobToTemporal(blob);
             Temporal *r = tspatial_transform(t, srid);
             free(t);
             if (!r) throw InvalidInputException("transform failed");
@@ -437,7 +425,7 @@ void TspatialToStboxExec(DataChunk &args, ExpressionState &, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t blob) {
-            Temporal *t = DecodeTemporalCopy(blob);
+            Temporal *t = BlobToTemporal(blob);
             STBox *box = tspatial_to_stbox(t);
             free(t);
             return StboxToBlob(result, box);
@@ -451,7 +439,7 @@ void TgeographyToTgeometryExec(DataChunk &args, ExpressionState &, Vector &resul
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t blob) {
-            Temporal *t = DecodeTemporalCopy(blob);
+            Temporal *t = BlobToTemporal(blob);
             Temporal *r = tgeography_to_tgeometry(t);
             free(t);
             if (!r) throw InvalidInputException("tgeometry(tgeography) failed");
@@ -463,7 +451,7 @@ void TgeometryToTgeographyExec(DataChunk &args, ExpressionState &, Vector &resul
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t blob) {
-            Temporal *t = DecodeTemporalCopy(blob);
+            Temporal *t = BlobToTemporal(blob);
             Temporal *r = tgeometry_to_tgeography(t);
             free(t);
             if (!r) throw InvalidInputException("tgeography(tgeometry) failed");
@@ -475,7 +463,7 @@ void TgeoCentroidExec(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t blob) -> string_t {
-            Temporal *t = DecodeTemporalCopy(blob);
+            Temporal *t = BlobToTemporal(blob);
             Temporal *r = tgeo_centroid(t);
             free(t);
             if (!r) throw InvalidInputException("centroid failed");
@@ -487,7 +475,7 @@ void TgeoConvexHullExec(DataChunk &args, ExpressionState &state, Vector &result)
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t blob) -> string_t {
-            Temporal *t = DecodeTemporalCopy(blob);
+            Temporal *t = BlobToTemporal(blob);
             GSERIALIZED *gs = tgeo_convex_hull(t);
             free(t);
             return GeoToBlobAsHex(result, gs);
@@ -500,7 +488,7 @@ void TgeoTraversedAreaExec(DataChunk &args, ExpressionState &, Vector &result) {
         BinaryExecutor::Execute<string_t, bool, string_t>(
             args.data[0], args.data[1], result, cnt,
             [&](string_t blob, bool unary_union) -> string_t {
-                Temporal *t = DecodeTemporalCopy(blob);
+                Temporal *t = BlobToTemporal(blob);
                 GSERIALIZED *gs = tgeo_traversed_area(t, unary_union);
                 free(t);
                 return GeoToBlobAsHex(result, gs);
@@ -509,7 +497,7 @@ void TgeoTraversedAreaExec(DataChunk &args, ExpressionState &, Vector &result) {
         UnaryExecutor::Execute<string_t, string_t>(
             args.data[0], result, cnt,
             [&](string_t blob) -> string_t {
-                Temporal *t = DecodeTemporalCopy(blob);
+                Temporal *t = BlobToTemporal(blob);
                 GSERIALIZED *gs = tgeo_traversed_area(t, false);
                 free(t);
                 return GeoToBlobAsHex(result, gs);
@@ -839,7 +827,7 @@ void TGeographyOps::RegisterScalarFunctions(ExtensionLoader &loader) {
                 result_validity.SetInvalid(i);
                 continue;
             }
-            Temporal *t = DecodeTemporalCopy(t_data[i]);
+            Temporal *t = BlobToTemporal(t_data[i]);
             GSERIALIZED *origin = geompoint_make3dz(0, 0.0, 0.0, 0.0);
             int count = 0;
             STBox *boxes = tgeo_space_boxes(
@@ -879,7 +867,7 @@ void TGeographyOps::RegisterScalarFunctions(ExtensionLoader &loader) {
                 result_validity.SetInvalid(i);
                 continue;
             }
-            Temporal *t = DecodeTemporalCopy(t_data[i]);
+            Temporal *t = BlobToTemporal(t_data[i]);
             GSERIALIZED *origin = geompoint_make3dz(0, 0.0, 0.0, 0.0);
             MeosInterval iv = IntervaltToInterval(dur_data[i]);
             constexpr int64_t DEFAULT_TIME_ORIGIN_MEOS = 2LL * 86400LL * 1000000LL;
@@ -909,7 +897,7 @@ void TGeographyOps::RegisterScalarFunctions(ExtensionLoader &loader) {
             BinaryExecutor::Execute<string_t, double, string_t>(
                 args.data[0], args.data[1], result, args.size(),
                 [&](string_t blob, double eps) {
-                    Temporal *t = DecodeTemporalCopy(blob);
+                    Temporal *t = BlobToTemporal(blob);
                     Temporal *r = FN(t, eps);
                     free(t);
                     if (!r) throw InvalidInputException("simplify failed");
@@ -933,7 +921,7 @@ void TGeographyOps::RegisterScalarFunctions(ExtensionLoader &loader) {
                     continue;
                 }
                 bool sync = has_third ? FlatVector::GetData<bool>(args.data[2])[i] : true;
-                Temporal *t = DecodeTemporalCopy(blob_data[i]);
+                Temporal *t = BlobToTemporal(blob_data[i]);
                 Temporal *r = FN(t, eps_data[i], sync);
                 free(t);
                 if (!r) {
@@ -955,7 +943,7 @@ void TGeographyOps::RegisterScalarFunctions(ExtensionLoader &loader) {
             BinaryExecutor::Execute<string_t, interval_t, string_t>(
                 args.data[0], args.data[1], result, args.size(),
                 [&](string_t blob, interval_t iv) {
-                    Temporal *t = DecodeTemporalCopy(blob);
+                    Temporal *t = BlobToTemporal(blob);
                     MeosInterval miv = IntervaltToInterval(iv);
                     Temporal *r = temporal_simplify_min_tdelta(t, &miv);
                     free(t);
