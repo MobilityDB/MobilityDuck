@@ -5,6 +5,7 @@
 #include "duckdb/function/cast/default_casts.hpp"
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
+#include "mobilityduck/meos_error_guard.hpp"
 #include "mobilityduck/meos_thread.hpp"
 
 namespace duckdb {
@@ -29,7 +30,7 @@ inline ScalarFunction WrapScalarFunctionWithMeosExecMutex(ScalarFunction sf) {
 	sf.function = [orig = std::move(orig)](DataChunk &args, ExpressionState &state, Vector &result) {
 		std::lock_guard<std::mutex> guard(MeosSerializedExecMutex());
 		EnsureMeosThreadInitialized();
-		orig(args, state, result);
+		MeosGuardedRun([&]() { orig(args, state, result); });
 	};
 	return sf;
 }
@@ -56,9 +57,12 @@ struct MeosCastData : BoundCastData {
 };
 
 inline bool MeosCastTrampoline(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+	std::lock_guard<std::mutex> guard(MeosSerializedExecMutex());
 	EnsureMeosThreadInitialized();
 	auto &data = parameters.cast_data->Cast<MeosCastData>();
-	return data.orig(source, result, count, parameters);
+	bool ok = true;
+	MeosGuardedRun([&]() { ok = data.orig(source, result, count, parameters); });
+	return ok;
 }
 
 inline void RegisterMeosCastFunction(ExtensionLoader &loader, const LogicalType &source, const LogicalType &target,

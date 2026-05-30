@@ -58,6 +58,7 @@ extern "C" {
 // OpenSSL linked through vcpkg
 #include <openssl/opensslv.h>
 
+#include "mobilityduck/meos_error_guard.hpp"
 #include "mobilityduck/meos_exec_serial.hpp"
 
 namespace duckdb {
@@ -198,10 +199,24 @@ static void ConfigureMeosSridCsvOnce() {
 // informational and ignored.
 static constexpr int MEOS_ERRLEVEL_ERROR = 21;
 
+// Longjmp landing-pad state for the MEOS error handler, declared in
+// mobilityduck/meos_error_guard.hpp. Defined here, the translation unit that
+// owns the handler.
+thread_local sigjmp_buf MeosJmpBuf;
+thread_local bool        MeosGuardActive = false;
+thread_local std::string MeosErrMsg;
+
 extern "C" void MobilityduckMeosErrorHandler(int errlevel, int errcode, const char *errmsg) {
     (void) errcode;
     if (errlevel >= MEOS_ERRLEVEL_ERROR) {
-        throw duckdb::InvalidInputException(errmsg ? errmsg : "MEOS error");
+        MeosErrMsg = errmsg ? errmsg : "MEOS error";
+        // Unwind to the nearest MeosGuardedRun boundary installed during a
+        // scalar/cast execution and throw from pure C++ frames there; throwing
+        // straight out of this C callback would unwind through MEOS C frames.
+        if (MeosGuardActive) {
+            siglongjmp(MeosJmpBuf, 1);
+        }
+        throw InvalidInputException(MeosErrMsg);
     }
 }
 
