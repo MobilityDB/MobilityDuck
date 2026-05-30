@@ -2,15 +2,15 @@
 # description: MobilityDB regression file 042_temporal_waggfuncs.test.sql adapted for MobilityDuck
 # group: [sql]
 #
-# Windowed temporal aggregates (WminAgg, WmaxAgg, WsumAgg, WavgAgg) over a
+# Windowed temporal aggregates (Wmin, Wmax, Wsum, Wavg) over a
 # fixed-width interval window. RFC #827 Pascal-cased names.
 #
-# WcountAgg: tnumber_wcount_transfn is absent from the pinned MEOS commit
+# Wcount: tnumber_wcount_transfn is absent from the pinned MEOS commit
 # (f11b7443e); that overload is omitted and tracked for re-activation when
 # MEOS is bumped.
 #
-# Window aggregates over TSequence input: MobilityDuck's WminAgg/WmaxAgg/
-# WsumAgg with a single-row TSequence input produce a constant-value result
+# Window aggregates over TSequence input: MobilityDuck's Wmin/Wmax/
+# Wsum with a single-row TSequence input produce a constant-value result
 # (first value extended to end+duration). This matches MEOS's SkipList window
 # accumulator behaviour for a single TSequence row; the per-instant case is
 # verified in 031_aggregates_skiplist.test.
@@ -18,16 +18,16 @@
 require mobilityduck
 
 query I
-SELECT WminAgg(temp::tint, INTERVAL '1 day')::VARCHAR FROM (VALUES ('[1@2000-01-01, 5@2000-01-05]')) t(temp);
+SELECT Wmin(temp::tint, INTERVAL '1 day')::VARCHAR FROM (VALUES ('[1@2000-01-01, 5@2000-01-05]')) t(temp);
 ----
 {[1@2000-01-01 00:00:00+01, 1@2000-01-06 00:00:00+01]}
 
 query I
-SELECT WmaxAgg(temp::tint, INTERVAL '1 day')::VARCHAR FROM (VALUES ('[1@2000-01-01, 5@2000-01-05]')) t(temp);
+SELECT Wmax(temp::tint, INTERVAL '1 day')::VARCHAR FROM (VALUES ('[1@2000-01-01, 5@2000-01-05]')) t(temp);
 ----
 {[1@2000-01-01 00:00:00+01, 1@2000-01-06 00:00:00+01]}
 
 query I
-SELECT WsumAgg(temp::tint, INTERVAL '1 day')::VARCHAR FROM (VALUES ('[1@2000-01-01, 5@2000-01-05]')) t(temp);
+SELECT Wsum(temp::tint, INTERVAL '1 day')::VARCHAR FROM (VALUES ('[1@2000-01-01, 5@2000-01-05]')) t(temp);
 ----
 {[1@2000-01-01 00:00:00+01, 1@2000-01-06 00:00:00+01]}

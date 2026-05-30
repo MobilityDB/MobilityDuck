@@ -1067,7 +1067,7 @@ struct SetUnionSetFunction {
 } // anonymous namespace
 
 void SetTypes::RegisterSetUnionAgg(ExtensionLoader &loader) {
-    AggregateFunctionSet set_union_set("SetUnionAgg");
+    AggregateFunctionSet set_union_set("SetUnion");
 
     // Scalar overloads: convert each value to a single-element Set.
     set_union_set.AddFunction(

@@ -312,7 +312,7 @@ SELECT (traversedArea(t::tgeometry) IS NOT NULL) FROM (VALUES
 true
 
 # =============================================================================
-# Aggregate wiring — extent / TcountAgg / MergeAgg / AppendInstantAgg over
+# Aggregate wiring — extent / Tcount / MergeAgg / AppendInstantAgg over
 # tgeometry inputs.
 # =============================================================================
 
@@ -323,7 +323,7 @@ SELECT extent(t::tgeometry)::VARCHAR FROM (VALUES
 STBOX XT(((0,0),(2,2)),[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01])
 
 query I
-SELECT TcountAgg(t::tgeometry)::VARCHAR FROM (VALUES
+SELECT Tcount(t::tgeometry)::VARCHAR FROM (VALUES
   ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
 ----
 {1@2000-01-01 00:00:00+01, 1@2000-01-02 00:00:00+01}

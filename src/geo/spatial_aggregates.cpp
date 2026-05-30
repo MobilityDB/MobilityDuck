@@ -281,7 +281,7 @@ void SpatialAggregates::AddExtentOverloads(AggregateFunctionSet &extent_set) {
 }
 
 void SpatialAggregates::RegisterTcentroid(ExtensionLoader &loader) {
-    AggregateFunctionSet tcentroid_set("TcentroidAgg");
+    AggregateFunctionSet tcentroid_set("Tcentroid");
     tcentroid_set.AddFunction(MakeTcentroidAggregate(TgeompointType::TGEOMPOINT()));
     loader.RegisterFunction(std::move(tcentroid_set));
 }

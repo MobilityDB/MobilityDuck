@@ -1,7 +1,7 @@
 # name: test/sql/parity/031_aggregates_skiplist.test
-# description: SkipList-state aggregates — TandAgg, TorAgg, TcountAgg, TminAgg,
-#              TmaxAgg, TsumAgg, TavgAgg, TcentroidAgg, MergeAgg,
-#              AppendInstantAgg, AppendSequenceAgg, SpanUnionAgg, SetUnionAgg,
+# description: SkipList-state aggregates — Tand, Tor, Tcount, TminAgg,
+#              TmaxAgg, Tsum, Tavg, Tcentroid, MergeAgg,
+#              AppendInstantAgg, AppendSequenceAgg, SpanUnion, SetUnion,
 #              and the window aggregates W{min,max,sum,count,avg}Agg. Names
 #              follow MobilityDB RFC #827 — every SkipList aggregate is
 #              exposed under a Pascal-cased *Agg identifier. The MobilityDB
@@ -16,46 +16,46 @@ statement ok
 SET TimeZone='UTC'
 
 # =============================================================================
-# TandAgg / TorAgg on tbool
+# Tand / Tor on tbool
 # =============================================================================
 
 query I
-SELECT TandAgg(v::tbool)::VARCHAR FROM (VALUES ('true@2000-01-01'),('true@2000-01-02')) t(v);
+SELECT Tand(v::tbool)::VARCHAR FROM (VALUES ('true@2000-01-01'),('true@2000-01-02')) t(v);
 ----
 {t@2000-01-01 00:00:00+01, t@2000-01-02 00:00:00+01}
 
 query I
-SELECT TorAgg(v::tbool)::VARCHAR FROM (VALUES ('true@2000-01-01'),('false@2000-01-02')) t(v);
+SELECT Tor(v::tbool)::VARCHAR FROM (VALUES ('true@2000-01-01'),('false@2000-01-02')) t(v);
 ----
 {t@2000-01-01 00:00:00+01, f@2000-01-02 00:00:00+01}
 
 # Single-row aggregate degenerates to identity over the input.
 query I
-SELECT TandAgg(v::tbool)::VARCHAR FROM (VALUES ('true@2000-01-01')) t(v);
+SELECT Tand(v::tbool)::VARCHAR FROM (VALUES ('true@2000-01-01')) t(v);
 ----
 {t@2000-01-01 00:00:00+01}
 
 # =============================================================================
-# TcountAgg over each temporal type → tint
+# Tcount over each temporal type → tint
 # =============================================================================
 
 query I
-SELECT TcountAgg(v::tint)::VARCHAR FROM (VALUES ('1@2000-01-01'),('5@2000-01-02')) t(v);
+SELECT Tcount(v::tint)::VARCHAR FROM (VALUES ('1@2000-01-01'),('5@2000-01-02')) t(v);
 ----
 {1@2000-01-01 00:00:00+01, 1@2000-01-02 00:00:00+01}
 
 query I
-SELECT TcountAgg(v::tfloat)::VARCHAR FROM (VALUES ('1.5@2000-01-01'),('5.5@2000-01-02')) t(v);
+SELECT Tcount(v::tfloat)::VARCHAR FROM (VALUES ('1.5@2000-01-01'),('5.5@2000-01-02')) t(v);
 ----
 {1@2000-01-01 00:00:00+01, 1@2000-01-02 00:00:00+01}
 
 query I
-SELECT TcountAgg(v::tbool)::VARCHAR FROM (VALUES ('true@2000-01-01'),('false@2000-01-02')) t(v);
+SELECT Tcount(v::tbool)::VARCHAR FROM (VALUES ('true@2000-01-01'),('false@2000-01-02')) t(v);
 ----
 {1@2000-01-01 00:00:00+01, 1@2000-01-02 00:00:00+01}
 
 query I
-SELECT TcountAgg(v::ttext)::VARCHAR FROM (VALUES ('"hi"@2000-01-01'),('"bye"@2000-01-02')) t(v);
+SELECT Tcount(v::ttext)::VARCHAR FROM (VALUES ('"hi"@2000-01-01'),('"bye"@2000-01-02')) t(v);
 ----
 {1@2000-01-01 00:00:00+01, 1@2000-01-02 00:00:00+01}
 
@@ -84,70 +84,70 @@ SELECT TmaxAgg(v::ttext)::VARCHAR FROM (VALUES ('"a"@2000-01-01'),('"z"@2000-01-
 {"a"@2000-01-01 00:00:00+01, "z"@2000-01-02 00:00:00+01}
 
 # =============================================================================
-# TsumAgg on tint, tfloat
+# Tsum on tint, tfloat
 # =============================================================================
 
 query I
-SELECT TsumAgg(v::tint)::VARCHAR FROM (VALUES ('1@2000-01-01'),('5@2000-01-02')) t(v);
+SELECT Tsum(v::tint)::VARCHAR FROM (VALUES ('1@2000-01-01'),('5@2000-01-02')) t(v);
 ----
 {1@2000-01-01 00:00:00+01, 5@2000-01-02 00:00:00+01}
 
 query I
-SELECT TsumAgg(v::tfloat)::VARCHAR FROM (VALUES ('1.5@2000-01-01'),('2.5@2000-01-02')) t(v);
+SELECT Tsum(v::tfloat)::VARCHAR FROM (VALUES ('1.5@2000-01-01'),('2.5@2000-01-02')) t(v);
 ----
 {1.5@2000-01-01 00:00:00+01, 2.5@2000-01-02 00:00:00+01}
 
 # =============================================================================
-# TavgAgg on tint, tfloat → tfloat
+# Tavg on tint, tfloat → tfloat
 # =============================================================================
 
 query I
-SELECT TavgAgg(v::tint)::VARCHAR FROM (VALUES ('2@2000-01-01'),('4@2000-01-02')) t(v);
+SELECT Tavg(v::tint)::VARCHAR FROM (VALUES ('2@2000-01-01'),('4@2000-01-02')) t(v);
 ----
 {2@2000-01-01 00:00:00+01, 4@2000-01-02 00:00:00+01}
 
 query I
-SELECT TavgAgg(v::tfloat)::VARCHAR FROM (VALUES ('2.0@2000-01-01'),('4.0@2000-01-02')) t(v);
+SELECT Tavg(v::tfloat)::VARCHAR FROM (VALUES ('2.0@2000-01-01'),('4.0@2000-01-02')) t(v);
 ----
 {2@2000-01-01 00:00:00+01, 4@2000-01-02 00:00:00+01}
 
 # =============================================================================
-# TcentroidAgg on tgeompoint
+# Tcentroid on tgeompoint
 #
 # Output is the EWKB-hex display format MobilityDuck uses for geometry, not
 # WKT — both points encode the input coordinates verbatim.
 # =============================================================================
 
 query I
-SELECT TcentroidAgg(v::tgeompoint)::VARCHAR FROM (VALUES
+SELECT Tcentroid(v::tgeompoint)::VARCHAR FROM (VALUES
   ('Point(0 0)@2000-01-01'),('Point(2 4)@2000-01-02')) t(v);
 ----
 {010100000000000000000000000000000000000000@2000-01-01 00:00:00+01, 010100000000000000000000400000000000001040@2000-01-02 00:00:00+01}
 
 # =============================================================================
-# TcountAgg over time-only inputs (timestamptz / tstzset / tstzspan / tstzspanset)
+# Tcount over time-only inputs (timestamptz / tstzset / tstzspan / tstzspanset)
 # =============================================================================
 
 query I
-SELECT TcountAgg(t::timestamptz)::VARCHAR FROM (VALUES
+SELECT Tcount(t::timestamptz)::VARCHAR FROM (VALUES
   ('2000-01-01 00:00:00+00'::timestamptz), ('2000-01-02 00:00:00+00')) t(t);
 ----
 {1@2000-01-01 01:00:00+01, 1@2000-01-02 01:00:00+01}
 
 query I
-SELECT TcountAgg(s::tstzset)::VARCHAR FROM (VALUES
+SELECT Tcount(s::tstzset)::VARCHAR FROM (VALUES
   ('{2000-01-01, 2000-01-02}'::tstzset), ('{2000-01-02, 2000-01-03}')) t(s);
 ----
 {1@2000-01-01 00:00:00+01, 2@2000-01-02 00:00:00+01, 1@2000-01-03 00:00:00+01}
 
 query I
-SELECT TcountAgg(s::tstzspan)::VARCHAR FROM (VALUES
+SELECT Tcount(s::tstzspan)::VARCHAR FROM (VALUES
   ('[2000-01-01, 2000-01-03)'::tstzspan), ('[2000-01-02, 2000-01-04)')) t(s);
 ----
 {[1@2000-01-01 00:00:00+01, 2@2000-01-02 00:00:00+01, 1@2000-01-03 00:00:00+01, 1@2000-01-04 00:00:00+01)}
 
 query I
-SELECT TcountAgg(s::tstzspanset)::VARCHAR FROM (VALUES
+SELECT Tcount(s::tstzspanset)::VARCHAR FROM (VALUES
   ('{[2000-01-01, 2000-01-03)}'::tstzspanset), ('{[2000-01-02, 2000-01-04)}')) t(s);
 ----
 {[1@2000-01-01 00:00:00+01, 2@2000-01-02 00:00:00+01, 1@2000-01-03 00:00:00+01, 1@2000-01-04 00:00:00+01)}
@@ -174,56 +174,56 @@ SELECT AppendSequenceAgg(v::tint)::VARCHAR FROM (VALUES
 {[1@2000-01-01 00:00:00+01, 2@2000-01-02 00:00:00+01], [5@2000-01-04 00:00:00+01, 6@2000-01-05 00:00:00+01]}
 
 # =============================================================================
-# SpanUnionAgg / SetUnionAgg
+# SpanUnion / SetUnion
 # =============================================================================
 
 query I
-SELECT SpanUnionAgg(s::intspan)::VARCHAR FROM (VALUES ('[1, 5)'), ('[3, 8)')) t(s);
+SELECT SpanUnion(s::intspan)::VARCHAR FROM (VALUES ('[1, 5)'), ('[3, 8)')) t(s);
 ----
 {[1, 8)}
 
 query I
-SELECT SpanUnionAgg(s::intspanset)::VARCHAR FROM (VALUES
+SELECT SpanUnion(s::intspanset)::VARCHAR FROM (VALUES
   ('{[1, 3), [5, 7)}'), ('{[10, 15)}')) t(s);
 ----
 {[1, 3), [5, 7), [10, 15)}
 
 query I
-SELECT SetUnionAgg(v::int)::VARCHAR FROM (VALUES (1), (3), (5), (3)) t(v);
+SELECT SetUnion(v::int)::VARCHAR FROM (VALUES (1), (3), (5), (3)) t(v);
 ----
 {1, 3, 5}
 
 query I
-SELECT SetUnionAgg(v::intset)::VARCHAR FROM (VALUES ('{1, 3}'::intset), ('{2, 4}')) t(v);
+SELECT SetUnion(v::intset)::VARCHAR FROM (VALUES ('{1, 3}'::intset), ('{2, 4}')) t(v);
 ----
 {1, 2, 3, 4}
 
 query I
-SELECT SetUnionAgg(d::date)::VARCHAR FROM (VALUES ('2001-01-01'::date), ('2001-01-03')) t(d);
+SELECT SetUnion(d::date)::VARCHAR FROM (VALUES ('2001-01-01'::date), ('2001-01-03')) t(d);
 ----
 {2001-01-01, 2001-01-03}
 
 # =============================================================================
-# Window aggregates: WminAgg / WmaxAgg / WsumAgg / WcountAgg / WavgAgg
+# Window aggregates: Wmin / Wmax / Wsum / Wcount / Wavg
 # =============================================================================
 
 query I
-SELECT WminAgg(v::tint, INTERVAL '2 days')::VARCHAR FROM (VALUES ('1@2000-01-01'),('5@2000-01-02'),('3@2000-01-04')) t(v);
+SELECT Wmin(v::tint, INTERVAL '2 days')::VARCHAR FROM (VALUES ('1@2000-01-01'),('5@2000-01-02'),('3@2000-01-04')) t(v);
 ----
 {[1@2000-01-01 00:00:00+01, 1@2000-01-03 00:00:00+01], (5@2000-01-03 00:00:00+01, 3@2000-01-04 00:00:00+01, 3@2000-01-06 00:00:00+01]}
 
 query I
-SELECT WmaxAgg(v::tfloat, INTERVAL '2 days')::VARCHAR FROM (VALUES ('1.5@2000-01-01'),('5.5@2000-01-02')) t(v);
+SELECT Wmax(v::tfloat, INTERVAL '2 days')::VARCHAR FROM (VALUES ('1.5@2000-01-01'),('5.5@2000-01-02')) t(v);
 ----
 {[1.5@2000-01-01 00:00:00+01, 1.5@2000-01-02 00:00:00+01), [5.5@2000-01-02 00:00:00+01, 5.5@2000-01-04 00:00:00+01]}
 
 query I
-SELECT WsumAgg(v::tint, INTERVAL '2 days')::VARCHAR FROM (VALUES ('1@2000-01-01'),('5@2000-01-02')) t(v);
+SELECT Wsum(v::tint, INTERVAL '2 days')::VARCHAR FROM (VALUES ('1@2000-01-01'),('5@2000-01-02')) t(v);
 ----
 {[1@2000-01-01 00:00:00+01, 6@2000-01-02 00:00:00+01, 6@2000-01-03 00:00:00+01], (5@2000-01-03 00:00:00+01, 5@2000-01-04 00:00:00+01]}
 
 query I
-SELECT WavgAgg(v::tint, INTERVAL '2 days')::VARCHAR FROM (VALUES ('2@2000-01-01'),('4@2000-01-02')) t(v);
+SELECT Wavg(v::tint, INTERVAL '2 days')::VARCHAR FROM (VALUES ('2@2000-01-01'),('4@2000-01-02')) t(v);
 ----
 Interp=Step;{[2@2000-01-01 00:00:00+01, 3@2000-01-02 00:00:00+01, 3@2000-01-03 00:00:00+01], (4@2000-01-03 00:00:00+01, 4@2000-01-04 00:00:00+01]}
 
@@ -232,11 +232,11 @@ Interp=Step;{[2@2000-01-01 00:00:00+01, 3@2000-01-02 00:00:00+01, 3@2000-01-03 0
 # =============================================================================
 
 query I
-SELECT TandAgg(v::tbool)::VARCHAR FROM (VALUES (NULL::VARCHAR)) t(v) WHERE v IS NOT NULL;
+SELECT Tand(v::tbool)::VARCHAR FROM (VALUES (NULL::VARCHAR)) t(v) WHERE v IS NOT NULL;
 ----
 NULL
 
 query I
-SELECT TcountAgg(v::tint)::VARCHAR FROM (VALUES ('1@2000-01-01'),(NULL),('5@2000-01-02')) t(v);
+SELECT Tcount(v::tint)::VARCHAR FROM (VALUES ('1@2000-01-01'),(NULL),('5@2000-01-02')) t(v);
 ----
 {1@2000-01-01 00:00:00+01, 1@2000-01-02 00:00:00+01}

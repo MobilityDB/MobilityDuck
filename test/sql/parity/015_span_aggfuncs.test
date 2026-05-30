@@ -3,9 +3,9 @@
 # group: [sql]
 #
 # Queries from mobilitydb/test/temporal/queries/015_span_aggfuncs.test.sql.
-# Aggregate infrastructure (extent, SpanUnionAgg, SetUnionAgg) is now
+# Aggregate infrastructure (extent, SpanUnion, SetUnion) is now
 # registered; this file is fully active. Function names follow RFC #827:
-# setUnion → SetUnionAgg, spanUnion → SpanUnionAgg.
+# setUnion → SetUnion, spanUnion → SpanUnion.
 
 require mobilityduck
 
@@ -114,16 +114,16 @@ SELECT extent(NULL::tstzspanset) FROM generate_series(1,10);
 ----
 NULL
 
-# SetUnionAgg / SpanUnionAgg — accumulator aggregates returning set / span
+# SetUnion / SpanUnion — accumulator aggregates returning set / span
 
 query I
-SELECT SetUnionAgg(t::tstzset)::VARCHAR FROM (VALUES
+SELECT SetUnion(t::tstzset)::VARCHAR FROM (VALUES
 ('{2000-01-01}'::tstzset)) t(t);
 ----
 {"2000-01-01 00:00:00+01"}
 
 query I
-SELECT SpanUnionAgg(t::tstzspan)::VARCHAR FROM (VALUES
+SELECT SpanUnion(t::tstzspan)::VARCHAR FROM (VALUES
 ('[2000-01-01, 2000-01-02]'::tstzspan)) t(t);
 ----
 {[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01]}

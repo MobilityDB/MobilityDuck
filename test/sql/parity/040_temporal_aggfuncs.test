@@ -4,7 +4,7 @@
 #
 # Per-temporal-type aggregate manifest using RFC #827 Pascal-cased *Agg names.
 # Notes on expected outputs vs MobilityDB upstream:
-#   - TcountAgg / TminAgg / TsumAgg over TInstants at distinct timestamps return
+#   - Tcount / TminAgg / Tsum over TInstants at distinct timestamps return
 #     one output instant per input (no overlap → each instant is its own group).
 #     MobilityDB's `tcount`/`tmin`/`tsum` produce step sequences spanning the
 #     full temporal extent; MobilityDuck's skiplist aggregates emit discrete
@@ -13,12 +13,12 @@
 require mobilityduck
 
 query I
-SELECT TcountAgg(temp::tint)::VARCHAR FROM (VALUES ('1@2000-01-01'), ('2@2000-01-02')) t(temp);
+SELECT Tcount(temp::tint)::VARCHAR FROM (VALUES ('1@2000-01-01'), ('2@2000-01-02')) t(temp);
 ----
 {1@2000-01-01 00:00:00+01, 1@2000-01-02 00:00:00+01}
 
 query I
-SELECT TandAgg(temp::tbool)::VARCHAR FROM (VALUES ('t@2000-01-01'), ('f@2000-01-02')) t(temp);
+SELECT Tand(temp::tbool)::VARCHAR FROM (VALUES ('t@2000-01-01'), ('f@2000-01-02')) t(temp);
 ----
 {t@2000-01-01 00:00:00+01, f@2000-01-02 00:00:00+01}
 
@@ -28,7 +28,7 @@ SELECT TminAgg(temp::tint)::VARCHAR FROM (VALUES ('3@2000-01-01'), ('1@2000-01-0
 {3@2000-01-01 00:00:00+01, 1@2000-01-02 00:00:00+01}
 
 query I
-SELECT TsumAgg(temp::tint)::VARCHAR FROM (VALUES ('1@2000-01-01'), ('2@2000-01-02')) t(temp);
+SELECT Tsum(temp::tint)::VARCHAR FROM (VALUES ('1@2000-01-01'), ('2@2000-01-02')) t(temp);
 ----
 {1@2000-01-01 00:00:00+01, 2@2000-01-02 00:00:00+01}
 
