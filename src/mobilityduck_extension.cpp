@@ -12,6 +12,7 @@
 #include "geo/tgeogpoint.hpp"
 #include "duckdb.hpp"
 #include "geo/tgeometry.hpp"
+#include "geo/tgeo_setset_join.hpp"
 #include "geo/tgeometry_ops.hpp"
 #include "geo/tgeography.hpp"
 #include "geo/tgeography_ops.hpp"
@@ -321,6 +322,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TGeometryTypes::RegisterCastFunctions(loader);
 	TGeometryTypes::RegisterScalarInOutFunctions(loader);
 	TGeometryOps::RegisterScalarFunctions(loader);
+	RegisterSetSetSpatialJoin(loader);
 
 	TGeographyTypes::RegisterTypes(loader);
 	TGeographyTypes::RegisterScalarFunctions(loader);

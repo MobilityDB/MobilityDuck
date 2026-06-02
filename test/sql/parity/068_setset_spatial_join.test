@@ -1,0 +1,109 @@
+# name: test/sql/parity/068_setset_spatial_join.test
+# description: Set-set spatial-join family eDwithinPairs / tDwithinPairs / aDisjointPairs / minDistance(arr, arr).
+# group: [sql]
+#
+# Each function takes two arrays of temporal geometries and returns the
+# qualifying index pairs (i into the first array, j into the second). Indexes
+# are 1-based to match DuckDB list indexing. Pairs that never overlap in time
+# are excluded.
+
+require mobilityduck
+
+# =============================================================================
+# eDwithinPairs(tgeompoint[], tgeompoint[], dist)
+# =============================================================================
+
+# arr1[1] = origin, arr1[2] = far away; arr2[1] within 2 of origin, arr2[2] = origin
+query II
+SELECT * FROM eDwithinPairs(
+  [tgeompoint 'Point(0 0)@2000-01-01', tgeompoint 'Point(10 10)@2000-01-01'],
+  [tgeompoint 'Point(0 1)@2000-01-01', tgeompoint 'Point(0 0)@2000-01-01'],
+  2.0) ORDER BY i, j;
+----
+1	1
+1	2
+
+# =============================================================================
+# tDwithinPairs(tgeompoint[], tgeompoint[], dist) — with periods
+# =============================================================================
+
+# A stationary point at the origin and a point moving away; they stay within
+# distance 2 only over the first part of the shared interval.
+query III
+SELECT * FROM tDwithinPairs(
+  [tgeompoint '[Point(0 0)@2000-01-01, Point(0 0)@2000-01-02]', tgeompoint '[Point(10 10)@2000-01-01, Point(10 10)@2000-01-02]'],
+  [tgeompoint '[Point(0 1)@2000-01-01, Point(0 5)@2000-01-02]'],
+  2.0) ORDER BY i, j;
+----
+1	1	{[2000-01-01 00:00:00+01, 2000-01-01 06:00:00+01]}
+
+# =============================================================================
+# aDisjointPairs(tgeompoint[], tgeompoint[])
+# =============================================================================
+
+# arr1[1] crosses arr2[1]; arr1[2] is far away and never intersects.
+query II
+SELECT * FROM aDisjointPairs(
+  [tgeompoint '[Point(0 0)@2000-01-01, Point(0 0)@2000-01-02]', tgeompoint '[Point(10 10)@2000-01-01, Point(10 10)@2000-01-02]'],
+  [tgeompoint '[Point(0 0)@2000-01-01, Point(5 5)@2000-01-02]']) ORDER BY i, j;
+----
+2	1
+
+# =============================================================================
+# tgeometry[] overloads
+# =============================================================================
+
+query II
+SELECT * FROM eDwithinPairs(
+  [tgeometry 'Point(0 0)@2000-01-01', tgeometry 'Point(10 10)@2000-01-01'],
+  [tgeometry 'Point(0 1)@2000-01-01'],
+  2.0) ORDER BY i, j;
+----
+1	1
+
+query III
+SELECT * FROM tDwithinPairs(
+  [tgeometry '[Point(0 0)@2000-01-01, Point(0 0)@2000-01-02]'],
+  [tgeometry '[Point(0 1)@2000-01-01, Point(0 5)@2000-01-02]'],
+  2.0) ORDER BY i, j;
+----
+1	1	{[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01)}
+
+query II
+SELECT * FROM aDisjointPairs(
+  [tgeometry '[Point(0 0)@2000-01-01, Point(0 0)@2000-01-02]', tgeometry '[Point(10 10)@2000-01-01, Point(10 10)@2000-01-02]'],
+  [tgeometry '[Point(0 0)@2000-01-01, Point(5 5)@2000-01-02]']) ORDER BY i, j;
+----
+2	1
+
+# =============================================================================
+# minDistance(tgeompoint[], tgeompoint[]) — exact set-set spatial minimum
+# =============================================================================
+
+# Minimum over the cross product of the two arrays: the nearest pair is
+# arr1[2] = Point(4 0) and arr2[1] = Point(0 0), at distance 4.
+query I
+SELECT minDistance(
+  [tgeompoint 'Point(0 10)@2000-01-01', tgeompoint 'Point(4 0)@2000-01-01'],
+  [tgeompoint 'Point(0 0)@2000-01-01']);
+----
+4.0
+
+# Two moving trips whose closest synchronous approach is 3.
+query I
+SELECT minDistance(
+  [tgeompoint '[Point(0 0)@2000-01-01, Point(2 2)@2000-01-02]', tgeompoint '[Point(10 10)@2000-01-01, Point(11 11)@2000-01-02]'],
+  [tgeompoint '[Point(5 0)@2000-01-01, Point(5 2)@2000-01-02]']);
+----
+3.0
+
+# =============================================================================
+# minDistance(tgeometry[], tgeometry[])
+# =============================================================================
+
+query I
+SELECT minDistance(
+  [tgeometry 'Point(0 10)@2000-01-01', tgeometry 'Point(4 0)@2000-01-01'],
+  [tgeometry 'Point(0 0)@2000-01-01']);
+----
+4.0

@@ -102,6 +102,7 @@ set(EXTENSION_SOURCES
     src/geo/tgeometry.cpp
     src/geo/tgeometry_in_out.cpp
     src/geo/tgeometry_ops.cpp
+    src/geo/tgeo_setset_join.cpp
     src/geo/tgeography.cpp
     src/geo/tgeography_in_out.cpp
     src/geo/tgeography_ops.cpp
