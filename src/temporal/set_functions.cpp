@@ -893,7 +893,8 @@ void SetFunctions::Set_values(DataChunk &args, ExpressionState &state, Vector &r
         }
 
         uint64_t count = s->count;
-        Datum *values = set_vals(s);
+        int nvals = 0;
+        Datum *values = set_vals(s, &nvals);
         
         ListVector::SetListSize(result, total_offset + count);
         list_entries[i] = list_entry_t{total_offset, count};

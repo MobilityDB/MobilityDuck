@@ -2546,9 +2546,10 @@ unique_ptr<GlobalTableFunctionState> TimeSplitInit(ClientContext &, TableFunctio
         ? static_cast<TimestampTz>(DuckDBToMeosTimestamp(bd.torigin).value)
         : TimestampTz(0);
 
-    int count = 0;
-    TimestampTz *tbins = nullptr;
-    Temporal **parts   = temporal_time_split(t, &mi, torigin, &tbins, &count);
+    TimeSplit split    = temporal_time_split(t, &mi, torigin);
+    Temporal **parts   = split.fragments;
+    TimestampTz *tbins = split.bins;
+    int count          = split.count;
     free(t);
 
     if (!parts || count <= 0) {
@@ -2633,9 +2634,10 @@ unique_ptr<GlobalTableFunctionState> ValueSplitInit(ClientContext &, TableFuncti
     Temporal *t = static_cast<Temporal *>(malloc(bd.temp_blob.size()));
     memcpy(t, bd.temp_blob.data(), bd.temp_blob.size());
 
-    int   count  = 0;
-    Datum *vbins = nullptr;
-    Temporal **parts = tnumber_value_split(t, bd.vsize, bd.vorigin, &vbins, &count);
+    DatumSplit vsplit = tnumber_value_split(t, bd.vsize, bd.vorigin);
+    Temporal **parts  = vsplit.fragments;
+    Datum     *vbins  = vsplit.bins;
+    int        count  = vsplit.count;
     free(t);
 
     if (!parts || count <= 0) {
@@ -2903,8 +2905,10 @@ static unique_ptr<GlobalTableFunctionState> TnumberValueSplitInit(ClientContext 
     int count = 0;
     Temporal **slices = nullptr;
     if (bind.temptype == T_TINT) {
-        int *bins_int = nullptr;
-        slices = tint_value_split(temp, (int)bind.size, (int)bind.origin, &bins_int, &count);
+        IntSplit isplit = tint_value_split(temp, (int)bind.size, (int)bind.origin);
+        slices        = isplit.fragments;
+        int *bins_int = isplit.bins;
+        count         = isplit.count;
         for (int i = 0; i < count; ++i) {
             state->rows.emplace_back(Value::BIGINT((int64_t)bins_int[i]), make_slice_value(slices[i]));
             free(slices[i]);
@@ -2912,8 +2916,10 @@ static unique_ptr<GlobalTableFunctionState> TnumberValueSplitInit(ClientContext 
         free(slices);
         free(bins_int);
     } else if (bind.temptype == T_TFLOAT) {
-        double *bins_dbl = nullptr;
-        slices = tfloat_value_split(temp, bind.size, bind.origin, &bins_dbl, &count);
+        FloatSplit fsplit = tfloat_value_split(temp, bind.size, bind.origin);
+        slices           = fsplit.fragments;
+        double *bins_dbl = fsplit.bins;
+        count            = fsplit.count;
         for (int i = 0; i < count; ++i) {
             state->rows.emplace_back(Value::DOUBLE(bins_dbl[i]), make_slice_value(slices[i]));
             free(slices[i]);

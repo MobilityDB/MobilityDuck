@@ -516,7 +516,8 @@ void SpanFunctions::Set_spans(DataChunk &args, ExpressionState &state, Vector &r
         memcpy(s, blob.GetData(), blob.GetSize());
 
         int num = set_num_values(s);
-        Span *spans = set_spans(s);
+        int nspans = 0;
+        Span *spans = set_spans(s, &nspans);
         free(s);
 
         if (!spans || num <= 0) {

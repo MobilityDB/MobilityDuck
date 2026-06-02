@@ -1654,7 +1654,8 @@ void SpansetFunctions::Spanset_spans(DataChunk &args, ExpressionState &state, Ve
         memcpy(s, blob.GetData(), blob.GetSize());
 
         int num = spanset_num_spans(s);
-        Span *spans = spanset_spans(s);
+        int nspans = 0;
+        Span *spans = spanset_spans(s, &nspans);
         free(s);
 
         if (!spans || num <= 0) {

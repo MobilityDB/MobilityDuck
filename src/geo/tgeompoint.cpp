@@ -1936,12 +1936,12 @@ void TgeoAsMVTGeomExec(DataChunk &args, ExpressionState &state, Vector &result) 
         if (cc > 3) buffer = FlatVector::GetData<int32_t>(args.data[3])[row];
         if (cc > 4) clip   = FlatVector::GetData<bool>(args.data[4])[row];
 
-        GSERIALIZED *geom = nullptr;
-        int64 *times = nullptr;
-        int count = 0;
-        bool found = tpoint_as_mvtgeom(t, bx, extent, buffer, clip, &geom, &times, &count);
+        MvtGeom mvt = tpoint_as_mvtgeom(t, bx, extent, buffer, clip);
+        GSERIALIZED *geom = mvt.geom;
+        int64 *times = mvt.times;
+        int count = mvt.count;
         free(t); free(bx);
-        if (!found || !geom) {
+        if (!geom) {
             out_validity.SetInvalid(row);
             times_entries[row] = list_entry_t{total_times, 0};
             if (geom) free(geom);
@@ -2120,12 +2120,18 @@ unique_ptr<GlobalTableFunctionState> SpaceSplitInitCommon(ClientContext &context
         if (bind.has_torigin) {
             torigin = (TimestampTz) DuckDBToMeosTimestamp(bind.torigin).value;
         }
-        trajs = tgeo_space_time_split(temp, bind.xsize, bind.ysize, bind.zsize,
-                                       &mi, origin, torigin, bind.bitmatrix, true,
-                                       &bins, &tbins, &count);
+        SpaceTimeSplit stsplit = tgeo_space_time_split(temp, bind.xsize, bind.ysize, bind.zsize,
+                                       &mi, origin, torigin, bind.bitmatrix, true);
+        trajs = stsplit.fragments;
+        bins  = stsplit.space_bins;
+        tbins = stsplit.time_bins;
+        count = stsplit.count;
     } else {
-        trajs = tgeo_space_split(temp, bind.xsize, bind.ysize, bind.zsize,
-                                  origin, bind.bitmatrix, true, &bins, &count);
+        SpaceSplit ssplit = tgeo_space_split(temp, bind.xsize, bind.ysize, bind.zsize,
+                                  origin, bind.bitmatrix, true);
+        trajs = ssplit.fragments;
+        bins  = ssplit.bins;
+        count = ssplit.count;
     }
     free(temp);
     free(origin);
