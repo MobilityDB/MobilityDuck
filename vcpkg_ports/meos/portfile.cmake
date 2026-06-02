@@ -1,8 +1,8 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO estebanzimanyi/MobilityDB
-    REF 3db47f887c61f049a6a03db55c48bedf6d10eee4
-    SHA512 b73123bca036813c43937f90f0d0ce45af5cb9e39d6a597304199d21ae854212319a3a7b58ecd075eb5678d89d6d5990b9faf63dd29bd8c9a4e2ed83282b94c5
+    REF 8569019b7bb3b35944e52a62e877f8df1a966542
+    SHA512 d318b3137cc39defe77e1bfcbd93a4183b825c471b74685f61006ad0c6ac278d0b072287c2e467650f00d5aff43183215f67cd69857445aa1b14efd0f8fb3b0b
 )
 
 vcpkg_replace_string(
@@ -22,10 +22,20 @@ vcpkg_cmake_configure(
     OPTIONS
         -DMEOS=ON
         -DBUILD_SHARED_LIBS=ON
+        -DBUILD_TESTING=OFF
         -DCMAKE_C_FLAGS="-Dsession_timezone=meos_session_timezone"
         -DCMAKE_CXX_FLAGS="-Dsession_timezone=meos_session_timezone"
 
 )
+
+# DIAGNOSTIC (throwaway branch): stream the MEOS build verbosely to CI stdout so
+# the arm64-linux compile failure is visible. ninja -k0 keeps going and reports
+# every error (not just the first); -v prints the failing compile command.
+execute_process(
+    COMMAND "${CMAKE_COMMAND}" --build "${CURRENT_BUILDTREES_DIR}/${TARGET_TRIPLET}-rel" -- -k0 -j2 -v
+    RESULT_VARIABLE _meos_diag_rc
+)
+message(STATUS "=== MEOS diagnostic verbose build rc=${_meos_diag_rc} ===")
 
 vcpkg_cmake_build(TARGET all)
 vcpkg_cmake_install()
