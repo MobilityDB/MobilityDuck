@@ -25,6 +25,12 @@ vcpkg_cmake_configure(
         # Build only the MEOS library, not the MEOS C test binaries: those link
         # the GEOS C++ API, which the arm64-linux vcpkg triplet does not carry.
         -DBUILD_TESTING=OFF
+        # Build the optional spatial type families that MobilityDuck ports
+        # (tcbuffer, tnpoint, tpose, trgeometry). RGEO depends on POSE.
+        -DCBUFFER=ON
+        -DNPOINT=ON
+        -DPOSE=ON
+        -DRGEO=ON
         -DCMAKE_C_FLAGS="-Dsession_timezone=meos_session_timezone"
         -DCMAKE_CXX_FLAGS="-Dsession_timezone=meos_session_timezone"
 
