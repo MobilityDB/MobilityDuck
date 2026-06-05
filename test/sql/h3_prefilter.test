@@ -1,0 +1,30 @@
+# name: test/sql/h3_prefilter.test
+# description: static-geometry h3indexset prefilter (geoToH3IndexSet + everEq) smoke coverage
+# group: [mobilityduck]
+
+require mobilityduck
+
+# everEq(h3indexset, th3index): a trip running through the polygon ever takes a
+# cell that equals a cell of the polygon's set
+query I
+SELECT everEq(
+    geoToH3IndexSet(ST_GeomFromText('POLYGON((-1 -1, -1 1, 1 1, 1 -1, -1 -1))'), 4),
+    th3index(tgeompoint 'SRID=4326;[POINT(0 0)@2000-01-01, POINT(0.5 0.5)@2000-01-02]', 4));
+----
+true
+
+# everEq is registered in both argument directions
+query I
+SELECT everEq(
+    th3index(tgeompoint 'SRID=4326;[POINT(0 0)@2000-01-01, POINT(0.5 0.5)@2000-01-02]', 4),
+    geoToH3IndexSet(ST_GeomFromText('POLYGON((-1 -1, -1 1, 1 1, 1 -1, -1 -1))'), 4));
+----
+true
+
+# a polygon disjoint from the trip shares no cell with it
+query I
+SELECT everEq(
+    geoToH3IndexSet(ST_GeomFromText('POLYGON((39 39, 39 41, 41 41, 41 39, 39 39))'), 4),
+    th3index(tgeompoint 'SRID=4326;[POINT(0 0)@2000-01-01, POINT(0.5 0.5)@2000-01-02]', 4));
+----
+false
