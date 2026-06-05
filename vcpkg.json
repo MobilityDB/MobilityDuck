@@ -2,6 +2,7 @@
         "dependencies": [
           "geos",
           "gsl",
+          "h3",
           { "name": "meos", "version>=": "0" },
 
           "vcpkg-cmake",

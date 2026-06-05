@@ -1,0 +1,16 @@
+# name: test/sql/th3index.test
+# description: th3index H3 cell-index I/O smoke coverage
+# group: [mobilityduck]
+
+require mobilityduck
+
+# H3INDEX scalar text round-trip (resolution 5 and resolution 0 cells)
+query I
+SELECT h3IndexAsText(h3IndexFromText('85283473fffffff'));
+----
+85283473fffffff
+
+query I
+SELECT h3IndexAsText(h3IndexFromText('8001fffffffffff'));
+----
+8001fffffffffff
