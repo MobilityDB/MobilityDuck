@@ -1,5 +1,6 @@
 #include "geo/tgeography.hpp"
 #include "geo/tgeompoint_functions.hpp"
+#include "mobilityduck/meos_exec_serial.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/common/extension_type_info.hpp"
 #include <regex>
@@ -1082,12 +1083,30 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction( tgeographyseqarr_3params);
 
     auto tgeographyseqarr_4params = ScalarFunction(
-        "tgeographySeq", 
+        "tgeographySeq",
         {LogicalType::LIST(TGeographyTypes::TGEOGRAPHY()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN},
         TGeographyTypes::TGEOGRAPHY(),
         Tgeography_sequence_constructor
     );
     loader.RegisterFunction( tgeographyseqarr_4params);
+
+    // tgeographySeqSet — collect a list of tgeography values into a
+    // single TSequenceSet.
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "tgeographySeqSet", {LogicalType::LIST(TGeographyTypes::TGEOGRAPHY())},
+        TGeographyTypes::TGEOGRAPHY(), TemporalFunctions::Tsequenceset_constructor));
+
+    // tgeographySeqSetGaps — split into sequences at temporal or
+    // geographic-distance gaps.
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "tgeographySeqSetGaps", {LogicalType::LIST(TGeographyTypes::TGEOGRAPHY())},
+        TGeographyTypes::TGEOGRAPHY(), TemporalFunctions::Tsequenceset_constructor_gaps));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "tgeographySeqSetGaps", {LogicalType::LIST(TGeographyTypes::TGEOGRAPHY()), LogicalType::INTERVAL},
+        TGeographyTypes::TGEOGRAPHY(), TemporalFunctions::Tsequenceset_constructor_gaps));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "tgeographySeqSetGaps", {LogicalType::LIST(TGeographyTypes::TGEOGRAPHY()), LogicalType::INTERVAL, LogicalType::DOUBLE},
+        TGeographyTypes::TGEOGRAPHY(), TemporalFunctions::Tsequenceset_constructor_gaps));
 
     auto tgeography_to_timespan_function = ScalarFunction(
         "timeSpan",

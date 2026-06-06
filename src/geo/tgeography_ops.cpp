@@ -234,9 +234,11 @@ void TgeoTgeoDistIntExec(DataChunk &args, ExpressionState &, Vector &result) {
 }
 
 // ====================================================================
-// Temporal-relation Temporal→Temporal helpers — `restr=false`,
-// `atvalue=false` are the SQL defaults that produce a temporal value
-// covering the whole input duration.
+// Temporal-relation Temporal→Temporal helpers.  The MEOS exports
+// `t{contains,disjoint,intersects,touches,dwithin}_*` produce a tbool
+// covering the whole input duration; restriction is composed at the
+// call site when the SQL surface needs it (see Tcontains_geo_tgeo
+// in tgeompoint_functions.cpp).
 // ====================================================================
 
 
@@ -977,6 +979,18 @@ void TGeographyOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     REG_TCMP("temporal_teq", Teq)
     REG_TCMP("temporal_tne", Tne)
 #undef REG_TCMP
+
+    // eCovers (BOOLEAN), aCovers (BOOLEAN) and tCovers (tbool) —
+    // covering relationships for tgeography.
+    loader.RegisterFunction(ScalarFunction("eCovers", {GEOM, TGEOM},  LogicalType::BOOLEAN, TgeompointFunctions::Ecovers_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction("eCovers", {TGEOM, GEOM},  LogicalType::BOOLEAN, TgeompointFunctions::Ecovers_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("eCovers", {TGEOM, TGEOM}, LogicalType::BOOLEAN, TgeompointFunctions::Ecovers_tgeo_tgeo));
+    loader.RegisterFunction(ScalarFunction("aCovers", {GEOM, TGEOM},  LogicalType::BOOLEAN, TgeompointFunctions::Acovers_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction("aCovers", {TGEOM, GEOM},  LogicalType::BOOLEAN, TgeompointFunctions::Acovers_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("aCovers", {TGEOM, TGEOM}, LogicalType::BOOLEAN, TgeompointFunctions::Acovers_tgeo_tgeo));
+    loader.RegisterFunction(ScalarFunction("tCovers", {GEOM, TGEOM},  TemporalTypes::TBOOL(), TgeompointFunctions::Tcovers_geo_tgeo));
+    loader.RegisterFunction(ScalarFunction("tCovers", {TGEOM, GEOM},  TemporalTypes::TBOOL(), TgeompointFunctions::Tcovers_tgeo_geo));
+    loader.RegisterFunction(ScalarFunction("tCovers", {TGEOM, TGEOM}, TemporalTypes::TBOOL(), TgeompointFunctions::Tcovers_tgeo_tgeo));
 }
 
 } // namespace duckdb

@@ -388,7 +388,7 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
+        duckdb::RegisterSerializedScalarFunction(loader,
             ScalarFunction(
                 StringUtil::Lower(type.GetAlias()) + "SeqSet",
                 {type},
@@ -396,6 +396,23 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_to_tsequenceset
             )
         );
+
+        // <type>SeqSetGaps — split LIST<type> into a TSequenceSet of
+        // sequences whenever a gap exceeds maxt (interval) or maxdist
+        // (numeric / spatial).  TBOOL and TTEXT skip the maxdist
+        // overload (no distance metric for those types).
+        const std::string gaps_name = StringUtil::Lower(type.GetAlias()) + "SeqSetGaps";
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            gaps_name, {LogicalType::LIST(type)},
+            type, TemporalFunctions::Tsequenceset_constructor_gaps));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            gaps_name, {LogicalType::LIST(type), LogicalType::INTERVAL},
+            type, TemporalFunctions::Tsequenceset_constructor_gaps));
+        if (type.GetAlias() == "TINT" || type.GetAlias() == "TFLOAT") {
+            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+                gaps_name, {LogicalType::LIST(type), LogicalType::INTERVAL, LogicalType::DOUBLE},
+                type, TemporalFunctions::Tsequenceset_constructor_gaps));
+        }
 
         if (type.GetAlias() == "TFLOAT") {
             duckdb::RegisterSerializedScalarFunction(loader, 
@@ -527,7 +544,7 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
+        duckdb::RegisterSerializedScalarFunction(loader,
             ScalarFunction(
                 "startTimestamp",
                 {type},
@@ -536,7 +553,7 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
+        duckdb::RegisterSerializedScalarFunction(loader,
             ScalarFunction(
                 "endTimestamp",
                 {type},
@@ -544,6 +561,16 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_end_timestamptz
             )
         );
+
+        // numSequences / numInstants — generic temporal accessors;
+        // the spatial-temporal types register them separately at their
+        // own registration sites.
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("numSequences", {type}, LogicalType::INTEGER,
+                           TemporalFunctions::Temporal_num_sequences));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("numInstants", {type}, LogicalType::INTEGER,
+                           TemporalFunctions::Temporal_num_instants));
 
         duckdb::RegisterSerializedScalarFunction(loader, 
             ScalarFunction(
@@ -1044,7 +1071,16 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     mobilityduck::RegisterTemporalDatumAccessor<double>(
         loader, "maxValue", TemporalTypes::TFLOAT(), LogicalType::DOUBLE, temporal_max_value);
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    // PG-equality 32-bit hash for every temporal type — `temporal_hash`
+    // is subtype-agnostic; a single executor handles all bases.
+    for (const auto &temp_type : {TemporalTypes::TBOOL(), TemporalTypes::TINT(),
+                                  TemporalTypes::TFLOAT(), TemporalTypes::TTEXT()}) {
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("temporal_hash", {temp_type}, LogicalType::INTEGER,
+                           TemporalFunctions::Temporal_hash));
+    }
+
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "atValues",
             {TemporalTypes::TINT(), SetTypes::intset()},

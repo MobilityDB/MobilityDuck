@@ -26,7 +26,14 @@ struct SpatialSetFunctions{
 
     //other
     static void Spatialset_as_text(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Spatialset_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result);    
+    static void Spatialset_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result);
+    /* Text/EWKT parsers — `geomsetFromText`, `geomsetFromEWKT`,
+     * `geogsetFromText`, `geogsetFromEWKT`.  The MEOS `set_in`
+     * dispatcher accepts both WKT and EWKT for spatial-set basetypes,
+     * so a single executor covers all four entry points; the result
+     * type drives the basetype dispatch. */
+    static void Geomset_from_text(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Geogset_from_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_mem_size(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spatialset_srid(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spatialset_set_srid(DataChunk &args, ExpressionState &state, Vector &result_vec);

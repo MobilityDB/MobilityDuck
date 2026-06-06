@@ -1,0 +1,49 @@
+# name: test/sql/parity/056b_tpoint_atelevation.test
+# description: atElevation / minusElevation — orthogonal floatspan
+#              restriction for tgeompoint.  Pairs symmetrically with
+#              atGeometry / minusGeometry; compose at the SQL surface
+#              when both apply.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# atElevation — restrict to a floatspan z-range
+# =============================================================================
+
+# Trajectory rises from z=3 to z=7; restricting to z ∈ [4, 6] should
+# leave a non-NULL temporal value covering the passage through the band.
+query I
+SELECT atElevation(
+  '[Point(1 1 3)@2000-01-01, Point(1 1 7)@2000-01-02]'::tgeompoint,
+  '[4.0, 6.0]'::floatspan) IS NOT NULL;
+----
+true
+
+# Restricting to z ∈ [100, 200] (entirely above the trajectory) yields NULL.
+query I
+SELECT atElevation(
+  '[Point(1 1 3)@2000-01-01, Point(1 1 7)@2000-01-02]'::tgeompoint,
+  '[100.0, 200.0]'::floatspan) IS NULL;
+----
+true
+
+# =============================================================================
+# minusElevation — exclude a floatspan z-range
+# =============================================================================
+
+# Subtracting z ∈ [4, 6] leaves the parts of the trajectory at z<4 and z>6.
+query I
+SELECT minusElevation(
+  '[Point(1 1 3)@2000-01-01, Point(1 1 7)@2000-01-02]'::tgeompoint,
+  '[4.0, 6.0]'::floatspan) IS NOT NULL;
+----
+true
+
+# Subtracting z ∈ [-100, 100] removes the entire trajectory.
+query I
+SELECT minusElevation(
+  '[Point(1 1 3)@2000-01-01, Point(1 1 7)@2000-01-02]'::tgeompoint,
+  '[-100.0, 100.0]'::floatspan) IS NULL;
+----
+true

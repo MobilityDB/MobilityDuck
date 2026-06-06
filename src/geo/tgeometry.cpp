@@ -1083,12 +1083,30 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,  tgeometryseqarr_3params);
 
     auto tgeometryseqarr_4params = ScalarFunction(
-        "tgeometrySeq", 
+        "tgeometrySeq",
         {LogicalType::LIST(TGeometryTypes::TGEOMETRY()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN},
         TGeometryTypes::TGEOMETRY(),
         Tgeometry_sequence_constructor
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tgeometryseqarr_4params);
+
+    // tgeometrySeqSet — collect a list of tgeometry values into a
+    // single TSequenceSet.
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "tgeometrySeqSet", {LogicalType::LIST(TGeometryTypes::TGEOMETRY())},
+        TGeometryTypes::TGEOMETRY(), TemporalFunctions::Tsequenceset_constructor));
+
+    // tgeometrySeqSetGaps — split into sequences at temporal or
+    // 2D-distance gaps.
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "tgeometrySeqSetGaps", {LogicalType::LIST(TGeometryTypes::TGEOMETRY())},
+        TGeometryTypes::TGEOMETRY(), TemporalFunctions::Tsequenceset_constructor_gaps));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "tgeometrySeqSetGaps", {LogicalType::LIST(TGeometryTypes::TGEOMETRY()), LogicalType::INTERVAL},
+        TGeometryTypes::TGEOMETRY(), TemporalFunctions::Tsequenceset_constructor_gaps));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "tgeometrySeqSetGaps", {LogicalType::LIST(TGeometryTypes::TGEOMETRY()), LogicalType::INTERVAL, LogicalType::DOUBLE},
+        TGeometryTypes::TGEOMETRY(), TemporalFunctions::Tsequenceset_constructor_gaps));
 
     auto tgeometry_to_timespan_function = ScalarFunction(
         "timeSpan",

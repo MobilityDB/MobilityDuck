@@ -78,6 +78,8 @@ struct TemporalFunctions {
     static void Temporal_end_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_min_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_max_value(DataChunk &args, ExpressionState &state, Vector &result);
+    /* PG-equality 32-bit hash; routed for every temporal type. */
+    static void Temporal_hash(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_avg_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_value_n(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_num_instants(DataChunk &args, ExpressionState &state, Vector &result); 

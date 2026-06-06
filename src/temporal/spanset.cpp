@@ -405,11 +405,31 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         duckdb::RegisterSerializedScalarFunction(loader, 
             ScalarFunction(">", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_gt)
         );
-        duckdb::RegisterSerializedScalarFunction(loader, 
+        duckdb::RegisterSerializedScalarFunction(loader,
             ScalarFunction("spanset_cmp", {spanset_type, spanset_type}, LogicalType::INTEGER, SpansetFunctions::Spanset_cmp)
         );
     }
-    duckdb::RegisterSerializedScalarFunction(loader, 
+
+    // time_distance — temporal-distance between a tstzspanset and a
+    // timestamptz / tstzspan / tstzspanset.  Five overloads.
+    {
+        const auto SS = SpansetTypes::tstzspanset();
+        const auto S  = SpanTypes::TSTZSPAN();
+        const auto TS = LogicalType::TIMESTAMP_TZ;
+        const auto D  = LogicalType::DOUBLE;
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("time_distance", {TS, SS}, D, SpansetFunctions::Time_distance_value_spanset));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("time_distance", {S,  SS}, D, SpansetFunctions::Time_distance_span_spanset));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("time_distance", {SS, TS}, D, SpansetFunctions::Time_distance_spanset_value));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("time_distance", {SS, S},  D, SpansetFunctions::Time_distance_spanset_span));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("time_distance", {SS, SS}, D, SpansetFunctions::Time_distance_spanset_spanset));
+    }
+
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction("duration", {SpansetTypes::datespanset()}, LogicalType::INTERVAL, SpansetFunctions::Datespanset_duration)
     );
 

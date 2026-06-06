@@ -1,4 +1,5 @@
 #include "geo/geoset.hpp"
+#include "temporal/set_functions.hpp"
 #include "tydef.hpp"
 #include "geo_util.hpp"
 #include "duckdb/common/types/data_chunk.hpp"
@@ -143,6 +144,44 @@ void SpatialSetType::RegisterScalarFunctions(ExtensionLoader &loader) {
         SpatialSetType::geomset(),
         SpatialSetFunctions::Geomset_constructor
     ));
+
+    // Binary / EWKB / HexWKB / Text / EWKT parsers — route to the
+    // subtype-agnostic MEOS `set_from_wkb` / `set_from_hexwkb` /
+    // `set_in` dispatchers.  The format encodes (or the caller-side
+    // basetype dictates) the target type.
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geomsetFromBinary", {LogicalType::BLOB},    SpatialSetType::geomset(), SetFunctions::Set_from_binary));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geomsetFromEWKB",   {LogicalType::BLOB},    SpatialSetType::geomset(), SetFunctions::Set_from_binary));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geomsetFromHexWKB", {LogicalType::VARCHAR}, SpatialSetType::geomset(), SetFunctions::Set_from_hexwkb));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geomsetFromText",   {LogicalType::VARCHAR}, SpatialSetType::geomset(), SpatialSetFunctions::Geomset_from_text));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geomsetFromEWKT",   {LogicalType::VARCHAR}, SpatialSetType::geomset(), SpatialSetFunctions::Geomset_from_text));
+
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geogsetFromBinary", {LogicalType::BLOB},    SpatialSetType::geogset(), SetFunctions::Set_from_binary));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geogsetFromEWKB",   {LogicalType::BLOB},    SpatialSetType::geogset(), SetFunctions::Set_from_binary));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geogsetFromHexWKB", {LogicalType::VARCHAR}, SpatialSetType::geogset(), SetFunctions::Set_from_hexwkb));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geogsetFromText",   {LogicalType::VARCHAR}, SpatialSetType::geogset(), SpatialSetFunctions::Geogset_from_text));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "geogsetFromEWKT",   {LogicalType::VARCHAR}, SpatialSetType::geogset(), SpatialSetFunctions::Geogset_from_text));
+
+    // asBinary / asHexWKB for geomset / geogset — output side of the
+    // I/O round-trip.  `set_as_wkb` / `set_as_hexwkb` are
+    // subtype-agnostic; the format encodes the source basetype.
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "asBinary", {SpatialSetType::geomset()}, LogicalType::BLOB, SetFunctions::Set_as_binary));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "asBinary", {SpatialSetType::geogset()}, LogicalType::BLOB, SetFunctions::Set_as_binary));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "asHexWKB", {SpatialSetType::geomset()}, LogicalType::VARCHAR, SetFunctions::Set_as_hexwkb));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "asHexWKB", {SpatialSetType::geogset()}, LogicalType::VARCHAR, SetFunctions::Set_as_hexwkb));
 }
 
 // --- Constructor: set(LIST(GEOMETRY)) -> geomset ---
@@ -209,6 +248,41 @@ bool SpatialSetFunctions::Text_to_geoset(Vector &source, Vector &result, idx_t c
 
     result.SetVectorType(VectorType::FLAT_VECTOR);
     return true;
+}
+
+// --- WKT/EWKT parsers ---
+// `geomsetFromText` / `geomsetFromEWKT` route here when the result type
+// is geomset; `geogsetFromText` / `geogsetFromEWKT` route via the
+// geogset variant.  `set_in` is the MEOS dispatcher that handles both
+// WKT and EWKT input for spatial-set basetypes.
+
+namespace {
+
+inline void GeosetFromTextImpl(DataChunk &args, Vector &result, meosType basetype, const char *func_name) {
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t input) -> string_t {
+            std::string s(input.GetData(), input.GetSize());
+            Set *r = set_in(s.c_str(), basetype);
+            if (!r) {
+                throw InvalidInputException(std::string(func_name) + ": invalid input");
+            }
+            size_t sz = set_mem_size(r);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(r), sz));
+            free(r);
+            return stored;
+        });
+}
+
+} // namespace
+
+void SpatialSetFunctions::Geomset_from_text(DataChunk &args, ExpressionState &state, Vector &result) {
+    GeosetFromTextImpl(args, result, T_GEOMSET, "geomsetFromText/EWKT");
+}
+
+void SpatialSetFunctions::Geogset_from_text(DataChunk &args, ExpressionState &state, Vector &result) {
+    GeosetFromTextImpl(args, result, T_GEOGSET, "geogsetFromText/EWKT");
 }
 
 // --- asText ---

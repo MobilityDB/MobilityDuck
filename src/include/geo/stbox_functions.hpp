@@ -31,11 +31,27 @@ struct StboxFunctions {
     static void Stbox_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
-     * Constructor functions
+     * Dimensional constructor functions
+     * stboxX  — 2D (xmin/xmax/ymin/ymax)
+     * stboxZ  — 3D (xmin/xmax/ymin/ymax/zmin/zmax)
+     * stboxT  — time-only
+     * stboxXT — 2D + time
+     * stboxZT — 3D + time
+     * geodstboxZ / geodstboxT / geodstboxZT — geodetic variants
      ****************************************************/
-    // static void Stbox_constructor_x(DataChunk &args, ExpressionState &state, Vector &result);
-    // static void Stbox_constructor_z(DataChunk &args, ExpressionState &state, Vector &result);
-    // static void Stbox_constructor_t(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_constructor_x(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_constructor_z(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_constructor_t_ts(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_constructor_t_span(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_constructor_xt_ts(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_constructor_xt_span(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_constructor_zt_ts(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_constructor_zt_span(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Geodstbox_constructor_z(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Geodstbox_constructor_t_ts(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Geodstbox_constructor_t_span(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Geodstbox_constructor_zt_ts(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Geodstbox_constructor_zt_span(DataChunk &args, ExpressionState &state, Vector &result);
 
     static void Geo_timestamptz_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Geo_tstzspan_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
@@ -80,6 +96,9 @@ struct StboxFunctions {
     static void Stbox_tmax_inc(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_area(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_volume(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_hash(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_hash_extended(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Stbox_srid(DataChunk &args, ExpressionState &state, Vector &result);
     // TODO static void Stbox_perimeter(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
      * Transformation functions
@@ -162,6 +181,16 @@ struct StboxFunctions {
     static void Stbox_space_time_tiles(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tgeo_space_boxes(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tgeo_space_time_boxes(DataChunk &args, ExpressionState &state, Vector &result);
+    /* Multi-entry bbox emitters — `stboxes(t)`, `splitNStboxes(t, n)`,
+     * `splitEachNStboxes(t, n)` for tgeometry/tgeography/tgeompoint/
+     * tgeogpoint and the geometry/geography geo-side overloads.
+     * Each emits an `stbox[]` for downstream multi-entry indexes. */
+    static void Tspatial_stboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Geo_stboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tspatial_split_n_stboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tspatial_split_each_n_stboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Geo_split_n_stboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Geo_split_each_n_stboxes(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_get_space_tile(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_get_time_tile(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_get_space_time_tile(DataChunk &args, ExpressionState &state, Vector &result);

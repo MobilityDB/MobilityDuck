@@ -11,10 +11,8 @@ extern "C" {
     #include <meos_internal.h>
 }
 
-// Forward-compat alias for the meosType → MeosType rename (MobilityDB
-// pr785-sync-script).  Vcpkg's MEOS exposes `MeosType`; existing
-// MobilityDuck code still uses `meosType`.  This alias bridges the two
-// without touching every reference site.
+// `meosType` and `MeosType` are interchangeable spellings of the
+// catalog-type enum (MEOS spells it `MeosType`).
 using meosType = MeosType;
 
 namespace duckdb {
@@ -47,6 +45,7 @@ DatumGetFloat8(Datum X)
 
 #define DatumGetInt32(X) ((int32) (X))
 #define DatumGetInt64(X) ((int64) (X))
+#define DatumGetBool(X) ((bool) (((int64) (X)) != 0))
 #define DatumGetCString(X) ((char *) DatumGetPointer(X))
 #define CStringGetDatum(X) PointerGetDatum(X)
 #define DatumGetPointer(X) ((Pointer) (X))

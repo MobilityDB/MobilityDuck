@@ -4,6 +4,9 @@
 #include "geo/stbox.hpp"
 #include "geo/stbox_functions.hpp"
 #include "geo/tgeompoint.hpp"
+#include "geo/tgeogpoint.hpp"
+#include "geo/tgeometry.hpp"
+#include "geo/tgeography.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/function/function.hpp"
@@ -84,17 +87,16 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    // ExtensionUtil::RegisterFunction(
-    //     instance,
-    //     ScalarFunction(
-    //         "stboxFromHexWKB",
-    //         {LogicalType::VARCHAR},
-    //         STBOX(),
-    //         StboxFunctions::Stbox_from_hexwkb
-    //     )
-    // );
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction(
+            "stboxFromHexWKB",
+            {LogicalType::VARCHAR},
+            STBOX(),
+            StboxFunctions::Stbox_from_hexwkb
+        )
+    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "asText",
             {STBOX()},
@@ -102,6 +104,52 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
             StboxFunctions::Stbox_as_text
         )
     );
+
+    /* Dimensional constructors — stboxX/Z/T/XT/ZT and the geodstbox*
+     * variants.  All wrap MEOS stbox_make with the appropriate
+     * has-x/has-z/geodetic flags filled in. */
+    {
+        const auto STB = STBOX();
+        const auto D   = LogicalType::DOUBLE;
+        const auto I   = LogicalType::INTEGER;
+        const auto T   = LogicalType::TIMESTAMP_TZ;
+        const auto SP  = SpanTypes::TSTZSPAN();
+
+        // stboxX(xmin, xmax, ymin, ymax, srid)
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "stboxX", {D, D, D, D, I}, STB, StboxFunctions::Stbox_constructor_x));
+        // stboxZ(xmin, xmax, ymin, ymax, zmin, zmax, srid)
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "stboxZ", {D, D, D, D, D, D, I}, STB, StboxFunctions::Stbox_constructor_z));
+        // stboxT(timestamptz) and stboxT(tstzspan)
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "stboxT", {T},  STB, StboxFunctions::Stbox_constructor_t_ts));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "stboxT", {SP}, STB, StboxFunctions::Stbox_constructor_t_span));
+        // stboxXT(xmin, xmax, ymin, ymax, ts|span, srid)
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "stboxXT", {D, D, D, D, T,  I}, STB, StboxFunctions::Stbox_constructor_xt_ts));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "stboxXT", {D, D, D, D, SP, I}, STB, StboxFunctions::Stbox_constructor_xt_span));
+        // stboxZT(xmin, xmax, ymin, ymax, zmin, zmax, ts|span, srid)
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "stboxZT", {D, D, D, D, D, D, T,  I}, STB, StboxFunctions::Stbox_constructor_zt_ts));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "stboxZT", {D, D, D, D, D, D, SP, I}, STB, StboxFunctions::Stbox_constructor_zt_span));
+
+        // Geographic variants — geodetic flag set; SRID defaults to
+        // 4326 in the time-only forms (MobilityDB convention).
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "geodstboxZ", {D, D, D, D, D, D, I}, STB, StboxFunctions::Geodstbox_constructor_z));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "geodstboxT", {T},  STB, StboxFunctions::Geodstbox_constructor_t_ts));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "geodstboxT", {SP}, STB, StboxFunctions::Geodstbox_constructor_t_span));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "geodstboxZT", {D, D, D, D, D, D, T,  I}, STB, StboxFunctions::Geodstbox_constructor_zt_ts));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "geodstboxZT", {D, D, D, D, D, D, SP, I}, STB, StboxFunctions::Geodstbox_constructor_zt_span));
+    }
 
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
@@ -112,15 +160,14 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    // ExtensionUtil::RegisterFunction(
-    //     instance,
-    //     ScalarFunction(
-    //         "asHexWKB",
-    //         {STBOX()},
-    //         LogicalType::VARCHAR,
-    //         StboxFunctions::Stbox_as_hexwkb
-    //     )
-    // );
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction(
+            "asHexWKB",
+            {STBOX()},
+            LogicalType::VARCHAR,
+            StboxFunctions::Stbox_as_hexwkb
+        )
+    );
 
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
@@ -325,7 +372,7 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "volume",
             {STBOX()},
@@ -334,7 +381,19 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    // Hash functions — `stbox_hash(stbox) → INTEGER`,
+    // `stbox_hash_extended(stbox, seed) → BIGINT`.
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("stbox_hash", {STBOX()}, LogicalType::INTEGER,
+                       StboxFunctions::Stbox_hash));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("stbox_hash_extended", {STBOX(), LogicalType::BIGINT},
+                       LogicalType::BIGINT, StboxFunctions::Stbox_hash_extended));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("SRID", {STBOX()}, LogicalType::INTEGER,
+                       StboxFunctions::Stbox_srid));
+
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "shiftTime",
             {STBOX(), LogicalType::INTERVAL},
@@ -956,6 +1015,29 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         loader.RegisterFunction(ScalarFunction("spaceTimeBoxes", {P, D, D, D, I, G},             LB, StboxFunctions::Tgeo_space_time_boxes));
         loader.RegisterFunction(ScalarFunction("spaceTimeBoxes", {P, D, D, D, I, G, TS},         LB, StboxFunctions::Tgeo_space_time_boxes));
         loader.RegisterFunction(ScalarFunction("spaceTimeBoxes", {P, D, D, D, I, G, TS, BB},     LB, StboxFunctions::Tgeo_space_time_boxes));
+
+        // Multi-entry bbox emitters: stboxes / splitNStboxes /
+        // splitEachNStboxes for tgeometry / tgeography / tgeompoint /
+        // tgeogpoint, plus the geometry / geography geo-side overloads.
+        const auto TGM = TGeometryTypes::TGEOMETRY();
+        const auto TGG = TGeographyTypes::TGEOGRAPHY();
+        const auto TGP = TgeogpointType::TGEOGPOINT();
+        const auto INT32 = LogicalType::INTEGER;
+        loader.RegisterFunction(ScalarFunction("stboxes", {P},   LB, StboxFunctions::Tspatial_stboxes));
+        loader.RegisterFunction(ScalarFunction("stboxes", {TGP}, LB, StboxFunctions::Tspatial_stboxes));
+        loader.RegisterFunction(ScalarFunction("stboxes", {TGM}, LB, StboxFunctions::Tspatial_stboxes));
+        loader.RegisterFunction(ScalarFunction("stboxes", {TGG}, LB, StboxFunctions::Tspatial_stboxes));
+        loader.RegisterFunction(ScalarFunction("stboxes", {G},   LB, StboxFunctions::Geo_stboxes));
+        loader.RegisterFunction(ScalarFunction("splitNStboxes",     {P,   INT32}, LB, StboxFunctions::Tspatial_split_n_stboxes));
+        loader.RegisterFunction(ScalarFunction("splitNStboxes",     {TGP, INT32}, LB, StboxFunctions::Tspatial_split_n_stboxes));
+        loader.RegisterFunction(ScalarFunction("splitNStboxes",     {TGM, INT32}, LB, StboxFunctions::Tspatial_split_n_stboxes));
+        loader.RegisterFunction(ScalarFunction("splitNStboxes",     {TGG, INT32}, LB, StboxFunctions::Tspatial_split_n_stboxes));
+        loader.RegisterFunction(ScalarFunction("splitNStboxes",     {G,   INT32}, LB, StboxFunctions::Geo_split_n_stboxes));
+        loader.RegisterFunction(ScalarFunction("splitEachNStboxes", {P,   INT32}, LB, StboxFunctions::Tspatial_split_each_n_stboxes));
+        loader.RegisterFunction(ScalarFunction("splitEachNStboxes", {TGP, INT32}, LB, StboxFunctions::Tspatial_split_each_n_stboxes));
+        loader.RegisterFunction(ScalarFunction("splitEachNStboxes", {TGM, INT32}, LB, StboxFunctions::Tspatial_split_each_n_stboxes));
+        loader.RegisterFunction(ScalarFunction("splitEachNStboxes", {TGG, INT32}, LB, StboxFunctions::Tspatial_split_each_n_stboxes));
+        loader.RegisterFunction(ScalarFunction("splitEachNStboxes", {G,   INT32}, LB, StboxFunctions::Geo_split_each_n_stboxes));
 
         // getSpaceTile(point geometry, xsz, ysz, zsz[, sorigin])
         loader.RegisterFunction(ScalarFunction("getSpaceTile", {G, D, D, D},     B, StboxFunctions::Stbox_get_space_tile));
