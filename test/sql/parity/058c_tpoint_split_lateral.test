@@ -1,0 +1,43 @@
+# name: test/sql/parity/058c_tpoint_split_lateral.test
+# description: spaceSplit / spaceTimeSplit consumed via LATERAL join.
+#              Driven by `in_out_function` registration so the splitter
+#              accepts both literal arguments and per-row column inputs.
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+CREATE TABLE trip(id INTEGER, traj TGEOMPOINT);
+
+statement ok
+INSERT INTO trip VALUES
+    (1, tgeompoint '[POINT(0 0)@2000-01-01 00:00:00+00, POINT(10 10)@2000-01-05 00:00:00+00]');
+
+# Same trajectory + parameters as 058b_tpoint_split.test query 1, but the
+# tgeompoint comes from a table column rather than a literal — exercises
+# the LATERAL column-input path of the in_out_function plumbing.
+
+query I
+SELECT count(*)
+FROM trip, LATERAL spaceSplit(traj, 5.0, 5.0, 5.0);
+----
+3
+
+# Geometry/subtype check via LATERAL — must match the literal-input case.
+
+query II
+SELECT ST_AsText(spaceBin), tempSubtype(tpoint)
+FROM trip, LATERAL spaceSplit(traj, 5.0, 5.0, 5.0)
+ORDER BY ST_AsText(spaceBin);
+----
+POINT (0 0)	SequenceSet
+POINT (10 10)	SequenceSet
+POINT (5 5)	SequenceSet
+
+# spaceTimeSplit via LATERAL.
+
+query I
+SELECT count(*)
+FROM trip, LATERAL spaceTimeSplit(traj, 5.0, 5.0, 5.0, INTERVAL '2 days');
+----
+3
