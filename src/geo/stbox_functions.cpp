@@ -1405,6 +1405,28 @@ void StboxFunctions::Stbox_srid(DataChunk &args, ExpressionState &state, Vector 
     if (args.size() == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
+void StboxFunctions::Stbox_perimeter(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    args.data[0].Flatten(row_count);
+    const bool has_spheroid = args.ColumnCount() > 1;
+    if (has_spheroid) args.data[1].Flatten(row_count);
+    auto in_box = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_sph = has_spheroid ? FlatVector::GetData<bool>(args.data[1]) : nullptr;
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto out_data = FlatVector::GetData<double>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row)) { out_validity.SetInvalid(row); continue; }
+        if (in_box[row].GetSize() != sizeof(STBox)) {
+            throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+        }
+        STBox box;
+        memcpy(&box, in_box[row].GetData(), sizeof(STBox));
+        out_data[row] = stbox_perimeter(&box, in_sph ? in_sph[row] : false);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 void StboxFunctions::Stbox_volume(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::ExecuteWithNulls<string_t, double>(
         args.data[0], result, args.size(),
@@ -3374,6 +3396,69 @@ void StboxFunctions::Geo_split_each_n_stboxes(DataChunk &args, ExpressionState &
         int count = 0;
         STBox *boxes = geo_split_each_n_stboxes(gs, in_n[row], &count);
         free(gs);
+        EmitStboxList(result, row, list_entries, boxes, count, total);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+/* transformPipeline(stbox, pipeline text, srid int = 0, is_forward bool = true)
+ * Apply a PROJ pipeline string to an stbox.
+ */
+void StboxFunctions::Stbox_transform_pipeline(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_box = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_pipe = FlatVector::GetData<string_t>(args.data[1]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto &v1 = FlatVector::Validity(args.data[1]);
+    auto out_data = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row) || !v1.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        if (in_box[row].GetSize() != sizeof(STBox)) {
+            throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+        }
+        STBox box;
+        memcpy(&box, in_box[row].GetData(), sizeof(STBox));
+        int32_t srid = (cc > 2) ? FlatVector::GetData<int32_t>(args.data[2])[row] : 0;
+        bool is_fwd = (cc > 3) ? FlatVector::GetData<bool>(args.data[3])[row]    : true;
+        std::string pipe = in_pipe[row].GetString();
+        STBox *ret = stbox_transform_pipeline(&box, pipe.c_str(), srid, is_fwd);
+        if (!ret) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        string_t blob(reinterpret_cast<const char *>(ret), sizeof(STBox));
+        out_data[row] = StringVector::AddStringOrBlob(result, blob);
+        free(ret);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+void StboxFunctions::Stbox_quad_split(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    args.data[0].Flatten(row_count);
+    auto in_box = FlatVector::GetData<string_t>(args.data[0]);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        if (in_box[row].GetSize() != sizeof(STBox)) {
+            throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+        }
+        STBox box;
+        memcpy(&box, in_box[row].GetData(), sizeof(STBox));
+        int count = 0;
+        STBox *boxes = stbox_quad_split(&box, &count);
         EmitStboxList(result, row, list_entries, boxes, count, total);
     }
     if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);

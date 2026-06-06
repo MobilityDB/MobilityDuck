@@ -1,0 +1,70 @@
+# name: test/sql/parity/076c_transform_pipeline.test
+# description: `transformPipeline(<value>, pipeline_text, srid int = 0,
+#              is_forward bool = true)` — apply a PROJ pipeline
+#              string to a temporal spatial value, an stbox, or a
+#              spatial set.
+#
+#              Closes the last parity gap (3 sections × 7 overloads
+#              of the same name) in the active addressable surface.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# Temporal spatial values — tgeompoint
+# =============================================================================
+
+# 2-arg form (srid=0, is_forward=true defaults).  axisswap on (1, 2) → (2, 1).
+query I
+SELECT asText(transformPipeline(tgeompoint '[Point(1 2)@2000-01-01]',
+                                 '+proj=pipeline +step +proj=axisswap +order=2,1'));
+----
+[POINT(2 1)@2000-01-01 00:00:00+01]
+
+# Explicit srid + is_forward.
+query I
+SELECT asText(transformPipeline(tgeompoint '[Point(1 2)@2000-01-01]',
+                                 '+proj=pipeline +step +proj=axisswap +order=2,1',
+                                 0, true));
+----
+[POINT(2 1)@2000-01-01 00:00:00+01]
+
+# Inverse — for axisswap, forward = inverse.
+query I
+SELECT asText(transformPipeline(tgeompoint '[Point(1 2)@2000-01-01]',
+                                 '+proj=pipeline +step +proj=axisswap +order=2,1',
+                                 0, false));
+----
+[POINT(2 1)@2000-01-01 00:00:00+01]
+
+# =============================================================================
+# Smoke — the other surfaces (tgeometry / tgeography / tgeogpoint / stbox /
+# geomset / geogset) all wire to the same MEOS entrypoints; assert that
+# each call returns a value (full output checks deferred to dedicated
+# transform tests).
+# =============================================================================
+
+query I
+SELECT transformPipeline(tgeometry '[Point(1 2)@2000-01-01]',
+                          '+proj=pipeline +step +proj=axisswap +order=2,1') IS NOT NULL;
+----
+true
+
+query I
+SELECT transformPipeline(tgeography '[Point(1 2)@2000-01-01]',
+                          '+proj=pipeline +step +proj=axisswap +order=2,1') IS NOT NULL;
+----
+true
+
+query I
+SELECT transformPipeline(tgeogpoint '[Point(1 2)@2000-01-01]',
+                          '+proj=pipeline +step +proj=axisswap +order=2,1') IS NOT NULL;
+----
+true
+
+query I
+SELECT transformPipeline(setSRID(geomset '{Point(1 2), Point(3 4)}', 4326),
+                          '+proj=pipeline +step +proj=axisswap +order=2,1',
+                          4326) IS NOT NULL;
+----
+true

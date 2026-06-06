@@ -423,6 +423,36 @@ void TspatialTransformExec(DataChunk &args, ExpressionState &, Vector &result) {
         });
 }
 
+void TspatialTransformPipelineExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_temp = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_pipe = FlatVector::GetData<string_t>(args.data[1]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto &v1 = FlatVector::Validity(args.data[1]);
+    auto out_data = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row) || !v1.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        int32_t srid = (cc > 2) ? FlatVector::GetData<int32_t>(args.data[2])[row] : 0;
+        bool is_fwd = (cc > 3) ? FlatVector::GetData<bool>(args.data[3])[row]    : true;
+        Temporal *t = BlobToTemporal(in_temp[row]);
+        std::string pipe = in_pipe[row].GetString();
+        Temporal *r = tspatial_transform_pipeline(t, pipe.c_str(), srid, is_fwd);
+        free(t);
+        if (!r) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        out_data[row] = TemporalToBlob(result, r);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 void TspatialToStboxExec(DataChunk &args, ExpressionState &, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
@@ -753,6 +783,18 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
         "setSRID", {TGEOM, INT32}, TGEOM, TspatialSetSridExec));
     loader.RegisterFunction(ScalarFunction(
         "transform", {TGEOM, INT32}, TGEOM, TspatialTransformExec));
+
+    // transformPipeline(tgeometry, pipeline text, srid int = 0,
+    //                   is_forward bool = true)
+    loader.RegisterFunction(ScalarFunction(
+        "transformPipeline", {TGEOM, LogicalType::VARCHAR}, TGEOM,
+        TspatialTransformPipelineExec));
+    loader.RegisterFunction(ScalarFunction(
+        "transformPipeline", {TGEOM, LogicalType::VARCHAR, INT32}, TGEOM,
+        TspatialTransformPipelineExec));
+    loader.RegisterFunction(ScalarFunction(
+        "transformPipeline", {TGEOM, LogicalType::VARCHAR, INT32, LogicalType::BOOLEAN}, TGEOM,
+        TspatialTransformPipelineExec));
 
     // tgeometry → stbox is a cast in the SQL surface; expose it as a
     // function for now to keep the implementation a single template.

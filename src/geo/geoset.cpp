@@ -112,11 +112,28 @@ void SpatialSetType::RegisterScalarFunctions(ExtensionLoader &loader) {
         {SpatialSetType::geomset(), LogicalType::INTEGER}, SpatialSetType::geomset(), SpatialSetFunctions::Spatialset_transform));
     
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
-		"transform", 
+		"transform",
         {SpatialSetType::geogset(), LogicalType::INTEGER}, SpatialSetType::geogset(), SpatialSetFunctions::Spatialset_transform));
 
+    // transformPipeline(<geomset|geogset>, pipeline text, srid int = 0,
+    //                   is_forward bool = true)
+    for (auto &set_type : {SpatialSetType::geomset(), SpatialSetType::geogset()}) {
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "transformPipeline",
+            {set_type, LogicalType::VARCHAR},
+            set_type, SpatialSetFunctions::Spatialset_transform_pipeline));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "transformPipeline",
+            {set_type, LogicalType::VARCHAR, LogicalType::INTEGER},
+            set_type, SpatialSetFunctions::Spatialset_transform_pipeline));
+        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+            "transformPipeline",
+            {set_type, LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN},
+            set_type, SpatialSetFunctions::Spatialset_transform_pipeline));
+    }
+
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
-		"startValue", {SpatialSetType::geomset()},  
+		"startValue", {SpatialSetType::geomset()},
 		GeoTypes::GEOMETRY(),
 		SpatialSetFunctions::Set_start_value
 	));    
@@ -449,6 +466,44 @@ void SpatialSetFunctions::Spatialset_transform(DataChunk &args, ExpressionState 
         result_data[i] = StringVector::AddStringOrBlob(result_vec, (const char*)result, total_size);                        
         free(result);		
 	}
+}
+
+/* transformPipeline(<spatial-set>, pipeline text, srid int = 0,
+ *                    is_forward bool = true)
+ * Apply a PROJ pipeline string to every element of the spatial set.
+ */
+void SpatialSetFunctions::Spatialset_transform_pipeline(DataChunk &args, ExpressionState &state, Vector &result_vec) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_set = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_pipe = FlatVector::GetData<string_t>(args.data[1]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto &v1 = FlatVector::Validity(args.data[1]);
+    auto out_data = FlatVector::GetData<string_t>(result_vec);
+    auto &out_validity = FlatVector::Validity(result_vec);
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row) || !v1.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        size_t sz = in_set[row].GetSize();
+        Set *s = (Set *) malloc(sz);
+        memcpy(s, in_set[row].GetData(), sz);
+        int32_t srid = (cc > 2) ? FlatVector::GetData<int32_t>(args.data[2])[row] : 0;
+        bool is_fwd = (cc > 3) ? FlatVector::GetData<bool>(args.data[3])[row]    : true;
+        std::string pipe = in_pipe[row].GetString();
+        Set *ret = spatialset_transform_pipeline(s, pipe.c_str(), srid, is_fwd);
+        free(s);
+        if (!ret) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        size_t rsz = set_mem_size(ret);
+        out_data[row] = StringVector::AddStringOrBlob(result_vec, (const char *) ret, rsz);
+        free(ret);
+    }
+    if (row_count == 1) result_vec.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 // --- startValue ---

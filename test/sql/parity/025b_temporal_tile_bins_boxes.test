@@ -1,0 +1,108 @@
+# name: test/sql/parity/025b_temporal_tile_bins_boxes.test
+# description: Temporal-tile bin / box emitters added to close
+#              `025_temporal_tile.in.sql` parity gap:
+#                - `timeBins(<temp>, interval [, torigin])`
+#                - `valueBins(tint/tfloat, vsize [, vorigin])`
+#                - `timeBoxes(tnumber, interval [, torigin])`
+#                - `valueBoxes(tnumber, vsize [, vorigin])`
+#                - `valueTimeBoxes(tnumber, vsize, interval [, vorigin, torigin])`
+#
+#              Defaults match MobilityDB: `torigin = '2000-01-03'`
+#              and `vorigin = 0`.
+# group: [sql]
+
+require mobilityduck
+
+# =============================================================================
+# timeBins — for each of the four base temporal types
+# =============================================================================
+
+query I
+SELECT len(timeBins(tbool '[t@2000-01-01, f@2000-01-08]', INTERVAL '1 day'));
+----
+8
+
+query I
+SELECT len(timeBins(tint '[1@2000-01-01, 5@2000-01-08]', INTERVAL '1 day'));
+----
+8
+
+query I
+SELECT len(timeBins(tfloat '[1.5@2000-01-01, 5.5@2000-01-04]', INTERVAL '1 day'));
+----
+4
+
+query I
+SELECT len(timeBins(ttext '["a"@2000-01-01, "b"@2000-01-04]', INTERVAL '1 day'));
+----
+4
+
+# torigin explicit — same result because the bin grid is offset-free
+# at the default origin.
+query I
+SELECT len(timeBins(tint '[1@2000-01-01, 5@2000-01-04]',
+                    INTERVAL '1 day',
+                    TIMESTAMPTZ '2000-01-03 00:00:00+00'));
+----
+4
+
+# =============================================================================
+# valueBins — typed per tint / tfloat
+# =============================================================================
+
+query I
+SELECT len(valueBins(tint '[1@2000-01-01, 7@2000-01-08]', 3));
+----
+2
+
+query I
+SELECT len(valueBins(tint '[1@2000-01-01, 7@2000-01-08]', 3, 1));
+----
+2
+
+query I
+SELECT len(valueBins(tfloat '[1.5@2000-01-01, 8.7@2000-01-03]', 2.0));
+----
+5
+
+# =============================================================================
+# timeBoxes — tnumber × time grid
+# =============================================================================
+
+query I
+SELECT len(timeBoxes(tint '[1@2000-01-01, 5@2000-01-08]', INTERVAL '2 days'));
+----
+5
+
+query I
+SELECT len(timeBoxes(tfloat '[1.5@2000-01-01, 5.5@2000-01-04]', INTERVAL '1 day'));
+----
+4
+
+# =============================================================================
+# valueBoxes — tnumber × value grid
+# =============================================================================
+
+query I
+SELECT len(valueBoxes(tint '[1@2000-01-01, 7@2000-01-08]', 3));
+----
+2
+
+query I
+SELECT len(valueBoxes(tfloat '[1.5@2000-01-01, 8.7@2000-01-03]', 2.0));
+----
+5
+
+# =============================================================================
+# valueTimeBoxes — combined value × time grid
+# =============================================================================
+
+query I
+SELECT len(valueTimeBoxes(tint '[1@2000-01-01, 5@2000-01-08]', 2, INTERVAL '2 days'));
+----
+6
+
+query I
+SELECT len(valueTimeBoxes(tfloat '[1.5@2000-01-01, 5.5@2000-01-04]', 2.0, INTERVAL '1 day'));
+----
+6

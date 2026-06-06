@@ -4586,6 +4586,299 @@ void TemporalFunctions::Tnumber_split_each_n_tboxes(DataChunk &args, ExpressionS
         /*has_n_arg=*/true);
 }
 
+/* ============================================================
+ * Temporal-tile family — bin / box emitters
+ *
+ * `timeBins(temporal, interval [, torigin])` → tstzspan[]
+ * `valueBins(tint/tfloat, vsize [, vorigin])` → intspan[] / floatspan[]
+ * `timeBoxes(tnumber, interval [, torigin])` → tbox[]
+ * `valueBoxes(tnumber, vsize [, vorigin])` → tbox[]
+ * `valueTimeBoxes(tnumber, vsize, interval [, vorigin, torigin])` → tbox[]
+ *
+ * MobilityDB defaults: `torigin = '2000-01-03 +0:00:00'` (Monday epoch
+ * in MEOS), `vorigin = 0`.
+ ============================================================ */
+
+namespace {
+
+// MEOS torigin default — Monday epoch 2000-01-03 expressed in MEOS
+// internal representation (microseconds since 2000-01-01 UTC).  This
+// section runs before the file's other `DEFAULT_T_ORIGIN` definition,
+// so we name the constant locally here.
+constexpr TimestampTz DEFAULT_T_ORIGIN_TILE = 0;
+
+template <typename SPAN_T>
+void EmitSpanList(Vector &result, idx_t row, list_entry_t *list_entries,
+                  SPAN_T *spans, int count, idx_t &total) {
+    if (!spans || count <= 0) {
+        list_entries[row] = list_entry_t{total, 0};
+        if (spans) free(spans);
+        return;
+    }
+    ListVector::Reserve(result, total + count);
+    ListVector::SetListSize(result, total + count);
+    list_entries[row] = list_entry_t{total, static_cast<uint64_t>(count)};
+    auto &child = ListVector::GetEntry(result);
+    auto child_data = FlatVector::GetData<string_t>(child);
+    for (int k = 0; k < count; k++) {
+        string_t one(reinterpret_cast<const char *>(&spans[k]), sizeof(SPAN_T));
+        child_data[total + k] = StringVector::AddStringOrBlob(child, one);
+    }
+    total += count;
+    free(spans);
+}
+
+void EmitTboxList(Vector &result, idx_t row, list_entry_t *list_entries,
+                  TBox *boxes, int count, idx_t &total) {
+    if (!boxes || count <= 0) {
+        list_entries[row] = list_entry_t{total, 0};
+        if (boxes) free(boxes);
+        return;
+    }
+    ListVector::Reserve(result, total + count);
+    ListVector::SetListSize(result, total + count);
+    list_entries[row] = list_entry_t{total, static_cast<uint64_t>(count)};
+    auto &child = ListVector::GetEntry(result);
+    auto child_data = FlatVector::GetData<string_t>(child);
+    for (int k = 0; k < count; k++) {
+        string_t one(reinterpret_cast<const char *>(&boxes[k]), sizeof(TBox));
+        child_data[total + k] = StringVector::AddStringOrBlob(child, one);
+    }
+    total += count;
+    free(boxes);
+}
+
+} // namespace
+
+void TemporalFunctions::Temporal_time_bins(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    auto in_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto dur_data = FlatVector::GetData<interval_t>(args.data[1]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto &v1 = FlatVector::Validity(args.data[1]);
+    const bool has_origin = args.ColumnCount() > 2;
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row) || !v1.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        TimestampTz origin = DEFAULT_T_ORIGIN_TILE;
+        if (has_origin) {
+            auto &ov = args.data[2];
+            if (FlatVector::Validity(ov).RowIsValid(row)) {
+                origin = (TimestampTz) DuckDBToMeosTimestamp(
+                    FlatVector::GetData<timestamp_tz_t>(ov)[row]).value;
+            }
+        }
+        Temporal *t = BlobToTemporal(in_data[row]);
+        MeosInterval mi = IntervaltToInterval(dur_data[row]);
+        int count = 0;
+        Span *spans = temporal_time_bins(t, &mi, origin, &count);
+        free(t);
+        EmitSpanList<Span>(result, row, list_entries, spans, count, total);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+namespace {
+
+template <typename VAL_T, typename FN>
+void RunValueBinsEmit(DataChunk &args, Vector &result, FN produce) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    auto in_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto in_size = FlatVector::GetData<VAL_T>(args.data[1]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto &v1 = FlatVector::Validity(args.data[1]);
+    const bool has_origin = args.ColumnCount() > 2;
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row) || !v1.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        VAL_T origin = 0;
+        if (has_origin) {
+            auto &ov = args.data[2];
+            if (FlatVector::Validity(ov).RowIsValid(row)) {
+                origin = FlatVector::GetData<VAL_T>(ov)[row];
+            }
+        }
+        Temporal *t = BlobToTemporal(in_data[row]);
+        int count = 0;
+        Span *spans = produce(t, in_size[row], origin, &count);
+        free(t);
+        EmitSpanList<Span>(result, row, list_entries, spans, count, total);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+} // namespace
+
+void TemporalFunctions::Tint_value_bins(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunValueBinsEmit<int32_t>(args, result,
+        [](const Temporal *t, int32_t size, int32_t origin, int *count) {
+            return tint_value_bins(t, (int) size, (int) origin, count);
+        });
+}
+
+void TemporalFunctions::Tfloat_value_bins(DataChunk &args, ExpressionState &state, Vector &result) {
+    RunValueBinsEmit<double>(args, result,
+        [](const Temporal *t, double size, double origin, int *count) {
+            return tfloat_value_bins(t, size, origin, count);
+        });
+}
+
+namespace {
+
+template <typename VAL_T, typename FN_TIME, typename FN_VALUE, typename FN_VT>
+void RunValueTimeBoxes(DataChunk &args, Vector &result,
+                       bool value_axis, bool time_axis,
+                       FN_TIME fn_time, FN_VALUE fn_value, FN_VT fn_vt) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    auto in_data = FlatVector::GetData<string_t>(args.data[0]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    idx_t arg = 1;
+    VAL_T *vsize_data = nullptr;
+    if (value_axis) {
+        if (!FlatVector::Validity(args.data[arg]).RowIsValid(0)) {
+            // ignored — per-row validity is checked in loop.
+        }
+        vsize_data = FlatVector::GetData<VAL_T>(args.data[arg]);
+        arg++;
+    }
+    interval_t *dur_data = nullptr;
+    if (time_axis) {
+        dur_data = FlatVector::GetData<interval_t>(args.data[arg]);
+        arg++;
+    }
+    const idx_t vorigin_idx = value_axis ? arg++ : 0;
+    const idx_t torigin_idx = time_axis  ? arg++ : 0;
+    const bool has_vorigin = value_axis && vorigin_idx < args.ColumnCount();
+    const bool has_torigin = time_axis  && torigin_idx < args.ColumnCount();
+
+    idx_t total = 0;
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            list_entries[row] = list_entry_t{total, 0};
+            continue;
+        }
+        VAL_T vsize = value_axis ? vsize_data[row] : VAL_T{0};
+        MeosInterval mi_storage{};
+        ::Interval *duration = nullptr;
+        if (time_axis) {
+            mi_storage = IntervaltToInterval(dur_data[row]);
+            duration = &mi_storage;
+        }
+        VAL_T vorigin = 0;
+        if (has_vorigin && FlatVector::Validity(args.data[vorigin_idx]).RowIsValid(row)) {
+            vorigin = FlatVector::GetData<VAL_T>(args.data[vorigin_idx])[row];
+        }
+        TimestampTz torigin = DEFAULT_T_ORIGIN_TILE;
+        if (has_torigin && FlatVector::Validity(args.data[torigin_idx]).RowIsValid(row)) {
+            torigin = (TimestampTz) DuckDBToMeosTimestamp(
+                FlatVector::GetData<timestamp_tz_t>(args.data[torigin_idx])[row]).value;
+        }
+        Temporal *t = BlobToTemporal(in_data[row]);
+        int count = 0;
+        TBox *boxes = nullptr;
+        if (value_axis && time_axis) {
+            boxes = fn_vt(t, vsize, duration, vorigin, torigin, &count);
+        } else if (time_axis) {
+            boxes = fn_time(t, duration, torigin, &count);
+        } else {
+            boxes = fn_value(t, vsize, vorigin, &count);
+        }
+        free(t);
+        EmitTboxList(result, row, list_entries, boxes, count, total);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+} // namespace
+
+void TemporalFunctions::Tnumber_time_boxes(DataChunk &args, ExpressionState &state, Vector &result) {
+    // Dispatch on the underlying temporal type by peeking the first byte of
+    // the blob (T_TINT / T_TFLOAT etc.).  Since both register the same
+    // function, we discriminate at runtime.
+    args.data[0].Flatten(args.size());
+    auto in_data = FlatVector::GetData<string_t>(args.data[0]);
+    if (args.size() == 0) return;
+    MeosType base_type = T_TFLOAT;
+    if (in_data[0].GetSize() > 0) {
+        const Temporal *probe = reinterpret_cast<const Temporal *>(in_data[0].GetData());
+        base_type = (MeosType) probe->temptype;
+    }
+    if (base_type == T_TINT) {
+        RunValueTimeBoxes<int32_t>(args, result, /*value=*/false, /*time=*/true,
+            [](const Temporal *t, const ::Interval *d, TimestampTz to, int *c) { return tint_time_boxes(t, d, to, c); },
+            [](const Temporal *, int32_t, int32_t, int *) -> TBox * { return nullptr; },
+            [](const Temporal *, int32_t, const ::Interval *, int32_t, TimestampTz, int *) -> TBox * { return nullptr; });
+    } else {
+        RunValueTimeBoxes<double>(args, result, /*value=*/false, /*time=*/true,
+            [](const Temporal *t, const ::Interval *d, TimestampTz to, int *c) { return tfloat_time_boxes(t, d, to, c); },
+            [](const Temporal *, double, double, int *) -> TBox * { return nullptr; },
+            [](const Temporal *, double, const ::Interval *, double, TimestampTz, int *) -> TBox * { return nullptr; });
+    }
+}
+
+void TemporalFunctions::Tnumber_value_boxes(DataChunk &args, ExpressionState &state, Vector &result) {
+    args.data[0].Flatten(args.size());
+    auto in_data = FlatVector::GetData<string_t>(args.data[0]);
+    if (args.size() == 0) return;
+    MeosType base_type = T_TFLOAT;
+    if (in_data[0].GetSize() > 0) {
+        const Temporal *probe = reinterpret_cast<const Temporal *>(in_data[0].GetData());
+        base_type = (MeosType) probe->temptype;
+    }
+    if (base_type == T_TINT) {
+        RunValueTimeBoxes<int32_t>(args, result, /*value=*/true, /*time=*/false,
+            [](const Temporal *, const ::Interval *, TimestampTz, int *) -> TBox * { return nullptr; },
+            [](const Temporal *t, int32_t v, int32_t vo, int *c) { return tint_value_boxes(t, v, vo, c); },
+            [](const Temporal *, int32_t, const ::Interval *, int32_t, TimestampTz, int *) -> TBox * { return nullptr; });
+    } else {
+        RunValueTimeBoxes<double>(args, result, /*value=*/true, /*time=*/false,
+            [](const Temporal *, const ::Interval *, TimestampTz, int *) -> TBox * { return nullptr; },
+            [](const Temporal *t, double v, double vo, int *c) { return tfloat_value_boxes(t, v, vo, c); },
+            [](const Temporal *, double, const ::Interval *, double, TimestampTz, int *) -> TBox * { return nullptr; });
+    }
+}
+
+void TemporalFunctions::Tnumber_value_time_boxes(DataChunk &args, ExpressionState &state, Vector &result) {
+    args.data[0].Flatten(args.size());
+    auto in_data = FlatVector::GetData<string_t>(args.data[0]);
+    if (args.size() == 0) return;
+    MeosType base_type = T_TFLOAT;
+    if (in_data[0].GetSize() > 0) {
+        const Temporal *probe = reinterpret_cast<const Temporal *>(in_data[0].GetData());
+        base_type = (MeosType) probe->temptype;
+    }
+    if (base_type == T_TINT) {
+        RunValueTimeBoxes<int32_t>(args, result, /*value=*/true, /*time=*/true,
+            [](const Temporal *, const ::Interval *, TimestampTz, int *) -> TBox * { return nullptr; },
+            [](const Temporal *, int32_t, int32_t, int *) -> TBox * { return nullptr; },
+            [](const Temporal *t, int32_t v, const ::Interval *d, int32_t vo, TimestampTz to, int *c) { return tint_value_time_boxes(t, v, d, vo, to, c); });
+    } else {
+        RunValueTimeBoxes<double>(args, result, /*value=*/true, /*time=*/true,
+            [](const Temporal *, const ::Interval *, TimestampTz, int *) -> TBox * { return nullptr; },
+            [](const Temporal *, double, double, int *) -> TBox * { return nullptr; },
+            [](const Temporal *t, double v, const ::Interval *d, double vo, TimestampTz to, int *c) { return tfloat_value_time_boxes(t, v, d, vo, to, c); });
+    }
+}
+
 // Temporal_derivative is implemented later in this file in the Math
 // functions block (existed before the unary-tnumber additions).
 

@@ -1268,7 +1268,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "transform",
             {TGEOMPOINT(), LogicalType::INTEGER},
@@ -1277,7 +1277,22 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    // transformPipeline(tgeompoint, pipeline text, srid int = 0,
+    //                   is_forward bool = true)
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("transformPipeline",
+                       {TGEOMPOINT(), LogicalType::VARCHAR},
+                       TGEOMPOINT(), TgeompointFunctions::Tspatial_transform_pipeline));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("transformPipeline",
+                       {TGEOMPOINT(), LogicalType::VARCHAR, LogicalType::INTEGER},
+                       TGEOMPOINT(), TgeompointFunctions::Tspatial_transform_pipeline));
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction("transformPipeline",
+                       {TGEOMPOINT(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN},
+                       TGEOMPOINT(), TgeompointFunctions::Tspatial_transform_pipeline));
+
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "round",
             {TGEOMPOINT(), LogicalType::INTEGER},
@@ -2341,6 +2356,46 @@ void TgeoGeoMeasureExec(DataChunk &args, ExpressionState &state, Vector &result)
     }
 }
 
+/* geometry(tgeompoint [, segmentize bool]) /
+ * geography(tgeogpoint [, segmentize bool])
+ *
+ * Convert a temporal point's trajectory to a (possibly segmentized)
+ * geometry/geography linestring.  Same underlying MEOS call
+ * (`tpoint_tfloat_to_geomeas`) as `geoMeasure`, but with a NULL
+ * measure — so the M coordinate is omitted from the output.
+ */
+void TgeoToGeomExec(DataChunk &args, ExpressionState &state, Vector &result) {
+    const idx_t row_count = args.size();
+    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
+    const idx_t cc = args.ColumnCount();
+    auto in_temp = FlatVector::GetData<string_t>(args.data[0]);
+    auto &v0 = FlatVector::Validity(args.data[0]);
+    auto out_data = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    for (idx_t row = 0; row < row_count; row++) {
+        if (!v0.RowIsValid(row)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        Temporal *t = BlobToTempMVT(in_temp[row]);
+        bool segmentize = (cc > 1) ? FlatVector::GetData<bool>(args.data[1])[row] : false;
+        GSERIALIZED *geom = nullptr;
+        bool ok = tpoint_tfloat_to_geomeas(t, nullptr, segmentize, &geom);
+        free(t);
+        if (!ok || !geom) {
+            out_validity.SetInvalid(row);
+            if (geom) free(geom);
+            continue;
+        }
+        ArenaAllocator arena(BufferAllocator::Get(state.GetContext()));
+        string_t enc = GSerializedToGeometry(geom, arena, result);
+        out_data[row] = StringVector::AddStringOrBlob(result, enc);
+        free(geom);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 } // namespace
 
 void TgeompointType::RegisterRoundtripIO(ExtensionLoader &loader) {
@@ -2441,6 +2496,13 @@ void TgeompointType::RegisterAnalyticsViz(ExtensionLoader &loader) {
     /* geoMeasure(tgeompoint, tfloat[, segmentize]) -> geometry */
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("geoMeasure", {T, TemporalTypes::TFLOAT()},     G, TgeoGeoMeasureExec));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("geoMeasure", {T, TemporalTypes::TFLOAT(), BL}, G, TgeoGeoMeasureExec));
+
+    /* geometry(tgeompoint [, segmentize bool]) -> geometry
+     * Trajectory of the temporal point, optionally segmentized into
+     * pairwise linestrings.  Mirrors MobilityDB's `geometry(tgeompoint)`
+     * conversion. */
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("geometry", {T},     G, TgeoToGeomExec));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("geometry", {T, BL}, G, TgeoToGeomExec));
 }
 
 } // namespace duckdb
