@@ -1,0 +1,40 @@
+# name: test/sql/asmfjson_temporal.test
+# description: asMFJSON for the number/text/bool temporal types (MFJSON output round-trip)
+# group: [mobilityduck]
+
+require mobilityduck
+
+# Each non-spatial temporal type emits its MovingX MFJSON type
+query I
+SELECT asMFJSON(tfloat '{1@2000-01-01, 2@2000-01-02}') LIKE '%"type":"MovingFloat"%';
+----
+true
+
+query I
+SELECT asMFJSON(tint '[3@2000-01-01, 4@2000-01-02]') LIKE '%"type":"MovingInteger"%';
+----
+true
+
+query I
+SELECT asMFJSON(ttext '[abc@2000-01-01]') LIKE '%"type":"MovingText"%';
+----
+true
+
+query I
+SELECT asMFJSON(tbool '[true@2000-01-01]') LIKE '%"type":"MovingBoolean"%';
+----
+true
+
+# tfloat takes the optional options/flags/maxdecimaldigits arguments
+query I
+SELECT length(asMFJSON(tfloat '{1.23456789@2000-01-01, 2@2000-01-02}', 0, 0, 3)) > 0;
+----
+true
+
+# round-trips back through tfloatFromMFJSON: parsing the emitted MFJSON and
+# re-emitting reproduces the original MFJSON
+query I
+SELECT asMFJSON(tfloatFromMFJSON(asMFJSON(tfloat '{1@2000-01-01, 2@2000-01-02, 3@2000-01-03}')))
+     = asMFJSON(tfloat '{1@2000-01-01, 2@2000-01-02, 3@2000-01-03}');
+----
+true

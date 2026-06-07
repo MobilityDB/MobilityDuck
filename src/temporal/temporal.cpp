@@ -2117,6 +2117,30 @@ void TemporalScalarFromMfjsonExec(DataChunk &args, ExpressionState &, Vector &re
         });
 }
 
+// asMFJSON(temp[, options[, flags[, maxdecimaldigits]]]) for the number/text/bool
+// temporal types, deriving the same Temporal_as_mfjson surface MobilityDB exposes.
+// options != 0 requests the bounding box; srs is not applicable to non-spatial temporals.
+void TemporalScalarAsMfjsonExec(DataChunk &args, ExpressionState &, Vector &result) {
+    const idx_t n = args.size();
+    const idx_t cc = args.ColumnCount();
+    for (idx_t i = 0; i < cc; i++) args.data[i].Flatten(n);
+    auto in = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t row = 0; row < n; row++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(row)) { outv.SetInvalid(row); continue; }
+        Temporal *t = ScalarBlobToTemp(in[row]);
+        bool with_bbox = (cc > 1) ? FlatVector::GetData<int32_t>(args.data[1])[row] != 0 : false;
+        int flags     = (cc > 2) ? FlatVector::GetData<int32_t>(args.data[2])[row] : 0;
+        int precision = (cc > 3) ? FlatVector::GetData<int32_t>(args.data[3])[row] : 15;
+        char *json = temporal_as_mfjson(t, with_bbox, flags, precision, nullptr);
+        free(t);
+        if (!json) { outv.SetInvalid(row); continue; }
+        out[row] = StringVector::AddString(result, json);
+        free(json);
+    }
+}
+
 } // anonymous namespace
 
 void TemporalTypes::RegisterWkbFunctions(ExtensionLoader &loader) {
@@ -2155,7 +2179,16 @@ void TemporalTypes::RegisterWkbFunctions(ExtensionLoader &loader) {
         duckdb::RegisterSerializedScalarFunction(
             loader,
             ScalarFunction(e.mfj_name, {V}, e.type, e.mfj_exec));
+        // asMFJSON(temp[, options[, flags]]) — completes the MFJSON round-trip.
+        const auto I = LogicalType::INTEGER;
+        loader.RegisterFunction(ScalarFunction("asMFJSON", {e.type},       V, TemporalScalarAsMfjsonExec));
+        loader.RegisterFunction(ScalarFunction("asMFJSON", {e.type, I},    V, TemporalScalarAsMfjsonExec));
+        loader.RegisterFunction(ScalarFunction("asMFJSON", {e.type, I, I}, V, TemporalScalarAsMfjsonExec));
     }
+    // tfloat additionally takes maxdecimaldigits, matching the MobilityDB surface.
+    loader.RegisterFunction(ScalarFunction("asMFJSON",
+        {TFLOAT(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::INTEGER},
+        V, TemporalScalarAsMfjsonExec));
 }
 
 namespace {
