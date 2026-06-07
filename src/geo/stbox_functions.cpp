@@ -1419,6 +1419,84 @@ void StboxFunctions::Stbox_expand_space(DataChunk &args, ExpressionState &state,
     }
 }
 
+void StboxFunctions::Geo_expand_space(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t geometry_blob, double d, ValidityMask &mask, idx_t idx) -> string_t {
+            int32 srid = 0;
+            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
+            if (!gs) {
+                throw InvalidInputException("Invalid geometry format in Geo_expand_space");
+            }
+            STBox *box = geo_to_stbox(gs);
+            free(gs);
+            if (!box) {
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            STBox *ret = stbox_expand_space(box, d);
+            free(box);
+            if (!ret) {
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t stbox_size = sizeof(STBox);
+            uint8_t *stbox_data = (uint8_t*)malloc(stbox_size);
+            if (!stbox_data) {
+                free(ret);
+                throw InternalException("Failure in Geo_expand_space: unable to allocate memory for stbox");
+            }
+            memcpy(stbox_data, ret, stbox_size);
+            string_t ret_str(reinterpret_cast<const char*>(stbox_data), stbox_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(stbox_data);
+            free(ret);
+            return stored_data;
+        }
+    );
+}
+
+void StboxFunctions::Tspatial_expand_space(DataChunk &args, ExpressionState &state, Vector &result) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t input_blob, double d, ValidityMask &mask, idx_t idx) -> string_t {
+            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
+            size_t data_size = input_blob.GetSize();
+            uint8_t *data_copy = (uint8_t*)malloc(data_size);
+            memcpy(data_copy, data, data_size);
+            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
+            if (!temp) {
+                free(data_copy);
+                throw InvalidInputException("Invalid temporal value in Tspatial_expand_space");
+            }
+            STBox *box = tspatial_to_stbox(temp);
+            free(temp);
+            if (!box) {
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            STBox *ret = stbox_expand_space(box, d);
+            free(box);
+            if (!ret) {
+                mask.SetInvalid(idx);
+                return string_t();
+            }
+            size_t stbox_size = sizeof(STBox);
+            uint8_t *stbox_data = (uint8_t*)malloc(stbox_size);
+            if (!stbox_data) {
+                free(ret);
+                throw InternalException("Failure in Tspatial_expand_space: unable to allocate memory for stbox");
+            }
+            memcpy(stbox_data, ret, stbox_size);
+            string_t ret_str(reinterpret_cast<const char*>(stbox_data), stbox_size);
+            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
+            free(stbox_data);
+            free(ret);
+            return stored_data;
+        }
+    );
+}
+
 /* ***************************************************
  * Topological operators
  ****************************************************/

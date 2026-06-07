@@ -89,6 +89,8 @@ struct StboxFunctions {
     static void Stbox_shift_scale_time(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_get_space(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_expand_space(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Geo_expand_space(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tspatial_expand_space(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_expand_time(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************

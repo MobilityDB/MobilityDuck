@@ -102,6 +102,31 @@ SELECT expandSpace(stbox 'STBOX XT(((1.0,1.0),(2.0,2.0)),[2000-01-01,2000-01-01]
 STBOX XT(((1.5,1.5),(1.5,1.5)),[2000-01-01 00:00:00+01, 2000-01-01 00:00:00+01])
 
 query I
+SELECT expandSpace(ST_Point(1.0, 2.0), 1.0);
+----
+STBOX X((0,1),(2,3))
+
+query I
+SELECT expandSpace(tgeompoint '[Point(0 0)@2000-01-01, Point(2 2)@2000-01-02]', 1.0);
+----
+STBOX XT(((-1,-1),(3,3)),[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01])
+
+query I
+SELECT expandSpace(tgeogpoint '[Point(0 0)@2000-01-01, Point(2 2)@2000-01-02]', 1.0);
+----
+SRID=4326;GEODSTBOX XT(((-1,-1),(3,3)),[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01])
+
+query I
+SELECT expandSpace(tgeometry '[Point(0 0)@2000-01-01, Point(2 2)@2000-01-02]', 1.0);
+----
+STBOX XT(((-1,-1),(3,3)),[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01])
+
+query I
+SELECT expandSpace(tgeography '[Point(0 0)@2000-01-01, Point(2 2)@2000-01-02]', 1.0);
+----
+SRID=4326;GEODSTBOX XT(((-1,-1),(3,3)),[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01])
+
+query I
 SELECT STBOX(ST_Point(1, 1));
 ----
 STBOX X((1,1),(1,1))

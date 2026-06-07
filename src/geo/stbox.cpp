@@ -4,6 +4,9 @@
 #include "geo/stbox.hpp"
 #include "geo/stbox_functions.hpp"
 #include "geo/tgeompoint.hpp"
+#include "geo/tgeogpoint.hpp"
+#include "geo/tgeometry.hpp"
+#include "geo/tgeography.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/function/function.hpp"
@@ -377,7 +380,7 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "expandSpace",
             {STBOX(), LogicalType::DOUBLE},
@@ -386,7 +389,33 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
+        ScalarFunction(
+            "expandSpace",
+            {GeoTypes::GEOMETRY(), LogicalType::DOUBLE},
+            STBOX(),
+            StboxFunctions::Geo_expand_space
+        )
+    );
+
+    {
+        const auto D   = LogicalType::DOUBLE;
+        const auto B   = STBOX();
+        const auto P   = TgeompointType::TGEOMPOINT();
+        const auto GP  = TgeogpointType::TGEOGPOINT();
+        const auto TGM = TGeometryTypes::TGEOMETRY();
+        const auto TGG = TGeographyTypes::TGEOGRAPHY();
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("expandSpace", {P,   D}, B, StboxFunctions::Tspatial_expand_space));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("expandSpace", {GP,  D}, B, StboxFunctions::Tspatial_expand_space));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("expandSpace", {TGM, D}, B, StboxFunctions::Tspatial_expand_space));
+        duckdb::RegisterSerializedScalarFunction(loader,
+            ScalarFunction("expandSpace", {TGG, D}, B, StboxFunctions::Tspatial_expand_space));
+    }
+
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "stbox_contains",
             {STBOX(), STBOX()},
