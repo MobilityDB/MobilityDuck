@@ -11,7 +11,7 @@ CREATE OR REPLACE TABLE Points (
 
 COPY Points(PointId, PosX, PosY) FROM './data/points.csv';
 UPDATE Points
-SET Geom = ST_Point(PosX, PosY);
+SET Geom = ST_Transform(ST_Point(PosX, PosY), 'EPSG:4326', 'EPSG:3857', always_xy := true);
 
 CREATE OR REPLACE VIEW Points1(PointId, PosX, PosY, Geom) AS
     SELECT PointId, PosX, PosY, Geom
