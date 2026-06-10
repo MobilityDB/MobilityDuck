@@ -1,0 +1,29 @@
+# name: test/sql/h3_prefilter.test
+# description: H3INDEXSET prefilter UDFs smoke coverage
+# group: [mobilityduck]
+
+require mobilityduck
+
+# geoToH3IndexSet: a POINT input returns an H3INDEXSET blob
+query I
+SELECT typeof(geoToH3IndexSet(ST_Point(-122.4185, 37.7758), 5));
+----
+H3INDEXSET
+
+# everEq: trajectory passing through a cell in the set → true
+query I
+SELECT everEq(
+    geoToH3IndexSet(ST_Point(-122.4185, 37.7758), 5),
+    th3index(tgeompoint(ST_Point(-122.4185, 37.7758), timestamptz '2023-01-01', 4326), 5)
+);
+----
+true
+
+# everEq: trajectory at a distant cell → false
+query I
+SELECT everEq(
+    geoToH3IndexSet(ST_Point(0.0, 0.0), 5),
+    th3index(tgeompoint(ST_Point(-122.4185, 37.7758), timestamptz '2023-01-01', 4326), 5)
+);
+----
+false

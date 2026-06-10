@@ -16,6 +16,11 @@ namespace duckdb {
 struct H3IndexTypes {
     static LogicalType H3INDEX();
     static LogicalType TH3INDEX();
+    /* H3INDEXSET is a Set<H3INDEX>, stored as a serialized Set* blob,
+     * built from a static geometry by `geoToH3IndexSet`.  Used as the
+     * static side of the trip×static h3 prefilter on Q4 / Q7 / Q11 /
+     * Q12 / Q15 / Q17. */
+    static LogicalType H3INDEXSET();
 
     static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
@@ -113,6 +118,13 @@ struct H3IndexFunctions {
     static void Th3index_cell_area(DataChunk &args, ExpressionState &state, Vector &result);
     static void Th3index_edge_length(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tgeogpoint_great_circle_distance(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* Static geometry → h3indexset (Set<H3INDEX>) at a given H3 resolution */
+    static void Geo_to_h3index_set(DataChunk &args, ExpressionState &state, Vector &result);
+
+    /* Trip × static h3indexset prefilter: true if any cell of the
+     * trajectory's th3index ever equals any cell of the static set. */
+    static void Ever_eq_h3index_set_th3index(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb
