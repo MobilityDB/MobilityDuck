@@ -1,0 +1,56 @@
+# name: test/sql/parity/026c_tfloat_trig.test
+# description: Trigonometric lifts for tfloat — sin, cos, tan.
+# group: [sql]
+
+require mobilityduck
+
+# Instant: sin(0) = 0
+query I
+SELECT sin(tfloat '[0@2000-01-01]');
+----
+[0@2000-01-01 00:00:00+01]
+
+# Instant: cos(0) = 1
+query I
+SELECT cos(tfloat '[0@2000-01-01]');
+----
+[1@2000-01-01 00:00:00+01]
+
+# Instant: tan(0) = 0
+query I
+SELECT tan(tfloat '[0@2000-01-01]');
+----
+[0@2000-01-01 00:00:00+01]
+
+# Sequence endpoints: sin lifted over [0, pi/2] starts at 0 and ends at 1
+query I
+SELECT round(startValue(sin(tfloat '[0@2000-01-01, 1.5707963267948966@2000-01-02]')), 6);
+----
+0.0
+
+query I
+SELECT round(endValue(sin(tfloat '[0@2000-01-01, 1.5707963267948966@2000-01-02]')), 6);
+----
+1.0
+
+# Sequence endpoints: cos lifted over [0, pi/2] starts at 1 and ends at 0
+query I
+SELECT round(startValue(cos(tfloat '[0@2000-01-01, 1.5707963267948966@2000-01-02]')), 6);
+----
+1.0
+
+query I
+SELECT round(endValue(cos(tfloat '[0@2000-01-01, 1.5707963267948966@2000-01-02]')), 6);
+----
+0.0
+
+# Sequence endpoints: tan lifted over [0, pi/4] starts at 0 and ends at 1
+query I
+SELECT round(startValue(tan(tfloat '[0@2000-01-01, 0.7853981633974483@2000-01-02]')), 6);
+----
+0.0
+
+query I
+SELECT round(endValue(tan(tfloat '[0@2000-01-01, 0.7853981633974483@2000-01-02]')), 6);
+----
+1.0

@@ -4816,6 +4816,18 @@ void TemporalFunctions::Tfloat_log10(DataChunk &args, ExpressionState &state, Ve
     TemporalUnary(args, result, [](Temporal *t) { return tfloat_log10(t); });
 }
 
+void TemporalFunctions::Tfloat_sin(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return tfloat_sin(t); });
+}
+
+void TemporalFunctions::Tfloat_cos(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return tfloat_cos(t); });
+}
+
+void TemporalFunctions::Tfloat_tan(DataChunk &args, ExpressionState &state, Vector &result) {
+    TemporalUnary(args, result, [](Temporal *t) { return tfloat_tan(t); });
+}
+
 namespace {
 
 template <typename Producer>

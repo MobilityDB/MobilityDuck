@@ -232,6 +232,9 @@ struct TemporalFunctions {
     static void Tfloat_exp(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tfloat_ln(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tfloat_log10(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tfloat_sin(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tfloat_cos(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Tfloat_tan(DataChunk &args, ExpressionState &state, Vector &result);
     // Temporal_derivative declared in the math-functions block below.
     static void Tfloat_degrees(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tfloat_radians(DataChunk &args, ExpressionState &state, Vector &result);
