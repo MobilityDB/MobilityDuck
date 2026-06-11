@@ -1,0 +1,64 @@
+# name: test/sql/parity/027_tjsonb.test
+# description: Smoke tests for the TJSONB temporal type (tjsonb family).
+# group: [sql]
+
+require mobilityduck
+
+# Round-trip a TJSONB instant through the cast.
+query I
+SELECT TJSONB('{"k":1}@2000-01-01')::VARCHAR;
+----
+"{\"k\": 1}"@2000-01-01 00:00:00+01
+
+# Two-argument instant constructor from JSON text + timestamptz.
+query I
+SELECT TJSONB('{"x":42}', TIMESTAMPTZ '2020-06-01 00:00:00+00')::VARCHAR;
+----
+"{\"x\": 42}"@2020-06-01 02:00:00+02
+
+# startValue returns the JSON of the first instant.
+query I
+SELECT startValue(TJSONB('{"a":1}@2000-01-01'));
+----
+{"a": 1}
+
+# endValue returns the JSON of the last instant.
+query I
+SELECT endValue(TJSONB('{"a":1}@2000-01-01'));
+----
+{"a": 1}
+
+# TJSONB over a step sequence: two instants.
+query I
+SELECT TJSONB('[{"v":1}@2000-01-01, {"v":2}@2000-01-02]')::VARCHAR;
+----
+["{\"v\": 1}"@2000-01-01 00:00:00+01, "{\"v\": 2}"@2000-01-02 00:00:00+01]
+
+# startValue of a sequence.
+query I
+SELECT startValue(TJSONB('[{"v":1}@2000-01-01, {"v":2}@2000-01-02]'));
+----
+{"v": 1}
+
+# endValue of a sequence.
+query I
+SELECT endValue(TJSONB('[{"v":1}@2000-01-01, {"v":2}@2000-01-02]'));
+----
+{"v": 2}
+
+# tempSubtype distinguishes instant from sequence.
+query I
+SELECT tempSubtype(TJSONB('{"k":1}@2000-01-01'));
+----
+Instant
+
+query I
+SELECT tempSubtype(TJSONB('[{"k":1}@2000-01-01, {"k":2}@2000-01-02]'));
+----
+Sequence
+
+# HexWKB round-trip.
+query I
+SELECT tjsonbFromHexWKB(asHexWKB(TJSONB('{"k":1}@2000-01-01')))::VARCHAR;
+----
+"{\"k\": 1}"@2000-01-01 00:00:00+01
