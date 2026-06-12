@@ -1,112 +1,28 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO estebanzimanyi/MobilityDB
-    REF 59ba0ad59cb93db6fa46929394e475b7851c00be
-    SHA512 e6a4a1578e5760326a596248865ccb487850120ca423f5675d1f014e9146de4f407c699afa63a102d8ba4ef1f895946d206ee4ab2f870dc4508ec2ca3d771869
+    REF 23331ac50e73e43567536d837d3e182bb45b3bdb
+    SHA512 c7eaf762b5aa3c7c6714d57fc22aaf3aa8ba852e18f72f23bbaba1bd54719c764aaf62eddf36e495daf79e346d3b561a0b589487ef55e1d437beb5a1035de675
 )
 
+# Upstream gap: `pgtypes/postgres.h` line 74 has
+#   #include "../../meos/include/meos_error.h"
+# which was authored for the former `postgres/include/postgres.h`
+# two-level nesting; with `pgtypes/postgres.h` one level deep the
+# relative `../../` path escapes the source tree entirely.
+# Inject `${CMAKE_SOURCE_DIR}/meos/include` as a private include
+# directory on the `pgtypes` target so the header resolves via the
+# explicit search path.
 vcpkg_replace_string(
-    "${SOURCE_PATH}/postgres/utils/CMakeLists.txt"
-    "set_property(TARGET utils PROPERTY POSITION_INDEPENDENT_CODE ON)"
-    [=[
-set_property(TARGET utils PROPERTY POSITION_INDEPENDENT_CODE ON)
-
+    "${SOURCE_PATH}/pgtypes/CMakeLists.txt"
+    [=[target_include_directories(pgtypes PUBLIC "${CMAKE_SOURCE_DIR}/pgtypes")
+target_include_directories(pgtypes PUBLIC "${CMAKE_BINARY_DIR}/pgtypes")]=]
+    [=[target_include_directories(pgtypes PUBLIC "${CMAKE_SOURCE_DIR}/pgtypes")
+target_include_directories(pgtypes PUBLIC "${CMAKE_BINARY_DIR}/pgtypes")
 if(MEOS)
-  target_include_directories(utils PRIVATE "${CMAKE_SOURCE_DIR}/meos/include")
-endif()
-]=]
-)
-
-# Upstream gap at commit beddae670: `meos/include/h3/th3index_internal.h`
-# does `#include <fmgr.h>` unconditionally.  `fmgr.h` is a PG-internal
-# header and is not bundled in MEOS's `postgres/` subtree, so the
-# standalone MEOS build of `meos/src/h3/h3index.c` fails with
-# `fatal error: fmgr.h: No such file or directory`.  Guard the
-# include with `#if !MEOS`, mirroring the same idiom already used by
-# `meos/include/temporal/temporal.h`.
-vcpkg_replace_string(
-    "${SOURCE_PATH}/meos/include/h3/th3index_internal.h"
-    [=[
-#include <postgres.h>
-#include <fmgr.h>
-]=]
-    [=[
-#include <postgres.h>
-#if ! MEOS
-#include <fmgr.h>
-#endif
-]=]
-)
-
-# Upstream gap at commit beddae670: `meos/CMakeLists.txt` builds the
-# `h3` OBJECT library (via `add_subdirectory(h3)` + `add_library`)
-# but the `PROJECT_OBJECTS` list that feeds the final
-# `add_library(meos ${PROJECT_OBJECTS})` lists every other optional
-# family (cbuffer / npoint / pose / rgeo) and silently omits `h3`.
-# Without this injection libmeos ships without H3 symbols, so any
-# consumer linking against `meos` sees ~120 `undefined reference to
-# 'th3index_*'` link errors.
-vcpkg_replace_string(
-    "${SOURCE_PATH}/meos/CMakeLists.txt"
-    [=[if(RGEO)
-  message(STATUS "Including rigid geometries")
-  set(PROJECT_OBJECTS ${PROJECT_OBJECTS} "$<TARGET_OBJECTS:rgeo>")
-endif()]=]
-    [=[if(RGEO)
-  message(STATUS "Including rigid geometries")
-  set(PROJECT_OBJECTS ${PROJECT_OBJECTS} "$<TARGET_OBJECTS:rgeo>")
-endif()
-if(H3)
-  message(STATUS "Including temporal H3 index (th3index)")
-  set(PROJECT_OBJECTS ${PROJECT_OBJECTS} "$<TARGET_OBJECTS:h3>")
+  target_include_directories(pgtypes PRIVATE "${CMAKE_SOURCE_DIR}/meos/include")
 endif()]=]
 )
-
-# Upstream gap at commit beddae670: `meos/CMakeLists.txt` carries
-# `install()` rules for `meos_npoint.h` / `meos_pose.h` /
-# `meos_rgeo.h` / `meos_cbuffer.h` but no rule for `meos_h3.h`.
-# Without it the H3 public header is missing from the installed
-# `include/` directory, so any consumer of `#include <meos_h3.h>`
-# fails to compile.
-vcpkg_replace_string(
-    "${SOURCE_PATH}/meos/CMakeLists.txt"
-    [=[if(RGEO)
-  install(
-    FILES "${CMAKE_SOURCE_DIR}/meos/include/meos_rgeo.h"
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-endif()]=]
-    [=[if(RGEO)
-  install(
-    FILES "${CMAKE_SOURCE_DIR}/meos/include/meos_rgeo.h"
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-endif()
-if(H3)
-  install(
-    FILES "${CMAKE_SOURCE_DIR}/meos/include/meos_h3.h"
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-endif()]=]
-)
-
-# Upstream gap at commit beddae670: the h3-side source files call
-# `ensure_srid_is_latlong()` (declared in
-# `meos/include/geo/tgeo_spatialfuncs.h`) without including that
-# header, yielding implicit-declaration errors under `MEOS=1`.
-foreach(_h3_src
-        meos/src/h3/h3_geo.c
-        meos/src/h3/th3index_latlng.c
-        meos/src/h3/th3index_metrics.c)
-    if(EXISTS "${SOURCE_PATH}/${_h3_src}")
-        vcpkg_replace_string(
-            "${SOURCE_PATH}/${_h3_src}"
-            "#include <meos_internal_geo.h>"
-            [=[
-#include <meos_internal_geo.h>
-
-#include "geo/tgeo_spatialfuncs.h"
-]=]
-        )
-    endif()
-endforeach()
 
 # vcpkg installs h3 at the per-triplet
 # `installed/<triplet>/{lib,include/h3}` layout, but MEOS's own
@@ -145,6 +61,130 @@ if(NOT _MEOS_H3_INC)
     message(FATAL_ERROR "MEOS port: cannot locate vcpkg-installed h3api.h under ${CURRENT_INSTALLED_DIR}/include or ${CURRENT_INSTALLED_DIR}/include/h3")
 endif()
 
+# Upstream gap: `meos/src/CMakeLists.txt` is missing the
+# `if(H3) add_subdirectory(h3) endif()` block.  The top-level
+# `meos/CMakeLists.txt` references `$<TARGET_OBJECTS:h3>` when H3=ON,
+# but without add_subdirectory the `h3` OBJECT library target is never
+# defined and cmake configure fails with
+# "Objects of target h3 referenced but no such target exists."
+vcpkg_replace_string(
+    "${SOURCE_PATH}/meos/src/CMakeLists.txt"
+    [=[if(JSON)
+  add_subdirectory(json)
+endif()]=]
+    [=[if(H3)
+  add_subdirectory(h3)
+endif()
+if(JSON)
+  add_subdirectory(json)
+endif()]=]
+)
+
+# Upstream gap: `pgtypes/libpq/pqformat.h` contains a deprecated
+# static-inline helper `pq_sendint` that calls `elog()`.  In the
+# standalone MEOS build the pgtypes shim does not declare `elog`, and
+# GCC 14 (Ubuntu 24.04 runners) treats implicit-function-declaration
+# as a hard error.  Replace the call with `meos_error` — both symbols
+# are in scope via the postgres.h → meos_error.h chain that pqformat.c
+# already includes before pulling in pqformat.h.
+vcpkg_replace_string(
+    "${SOURCE_PATH}/pgtypes/libpq/pqformat.h"
+    [=[elog(ERROR, "unsupported integer size %d", b);]=]
+    [=[meos_error(ERROR, MEOS_ERR_INTERNAL_ERROR, "unsupported integer size %d", b);]=]
+)
+
+# Upstream gap: the MEOS=1 include path (`postgres_int_defs.h` → `pg_timestamp.h`)
+# does not reach `pgtypes/utils/timestamp.h`, so the four Timestamp/TimestampTz
+# Datum accessors are absent from pure MEOS=1 TUs (e.g. `meos/src/h3/th3index_boxops.c`
+# calls `TimestampTzGetDatum`).  GCC 14 treats implicit-function-declaration as a
+# hard error.  Adding the functions unconditionally to `pg_timestamp.h` causes
+# redefinition errors in pgtypes TUs that explicitly include `utils/timestamp.h`
+# (e.g. `pgtypes/common/stringinfo.c`), because both files define the same four
+# static-inline functions.
+#
+# Fix — cross-guard the definitions so the header processed first wins:
+#   · `pg_timestamp.h` adds the four functions under `#ifndef TIMESTAMP_H`
+#     (the include-guard of `utils/timestamp.h`).
+#   · `utils/timestamp.h` wraps its four matching functions under
+#     `#ifndef __PG_TIMESTAMP_H__` (the include-guard of `pg_timestamp.h`).
+vcpkg_replace_string(
+    "${SOURCE_PATH}/pgtypes/pg_timestamp.h"
+    [=[typedef int64 TimestampTz;]=]
+    [=[typedef int64 TimestampTz;
+#ifndef TIMESTAMP_H
+static inline Datum TimestampGetDatum(Timestamp X) { return Int64GetDatum(X); }
+static inline Datum TimestampTzGetDatum(TimestampTz X) { return Int64GetDatum(X); }
+static inline Timestamp DatumGetTimestamp(Datum X) { return (Timestamp) DatumGetInt64(X); }
+static inline TimestampTz DatumGetTimestampTz(Datum X) { return (TimestampTz) DatumGetInt64(X); }
+#endif]=]
+)
+
+vcpkg_replace_string(
+    "${SOURCE_PATH}/pgtypes/utils/timestamp.h"
+    [=[static inline Timestamp
+DatumGetTimestamp(Datum X)
+{
+	return (Timestamp) DatumGetInt64(X);
+}
+
+static inline TimestampTz
+DatumGetTimestampTz(Datum X)
+{
+	return (TimestampTz) DatumGetInt64(X);
+}
+
+static inline Interval *
+DatumGetIntervalP(Datum X)
+{
+	return (Interval *) DatumGetPointer(X);
+}
+
+static inline Datum
+TimestampGetDatum(Timestamp X)
+{
+	return Int64GetDatum(X);
+}
+
+static inline Datum
+TimestampTzGetDatum(TimestampTz X)
+{
+	return Int64GetDatum(X);
+}]=]
+    [=[#ifndef __PG_TIMESTAMP_H__
+static inline Timestamp
+DatumGetTimestamp(Datum X)
+{
+	return (Timestamp) DatumGetInt64(X);
+}
+
+static inline TimestampTz
+DatumGetTimestampTz(Datum X)
+{
+	return (TimestampTz) DatumGetInt64(X);
+}
+#endif
+
+static inline Interval *
+DatumGetIntervalP(Datum X)
+{
+	return (Interval *) DatumGetPointer(X);
+}
+
+#ifndef __PG_TIMESTAMP_H__
+static inline Datum
+TimestampGetDatum(Timestamp X)
+{
+	return Int64GetDatum(X);
+}
+
+static inline Datum
+TimestampTzGetDatum(TimestampTz X)
+{
+	return Int64GetDatum(X);
+}
+#endif]=]
+)
+
 vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}"
     OPTIONS
@@ -160,8 +200,16 @@ vcpkg_cmake_configure(
         -DCMAKE_CXX_FLAGS="-Dsession_timezone=meos_session_timezone"
 )
 
-vcpkg_cmake_build(TARGET all)
 vcpkg_cmake_install()
+
+# meos_tls.h and meos_json.h are not listed in the upstream install() rules at
+# this pin.  meos_tls.h is included verbatim by the cmake-generated meos.h;
+# meos_json.h exposes the public JSONB / temporal-JSONB API used by TJSONB
+# bindings.  Copy both alongside the other installed headers.
+file(COPY "${SOURCE_PATH}/meos/include/meos_tls.h"
+    DESTINATION "${CURRENT_PACKAGES_DIR}/include")
+file(COPY "${SOURCE_PATH}/meos/include/meos_json.h"
+    DESTINATION "${CURRENT_PACKAGES_DIR}/include")
 
 file(MAKE_DIRECTORY "${CURRENT_PACKAGES_DIR}/share/meos")
 file(WRITE "${CURRENT_PACKAGES_DIR}/share/meos/MEOSConfig.cmake" [=[
