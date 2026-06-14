@@ -1,112 +1,15 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO estebanzimanyi/MobilityDB
-    REF 278863520b000b735cc361beab88387174909ed7
-    SHA512 2e617cac4bfed919eee8bd73e35f9b3da8ffd7a51f68104a9497c0d3339dbb1af4a2ec6feab3e8fffb880481badf86c352ad1efb39cab533de19d2c1192a8e5b
+    REF f4b82557ab2992ddd8f343710c48b0107063dbbb
+    SHA512 50d30dd2c3bf634bc2148d32b1178c9e8fe41654ff5386e7db0f6c10b77ff5ce5a1f7352d9dc85a1432ea1300c15b4f7a20ba2991ad2e31772f03ffd9be79fd2
 )
 
-vcpkg_replace_string(
-    "${SOURCE_PATH}/postgres/utils/CMakeLists.txt"
-    "set_property(TARGET utils PROPERTY POSITION_INDEPENDENT_CODE ON)"
-    [=[
-set_property(TARGET utils PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-if(MEOS)
-  target_include_directories(utils PRIVATE "${CMAKE_SOURCE_DIR}/meos/include")
-endif()
-]=]
-)
-
-# Upstream gap at commit beddae670: `meos/include/h3/th3index_internal.h`
-# does `#include <fmgr.h>` unconditionally.  `fmgr.h` is a PG-internal
-# header and is not bundled in MEOS's `postgres/` subtree, so the
-# standalone MEOS build of `meos/src/h3/h3index.c` fails with
-# `fatal error: fmgr.h: No such file or directory`.  Guard the
-# include with `#if !MEOS`, mirroring the same idiom already used by
-# `meos/include/temporal/temporal.h`.
-vcpkg_replace_string(
-    "${SOURCE_PATH}/meos/include/h3/th3index_internal.h"
-    [=[
-#include <postgres.h>
-#include <fmgr.h>
-]=]
-    [=[
-#include <postgres.h>
-#if ! MEOS
-#include <fmgr.h>
-#endif
-]=]
-)
-
-# Upstream gap at commit beddae670: `meos/CMakeLists.txt` builds the
-# `h3` OBJECT library (via `add_subdirectory(h3)` + `add_library`)
-# but the `PROJECT_OBJECTS` list that feeds the final
-# `add_library(meos ${PROJECT_OBJECTS})` lists every other optional
-# family (cbuffer / npoint / pose / rgeo) and silently omits `h3`.
-# Without this injection libmeos ships without H3 symbols, so any
-# consumer linking against `meos` sees ~120 `undefined reference to
-# 'th3index_*'` link errors.
-vcpkg_replace_string(
-    "${SOURCE_PATH}/meos/CMakeLists.txt"
-    [=[if(RGEO)
-  message(STATUS "Including rigid geometries")
-  set(PROJECT_OBJECTS ${PROJECT_OBJECTS} "$<TARGET_OBJECTS:rgeo>")
-endif()]=]
-    [=[if(RGEO)
-  message(STATUS "Including rigid geometries")
-  set(PROJECT_OBJECTS ${PROJECT_OBJECTS} "$<TARGET_OBJECTS:rgeo>")
-endif()
-if(H3)
-  message(STATUS "Including temporal H3 index (th3index)")
-  set(PROJECT_OBJECTS ${PROJECT_OBJECTS} "$<TARGET_OBJECTS:h3>")
-endif()]=]
-)
-
-# Upstream gap at commit beddae670: `meos/CMakeLists.txt` carries
-# `install()` rules for `meos_npoint.h` / `meos_pose.h` /
-# `meos_rgeo.h` / `meos_cbuffer.h` but no rule for `meos_h3.h`.
-# Without it the H3 public header is missing from the installed
-# `include/` directory, so any consumer of `#include <meos_h3.h>`
-# fails to compile.
-vcpkg_replace_string(
-    "${SOURCE_PATH}/meos/CMakeLists.txt"
-    [=[if(RGEO)
-  install(
-    FILES "${CMAKE_SOURCE_DIR}/meos/include/meos_rgeo.h"
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-endif()]=]
-    [=[if(RGEO)
-  install(
-    FILES "${CMAKE_SOURCE_DIR}/meos/include/meos_rgeo.h"
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-endif()
-if(H3)
-  install(
-    FILES "${CMAKE_SOURCE_DIR}/meos/include/meos_h3.h"
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-endif()]=]
-)
-
-# Upstream gap at commit beddae670: the h3-side source files call
-# `ensure_srid_is_latlong()` (declared in
-# `meos/include/geo/tgeo_spatialfuncs.h`) without including that
-# header, yielding implicit-declaration errors under `MEOS=1`.
-foreach(_h3_src
-        meos/src/h3/h3_geo.c
-        meos/src/h3/th3index_latlng.c
-        meos/src/h3/th3index_metrics.c)
-    if(EXISTS "${SOURCE_PATH}/${_h3_src}")
-        vcpkg_replace_string(
-            "${SOURCE_PATH}/${_h3_src}"
-            "#include <meos_internal_geo.h>"
-            [=[
-#include <meos_internal_geo.h>
-
-#include "geo/tgeo_spatialfuncs.h"
-]=]
-        )
-    endif()
-endforeach()
+# No source patching is required at this pin: the th3 build-gap + postgres/utils
+# patches older pins needed are fixed upstream (th3 is an integrated family;
+# postgres/ -> pgtypes/ via #751), and the pgtypes standalone-build includes are
+# depth-independent (bare `#include "meos_error.h"` + meos/include on the pgtypes
+# path) as of ecosystem-pin-2026-06-14c.
 
 # vcpkg installs h3 at the per-triplet
 # `installed/<triplet>/{lib,include/h3}` layout, but MEOS's own

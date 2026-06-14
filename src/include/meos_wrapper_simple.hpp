@@ -10,24 +10,14 @@ extern "C" {
     #include <meos_internal_geo.h>
 }
 
-// The symmetric box/span × temporal topological predicates (overlaps, same,
-// adjacent) are canonicalized in MEOS to a single argument direction
-// (temporal-first). The reverse-argument overloads the DuckDB surface exposes
-// derive from that one kernel by commutativity (swap the operands). The
-// non-symmetric predicates (contains/contained/overbefore/overafter) keep both
-// MEOS directions and are used directly.
-static inline bool overlaps_tstzspan_temporal(const Span *s, const Temporal *t) { return overlaps_temporal_tstzspan(t, s); }
-static inline bool same_tstzspan_temporal    (const Span *s, const Temporal *t) { return same_temporal_tstzspan(t, s); }
-static inline bool adjacent_tstzspan_temporal(const Span *s, const Temporal *t) { return adjacent_temporal_tstzspan(t, s); }
-static inline bool overlaps_stbox_tspatial(const STBox *b, const Temporal *t) { return overlaps_tspatial_stbox(t, b); }
-static inline bool same_stbox_tspatial    (const STBox *b, const Temporal *t) { return same_tspatial_stbox(t, b); }
-static inline bool adjacent_stbox_tspatial(const STBox *b, const Temporal *t) { return adjacent_tspatial_stbox(t, b); }
-static inline bool overlaps_numspan_tnumber(const Span *s, const Temporal *t) { return overlaps_tnumber_numspan(t, s); }
-static inline bool same_numspan_tnumber    (const Span *s, const Temporal *t) { return same_tnumber_numspan(t, s); }
-static inline bool adjacent_numspan_tnumber(const Span *s, const Temporal *t) { return adjacent_tnumber_numspan(t, s); }
-static inline bool overlaps_tbox_tnumber(const TBox *b, const Temporal *t) { return overlaps_tnumber_tbox(t, b); }
-static inline bool same_tbox_tnumber    (const TBox *b, const Temporal *t) { return same_tnumber_tbox(t, b); }
-static inline bool adjacent_tbox_tnumber(const TBox *b, const Temporal *t) { return adjacent_tnumber_tbox(t, b); }
+// The reverse-argument (box/span-first) overloads of the symmetric box/span ×
+// temporal topological predicates — overlaps / same / adjacent for tstzspan,
+// stbox, numspan and tbox against a temporal — are provided directly by MEOS as
+// of ecosystem-pin-2026-06-14c (declared in <meos.h> / <meos_geo.h>), so the
+// binding uses them from MEOS.  The former static-inline commutativity polyfills
+// were removed here: they now clash with the MEOS declarations ("declared
+// 'extern' and later 'static'").  The non-symmetric predicates
+// (contains/contained/overbefore/overafter) keep both MEOS directions.
 
 // Create explicit aliases for MEOS types
 // Use the original MEOS type names but with explicit qualification
