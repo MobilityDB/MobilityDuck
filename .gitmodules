@@ -9,3 +9,6 @@
 [submodule "duckdb-spatial"]
 	path = duckdb-spatial
 	url = https://github.com/duckdb/duckdb-spatial
+[submodule "benchmark/BerlinMOD/suite"]
+	path = benchmark/BerlinMOD/suite
+	url = https://github.com/estebanzimanyi/berlinmod-portability.git
