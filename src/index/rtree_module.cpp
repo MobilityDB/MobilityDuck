@@ -393,25 +393,22 @@ vector<row_t> TRTreeIndex::Search(const void *query_box, RTreeSearchOp op) const
         return results;
     }
 
-    int count = 0;
-    int *ids = nullptr;
-    
+    MeosArray *ids = meos_array_create(sizeof(int));
+
     try {
-        ids = rtree_search(rtree_, op, query_box, &count);
-        
-        if (ids && count > 0) {
+        int count = rtree_search(rtree_, op, query_box, ids);
+
+        if (count > 0) {
             results.reserve(count);
             for (int i = 0; i < count; i++) {
-                results.push_back(static_cast<row_t>(ids[i]));
+                results.push_back(static_cast<row_t>(*(int *) meos_array_get(ids, i)));
             }
         }
     } catch (...) {
         fprintf(stderr, "Exception during rtree_search\n");
     }
-    
-    if (ids) {
-        free(ids);
-    }
+
+    meos_array_destroy(ids);
     
     return results;
 }

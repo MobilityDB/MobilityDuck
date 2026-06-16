@@ -251,7 +251,7 @@ inline string_t TemporalToBlob(Vector &result, Temporal *t) {
     return out;
 }
 
-template <Temporal *(*FN)(const Temporal *, const GSERIALIZED *, bool, bool)>
+template <Temporal *(*FN)(const Temporal *, const GSERIALIZED *)>
 void TgeoGeoTempExec(DataChunk &args, ExpressionState &, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
@@ -259,14 +259,14 @@ void TgeoGeoTempExec(DataChunk &args, ExpressionState &, Vector &result) {
             Temporal *t = DecodeTemporalCopy(t_blob);
             int32 srid = tspatial_srid(t);
             GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
-            Temporal *r = FN(t, gs, false, false);
+            Temporal *r = FN(t, gs);
             free(t); free(gs);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return TemporalToBlob(result, r);
         });
 }
 
-template <Temporal *(*FN)(const GSERIALIZED *, const Temporal *, bool, bool)>
+template <Temporal *(*FN)(const GSERIALIZED *, const Temporal *)>
 void GeoTgeoTempExec(DataChunk &args, ExpressionState &, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
@@ -274,21 +274,21 @@ void GeoTgeoTempExec(DataChunk &args, ExpressionState &, Vector &result) {
             Temporal *t = DecodeTemporalCopy(t_blob);
             int32 srid = tspatial_srid(t);
             GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
-            Temporal *r = FN(gs, t, false, false);
+            Temporal *r = FN(gs, t);
             free(t); free(gs);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return TemporalToBlob(result, r);
         });
 }
 
-template <Temporal *(*FN)(const Temporal *, const Temporal *, bool, bool)>
+template <Temporal *(*FN)(const Temporal *, const Temporal *)>
 void TgeoTgeoTempExec(DataChunk &args, ExpressionState &, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = DecodeTemporalCopy(a);
             Temporal *t2 = DecodeTemporalCopy(b);
-            Temporal *r = FN(t1, t2, false, false);
+            Temporal *r = FN(t1, t2);
             free(t1); free(t2);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return TemporalToBlob(result, r);
@@ -296,7 +296,7 @@ void TgeoTgeoTempExec(DataChunk &args, ExpressionState &, Vector &result) {
 }
 
 // tDwithin variants take an extra distance argument.
-template <Temporal *(*FN)(const Temporal *, const GSERIALIZED *, double, bool, bool)>
+template <Temporal *(*FN)(const Temporal *, const GSERIALIZED *, double)>
 void TgeoGeoDistTempExec(DataChunk &args, ExpressionState &, Vector &result) {
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, string_t>(
         args.data[0], args.data[1], args.data[2], result, args.size(),
@@ -304,14 +304,14 @@ void TgeoGeoDistTempExec(DataChunk &args, ExpressionState &, Vector &result) {
             Temporal *t = DecodeTemporalCopy(t_blob);
             int32 srid = tspatial_srid(t);
             GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
-            Temporal *r = FN(t, gs, dist, false, false);
+            Temporal *r = FN(t, gs, dist);
             free(t); free(gs);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return TemporalToBlob(result, r);
         });
 }
 
-template <Temporal *(*FN)(const GSERIALIZED *, const Temporal *, double, bool, bool)>
+template <Temporal *(*FN)(const GSERIALIZED *, const Temporal *, double)>
 void GeoTgeoDistTempExec(DataChunk &args, ExpressionState &, Vector &result) {
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, string_t>(
         args.data[0], args.data[1], args.data[2], result, args.size(),
@@ -319,21 +319,21 @@ void GeoTgeoDistTempExec(DataChunk &args, ExpressionState &, Vector &result) {
             Temporal *t = DecodeTemporalCopy(t_blob);
             int32 srid = tspatial_srid(t);
             GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
-            Temporal *r = FN(gs, t, dist, false, false);
+            Temporal *r = FN(gs, t, dist);
             free(t); free(gs);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return TemporalToBlob(result, r);
         });
 }
 
-template <Temporal *(*FN)(const Temporal *, const Temporal *, double, bool, bool)>
+template <Temporal *(*FN)(const Temporal *, const Temporal *, double)>
 void TgeoTgeoDistTempExec(DataChunk &args, ExpressionState &, Vector &result) {
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, string_t>(
         args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t a, string_t b, double dist, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = DecodeTemporalCopy(a);
             Temporal *t2 = DecodeTemporalCopy(b);
-            Temporal *r = FN(t1, t2, dist, false, false);
+            Temporal *r = FN(t1, t2, dist);
             free(t1); free(t2);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return TemporalToBlob(result, r);

@@ -1,5 +1,6 @@
 #define DUCKDB_EXTENSION_MAIN
 
+#include <cstdio>
 #include "mobilityduck_extension.hpp"
 #include "temporal/spanset.hpp"
 #include "temporal/set.hpp"
@@ -17,6 +18,7 @@
 #include "geo/tgeography_ops.hpp"
 #include "geo/tgeogpoint.hpp"
 #include "geo/tgeogpoint_ops.hpp"
+#include "quadbin/tquadbin.hpp"
 #include "temporal/span.hpp"
 #include "temporal/span_aggregates.hpp"
 #include "temporal/temporal_aggregates.hpp"
@@ -81,7 +83,7 @@ inline void MobilityduckOpenSSLVersionScalarFun(DataChunk &args, ExpressionState
 // MEOS does not expose a runtime version symbol, so the build-time pin
 // is the most precise version stamp the extension can report.
 #ifndef MOBILITYDUCK_MEOS_PIN
-#define MOBILITYDUCK_MEOS_PIN "f11b7443e"
+#define MOBILITYDUCK_MEOS_PIN "d94af2d2c9"
 #endif
 
 inline std::string MobilityduckShortVersion() {
@@ -227,12 +229,26 @@ static void LoadInternal(ExtensionLoader &loader) {
 
     // Single-timezone model: ensure DuckDB's session timezone matches the
     // MEOS timezone so bare TIMESTAMPTZ display agrees with MEOS composite
-    // type strings.  Auto-load ICU (without it, the test framework keeps
-    // session timezone at UTC) and set the TimeZone option to Brussels.
+    // type strings.  This needs ICU for the named "Europe/Brussels" zone.
+    //
+    // If ICU cannot be auto-loaded (no on-disk copy AND no network egress:
+    // CI docker images, edge/musl deployments, offline installs), degrade
+    // gracefully to the session default (UTC) instead of failing the whole
+    // extension load.  Tests that assert Brussels display stage ICU locally
+    // via the Makefile's stage_icu.
     auto &db = loader.GetDatabaseInstance();
-    ExtensionHelper::AutoLoadExtension(db, "icu");
-    auto &config = DBConfig::GetConfig(db);
-    config.SetOptionByName("TimeZone", Value("Europe/Brussels"));
+    try {
+        ExtensionHelper::AutoLoadExtension(db, "icu");
+        auto &config = DBConfig::GetConfig(db);
+        config.SetOptionByName("TimeZone", Value("Europe/Brussels"));
+    } catch (const std::exception &e) {
+        // ICU unavailable: leave the session timezone at its default.
+        // Temporal-type text I/O is unaffected; only bare TIMESTAMPTZ display
+        // falls back to UTC.
+        fprintf(stderr,
+                "mobilityduck: ICU not available (%s); session timezone left "
+                "at default instead of Europe/Brussels.\n", e.what());
+    }
 
 
 	// Register scalar function: mobilityduck_openssl_version
@@ -325,6 +341,10 @@ static void LoadInternal(ExtensionLoader &loader) {
 	SpatialSetType::RegisterTypes(loader);
 	SpatialSetType::RegisterCastFunctions(loader);
 	SpatialSetType::RegisterScalarFunctions(loader);
+
+	QuadbinTypes::RegisterTypes(loader);
+	QuadbinTypes::RegisterCastFunctions(loader);
+	QuadbinTypes::RegisterScalarFunctions(loader);
 
 	SpansetTypes::RegisterTypes(loader);
 	SpansetTypes::RegisterCastFunctions(loader);

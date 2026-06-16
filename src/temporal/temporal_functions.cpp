@@ -199,7 +199,7 @@ void TemporalFunctions::Tinstant_constructor_text(Vector &value, Vector &ts, Vec
             timestamp_tz_t meos_ts = DuckDBToMeosTimestamp(ts);
 
             std::string str = value.GetString();
-            text *txt = cstring2text(str.c_str());
+            text *txt = cstring_to_text(str.c_str());
             TInstant *inst = ttextinst_make(txt, (TimestampTz)meos_ts.value);
             Temporal *temp = (Temporal*)inst;
 
@@ -244,7 +244,7 @@ void TemporalFunctions::Tsequence_constructor(DataChunk &args, ExpressionState &
     auto &child_vec = ListVector::GetEntry(array_vec);
 
     meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
-    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
+    interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;
     bool lower_inc = true;
     bool upper_inc = true;
     
@@ -446,7 +446,7 @@ void TemporalFunctions::Tsequence_from_base_tstzset(DataChunk &args, ExpressionS
         BinaryExecutor::Execute<string_t, string_t, string_t>(
             args.data[0], args.data[1], result, count,
             [&](string_t value, string_t set_blob) {
-                text *txt = cstring2text(value.GetString().c_str());
+                text *txt = cstring_to_text(value.GetString().c_str());
                 return Tsequence_from_base_tstzset_impl(PointerGetDatum(txt), set_blob, temptype, result);
             });
     } else if (arg_type.id() == LogicalTypeId::BLOB) {
@@ -516,7 +516,7 @@ void TemporalFunctions::Tsequence_from_base_tstzspan(DataChunk &args, Expression
     auto count = args.size();
     const auto &arg_type = args.data[0].GetType();
     meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
-    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
+    interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;
     if (args.ColumnCount() > 2) {
         auto &interp_child = args.data[2];
         interp_child.Flatten(count);
@@ -528,7 +528,7 @@ void TemporalFunctions::Tsequence_from_base_tstzspan(DataChunk &args, Expression
         BinaryExecutor::Execute<string_t, string_t, string_t>(
             args.data[0], args.data[1], result, count,
             [&](string_t value, string_t span_blob) {
-                text *txt = cstring2text(value.GetString().c_str());
+                text *txt = cstring_to_text(value.GetString().c_str());
                 return Tsequence_from_base_tstzspan_impl(PointerGetDatum(txt), span_blob, temptype, interp, result);
             });
     } else if (arg_type.id() == LogicalTypeId::BLOB) {
@@ -599,7 +599,7 @@ void TemporalFunctions::Tsequenceset_from_base_tstzspanset(DataChunk &args, Expr
     auto count = args.size();
     const auto &arg_type = args.data[0].GetType();
     meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
-    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
+    interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;
     if (args.ColumnCount() > 2) {
         auto &interp_child = args.data[2];
         interp_child.Flatten(count);
@@ -611,7 +611,7 @@ void TemporalFunctions::Tsequenceset_from_base_tstzspanset(DataChunk &args, Expr
         BinaryExecutor::Execute<string_t, string_t, string_t>(
             args.data[0], args.data[1], result, count,
             [&](string_t value, string_t spanset_blob) {
-                text *txt = cstring2text(value.GetString().c_str());
+                text *txt = cstring_to_text(value.GetString().c_str());
                 return Tsequenceset_from_base_tstzspanset_impl(PointerGetDatum(txt), spanset_blob, temptype, interp, result);
             });
     } else if (arg_type.id() == LogicalTypeId::BLOB) {
@@ -1335,7 +1335,7 @@ void TemporalFunctions::Temporal_value_n(DataChunk &args, ExpressionState &state
                     return string_t();
                 }
                 text *txt = DatumGetTextP(ret);
-                char *cstr = text2cstring(txt);
+                char *cstr = text_to_cstring(txt);
                 return StringVector::AddString(result, cstr);
             }
         );
@@ -2417,7 +2417,7 @@ void TemporalFunctions::Temporal_set_interp(DataChunk &args, ExpressionState &st
 void TemporalFunctions::Temporal_append_tinstant(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
-    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
+    interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;
     if (args.ColumnCount() > 2) {
         auto &interp_child = args.data[2];
         interp_child.Flatten(count);
@@ -2798,7 +2798,7 @@ static void temporal_at_minus_values_dispatch(DataChunk &args, ExpressionState &
         BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
             args.data[0], args.data[1], result, count,
             [&](string_t temp_str, string_t value, ValidityMask &mask, idx_t idx) -> string_t {
-                text *txt = cstring2text(value.GetString().c_str());
+                text *txt = cstring_to_text(value.GetString().c_str());
                 string_t stored = temporal_restrict_value_impl(temp_str, PointerGetDatum(txt), atfunc, result, mask, idx);
                 return stored;
             });
@@ -3523,7 +3523,7 @@ void TemporalFunctions::Temporal_value_at_timestamptz(DataChunk &args, Expressio
                     mask.SetInvalid(idx);
                     return string_t();
                 }
-                char *cstr = text2cstring(value);
+                char *cstr = text_to_cstring(value);
                 string_t stored = StringVector::AddString(result, cstr);
                 return stored;
             });
@@ -4757,19 +4757,19 @@ void TemporalFunctions::Sub_tnumber_tnumber(DataChunk &args, ExpressionState &st
 }
 
 void TemporalFunctions::Mult_int_tint(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV1<int32_t>(args, result, [](int32_t i, Temporal *t) { return mult_int_tint(i, t); });
+    TemporalBinaryV1<int32_t>(args, result, [](int32_t i, Temporal *t) { return mul_int_tint(i, t); });
 }
 void TemporalFunctions::Mult_tint_int(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV<int32_t>(args, result, [](Temporal *t, int32_t i) { return mult_tint_int(t, i); });
+    TemporalBinaryV<int32_t>(args, result, [](Temporal *t, int32_t i) { return mul_tint_int(t, i); });
 }
 void TemporalFunctions::Mult_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV1<double>(args, result, [](double d, Temporal *t) { return mult_float_tfloat(d, t); });
+    TemporalBinaryV1<double>(args, result, [](double d, Temporal *t) { return mul_float_tfloat(d, t); });
 }
 void TemporalFunctions::Mult_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV<double>(args, result, [](Temporal *t, double d) { return mult_tfloat_float(t, d); });
+    TemporalBinaryV<double>(args, result, [](Temporal *t, double d) { return mul_tfloat_float(t, d); });
 }
 void TemporalFunctions::Mult_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryTT(args, result, [](Temporal *a, Temporal *b) { return mult_tnumber_tnumber(a, b); });
+    TemporalBinaryTT(args, result, [](Temporal *a, Temporal *b) { return mul_tnumber_tnumber(a, b); });
 }
 
 void TemporalFunctions::Div_int_tint(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -5860,7 +5860,7 @@ void TemporalFunctions::Temporal_dump_common(DataChunk &args, Vector &result, me
                 values.push_back(actual_value);
             } else if constexpr (std::is_same_v<T, string_t>) {
                 text *txt = DatumGetTextP(val);
-                char *actual_value = text2cstring(txt);
+                char *actual_value = text_to_cstring(txt);
                 values.push_back(string_t(actual_value));
             }
 
