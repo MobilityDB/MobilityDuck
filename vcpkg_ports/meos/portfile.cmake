@@ -1,8 +1,8 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO estebanzimanyi/MobilityDB
-    REF d94af2d2c9ffe8b4eeab9d5b1a9b702c3b52fe0f
-    SHA512 17379b54c147c24c4f05de71da46073ab5a35687f0776051e07ad74352cf4a376033b4b688c5accd3a6168cb50792a341337586867717dcba40a6748dc167d06
+    REF 008ef1c2a590b7d6ab6ad9821ac51f13c852bb39
+    SHA512 8e8b87821900107bf3dddbec93978f150779353f94e99eb9c3a6dd877053868c93cf94a33dcc85d353c57f41bd98bfe02c99c86409ff0b5807d44d6d942d3ae5
 )
 
 
@@ -215,50 +215,6 @@ vcpkg_replace_string(
     [=[extern DateADT minus_date_int(DateADT date, int32 days);]=]
     [=[extern DateADT add_date_int(DateADT date, int32 days);
 extern DateADT minus_date_int(DateADT date, int32 days);]=]
-)
-
-# Upstream gap: when building libmeos.so (MEOS=ON) the QUADBIN object library is
-# added to PROJECT_OBJECTS instead of MEOS_OBJECTS, so its symbols are absent from
-# libmeos.so and cause undefined-reference link errors for any consumer of the
-# shared library.  Redirect to MEOS_OBJECTS to match all other MEOS-native families.
-vcpkg_replace_string(
-    "${SOURCE_PATH}/meos/CMakeLists.txt"
-    [=[  set(PROJECT_OBJECTS ${PROJECT_OBJECTS} "$<TARGET_OBJECTS:quadbin>")]=]
-    [=[  set(MEOS_OBJECTS ${MEOS_OBJECTS} "$<TARGET_OBJECTS:quadbin>")]=]
-)
-
-# Upstream gap: `basetype_byvalue` in `meos/src/temporal/meos_catalog.c` has a
-# dead second `return` statement that carries the `#if QUADBIN` branch.
-# The compiler reaches the first `return` (which only has the `#if H3` branch)
-# and never evaluates the second, so `T_QUADBIN` is never recognised as a
-# by-value type.  As a result `tinstant_make` falls through to
-# `meostype_length(T_QUADBIN)` which hits the catch-all `meos_error` and raises
-# "Unknown base type: quadbin".  Fix: merge the two returns into one.
-vcpkg_replace_string(
-    "${SOURCE_PATH}/meos/src/temporal/meos_catalog.c"
-    [=[  return (type == T_BOOL || type == T_INT4 || type == T_INT8 || type == T_FLOAT8 ||
-    type == T_DATE || type == T_TIMESTAMPTZ
-#if H3
-    || type == T_H3INDEX
-#endif
-    );
-  return (type == T_BOOL || type == T_INT4 || type == T_INT8 ||
-    type == T_FLOAT8 || type == T_DATE || type == T_TIMESTAMPTZ
-#if QUADBIN
-    || type == T_QUADBIN
-#endif
-    );
-}]=]
-    [=[  return (type == T_BOOL || type == T_INT4 || type == T_INT8 || type == T_FLOAT8 ||
-    type == T_DATE || type == T_TIMESTAMPTZ
-#if H3
-    || type == T_H3INDEX
-#endif
-#if QUADBIN
-    || type == T_QUADBIN
-#endif
-    );
-}]=]
 )
 
 vcpkg_cmake_configure(
