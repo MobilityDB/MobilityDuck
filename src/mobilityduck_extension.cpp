@@ -19,6 +19,7 @@
 #include "geo/tgeogpoint.hpp"
 #include "geo/tgeogpoint_ops.hpp"
 #include "quadbin/tquadbin.hpp"
+#include "quadbin/raster_quadbin.hpp"
 #include "temporal/span.hpp"
 #include "temporal/span_aggregates.hpp"
 #include "temporal/temporal_aggregates.hpp"
@@ -345,6 +346,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 	QuadbinTypes::RegisterTypes(loader);
 	QuadbinTypes::RegisterCastFunctions(loader);
 	QuadbinTypes::RegisterScalarFunctions(loader);
+	RasterQuadbinFunctions::RegisterScalarFunctions(loader);
 
 	SpansetTypes::RegisterTypes(loader);
 	SpansetTypes::RegisterCastFunctions(loader);

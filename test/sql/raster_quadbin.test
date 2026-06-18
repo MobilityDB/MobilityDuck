@@ -1,0 +1,50 @@
+require mobilityduck
+
+# ── trajectoryQuadbins ────────────────────────────────────────────────────────
+
+# A single-instant trajectory at the origin returns exactly one zoom-0 cell.
+query I
+SELECT cardinality(trajectoryQuadbins(tgeompoint 'POINT(0 0)@2024-01-01', 0));
+----
+1
+
+# That cell is the world tile at zoom 0.
+query I
+SELECT trajectoryQuadbins(tgeompoint 'POINT(0 0)@2024-01-01', 0)[1]
+       = quadbinTileToCell(0, 0, 0);
+----
+true
+
+# NULL input propagates.
+query I
+SELECT trajectoryQuadbins(NULL::TGEOMPOINT, 0) IS NULL;
+----
+true
+
+# ── rasterTileValueQuadbin ───────────────────────────────────────────────────
+
+# 1×1 UINT8 tile, pixel value 42 (0x2a).  POINT(0 0) in WGS84 maps to the
+# center of the zoom-0 world tile → pixel (col=0, row=0) → value 42.0.
+query I
+SELECT startValue(
+  rasterTileValueQuadbin(
+    from_hex('2a'),           -- 1-byte pixel buffer, value 42
+    1, 1,                     -- tile width × height in pixels
+    quadbinTileToCell(0,0,0), -- zoom-0 world cell
+    'UINT8', 0.0, false,
+    tgeompoint 'POINT(0 0)@2024-01-01'
+  )
+) = 42.0;
+----
+true
+
+# A trajectory entirely outside the tile bbox returns NULL.
+query I
+SELECT rasterTileValueQuadbin(
+  from_hex('2a'), 1, 1,
+  quadbinTileToCell(1, 0, 0),  -- NW quadrant of zoom 1
+  'UINT8', 0.0, false,
+  tgeompoint 'POINT(90 -45)@2024-01-01'  -- SE hemisphere → outside NW cell
+) IS NULL;
+----
+true

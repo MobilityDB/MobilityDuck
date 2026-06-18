@@ -22,6 +22,9 @@ else()
   add_definitions(-DMEOS_IS_BIG_ENDIAN=0)
 endif()
 
+# Expose the MEOS raster API (meos.h #if RASTER guard).
+add_definitions(-DRASTER=1)
+
 # -----------------------------
 # Dependencies (vcpkg)
 # -----------------------------
@@ -90,6 +93,7 @@ set(EXTENSION_SOURCES
     src/geo/tgeogpoint_in_out.cpp
     src/geo/tgeogpoint_ops.cpp
     src/quadbin/tquadbin.cpp
+    src/quadbin/raster_quadbin.cpp
     src/index/rtree_module.cpp
     src/single_tile_getters.cpp
     src/index/rtree_index_create_physical.cpp

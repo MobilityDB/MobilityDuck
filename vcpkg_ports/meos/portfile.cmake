@@ -224,6 +224,7 @@ vcpkg_cmake_configure(
         -DH3=OFF
         -DJSON=ON
         -DQUADBIN=ON
+        -DRASTER=ON
         "-DJSON-C_LIBRARIES=${_MEOS_JSONC_LIB}"
         "-DJSON-C_INCLUDE_DIRS=${_MEOS_JSONC_INC}"
         -DBUILD_SHARED_LIBS=ON
