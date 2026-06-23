@@ -1529,13 +1529,14 @@ void SpanFunctions::Float_round(DataChunk &args, ExpressionState &state, Vector 
         BinaryExecutor::Execute<double_t, int32_t, double_t>(
             args0, *args1, result, args.size(),
             [&](double_t float_value, int32_t precision) -> double_t {
-                return float_round(float_value, precision);
+                double factor = std::pow(10.0, (double)precision);
+                return std::round(float_value * factor) / factor;
             });
     } else {
         UnaryExecutor::Execute<double_t, double_t>(
             args0, result, args.size(),
             [&](double_t float_value) -> double_t {
-                return float_round(float_value, 0);
+                return std::round(float_value);
             });
     }
     if (args.size() == 1) {

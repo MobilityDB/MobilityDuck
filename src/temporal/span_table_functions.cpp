@@ -4,6 +4,7 @@
 #include "temporal/span_table_functions.hpp"
 #include "temporal/spanset.hpp"
 #include "time_util.hpp"
+#include "mobilityduck/meos_thread.hpp"
 
 #include "duckdb/common/exception.hpp"
 #include "duckdb/function/table_function.hpp"
@@ -44,7 +45,9 @@ struct BinsBindData : public FunctionData {
         r->blob = blob;
         r->vsize = vsize;
         r->vorigin = vorigin;
-        return r;
+        // DuckDB 1.4.4 disallows implicit derived->base unique_ptr conversion;
+        // explicit base-type construction from the moved-from derived pointer.
+        return unique_ptr_cast<BinsBindData, FunctionData>(std::move(r));
     }
     bool Equals(const FunctionData &other_p) const override {
         auto &other = other_p.Cast<BinsBindData>();
@@ -67,6 +70,7 @@ struct BinsGlobalState : public GlobalTableFunctionState {
 };
 
 static unique_ptr<GlobalTableFunctionState> BinsInitGlobal(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
     auto &bind_data = input.bind_data->Cast<BinsBindData>();
     auto state = make_uniq<BinsGlobalState>();
 

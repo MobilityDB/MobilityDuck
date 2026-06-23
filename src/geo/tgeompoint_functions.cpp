@@ -455,7 +455,7 @@ void TgeompointFunctions::Tgeompoint_sequence_constructor(DataChunk &args, Expre
     auto arg_count = args.ColumnCount();
     auto row_count = args.size();
     meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
-    interpType interp = temptype_continuous(temptype) ? LINEAR : STEP;
+    interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;
     bool lower_inc = true;
     bool upper_inc = true;
 
@@ -1286,7 +1286,7 @@ void TgeompointFunctions::Tgeo_minus_geom(DataChunk &args, ExpressionState &stat
 			throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
 		}
 
-		Temporal *ret = zspan ? tpoint_minus_geom(tgeom, gs, zspan) : tgeo_minus_geom(tgeom, gs);
+		Temporal *ret = zspan ? tpoint_minus_geom(tgeom, gs) : tgeo_minus_geom(tgeom, gs);
 		free(tgeom);
 		free(gs);
 		if (!ret) {
@@ -2419,7 +2419,7 @@ void TgeompointFunctions::Adwithin_tgeo_tgeo(DataChunk &args, ExpressionState &s
  ****************************************************/
 void TgeompointFunctions::Tcontains_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
     const idx_t count = args.size();
-    auto eval = [&](string_t geometry_blob, string_t tgeom_blob, bool restr, bool at_value, ValidityMask &mask,
+    auto eval = [&](string_t geometry_blob, string_t tgeom_blob, ValidityMask &mask,
                     idx_t idx) -> string_t {
         int32 srid = 0;
         GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
@@ -2438,7 +2438,7 @@ void TgeompointFunctions::Tcontains_geo_tgeo(DataChunk &args, ExpressionState &s
             throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
         }
 
-        Temporal *ret = tcontains_geo_tgeo(gs, tgeom, restr, at_value);
+        Temporal *ret = tcontains_geo_tgeo(gs, tgeom);
         free(tgeom);
         free(gs);
         if (!ret) {
@@ -2456,14 +2456,14 @@ void TgeompointFunctions::Tcontains_geo_tgeo(DataChunk &args, ExpressionState &s
         BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
             args.data[0], args.data[1], result, count,
             [&](string_t geometry_blob, string_t tgeom_blob, ValidityMask &mask, idx_t idx) -> string_t {
-                return eval(geometry_blob, tgeom_blob, false, false, mask, idx);
+                return eval(geometry_blob, tgeom_blob, mask, idx);
             });
     } else if (args.ColumnCount() == 3) {
         TernaryExecutor::ExecuteWithNulls<string_t, string_t, bool, string_t>(
             args.data[0], args.data[1], args.data[2], result, count,
-            [&](string_t geometry_blob, string_t tgeom_blob, bool at_value, ValidityMask &mask,
+            [&](string_t geometry_blob, string_t tgeom_blob, bool, ValidityMask &mask,
                 idx_t idx) -> string_t {
-                return eval(geometry_blob, tgeom_blob, true, at_value, mask, idx);
+                return eval(geometry_blob, tgeom_blob, mask, idx);
             });
     } else {
         throw InternalException("Tcontains_geo_tgeo: expected 2 or 3 arguments");
@@ -2474,12 +2474,6 @@ void TgeompointFunctions::Tcontains_geo_tgeo(DataChunk &args, ExpressionState &s
 }
 
 void TgeompointFunctions::Tdisjoint_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
-    bool at_value = false;
-    bool restr = false;
-    if (args.ColumnCount() > 2){
-        at_value = args.data[2].GetValue(0).GetValue<bool>();
-        restr = true;
-    }
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t geometry_blob, string_t tgeom_blob, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2500,7 +2494,7 @@ void TgeompointFunctions::Tdisjoint_geo_tgeo(DataChunk &args, ExpressionState &s
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            Temporal *ret = tdisjoint_geo_tgeo(gs, tgeom, restr, at_value);
+            Temporal *ret = tdisjoint_geo_tgeo(gs, tgeom);
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2519,12 +2513,6 @@ void TgeompointFunctions::Tdisjoint_geo_tgeo(DataChunk &args, ExpressionState &s
 }
 
 void TgeompointFunctions::Tdisjoint_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
-    bool at_value = false;
-    bool restr = false;
-    if (args.ColumnCount() > 2){
-        at_value = args.data[2].GetValue(0).GetValue<bool>();
-        restr = true;
-    }
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t tgeom_blob, string_t geometry_blob, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2545,7 +2533,7 @@ void TgeompointFunctions::Tdisjoint_tgeo_geo(DataChunk &args, ExpressionState &s
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            Temporal *ret = tdisjoint_tgeo_geo(tgeom, gs, restr, at_value);
+            Temporal *ret = tdisjoint_tgeo_geo(tgeom, gs);
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2564,12 +2552,6 @@ void TgeompointFunctions::Tdisjoint_tgeo_geo(DataChunk &args, ExpressionState &s
 }
 
 void TgeompointFunctions::Tdisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
-    bool at_value = false;
-    bool restr = false;
-    if (args.ColumnCount() > 2){
-        at_value = args.data[2].GetValue(0).GetValue<bool>();
-        restr = true;
-    }
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t tgeom1_blob, string_t tgeom2_blob, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2594,7 +2576,7 @@ void TgeompointFunctions::Tdisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            Temporal *ret = tdisjoint_tgeo_tgeo(tgeom1, tgeom2, restr, at_value);
+            Temporal *ret = tdisjoint_tgeo_tgeo(tgeom1, tgeom2);
             free(tgeom1);
             free(tgeom2);
             if (!ret) {
@@ -2613,12 +2595,6 @@ void TgeompointFunctions::Tdisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &
 }
 
 void TgeompointFunctions::Tintersects_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
-    bool at_value = false;
-    bool restr = false;
-    if (args.ColumnCount() > 2){
-        at_value = args.data[2].GetValue(0).GetValue<bool>();
-        restr = true; 
-    }
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t geometry_blob, string_t tgeom_blob, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2639,7 +2615,7 @@ void TgeompointFunctions::Tintersects_geo_tgeo(DataChunk &args, ExpressionState 
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            Temporal *ret = tintersects_geo_tgeo(gs, tgeom, restr, at_value);
+            Temporal *ret = tintersects_geo_tgeo(gs, tgeom);
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2658,12 +2634,6 @@ void TgeompointFunctions::Tintersects_geo_tgeo(DataChunk &args, ExpressionState 
 }
 
 void TgeompointFunctions::Tintersects_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
-    bool at_value = false;
-    bool restr = false;
-    if (args.ColumnCount() > 2){
-        at_value = args.data[2].GetValue(0).GetValue<bool>();
-        restr = true; 
-    }
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t tgeom_blob, string_t geometry_blob, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2684,7 +2654,7 @@ void TgeompointFunctions::Tintersects_tgeo_geo(DataChunk &args, ExpressionState 
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            Temporal *ret = tintersects_tgeo_geo(tgeom, gs, restr, at_value);
+            Temporal *ret = tintersects_tgeo_geo(tgeom, gs);
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2703,12 +2673,6 @@ void TgeompointFunctions::Tintersects_tgeo_geo(DataChunk &args, ExpressionState 
 }
 
 void TgeompointFunctions::Tintersects_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
-    bool at_value = false;
-    bool restr = false;
-    if (args.ColumnCount() > 2){
-        at_value = args.data[2].GetValue(0).GetValue<bool>();
-        restr = true; 
-    }
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t tgeom1_blob, string_t tgeom2_blob, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2733,7 +2697,7 @@ void TgeompointFunctions::Tintersects_tgeo_tgeo(DataChunk &args, ExpressionState
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            Temporal *ret = tintersects_tgeo_tgeo(tgeom1, tgeom2, restr, at_value);
+            Temporal *ret = tintersects_tgeo_tgeo(tgeom1, tgeom2);
             free(tgeom1);
             free(tgeom2);
             if (!ret) {
@@ -2752,12 +2716,6 @@ void TgeompointFunctions::Tintersects_tgeo_tgeo(DataChunk &args, ExpressionState
 }
 
 void TgeompointFunctions::Ttouches_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
-    bool at_value = false;
-    bool restr = false;
-    if (args.ColumnCount() > 2){
-        at_value = args.data[2].GetValue(0).GetValue<bool>();
-        restr = true; 
-    }
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t geometry_blob, string_t tgeom_blob, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2778,7 +2736,7 @@ void TgeompointFunctions::Ttouches_geo_tgeo(DataChunk &args, ExpressionState &st
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            Temporal *ret = ttouches_geo_tgeo(gs, tgeom, restr, at_value);
+            Temporal *ret = ttouches_geo_tgeo(gs, tgeom);
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2797,12 +2755,6 @@ void TgeompointFunctions::Ttouches_geo_tgeo(DataChunk &args, ExpressionState &st
 }
 
 void TgeompointFunctions::Ttouches_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
-    bool at_value = false;
-    bool restr = false;
-    if (args.ColumnCount() > 2){
-        at_value = args.data[2].GetValue(0).GetValue<bool>();
-        restr = true; 
-    }
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t tgeom_blob, string_t geometry_blob, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2823,7 +2775,7 @@ void TgeompointFunctions::Ttouches_tgeo_geo(DataChunk &args, ExpressionState &st
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            Temporal *ret = ttouches_tgeo_geo(tgeom, gs, restr, at_value);
+            Temporal *ret = ttouches_tgeo_geo(tgeom, gs);
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2842,12 +2794,6 @@ void TgeompointFunctions::Ttouches_tgeo_geo(DataChunk &args, ExpressionState &st
 }
 
 void TgeompointFunctions::Tdwithin_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
-    bool at_value = false;
-    bool restr = false;
-    if (args.ColumnCount() > 3) {
-        at_value = args.data[3].GetValue(0).GetValue<bool>();
-        restr = true;
-    }
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, string_t>(
         args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t tgeom1_blob, string_t tgeom2_blob, double dist, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2871,7 +2817,7 @@ void TgeompointFunctions::Tdwithin_tgeo_tgeo(DataChunk &args, ExpressionState &s
                 free(tgeom2_data_copy);
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
-            Temporal *ret = tdwithin_tgeo_tgeo(tgeom1, tgeom2, dist, restr, at_value);
+            Temporal *ret = tdwithin_tgeo_tgeo(tgeom1, tgeom2, dist);
             if (!ret) {
                 free(tgeom1);
                 free(tgeom2);
@@ -2892,12 +2838,6 @@ void TgeompointFunctions::Tdwithin_tgeo_tgeo(DataChunk &args, ExpressionState &s
 }
 
 void TgeompointFunctions::Tdwithin_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
-    bool at_value = false;
-    bool restr = false;
-    if (args.ColumnCount() > 3) {
-        at_value = args.data[3].GetValue(0).GetValue<bool>();
-        restr = true;
-    }
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, string_t>(
         args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t tgeom_blob, string_t geometry_blob, double dist, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2918,7 +2858,7 @@ void TgeompointFunctions::Tdwithin_tgeo_geo(DataChunk &args, ExpressionState &st
                 throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
             }
 
-            Temporal *ret = tdwithin_tgeo_geo(tgeom, gs, dist, restr, at_value);
+            Temporal *ret = tdwithin_tgeo_geo(tgeom, gs, dist);
             free(tgeom);
             free(gs);
             if (!ret) {
@@ -2937,12 +2877,6 @@ void TgeompointFunctions::Tdwithin_tgeo_geo(DataChunk &args, ExpressionState &st
 }
 
 void TgeompointFunctions::Tdwithin_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
-    bool at_value = false;
-    bool restr = false;
-    if (args.ColumnCount() > 3) {
-        at_value = args.data[3].GetValue(0).GetValue<bool>();
-        restr = true;
-    }
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, string_t>(
         args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t geometry_blob, string_t tgeom_blob, double dist, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2963,7 +2897,7 @@ void TgeompointFunctions::Tdwithin_geo_tgeo(DataChunk &args, ExpressionState &st
                 throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
             }
 
-            Temporal *ret = tdwithin_geo_tgeo(gs, tgeom, dist, restr, at_value);
+            Temporal *ret = tdwithin_geo_tgeo(gs, tgeom, dist);
             free(tgeom);
             free(gs);
             if (!ret) {

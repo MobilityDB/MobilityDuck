@@ -69,13 +69,13 @@ LogicalType TemporalTypes::GetBaseTypeFromAlias(const char *alias) {
 
 void TemporalTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     for (auto &type : TemporalTypes::AllTypes()) {
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader, 
             LogicalType::VARCHAR,
             type,
             TemporalFunctions::Temporal_in
         );
 
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader, 
             type,
             LogicalType::VARCHAR,
             TemporalFunctions::Temporal_out
@@ -90,37 +90,37 @@ void TemporalTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     //     );
     // }
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader, 
         LogicalType::BLOB,
         SpansetTypes::tstzspanset(),
         TemporalFunctions::Blob_to_tstzspanset
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader, 
         TemporalTypes::TBOOL(),
         TemporalTypes::TINT(),
         TemporalFunctions::Tbool_to_tint_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader, 
         TemporalTypes::TINT(),
         TemporalTypes::TFLOAT(),
         TemporalFunctions::Tint_to_tfloat_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader, 
         TemporalTypes::TFLOAT(),
         TemporalTypes::TINT(),
         TemporalFunctions::Tfloat_to_tint_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader, 
         TemporalTypes::TINT(),
         TboxType::TBOX(),
         TemporalFunctions::Tnumber_to_tbox_cast
     );
 
-    loader.RegisterCastFunction(
+    RegisterMeosCastFunction(loader, 
         TemporalTypes::TFLOAT(),
         TboxType::TBOX(),
         TemporalFunctions::Tnumber_to_tbox_cast
@@ -1942,6 +1942,7 @@ static unique_ptr<FunctionData> TemporalUnnestBind(ClientContext &context,
 
 static unique_ptr<GlobalTableFunctionState> TemporalUnnestInit(ClientContext &context,
                                                                TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
     auto &bind = input.bind_data->Cast<TemporalUnnestBindData>();
     auto &blob = bind.blob;
 
@@ -2535,6 +2536,7 @@ unique_ptr<FunctionData> TimeSplitBind(ClientContext &, TableFunctionBindInput &
 }
 
 unique_ptr<GlobalTableFunctionState> TimeSplitInit(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
     auto &bd    = input.bind_data->Cast<TimeSplitBindData>();
     auto  state = make_uniq<TemporalSplitGlobalState>();
 
@@ -2718,6 +2720,7 @@ unique_ptr<FunctionData> ValueTimeSplitBind(ClientContext &, TableFunctionBindIn
 }
 
 unique_ptr<GlobalTableFunctionState> ValueTimeSplitInit(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
     auto &bd    = input.bind_data->Cast<ValueTimeSplitBindData>();
     auto  state = make_uniq<TemporalSplitGlobalState>();
 
@@ -2827,7 +2830,7 @@ void TemporalTypes::RegisterTemporalTileSplit(ExtensionLoader &loader) {
  ****************************************************/
 
 struct TnumberValueSplitBindData : public TableFunctionData {
-    string_t blob;
+    string   blob;
     meosType temptype;
     LogicalType base_type;     // BIGINT for tint, DOUBLE for tfloat
     LogicalType temporal_type; // TINT or TFLOAT
@@ -2879,11 +2882,12 @@ static unique_ptr<FunctionData> TnumberValueSplitBind(ClientContext &context,
 
 static unique_ptr<GlobalTableFunctionState> TnumberValueSplitInit(ClientContext &context,
                                                                   TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
     auto &bind = input.bind_data->Cast<TnumberValueSplitBindData>();
     auto state = make_uniq<TnumberValueSplitGlobalState>();
 
-    const uint8_t *data = (const uint8_t *)bind.blob.GetData();
-    size_t size = bind.blob.GetSize();
+    const uint8_t *data = (const uint8_t *)bind.blob.data();
+    size_t size = bind.blob.size();
     Temporal *temp = (Temporal *)malloc(size);
     memcpy(temp, data, size);
 
@@ -2977,6 +2981,7 @@ static unique_ptr<FunctionData> SimilarityPathBind(ClientContext &context,
 
 static unique_ptr<GlobalTableFunctionState> SimilarityPathInit(ClientContext &context,
                                                                TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
     auto &bind = input.bind_data->Cast<SimilarityPathBindData>();
     auto state = make_uniq<SimilarityPathGlobalState>();
 
