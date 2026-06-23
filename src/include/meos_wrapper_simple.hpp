@@ -8,6 +8,10 @@ extern "C" {
     #include <meos_geo.h>
     #include <meos_internal.h>
     #include <meos_internal_geo.h>
+    // PG-compat date/timestamp arithmetic (add_date_int, add_timestamptz_interval)
+    // lives in the pgtypes public leaf headers, not the meos.h umbrella.
+    #include <pg_date.h>
+    #include <pg_timestamp.h>
 }
 
 // Create explicit aliases for MEOS types
