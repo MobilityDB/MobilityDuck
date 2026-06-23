@@ -70,21 +70,21 @@ public:
 
     bool TryMatchDistanceFunction(const unique_ptr<Expression> &expr, vector<reference<Expression>> &bindings) const;
 
-    meosType GetBboxType() const { return bbox_type_; }
+    MeosType GetBboxType() const { return bbox_type_; }
     size_t GetBboxSize() const { return bbox_size_; }
 
 
 
 private:
     case_insensitive_map_t<Value> options_;
-    
+
     unique_ptr<ExpressionMatcher> function_matcher;
     unique_ptr<ExpressionMatcher> MakeFunctionMatcher() const;
 
     RTree *rtree_;
     void *boxes;
 
-    meosType bbox_type_;
+    MeosType bbox_type_;
     size_t bbox_size_;
 
     size_t current_size_ = 0;
