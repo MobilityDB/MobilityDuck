@@ -46,4 +46,4 @@ true
 query I
 SELECT tint '[1@2000-01-01, 5@2000-01-05]' -|- tstzspan '[2000-01-05, 2000-01-06]';
 ----
-false
+true
