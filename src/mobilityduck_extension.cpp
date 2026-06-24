@@ -210,6 +210,9 @@ extern "C" void MobilityduckMeosErrorHandler(int errlevel, int errcode, const ch
 // 5. Extension load logic
 // =====================================================================
 
+// Defined in the catalog-generated src/generated/generated_temporal_udfs.cpp.
+void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader);
+
 static void LoadInternal(ExtensionLoader &loader) {
 	// Configure MEOS SRID CSV once (env / embedded)
 	ConfigureMeosSridCsvOnce();
@@ -357,6 +360,10 @@ static void LoadInternal(ExtensionLoader &loader) {
 	// Single-tile getters depend on tbox, stbox, and the spatial GEOMETRY
 	// type being registered first.
 	SingleTileGetters::RegisterScalarFunctions(loader);
+
+	// Catalog-driven scalar UDFs generated from the MEOS-API catalog, organized by
+	// doxygen @ingroup group. Registered last, after every type accessor exists.
+	RegisterGeneratedTemporalUdfs(loader);
 }
 
 void MobilityduckExtension::Load(ExtensionLoader &loader) {
