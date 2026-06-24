@@ -23,6 +23,7 @@ typedef struct {
 
 static const basetype_struct BASE_TYPES[] = {
     {"tint", LogicalType::BIGINT},
+    {"tbigint", LogicalType::BIGINT},
     {"tbool", LogicalType::BOOLEAN},
     {"tfloat", LogicalType::DOUBLE},
     {"ttext", LogicalType::VARCHAR}
@@ -30,6 +31,7 @@ static const basetype_struct BASE_TYPES[] = {
 
 struct TemporalTypes {
     static LogicalType tint();
+    static LogicalType tbigint();
     static LogicalType tbool();
     static LogicalType tfloat();
     static LogicalType ttext();

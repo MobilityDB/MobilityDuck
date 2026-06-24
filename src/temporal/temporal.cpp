@@ -35,6 +35,7 @@ namespace duckdb {
     }
 
 DEFINE_TEMPORAL_TYPE(tint)
+DEFINE_TEMPORAL_TYPE(tbigint)
 DEFINE_TEMPORAL_TYPE(tbool)
 DEFINE_TEMPORAL_TYPE(tfloat)
 DEFINE_TEMPORAL_TYPE(ttext)
@@ -43,6 +44,7 @@ DEFINE_TEMPORAL_TYPE(ttext)
 
 void TemporalTypes::RegisterTypes(ExtensionLoader &loader) {
     loader.RegisterType( "tint", tint());
+    loader.RegisterType( "tbigint", tbigint());
     loader.RegisterType( "tbool", tbool());
     loader.RegisterType( "tfloat", tfloat());
     loader.RegisterType( "ttext", ttext());
@@ -51,6 +53,7 @@ void TemporalTypes::RegisterTypes(ExtensionLoader &loader) {
 const std::vector<LogicalType> &TemporalTypes::AllTypes() {
     static std::vector<LogicalType> types = {
         tint(),
+        tbigint(),
         tbool(),
         tfloat(),
         ttext()

@@ -19,6 +19,7 @@ namespace duckdb {
 
 static const alias_type_struct DUCKDB_ALIAS_TYPE_CATALOG[] = {
     {(char*)"tint", T_TINT},
+    {(char*)"tbigint", T_TBIGINT},
     {(char*)"tfloat", T_TFLOAT},
     {(char*)"tbool", T_TBOOL},
     {(char*)"ttext", T_TTEXT},
