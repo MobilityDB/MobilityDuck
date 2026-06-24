@@ -1344,6 +1344,20 @@ def main():
             print(f"pin/ABI gate: {len(declared)} fns declared in {hdr}")
         nu, nb, nt, nr, ns, nsp = gen_cpp(fns, out, declared, aliases)
         print(f"wrote {nu} unary + {nb} binary + {nt} ternary + {ns} set + {nsp} span UDF bodies, {nr} registrations -> {out}")
+        # Regularity invariant (build-failing): MEOS keeps locale/collation, session
+        # timezone, PROJ context and RNGs in thread-local storage, so every UDF body
+        # must run EnsureMeosThreadInitialized() before any MEOS call. Verify it for
+        # every emitted body so a future emit path cannot silently drop the guard.
+        body_section = open(out).read().split("} // anonymous")[0]
+        unguarded = [b.split("(")[0] for b in body_section.split("\nstatic void Gen_")[1:]
+                     if "EnsureMeosThreadInitialized" not in b]
+        if unguarded:
+            print(f"FATAL: {len(unguarded)} generated UDF body(ies) reach MEOS without the "
+                  f"per-thread MEOS-init guard:", file=sys.stderr)
+            for u in unguarded[:20]:
+                print("   Gen_" + u, file=sys.stderr)
+            sys.exit(1)
+        print(f"per-thread MEOS-init guard: all {nu + nb + nt + ns + nsp} generated bodies verified")
     # sample emitted registrations (the shape; full emit = next increment)
     print("\n=== sample generated registrations (first 6) ===")
     for f in emittable[:6]:
