@@ -50,7 +50,7 @@ static SpatialarrElemKind spatialarr_elem_kind_from_list(const LogicalType &list
 	}
 	const auto &child = ListType::GetChildType(list_type);
 	const auto &alias = child.GetAlias();
-	if (alias == "TGEOMPOINT" || alias == "TGEOGPOINT") {
+	if (alias == "tgeompoint" || alias == "tgeogpoint") {
 		return SpatialarrElemKind::TGEOM_POINT;
 	}
 	if (alias == "GEOMETRY") {
@@ -172,14 +172,14 @@ bool TgeompointFunctions::Tpoint_in(Vector &source, Vector &result, idx_t count,
 
             Temporal *temp = tgeompoint_in(input_str.c_str());
             if (!temp) {
-                throw InvalidInputException("Invalid TGEOMPOINT input: " + input_str);
+                throw InvalidInputException("Invalid tgeompoint input: " + input_str);
             }
 
             size_t data_size = temporal_mem_size(temp);
             uint8_t *data_buffer = (uint8_t*)malloc(data_size);
             if (!data_buffer) {
                 free(temp);
-                throw InvalidInputException("Failed to allocate memory for TGEOMPOINT");
+                throw InvalidInputException("Failed to allocate memory for tgeompoint");
             }
 
             memcpy(data_buffer, temp, data_size);
@@ -205,20 +205,20 @@ void TgeompointFunctions::Tspatial_as_text(DataChunk &args, ExpressionState &sta
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
             size_t data_size = input_blob.GetSize();
             if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
+                throw InvalidInputException("Invalid tgeompoint data: insufficient size");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT input: " + input_blob.GetString());
+                throw InvalidInputException("Invalid tgeompoint input: " + input_blob.GetString());
             }
 
             char* ret = tspatial_as_text(temp, 15);
             if (!ret) {
                 free(data_copy);
-                throw InvalidInputException("Failed to convert TGEOMPOINT to text: " + input_blob.GetString());
+                throw InvalidInputException("Failed to convert tgeompoint to text: " + input_blob.GetString());
             }
             std::string ret_string(ret);
             string_t stored_data = StringVector::AddStringOrBlob(result, ret_string);
@@ -240,20 +240,20 @@ void TgeompointFunctions::Tspatial_as_ewkt(DataChunk &args, ExpressionState &sta
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
             size_t data_size = input_blob.GetSize();
             if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
+                throw InvalidInputException("Invalid tgeompoint data: insufficient size");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT input: " + input_blob.GetString());
+                throw InvalidInputException("Invalid tgeompoint input: " + input_blob.GetString());
             }
 
             char *ewkt = tspatial_as_ewkt(temp, OUT_DEFAULT_DECIMAL_DIGITS);
             if (!ewkt) {
                 free(data_copy);
-                throw InvalidInputException("Failed to convert TGEOMPOINT to EWKT: " + input_blob.GetString());
+                throw InvalidInputException("Failed to convert tgeompoint to EWKT: " + input_blob.GetString());
             }
             std::string ret_string(ewkt);
             string_t stored_data = StringVector::AddStringOrBlob(result, ret_string);
@@ -298,7 +298,7 @@ void TgeompointFunctions::Tpointinst_constructor(DataChunk &args, ExpressionStat
             Temporal *ret = (Temporal *) tpointinst_make(gs, static_cast<TimestampTz>(ts_meos.value));
             if (ret == NULL) {
                 free(gs);
-                throw InvalidInputException("Failed to create TGEOMPOINT from geometry and timestamp");
+                throw InvalidInputException("Failed to create tgeompoint from geometry and timestamp");
             }
 
             size_t ret_size = temporal_mem_size(ret);
@@ -306,7 +306,7 @@ void TgeompointFunctions::Tpointinst_constructor(DataChunk &args, ExpressionStat
             if (!ret_data) {
                 free(ret);
                 free(gs);
-                throw InvalidInputException("Failed to allocate memory for TGEOMPOINT");
+                throw InvalidInputException("Failed to allocate memory for tgeompoint");
             }
             memcpy(ret_data, ret, ret_size);
 
@@ -334,13 +334,13 @@ inline void Tspatial_to_stbox_common(Vector &source, Vector &result, idx_t count
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
                 return string_t();
             }
             STBox *stbox = tspatial_to_stbox(temp);
             if (!stbox) {
                 free(temp);
-                throw InvalidInputException("Failed to convert TGEOMPOINT to STBOX");
+                throw InvalidInputException("Failed to convert tgeompoint to stbox");
                 return string_t();
             }
 
@@ -348,7 +348,7 @@ inline void Tspatial_to_stbox_common(Vector &source, Vector &result, idx_t count
             uint8_t *stbox_data = (uint8_t*)malloc(stbox_size);
             if (!stbox_data) {
                 free(temp);
-                throw InvalidInputException("Failed to allocate memory for STBOX");
+                throw InvalidInputException("Failed to allocate memory for stbox");
                 return string_t();
             }
             memcpy(stbox_data, stbox, stbox_size);
@@ -387,7 +387,7 @@ void TgeompointFunctions::Tgeompoint_start_value(DataChunk &args, ExpressionStat
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
                 return string_t();
             }
 
@@ -395,7 +395,7 @@ void TgeompointFunctions::Tgeompoint_start_value(DataChunk &args, ExpressionStat
             GSERIALIZED *start_geom = DatumGetGserializedP(start_datum);
             if (!start_geom) {
                 free(temp);
-                throw InvalidInputException("Failed to get start value from TGEOMPOINT");
+                throw InvalidInputException("Failed to get start value from tgeompoint");
             }
 
             string_t geometry_blob = GSerializedToGeometry(start_geom, state, result);
@@ -422,7 +422,7 @@ void TgeompointFunctions::Tgeompoint_end_value(DataChunk &args, ExpressionState 
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
                 return string_t();
             }
 
@@ -430,7 +430,7 @@ void TgeompointFunctions::Tgeompoint_end_value(DataChunk &args, ExpressionState 
             GSERIALIZED *end_geom = DatumGetGserializedP(end_datum);
             if (!end_geom) {
                 free(temp);
-                throw InvalidInputException("Failed to get end value from TGEOMPOINT");
+                throw InvalidInputException("Failed to get end value from tgeompoint");
             }
 
             string_t geometry_blob = GSerializedToGeometry(end_geom, state, result);
@@ -618,7 +618,7 @@ void TgeompointFunctions::Tgeompoint_value(DataChunk &args, ExpressionState &sta
             Temporal *temp = reinterpret_cast<Temporal*>(tgeom_data_copy);
             if (!temp) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
             if (temp->subtype != TINSTANT) {
                 free(temp);
@@ -660,7 +660,7 @@ void TgeompointFunctions::Tgeompoint_at_value(DataChunk &args, ExpressionState &
             Temporal *temp = reinterpret_cast<Temporal*>(tgeom_data_copy);
             if (!temp) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int32 srid = tspatial_srid(temp);
@@ -709,7 +709,7 @@ void TgeompointFunctions::Tgeompoint_value_at_timestamptz(DataChunk &args, Expre
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts_duckdb);
@@ -753,7 +753,7 @@ void TgeompointFunctions::Tgeompoint_stops(DataChunk &args, ExpressionState &sta
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
             MeosInterval minduration = IntervaltToInterval(minduration_duckdb);
             TSequenceSet *ret = temporal_stops(temp, maxdist, &minduration);
@@ -792,12 +792,12 @@ void TgeompointFunctions::Tpoint_get_x(DataChunk &args, ExpressionState &state, 
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
             Temporal *ret = tpoint_get_x(temp);
             free(temp);
             if (!ret) {
-                throw InvalidInputException("Failed to get X coordinate from TGEOMPOINT");
+                throw InvalidInputException("Failed to get X coordinate from tgeompoint");
             }
             size_t ret_size = temporal_mem_size(ret);
             uint8_t *ret_data = (uint8_t*)malloc(ret_size);
@@ -825,12 +825,12 @@ void TgeompointFunctions::Tpoint_get_y(DataChunk &args, ExpressionState &state, 
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
             Temporal *ret = tpoint_get_y(temp);
             free(temp);
             if (!ret) {
-                throw InvalidInputException("Failed to get Y coordinate from TGEOMPOINT");
+                throw InvalidInputException("Failed to get Y coordinate from tgeompoint");
             }
             size_t ret_size = temporal_mem_size(ret);
             uint8_t *ret_data = (uint8_t*)malloc(ret_size);
@@ -858,12 +858,12 @@ void TgeompointFunctions::Tpoint_get_z(DataChunk &args, ExpressionState &state, 
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
             Temporal *ret = tpoint_get_z(temp);
             free(temp);
             if (!ret) {
-                throw InvalidInputException("Failed to get Z coordinate from TGEOMPOINT");
+                throw InvalidInputException("Failed to get Z coordinate from tgeompoint");
             }
             size_t ret_size = temporal_mem_size(ret);
             uint8_t *ret_data = (uint8_t*)malloc(ret_size);
@@ -891,7 +891,7 @@ void TgeompointFunctions::Tpoint_length(DataChunk &args, ExpressionState &state,
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
             double ret = tpoint_length(temp);
             free(temp);
@@ -914,12 +914,12 @@ void TgeompointFunctions::Tpoint_cumulative_length(DataChunk &args, ExpressionSt
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
             Temporal *ret = tpoint_cumulative_length(temp);
             free(temp);
             if (!ret) {
-                throw InvalidInputException("Failed to compute cumulative length of TGEOMPOINT");
+                throw InvalidInputException("Failed to compute cumulative length of tgeompoint");
             }
             size_t ret_size = temporal_mem_size(ret);
             uint8_t *ret_data = (uint8_t*)malloc(ret_size);
@@ -947,12 +947,12 @@ void TgeompointFunctions::Tpoint_twcentroid(DataChunk &args, ExpressionState &st
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
             GSERIALIZED *ret = tpoint_twcentroid(temp);
             free(temp);
             if (!ret) {
-                throw InvalidInputException("Failed to compute time-weighted centroid of TGEOMPOINT");
+                throw InvalidInputException("Failed to compute time-weighted centroid of tgeompoint");
             }
             string_t geometry_blob = GSerializedToGeometry(ret, state, result);
             string_t stored_result = StringVector::AddStringOrBlob(result, geometry_blob);
@@ -976,13 +976,13 @@ void TgeompointFunctions::Tpoint_direction(DataChunk &args, ExpressionState &sta
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
             double ret;
             bool has_direction = tpoint_direction(temp, &ret);
             if (!has_direction) {                   
                 free(temp);
-                throw InvalidInputException("Failed to compute direction of TGEOMPOINT");
+                throw InvalidInputException("Failed to compute direction of tgeompoint");
             }
             free(temp);
             return ret;
@@ -1004,12 +1004,12 @@ void TgeompointFunctions::Tpoint_azimuth(DataChunk &args, ExpressionState &state
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
             Temporal *ret = tpoint_azimuth(temp);
             free(temp);
             if (!ret) {
-                throw InvalidInputException("Failed to compute azimuth of TGEOMPOINT"); 
+                throw InvalidInputException("Failed to compute azimuth of tgeompoint"); 
             }
             size_t ret_size = temporal_mem_size(ret);
             uint8_t *ret_data = (uint8_t*)malloc(ret_size);
@@ -1037,12 +1037,12 @@ void TgeompointFunctions::Tpoint_angular_difference(DataChunk &args, ExpressionS
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
             Temporal *ret = tpoint_angular_difference(temp);
             free(temp);
             if (!ret) {
-                throw InvalidInputException("Failed to compute angular difference of TGEOMPOINT");
+                throw InvalidInputException("Failed to compute angular difference of tgeompoint");
             }
             size_t ret_size = temporal_mem_size(ret);
             uint8_t *ret_data = (uint8_t*)malloc(ret_size);
@@ -1070,7 +1070,7 @@ void TgeompointFunctions::Tpoint_is_simple(DataChunk &args, ExpressionState &sta
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
             bool ret = tpoint_is_simple(temp);
             free(temp);
@@ -1090,14 +1090,14 @@ void TgeompointFunctions::Tpoint_make_simple(DataChunk &args, ExpressionState &s
 		    const uint8_t *data = reinterpret_cast<const uint8_t *>(input_blob.GetData());
 		    size_t data_size = input_blob.GetSize();
 		    if (data_size < sizeof(void *)) {
-			    throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
+			    throw InvalidInputException("Invalid tgeompoint data: insufficient size");
 		    }
 		    uint8_t *data_copy = (uint8_t *)malloc(data_size);
 		    memcpy(data_copy, data, data_size);
 		    Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
 		    if (!temp) {
 			    free(data_copy);
-			    throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+			    throw InvalidInputException("Invalid tgeompoint data: null pointer");
 		    }
 
 		    int frag_count = 0;
@@ -1158,13 +1158,13 @@ void TgeompointFunctions::Tpoint_trajectory(DataChunk &args, ExpressionState &st
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             GSERIALIZED *gs = tpoint_trajectory(temp, false);
             if (!gs) {
                 free(temp);
-                throw InvalidInputException("Failed to get trajectory from TGEOMPOINT");
+                throw InvalidInputException("Failed to get trajectory from tgeompoint");
             }
 
             string_t geometry_blob = GSerializedToGeometry(gs, state, result);
@@ -1191,13 +1191,13 @@ void TgeompointFunctions::Tpoint_trajectory_gs(DataChunk &args, ExpressionState 
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             GSERIALIZED *gs = tpoint_trajectory(temp, false);
             if (!gs) {
                 free(temp);
-                throw InvalidInputException("Failed to get trajectory from TGEOMPOINT");
+                throw InvalidInputException("Failed to get trajectory from tgeompoint");
             }
 
             size_t gs_size = VARSIZE(gs);
@@ -1227,7 +1227,7 @@ void TgeompointFunctions::Tgeo_at_geom(DataChunk &args, ExpressionState &state, 
             Temporal *tgeom = reinterpret_cast<Temporal*>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int32 srid = tspatial_srid(tgeom);
@@ -1269,14 +1269,14 @@ void TgeompointFunctions::Tgeo_minus_geom(DataChunk &args, ExpressionState &stat
 		const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
 		size_t tgeom_data_size = tgeom_blob.GetSize();
 		if (tgeom_data_size < sizeof(void *)) {
-			throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
+			throw InvalidInputException("Invalid tgeompoint data: insufficient size");
 		}
 		uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
 		memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
 		Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
 		if (!tgeom) {
 			free(tgeom_data_copy);
-			throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+			throw InvalidInputException("Invalid tgeompoint data: null pointer");
 		}
 
 		int32 srid = tspatial_srid(tgeom);
@@ -1354,7 +1354,7 @@ void TgeompointFunctions::Tgeo_minus_stbox(DataChunk &args, ExpressionState &sta
             Temporal *tgeom = reinterpret_cast<Temporal*>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             const uint8_t *stbox_raw = reinterpret_cast<const uint8_t *>(stbox_blob.GetData());
@@ -1365,7 +1365,7 @@ void TgeompointFunctions::Tgeo_minus_stbox(DataChunk &args, ExpressionState &sta
             if (!stbox) {
                 free(tgeom_data_copy);
                 free(stbox_data_copy);
-                throw InvalidInputException("Invalid STBOX data: null pointer");
+                throw InvalidInputException("Invalid stbox data: null pointer");
             }
 
             Temporal *ret = tgeo_minus_stbox(tgeom, stbox, border_inc);
@@ -1403,7 +1403,7 @@ void TgeompointFunctions::Tgeo_at_stbox(DataChunk &args, ExpressionState &state,
         Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
         if (!tgeom) {
             free(tgeom_data_copy);
-            throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            throw InvalidInputException("Invalid tgeompoint data: null pointer");
         }
 
         const uint8_t *stbox_raw = reinterpret_cast<const uint8_t *>(stbox_blob.GetData());
@@ -1414,7 +1414,7 @@ void TgeompointFunctions::Tgeo_at_stbox(DataChunk &args, ExpressionState &state,
         if (!stbox) {
             free(tgeom_data_copy);
             free(stbox_data_copy);
-            throw InvalidInputException("Invalid STBOX data: null pointer");
+            throw InvalidInputException("Invalid stbox data: null pointer");
         }
 
         Temporal *ret = tgeo_at_stbox(tgeom, stbox, border_inc);
@@ -1465,13 +1465,13 @@ void TgeompointFunctions::Tspatial_transform(DataChunk &args, ExpressionState &s
             Temporal *tgeom = reinterpret_cast<Temporal*>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             Temporal *ret = tspatial_transform(tgeom, srid);
             if (ret == NULL) {
                 free(tgeom);
-                throw InvalidInputException("Failed to transform TGEOMPOINT");
+                throw InvalidInputException("Failed to transform tgeompoint");
             }
 
             size_t ret_size = temporal_mem_size(ret);
@@ -1479,7 +1479,7 @@ void TgeompointFunctions::Tspatial_transform(DataChunk &args, ExpressionState &s
             if (!ret_data) {
                 free(ret);
                 free(tgeom);
-                throw InvalidInputException("Failed to allocate memory for TGEOMPOINT");
+                throw InvalidInputException("Failed to allocate memory for tgeompoint");
             }
             memcpy(ret_data, ret, ret_size);
 
@@ -1518,7 +1518,7 @@ void TgeompointFunctions::Econtains_geo_tgeo(DataChunk &args, ExpressionState &s
             if (!tgeom) {
                 free(tgeom_data_copy);
                 free(gs);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int ret = econtains_geo_tgeo(gs, tgeom);
@@ -1554,7 +1554,7 @@ void TgeompointFunctions::Acontains_geo_tgeo(DataChunk &args, ExpressionState &s
             if (!tgeom) {
                 free(tgeom_data_copy);
                 free(gs);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int ret = acontains_geo_tgeo(gs, tgeom);
@@ -1579,14 +1579,14 @@ void TgeompointFunctions::Edisjoint_geo_tgeo(DataChunk &args, ExpressionState &s
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             if (tgeom_data_size < sizeof(void *)) {
-                throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
+                throw InvalidInputException("Invalid tgeompoint data: insufficient size");
             }
             uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
             memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
             Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int32 srid = tspatial_srid(tgeom);
@@ -1618,14 +1618,14 @@ void TgeompointFunctions::Edisjoint_tgeo_geo(DataChunk &args, ExpressionState &s
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             if (tgeom_data_size < sizeof(void *)) {
-                throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
+                throw InvalidInputException("Invalid tgeompoint data: insufficient size");
             }
             uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
             memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
             Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int32 srid = tspatial_srid(tgeom);
@@ -1661,7 +1661,7 @@ void TgeompointFunctions::Edisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &
             Temporal *tgeom1 = reinterpret_cast<Temporal*>(tgeom1_data_copy);
             if (!tgeom1) {
                 free(tgeom1_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
             
             const uint8_t *tgeom2_data = reinterpret_cast<const uint8_t*>(tgeom2_blob.GetData());
@@ -1672,7 +1672,7 @@ void TgeompointFunctions::Edisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &
             if (!tgeom2) {
                 free(tgeom1);
                 free(tgeom2_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int ret = edisjoint_tgeo_tgeo(tgeom1, tgeom2);
@@ -1697,14 +1697,14 @@ void TgeompointFunctions::Adisjoint_geo_tgeo(DataChunk &args, ExpressionState &s
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             if (tgeom_data_size < sizeof(void *)) {
-                throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
+                throw InvalidInputException("Invalid tgeompoint data: insufficient size");
             }
             uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
             memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
             Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int32 srid = tspatial_srid(tgeom);
@@ -1737,14 +1737,14 @@ void TgeompointFunctions::Adisjoint_tgeo_geo(DataChunk &args, ExpressionState &s
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             if (tgeom_data_size < sizeof(void *)) {
-                throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
+                throw InvalidInputException("Invalid tgeompoint data: insufficient size");
             }
             uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
             memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
             Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int32 srid = tspatial_srid(tgeom);
@@ -1780,7 +1780,7 @@ void TgeompointFunctions::Adisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &
             Temporal *tgeom1 = reinterpret_cast<Temporal*>(tgeom1_data_copy);
             if (!tgeom1) {
                 free(tgeom1_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
             
             const uint8_t *tgeom2_data = reinterpret_cast<const uint8_t*>(tgeom2_blob.GetData());
@@ -1791,7 +1791,7 @@ void TgeompointFunctions::Adisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &
             if (!tgeom2) {
                 free(tgeom1);
                 free(tgeom2_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             // extern int adisjoint_tgeo_tgeo(const Temporal *temp1, const Temporal *temp2);
@@ -1821,7 +1821,7 @@ void TgeompointFunctions::Eintersects_tgeo_tgeo(DataChunk &args, ExpressionState
             Temporal *tgeom1 = reinterpret_cast<Temporal*>(tgeom1_data_copy);
             if (!tgeom1) {
                 free(tgeom1_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             const uint8_t *tgeom2_data = reinterpret_cast<const uint8_t*>(tgeom2_blob.GetData());
@@ -1832,7 +1832,7 @@ void TgeompointFunctions::Eintersects_tgeo_tgeo(DataChunk &args, ExpressionState
             if (!tgeom2) {
                 free(tgeom1);
                 free(tgeom2_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int ret = eintersects_tgeo_tgeo(tgeom1, tgeom2);
@@ -1868,7 +1868,7 @@ void TgeompointFunctions::Eintersects_geo_tgeo(DataChunk &args, ExpressionState 
             if (!tgeom) {
                 free(tgeom_data_copy);
                 free(gs);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int ret = ea_intersects_geo_tgeo_dispatch(gs, tgeom, true);
@@ -1897,7 +1897,7 @@ void TgeompointFunctions::Eintersects_tgeo_geo(DataChunk &args, ExpressionState 
             Temporal *tgeom = reinterpret_cast<Temporal*>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int32 srid = tspatial_srid(tgeom);
@@ -1940,7 +1940,7 @@ void TgeompointFunctions::Aintersects_geo_tgeo(DataChunk &args, ExpressionState 
             if (!tgeom) {
                 free(tgeom_data_copy);
                 free(gs);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
             int ret = ea_intersects_geo_tgeo_dispatch(gs, tgeom, false);
             free(tgeom);
@@ -1968,7 +1968,7 @@ void TgeompointFunctions::Aintersects_tgeo_geo(DataChunk &args, ExpressionState 
             Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int32 srid = tspatial_srid(tgeom);
@@ -2004,7 +2004,7 @@ void TgeompointFunctions::Aintersects_tgeo_tgeo(DataChunk &args, ExpressionState
             Temporal *tgeom1 = reinterpret_cast<Temporal*>(tgeom1_data_copy);
             if (!tgeom1) {
                 free(tgeom1_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             const uint8_t *tgeom2_data = reinterpret_cast<const uint8_t*>(tgeom2_blob.GetData());
@@ -2015,7 +2015,7 @@ void TgeompointFunctions::Aintersects_tgeo_tgeo(DataChunk &args, ExpressionState
             if (!tgeom2) {
                 free(tgeom1);
                 free(tgeom2_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int ret = aintersects_tgeo_tgeo(tgeom1, tgeom2);
@@ -2040,14 +2040,14 @@ void TgeompointFunctions::Etouches_geo_tpoint(DataChunk &args, ExpressionState &
 		    const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
 		    size_t tgeom_data_size = tgeom_blob.GetSize();
 		    if (tgeom_data_size < sizeof(void *)) {
-			    throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
+			    throw InvalidInputException("Invalid tgeompoint data: insufficient size");
 		    }
 		    uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
 		    memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
 		    Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
 		    if (!tgeom) {
 			    free(tgeom_data_copy);
-			    throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+			    throw InvalidInputException("Invalid tgeompoint data: null pointer");
 		    }
 
 		    int32 srid = tspatial_srid(tgeom);
@@ -2078,14 +2078,14 @@ void TgeompointFunctions::Atouches_geo_tpoint(DataChunk &args, ExpressionState &
 		    const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
 		    size_t tgeom_data_size = tgeom_blob.GetSize();
 		    if (tgeom_data_size < sizeof(void *)) {
-			    throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
+			    throw InvalidInputException("Invalid tgeompoint data: insufficient size");
 		    }
 		    uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
 		    memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
 		    Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
 		    if (!tgeom) {
 			    free(tgeom_data_copy);
-			    throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+			    throw InvalidInputException("Invalid tgeompoint data: null pointer");
 		    }
 
 		    int32 srid = tspatial_srid(tgeom);
@@ -2120,7 +2120,7 @@ void TgeompointFunctions::Etouches_tpoint_geo(DataChunk &args, ExpressionState &
             Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int32 srid = tspatial_srid(tgeom);
@@ -2156,7 +2156,7 @@ void TgeompointFunctions::Atouches_tpoint_geo(DataChunk &args, ExpressionState &
             Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int32 srid = tspatial_srid(tgeom);
@@ -2192,7 +2192,7 @@ void TgeompointFunctions::Edwithin_tgeo_tgeo(DataChunk &args, ExpressionState &s
             Temporal *tgeom1 = reinterpret_cast<Temporal*>(tgeom1_data_copy);
             if (!tgeom1) {
                 free(tgeom1_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             const uint8_t *tgeom2_data = reinterpret_cast<const uint8_t*>(tgeom2_blob.GetData());
@@ -2203,7 +2203,7 @@ void TgeompointFunctions::Edwithin_tgeo_tgeo(DataChunk &args, ExpressionState &s
             if (!tgeom2) {
                 free(tgeom1);
                 free(tgeom2_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int ret = edwithin_tgeo_tgeo(tgeom1, tgeom2, dist);
@@ -2232,7 +2232,7 @@ void TgeompointFunctions::Edwithin_tgeo_geo(DataChunk &args, ExpressionState &st
             Temporal *tgeom = reinterpret_cast<Temporal*>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int32 srid = tspatial_srid(tgeom);
@@ -2264,14 +2264,14 @@ void TgeompointFunctions::Edwithin_geo_tgeo(DataChunk &args, ExpressionState &st
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             if (tgeom_data_size < sizeof(void *)) {
-                throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
+                throw InvalidInputException("Invalid tgeompoint data: insufficient size");
             }
             uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
             memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
             Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int32 srid = tspatial_srid(tgeom);
@@ -2303,14 +2303,14 @@ void TgeompointFunctions::Adwithin_tgeo_geo(DataChunk &args, ExpressionState &st
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             if (tgeom_data_size < sizeof(void *)) {
-                throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
+                throw InvalidInputException("Invalid tgeompoint data: insufficient size");
             }
             uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
             memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
             Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int32 srid = tspatial_srid(tgeom);
@@ -2342,14 +2342,14 @@ void TgeompointFunctions::Adwithin_geo_tgeo(DataChunk &args, ExpressionState &st
             const uint8_t *tgeom_data = reinterpret_cast<const uint8_t *>(tgeom_blob.GetData());
             size_t tgeom_data_size = tgeom_blob.GetSize();
             if (tgeom_data_size < sizeof(void *)) {
-                throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
+                throw InvalidInputException("Invalid tgeompoint data: insufficient size");
             }
             uint8_t *tgeom_data_copy = (uint8_t *)malloc(tgeom_data_size);
             memcpy(tgeom_data_copy, tgeom_data, tgeom_data_size);
             Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int32 srid = tspatial_srid(tgeom);
@@ -2385,7 +2385,7 @@ void TgeompointFunctions::Adwithin_tgeo_tgeo(DataChunk &args, ExpressionState &s
             Temporal *tgeom1 = reinterpret_cast<Temporal*>(tgeom1_data_copy);
             if (!tgeom1) {
                 free(tgeom1_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             const uint8_t *tgeom2_data = reinterpret_cast<const uint8_t*>(tgeom2_blob.GetData());
@@ -2396,7 +2396,7 @@ void TgeompointFunctions::Adwithin_tgeo_tgeo(DataChunk &args, ExpressionState &s
             if (!tgeom2) {
                 free(tgeom1);
                 free(tgeom2_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int ret = adwithin_tgeo_tgeo(tgeom1, tgeom2, dist);
@@ -2435,7 +2435,7 @@ void TgeompointFunctions::Tcontains_geo_tgeo(DataChunk &args, ExpressionState &s
         if (!tgeom) {
             free(tgeom_data_copy);
             free(gs);
-            throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+            throw InvalidInputException("Invalid tgeompoint data: null pointer");
         }
 
         Temporal *ret = tcontains_geo_tgeo(gs, tgeom);
@@ -2491,7 +2491,7 @@ void TgeompointFunctions::Tdisjoint_geo_tgeo(DataChunk &args, ExpressionState &s
             if (!tgeom) {
                 free(tgeom_data_copy);
                 free(gs);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             Temporal *ret = tdisjoint_geo_tgeo(gs, tgeom);
@@ -2530,7 +2530,7 @@ void TgeompointFunctions::Tdisjoint_tgeo_geo(DataChunk &args, ExpressionState &s
             if (!tgeom) {
                 free(tgeom_data_copy);
                 free(gs);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             Temporal *ret = tdisjoint_tgeo_geo(tgeom, gs);
@@ -2562,7 +2562,7 @@ void TgeompointFunctions::Tdisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &
             Temporal *tgeom1 = reinterpret_cast<Temporal*>(tgeom1_data_copy);
             if (!tgeom1) {
                 free(tgeom1_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             const uint8_t *tgeom2_data = reinterpret_cast<const uint8_t*>(tgeom2_blob.GetData());
@@ -2573,7 +2573,7 @@ void TgeompointFunctions::Tdisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &
             if (!tgeom2) {
                 free(tgeom1);
                 free(tgeom2_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             Temporal *ret = tdisjoint_tgeo_tgeo(tgeom1, tgeom2);
@@ -2612,7 +2612,7 @@ void TgeompointFunctions::Tintersects_geo_tgeo(DataChunk &args, ExpressionState 
             if (!tgeom) {
                 free(tgeom_data_copy);
                 free(gs);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             Temporal *ret = tintersects_geo_tgeo(gs, tgeom);
@@ -2651,7 +2651,7 @@ void TgeompointFunctions::Tintersects_tgeo_geo(DataChunk &args, ExpressionState 
             if (!tgeom) {
                 free(tgeom_data_copy);
                 free(gs);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             Temporal *ret = tintersects_tgeo_geo(tgeom, gs);
@@ -2683,7 +2683,7 @@ void TgeompointFunctions::Tintersects_tgeo_tgeo(DataChunk &args, ExpressionState
             Temporal *tgeom1 = reinterpret_cast<Temporal*>(tgeom1_data_copy);
             if (!tgeom1) {
                 free(tgeom1_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             const uint8_t *tgeom2_data = reinterpret_cast<const uint8_t*>(tgeom2_blob.GetData());
@@ -2694,7 +2694,7 @@ void TgeompointFunctions::Tintersects_tgeo_tgeo(DataChunk &args, ExpressionState
             if (!tgeom2) {
                 free(tgeom1);
                 free(tgeom2_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             Temporal *ret = tintersects_tgeo_tgeo(tgeom1, tgeom2);
@@ -2733,7 +2733,7 @@ void TgeompointFunctions::Ttouches_geo_tgeo(DataChunk &args, ExpressionState &st
             if (!tgeom) {
                 free(tgeom_data_copy);
                 free(gs);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             Temporal *ret = ttouches_geo_tgeo(gs, tgeom);
@@ -2772,7 +2772,7 @@ void TgeompointFunctions::Ttouches_tgeo_geo(DataChunk &args, ExpressionState &st
             if (!tgeom) {
                 free(tgeom_data_copy);
                 free(gs);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             Temporal *ret = ttouches_tgeo_geo(tgeom, gs);
@@ -2804,7 +2804,7 @@ void TgeompointFunctions::Tdwithin_tgeo_tgeo(DataChunk &args, ExpressionState &s
             Temporal *tgeom1 = reinterpret_cast<Temporal*>(tgeom1_data_copy);
             if (!tgeom1) {
                 free(tgeom1_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             const uint8_t *tgeom2_data = reinterpret_cast<const uint8_t*>(tgeom2_blob.GetData());
@@ -2815,7 +2815,7 @@ void TgeompointFunctions::Tdwithin_tgeo_tgeo(DataChunk &args, ExpressionState &s
             if (!tgeom2) {
                 free(tgeom1);
                 free(tgeom2_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
             Temporal *ret = tdwithin_tgeo_tgeo(tgeom1, tgeom2, dist);
             if (!ret) {
@@ -2848,7 +2848,7 @@ void TgeompointFunctions::Tdwithin_tgeo_geo(DataChunk &args, ExpressionState &st
             Temporal *tgeom = reinterpret_cast<Temporal *>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             int32 srid = tspatial_srid(tgeom);
@@ -2894,7 +2894,7 @@ void TgeompointFunctions::Tdwithin_geo_tgeo(DataChunk &args, ExpressionState &st
             if (!tgeom) {
                 free(tgeom_data_copy);
                 free(gs);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             Temporal *ret = tdwithin_geo_tgeo(gs, tgeom, dist);
@@ -2926,7 +2926,7 @@ void TgeompointFunctions::ShortestLine_tgeo_tgeo(DataChunk &args, ExpressionStat
             Temporal *tgeom1 = reinterpret_cast<Temporal*>(tgeom1_data_copy);
             if (!tgeom1) {
                 free(tgeom1_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             const uint8_t *tgeom2_data = reinterpret_cast<const uint8_t*>(tgeom2_blob.GetData());
@@ -2937,7 +2937,7 @@ void TgeompointFunctions::ShortestLine_tgeo_tgeo(DataChunk &args, ExpressionStat
             if (!tgeom2) {
                 free(tgeom1);
                 free(tgeom2_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
             GSERIALIZED *ret = shortestline_tgeo_tgeo(tgeom1, tgeom2);
             if (!ret) {
@@ -2974,7 +2974,7 @@ void TgeompointFunctions::Temporal_overlaps_tgeompoint_stbox(DataChunk &args, Ex
             Temporal *tgeom = reinterpret_cast<Temporal*>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             const uint8_t *stbox_data = reinterpret_cast<const uint8_t*>(stbox_blob.GetData());
@@ -2985,7 +2985,7 @@ void TgeompointFunctions::Temporal_overlaps_tgeompoint_stbox(DataChunk &args, Ex
             if (!stbox) {
                 free(tgeom);
                 free(stbox_data_copy);
-                throw InvalidInputException("Invalid STBOX data: null pointer");
+                throw InvalidInputException("Invalid stbox data: null pointer");
             }
             bool ret = overlaps_tspatial_stbox(tgeom, stbox);
             free(tgeom);
@@ -3009,7 +3009,7 @@ void TgeompointFunctions::Temporal_overlaps_tgeompoint_tstzspan(DataChunk &args,
             Temporal *tgeom = reinterpret_cast<Temporal*>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
             
             const uint8_t *span_data = reinterpret_cast<const uint8_t*>(span_blob.GetData());
@@ -3020,7 +3020,7 @@ void TgeompointFunctions::Temporal_overlaps_tgeompoint_tstzspan(DataChunk &args,
             if (!span) {
                 free(tgeom);
                 free(span_data_copy);
-                throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                throw InvalidInputException("Invalid tstzspan data: null pointer");
             }
             bool ret = overlaps_tstzspan_temporal(span, tgeom);
             free(tgeom);
@@ -3044,7 +3044,7 @@ void TgeompointFunctions::Temporal_contains_tgeompoint_stbox(DataChunk &args, Ex
             Temporal *tgeom = reinterpret_cast<Temporal*>(tgeom_data_copy);
             if (!tgeom) {
                 free(tgeom_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             const uint8_t *stbox_data = reinterpret_cast<const uint8_t*>(stbox_blob.GetData());
@@ -3055,7 +3055,7 @@ void TgeompointFunctions::Temporal_contains_tgeompoint_stbox(DataChunk &args, Ex
             if (!stbox) {
                 free(tgeom);
                 free(stbox_data_copy);
-                throw InvalidInputException("Invalid STBOX data: null pointer");
+                throw InvalidInputException("Invalid stbox data: null pointer");
             }
             bool ret = contains_tspatial_stbox(tgeom, stbox);
             free(tgeom);
@@ -3083,7 +3083,7 @@ void TgeompointFunctions::Tdistance_tgeo_tgeo(DataChunk &args, ExpressionState &
             Temporal *tgeom1 = reinterpret_cast<Temporal*>(tgeom1_data_copy);
             if (!tgeom1) {
                 free(tgeom1_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
             
             const uint8_t *tgeom2_data = reinterpret_cast<const uint8_t*>(tgeom2_blob.GetData());
@@ -3094,7 +3094,7 @@ void TgeompointFunctions::Tdistance_tgeo_tgeo(DataChunk &args, ExpressionState &
             if (!tgeom2) {
                 free(tgeom1);
                 free(tgeom2_data_copy);
-                throw InvalidInputException("Invalid TGEOMPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
             Temporal *ret = tdistance_tgeo_tgeo(tgeom1, tgeom2);
@@ -3286,7 +3286,7 @@ string_t TemporalToBlobLocal(Vector &result, Temporal *r) {
 string_t ApplyAffineToTgeoStraggler(Vector &result, string_t input_blob, const AFFINE &m) {
     size_t data_size = input_blob.GetSize();
     if (data_size < sizeof(void *)) {
-        throw InvalidInputException("Invalid TGEOMPOINT data: insufficient size");
+        throw InvalidInputException("Invalid tgeompoint data: insufficient size");
     }
     uint8_t *data_copy = (uint8_t *)malloc(data_size);
     memcpy(data_copy, input_blob.GetData(), data_size);

@@ -49,16 +49,16 @@ TRTreeIndex::TRTreeIndex(const string &name, IndexConstraintType constraint_type
     
     auto &type = unbound_expressions[0]->return_type;
     
-    if (type == StboxType::STBOX()) {
+    if (type == StboxType::stbox()) {
         bbox_type_ = T_STBOX;
         bbox_size_ = sizeof(STBox);
         rtree_ = rtree_create_stbox();
-    } else if (type == SpanTypes::TSTZSPAN()) {
+    } else if (type == SpanTypes::tstzspan()) {
         bbox_type_ = T_TSTZSPAN;
         bbox_size_ = sizeof(Span);  
         rtree_ = rtree_create_tstzspan();
     } else {
-        throw InternalException("RTree index only supports STBOX and TSTZSPAN types, got: " + type.ToString());
+        throw InternalException("RTree index only supports stbox and tstzspan types, got: " + type.ToString());
     }
     
     if (!rtree_) {
@@ -475,9 +475,9 @@ unique_ptr<ExpressionMatcher> TRTreeIndex::MakeFunctionMatcher() const {
 
     LogicalType index_type;
     if (bbox_type_ == T_STBOX) {
-        index_type = StboxType::STBOX();
+        index_type = StboxType::stbox();
     } else if (bbox_type_ == T_TSTZSPAN) {
-        index_type = SpanTypes::TSTZSPAN();
+        index_type = SpanTypes::tstzspan();
     } else {
         index_type = LogicalType::BLOB;
     }

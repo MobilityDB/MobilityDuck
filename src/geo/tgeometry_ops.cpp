@@ -517,13 +517,13 @@ void TgeoTraversedAreaExec(DataChunk &args, ExpressionState &, Vector &result) {
 } // namespace
 
 void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
-    const LogicalType TGEOM = TGeometryTypes::TGEOMETRY();
+    const LogicalType TGEOM = TGeometryTypes::tgeometry();
     const LogicalType GEOM  = GeoTypes::GEOMETRY();
-    const LogicalType STBOX = StboxType::STBOX();
-    const LogicalType TSTZSPAN = SpanTypes::TSTZSPAN();
+    const LogicalType stbox = StboxType::stbox();
+    const LogicalType tstzspan = SpanTypes::tstzspan();
     const LogicalType BOOL = LogicalType::BOOLEAN;
     const LogicalType DBL = LogicalType::DOUBLE;
-    const LogicalType TFLOAT = TemporalTypes::TFLOAT();
+    const LogicalType tfloat = TemporalTypes::tfloat();
 
     // -----------------------------------------------------------------
     // Box predicates: temporal_(overlaps|contains|contained|same|adjacent)
@@ -561,25 +561,25 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     // explicitly below using the macros.
 #define BOX_REG(NAME, OP, F_TSPAT_STBOX, F_TSPAT_TSPAT, F_TEMP_TSTZSPAN, F_TSTZSPAN_TEMP) \
     do { \
-        loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, STBOX},   BOOL, \
+        loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, stbox},   BOOL, \
             TspatialStboxBoolExec<F_TSPAT_STBOX>)); \
-        loader.RegisterFunction(ScalarFunction(NAME, {STBOX, TGEOM},   BOOL, \
+        loader.RegisterFunction(ScalarFunction(NAME, {stbox, TGEOM},   BOOL, \
             StboxTspatialBoolExec<F_TSPAT_STBOX>)); \
         loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, TGEOM},   BOOL, \
             TspatialTspatialBoolExec<F_TSPAT_TSPAT>)); \
-        loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, TSTZSPAN},BOOL, \
+        loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, tstzspan},BOOL, \
             TemporalTstzspanBoolExec<F_TEMP_TSTZSPAN>)); \
-        loader.RegisterFunction(ScalarFunction(NAME, {TSTZSPAN, TGEOM},BOOL, \
+        loader.RegisterFunction(ScalarFunction(NAME, {tstzspan, TGEOM},BOOL, \
             TstzspanTemporalBoolExec<F_TSTZSPAN_TEMP>)); \
-        loader.RegisterFunction(ScalarFunction(OP,   {TGEOM, STBOX},   BOOL, \
+        loader.RegisterFunction(ScalarFunction(OP,   {TGEOM, stbox},   BOOL, \
             TspatialStboxBoolExec<F_TSPAT_STBOX>)); \
-        loader.RegisterFunction(ScalarFunction(OP,   {STBOX, TGEOM},   BOOL, \
+        loader.RegisterFunction(ScalarFunction(OP,   {stbox, TGEOM},   BOOL, \
             StboxTspatialBoolExec<F_TSPAT_STBOX>)); \
         loader.RegisterFunction(ScalarFunction(OP,   {TGEOM, TGEOM},   BOOL, \
             TspatialTspatialBoolExec<F_TSPAT_TSPAT>)); \
-        loader.RegisterFunction(ScalarFunction(OP,   {TGEOM, TSTZSPAN},BOOL, \
+        loader.RegisterFunction(ScalarFunction(OP,   {TGEOM, tstzspan},BOOL, \
             TemporalTstzspanBoolExec<F_TEMP_TSTZSPAN>)); \
-        loader.RegisterFunction(ScalarFunction(OP,   {TSTZSPAN, TGEOM},BOOL, \
+        loader.RegisterFunction(ScalarFunction(OP,   {tstzspan, TGEOM},BOOL, \
             TstzspanTemporalBoolExec<F_TSTZSPAN_TEMP>)); \
     } while (0)
 
@@ -609,9 +609,9 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     // -----------------------------------------------------------------
 #define POS_REG(NAME, F_TSPAT_STBOX, F_TSPAT_TSPAT) \
     do { \
-        loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, STBOX}, BOOL, \
+        loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, stbox}, BOOL, \
             TspatialStboxBoolExec<F_TSPAT_STBOX>)); \
-        loader.RegisterFunction(ScalarFunction(NAME, {STBOX, TGEOM}, BOOL, \
+        loader.RegisterFunction(ScalarFunction(NAME, {stbox, TGEOM}, BOOL, \
             StboxTspatialBoolExec<F_TSPAT_STBOX>)); \
         loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, TGEOM}, BOOL, \
             TspatialTspatialBoolExec<F_TSPAT_TSPAT>)); \
@@ -641,9 +641,9 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     // axes.
 #define TIME_POS_REG(NAME, F_TEMP_TSTZSPAN, F_TSTZSPAN_TEMP) \
     do { \
-        loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, TSTZSPAN}, BOOL, \
+        loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, tstzspan}, BOOL, \
             TemporalTstzspanBoolExec<F_TEMP_TSTZSPAN>)); \
-        loader.RegisterFunction(ScalarFunction(NAME, {TSTZSPAN, TGEOM}, BOOL, \
+        loader.RegisterFunction(ScalarFunction(NAME, {tstzspan, TGEOM}, BOOL, \
             TstzspanTemporalBoolExec<F_TSTZSPAN_TEMP>)); \
     } while (0)
     TIME_POS_REG("temporal_before",     before_temporal_tstzspan,     before_tstzspan_temporal);
@@ -713,11 +713,11 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     // -----------------------------------------------------------------
 #define TREL_REG(NAME, F_TGEO_GEO, F_GEO_TGEO, F_TGEO_TGEO) \
     do { \
-        loader.RegisterFunction(ScalarFunction(NAME, {GEOM, TGEOM}, TemporalTypes::TBOOL(), \
+        loader.RegisterFunction(ScalarFunction(NAME, {GEOM, TGEOM}, TemporalTypes::tbool(), \
             GeoTgeoTempExec<F_GEO_TGEO>)); \
-        loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, GEOM}, TemporalTypes::TBOOL(), \
+        loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, GEOM}, TemporalTypes::tbool(), \
             TgeoGeoTempExec<F_TGEO_GEO>)); \
-        loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, TGEOM}, TemporalTypes::TBOOL(), \
+        loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, TGEOM}, TemporalTypes::tbool(), \
             TgeoTgeoTempExec<F_TGEO_TGEO>)); \
     } while (0)
 
@@ -729,26 +729,26 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     // tDwithin takes the extra distance argument.
     loader.RegisterFunction(ScalarFunction("tDwithin",
-        {GEOM, TGEOM, DBL}, TemporalTypes::TBOOL(),
+        {GEOM, TGEOM, DBL}, TemporalTypes::tbool(),
         GeoTgeoDistTempExec<tdwithin_geo_tgeo>));
     loader.RegisterFunction(ScalarFunction("tDwithin",
-        {TGEOM, GEOM, DBL}, TemporalTypes::TBOOL(),
+        {TGEOM, GEOM, DBL}, TemporalTypes::tbool(),
         TgeoGeoDistTempExec<tdwithin_tgeo_geo>));
     loader.RegisterFunction(ScalarFunction("tDwithin",
-        {TGEOM, TGEOM, DBL}, TemporalTypes::TBOOL(),
+        {TGEOM, TGEOM, DBL}, TemporalTypes::tbool(),
         TgeoTgeoDistTempExec<tdwithin_tgeo_tgeo>));
 
     // -----------------------------------------------------------------
     // Distance — `tdistance(...)` and `<->`.
     // -----------------------------------------------------------------
     loader.RegisterFunction(ScalarFunction("tdistance",
-        {TGEOM, GEOM}, TFLOAT, TgeoGeoDistanceExec<tdistance_tgeo_geo>));
+        {TGEOM, GEOM}, tfloat, TgeoGeoDistanceExec<tdistance_tgeo_geo>));
     loader.RegisterFunction(ScalarFunction("tdistance",
-        {TGEOM, TGEOM}, TFLOAT, TgeoTgeoDistanceExec<tdistance_tgeo_tgeo>));
+        {TGEOM, TGEOM}, tfloat, TgeoTgeoDistanceExec<tdistance_tgeo_tgeo>));
     loader.RegisterFunction(ScalarFunction("<->",
-        {TGEOM, GEOM}, TFLOAT, TgeoGeoDistanceExec<tdistance_tgeo_geo>));
+        {TGEOM, GEOM}, tfloat, TgeoGeoDistanceExec<tdistance_tgeo_geo>));
     loader.RegisterFunction(ScalarFunction("<->",
-        {TGEOM, TGEOM}, TFLOAT, TgeoTgeoDistanceExec<tdistance_tgeo_tgeo>));
+        {TGEOM, TGEOM}, tfloat, TgeoTgeoDistanceExec<tdistance_tgeo_tgeo>));
 
     // -----------------------------------------------------------------
     // Spatial functions: SRID accessor / setter, projection / transform,
@@ -767,14 +767,14 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     // tgeometry → stbox is a cast in the SQL surface; expose it as a
     // function for now to keep the implementation a single template.
     loader.RegisterFunction(ScalarFunction(
-        "stbox", {TGEOM}, STBOX, TspatialToStboxExec));
+        "stbox", {TGEOM}, stbox, TspatialToStboxExec));
 
     // tgeometry <-> tgeompoint coercion functions.
     loader.RegisterFunction(ScalarFunction(
-        "tgeompoint", {TGEOM}, TgeompointType::TGEOMPOINT(),
+        "tgeompoint", {TGEOM}, TgeompointType::tgeompoint(),
         TgeometryToTgeompointExec));
     loader.RegisterFunction(ScalarFunction(
-        "tgeometry", {TgeompointType::TGEOMPOINT()}, TGEOM,
+        "tgeometry", {TgeompointType::tgeompoint()}, TGEOM,
         TgeompointToTgeometryExec));
 
     // Centroid / convexHull / traversedArea — produce a non-temporal
@@ -847,7 +847,7 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
         }
     };
 
-    LogicalType list_stbox = LogicalType::LIST(STBOX);
+    LogicalType list_stbox = LogicalType::LIST(stbox);
     loader.RegisterFunction(ScalarFunction(
         "spaceBoxes", {TGEOM, DBL, DBL, DBL}, list_stbox, space_boxes_exec));
 
@@ -978,9 +978,9 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     // The MEOS teq_*/tne_* exports work on Temporal* regardless of subtype,
     // so we reuse the TgeompointFunctions wrappers which cover all 3 forms.
 #define REG_TCMP(NAME, FN)                                                                                                                            \
-        loader.RegisterFunction(ScalarFunction(NAME, {GEOM, TGEOM},  TemporalTypes::TBOOL(), TgeompointFunctions::FN##_geo_tgeo)); \
-        loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, GEOM},  TemporalTypes::TBOOL(), TgeompointFunctions::FN##_tgeo_geo)); \
-        loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, TGEOM}, TemporalTypes::TBOOL(), TgeompointFunctions::FN##_tgeo_tgeo));
+        loader.RegisterFunction(ScalarFunction(NAME, {GEOM, TGEOM},  TemporalTypes::tbool(), TgeompointFunctions::FN##_geo_tgeo)); \
+        loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, GEOM},  TemporalTypes::tbool(), TgeompointFunctions::FN##_tgeo_geo)); \
+        loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, TGEOM}, TemporalTypes::tbool(), TgeompointFunctions::FN##_tgeo_tgeo));
     REG_TCMP("tgeo_teq", Teq)
     REG_TCMP("tgeo_tne", Tne)
     REG_TCMP("temporal_teq", Teq)

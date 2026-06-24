@@ -72,11 +72,11 @@ meosType SpansetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
 
 LogicalType SpansetTypeMapping::GetChildType(const LogicalType &type) {
     auto alias = type.ToString();        
-    if (alias == "intspanset") return SpanTypes::INTSPAN();
-    if (alias == "bigintspanset") return SpanTypes::BIGINTSPAN();
-    if (alias == "floatspanset") return SpanTypes::FLOATSPAN();    
-    if (alias == "datespanset") return SpanTypes::DATESPAN();
-    if (alias == "tstzspanset") return SpanTypes::TSTZSPAN();   
+    if (alias == "intspanset") return SpanTypes::intspan();
+    if (alias == "bigintspanset") return SpanTypes::bigintspan();
+    if (alias == "floatspanset") return SpanTypes::floatspan();    
+    if (alias == "datespanset") return SpanTypes::datespan();
+    if (alias == "tstzspanset") return SpanTypes::tstzspan();   
     throw NotImplementedException("GetChildType: unsupported alias: " + alias); 
 }
 

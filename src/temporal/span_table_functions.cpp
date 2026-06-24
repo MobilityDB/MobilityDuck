@@ -17,11 +17,11 @@ namespace {
 // Tag identifying the input span / spanset variant. Drives which MEOS
 // function the global-state init dispatches to.
 enum class BinsKind {
-    INTSPAN,
-    BIGINTSPAN,
-    FLOATSPAN,
-    DATESPAN,
-    TSTZSPAN,
+    intspan,
+    bigintspan,
+    floatspan,
+    datespan,
+    tstzspan,
     INTSPANSET,
     BIGINTSPANSET,
     FLOATSPANSET,
@@ -78,7 +78,7 @@ static unique_ptr<GlobalTableFunctionState> BinsInitGlobal(ClientContext &, Tabl
     size_t raw_size = bind_data.blob.size();
 
     switch (bind_data.kind) {
-        case BinsKind::INTSPAN: {
+        case BinsKind::intspan: {
             Span *s = reinterpret_cast<Span *>(malloc(raw_size));
             memcpy(s, raw_blob, raw_size);
             state->bins = intspan_bins(s, bind_data.vsize.GetValue<int32_t>(),
@@ -86,7 +86,7 @@ static unique_ptr<GlobalTableFunctionState> BinsInitGlobal(ClientContext &, Tabl
             free(s);
             break;
         }
-        case BinsKind::BIGINTSPAN: {
+        case BinsKind::bigintspan: {
             Span *s = reinterpret_cast<Span *>(malloc(raw_size));
             memcpy(s, raw_blob, raw_size);
             state->bins = bigintspan_bins(s, bind_data.vsize.GetValue<int64_t>(),
@@ -94,7 +94,7 @@ static unique_ptr<GlobalTableFunctionState> BinsInitGlobal(ClientContext &, Tabl
             free(s);
             break;
         }
-        case BinsKind::FLOATSPAN: {
+        case BinsKind::floatspan: {
             Span *s = reinterpret_cast<Span *>(malloc(raw_size));
             memcpy(s, raw_blob, raw_size);
             state->bins = floatspan_bins(s, bind_data.vsize.GetValue<double>(),
@@ -102,7 +102,7 @@ static unique_ptr<GlobalTableFunctionState> BinsInitGlobal(ClientContext &, Tabl
             free(s);
             break;
         }
-        case BinsKind::DATESPAN: {
+        case BinsKind::datespan: {
             Span *s = reinterpret_cast<Span *>(malloc(raw_size));
             memcpy(s, raw_blob, raw_size);
             interval_t duck_duration = bind_data.vsize.GetValue<interval_t>();
@@ -112,7 +112,7 @@ static unique_ptr<GlobalTableFunctionState> BinsInitGlobal(ClientContext &, Tabl
             free(s);
             break;
         }
-        case BinsKind::TSTZSPAN: {
+        case BinsKind::tstzspan: {
             Span *s = reinterpret_cast<Span *>(malloc(raw_size));
             memcpy(s, raw_blob, raw_size);
             interval_t duck_duration = bind_data.vsize.GetValue<interval_t>();
@@ -213,16 +213,16 @@ static unique_ptr<FunctionData> BinsBind(ClientContext &, TableFunctionBindInput
 
     LogicalType span_out;
     switch (KIND) {
-        case BinsKind::INTSPAN:
-        case BinsKind::INTSPANSET:    span_out = SpanTypes::INTSPAN(); break;
-        case BinsKind::BIGINTSPAN:
-        case BinsKind::BIGINTSPANSET: span_out = SpanTypes::BIGINTSPAN(); break;
-        case BinsKind::FLOATSPAN:
-        case BinsKind::FLOATSPANSET:  span_out = SpanTypes::FLOATSPAN(); break;
-        case BinsKind::DATESPAN:
-        case BinsKind::DATESPANSET:   span_out = SpanTypes::DATESPAN(); break;
-        case BinsKind::TSTZSPAN:
-        case BinsKind::TSTZSPANSET:   span_out = SpanTypes::TSTZSPAN(); break;
+        case BinsKind::intspan:
+        case BinsKind::INTSPANSET:    span_out = SpanTypes::intspan(); break;
+        case BinsKind::bigintspan:
+        case BinsKind::BIGINTSPANSET: span_out = SpanTypes::bigintspan(); break;
+        case BinsKind::floatspan:
+        case BinsKind::FLOATSPANSET:  span_out = SpanTypes::floatspan(); break;
+        case BinsKind::datespan:
+        case BinsKind::DATESPANSET:   span_out = SpanTypes::datespan(); break;
+        case BinsKind::tstzspan:
+        case BinsKind::TSTZSPANSET:   span_out = SpanTypes::tstzspan(); break;
     }
     data->output_span_type = span_out;
     return_types.emplace_back(span_out);
@@ -244,16 +244,16 @@ static TableFunction MakeBinsFunction(const LogicalType &input_type, const Logic
 
 void SpanTableFunctions::RegisterBins(ExtensionLoader &loader) {
     // span variants
-    loader.RegisterFunction(MakeBinsFunction<BinsKind::INTSPAN>(
-        SpanTypes::INTSPAN(), LogicalType::INTEGER, LogicalType::INTEGER));
-    loader.RegisterFunction(MakeBinsFunction<BinsKind::BIGINTSPAN>(
-        SpanTypes::BIGINTSPAN(), LogicalType::BIGINT, LogicalType::BIGINT));
-    loader.RegisterFunction(MakeBinsFunction<BinsKind::FLOATSPAN>(
-        SpanTypes::FLOATSPAN(), LogicalType::DOUBLE, LogicalType::DOUBLE));
-    loader.RegisterFunction(MakeBinsFunction<BinsKind::DATESPAN>(
-        SpanTypes::DATESPAN(), LogicalType::INTERVAL, LogicalType::DATE));
-    loader.RegisterFunction(MakeBinsFunction<BinsKind::TSTZSPAN>(
-        SpanTypes::TSTZSPAN(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ));
+    loader.RegisterFunction(MakeBinsFunction<BinsKind::intspan>(
+        SpanTypes::intspan(), LogicalType::INTEGER, LogicalType::INTEGER));
+    loader.RegisterFunction(MakeBinsFunction<BinsKind::bigintspan>(
+        SpanTypes::bigintspan(), LogicalType::BIGINT, LogicalType::BIGINT));
+    loader.RegisterFunction(MakeBinsFunction<BinsKind::floatspan>(
+        SpanTypes::floatspan(), LogicalType::DOUBLE, LogicalType::DOUBLE));
+    loader.RegisterFunction(MakeBinsFunction<BinsKind::datespan>(
+        SpanTypes::datespan(), LogicalType::INTERVAL, LogicalType::DATE));
+    loader.RegisterFunction(MakeBinsFunction<BinsKind::tstzspan>(
+        SpanTypes::tstzspan(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ));
 
     // spanset variants
     loader.RegisterFunction(MakeBinsFunction<BinsKind::INTSPANSET>(

@@ -18,7 +18,7 @@ namespace duckdb {
 class ExtensionLoader;
 
 struct TgeogpointType {
-    static LogicalType TGEOGPOINT();
+    static LogicalType tgeogpoint();
 
     static void RegisterType(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
@@ -32,7 +32,7 @@ struct TgeogpointType {
 // MEOS C functions reached here are subtype-agnostic and shared between
 // the two types.
 struct TGeogpointType {
-    static LogicalType TGEOGPOINT();
+    static LogicalType tgeogpoint();
     static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterScalarFunctions(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);

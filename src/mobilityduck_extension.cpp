@@ -300,7 +300,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 	SpanAggregates::RegisterAggregateFunctions(loader);
 	TemporalAggregates::RegisterAggregateFunctions(loader);
 
-	// Tile getters return SpanTypes blobs and consume TBOX, so all those
+	// Tile getters return SpanTypes blobs and consume tbox, so all those
 	// types must already be registered.
 	TemporalTypes::RegisterTileGetters(loader);
 
@@ -354,7 +354,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TRTreeModule::RegisterIndexScan(loader);
 	TRTreeModule::RegisterScanOptimizer(loader);
 
-	// Single-tile getters depend on TBOX, STBOX, and the spatial GEOMETRY
+	// Single-tile getters depend on tbox, stbox, and the spatial GEOMETRY
 	// type being registered first.
 	SingleTileGetters::RegisterScalarFunctions(loader);
 }

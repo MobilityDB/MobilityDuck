@@ -18,13 +18,13 @@
 namespace duckdb {
 
 static const alias_type_struct DUCKDB_ALIAS_TYPE_CATALOG[] = {
-    {(char*)"TINT", T_TINT},
-    {(char*)"TFLOAT", T_TFLOAT},
-    {(char*)"TBOOL", T_TBOOL},
-    {(char*)"TTEXT", T_TTEXT},
-    {(char*)"TGEOMPOINT", T_TGEOMPOINT},
-    {(char*)"TGEOGPOINT", T_TGEOGPOINT},
-    {(char*)"TGEOMETRY", T_TGEOMETRY}
+    {(char*)"tint", T_TINT},
+    {(char*)"tfloat", T_TFLOAT},
+    {(char*)"tbool", T_TBOOL},
+    {(char*)"ttext", T_TTEXT},
+    {(char*)"tgeompoint", T_TGEOMPOINT},
+    {(char*)"tgeogpoint", T_TGEOGPOINT},
+    {(char*)"tgeometry", T_TGEOMETRY}
 };
 
 meosType TemporalHelpers::GetTemptypeFromAlias(const char *alias) {

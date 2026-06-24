@@ -155,9 +155,9 @@ MakeTemporalDatumAccessor(uintptr_t (*meos_fn)(const Temporal *),
 // by name + (input temporal type, output LogicalType), wiring in the
 // generated executor built from `meos_fn`.
 //
-// Example (TBOOL):
+// Example (tbool):
 //   RegisterTemporalDatumAccessor<bool>(
-//       loader, "startValue", TemporalTypes::TBOOL(),
+//       loader, "startValue", TemporalTypes::tbool(),
 //       duckdb::LogicalType::BOOLEAN, temporal_start_value);
 // ---------------------------------------------------------------------
 

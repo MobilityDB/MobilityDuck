@@ -1878,7 +1878,7 @@ void SpanFunctions::Contains_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = contains_span_value(span, Datum(value));
                     free(span_data_copy);
@@ -1898,7 +1898,7 @@ void SpanFunctions::Contains_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);       
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = contains_span_value(span, Datum(value));
                     free(span_data_copy);
@@ -1918,7 +1918,7 @@ void SpanFunctions::Contains_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = contains_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
@@ -1937,7 +1937,7 @@ void SpanFunctions::Contains_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = contains_span_value(span, Datum(value));
                     free(span_data_copy);
@@ -1957,7 +1957,7 @@ void SpanFunctions::Contains_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = contains_span_value(span, Datum(ts_meos.value));
                     free(span_data_copy);
@@ -2064,7 +2064,7 @@ void SpanFunctions::Contained_value_span(DataChunk &args, ExpressionState &state
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = contains_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
@@ -2083,7 +2083,7 @@ void SpanFunctions::Contained_value_span(DataChunk &args, ExpressionState &state
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = contains_span_value(span, Datum(value));
                     free(span_data_copy);
@@ -2103,7 +2103,7 @@ void SpanFunctions::Contained_value_span(DataChunk &args, ExpressionState &state
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = contains_span_value(span, Datum(ts_meos.value));
                     free(span_data_copy);
@@ -2249,7 +2249,7 @@ void SpanFunctions::Adjacent_value_span(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = adjacent_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
@@ -2268,7 +2268,7 @@ void SpanFunctions::Adjacent_value_span(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = adjacent_span_value(span, Datum(value));
                     free(span_data_copy);
@@ -2288,7 +2288,7 @@ void SpanFunctions::Adjacent_value_span(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = adjacent_span_value(span, Datum(ts_meos.value));
                     free(span_data_copy);
@@ -2361,7 +2361,7 @@ void SpanFunctions::Adjacent_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);   
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = adjacent_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
@@ -2380,7 +2380,7 @@ void SpanFunctions::Adjacent_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = adjacent_span_value(span, Datum(value));
                     free(span_data_copy);
@@ -2400,7 +2400,7 @@ void SpanFunctions::Adjacent_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = adjacent_span_value(span, Datum(ts_meos.value));
                     free(span_data_copy);
@@ -2509,7 +2509,7 @@ void SpanFunctions::Left_value_span(DataChunk &args, ExpressionState &state, Vec
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = left_value_span(Float8GetDatum(value), span);
                     free(span_data_copy);
@@ -2528,7 +2528,7 @@ void SpanFunctions::Left_value_span(DataChunk &args, ExpressionState &state, Vec
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = left_value_span(Datum(value), span);
                     free(span_data_copy);
@@ -2548,7 +2548,7 @@ void SpanFunctions::Left_value_span(DataChunk &args, ExpressionState &state, Vec
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = left_value_span(Datum(ts_meos.value), span);
                     free(span_data_copy);
@@ -2620,7 +2620,7 @@ void SpanFunctions::Left_span_value(DataChunk &args, ExpressionState &state, Vec
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);       
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = left_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
@@ -2639,7 +2639,7 @@ void SpanFunctions::Left_span_value(DataChunk &args, ExpressionState &state, Vec
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = left_span_value(span, Datum(value));
                     free(span_data_copy);
@@ -2659,7 +2659,7 @@ void SpanFunctions::Left_span_value(DataChunk &args, ExpressionState &state, Vec
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = left_span_value(span, Datum(ts_meos.value));
                     free(span_data_copy);
@@ -2764,7 +2764,7 @@ void SpanFunctions::Right_value_span(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = right_value_span(Float8GetDatum(value), span);
                     free(span_data_copy);
@@ -2783,7 +2783,7 @@ void SpanFunctions::Right_value_span(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = right_value_span(Datum(value), span);
                     free(span_data_copy);
@@ -2803,7 +2803,7 @@ void SpanFunctions::Right_value_span(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = right_value_span(Datum(ts_meos.value), span);
                     free(span_data_copy);
@@ -2874,7 +2874,7 @@ void SpanFunctions::Right_span_value(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = right_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
@@ -2893,7 +2893,7 @@ void SpanFunctions::Right_span_value(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = right_span_value(span, Datum(value));
                     free(span_data_copy);
@@ -2913,7 +2913,7 @@ void SpanFunctions::Right_span_value(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = right_span_value(span, Datum(ts_meos.value));
                     free(span_data_copy);
@@ -3019,7 +3019,7 @@ void SpanFunctions::Overleft_value_span(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = overleft_value_span(Float8GetDatum(value), span);
                     free(span_data_copy);
@@ -3038,7 +3038,7 @@ void SpanFunctions::Overleft_value_span(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = overleft_value_span(Datum(value), span);
                     free(span_data_copy);
@@ -3058,7 +3058,7 @@ void SpanFunctions::Overleft_value_span(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = overleft_value_span(Datum(ts_meos.value), span);
                     free(span_data_copy);
@@ -3129,7 +3129,7 @@ void SpanFunctions::Overleft_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {    
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = overleft_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
@@ -3148,7 +3148,7 @@ void SpanFunctions::Overleft_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = overleft_span_value(span, Datum(value)); 
                     free(span_data_copy);
@@ -3168,7 +3168,7 @@ void SpanFunctions::Overleft_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = overleft_span_value(span, Datum(ts_meos.value));
                     free(span_data_copy);
@@ -3274,7 +3274,7 @@ void SpanFunctions::Overright_value_span(DataChunk &args, ExpressionState &state
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = overright_value_span(Float8GetDatum(value), span);
                     free(span_data_copy);
@@ -3293,7 +3293,7 @@ void SpanFunctions::Overright_value_span(DataChunk &args, ExpressionState &state
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = overright_value_span(Datum(value), span);
                     free(span_data_copy);
@@ -3313,7 +3313,7 @@ void SpanFunctions::Overright_value_span(DataChunk &args, ExpressionState &state
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = overright_value_span(Datum(ts_meos.value), span);
                     free(span_data_copy);
@@ -3385,7 +3385,7 @@ void SpanFunctions::Overright_span_value(DataChunk &args, ExpressionState &state
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = overright_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
@@ -3404,7 +3404,7 @@ void SpanFunctions::Overright_span_value(DataChunk &args, ExpressionState &state
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = overright_span_value(span, Datum(value));
                     free(span_data_copy);
@@ -3424,7 +3424,7 @@ void SpanFunctions::Overright_span_value(DataChunk &args, ExpressionState &state
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = overright_span_value(span, Datum(ts_meos.value));
                     free(span_data_copy);
@@ -3543,7 +3543,7 @@ void SpanFunctions::Union_value_span(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     SpanSet *ret = union_value_span(Float8GetDatum(value), span);
                     size_t span_size = sizeof(*ret);
@@ -3596,7 +3596,7 @@ void SpanFunctions::Union_value_span(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     SpanSet *ret = union_value_span(Datum(ts_meos.value), span);
                     size_t span_size = sizeof(*ret);
@@ -3688,7 +3688,7 @@ void SpanFunctions::Union_span_value(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     SpanSet *ret = union_span_value(span, Float8GetDatum(value));
                     size_t span_size = sizeof(*ret);
@@ -3741,7 +3741,7 @@ void SpanFunctions::Union_span_value(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     SpanSet *ret = union_span_value(span, Datum(ts_meos.value));
                     size_t span_size = sizeof(*ret);
@@ -3878,7 +3878,7 @@ void SpanFunctions::Intersection_value_span(DataChunk &args, ExpressionState &st
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     Span *ret = intersection_value_span(Float8GetDatum(value), span);
                     if (!ret) {
@@ -3939,7 +3939,7 @@ void SpanFunctions::Intersection_value_span(DataChunk &args, ExpressionState &st
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     Span *ret = intersection_value_span(Datum(ts_meos.value), span);
                     if (!ret) {
@@ -4043,7 +4043,7 @@ void SpanFunctions::Intersection_span_value(DataChunk &args, ExpressionState &st
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     Span *ret = intersection_span_value(span, Float8GetDatum(value));
                     if (!ret) {
@@ -4104,7 +4104,7 @@ void SpanFunctions::Intersection_span_value(DataChunk &args, ExpressionState &st
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     Span *ret = intersection_span_value(span, Datum(ts_meos.value));
                     if (!ret) {
@@ -4142,7 +4142,7 @@ void SpanFunctions::Intersection_span_span(DataChunk &args, ExpressionState &sta
             Span *span1 = reinterpret_cast<Span*>(span1_data_copy);
             if (!span1) {
                 free(span1_data_copy);
-                throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                throw InvalidInputException("Invalid tstzspan data: null pointer");
             }
 
             const uint8_t *span2_data = reinterpret_cast<const uint8_t*>(span2_blob.GetData());
@@ -4152,7 +4152,7 @@ void SpanFunctions::Intersection_span_span(DataChunk &args, ExpressionState &sta
             Span *span2 = reinterpret_cast<Span*>(span2_data_copy);
             if (!span2) {
                 free(span2_data_copy);
-                throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                throw InvalidInputException("Invalid tstzspan data: null pointer");
             }
 
             Span *ret = intersection_span_span(span1, span2);
@@ -4258,7 +4258,7 @@ void SpanFunctions::Minus_value_span(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     SpanSet *ret = minus_value_span(Float8GetDatum(value), span);
                     if (!ret) {
@@ -4319,7 +4319,7 @@ void SpanFunctions::Minus_value_span(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     SpanSet *ret = minus_value_span(Datum(ts_meos.value), span);
                     if (!ret) {
@@ -4423,7 +4423,7 @@ void SpanFunctions::Minus_span_value(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     SpanSet *ret = minus_span_value(span, Float8GetDatum(value));
                     if (!ret) {
@@ -4484,7 +4484,7 @@ void SpanFunctions::Minus_span_value(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer"); 
+                        throw InvalidInputException("Invalid tstzspan data: null pointer"); 
                     }
                     SpanSet *ret = minus_span_value(span, Datum(ts_meos.value));
                     if (!ret) {
@@ -4522,7 +4522,7 @@ void SpanFunctions::Minus_span_span(DataChunk &args, ExpressionState &state, Vec
             Span *span1 = reinterpret_cast<Span*>(span1_data_copy);
             if (!span1) {
                 free(span1_data_copy);
-                throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                throw InvalidInputException("Invalid tstzspan data: null pointer");
             }
 
             const uint8_t *span2_data = reinterpret_cast<const uint8_t*>(span2_blob.GetData());
@@ -4532,7 +4532,7 @@ void SpanFunctions::Minus_span_span(DataChunk &args, ExpressionState &state, Vec
             Span *span2 = reinterpret_cast<Span*>(span2_data_copy);
             if (!span2) {
                 free(span2_data_copy);
-                throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                throw InvalidInputException("Invalid tstzspan data: null pointer");
             }
 
             SpanSet *ret = minus_span_span(span1, span2);
@@ -4616,7 +4616,7 @@ void SpanFunctions::Distance_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");    
+                        throw InvalidInputException("Invalid floatspan data: null pointer");    
                     }
                     double distance = distance_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
@@ -4655,7 +4655,7 @@ void SpanFunctions::Distance_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     double secs = distance_span_timestamptz(span, (TimestampTz)ts_meos.value);
                     free(span_data_copy);
@@ -4727,7 +4727,7 @@ void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");    
+                        throw InvalidInputException("Invalid floatspan data: null pointer");    
                     }
                     double distance = distance_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
@@ -4766,7 +4766,7 @@ void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     double secs = distance_span_timestamptz(span, (TimestampTz)ts_meos.value);
                     free(span_data_copy);

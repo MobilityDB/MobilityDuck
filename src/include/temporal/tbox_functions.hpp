@@ -17,7 +17,7 @@ class ExtensionLoader;
 
 struct TboxFunctions {
     /* ***************************************************
-     * In/out functions: VARCHAR <-> TBOX
+     * In/out functions: VARCHAR <-> tbox
      ****************************************************/
     static bool Tbox_in(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Tbox_out(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
@@ -38,7 +38,7 @@ struct TboxFunctions {
     static void Numspan_tstzspan_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
-     * Conversion functions + cast functions: [TYPE] -> TBOX
+     * Conversion functions + cast functions: [TYPE] -> tbox
      ****************************************************/
     template <typename TA>
     static void NumberToTboxExecutor(Vector &value, meosType basetype, Vector &result, idx_t count);
@@ -64,7 +64,7 @@ struct TboxFunctions {
     static void Spanset_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static bool Spanset_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     /* ***************************************************
-     * Conversion functions + cast functions: TBOX -> [TYPE]
+     * Conversion functions + cast functions: tbox -> [TYPE]
      ****************************************************/
     static void TboxToIntspanExecutor(Vector &value, Vector &result, idx_t count);
     static void Tbox_to_intspan(DataChunk &args, ExpressionState &state, Vector &result);
