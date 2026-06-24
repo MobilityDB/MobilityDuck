@@ -10941,14 +10941,14 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
 
 static void RegisterGenerated_meos_temporal_analytics_similarity(ExtensionLoader &loader) {
     for (auto &type : TemporalTypes::AllTypes()) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("g_dynTimeWarpDistance", {type, type}, LogicalType::DOUBLE, Gen_temporal_dyntimewarp_distance));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("g_frechetDistance", {type, type}, LogicalType::DOUBLE, Gen_temporal_frechet_distance));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("g_hausdorffDistance", {type, type}, LogicalType::DOUBLE, Gen_temporal_hausdorff_distance));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpDistance", {type, type}, LogicalType::DOUBLE, Gen_temporal_dyntimewarp_distance));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistance", {type, type}, LogicalType::DOUBLE, Gen_temporal_frechet_distance));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("hausdorffDistance", {type, type}, LogicalType::DOUBLE, Gen_temporal_hausdorff_distance));
     }
     for (auto &type : std::vector<LogicalType>{TgeompointType::tgeompoint(), TgeogpointType::tgeogpoint(), TGeometryTypes::tgeometry(), TGeographyTypes::tgeography()}) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("g_dynTimeWarpDistance", {type, type}, LogicalType::DOUBLE, Gen_temporal_dyntimewarp_distance));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("g_frechetDistance", {type, type}, LogicalType::DOUBLE, Gen_temporal_frechet_distance));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("g_hausdorffDistance", {type, type}, LogicalType::DOUBLE, Gen_temporal_hausdorff_distance));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpDistance", {type, type}, LogicalType::DOUBLE, Gen_temporal_dyntimewarp_distance));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistance", {type, type}, LogicalType::DOUBLE, Gen_temporal_frechet_distance));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("hausdorffDistance", {type, type}, LogicalType::DOUBLE, Gen_temporal_hausdorff_distance));
     }
 }
 

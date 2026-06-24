@@ -1570,11 +1570,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     // Similarity measures (tnumber × tnumber, tgeompoint × tgeompoint)
     for (auto &t : {TemporalTypes::tint(), TemporalTypes::tfloat()}) {
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistance",     {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("discreteFrechet",     {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarp",         {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_dyntimewarp_distance));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpDistance", {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_dyntimewarp_distance));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("hausdorffDistance",   {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_hausdorff_distance));
         auto path_type = LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}}));
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistancePath", {t, t}, path_type, TemporalFunctions::Temporal_frechet_path));
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpPath",     {t, t}, path_type, TemporalFunctions::Temporal_dyntimewarp_path));
@@ -1582,10 +1579,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // similarity on tgeompoint (including paths)
     {
         auto tg = TgeompointType::tgeompoint();
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistance",   {tg, tg}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("discreteFrechet",   {tg, tg}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarp",       {tg, tg}, LogicalType::DOUBLE, TemporalFunctions::Temporal_dyntimewarp_distance));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("hausdorffDistance", {tg, tg}, LogicalType::DOUBLE, TemporalFunctions::Temporal_hausdorff_distance));
         auto path_type = LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}}));
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistancePath", {tg, tg}, path_type, TemporalFunctions::Temporal_frechet_path));
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpPath",     {tg, tg}, path_type, TemporalFunctions::Temporal_dyntimewarp_path));
