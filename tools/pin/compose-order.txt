@@ -1,0 +1,93 @@
+# USER-APPROVED-PIN-WRITE — creating MobilityDuck's committed pin manifest (user 2026-06-25,
+#   per-binding generator policy rollout). New file in the MobilityDuck repo, NOT a mutation
+#   of MobilityDB's pin tooling.
+#
+# MobilityDuck pin — THE canonical, dependency-ordered fold manifest (per-binding policy).
+#
+# Derived from the LIVE base<-head DAG (gh pr list, verified this turn), organized into the
+# established waves. Within a stack, the BASE folds before its HEAD. Edit THIS file (reviewed)
+# — never re-derive ad hoc. (policy: generator-per-binding-canonical-policy, binding-compose-order-manifest)
+#
+# NOTE: MobilityDuck is today HAND-WRITTEN C++ UDFs (the 30 PRs below are hand features). The
+# catalog-driven generator (`tools/codegen_duck_udfs.py`) is the planned migration — see
+# GENERATION.md; it is NOT yet on GitHub. These hand PRs dissolve as generation lands
+# (generate-then-retire). base = current origin/main.
+#
+# Format:  <PR#> <head-branch>            # role.   '?' = membership/order UNCONFIRMED.
+
+# ── WAVE 0 — PIN FOUNDATION (the MEOS pin bump everything rebases on) ──
+197   fix/bump-meos-pin-clean               # pin vcpkg MEOS to the canonical ecosystem SHA + meosType->MeosType
+                                            #   (the clean pin bump; the `fix/bump-meos-pin` base branch of the stacks below)
+190   fix/worker-thread-linkage-crashes     # worker-thread + linkage crash fixes (head: fix/meos-error-longjmp / #149)
+185   fix/stbox-from-hexwkb-nul-terminate   # stboxFromHexWKB past-buffer read (#170)
+173   fix/span-bins-bind-copy-unique-ptr-conv
+188   fix/normalize-tnumber-mult-to-mul     # mult -> mul naming
+165   cleanup/retire-geodetic-stbox-workarounds
+
+# ── WAVE 1 — EXTENDED TYPES (port stack; fold bottom-up: tcbuffer<-tnpoint<-tpose<-trgeometry<-pointcloud<-tpcpoint<-tpcpatch) ──
+150   feat/tnpoint-port-core                # base feat/tcbuffer-port-core
+151   feat/tpose-port-core                  # base feat/tnpoint-port-core
+153   feat/trgeometry-port-core             # base feat/tpose-port-core
+154   feat/pointcloud-vcpkg-enabler         # base feat/trgeometry-port-core
+155   feat/tpcpoint-port-core               # base feat/pointcloud-vcpkg-enabler
+156   feat/tpcpatch-port-core               # base feat/tpcpoint-port-core
+
+# ── WAVE 2 — PARITY (cell-index/json/trig stack: th3index<-h3-prefilter<-{setset,asmfjson,expandspace,trig}<-pin-11c<-tjsonb) ──
+193   feat/parity-th3index                  # full H3 cell index API (base fix/bump-meos-pin)
+198   feat/parity-h3-static-prefilter       # base feat/parity-th3index
+192   feat/setset-spatial-join-udfs         # base feat/parity-h3-static-prefilter
+194   feat/asmfjson-number-temporal-types   # base feat/parity-h3-static-prefilter
+195   feat/expandspace-tgeo-overloads       # base feat/parity-h3-static-prefilter
+199   feat/parity-tfloat-trig               # base feat/parity-h3-static-prefilter
+200   feat/parity-pin-11c                   # base feat/parity-tfloat-trig (a pin bump inside the parity stack)
+201   feat/parity-tjsonb                    # base feat/parity-pin-11c
+203   feat/parity-tquadbin                  # QUADBIN/TQUADBIN cell index (main-based; bumps pin)
+
+# ── WAVE 3 — GEOGRAPHY ──
+168   doc/geography-boundary-design
+169   feat/register-geography-logicaltype
+174   feat/geography-io-udfs
+175   feat/geography-casts
+176   feat/geography-operations
+177   feat/geography-test-matrix
+
+# ── WAVE 4 — FEATURES ──
+205   feat/parity-raster-quadbin            # rasterTileValueQuadbin + trajectoryQuadbins (Raquet sampling)
+
+# ── WAVE 5 — MULTI-VERSION / CI ──
+166   feat/multi-duckdb-version-foundation
+167   ci/multi-duckdb-version-matrix
+186   build/fast-extension-iteration
+189   ci/parallel-extension-build
+170   ci/exclude-osx-arm64-pending-hex-wkb
+171   ci/probe-mingw-build
+172   ci/probe-musl-build
+184   fix/icu-resilience-version-agnostic
+182   fix/meos-tz-init-resilient
+181   fix/tgeogpoint-test-tz-pinned
+
+# ── WAVE 6 — DIAGNOSTICS / FIXES ──
+162   diag/hex-wkb-odd-length
+180   feat/hex-wkb-diag
+163   fix/drop-range-todos
+
+# ── WAVE 7 — DOCS ──
+158   feat/edge-to-cloud-quickstart-rebased
+159   doc/reviewer-guide-rebased
+160   consolidate/pr-coordination-and-tz-lint-rebased
+179   feat/iceberg-polaris-readiness
+183   docs/duckdb-version-alignment-geoparquet
+
+# ── WAVE 8 — BENCHMARK (evidence vehicle; not a deliverable) ──
+196   feat/berlinmod-canonical-queries
+202   consolidate/berlinmod-canonical-queries
+
+# ── PIN BUMPS (pin mechanics, fold near WAVE 0 at assembly) ──
+204   feat/pin-2026-06-18b                  # bump pinned MEOS to ecosystem-pin-2026-06-18b
+
+# ════════════════════════════════════════════════════════════════════════════════════
+# The deep parity/pin bumps inside the stacks (#200 pin-11c, #203/#204) are pin MECHANICS, not
+# features; at assembly time the binding pins to the LATEST ecosystem pin once (GENERATION.md).
+# The catalog generator (tools/codegen_duck_udfs.py) is the endgame: once generated ⊇ hand is
+# proven, most of these hand feature PRs are mooted (generate-then-retire).
+# ════════════════════════════════════════════════════════════════════════════════════
