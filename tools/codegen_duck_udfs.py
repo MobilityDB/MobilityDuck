@@ -906,6 +906,22 @@ def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
 def reg_name(nm, f):
     return nm if retired(f) else COEXIST_PREFIX + nm
+def reg_names(f, sqlfn, aliases):
+    """The SQL names a function registers under: its sqlfn, the portable bare
+    alias for its operator (the cross-engine RFC dialect), and the operator symbol
+    itself so DuckDB exposes the operator like MobilityDB. The doxygen `@`-escape on
+    the operator (`\\@>`) is normalized to the bare symbol (`@>`)."""
+    op = (f.get("sqlop") or "").replace("\\", "")
+    names = [sqlfn]
+    bare = aliases.get(op) if aliases else None
+    if bare and bare not in names:
+        names.append(bare)
+    # The operator symbol is registered only when DuckDB can parse it: a name
+    # containing '#' is rejected by the lexer in any operator position, so those
+    # operators are reachable only through their bare name (before/after/tEq/...).
+    if op and "#" not in op and op not in names:
+        names.append(op)
+    return names
 
 # Output organization mirrors the canonical generator family (JMEOS FunctionsGenerator /
 # Spark codegen_spark_udfs.py): every emitted body + registration is bucketed by its
@@ -970,11 +986,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         # Names to register: the native sqlfn + any portable bare-name alias the pin
         # assigns to this fn's operator (catalog portableAliases is the SoT — invent
         # nothing). The alias reuses the SAME backing body ([[aliases-reuse-backing]]).
-        names = [sqlfn]
-        if aliases:
-            bare = aliases.get(f.get("sqlop"))
-            if bare and bare not in names:
-                names.append(bare)
+        names = reg_names(f, sqlfn, aliases)
         if scope == "all":
             rett = ret_temporal_type(fn, "type") if dret == "MD_TEMPORAL" else dret
             for nm in names:
@@ -999,11 +1011,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         set_bodies.append(emit_set(f, kind))
         fn, sqlfn = f["name"], f["sqlfn"]
         # portable bare-name alias; normalize the doxygen `@`-escape (sqlop "\@>" -> "@>").
-        names = [sqlfn]
-        if aliases:
-            bare = aliases.get((f.get("sqlop") or "").replace("\\", ""))
-            if bare and bare not in names:
-                names.append(bare)
+        names = reg_names(f, sqlfn, aliases)
         # element-typed predicates: accessor from the scalar element type, BOOLEAN ret.
         if kind.startswith("setsc_set:"):   # (Set, scalar element) -> Set (same set type)
             b = kind.split(':')[1]; acc = ELEM_TO_SET[b]
@@ -1051,11 +1059,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             kind, dret = s; n_span += 1
             span_bodies.append(emit_span(f, kind, C))
             fn, sqlfn = f["name"], f["sqlfn"]
-            names = [sqlfn]
-            if aliases:
-                bare = aliases.get((f.get("sqlop") or "").replace("\\", ""))
-                if bare and bare not in names:
-                    names.append(bare)
+            names = reg_names(f, sqlfn, aliases)
             # element predicates: accessor from the scalar element type, BOOLEAN ret (type-specific).
             if kind.startswith("setsc:") or kind.startswith("scset:"):
                 b = kind.split(':')[1]; acc = C["elem"][b]; scd = SCALAR_ARG[b][0]
@@ -1116,10 +1120,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         kind, accs = s; n_bin += 1
         temporal_box_bodies.append(emit_temporal_box(f, kind))
         fn, sqlfn = f["name"], f["sqlfn"]
-        names = [sqlfn]
-        if aliases:
-            bare = aliases.get((f.get("sqlop") or "").replace("\\", ""))
-            if bare and bare not in names: names.append(bare)
+        names = reg_names(f, sqlfn, aliases)
         box_acc = BOX_MARSH[kind.split(":")[1]][1]
         for a in accs:
             sig = "{%s, %s}" % (a, box_acc) if kind.startswith("tb_r:") else "{%s, %s}" % (box_acc, a)
@@ -1139,10 +1140,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         temporal_box_bodies.append(emit_temporal_span(f, kind))
         fn, sqlfn = f["name"], f["sqlfn"]; side, cont, flav, retk = kind.split(":")
         span_first = (side == "ts_l")
-        names = [sqlfn]
-        if aliases:
-            bare = aliases.get((f.get("sqlop") or "").replace("\\", ""))
-            if bare and bare not in names: names.append(bare)
+        names = reg_names(f, sqlfn, aliases)
         TSTZ_CONT = {"Span": "SpanTypes::tstzspan()", "Set": "SetTypes::tstzset()",
                      "SpanSet": "SpansetTypes::tstzspanset()"}
         if flav == "num":                       # tnumber value span, paired (Span only)
