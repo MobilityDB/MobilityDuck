@@ -902,6 +902,12 @@ COEXIST_PREFIX = "g_"
 # @ingroup groups whose hand registrations are deleted: the generated surface owns
 # their canonical names (no prefix). Grows as families migrate to generation.
 RETIRED_GROUPS = {"meos_temporal_analytics_similarity", "meos_temporal_comp_temp"}
+# @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
+# hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
+# uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
+RETIRE_UNCOVERED_OK = {
+    "dynTimeWarpPath", "frechetDistancePath",  # LIST(STRUCT) path returns — not an emit shape yet
+}
 def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
 def reg_name(nm, f):
@@ -1358,6 +1364,41 @@ def main():
                 print("   Gen_" + u, file=sys.stderr)
             sys.exit(1)
         print(f"per-thread MEOS-init guard: all {nu + nb + nt + ns + nsp} generated bodies verified")
+        # Retire-safety guards (build-failing) — the two retire traps, read off the actual
+        # generated output so they cannot be reasoned-away by hand.
+        gentext = open(out).read()
+        emitted = Counter(re.findall(r'ScalarFunction\("([^"]+)"', gentext))
+        # TRAP 1 (split name): a name emitted BOTH bare and g_-prefixed means a RETIRED group and
+        # a NON-retired group share it (bare here, g_ there) -> a query finds only one. The shared
+        # bare/operator dialect must be retired as a coherent wave (add the sibling groups).
+        split = sorted(n for n in emitted if not n.startswith("g_") and ("g_" + n) in emitted)
+        if split:
+            print(f"FATAL: retire trap 1 (split name) — {len(split)} name(s) emitted BOTH bare and "
+                  f"g_-prefixed: a retired group shares them with a non-retired group. Retire the "
+                  f"whole shared-name wave together (add the sibling @ingroup groups to "
+                  f"RETIRED_GROUPS):", file=sys.stderr)
+            for n in split[:20]:
+                print(f"   {n}  (also g_{n})", file=sys.stderr)
+            sys.exit(1)
+        # TRAP 2 (uncovered): every @sqlfn of a RETIRED group must be emitted (bare) — else
+        # retiring it DROPS that function. A genuine, documented generator-shape gap kept by the
+        # hand goes in RETIRE_UNCOVERED_OK (with a reason); anything else is a real coverage gap.
+        retired_sqlfns = defaultdict(set)
+        for f in fns:
+            if (f.get("group") in RETIRED_GROUPS) and f.get("sqlfn"):
+                retired_sqlfns[f["group"]].add(f["sqlfn"])
+        uncovered = [(g, nm) for g, nms in retired_sqlfns.items() for nm in sorted(nms)
+                     if emitted.get(nm, 0) == 0 and nm not in RETIRE_UNCOVERED_OK]
+        if uncovered:
+            print(f"FATAL: retire trap 2 (uncovered) — {len(uncovered)} @sqlfn function(s) of a "
+                  f"RETIRED group are NOT generated, so retiring drops them. Generate them (close "
+                  f"the shape gap), or add to RETIRE_UNCOVERED_OK with a reason if genuinely kept "
+                  f"by hand pending a catalog/shape fix:", file=sys.stderr)
+            for g, nm in uncovered[:20]:
+                print(f"   {g}: {nm}", file=sys.stderr)
+            sys.exit(1)
+        print(f"retire-safety: {len(RETIRED_GROUPS)} retired group(s) verified "
+              f"(no split names, every @sqlfn generated or documented)")
     # sample emitted registrations (the shape; full emit = next increment)
     print("\n=== sample generated registrations (first 6) ===")
     for f in emittable[:6]:
