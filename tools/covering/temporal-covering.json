@@ -1,0 +1,74 @@
+{
+  "_comment": "Temporal-covering descriptor — the single codegen source of truth for projecting a MEOS temporal column into Parquet/Iceberg covering columns (GeoParquet 1.1 `covering.bbox`). Every binding/engine generates the IDENTICAL covering schema from this mapping, so a temporal table prunes the same way on every platform (Iceberg manifest pruning + Parquet row-group min/max) with no spatial-aware engine. Curated canonical data keyed by temporal-type FAMILY (a `class`), not per type — adding a type is one entry in its class. The canonical MEOS-WKB value column is unchanged and lossless; the covering columns are denormalised derivations of the value's bounding box. RFC #870 (TemporalParquet) / #913 (Temporal Data Lake).",
+  "provenance": {
+    "rfc": "MobilityDB RFC #870 (TemporalParquet) + #913 (Temporal Data Lake)",
+    "discussion": "MobilityDB#861 (edge-to-cloud SQL portability: one query, three platforms)",
+    "geoParquet": "GeoParquet 1.1 covering.bbox (geoparquet.org/releases/v1.1.0)",
+    "benchmark": "MVB v3 — the scalar AND-chain on materialised covering columns prunes row groups identically to the spatial-aware path and ~10x faster, with no DuckDB spatial extension"
+  },
+  "version": "1.0.0",
+  "valueCodec": {
+    "asHexWkb": "temporal_as_hexwkb",
+    "fromHexWkb": "temporal_from_hexwkb",
+    "note": "The canonical MEOS-WKB stays the lossless value column (BLOB); covering columns are denormalised and never the source of truth."
+  },
+  "metadataKeys": {
+    "temporal": "temporal",
+    "geo": "geo",
+    "covering": "bbox"
+  },
+  "classes": {
+    "spatial": {
+      "doc": "Spatial temporal types — STBOX covering (x/y[/z] extent + time extent + SRID).",
+      "box": {"type": "STBOX", "from": "tspatial_to_stbox"},
+      "srid": "tspatial_srid",
+      "types": ["tgeompoint", "tgeogpoint", "tgeometry", "tgeography", "tcbuffer", "tnpoint", "tpose", "trgeometry"],
+      "columns": [
+        {"name": "xmin", "sqlType": "double",      "accessor": "stbox_xmin", "source": "box"},
+        {"name": "xmax", "sqlType": "double",      "accessor": "stbox_xmax", "source": "box"},
+        {"name": "ymin", "sqlType": "double",      "accessor": "stbox_ymin", "source": "box"},
+        {"name": "ymax", "sqlType": "double",      "accessor": "stbox_ymax", "source": "box"},
+        {"name": "zmin", "sqlType": "double",      "accessor": "stbox_zmin", "source": "box", "when": "hasZ"},
+        {"name": "zmax", "sqlType": "double",      "accessor": "stbox_zmax", "source": "box", "when": "hasZ"},
+        {"name": "tmin", "sqlType": "timestamptz", "accessor": "stbox_tmin", "source": "box"},
+        {"name": "tmax", "sqlType": "timestamptz", "accessor": "stbox_tmax", "source": "box"},
+        {"name": "srid", "sqlType": "int",         "accessor": "tspatial_srid", "source": "value"}
+      ]
+    },
+    "number": {
+      "doc": "Numeric temporal types — TBOX covering (value range + time extent).",
+      "box": {"type": "TBOX", "from": "tnumber_to_tbox"},
+      "srid": null,
+      "types": ["tint", "tfloat", "tbigint"],
+      "columns": [
+        {"name": "vmin", "sqlType": "double",      "accessor": "tbox_xmin", "source": "box"},
+        {"name": "vmax", "sqlType": "double",      "accessor": "tbox_xmax", "source": "box"},
+        {"name": "tmin", "sqlType": "timestamptz", "accessor": "tbox_tmin", "source": "box"},
+        {"name": "tmax", "sqlType": "timestamptz", "accessor": "tbox_tmax", "source": "box"}
+      ]
+    },
+    "timeOnly": {
+      "doc": "Time-only temporal types — no spatial box; time extent only.",
+      "box": null,
+      "srid": null,
+      "types": ["tbool", "ttext"],
+      "columns": [
+        {"name": "tmin", "sqlType": "timestamptz", "accessor": "temporal_start_timestamptz", "source": "value"},
+        {"name": "tmax", "sqlType": "timestamptz", "accessor": "temporal_end_timestamptz", "source": "value"}
+      ]
+    }
+  },
+  "deferred": {
+    "pointcloudCellIndex": {
+      "types": ["tpcpoint", "tpcpatch", "th3index", "tquadbin"],
+      "reason": "STBOX covering via a type-specific box path (e.g. tpcbox_to_stbox); fold into the `spatial` class once the catalog confirms a uniform temporal->STBOX converter for these families."
+    }
+  },
+  "notes": [
+    "The covering columns are a denormalisation of the value's bounding box; the canonical MEOS-WKB BLOB remains the lossless source of truth.",
+    "Materialising the covering columns as primitive Parquet columns gives Iceberg manifest-level file pruning and Parquet row-group min/max pruning, with no spatial-aware engine.",
+    "zmin/zmax are emitted only for 3D values (`when: hasZ`); 2D values omit them or store null.",
+    "`source: box` accessors take the box returned by `class.box.from(value)`; `source: value` accessors take the temporal value directly.",
+    "This descriptor is type-agnostic per class exactly as `portable-aliases.json` is type-agnostic per operator family — codegen consumes it identically across every binding."
+  ]
+}
