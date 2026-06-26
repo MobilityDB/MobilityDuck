@@ -901,7 +901,7 @@ def emit_span(f, kind, C=SPAN_C):
 COEXIST_PREFIX = "g_"
 # @ingroup groups whose hand registrations are deleted: the generated surface owns
 # their canonical names (no prefix). Grows as families migrate to generation.
-RETIRED_GROUPS = {"meos_temporal_analytics_similarity"}
+RETIRED_GROUPS = {"meos_temporal_analytics_similarity", "meos_temporal_comp_temp"}
 def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
 def reg_name(nm, f):

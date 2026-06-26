@@ -1754,74 +1754,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overright", {tflt, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Overright_tnumber_tnumber));
     }
 
-    // Temporal comparison predicates returning tbool (temporal_teq/tne/tlt/tle/tgt/tge)
-    {
-        auto tbool = TemporalTypes::tbool();
-        auto tint  = TemporalTypes::tint();
-        auto tflt  = TemporalTypes::tfloat();
-        auto ttext = TemporalTypes::ttext();
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {LogicalType::BOOLEAN,    tbool}, tbool, TemporalFunctions::Teq_bool_tbool));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {tbool,  LogicalType::BOOLEAN},   tbool, TemporalFunctions::Teq_tbool_bool));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {LogicalType::INTEGER,    tint},  tbool, TemporalFunctions::Teq_int_tint));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {tint,   LogicalType::INTEGER},   tbool, TemporalFunctions::Teq_tint_int));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {LogicalType::DOUBLE,     tflt},  tbool, TemporalFunctions::Teq_float_tfloat));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {tflt,   LogicalType::DOUBLE},    tbool, TemporalFunctions::Teq_tfloat_float));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {LogicalType::VARCHAR,    ttext}, tbool, TemporalFunctions::Teq_text_ttext));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {ttext,  LogicalType::VARCHAR},   tbool, TemporalFunctions::Teq_ttext_text));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {tint,   tint},                  tbool, TemporalFunctions::Teq_temporal_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {tflt,   tflt},                  tbool, TemporalFunctions::Teq_temporal_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_teq", {tbool,  tbool},                 tbool, TemporalFunctions::Teq_temporal_temporal));
-
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {LogicalType::BOOLEAN,    tbool}, tbool, TemporalFunctions::Tne_bool_tbool));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {tbool,  LogicalType::BOOLEAN},   tbool, TemporalFunctions::Tne_tbool_bool));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {LogicalType::INTEGER,    tint},  tbool, TemporalFunctions::Tne_int_tint));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {tint,   LogicalType::INTEGER},   tbool, TemporalFunctions::Tne_tint_int));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {LogicalType::DOUBLE,     tflt},  tbool, TemporalFunctions::Tne_float_tfloat));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {tflt,   LogicalType::DOUBLE},    tbool, TemporalFunctions::Tne_tfloat_float));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {LogicalType::VARCHAR,    ttext}, tbool, TemporalFunctions::Tne_text_ttext));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {ttext,  LogicalType::VARCHAR},   tbool, TemporalFunctions::Tne_ttext_text));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {tint,   tint},                  tbool, TemporalFunctions::Tne_temporal_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {tflt,   tflt},                  tbool, TemporalFunctions::Tne_temporal_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tne", {tbool,  tbool},                 tbool, TemporalFunctions::Tne_temporal_temporal));
-
-        // temporal_tlt/tle/tgt/tge: ordered types only (int, float, text)
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tlt", {LogicalType::INTEGER,    tint},  tbool, TemporalFunctions::Tlt_int_tint));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tlt", {tint,   LogicalType::INTEGER},   tbool, TemporalFunctions::Tlt_tint_int));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tlt", {LogicalType::DOUBLE,     tflt},  tbool, TemporalFunctions::Tlt_float_tfloat));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tlt", {tflt,   LogicalType::DOUBLE},    tbool, TemporalFunctions::Tlt_tfloat_float));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tlt", {LogicalType::VARCHAR,    ttext}, tbool, TemporalFunctions::Tlt_text_ttext));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tlt", {ttext,  LogicalType::VARCHAR},   tbool, TemporalFunctions::Tlt_ttext_text));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tlt", {tint,   tint},                  tbool, TemporalFunctions::Tlt_temporal_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tlt", {tflt,   tflt},                  tbool, TemporalFunctions::Tlt_temporal_temporal));
-
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tle", {LogicalType::INTEGER,    tint},  tbool, TemporalFunctions::Tle_int_tint));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tle", {tint,   LogicalType::INTEGER},   tbool, TemporalFunctions::Tle_tint_int));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tle", {LogicalType::DOUBLE,     tflt},  tbool, TemporalFunctions::Tle_float_tfloat));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tle", {tflt,   LogicalType::DOUBLE},    tbool, TemporalFunctions::Tle_tfloat_float));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tle", {LogicalType::VARCHAR,    ttext}, tbool, TemporalFunctions::Tle_text_ttext));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tle", {ttext,  LogicalType::VARCHAR},   tbool, TemporalFunctions::Tle_ttext_text));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tle", {tint,   tint},                  tbool, TemporalFunctions::Tle_temporal_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tle", {tflt,   tflt},                  tbool, TemporalFunctions::Tle_temporal_temporal));
-
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tgt", {LogicalType::INTEGER,    tint},  tbool, TemporalFunctions::Tgt_int_tint));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tgt", {tint,   LogicalType::INTEGER},   tbool, TemporalFunctions::Tgt_tint_int));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tgt", {LogicalType::DOUBLE,     tflt},  tbool, TemporalFunctions::Tgt_float_tfloat));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tgt", {tflt,   LogicalType::DOUBLE},    tbool, TemporalFunctions::Tgt_tfloat_float));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tgt", {LogicalType::VARCHAR,    ttext}, tbool, TemporalFunctions::Tgt_text_ttext));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tgt", {ttext,  LogicalType::VARCHAR},   tbool, TemporalFunctions::Tgt_ttext_text));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tgt", {tint,   tint},                  tbool, TemporalFunctions::Tgt_temporal_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tgt", {tflt,   tflt},                  tbool, TemporalFunctions::Tgt_temporal_temporal));
-
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tge", {LogicalType::INTEGER,    tint},  tbool, TemporalFunctions::Tge_int_tint));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tge", {tint,   LogicalType::INTEGER},   tbool, TemporalFunctions::Tge_tint_int));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tge", {LogicalType::DOUBLE,     tflt},  tbool, TemporalFunctions::Tge_float_tfloat));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tge", {tflt,   LogicalType::DOUBLE},    tbool, TemporalFunctions::Tge_tfloat_float));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tge", {LogicalType::VARCHAR,    ttext}, tbool, TemporalFunctions::Tge_text_ttext));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tge", {ttext,  LogicalType::VARCHAR},   tbool, TemporalFunctions::Tge_ttext_text));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tge", {tint,   tint},                  tbool, TemporalFunctions::Tge_temporal_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_tge", {tflt,   tflt},                  tbool, TemporalFunctions::Tge_temporal_temporal));
-    }
-
+    // Temporal #= comparison (temporal_teq/tne/tlt/tle/tgt/tge) is generated
+    // (group meos_temporal_comp_temp).
     // tprecision and tsample — time-domain rebinning
     for (auto &t : TemporalTypes::AllTypes()) {
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tprecision", {t, LogicalType::INTERVAL}, t, TemporalFunctions::Temporal_tprecision));
