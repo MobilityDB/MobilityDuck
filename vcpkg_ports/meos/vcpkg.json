@@ -1,7 +1,7 @@
 {
     "name": "meos",
     "version-string": "git",
-    "port-version": 3,
+    "port-version": 4,
     "description": "MEOS - Mobility Engine Open Source C library (built from MobilityDB with -DMEOS=ON)",
     "homepage": "https://libmeos.org/",
     "dependencies": [

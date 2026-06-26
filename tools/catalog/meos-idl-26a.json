@@ -5702,7 +5702,7 @@
         }
       ],
       "mdbC": "Set_cmp",
-      "sqlfn": "set_cmp",
+      "sqlfn": "cmp",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "group": "meos_setspan_comp"
@@ -5727,7 +5727,7 @@
         }
       ],
       "mdbC": "Set_eq",
-      "sqlfn": "set_eq",
+      "sqlfn": "eq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "=",
@@ -5753,7 +5753,7 @@
         }
       ],
       "mdbC": "Set_ge",
-      "sqlfn": "set_ge",
+      "sqlfn": "ge",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": ">=",
@@ -5779,7 +5779,7 @@
         }
       ],
       "mdbC": "Set_gt",
-      "sqlfn": "set_gt",
+      "sqlfn": "gt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": ">",
@@ -5805,7 +5805,7 @@
         }
       ],
       "mdbC": "Set_le",
-      "sqlfn": "set_le",
+      "sqlfn": "le",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<=",
@@ -5831,7 +5831,7 @@
         }
       ],
       "mdbC": "Set_lt",
-      "sqlfn": "set_lt",
+      "sqlfn": "lt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<",
@@ -5857,7 +5857,7 @@
         }
       ],
       "mdbC": "Set_ne",
-      "sqlfn": "set_ne",
+      "sqlfn": "ne",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<>",
@@ -5883,7 +5883,7 @@
         }
       ],
       "mdbC": "Span_cmp",
-      "sqlfn": "span_cmp",
+      "sqlfn": "cmp",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "group": "meos_setspan_comp"
@@ -5908,7 +5908,7 @@
         }
       ],
       "mdbC": "Span_eq",
-      "sqlfn": "span_eq",
+      "sqlfn": "eq",
       "sqlArity": 2,
       "sqlArityMax": 5,
       "sqlop": "=",
@@ -5934,7 +5934,7 @@
         }
       ],
       "mdbC": "Span_gt",
-      "sqlfn": "span_gt",
+      "sqlfn": "gt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": ">",
@@ -5960,7 +5960,7 @@
         }
       ],
       "mdbC": "Span_ge",
-      "sqlfn": "span_ge",
+      "sqlfn": "ge",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": ">=",
@@ -5986,7 +5986,7 @@
         }
       ],
       "mdbC": "Span_le",
-      "sqlfn": "span_le",
+      "sqlfn": "le",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<=",
@@ -6012,7 +6012,7 @@
         }
       ],
       "mdbC": "Span_lt",
-      "sqlfn": "span_lt",
+      "sqlfn": "lt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<",
@@ -6038,7 +6038,7 @@
         }
       ],
       "mdbC": "Span_ne",
-      "sqlfn": "span_ne",
+      "sqlfn": "ne",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<>",
@@ -6064,7 +6064,7 @@
         }
       ],
       "mdbC": "Spanset_cmp",
-      "sqlfn": "spanset_cmp",
+      "sqlfn": "cmp",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "group": "meos_setspan_comp"
@@ -6089,7 +6089,7 @@
         }
       ],
       "mdbC": "Spanset_eq",
-      "sqlfn": "spanset_eq",
+      "sqlfn": "eq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "=",
@@ -6115,7 +6115,7 @@
         }
       ],
       "mdbC": "Spanset_ge",
-      "sqlfn": "spanset_ge",
+      "sqlfn": "ge",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": ">=",
@@ -6141,7 +6141,7 @@
         }
       ],
       "mdbC": "Spanset_gt",
-      "sqlfn": "spanset_gt",
+      "sqlfn": "gt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": ">",
@@ -6167,7 +6167,7 @@
         }
       ],
       "mdbC": "Spanset_le",
-      "sqlfn": "spanset_le",
+      "sqlfn": "le",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<=",
@@ -6193,7 +6193,7 @@
         }
       ],
       "mdbC": "Spanset_lt",
-      "sqlfn": "spanset_lt",
+      "sqlfn": "lt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<",
@@ -6219,7 +6219,7 @@
         }
       ],
       "mdbC": "Spanset_ne",
-      "sqlfn": "spanset_ne",
+      "sqlfn": "ne",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<>",
@@ -6300,7 +6300,7 @@
         }
       ],
       "mdbC": "Set_split_n_spans",
-      "sqlfn": "splitNspans",
+      "sqlfn": "splitNSpans",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "group": "meos_setspan_bbox_split"
@@ -6350,7 +6350,7 @@
         }
       ],
       "mdbC": "Spanset_split_each_n_spans",
-      "sqlfn": "splitEachNspans",
+      "sqlfn": "splitEachNSpans",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "group": "meos_setspan_bbox_split"
@@ -6380,7 +6380,7 @@
         }
       ],
       "mdbC": "Spanset_split_n_spans",
-      "sqlfn": "splitNspans",
+      "sqlfn": "splitNSpans",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "group": "meos_setspan_bbox_split"
@@ -11833,7 +11833,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -11859,7 +11859,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -11885,7 +11885,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -11911,7 +11911,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -11937,7 +11937,7 @@
         }
       ],
       "mdbC": "Intersection_set_value",
-      "sqlfn": "set_intersection",
+      "sqlfn": "setIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -11963,7 +11963,7 @@
         }
       ],
       "mdbC": "Intersection_set_value",
-      "sqlfn": "set_intersection",
+      "sqlfn": "setIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -11989,7 +11989,7 @@
         }
       ],
       "mdbC": "Intersection_set_value",
-      "sqlfn": "set_intersection",
+      "sqlfn": "setIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12015,7 +12015,7 @@
         }
       ],
       "mdbC": "Intersection_set_value",
-      "sqlfn": "set_intersection",
+      "sqlfn": "setIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12041,7 +12041,7 @@
         }
       ],
       "mdbC": "Intersection_set_set",
-      "sqlfn": "set_intersection",
+      "sqlfn": "setIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12067,7 +12067,7 @@
         }
       ],
       "mdbC": "Intersection_set_value",
-      "sqlfn": "set_intersection",
+      "sqlfn": "setIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12093,7 +12093,7 @@
         }
       ],
       "mdbC": "Intersection_set_value",
-      "sqlfn": "set_intersection",
+      "sqlfn": "setIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12119,7 +12119,7 @@
         }
       ],
       "mdbC": "Intersection_span_value",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spanIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12145,7 +12145,7 @@
         }
       ],
       "mdbC": "Intersection_span_value",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spanIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12171,7 +12171,7 @@
         }
       ],
       "mdbC": "Intersection_span_value",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spanIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12197,7 +12197,7 @@
         }
       ],
       "mdbC": "Intersection_span_value",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spanIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12223,7 +12223,7 @@
         }
       ],
       "mdbC": "Intersection_span_span",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spanIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12249,7 +12249,7 @@
         }
       ],
       "mdbC": "Intersection_span_spanset",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spanIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12275,7 +12275,7 @@
         }
       ],
       "mdbC": "Intersection_span_value",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spanIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12301,7 +12301,7 @@
         }
       ],
       "mdbC": "Intersection_spanset_value",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spansetIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12327,7 +12327,7 @@
         }
       ],
       "mdbC": "Intersection_spanset_value",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spansetIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12353,7 +12353,7 @@
         }
       ],
       "mdbC": "Intersection_spanset_value",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spansetIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12379,7 +12379,7 @@
         }
       ],
       "mdbC": "Intersection_spanset_value",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spansetIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12405,7 +12405,7 @@
         }
       ],
       "mdbC": "Intersection_spanset_span",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spansetIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12431,7 +12431,7 @@
         }
       ],
       "mdbC": "Intersection_spanset_spanset",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spansetIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12457,7 +12457,7 @@
         }
       ],
       "mdbC": "Intersection_spanset_value",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spansetIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12483,7 +12483,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -12509,7 +12509,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -12535,7 +12535,7 @@
         }
       ],
       "mdbC": "Minus_value_set",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -12561,7 +12561,7 @@
         }
       ],
       "mdbC": "Minus_value_span",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spanIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12587,7 +12587,7 @@
         }
       ],
       "mdbC": "Minus_value_spanset",
-      "sqlfn": "span_minus",
+      "sqlfn": "spansetMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -12613,7 +12613,7 @@
         }
       ],
       "mdbC": "Minus_value_set",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -12639,7 +12639,7 @@
         }
       ],
       "mdbC": "Minus_value_span",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spanIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12665,7 +12665,7 @@
         }
       ],
       "mdbC": "Minus_value_spanset",
-      "sqlfn": "span_minus",
+      "sqlfn": "spansetMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -12691,7 +12691,7 @@
         }
       ],
       "mdbC": "Minus_value_set",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -12717,7 +12717,7 @@
         }
       ],
       "mdbC": "Minus_value_span",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spanIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12743,7 +12743,7 @@
         }
       ],
       "mdbC": "Minus_value_spanset",
-      "sqlfn": "span_minus",
+      "sqlfn": "spansetMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -12769,7 +12769,7 @@
         }
       ],
       "mdbC": "Minus_value_set",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -12795,7 +12795,7 @@
         }
       ],
       "mdbC": "Minus_value_span",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spanIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -12821,7 +12821,7 @@
         }
       ],
       "mdbC": "Minus_value_spanset",
-      "sqlfn": "span_minus",
+      "sqlfn": "spansetMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -12847,7 +12847,7 @@
         }
       ],
       "mdbC": "Minus_set_value",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -12873,7 +12873,7 @@
         }
       ],
       "mdbC": "Minus_set_value",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -12899,7 +12899,7 @@
         }
       ],
       "mdbC": "Minus_set_value",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -12925,7 +12925,7 @@
         }
       ],
       "mdbC": "Minus_set_value",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -12951,7 +12951,7 @@
         }
       ],
       "mdbC": "Minus_set_set",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -12977,7 +12977,7 @@
         }
       ],
       "mdbC": "Minus_set_value",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -13003,7 +13003,7 @@
         }
       ],
       "mdbC": "Minus_set_value",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -13029,7 +13029,7 @@
         }
       ],
       "mdbC": "Minus_span_value",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spanIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -13055,7 +13055,7 @@
         }
       ],
       "mdbC": "Minus_span_value",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spanIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -13081,7 +13081,7 @@
         }
       ],
       "mdbC": "Minus_span_value",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spanIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -13107,7 +13107,7 @@
         }
       ],
       "mdbC": "Minus_span_value",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spanIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -13159,7 +13159,7 @@
         }
       ],
       "mdbC": "Minus_span_spanset",
-      "sqlfn": "span_minus",
+      "sqlfn": "spanMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -13185,7 +13185,7 @@
         }
       ],
       "mdbC": "Minus_span_value",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spanIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -13211,7 +13211,7 @@
         }
       ],
       "mdbC": "Minus_spanset_value",
-      "sqlfn": "span_minus",
+      "sqlfn": "spansetMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -13237,7 +13237,7 @@
         }
       ],
       "mdbC": "Minus_spanset_value",
-      "sqlfn": "span_minus",
+      "sqlfn": "spansetMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -13263,7 +13263,7 @@
         }
       ],
       "mdbC": "Minus_spanset_value",
-      "sqlfn": "span_minus",
+      "sqlfn": "spansetMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -13289,7 +13289,7 @@
         }
       ],
       "mdbC": "Minus_spanset_value",
-      "sqlfn": "span_minus",
+      "sqlfn": "spansetMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -13315,7 +13315,7 @@
         }
       ],
       "mdbC": "Minus_spanset_span",
-      "sqlfn": "span_minus",
+      "sqlfn": "spansetMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -13341,7 +13341,7 @@
         }
       ],
       "mdbC": "Minus_spanset_spanset",
-      "sqlfn": "span_minus",
+      "sqlfn": "spansetMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -13367,7 +13367,7 @@
         }
       ],
       "mdbC": "Minus_spanset_value",
-      "sqlfn": "span_minus",
+      "sqlfn": "spansetMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -13393,7 +13393,7 @@
         }
       ],
       "mdbC": "Minus_value_set",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -13419,7 +13419,7 @@
         }
       ],
       "mdbC": "Minus_value_set",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -13445,7 +13445,7 @@
         }
       ],
       "mdbC": "Minus_value_span",
-      "sqlfn": "span_intersection",
+      "sqlfn": "spanIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -13471,7 +13471,7 @@
         }
       ],
       "mdbC": "Minus_value_spanset",
-      "sqlfn": "span_minus",
+      "sqlfn": "spansetMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -13497,7 +13497,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -13549,7 +13549,7 @@
         }
       ],
       "mdbC": "Union_spanset_value",
-      "sqlfn": "span_union",
+      "sqlfn": "spansetUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -13575,7 +13575,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -13627,7 +13627,7 @@
         }
       ],
       "mdbC": "Union_spanset_value",
-      "sqlfn": "span_union",
+      "sqlfn": "spansetUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -13653,7 +13653,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -13705,7 +13705,7 @@
         }
       ],
       "mdbC": "Union_spanset_value",
-      "sqlfn": "span_union",
+      "sqlfn": "spansetUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -13731,7 +13731,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -13783,7 +13783,7 @@
         }
       ],
       "mdbC": "Union_spanset_value",
-      "sqlfn": "span_union",
+      "sqlfn": "spansetUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -13809,7 +13809,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -13835,7 +13835,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -13861,7 +13861,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -13887,7 +13887,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -13913,7 +13913,7 @@
         }
       ],
       "mdbC": "Union_set_set",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -13939,7 +13939,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -13965,7 +13965,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -14142,7 +14142,7 @@
         }
       ],
       "mdbC": "Union_span_spanset",
-      "sqlfn": "span_union",
+      "sqlfn": "spanUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -14194,7 +14194,7 @@
         }
       ],
       "mdbC": "Union_spanset_value",
-      "sqlfn": "span_union",
+      "sqlfn": "spansetUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -14220,7 +14220,7 @@
         }
       ],
       "mdbC": "Union_spanset_value",
-      "sqlfn": "span_union",
+      "sqlfn": "spansetUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -14246,7 +14246,7 @@
         }
       ],
       "mdbC": "Union_spanset_value",
-      "sqlfn": "span_union",
+      "sqlfn": "spansetUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -14272,7 +14272,7 @@
         }
       ],
       "mdbC": "Union_spanset_value",
-      "sqlfn": "span_union",
+      "sqlfn": "spansetUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -14298,7 +14298,7 @@
         }
       ],
       "mdbC": "Union_spanset_span",
-      "sqlfn": "span_union",
+      "sqlfn": "spansetUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -14324,7 +14324,7 @@
         }
       ],
       "mdbC": "Union_spanset_spanset",
-      "sqlfn": "span_union",
+      "sqlfn": "spansetUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -14350,7 +14350,7 @@
         }
       ],
       "mdbC": "Union_spanset_value",
-      "sqlfn": "span_union",
+      "sqlfn": "spansetUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -14376,7 +14376,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -14402,7 +14402,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -14454,7 +14454,7 @@
         }
       ],
       "mdbC": "Union_spanset_value",
-      "sqlfn": "span_union",
+      "sqlfn": "spansetUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -16935,7 +16935,7 @@
         }
       ],
       "mdbC": "Tbox_tmax",
-      "sqlfn": "Tmax",
+      "sqlfn": "tMax",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_box_accessor"
@@ -16960,7 +16960,7 @@
         }
       ],
       "mdbC": "Tbox_tmax_inc",
-      "sqlfn": "Tmin_inc",
+      "sqlfn": "tMaxInc",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_box_accessor"
@@ -16985,7 +16985,7 @@
         }
       ],
       "mdbC": "Tbox_tmin",
-      "sqlfn": "Tmin",
+      "sqlfn": "tMin",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_box_accessor"
@@ -17010,7 +17010,7 @@
         }
       ],
       "mdbC": "Tbox_tmin_inc",
-      "sqlfn": "Tmin_inc",
+      "sqlfn": "tMinInc",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_box_accessor"
@@ -17035,7 +17035,7 @@
         }
       ],
       "mdbC": "Tbox_xmax",
-      "sqlfn": "Xmax",
+      "sqlfn": "xMax",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_internal_box_accessor"
@@ -17060,7 +17060,7 @@
         }
       ],
       "mdbC": "Tbox_xmax_inc",
-      "sqlfn": "Xmin_inc",
+      "sqlfn": "xMaxInc",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_box_accessor"
@@ -17085,7 +17085,7 @@
         }
       ],
       "mdbC": "Tbox_xmin",
-      "sqlfn": "Xmin",
+      "sqlfn": "xMin",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_internal_box_accessor"
@@ -17110,7 +17110,7 @@
         }
       ],
       "mdbC": "Tbox_xmin_inc",
-      "sqlfn": "Xmin_inc",
+      "sqlfn": "xMinInc",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_box_accessor"
@@ -17135,7 +17135,7 @@
         }
       ],
       "mdbC": "Tbox_xmax",
-      "sqlfn": "Xmax",
+      "sqlfn": "xMax",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_box_accessor"
@@ -17160,7 +17160,7 @@
         }
       ],
       "mdbC": "Tbox_xmin",
-      "sqlfn": "Xmin",
+      "sqlfn": "xMin",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_box_accessor"
@@ -17185,7 +17185,7 @@
         }
       ],
       "mdbC": "Tbox_xmax",
-      "sqlfn": "Xmax",
+      "sqlfn": "xMax",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_box_accessor"
@@ -17210,7 +17210,7 @@
         }
       ],
       "mdbC": "Tbox_xmax",
-      "sqlfn": "Xmax",
+      "sqlfn": "xMax",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_box_accessor"
@@ -17235,7 +17235,7 @@
         }
       ],
       "mdbC": "Tbox_xmin",
-      "sqlfn": "Xmin",
+      "sqlfn": "xMin",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_box_accessor"
@@ -17260,7 +17260,7 @@
         }
       ],
       "mdbC": "Tbox_xmin",
-      "sqlfn": "Xmin",
+      "sqlfn": "xMin",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_box_accessor"
@@ -17955,7 +17955,7 @@
         }
       ],
       "mdbC": "Tbox_cmp",
-      "sqlfn": "tbox_cmp",
+      "sqlfn": "cmp",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "group": "meos_box_comp"
@@ -17980,7 +17980,7 @@
         }
       ],
       "mdbC": "Tbox_eq",
-      "sqlfn": "tbox_eq",
+      "sqlfn": "eq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "=",
@@ -18006,7 +18006,7 @@
         }
       ],
       "mdbC": "Tbox_ge",
-      "sqlfn": "tbox_ge",
+      "sqlfn": "ge",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": ">=",
@@ -18032,7 +18032,7 @@
         }
       ],
       "mdbC": "Tbox_gt",
-      "sqlfn": "tbox_gt",
+      "sqlfn": "gt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": ">",
@@ -18058,7 +18058,7 @@
         }
       ],
       "mdbC": "Tbox_le",
-      "sqlfn": "tbox_le",
+      "sqlfn": "le",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<=",
@@ -18084,7 +18084,7 @@
         }
       ],
       "mdbC": "Tbox_lt",
-      "sqlfn": "tbox_lt",
+      "sqlfn": "lt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<",
@@ -18110,7 +18110,7 @@
         }
       ],
       "mdbC": "Tbox_ne",
-      "sqlfn": "tbox_ne",
+      "sqlfn": "ne",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<>",
@@ -22559,7 +22559,7 @@
         }
       ],
       "mdbC": "Temporal_cmp",
-      "sqlfn": "tint_cmp",
+      "sqlfn": "cmp",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "group": "meos_temporal_comp_trad"
@@ -22593,9 +22593,10 @@
         "subtype": "any"
       },
       "mdbC": "Temporal_eq",
-      "sqlfn": "tint_eq",
+      "sqlfn": "eq",
       "sqlArity": 2,
       "sqlArityMax": 2,
+      "sqlop": "=",
       "group": "meos_temporal_comp_trad"
     },
     {
@@ -22618,7 +22619,7 @@
         }
       ],
       "mdbC": "Temporal_gt",
-      "sqlfn": "tint_gt",
+      "sqlfn": "gt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": ">",
@@ -22644,9 +22645,10 @@
         }
       ],
       "mdbC": "Temporal_ge",
-      "sqlfn": "tint_ge",
+      "sqlfn": "ge",
       "sqlArity": 2,
       "sqlArityMax": 2,
+      "sqlop": ">=",
       "group": "meos_temporal_comp_trad"
     },
     {
@@ -22669,7 +22671,7 @@
         }
       ],
       "mdbC": "Temporal_le",
-      "sqlfn": "tint_le",
+      "sqlfn": "le",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<=",
@@ -22695,7 +22697,7 @@
         }
       ],
       "mdbC": "Temporal_lt",
-      "sqlfn": "tint_lt",
+      "sqlfn": "lt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<",
@@ -22721,9 +22723,10 @@
         }
       ],
       "mdbC": "Temporal_ne",
-      "sqlfn": "tint_ne",
+      "sqlfn": "ne",
       "sqlArity": 2,
       "sqlArityMax": 2,
+      "sqlop": "<>",
       "group": "meos_temporal_comp_trad"
     },
     {
@@ -22746,7 +22749,7 @@
         }
       ],
       "mdbC": "Always_eq_base_temporal",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -22772,7 +22775,7 @@
         }
       ],
       "mdbC": "Always_eq_base_temporal",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -22798,7 +22801,7 @@
         }
       ],
       "mdbC": "Always_eq_base_temporal",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -22824,7 +22827,7 @@
         }
       ],
       "mdbC": "Always_eq_temporal_base",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -22850,7 +22853,7 @@
         }
       ],
       "mdbC": "Always_eq_temporal_temporal",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -22876,7 +22879,7 @@
         }
       ],
       "mdbC": "Always_eq_base_temporal",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -22902,7 +22905,7 @@
         }
       ],
       "mdbC": "Always_eq_temporal_base",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -22928,7 +22931,7 @@
         }
       ],
       "mdbC": "Always_eq_temporal_base",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -22954,7 +22957,7 @@
         }
       ],
       "mdbC": "Always_eq_base_temporal",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -22980,7 +22983,7 @@
         }
       ],
       "mdbC": "Always_eq_temporal_base",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -23006,7 +23009,7 @@
         }
       ],
       "mdbC": "Always_eq_temporal_base",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -23032,7 +23035,7 @@
         }
       ],
       "mdbC": "Always_ge_base_temporal",
-      "sqlfn": "always_ge",
+      "sqlfn": "aGe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%>=",
@@ -23058,7 +23061,7 @@
         }
       ],
       "mdbC": "Always_ge_base_temporal",
-      "sqlfn": "always_ge",
+      "sqlfn": "aGe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%>=",
@@ -23084,7 +23087,7 @@
         }
       ],
       "mdbC": "Always_ge_temporal_temporal",
-      "sqlfn": "always_ge",
+      "sqlfn": "aGe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%>=",
@@ -23110,7 +23113,7 @@
         }
       ],
       "mdbC": "Always_ge_base_temporal",
-      "sqlfn": "always_ge",
+      "sqlfn": "aGe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%>=",
@@ -23136,7 +23139,7 @@
         }
       ],
       "mdbC": "Always_ge_temporal_base",
-      "sqlfn": "always_ge",
+      "sqlfn": "aGe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%>=",
@@ -23162,7 +23165,7 @@
         }
       ],
       "mdbC": "Always_ge_temporal_base",
-      "sqlfn": "always_ge",
+      "sqlfn": "aGe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%>=",
@@ -23188,7 +23191,7 @@
         }
       ],
       "mdbC": "Always_ge_base_temporal",
-      "sqlfn": "always_ge",
+      "sqlfn": "aGe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%>=",
@@ -23214,7 +23217,7 @@
         }
       ],
       "mdbC": "Always_ge_temporal_base",
-      "sqlfn": "always_ge",
+      "sqlfn": "aGe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%>=",
@@ -23240,7 +23243,7 @@
         }
       ],
       "mdbC": "Always_ge_temporal_base",
-      "sqlfn": "always_ge",
+      "sqlfn": "aGe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%>=",
@@ -23266,7 +23269,7 @@
         }
       ],
       "mdbC": "Always_gt_base_temporal",
-      "sqlfn": "always_gt",
+      "sqlfn": "aGt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%>",
@@ -23292,7 +23295,7 @@
         }
       ],
       "mdbC": "Always_gt_base_temporal",
-      "sqlfn": "always_gt",
+      "sqlfn": "aGt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%>",
@@ -23318,7 +23321,7 @@
         }
       ],
       "mdbC": "Always_gt_temporal_temporal",
-      "sqlfn": "always_gt",
+      "sqlfn": "aGt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%>",
@@ -23344,7 +23347,7 @@
         }
       ],
       "mdbC": "Always_gt_base_temporal",
-      "sqlfn": "always_gt",
+      "sqlfn": "aGt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%>",
@@ -23370,7 +23373,7 @@
         }
       ],
       "mdbC": "Always_gt_temporal_base",
-      "sqlfn": "always_gt",
+      "sqlfn": "aGt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%>",
@@ -23396,7 +23399,7 @@
         }
       ],
       "mdbC": "Always_gt_temporal_base",
-      "sqlfn": "always_gt",
+      "sqlfn": "aGt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%>",
@@ -23422,7 +23425,7 @@
         }
       ],
       "mdbC": "Always_gt_base_temporal",
-      "sqlfn": "always_gt",
+      "sqlfn": "aGt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%>",
@@ -23448,7 +23451,7 @@
         }
       ],
       "mdbC": "Always_gt_temporal_base",
-      "sqlfn": "always_gt",
+      "sqlfn": "aGt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%>",
@@ -23474,7 +23477,7 @@
         }
       ],
       "mdbC": "Always_gt_temporal_base",
-      "sqlfn": "always_gt",
+      "sqlfn": "aGt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%>",
@@ -23500,7 +23503,7 @@
         }
       ],
       "mdbC": "Always_le_base_temporal",
-      "sqlfn": "always_le",
+      "sqlfn": "aLe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<=",
@@ -23526,7 +23529,7 @@
         }
       ],
       "mdbC": "Always_le_base_temporal",
-      "sqlfn": "always_le",
+      "sqlfn": "aLe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<=",
@@ -23552,7 +23555,7 @@
         }
       ],
       "mdbC": "Always_le_temporal_temporal",
-      "sqlfn": "always_le",
+      "sqlfn": "aLe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<=",
@@ -23578,7 +23581,7 @@
         }
       ],
       "mdbC": "Always_le_base_temporal",
-      "sqlfn": "always_le",
+      "sqlfn": "aLe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<=",
@@ -23604,7 +23607,7 @@
         }
       ],
       "mdbC": "Always_le_temporal_base",
-      "sqlfn": "always_le",
+      "sqlfn": "aLe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<=",
@@ -23630,7 +23633,7 @@
         }
       ],
       "mdbC": "Always_le_temporal_base",
-      "sqlfn": "always_le",
+      "sqlfn": "aLe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<=",
@@ -23656,7 +23659,7 @@
         }
       ],
       "mdbC": "Always_le_base_temporal",
-      "sqlfn": "always_le",
+      "sqlfn": "aLe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<=",
@@ -23682,7 +23685,7 @@
         }
       ],
       "mdbC": "Always_le_temporal_base",
-      "sqlfn": "always_le",
+      "sqlfn": "aLe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<=",
@@ -23708,7 +23711,7 @@
         }
       ],
       "mdbC": "Always_le_temporal_base",
-      "sqlfn": "always_le",
+      "sqlfn": "aLe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<=",
@@ -23734,7 +23737,7 @@
         }
       ],
       "mdbC": "Always_lt_base_temporal",
-      "sqlfn": "always_lt",
+      "sqlfn": "aLt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<",
@@ -23760,7 +23763,7 @@
         }
       ],
       "mdbC": "Always_lt_base_temporal",
-      "sqlfn": "always_lt",
+      "sqlfn": "aLt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<",
@@ -23786,7 +23789,7 @@
         }
       ],
       "mdbC": "Always_lt_temporal_temporal",
-      "sqlfn": "always_lt",
+      "sqlfn": "aLt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<",
@@ -23812,7 +23815,7 @@
         }
       ],
       "mdbC": "Always_lt_base_temporal",
-      "sqlfn": "always_lt",
+      "sqlfn": "aLt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<",
@@ -23838,7 +23841,7 @@
         }
       ],
       "mdbC": "Always_lt_temporal_base",
-      "sqlfn": "always_lt",
+      "sqlfn": "aLt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<",
@@ -23864,7 +23867,7 @@
         }
       ],
       "mdbC": "Always_lt_temporal_base",
-      "sqlfn": "always_lt",
+      "sqlfn": "aLt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<",
@@ -23890,7 +23893,7 @@
         }
       ],
       "mdbC": "Always_lt_base_temporal",
-      "sqlfn": "always_lt",
+      "sqlfn": "aLt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<",
@@ -23916,7 +23919,7 @@
         }
       ],
       "mdbC": "Always_lt_temporal_base",
-      "sqlfn": "always_lt",
+      "sqlfn": "aLt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<",
@@ -23942,7 +23945,7 @@
         }
       ],
       "mdbC": "Always_lt_temporal_base",
-      "sqlfn": "always_lt",
+      "sqlfn": "aLt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<",
@@ -23968,7 +23971,7 @@
         }
       ],
       "mdbC": "Always_ne_base_temporal",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -23994,7 +23997,7 @@
         }
       ],
       "mdbC": "Always_ne_base_temporal",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -24020,7 +24023,7 @@
         }
       ],
       "mdbC": "Always_ne_base_temporal",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -24046,7 +24049,7 @@
         }
       ],
       "mdbC": "Always_ne_temporal_base",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -24072,7 +24075,7 @@
         }
       ],
       "mdbC": "Always_ne_temporal_temporal",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -24098,7 +24101,7 @@
         }
       ],
       "mdbC": "Always_ne_base_temporal",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -24124,7 +24127,7 @@
         }
       ],
       "mdbC": "Always_ne_temporal_base",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -24150,7 +24153,7 @@
         }
       ],
       "mdbC": "Always_ne_temporal_base",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -24176,7 +24179,7 @@
         }
       ],
       "mdbC": "Always_ne_base_temporal",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -24202,7 +24205,7 @@
         }
       ],
       "mdbC": "Always_ne_temporal_base",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -24228,7 +24231,7 @@
         }
       ],
       "mdbC": "Always_ne_temporal_base",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -24254,7 +24257,7 @@
         }
       ],
       "mdbC": "Ever_eq_base_temporal",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -24280,7 +24283,7 @@
         }
       ],
       "mdbC": "Ever_eq_base_temporal",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -24306,7 +24309,7 @@
         }
       ],
       "mdbC": "Ever_eq_base_temporal",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -24332,7 +24335,7 @@
         }
       ],
       "mdbC": "Ever_eq_temporal_base",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -24358,7 +24361,7 @@
         }
       ],
       "mdbC": "Ever_eq_temporal_temporal",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -24384,7 +24387,7 @@
         }
       ],
       "mdbC": "Ever_eq_base_temporal",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -24410,7 +24413,7 @@
         }
       ],
       "mdbC": "Ever_eq_temporal_base",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -24436,7 +24439,7 @@
         }
       ],
       "mdbC": "Ever_eq_temporal_base",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -24462,7 +24465,7 @@
         }
       ],
       "mdbC": "Ever_eq_base_temporal",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -24488,7 +24491,7 @@
         }
       ],
       "mdbC": "Ever_eq_temporal_base",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -24514,7 +24517,7 @@
         }
       ],
       "mdbC": "Ever_eq_temporal_base",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -24540,7 +24543,7 @@
         }
       ],
       "mdbC": "Ever_ge_base_temporal",
-      "sqlfn": "ever_ge",
+      "sqlfn": "eGe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?>=",
@@ -24566,7 +24569,7 @@
         }
       ],
       "mdbC": "Ever_ge_base_temporal",
-      "sqlfn": "ever_ge",
+      "sqlfn": "eGe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?>=",
@@ -24592,7 +24595,7 @@
         }
       ],
       "mdbC": "Ever_ge_temporal_temporal",
-      "sqlfn": "ever_ge",
+      "sqlfn": "eGe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?>=",
@@ -24618,7 +24621,7 @@
         }
       ],
       "mdbC": "Ever_ge_base_temporal",
-      "sqlfn": "ever_ge",
+      "sqlfn": "eGe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?>=",
@@ -24644,7 +24647,7 @@
         }
       ],
       "mdbC": "Ever_ge_temporal_base",
-      "sqlfn": "ever_ge",
+      "sqlfn": "eGe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?>=",
@@ -24670,7 +24673,7 @@
         }
       ],
       "mdbC": "Ever_ge_temporal_base",
-      "sqlfn": "ever_ge",
+      "sqlfn": "eGe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?>=",
@@ -24696,7 +24699,7 @@
         }
       ],
       "mdbC": "Ever_ge_base_temporal",
-      "sqlfn": "ever_ge",
+      "sqlfn": "eGe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?>=",
@@ -24722,7 +24725,7 @@
         }
       ],
       "mdbC": "Ever_ge_temporal_base",
-      "sqlfn": "ever_ge",
+      "sqlfn": "eGe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?>=",
@@ -24748,7 +24751,7 @@
         }
       ],
       "mdbC": "Ever_ge_temporal_base",
-      "sqlfn": "ever_ge",
+      "sqlfn": "eGe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?>=",
@@ -24774,7 +24777,7 @@
         }
       ],
       "mdbC": "Ever_gt_base_temporal",
-      "sqlfn": "ever_gt",
+      "sqlfn": "eGt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?>",
@@ -24800,7 +24803,7 @@
         }
       ],
       "mdbC": "Ever_gt_base_temporal",
-      "sqlfn": "ever_gt",
+      "sqlfn": "eGt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?>",
@@ -24826,7 +24829,7 @@
         }
       ],
       "mdbC": "Ever_gt_temporal_temporal",
-      "sqlfn": "ever_gt",
+      "sqlfn": "eGt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?>",
@@ -24852,7 +24855,7 @@
         }
       ],
       "mdbC": "Ever_gt_base_temporal",
-      "sqlfn": "ever_gt",
+      "sqlfn": "eGt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?>",
@@ -24878,7 +24881,7 @@
         }
       ],
       "mdbC": "Ever_gt_temporal_base",
-      "sqlfn": "ever_gt",
+      "sqlfn": "eGt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?>",
@@ -24904,7 +24907,7 @@
         }
       ],
       "mdbC": "Ever_gt_temporal_base",
-      "sqlfn": "ever_gt",
+      "sqlfn": "eGt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?>",
@@ -24930,7 +24933,7 @@
         }
       ],
       "mdbC": "Ever_gt_base_temporal",
-      "sqlfn": "ever_gt",
+      "sqlfn": "eGt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?>",
@@ -24956,7 +24959,7 @@
         }
       ],
       "mdbC": "Ever_gt_temporal_base",
-      "sqlfn": "ever_gt",
+      "sqlfn": "eGt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?>",
@@ -24982,7 +24985,7 @@
         }
       ],
       "mdbC": "Ever_gt_temporal_base",
-      "sqlfn": "ever_gt",
+      "sqlfn": "eGt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?>",
@@ -25008,7 +25011,7 @@
         }
       ],
       "mdbC": "Ever_le_base_temporal",
-      "sqlfn": "ever_le",
+      "sqlfn": "eLe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<=",
@@ -25034,7 +25037,7 @@
         }
       ],
       "mdbC": "Ever_le_base_temporal",
-      "sqlfn": "ever_le",
+      "sqlfn": "eLe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<=",
@@ -25060,7 +25063,7 @@
         }
       ],
       "mdbC": "Ever_le_temporal_temporal",
-      "sqlfn": "ever_le",
+      "sqlfn": "eLe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<=",
@@ -25086,7 +25089,7 @@
         }
       ],
       "mdbC": "Ever_le_base_temporal",
-      "sqlfn": "ever_le",
+      "sqlfn": "eLe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<=",
@@ -25112,7 +25115,7 @@
         }
       ],
       "mdbC": "Ever_le_temporal_base",
-      "sqlfn": "ever_le",
+      "sqlfn": "eLe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<=",
@@ -25138,7 +25141,7 @@
         }
       ],
       "mdbC": "Ever_le_temporal_base",
-      "sqlfn": "ever_le",
+      "sqlfn": "eLe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<=",
@@ -25164,7 +25167,7 @@
         }
       ],
       "mdbC": "Ever_le_base_temporal",
-      "sqlfn": "ever_le",
+      "sqlfn": "eLe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<=",
@@ -25190,7 +25193,7 @@
         }
       ],
       "mdbC": "Ever_le_temporal_base",
-      "sqlfn": "ever_le",
+      "sqlfn": "eLe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<=",
@@ -25216,7 +25219,7 @@
         }
       ],
       "mdbC": "Ever_le_temporal_base",
-      "sqlfn": "ever_le",
+      "sqlfn": "eLe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<=",
@@ -25242,7 +25245,7 @@
         }
       ],
       "mdbC": "Ever_lt_base_temporal",
-      "sqlfn": "ever_lt",
+      "sqlfn": "eLt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<",
@@ -25268,7 +25271,7 @@
         }
       ],
       "mdbC": "Ever_lt_base_temporal",
-      "sqlfn": "ever_lt",
+      "sqlfn": "eLt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<",
@@ -25294,7 +25297,7 @@
         }
       ],
       "mdbC": "Ever_lt_temporal_temporal",
-      "sqlfn": "ever_lt",
+      "sqlfn": "eLt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<",
@@ -25320,7 +25323,7 @@
         }
       ],
       "mdbC": "Ever_lt_base_temporal",
-      "sqlfn": "ever_lt",
+      "sqlfn": "eLt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<",
@@ -25346,7 +25349,7 @@
         }
       ],
       "mdbC": "Ever_lt_temporal_base",
-      "sqlfn": "ever_lt",
+      "sqlfn": "eLt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<",
@@ -25372,7 +25375,7 @@
         }
       ],
       "mdbC": "Ever_lt_temporal_base",
-      "sqlfn": "ever_lt",
+      "sqlfn": "eLt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<",
@@ -25398,7 +25401,7 @@
         }
       ],
       "mdbC": "Ever_lt_base_temporal",
-      "sqlfn": "ever_lt",
+      "sqlfn": "eLt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<",
@@ -25424,7 +25427,7 @@
         }
       ],
       "mdbC": "Ever_lt_temporal_base",
-      "sqlfn": "ever_lt",
+      "sqlfn": "eLt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<",
@@ -25450,7 +25453,7 @@
         }
       ],
       "mdbC": "Ever_lt_temporal_base",
-      "sqlfn": "ever_lt",
+      "sqlfn": "eLt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<",
@@ -25476,7 +25479,7 @@
         }
       ],
       "mdbC": "Ever_ne_base_temporal",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -25502,7 +25505,7 @@
         }
       ],
       "mdbC": "Ever_ne_base_temporal",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -25528,7 +25531,7 @@
         }
       ],
       "mdbC": "Ever_ne_base_temporal",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -25554,7 +25557,7 @@
         }
       ],
       "mdbC": "Ever_ne_temporal_base",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -25580,7 +25583,7 @@
         }
       ],
       "mdbC": "Ever_ne_temporal_temporal",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -25606,7 +25609,7 @@
         }
       ],
       "mdbC": "Ever_ne_base_temporal",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -25632,7 +25635,7 @@
         }
       ],
       "mdbC": "Ever_ne_temporal_base",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -25658,7 +25661,7 @@
         }
       ],
       "mdbC": "Ever_ne_temporal_base",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -25684,7 +25687,7 @@
         }
       ],
       "mdbC": "Ever_ne_base_temporal",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -25710,7 +25713,7 @@
         }
       ],
       "mdbC": "Ever_ne_temporal_base",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -25736,7 +25739,7 @@
         }
       ],
       "mdbC": "Ever_ne_temporal_base",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -29509,7 +29512,7 @@
         }
       ],
       "mdbC": "Add_number_tnumber",
-      "sqlfn": "tnumber_add",
+      "sqlfn": "tAdd",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -29535,7 +29538,7 @@
         }
       ],
       "mdbC": "Add_number_tnumber",
-      "sqlfn": "tnumber_add",
+      "sqlfn": "tAdd",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -29561,7 +29564,7 @@
         }
       ],
       "mdbC": "Add_tnumber_number",
-      "sqlfn": "tnumber_add",
+      "sqlfn": "tAdd",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -29587,7 +29590,7 @@
         }
       ],
       "mdbC": "Add_tnumber_number",
-      "sqlfn": "tnumber_add",
+      "sqlfn": "tAdd",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -29613,7 +29616,7 @@
         }
       ],
       "mdbC": "Add_number_tnumber",
-      "sqlfn": "tnumber_add",
+      "sqlfn": "tAdd",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -29639,7 +29642,7 @@
         }
       ],
       "mdbC": "Add_tnumber_number",
-      "sqlfn": "tnumber_add",
+      "sqlfn": "tAdd",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -29665,7 +29668,7 @@
         }
       ],
       "mdbC": "Add_tnumber_tnumber",
-      "sqlfn": "tnumber_add",
+      "sqlfn": "tAdd",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -29691,7 +29694,7 @@
         }
       ],
       "mdbC": "Div_number_tnumber",
-      "sqlfn": "tnumber_div",
+      "sqlfn": "tDiv",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "/",
@@ -29717,7 +29720,7 @@
         }
       ],
       "mdbC": "Div_number_tnumber",
-      "sqlfn": "tnumber_div",
+      "sqlfn": "tDiv",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "/",
@@ -29743,7 +29746,7 @@
         }
       ],
       "mdbC": "Div_tnumber_number",
-      "sqlfn": "tnumber_div",
+      "sqlfn": "tDiv",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "/",
@@ -29790,7 +29793,7 @@
         }
       ],
       "mdbC": "Div_number_tnumber",
-      "sqlfn": "tnumber_div",
+      "sqlfn": "tDiv",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "/",
@@ -29837,7 +29840,7 @@
         }
       ],
       "mdbC": "Div_tnumber_tnumber",
-      "sqlfn": "tnumber_div",
+      "sqlfn": "tDiv",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "/",
@@ -29863,7 +29866,7 @@
         }
       ],
       "mdbC": "Mul_number_tnumber",
-      "sqlfn": "tnumber_mul",
+      "sqlfn": "tMul",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -29889,7 +29892,7 @@
         }
       ],
       "mdbC": "Mul_number_tnumber",
-      "sqlfn": "tnumber_mul",
+      "sqlfn": "tMul",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -29915,7 +29918,7 @@
         }
       ],
       "mdbC": "Mul_tnumber_number",
-      "sqlfn": "tnumber_mul",
+      "sqlfn": "tMul",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -29941,7 +29944,7 @@
         }
       ],
       "mdbC": "Mul_tnumber_number",
-      "sqlfn": "tnumber_mul",
+      "sqlfn": "tMul",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -29967,7 +29970,7 @@
         }
       ],
       "mdbC": "Mul_number_tnumber",
-      "sqlfn": "tnumber_mul",
+      "sqlfn": "tMul",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -29993,7 +29996,7 @@
         }
       ],
       "mdbC": "Mul_tnumber_number",
-      "sqlfn": "tnumber_mul",
+      "sqlfn": "tMul",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -30019,7 +30022,7 @@
         }
       ],
       "mdbC": "Mul_tnumber_tnumber",
-      "sqlfn": "tnumber_mul",
+      "sqlfn": "tMul",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -30045,7 +30048,7 @@
         }
       ],
       "mdbC": "Sub_number_tnumber",
-      "sqlfn": "tnumber_sub",
+      "sqlfn": "tSub",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -30071,7 +30074,7 @@
         }
       ],
       "mdbC": "Sub_number_tnumber",
-      "sqlfn": "tnumber_sub",
+      "sqlfn": "tSub",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -30097,7 +30100,7 @@
         }
       ],
       "mdbC": "Sub_tnumber_number",
-      "sqlfn": "tnumber_sub",
+      "sqlfn": "tSub",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -30123,7 +30126,7 @@
         }
       ],
       "mdbC": "Sub_tnumber_number",
-      "sqlfn": "tnumber_sub",
+      "sqlfn": "tSub",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -30149,7 +30152,7 @@
         }
       ],
       "mdbC": "Sub_number_tnumber",
-      "sqlfn": "tnumber_sub",
+      "sqlfn": "tSub",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -30175,7 +30178,7 @@
         }
       ],
       "mdbC": "Sub_tnumber_number",
-      "sqlfn": "tnumber_sub",
+      "sqlfn": "tSub",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -30201,7 +30204,7 @@
         }
       ],
       "mdbC": "Sub_tnumber_tnumber",
-      "sqlfn": "tnumber_sub",
+      "sqlfn": "tSub",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -35318,7 +35321,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -35344,7 +35347,7 @@
         }
       ],
       "mdbC": "Intersection_set_value",
-      "sqlfn": "set_intersection",
+      "sqlfn": "setIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -35370,7 +35373,7 @@
         }
       ],
       "mdbC": "Minus_value_set",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -35396,7 +35399,7 @@
         }
       ],
       "mdbC": "Minus_set_value",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -35422,7 +35425,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -35448,7 +35451,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -36252,7 +36255,7 @@
         }
       ],
       "mdbC": "Stbox_tmax",
-      "sqlfn": "Tmax",
+      "sqlfn": "tMax",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_geo_box_accessor"
@@ -36277,7 +36280,7 @@
         }
       ],
       "mdbC": "Stbox_tmax_inc",
-      "sqlfn": "Tmax_inc",
+      "sqlfn": "tMaxInc",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_geo_box_accessor"
@@ -36302,7 +36305,7 @@
         }
       ],
       "mdbC": "Stbox_tmin",
-      "sqlfn": "Tmin",
+      "sqlfn": "tMin",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_geo_box_accessor"
@@ -36327,7 +36330,7 @@
         }
       ],
       "mdbC": "Stbox_tmin_inc",
-      "sqlfn": "Tmin_inc",
+      "sqlfn": "tMinInc",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_geo_box_accessor"
@@ -36372,7 +36375,7 @@
         }
       ],
       "mdbC": "Stbox_xmax",
-      "sqlfn": "Xmax",
+      "sqlfn": "xMax",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_geo_box_accessor"
@@ -36397,7 +36400,7 @@
         }
       ],
       "mdbC": "Stbox_xmin",
-      "sqlfn": "Xmin",
+      "sqlfn": "xMin",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_geo_box_accessor"
@@ -36422,7 +36425,7 @@
         }
       ],
       "mdbC": "Stbox_ymax",
-      "sqlfn": "Ymax",
+      "sqlfn": "yMax",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_geo_box_accessor"
@@ -36447,7 +36450,7 @@
         }
       ],
       "mdbC": "Stbox_ymin",
-      "sqlfn": "Ymin",
+      "sqlfn": "yMin",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_geo_box_accessor"
@@ -36472,7 +36475,7 @@
         }
       ],
       "mdbC": "Stbox_zmax",
-      "sqlfn": "Zmax",
+      "sqlfn": "zMax",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_geo_box_accessor"
@@ -36497,7 +36500,7 @@
         }
       ],
       "mdbC": "Stbox_zmin",
-      "sqlfn": "Zmin",
+      "sqlfn": "zMin",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_geo_box_accessor"
@@ -37411,7 +37414,7 @@
         }
       ],
       "mdbC": "Stbox_cmp",
-      "sqlfn": "stbox_cmp",
+      "sqlfn": "cmp",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "group": "meos_geo_box_comp"
@@ -37436,7 +37439,7 @@
         }
       ],
       "mdbC": "Stbox_eq",
-      "sqlfn": "stbox_eq",
+      "sqlfn": "eq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "=",
@@ -37462,7 +37465,7 @@
         }
       ],
       "mdbC": "Stbox_ge",
-      "sqlfn": "stbox_ge",
+      "sqlfn": "ge",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": ">=",
@@ -37488,7 +37491,7 @@
         }
       ],
       "mdbC": "Stbox_gt",
-      "sqlfn": "stbox_gt",
+      "sqlfn": "gt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": ">",
@@ -37514,7 +37517,7 @@
         }
       ],
       "mdbC": "Stbox_le",
-      "sqlfn": "stbox_le",
+      "sqlfn": "le",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<=",
@@ -37540,7 +37543,7 @@
         }
       ],
       "mdbC": "Stbox_lt",
-      "sqlfn": "stbox_lt",
+      "sqlfn": "lt",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<",
@@ -37566,7 +37569,7 @@
         }
       ],
       "mdbC": "Stbox_ne",
-      "sqlfn": "stbox_ne",
+      "sqlfn": "ne",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<>",
@@ -39410,7 +39413,7 @@
         }
       ],
       "mdbC": "Always_eq_geo_tgeo",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -39436,7 +39439,7 @@
         }
       ],
       "mdbC": "Always_eq_tgeo_geo",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -39462,7 +39465,7 @@
         }
       ],
       "mdbC": "Always_eq_tgeo_tgeo",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -39488,7 +39491,7 @@
         }
       ],
       "mdbC": "Always_ne_geo_tgeo",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -39514,7 +39517,7 @@
         }
       ],
       "mdbC": "Always_ne_tgeo_geo",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -39540,7 +39543,7 @@
         }
       ],
       "mdbC": "Always_ne_tgeo_tgeo",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -39566,7 +39569,7 @@
         }
       ],
       "mdbC": "Ever_eq_geo_tgeo",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -39592,7 +39595,7 @@
         }
       ],
       "mdbC": "Ever_eq_tgeo_geo",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -39618,7 +39621,7 @@
         }
       ],
       "mdbC": "Ever_eq_tgeo_tgeo",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -39644,7 +39647,7 @@
         }
       ],
       "mdbC": "Ever_ne_geo_tgeo",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -39670,7 +39673,7 @@
         }
       ],
       "mdbC": "Ever_ne_tgeo_geo",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -39696,7 +39699,7 @@
         }
       ],
       "mdbC": "Ever_ne_tgeo_tgeo",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -45679,7 +45682,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -45705,7 +45708,7 @@
         }
       ],
       "mdbC": "Intersection_set_value",
-      "sqlfn": "set_intersection",
+      "sqlfn": "setIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -45731,7 +45734,7 @@
         }
       ],
       "mdbC": "Minus_value_set",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -45757,7 +45760,7 @@
         }
       ],
       "mdbC": "Minus_set_value",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -45783,7 +45786,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -45809,7 +45812,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -46828,7 +46831,7 @@
         }
       ],
       "mdbC": "Always_eq_cbuffer_tcbuffer",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -46854,7 +46857,7 @@
         }
       ],
       "mdbC": "Always_eq_tcbuffer_cbuffer",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -46880,7 +46883,7 @@
         }
       ],
       "mdbC": "Always_eq_tcbuffer_tcbuffer",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -46906,7 +46909,7 @@
         }
       ],
       "mdbC": "Always_ne_cbuffer_tcbuffer",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -46932,7 +46935,7 @@
         }
       ],
       "mdbC": "Always_ne_tcbuffer_cbuffer",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -46958,7 +46961,7 @@
         }
       ],
       "mdbC": "Always_ne_tcbuffer_tcbuffer",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -46984,7 +46987,7 @@
         }
       ],
       "mdbC": "Ever_eq_cbuffer_tcbuffer",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -47010,7 +47013,7 @@
         }
       ],
       "mdbC": "Ever_eq_tcbuffer_cbuffer",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -47036,7 +47039,7 @@
         }
       ],
       "mdbC": "Ever_eq_tcbuffer_tcbuffer",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -47062,7 +47065,7 @@
         }
       ],
       "mdbC": "Ever_ne_cbuffer_tcbuffer",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -47088,7 +47091,7 @@
         }
       ],
       "mdbC": "Ever_ne_tcbuffer_cbuffer",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -47114,7 +47117,7 @@
         }
       ],
       "mdbC": "Ever_ne_tcbuffer_tcbuffer",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -59567,7 +59570,7 @@
         }
       ],
       "mdbC": "Temporal_cmp",
-      "sqlfn": "tint_cmp",
+      "sqlfn": "cmp",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "group": "meos_internal_temporal_comp_trad"
@@ -59592,9 +59595,10 @@
         }
       ],
       "mdbC": "Temporal_eq",
-      "sqlfn": "tint_eq",
+      "sqlfn": "eq",
       "sqlArity": 2,
       "sqlArityMax": 2,
+      "sqlop": "=",
       "group": "meos_internal_temporal_comp_trad"
     },
     {
@@ -59617,7 +59621,7 @@
         }
       ],
       "mdbC": "Temporal_cmp",
-      "sqlfn": "tint_cmp",
+      "sqlfn": "cmp",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "group": "meos_internal_temporal_comp_trad"
@@ -59642,9 +59646,10 @@
         }
       ],
       "mdbC": "Temporal_eq",
-      "sqlfn": "tint_eq",
+      "sqlfn": "eq",
       "sqlArity": 2,
       "sqlArityMax": 2,
+      "sqlop": "=",
       "group": "meos_internal_temporal_comp_trad"
     },
     {
@@ -59667,7 +59672,7 @@
         }
       ],
       "mdbC": "Temporal_cmp",
-      "sqlfn": "tint_cmp",
+      "sqlfn": "cmp",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "group": "meos_internal_temporal_comp_trad"
@@ -59692,9 +59697,10 @@
         }
       ],
       "mdbC": "Temporal_eq",
-      "sqlfn": "tint_eq",
+      "sqlfn": "eq",
       "sqlArity": 2,
       "sqlArityMax": 2,
+      "sqlop": "=",
       "group": "meos_internal_temporal_comp_trad"
     },
     {
@@ -73624,7 +73630,7 @@
         }
       ],
       "mdbC": "Intersection_set_value",
-      "sqlfn": "set_intersection",
+      "sqlfn": "setIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -73671,7 +73677,7 @@
         }
       ],
       "mdbC": "Minus_value_set",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -73697,7 +73703,7 @@
         }
       ],
       "mdbC": "Minus_set_value",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -73744,7 +73750,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -75207,7 +75213,7 @@
         }
       ],
       "mdbC": "Always_eq_base_temporal",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -75233,7 +75239,7 @@
         }
       ],
       "mdbC": "Always_eq_temporal_base",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -75259,7 +75265,7 @@
         }
       ],
       "mdbC": "Always_eq_tjsonb_tjsonb",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -75285,7 +75291,7 @@
         }
       ],
       "mdbC": "Always_ne_base_temporal",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -75311,7 +75317,7 @@
         }
       ],
       "mdbC": "Always_ne_temporal_base",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -75337,7 +75343,7 @@
         }
       ],
       "mdbC": "Always_ne_tjsonb_tjsonb",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -75363,7 +75369,7 @@
         }
       ],
       "mdbC": "Ever_eq_base_temporal",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -75389,7 +75395,7 @@
         }
       ],
       "mdbC": "Ever_eq_temporal_base",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -75415,7 +75421,7 @@
         }
       ],
       "mdbC": "Ever_eq_tjsonb_tjsonb",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -75441,7 +75447,7 @@
         }
       ],
       "mdbC": "Ever_ne_base_temporal",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -75467,7 +75473,7 @@
         }
       ],
       "mdbC": "Ever_ne_temporal_base",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -75493,7 +75499,7 @@
         }
       ],
       "mdbC": "Ever_ne_tjsonb_tjsonb",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -82013,7 +82019,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -82039,7 +82045,7 @@
         }
       ],
       "mdbC": "Intersection_set_value",
-      "sqlfn": "set_intersection",
+      "sqlfn": "setIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -82065,7 +82071,7 @@
         }
       ],
       "mdbC": "Minus_value_set",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -82091,7 +82097,7 @@
         }
       ],
       "mdbC": "Minus_set_value",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -82138,7 +82144,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -82164,7 +82170,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -83266,7 +83272,7 @@
         }
       ],
       "mdbC": "Always_eq_npoint_tnpoint",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -83292,7 +83298,7 @@
         }
       ],
       "mdbC": "Always_eq_tnpoint_npoint",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -83318,7 +83324,7 @@
         }
       ],
       "mdbC": "Always_eq_tnpoint_tnpoint",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -83344,7 +83350,7 @@
         }
       ],
       "mdbC": "Always_ne_npoint_tnpoint",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -83370,7 +83376,7 @@
         }
       ],
       "mdbC": "Always_ne_tnpoint_npoint",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -83396,7 +83402,7 @@
         }
       ],
       "mdbC": "Always_ne_tnpoint_tnpoint",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -83422,7 +83428,7 @@
         }
       ],
       "mdbC": "Ever_eq_npoint_tnpoint",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -83448,7 +83454,7 @@
         }
       ],
       "mdbC": "Ever_eq_tnpoint_npoint",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -83474,7 +83480,7 @@
         }
       ],
       "mdbC": "Ever_eq_tnpoint_tnpoint",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -83500,7 +83506,7 @@
         }
       ],
       "mdbC": "Ever_ne_npoint_tnpoint",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -83526,7 +83532,7 @@
         }
       ],
       "mdbC": "Ever_ne_tnpoint_npoint",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -83552,7 +83558,7 @@
         }
       ],
       "mdbC": "Ever_ne_tnpoint_tnpoint",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -84679,7 +84685,7 @@
         }
       ],
       "mdbC": "Intersection_set_value",
-      "sqlfn": "set_intersection",
+      "sqlfn": "setIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -84705,7 +84711,7 @@
         }
       ],
       "mdbC": "Intersection_set_value",
-      "sqlfn": "set_intersection",
+      "sqlfn": "setIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -84731,7 +84737,7 @@
         }
       ],
       "mdbC": "Minus_value_set",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -84757,7 +84763,7 @@
         }
       ],
       "mdbC": "Minus_set_value",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -84783,7 +84789,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -84809,7 +84815,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -85088,7 +85094,7 @@
         }
       ],
       "mdbC": "Intersection_set_value",
-      "sqlfn": "set_intersection",
+      "sqlfn": "setIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -85114,7 +85120,7 @@
         }
       ],
       "mdbC": "Intersection_set_value",
-      "sqlfn": "set_intersection",
+      "sqlfn": "setIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -85140,7 +85146,7 @@
         }
       ],
       "mdbC": "Minus_value_set",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -85166,7 +85172,7 @@
         }
       ],
       "mdbC": "Minus_set_value",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -85192,7 +85198,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -85218,7 +85224,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -85512,7 +85518,7 @@
         }
       ],
       "mdbC": "Tpcbox_xmax",
-      "sqlfn": "xmax",
+      "sqlfn": "xMax",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_pointcloud_box_accessor"
@@ -85537,7 +85543,7 @@
         }
       ],
       "mdbC": "Tpcbox_ymin",
-      "sqlfn": "ymin",
+      "sqlfn": "yMin",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_pointcloud_box_accessor"
@@ -85562,7 +85568,7 @@
         }
       ],
       "mdbC": "Tpcbox_ymax",
-      "sqlfn": "ymax",
+      "sqlfn": "yMax",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_pointcloud_box_accessor"
@@ -85587,7 +85593,7 @@
         }
       ],
       "mdbC": "Tpcbox_zmin",
-      "sqlfn": "zmin",
+      "sqlfn": "zMin",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_pointcloud_box_accessor"
@@ -85612,7 +85618,7 @@
         }
       ],
       "mdbC": "Tpcbox_zmax",
-      "sqlfn": "zmax",
+      "sqlfn": "zMax",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_pointcloud_box_accessor"
@@ -85637,7 +85643,32 @@
         }
       ],
       "mdbC": "Tpcbox_tmin",
-      "sqlfn": "tmin",
+      "sqlfn": "tMin",
+      "sqlArity": 1,
+      "sqlArityMax": 1,
+      "group": "meos_pointcloud_box_accessor"
+    },
+    {
+      "name": "tpcbox_tmin_inc",
+      "file": "meos_pointcloud.h",
+      "returnType": {
+        "c": "bool",
+        "canonical": "bool"
+      },
+      "params": [
+        {
+          "name": "box",
+          "cType": "const TPCBox *",
+          "canonical": "const struct TPCBox *"
+        },
+        {
+          "name": "result",
+          "cType": "bool *",
+          "canonical": "bool *"
+        }
+      ],
+      "mdbC": "Tpcbox_tmin_inc",
+      "sqlfn": "tMinInc",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_pointcloud_box_accessor"
@@ -85662,7 +85693,32 @@
         }
       ],
       "mdbC": "Tpcbox_tmax",
-      "sqlfn": "tmax",
+      "sqlfn": "tMax",
+      "sqlArity": 1,
+      "sqlArityMax": 1,
+      "group": "meos_pointcloud_box_accessor"
+    },
+    {
+      "name": "tpcbox_tmax_inc",
+      "file": "meos_pointcloud.h",
+      "returnType": {
+        "c": "bool",
+        "canonical": "bool"
+      },
+      "params": [
+        {
+          "name": "box",
+          "cType": "const TPCBox *",
+          "canonical": "const struct TPCBox *"
+        },
+        {
+          "name": "result",
+          "cType": "bool *",
+          "canonical": "bool *"
+        }
+      ],
+      "mdbC": "Tpcbox_tmax_inc",
+      "sqlfn": "tMaxInc",
       "sqlArity": 1,
       "sqlArityMax": 1,
       "group": "meos_pointcloud_box_accessor"
@@ -85823,7 +85879,7 @@
         }
       ],
       "mdbC": "Union_tpcbox_tpcbox",
-      "sqlfn": "tpcbox_union",
+      "sqlfn": "union",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -85875,7 +85931,7 @@
         }
       ],
       "mdbC": "Intersection_tpcbox_tpcbox",
-      "sqlfn": "tpcbox_intersection",
+      "sqlfn": "intersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -85901,7 +85957,7 @@
         }
       ],
       "mdbC": "Contains_tpcbox_tpcbox",
-      "sqlfn": "tpcbox_contains",
+      "sqlfn": "contains",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "\\@>",
@@ -85927,7 +85983,7 @@
         }
       ],
       "mdbC": "Contained_tpcbox_tpcbox",
-      "sqlfn": "tpcbox_contained",
+      "sqlfn": "contained",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<@",
@@ -85953,7 +86009,7 @@
         }
       ],
       "mdbC": "Overlaps_tpcbox_tpcbox",
-      "sqlfn": "tpcbox_overlaps",
+      "sqlfn": "overlaps",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "&&",
@@ -85979,7 +86035,7 @@
         }
       ],
       "mdbC": "Same_tpcbox_tpcbox",
-      "sqlfn": "tpcbox_same",
+      "sqlfn": "same",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "~=",
@@ -86005,7 +86061,7 @@
         }
       ],
       "mdbC": "Adjacent_tpcbox_tpcbox",
-      "sqlfn": "tpcbox_adjacent",
+      "sqlfn": "adjacent",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-|-",
@@ -86201,6 +86257,11 @@
           "canonical": "const struct TPCBox *"
         }
       ],
+      "mdbC": "Overleft_tpcbox_tpcbox",
+      "sqlfn": "overleft",
+      "sqlArity": 2,
+      "sqlArityMax": 2,
+      "sqlop": "&<",
       "group": "meos_pointcloud_box_pos"
     },
     {
@@ -86222,6 +86283,11 @@
           "canonical": "const struct TPCBox *"
         }
       ],
+      "mdbC": "Right_tpcbox_tpcbox",
+      "sqlfn": "right",
+      "sqlArity": 2,
+      "sqlArityMax": 2,
+      "sqlop": ">>",
       "group": "meos_pointcloud_box_pos"
     },
     {
@@ -86243,6 +86309,11 @@
           "canonical": "const struct TPCBox *"
         }
       ],
+      "mdbC": "Overright_tpcbox_tpcbox",
+      "sqlfn": "overright",
+      "sqlArity": 2,
+      "sqlArityMax": 2,
+      "sqlop": "&>",
       "group": "meos_pointcloud_box_pos"
     },
     {
@@ -86264,6 +86335,11 @@
           "canonical": "const struct TPCBox *"
         }
       ],
+      "mdbC": "Below_tpcbox_tpcbox",
+      "sqlfn": "below",
+      "sqlArity": 2,
+      "sqlArityMax": 2,
+      "sqlop": "<<|",
       "group": "meos_pointcloud_box_pos"
     },
     {
@@ -86285,6 +86361,11 @@
           "canonical": "const struct TPCBox *"
         }
       ],
+      "mdbC": "Overbelow_tpcbox_tpcbox",
+      "sqlfn": "overbelow",
+      "sqlArity": 2,
+      "sqlArityMax": 2,
+      "sqlop": "&<|",
       "group": "meos_pointcloud_box_pos"
     },
     {
@@ -86306,6 +86387,11 @@
           "canonical": "const struct TPCBox *"
         }
       ],
+      "mdbC": "Above_tpcbox_tpcbox",
+      "sqlfn": "above",
+      "sqlArity": 2,
+      "sqlArityMax": 2,
+      "sqlop": "|>>",
       "group": "meos_pointcloud_box_pos"
     },
     {
@@ -86327,6 +86413,11 @@
           "canonical": "const struct TPCBox *"
         }
       ],
+      "mdbC": "Overabove_tpcbox_tpcbox",
+      "sqlfn": "overabove",
+      "sqlArity": 2,
+      "sqlArityMax": 2,
+      "sqlop": "|&>",
       "group": "meos_pointcloud_box_pos"
     },
     {
@@ -86348,6 +86439,11 @@
           "canonical": "const struct TPCBox *"
         }
       ],
+      "mdbC": "Front_tpcbox_tpcbox",
+      "sqlfn": "front",
+      "sqlArity": 2,
+      "sqlArityMax": 2,
+      "sqlop": "<</",
       "group": "meos_pointcloud_box_pos"
     },
     {
@@ -86369,6 +86465,11 @@
           "canonical": "const struct TPCBox *"
         }
       ],
+      "mdbC": "Overfront_tpcbox_tpcbox",
+      "sqlfn": "overfront",
+      "sqlArity": 2,
+      "sqlArityMax": 2,
+      "sqlop": "&</",
       "group": "meos_pointcloud_box_pos"
     },
     {
@@ -86390,6 +86491,11 @@
           "canonical": "const struct TPCBox *"
         }
       ],
+      "mdbC": "Back_tpcbox_tpcbox",
+      "sqlfn": "back",
+      "sqlArity": 2,
+      "sqlArityMax": 2,
+      "sqlop": "/>>",
       "group": "meos_pointcloud_box_pos"
     },
     {
@@ -86411,6 +86517,11 @@
           "canonical": "const struct TPCBox *"
         }
       ],
+      "mdbC": "Overback_tpcbox_tpcbox",
+      "sqlfn": "overback",
+      "sqlArity": 2,
+      "sqlArityMax": 2,
+      "sqlop": "/&>",
       "group": "meos_pointcloud_box_pos"
     },
     {
@@ -86432,6 +86543,11 @@
           "canonical": "const struct TPCBox *"
         }
       ],
+      "mdbC": "Before_tpcbox_tpcbox",
+      "sqlfn": "before",
+      "sqlArity": 2,
+      "sqlArityMax": 2,
+      "sqlop": "<<#",
       "group": "meos_pointcloud_box_pos"
     },
     {
@@ -86453,6 +86569,11 @@
           "canonical": "const struct TPCBox *"
         }
       ],
+      "mdbC": "Overbefore_tpcbox_tpcbox",
+      "sqlfn": "overbefore",
+      "sqlArity": 2,
+      "sqlArityMax": 2,
+      "sqlop": "&<#",
       "group": "meos_pointcloud_box_pos"
     },
     {
@@ -86474,6 +86595,11 @@
           "canonical": "const struct TPCBox *"
         }
       ],
+      "mdbC": "After_tpcbox_tpcbox",
+      "sqlfn": "after",
+      "sqlArity": 2,
+      "sqlArityMax": 2,
+      "sqlop": "#>>",
       "group": "meos_pointcloud_box_pos"
     },
     {
@@ -86495,6 +86621,11 @@
           "canonical": "const struct TPCBox *"
         }
       ],
+      "mdbC": "Overafter_tpcbox_tpcbox",
+      "sqlfn": "overafter",
+      "sqlArity": 2,
+      "sqlArityMax": 2,
+      "sqlop": "#&>",
       "group": "meos_pointcloud_box_pos"
     },
     {
@@ -88083,7 +88214,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -88109,7 +88240,7 @@
         }
       ],
       "mdbC": "Intersection_set_value",
-      "sqlfn": "set_intersection",
+      "sqlfn": "setIntersection",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "*",
@@ -88135,7 +88266,7 @@
         }
       ],
       "mdbC": "Minus_value_set",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -88161,7 +88292,7 @@
         }
       ],
       "mdbC": "Minus_set_value",
-      "sqlfn": "set_minus",
+      "sqlfn": "setMinus",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "-",
@@ -88208,7 +88339,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -88234,7 +88365,7 @@
         }
       ],
       "mdbC": "Union_set_value",
-      "sqlfn": "set_union",
+      "sqlfn": "setUnion",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "+",
@@ -89225,7 +89356,7 @@
         }
       ],
       "mdbC": "Always_eq_pose_tpose",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -89251,7 +89382,7 @@
         }
       ],
       "mdbC": "Always_eq_tpose_pose",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -89277,7 +89408,7 @@
         }
       ],
       "mdbC": "Always_eq_tpose_tpose",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlop": "%=",
       "group": "meos_pose_comp_ever"
     },
@@ -89301,7 +89432,7 @@
         }
       ],
       "mdbC": "Always_ne_pose_tpose",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -89327,7 +89458,7 @@
         }
       ],
       "mdbC": "Always_ne_tpose_pose",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -89353,7 +89484,7 @@
         }
       ],
       "mdbC": "Always_ne_tpose_tpose",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlop": "%<>",
       "group": "meos_pose_comp_ever"
     },
@@ -89377,7 +89508,7 @@
         }
       ],
       "mdbC": "Ever_eq_pose_tpose",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -89403,7 +89534,7 @@
         }
       ],
       "mdbC": "Ever_eq_tpose_pose",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -89429,7 +89560,7 @@
         }
       ],
       "mdbC": "Ever_eq_tpose_tpose",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlop": "?=",
       "group": "meos_pose_comp_ever"
     },
@@ -89453,7 +89584,7 @@
         }
       ],
       "mdbC": "Ever_ne_pose_tpose",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -89479,7 +89610,7 @@
         }
       ],
       "mdbC": "Ever_ne_tpose_pose",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -89505,7 +89636,7 @@
         }
       ],
       "mdbC": "Ever_ne_tpose_tpose",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlop": "?<>",
       "group": "meos_pose_comp_ever"
     },
@@ -89623,8 +89754,8 @@
       "params": [
         {
           "name": "index",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ],
       "mdbC": "Quadbin_is_valid_index",
@@ -89643,8 +89774,8 @@
       "params": [
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ],
       "mdbC": "Quadbin_is_valid_cell",
@@ -89657,8 +89788,8 @@
       "name": "quadbin_tile_to_cell",
       "file": "meos_quadbin.h",
       "returnType": {
-        "c": "uint64_t",
-        "canonical": "uint64_t"
+        "c": "Quadbin",
+        "canonical": "int"
       },
       "params": [
         {
@@ -89693,8 +89824,8 @@
       "params": [
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "x",
@@ -89728,8 +89859,8 @@
       "params": [
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ],
       "mdbC": "Quadbin_get_resolution",
@@ -89742,14 +89873,14 @@
       "name": "quadbin_cell_to_parent",
       "file": "meos_quadbin.h",
       "returnType": {
-        "c": "uint64_t",
-        "canonical": "uint64_t"
+        "c": "Quadbin",
+        "canonical": "int"
       },
       "params": [
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "parent_resolution",
@@ -89767,14 +89898,14 @@
       "name": "quadbin_cell_to_children",
       "file": "meos_quadbin.h",
       "returnType": {
-        "c": "uint64_t *",
-        "canonical": "uint64_t *"
+        "c": "Quadbin *",
+        "canonical": "int *"
       },
       "params": [
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "children_resolution",
@@ -89797,14 +89928,14 @@
       "name": "quadbin_cell_sibling",
       "file": "meos_quadbin.h",
       "returnType": {
-        "c": "uint64_t",
-        "canonical": "uint64_t"
+        "c": "Quadbin",
+        "canonical": "int"
       },
       "params": [
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "direction",
@@ -89822,14 +89953,14 @@
       "name": "quadbin_k_ring",
       "file": "meos_quadbin.h",
       "returnType": {
-        "c": "uint64_t *",
-        "canonical": "uint64_t *"
+        "c": "Quadbin *",
+        "canonical": "int *"
       },
       "params": [
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "k",
@@ -89848,8 +89979,8 @@
       "name": "quadbin_point_to_cell",
       "file": "meos_quadbin.h",
       "returnType": {
-        "c": "uint64_t",
-        "canonical": "uint64_t"
+        "c": "Quadbin",
+        "canonical": "int"
       },
       "params": [
         {
@@ -89884,8 +90015,8 @@
       "params": [
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "longitude",
@@ -89914,8 +90045,8 @@
       "params": [
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "xmin",
@@ -89954,8 +90085,8 @@
       "params": [
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ],
       "mdbC": "Quadbin_cell_area",
@@ -89974,8 +90105,8 @@
       "params": [
         {
           "name": "index",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ],
       "mdbC": "Quadbin_out",
@@ -89988,8 +90119,8 @@
       "name": "quadbin_string_to_index",
       "file": "meos_quadbin.h",
       "returnType": {
-        "c": "uint64_t",
-        "canonical": "uint64_t"
+        "c": "Quadbin",
+        "canonical": "int"
       },
       "params": [
         {
@@ -90010,8 +90141,8 @@
       "params": [
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ],
       "mdbC": "Quadbin_cell_to_quadkey",
@@ -90024,8 +90155,8 @@
       "name": "quadbin_parse",
       "file": "meos_quadbin.h",
       "returnType": {
-        "c": "uint64_t",
-        "canonical": "uint64_t"
+        "c": "Quadbin",
+        "canonical": "int"
       },
       "params": [
         {
@@ -90050,13 +90181,13 @@
       "params": [
         {
           "name": "a",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "b",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ],
       "mdbC": "Quadbin_eq",
@@ -90075,13 +90206,13 @@
       "params": [
         {
           "name": "a",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "b",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ],
       "mdbC": "Quadbin_ne",
@@ -90100,13 +90231,13 @@
       "params": [
         {
           "name": "a",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "b",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ],
       "mdbC": "Quadbin_lt",
@@ -90125,13 +90256,13 @@
       "params": [
         {
           "name": "a",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "b",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ],
       "mdbC": "Quadbin_le",
@@ -90150,13 +90281,13 @@
       "params": [
         {
           "name": "a",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "b",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ],
       "mdbC": "Quadbin_gt",
@@ -90175,13 +90306,13 @@
       "params": [
         {
           "name": "a",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "b",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ],
       "mdbC": "Quadbin_ge",
@@ -90200,13 +90331,13 @@
       "params": [
         {
           "name": "a",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "b",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ],
       "mdbC": "Quadbin_cmp",
@@ -90225,8 +90356,8 @@
       "params": [
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ],
       "mdbC": "Quadbin_hash",
@@ -90245,8 +90376,8 @@
       "params": [
         {
           "name": "origin",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "k",
@@ -90269,8 +90400,8 @@
       "params": [
         {
           "name": "origin",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "children_resolution",
@@ -90366,8 +90497,8 @@
       "params": [
         {
           "name": "value",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "t",
@@ -90387,8 +90518,8 @@
       "params": [
         {
           "name": "value",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "t",
@@ -90408,8 +90539,8 @@
       "params": [
         {
           "name": "values",
-          "cType": "const uint64_t *",
-          "canonical": "const uint64_t *"
+          "cType": "const Quadbin *",
+          "canonical": "const int *"
         },
         {
           "name": "times",
@@ -90459,8 +90590,8 @@
       "name": "tquadbin_start_value",
       "file": "meos_quadbin.h",
       "returnType": {
-        "c": "uint64_t",
-        "canonical": "uint64_t"
+        "c": "Quadbin",
+        "canonical": "int"
       },
       "params": [
         {
@@ -90479,8 +90610,8 @@
       "name": "tquadbin_end_value",
       "file": "meos_quadbin.h",
       "returnType": {
-        "c": "uint64_t",
-        "canonical": "uint64_t"
+        "c": "Quadbin",
+        "canonical": "int"
       },
       "params": [
         {
@@ -90515,8 +90646,8 @@
         },
         {
           "name": "result",
-          "cType": "uint64_t *",
-          "canonical": "uint64_t *"
+          "cType": "Quadbin *",
+          "canonical": "int *"
         }
       ],
       "mdbC": "Temporal_value_n",
@@ -90529,8 +90660,8 @@
       "name": "tquadbin_values",
       "file": "meos_quadbin.h",
       "returnType": {
-        "c": "uint64_t *",
-        "canonical": "uint64_t *"
+        "c": "Quadbin *",
+        "canonical": "int *"
       },
       "params": [
         {
@@ -90575,8 +90706,8 @@
         },
         {
           "name": "result",
-          "cType": "uint64_t *",
-          "canonical": "uint64_t *"
+          "cType": "Quadbin *",
+          "canonical": "int *"
         }
       ],
       "mdbC": "Temporal_value_at_timestamptz",
@@ -90637,8 +90768,8 @@
       "params": [
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "temp",
@@ -90663,8 +90794,8 @@
         },
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ],
       "group": "meos_quadbin_comp_ever"
@@ -90679,8 +90810,8 @@
       "params": [
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "temp",
@@ -90705,8 +90836,8 @@
         },
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ],
       "group": "meos_quadbin_comp_ever"
@@ -90721,8 +90852,8 @@
       "params": [
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "temp",
@@ -90747,8 +90878,8 @@
         },
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ],
       "group": "meos_quadbin_comp_ever"
@@ -90763,8 +90894,8 @@
       "params": [
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "temp",
@@ -90789,8 +90920,8 @@
         },
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ],
       "group": "meos_quadbin_comp_ever"
@@ -90889,8 +91020,8 @@
       "params": [
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "temp",
@@ -90915,8 +91046,8 @@
         },
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ],
       "group": "meos_quadbin_comp_temp"
@@ -90952,8 +91083,8 @@
       "params": [
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "temp",
@@ -90978,8 +91109,8 @@
         },
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ],
       "group": "meos_quadbin_comp_temp"
@@ -92574,7 +92705,7 @@
         }
       ],
       "mdbC": "Tdistance_trgeometry_geo",
-      "sqlfn": "tdistance",
+      "sqlfn": "tDistance",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<->",
@@ -92600,7 +92731,7 @@
         }
       ],
       "mdbC": "Tdistance_trgeometry_tpoint",
-      "sqlfn": "tdistance",
+      "sqlfn": "tDistance",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<->",
@@ -92626,7 +92757,7 @@
         }
       ],
       "mdbC": "Tdistance_trgeometry_trgeometry",
-      "sqlfn": "tdistance",
+      "sqlfn": "tDistance",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "<->",
@@ -92895,7 +93026,7 @@
         }
       ],
       "mdbC": "Always_eq_geo_trgeometry",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -92921,7 +93052,7 @@
         }
       ],
       "mdbC": "Always_eq_trgeometry_geo",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -92947,7 +93078,7 @@
         }
       ],
       "mdbC": "Always_eq_trgeometry_trgeometry",
-      "sqlfn": "always_eq",
+      "sqlfn": "aEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%=",
@@ -92973,7 +93104,7 @@
         }
       ],
       "mdbC": "Always_ne_geo_trgeometry",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -92999,7 +93130,7 @@
         }
       ],
       "mdbC": "Always_ne_trgeometry_geo",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -93025,7 +93156,7 @@
         }
       ],
       "mdbC": "Always_ne_trgeometry_trgeometry",
-      "sqlfn": "always_ne",
+      "sqlfn": "aNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "%<>",
@@ -93051,7 +93182,7 @@
         }
       ],
       "mdbC": "Ever_eq_geo_trgeometry",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -93077,7 +93208,7 @@
         }
       ],
       "mdbC": "Ever_eq_trgeometry_geo",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -93103,7 +93234,7 @@
         }
       ],
       "mdbC": "Ever_eq_trgeometry_trgeometry",
-      "sqlfn": "ever_eq",
+      "sqlfn": "eEq",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?=",
@@ -93129,7 +93260,7 @@
         }
       ],
       "mdbC": "Ever_ne_geo_trgeometry",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -93155,7 +93286,7 @@
         }
       ],
       "mdbC": "Ever_ne_trgeometry_geo",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -93181,7 +93312,7 @@
         }
       ],
       "mdbC": "Ever_ne_trgeometry_trgeometry",
-      "sqlfn": "ever_ne",
+      "sqlfn": "eNe",
       "sqlArity": 2,
       "sqlArityMax": 2,
       "sqlop": "?<>",
@@ -96733,7 +96864,7 @@
       "file": "postgres_ext_defs.in.h",
       "returnType": {
         "c": "DateADT",
-        "canonical": "DateADT"
+        "canonical": "int"
       },
       "params": [
         {
@@ -96754,7 +96885,7 @@
         {
           "name": "date",
           "cType": "DateADT",
-          "canonical": "DateADT"
+          "canonical": "int"
         }
       ]
     },
@@ -97122,8 +97253,8 @@
         },
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         }
       ]
     },
@@ -97207,8 +97338,8 @@
       "params": [
         {
           "name": "cell",
-          "cType": "uint64_t",
-          "canonical": "uint64_t"
+          "cType": "Quadbin",
+          "canonical": "int"
         },
         {
           "name": "box",
@@ -104373,7 +104504,7 @@
         },
         {
           "name": "tunits",
-          "cType": "int64_t",
+          "cType": "int64",
           "canonical": "long"
         },
         {
@@ -104397,7 +104528,7 @@
       "name": "interval_units",
       "file": "temporal_tile.h",
       "returnType": {
-        "c": "int64_t",
+        "c": "int64",
         "canonical": "long"
       },
       "params": [
@@ -104423,7 +104554,7 @@
         },
         {
           "name": "tunits",
-          "cType": "int64_t",
+          "cType": "int64",
           "canonical": "long"
         },
         {
