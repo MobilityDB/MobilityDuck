@@ -404,14 +404,13 @@ def emit_set(f, kind):
                 f"        [&]({cpp1} a1, string_t b) {{\n"
                 f"            Set *s = BlobToSet(b);\n            bool r = {name}({marsh}, s);\n            free(s);\n"
                 f"            return r;\n        }});\n}}\n")
-    if kind == "u_set":
-        body = ("            Set *s = BlobToSet(in);\n"
-                f"            Set *r = {name}(s);\n            free(s);\n"
-                "            return SetToBlob(result, r);")
+    if kind == "u_set":             # (Set) -> Set (pointer return; MEOS NULL -> SQL NULL)
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
-                f"    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),\n"
-                f"        [&](string_t in) {{\n{body}\n        }});\n}}\n")
+                f"    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
+                f"        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                f"            Set *s = BlobToSet(in);\n            Set *r = {name}(s);\n            free(s);\n"
+                f"            return SetToBlobN(result, r, mask, idx);\n        }});\n}}\n")
     if kind.startswith("u_scalar:"):
         cct, rett, rexpr = byval_ret3(kind.split(':')[1])
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
@@ -420,10 +419,14 @@ def emit_set(f, kind):
                 f"        [&](string_t in) {{\n"
                 f"            Set *s = BlobToSet(in);\n            {cct} r = {name}(s);\n            free(s);\n"
                 f"            return {rexpr};\n        }});\n}}\n")
-    if kind == "b_set":
-        inner = (f"            Set *r = {name}(s1, s2);\n            free(s1); free(s2);\n"
-                 "            return SetToBlob(result, r);")
-        rett = "string_t"
+    if kind == "b_set":             # (Set,Set) -> Set (pointer return; MEOS NULL -> SQL NULL)
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                f"            Set *s1 = BlobToSet(a);\n            Set *s2 = BlobToSet(b);\n"
+                f"            Set *r = {name}(s1, s2);\n            free(s1); free(s2);\n"
+                f"            return SetToBlobN(result, r, mask, idx);\n        }});\n}}\n")
     else:  # b_bool
         inner = (f"            bool r = {name}(s1, s2);\n            free(s1); free(s2);\n            return r;")
         rett = "bool"
@@ -461,15 +464,15 @@ def poc_emittable(f):
 
 def emit_body(f, kind):
     name, sqlfn = f["name"], f["sqlfn"]
-    if kind == "temporal":
+    if kind == "temporal":          # (Temporal) -> Temporal (pointer return; MEOS NULL -> SQL NULL)
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
-                f"    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),\n"
-                f"        [&](string_t in) {{\n"
+                f"    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
+                f"        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
                 f"            Temporal *t = BlobToTemporal(in);\n"
                 f"            Temporal *r = {name}(t);\n"
                 f"            free(t);\n"
-                f"            return TemporalToBlob(result, r);  // frees r\n"
+                f"            return TemporalToBlobN(result, r, mask, idx);\n"
                 f"        }});\n}}\n")
     cct, rett, rexpr = scalar_emit3(f)
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
@@ -520,12 +523,17 @@ def emit_body_binary(f, kind, arg2):
     pre = "text *a2t = MakeText(a2);\n            " if is_text else ""
     call2 = "a2t" if is_text else marsh
     post = "free(a2t); " if is_text else ""
-    if kind == "temporal":
-        inner = f"{pre}Temporal *r = {name}(t, {call2});\n            {post}free(t);\n            return TemporalToBlob(result, r);"
-        rett = "string_t"
-    else:
-        ctype, rett, _rx = scalar_emit3(f)
-        inner = f"{pre}{ctype} r = {name}(t, {call2});\n            {post}free(t);\n            return {_rx};"
+    if kind == "temporal":          # pointer return -> NULL-safe (MEOS NULL -> SQL NULL)
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::ExecuteWithNulls<string_t, {cpp2}, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t in, {cpp2} a2, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                f"            Temporal *t = BlobToTemporal(in);\n"
+                f"            {pre}Temporal *r = {name}(t, {call2});\n            {post}free(t);\n"
+                f"            return TemporalToBlobN(result, r, mask, idx);\n"
+                f"        }});\n}}\n")
+    ctype, rett, _rx = scalar_emit3(f)
+    inner = f"{pre}{ctype} r = {name}(t, {call2});\n            {post}free(t);\n            return {_rx};"
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
             f"    BinaryExecutor::Execute<string_t, {cpp2}, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
@@ -580,12 +588,17 @@ def poc_ternary(f):
 def emit_body_ternary(f, kind, arg2, arg3):
     name = f["name"]; dt2, cpp2, _ = arg2; dt3, cpp3, _ = arg3
     e2 = arg2[2]; e3 = arg3[2].replace("a2", "a3")   # SCALAR_ARG marshal is templated on "a2"
-    if kind == "temporal":
-        inner = f"Temporal *r = {name}(t, {e2}, {e3});\n            free(t);\n            return TemporalToBlob(result, r);"
-        rett = "string_t"
-    else:
-        ctype, rett, _rx = scalar_emit3(f)
-        inner = f"{ctype} r = {name}(t, {e2}, {e3});\n            free(t);\n            return {_rx};"
+    if kind == "temporal":          # ternary -> Temporal (NULL-safe pointer return)
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    TernaryExecutor::ExecuteWithNulls<string_t, {cpp2}, {cpp3}, string_t>("
+                f"args.data[0], args.data[1], args.data[2], result, args.size(),\n"
+                f"        [&](string_t in, {cpp2} a2, {cpp3} a3, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                f"            Temporal *t = BlobToTemporal(in);\n"
+                f"            Temporal *r = {name}(t, {e2}, {e3});\n            free(t);\n"
+                f"            return TemporalToBlobN(result, r, mask, idx);\n        }});\n}}\n")
+    ctype, rett, _rx = scalar_emit3(f)
+    inner = f"{ctype} r = {name}(t, {e2}, {e3});\n            free(t);\n            return {_rx};"
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
             f"    TernaryExecutor::Execute<string_t, {cpp2}, {cpp3}, {rett}>("
@@ -613,13 +626,16 @@ def poc_binary_tt(f):
 
 def emit_binary_tt(f, kind):
     name = f["name"]
-    if kind == "temporal":
-        inner = (f"Temporal *r = {name}(t1, t2);\n            free(t1); free(t2);\n"
-                 f"            return TemporalToBlob(result, r);")
-        rett = "string_t"
-    else:
-        ctype, rett, _rx = scalar_emit3(f)
-        inner = f"{ctype} r = {name}(t1, t2);\n            free(t1); free(t2);\n            return {_rx};"
+    if kind == "temporal":          # (Temporal,Temporal) -> Temporal (NULL-safe pointer return)
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                f"            Temporal *t1 = BlobToTemporal(in1);\n            Temporal *t2 = BlobToTemporal(in2);\n"
+                f"            Temporal *r = {name}(t1, t2);\n            free(t1); free(t2);\n"
+                f"            return TemporalToBlobN(result, r, mask, idx);\n        }});\n}}\n")
+    ctype, rett, _rx = scalar_emit3(f)
+    inner = f"{ctype} r = {name}(t1, t2);\n            free(t1); free(t2);\n            return {_rx};"
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
             f"    BinaryExecutor::Execute<string_t, string_t, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
@@ -821,12 +837,16 @@ def emit_scalar_first(f, kind, arg1):
     pre = "text *a1t = MakeText(a1);\n            " if is_text else ""
     call1 = "a1t" if is_text else marsh
     post = "free(a1t); " if is_text else ""
-    if kind == "temporal":
-        inner = f"{pre}Temporal *r = {name}({call1}, t);\n            {post}free(t);\n            return TemporalToBlob(result, r);"
-        rett = "string_t"
-    else:
-        ctype, rett, _rx = scalar_emit3(f)
-        inner = f"{pre}{ctype} r = {name}({call1}, t);\n            {post}free(t);\n            return {_rx};"
+    if kind == "temporal":          # (scalar,Temporal) -> Temporal (NULL-safe pointer return)
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::ExecuteWithNulls<{cpp1}, string_t, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&]({cpp1} a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                f"            Temporal *t = BlobToTemporal(in);\n"
+                f"            {pre}Temporal *r = {name}({call1}, t);\n            {post}free(t);\n"
+                f"            return TemporalToBlobN(result, r, mask, idx);\n        }});\n}}\n")
+    ctype, rett, _rx = scalar_emit3(f)
+    inner = f"{pre}{ctype} r = {name}({call1}, t);\n            {post}free(t);\n            return {_rx};"
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
             f"    BinaryExecutor::Execute<{cpp1}, string_t, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
@@ -1297,6 +1317,10 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "    size_t sz = temporal_mem_size(t);\n"
            "    string_t out = StringVector::AddStringOrBlob(result, (const char *)t, sz);\n"
            "    free(t);\n    return out;\n}\n"
+           "// Null-aware variants: a MEOS function returning NULL (empty/undefined result,\n"
+           "// e.g. an intersection or restriction with no match) maps to SQL NULL via the mask.\n"
+           "inline string_t TemporalToBlobN(Vector &result, Temporal *t, ValidityMask &mask, idx_t idx) {\n"
+           "    if (!t) { mask.SetInvalid(idx); return string_t(); }\n    return TemporalToBlob(result, t);\n}\n"
            "inline Temporal *BlobToTemporal(string_t blob) {\n"
            "    size_t sz = blob.GetSize();\n"
            "    uint8_t *copy = (uint8_t *)malloc(sz);\n"
@@ -1306,6 +1330,8 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "inline string_t SetToBlob(Vector &result, Set *s) {\n"
            "    string_t out = StringVector::AddStringOrBlob(result, (const char *)s, set_mem_size(s));\n"
            "    free(s);\n    return out;\n}\n"
+           "inline string_t SetToBlobN(Vector &result, Set *s, ValidityMask &mask, idx_t idx) {\n"
+           "    if (!s) { mask.SetInvalid(idx); return string_t(); }\n    return SetToBlob(result, s);\n}\n"
            "inline Set *BlobToSet(string_t blob) {\n"
            "    size_t sz = blob.GetSize();\n"
            "    uint8_t *copy = (uint8_t *)malloc(sz);\n"

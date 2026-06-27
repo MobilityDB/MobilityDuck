@@ -33,6 +33,12 @@ inline string_t TemporalToBlob(Vector &result, Temporal *t) {
     free(t);
     return out;
 }
+// Null-aware variants: a MEOS function returning NULL (empty/undefined result,
+// e.g. an intersection or restriction with no match) maps to SQL NULL via the mask.
+inline string_t TemporalToBlobN(Vector &result, Temporal *t, ValidityMask &mask, idx_t idx) {
+    if (!t) { mask.SetInvalid(idx); return string_t(); }
+    return TemporalToBlob(result, t);
+}
 inline Temporal *BlobToTemporal(string_t blob) {
     size_t sz = blob.GetSize();
     uint8_t *copy = (uint8_t *)malloc(sz);
@@ -44,6 +50,10 @@ inline string_t SetToBlob(Vector &result, Set *s) {
     string_t out = StringVector::AddStringOrBlob(result, (const char *)s, set_mem_size(s));
     free(s);
     return out;
+}
+inline string_t SetToBlobN(Vector &result, Set *s, ValidityMask &mask, idx_t idx) {
+    if (!s) { mask.SetInvalid(idx); return string_t(); }
+    return SetToBlob(result, s);
 }
 inline Set *BlobToSet(string_t blob) {
     size_t sz = blob.GetSize();
@@ -380,23 +390,23 @@ static void Gen_intersection_tbox_tbox(DataChunk &args, ExpressionState &, Vecto
 // ===== @ingroup meos_cbuffer_conversion =====
 static void Gen_tcbuffer_to_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tcbuffer_to_tfloat(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tgeometry_to_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tgeometry_to_tcbuffer(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -1559,67 +1569,67 @@ static void Gen_ever_ne_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &re
 // ===== @ingroup meos_geo_conversion =====
 static void Gen_tgeogpoint_to_tgeography(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tgeogpoint_to_tgeography(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tgeography_to_tgeogpoint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tgeography_to_tgeogpoint(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tgeography_to_tgeometry(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tgeography_to_tgeometry(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tgeometry_to_tgeography(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tgeometry_to_tgeography(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tgeometry_to_tgeompoint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tgeometry_to_tgeompoint(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tgeompoint_to_tgeometry(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tgeompoint_to_tgeometry(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -1627,13 +1637,13 @@ static void Gen_tgeompoint_to_tgeometry(DataChunk &args, ExpressionState &, Vect
 // ===== @ingroup meos_geo_distance =====
 static void Gen_tdistance_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = tdistance_tgeo_tgeo(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -1763,61 +1773,61 @@ static void Gen_etouches_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &r
 // ===== @ingroup meos_geo_rel_temp =====
 static void Gen_tcontains_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = tcontains_tgeo_tgeo(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tcovers_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = tcovers_tgeo_tgeo(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tdisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = tdisjoint_tgeo_tgeo(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tintersects_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = tintersects_tgeo_tgeo(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_ttouches_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = ttouches_tgeo_tgeo(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -1849,23 +1859,23 @@ static void Gen_spatialset_transform(DataChunk &args, ExpressionState &, Vector 
 // ===== @ingroup meos_h3_conversion =====
 static void Gen_tbigint_to_th3index(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tbigint_to_th3index(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_th3index_to_tbigint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = th3index_to_tbigint(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -1873,23 +1883,23 @@ static void Gen_th3index_to_tbigint(DataChunk &args, ExpressionState &, Vector &
 // ===== @ingroup meos_h3_latlng =====
 static void Gen_tgeogpoint_to_th3index(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tgeogpoint_to_th3index(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tgeompoint_to_th3index(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tgeompoint_to_th3index(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -1897,23 +1907,23 @@ static void Gen_tgeompoint_to_th3index(DataChunk &args, ExpressionState &, Vecto
 // ===== @ingroup meos_json_conversion =====
 static void Gen_tjsonb_to_ttext(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tjsonb_to_ttext(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_ttext_to_tjsonb(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = ttext_to_tjsonb(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -1921,12 +1931,12 @@ static void Gen_ttext_to_tjsonb(DataChunk &args, ExpressionState &, Vector &resu
 // ===== @ingroup meos_npoint_conversion =====
 static void Gen_tgeompoint_to_tnpoint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tgeompoint_to_tnpoint(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -1934,23 +1944,23 @@ static void Gen_tgeompoint_to_tnpoint(DataChunk &args, ExpressionState &, Vector
 // ===== @ingroup meos_quadbin_conversion =====
 static void Gen_tbigint_to_tquadbin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tbigint_to_tquadbin(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tquadbin_to_tbigint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tquadbin_to_tbigint(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -2750,45 +2760,45 @@ static void Gen_spanset_ne(DataChunk &args, ExpressionState &, Vector &result) {
 // ===== @ingroup meos_setspan_conversion =====
 static void Gen_dateset_to_tstzset(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s = BlobToSet(in);
             Set *r = dateset_to_tstzset(s);
             free(s);
-            return SetToBlob(result, r);
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_floatset_to_intset(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s = BlobToSet(in);
             Set *r = floatset_to_intset(s);
             free(s);
-            return SetToBlob(result, r);
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_intset_to_floatset(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s = BlobToSet(in);
             Set *r = intset_to_floatset(s);
             free(s);
-            return SetToBlob(result, r);
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tstzset_to_dateset(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s = BlobToSet(in);
             Set *r = tstzset_to_dateset(s);
             free(s);
-            return SetToBlob(result, r);
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
@@ -4498,13 +4508,13 @@ static void Gen_intersection_set_int(DataChunk &args, ExpressionState &, Vector 
 
 static void Gen_intersection_set_set(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s1 = BlobToSet(a);
             Set *s2 = BlobToSet(b);
             Set *r = intersection_set_set(s1, s2);
             free(s1); free(s2);
-            return SetToBlob(result, r);
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
@@ -4577,13 +4587,13 @@ static void Gen_minus_set_int(DataChunk &args, ExpressionState &, Vector &result
 
 static void Gen_minus_set_set(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s1 = BlobToSet(a);
             Set *s2 = BlobToSet(b);
             Set *r = minus_set_set(s1, s2);
             free(s1); free(s2);
-            return SetToBlob(result, r);
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
@@ -4656,13 +4666,13 @@ static void Gen_union_set_int(DataChunk &args, ExpressionState &, Vector &result
 
 static void Gen_union_set_set(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s1 = BlobToSet(a);
             Set *s2 = BlobToSet(b);
             Set *r = union_set_set(s1, s2);
             free(s1); free(s2);
-            return SetToBlob(result, r);
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
@@ -5343,34 +5353,34 @@ static void Gen_overlaps_spanset_spanset(DataChunk &args, ExpressionState &, Vec
 // ===== @ingroup meos_setspan_transf =====
 static void Gen_floatset_ceil(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s = BlobToSet(in);
             Set *r = floatset_ceil(s);
             free(s);
-            return SetToBlob(result, r);
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_floatset_floor(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s = BlobToSet(in);
             Set *r = floatset_floor(s);
             free(s);
-            return SetToBlob(result, r);
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_floatset_radians(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s = BlobToSet(in);
             Set *r = floatset_radians(s);
             free(s);
-            return SetToBlob(result, r);
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
@@ -5399,34 +5409,34 @@ static void Gen_textcat_textset_text(DataChunk &args, ExpressionState &, Vector 
 
 static void Gen_textset_initcap(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s = BlobToSet(in);
             Set *r = textset_initcap(s);
             free(s);
-            return SetToBlob(result, r);
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_textset_lower(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s = BlobToSet(in);
             Set *r = textset_lower(s);
             free(s);
-            return SetToBlob(result, r);
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_textset_upper(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s = BlobToSet(in);
             Set *r = textset_upper(s);
             free(s);
-            return SetToBlob(result, r);
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
@@ -6000,34 +6010,34 @@ static void Gen_temporal_hausdorff_distance(DataChunk &args, ExpressionState &, 
 // ===== @ingroup meos_temporal_analytics_simplify =====
 static void Gen_temporal_simplify_dp(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    TernaryExecutor::Execute<string_t, double, bool, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
-        [&](string_t in, double a2, bool a3) {
+    TernaryExecutor::ExecuteWithNulls<string_t, double, bool, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t in, double a2, bool a3, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = temporal_simplify_dp(t, a2, a3);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_temporal_simplify_max_dist(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    TernaryExecutor::Execute<string_t, double, bool, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
-        [&](string_t in, double a2, bool a3) {
+    TernaryExecutor::ExecuteWithNulls<string_t, double, bool, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t in, double a2, bool a3, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = temporal_simplify_max_dist(t, a2, a3);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_temporal_simplify_min_dist(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = temporal_simplify_min_dist(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -7047,80 +7057,80 @@ static void Gen_same_tstzspan_temporal(DataChunk &args, ExpressionState &, Vecto
 // ===== @ingroup meos_temporal_bool =====
 static void Gen_tand_bool_tbool(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<bool, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](bool a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<bool, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](bool a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tand_bool_tbool(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tand_tbool_bool(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, bool a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, bool a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tand_tbool_bool(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tand_tbool_tbool(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = tand_tbool_tbool(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tnot_tbool(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tnot_tbool(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tor_bool_tbool(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<bool, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](bool a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<bool, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](bool a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tor_bool_tbool(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tor_tbool_bool(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, bool a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, bool a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tor_tbool_bool(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tor_tbool_tbool(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = tor_tbool_tbool(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -8442,525 +8452,525 @@ static void Gen_ever_ne_ttext_text(DataChunk &args, ExpressionState &, Vector &r
 // ===== @ingroup meos_temporal_comp_temp =====
 static void Gen_teq_bool_tbool(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<bool, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](bool a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<bool, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](bool a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = teq_bool_tbool(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_teq_float_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](double a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](double a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = teq_float_tfloat(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_teq_int_tint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int32_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](int32_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = teq_int_tint(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_teq_tbool_bool(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, bool a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, bool a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = teq_tbool_bool(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_teq_temporal_temporal(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = teq_temporal_temporal(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_teq_text_ttext(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             text *a1t = MakeText(a1);
             Temporal *r = teq_text_ttext(a1t, t);
             free(a1t); free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_teq_tfloat_float(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = teq_tfloat_float(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_teq_tint_int(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = teq_tint_int(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_teq_ttext_text(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, string_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             text *a2t = MakeText(a2);
             Temporal *r = teq_ttext_text(t, a2t);
             free(a2t); free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tge_float_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](double a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](double a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tge_float_tfloat(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tge_int_tint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int32_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](int32_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tge_int_tint(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tge_temporal_temporal(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = tge_temporal_temporal(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tge_text_ttext(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             text *a1t = MakeText(a1);
             Temporal *r = tge_text_ttext(a1t, t);
             free(a1t); free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tge_tfloat_float(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tge_tfloat_float(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tge_tint_int(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tge_tint_int(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tge_ttext_text(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, string_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             text *a2t = MakeText(a2);
             Temporal *r = tge_ttext_text(t, a2t);
             free(a2t); free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tgt_float_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](double a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](double a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tgt_float_tfloat(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tgt_int_tint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int32_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](int32_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tgt_int_tint(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tgt_temporal_temporal(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = tgt_temporal_temporal(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tgt_text_ttext(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             text *a1t = MakeText(a1);
             Temporal *r = tgt_text_ttext(a1t, t);
             free(a1t); free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tgt_tfloat_float(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tgt_tfloat_float(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tgt_tint_int(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tgt_tint_int(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tgt_ttext_text(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, string_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             text *a2t = MakeText(a2);
             Temporal *r = tgt_ttext_text(t, a2t);
             free(a2t); free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tle_float_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](double a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](double a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tle_float_tfloat(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tle_int_tint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int32_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](int32_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tle_int_tint(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tle_temporal_temporal(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = tle_temporal_temporal(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tle_text_ttext(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             text *a1t = MakeText(a1);
             Temporal *r = tle_text_ttext(a1t, t);
             free(a1t); free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tle_tfloat_float(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tle_tfloat_float(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tle_tint_int(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tle_tint_int(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tle_ttext_text(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, string_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             text *a2t = MakeText(a2);
             Temporal *r = tle_ttext_text(t, a2t);
             free(a2t); free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tlt_float_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](double a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](double a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tlt_float_tfloat(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tlt_int_tint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int32_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](int32_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tlt_int_tint(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tlt_temporal_temporal(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = tlt_temporal_temporal(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tlt_text_ttext(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             text *a1t = MakeText(a1);
             Temporal *r = tlt_text_ttext(a1t, t);
             free(a1t); free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tlt_tfloat_float(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tlt_tfloat_float(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tlt_tint_int(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tlt_tint_int(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tlt_ttext_text(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, string_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             text *a2t = MakeText(a2);
             Temporal *r = tlt_ttext_text(t, a2t);
             free(a2t); free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tne_bool_tbool(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<bool, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](bool a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<bool, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](bool a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tne_bool_tbool(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tne_float_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](double a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](double a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tne_float_tfloat(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tne_int_tint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int32_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](int32_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tne_int_tint(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tne_tbool_bool(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, bool a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, bool a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tne_tbool_bool(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tne_temporal_temporal(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = tne_temporal_temporal(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tne_text_ttext(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             text *a1t = MakeText(a1);
             Temporal *r = tne_text_ttext(a1t, t);
             free(a1t); free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tne_tfloat_float(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tne_tfloat_float(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tne_tint_int(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tne_tint_int(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tne_ttext_text(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, string_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             text *a2t = MakeText(a2);
             Temporal *r = tne_ttext_text(t, a2t);
             free(a2t); free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -9054,78 +9064,78 @@ static void Gen_temporal_ne(DataChunk &args, ExpressionState &, Vector &result) 
 // ===== @ingroup meos_temporal_conversion =====
 static void Gen_tbool_to_tint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tbool_to_tint(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tfloat_to_tint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tfloat_to_tint(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tfloat_to_tbigint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tfloat_to_tbigint(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tint_to_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tint_to_tfloat(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tint_to_tbigint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tint_to_tbigint(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tbigint_to_tint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tbigint_to_tint(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tbigint_to_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tbigint_to_tfloat(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -9133,35 +9143,35 @@ static void Gen_tbigint_to_tfloat(DataChunk &args, ExpressionState &, Vector &re
 // ===== @ingroup meos_temporal_dist =====
 static void Gen_tdistance_tfloat_float(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tdistance_tfloat_float(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tdistance_tint_int(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tdistance_tint_int(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tdistance_tnumber_tnumber(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = tdistance_tnumber_tnumber(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -9215,412 +9225,412 @@ static void Gen_nad_tint_tint(DataChunk &args, ExpressionState &, Vector &result
 // ===== @ingroup meos_temporal_math =====
 static void Gen_add_float_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](double a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](double a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = add_float_tfloat(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_add_int_tint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int32_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](int32_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = add_int_tint(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_add_tfloat_float(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = add_tfloat_float(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_add_tint_int(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = add_tint_int(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_add_bigint_tbigint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<int64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](int64_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = add_bigint_tbigint(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_add_tbigint_bigint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = add_tbigint_bigint(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_add_tnumber_tnumber(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = add_tnumber_tnumber(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_div_float_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](double a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](double a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = div_float_tfloat(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_div_int_tint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int32_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](int32_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = div_int_tint(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_div_tfloat_float(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = div_tfloat_float(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_div_bigint_tbigint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<int64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](int64_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = div_bigint_tbigint(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_div_tnumber_tnumber(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = div_tnumber_tnumber(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_mul_float_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](double a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](double a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = mul_float_tfloat(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_mul_int_tint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int32_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](int32_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = mul_int_tint(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_mul_tfloat_float(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = mul_tfloat_float(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_mul_tint_int(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = mul_tint_int(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_mul_bigint_tbigint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<int64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](int64_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = mul_bigint_tbigint(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_mul_tbigint_bigint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = mul_tbigint_bigint(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_mul_tnumber_tnumber(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = mul_tnumber_tnumber(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_sub_float_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](double a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](double a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = sub_float_tfloat(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_sub_int_tint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int32_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](int32_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = sub_int_tint(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_sub_tfloat_float(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = sub_tfloat_float(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_sub_tint_int(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = sub_tint_int(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_sub_bigint_tbigint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<int64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](int64_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = sub_bigint_tbigint(a1, t);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_sub_tbigint_bigint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = sub_tbigint_bigint(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_sub_tnumber_tnumber(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = sub_tnumber_tnumber(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_temporal_derivative(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = temporal_derivative(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tfloat_exp(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tfloat_exp(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tfloat_ln(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tfloat_ln(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tfloat_log10(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tfloat_log10(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tfloat_sin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tfloat_sin(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tfloat_cos(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tfloat_cos(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tfloat_tan(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tfloat_tan(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tnumber_abs(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tnumber_abs(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tnumber_trend(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tnumber_trend(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tnumber_angular_difference(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tnumber_angular_difference(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tnumber_delta_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tnumber_delta_value(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -9628,24 +9638,24 @@ static void Gen_tnumber_delta_value(DataChunk &args, ExpressionState &, Vector &
 // ===== @ingroup meos_temporal_modif =====
 static void Gen_temporal_delete_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    TernaryExecutor::Execute<string_t, timestamp_tz_t, bool, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
-        [&](string_t in, timestamp_tz_t a2, bool a3) {
+    TernaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, bool, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t in, timestamp_tz_t a2, bool a3, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = temporal_delete_timestamptz(t, DuckDBToMeosTimestamp(a2).value, a3);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_temporal_merge(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = temporal_merge(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -9653,179 +9663,179 @@ static void Gen_temporal_merge(DataChunk &args, ExpressionState &, Vector &resul
 // ===== @ingroup meos_temporal_restrict =====
 static void Gen_tbool_at_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, bool a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, bool a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tbool_at_value(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tbool_minus_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, bool a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, bool a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tbool_minus_value(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_temporal_after_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    TernaryExecutor::Execute<string_t, timestamp_tz_t, bool, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
-        [&](string_t in, timestamp_tz_t a2, bool a3) {
+    TernaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, bool, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t in, timestamp_tz_t a2, bool a3, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = temporal_after_timestamptz(t, DuckDBToMeosTimestamp(a2).value, a3);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_temporal_at_max(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = temporal_at_max(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_temporal_at_min(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = temporal_at_min(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_temporal_at_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, timestamp_tz_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, timestamp_tz_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = temporal_at_timestamptz(t, DuckDBToMeosTimestamp(a2).value);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_temporal_before_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    TernaryExecutor::Execute<string_t, timestamp_tz_t, bool, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
-        [&](string_t in, timestamp_tz_t a2, bool a3) {
+    TernaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, bool, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t in, timestamp_tz_t a2, bool a3, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = temporal_before_timestamptz(t, DuckDBToMeosTimestamp(a2).value, a3);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_temporal_minus_max(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = temporal_minus_max(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_temporal_minus_min(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = temporal_minus_min(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_temporal_minus_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, timestamp_tz_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, timestamp_tz_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = temporal_minus_timestamptz(t, DuckDBToMeosTimestamp(a2).value);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tfloat_at_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tfloat_at_value(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tfloat_minus_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tfloat_minus_value(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tint_at_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tint_at_value(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tint_minus_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tint_minus_value(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_ttext_at_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, string_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             text *a2t = MakeText(a2);
             Temporal *r = ttext_at_value(t, a2t);
             free(a2t); free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_ttext_minus_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, string_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             text *a2t = MakeText(a2);
             Temporal *r = ttext_minus_value(t, a2t);
             free(a2t); free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -9905,70 +9915,70 @@ static void Gen_temporal_minus_tstzspanset(DataChunk &args, ExpressionState &, V
 // ===== @ingroup meos_temporal_text =====
 static void Gen_textcat_text_ttext(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a1, string_t in) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             text *a1t = MakeText(a1);
             Temporal *r = textcat_text_ttext(a1t, t);
             free(a1t); free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_textcat_ttext_text(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, string_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             text *a2t = MakeText(a2);
             Temporal *r = textcat_ttext_text(t, a2t);
             free(a2t); free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_textcat_ttext_ttext(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = textcat_ttext_ttext(t1, t2);
             free(t1); free(t2);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_ttext_initcap(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = ttext_initcap(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_ttext_upper(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = ttext_upper(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_ttext_lower(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = ttext_lower(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -9976,155 +9986,155 @@ static void Gen_ttext_lower(DataChunk &args, ExpressionState &, Vector &result) 
 // ===== @ingroup meos_temporal_transf =====
 static void Gen_temporal_round(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = temporal_round(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tfloat_ceil(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tfloat_ceil(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tfloat_degrees(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, bool a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, bool a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tfloat_degrees(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tfloat_floor(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tfloat_floor(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tfloat_radians(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tfloat_radians(t);
             free(t);
-            return TemporalToBlob(result, r);  // frees r
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tfloat_scale_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tfloat_scale_value(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tfloat_shift_scale_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    TernaryExecutor::Execute<string_t, double, double, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
-        [&](string_t in, double a2, double a3) {
+    TernaryExecutor::ExecuteWithNulls<string_t, double, double, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t in, double a2, double a3, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tfloat_shift_scale_value(t, a2, a3);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tfloat_shift_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tfloat_shift_value(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tint_scale_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tint_scale_value(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tbigint_scale_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tbigint_scale_value(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tint_shift_scale_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    TernaryExecutor::Execute<string_t, int32_t, int32_t, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
-        [&](string_t in, int32_t a2, int32_t a3) {
+    TernaryExecutor::ExecuteWithNulls<string_t, int32_t, int32_t, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t in, int32_t a2, int32_t a3, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tint_shift_scale_value(t, a2, a3);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tbigint_shift_scale_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    TernaryExecutor::Execute<string_t, int64_t, int64_t, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
-        [&](string_t in, int64_t a2, int64_t a3) {
+    TernaryExecutor::ExecuteWithNulls<string_t, int64_t, int64_t, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t in, int64_t a2, int64_t a3, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tbigint_shift_scale_value(t, a2, a3);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tint_shift_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tint_shift_value(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tbigint_shift_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tbigint_shift_value(t, a2);
             free(t);
-            return TemporalToBlob(result, r);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
