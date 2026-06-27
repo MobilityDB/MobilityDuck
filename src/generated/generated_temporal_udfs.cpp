@@ -365,12 +365,13 @@ static void Gen_tbox_ne(DataChunk &args, ExpressionState &, Vector &result) {
 // ===== @ingroup meos_box_set =====
 static void Gen_intersection_tbox_tbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
             TBox *s1 = BlobToTbox(a);
             TBox *s2 = BlobToTbox(b);
             TBox *r = intersection_tbox_tbox(s1, s2);
             free(s1); free(s2);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
             return TboxToBlob(result, r);
         });
 }
@@ -1431,12 +1432,13 @@ static void Gen_right_stbox_stbox(DataChunk &args, ExpressionState &, Vector &re
 // ===== @ingroup meos_geo_box_set =====
 static void Gen_intersection_stbox_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
             STBox *s1 = BlobToStbox(a);
             STBox *s2 = BlobToStbox(b);
             STBox *r = intersection_stbox_stbox(s1, s2);
             free(s1); free(s2);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
             return StboxToBlob(result, r);
         });
 }
@@ -2792,88 +2794,96 @@ static void Gen_tstzset_to_dateset(DataChunk &args, ExpressionState &, Vector &r
 
 static void Gen_datespan_to_tstzspan(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Span *s = BlobToSpan(in);
             Span *r = datespan_to_tstzspan(s);
             free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanToBlob(result, r);
         });
 }
 
 static void Gen_floatspan_to_intspan(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Span *s = BlobToSpan(in);
             Span *r = floatspan_to_intspan(s);
             free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanToBlob(result, r);
         });
 }
 
 static void Gen_intspan_to_floatspan(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Span *s = BlobToSpan(in);
             Span *r = intspan_to_floatspan(s);
             free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanToBlob(result, r);
         });
 }
 
 static void Gen_tstzspan_to_datespan(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Span *s = BlobToSpan(in);
             Span *r = tstzspan_to_datespan(s);
             free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanToBlob(result, r);
         });
 }
 
 static void Gen_datespanset_to_tstzspanset(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s = BlobToSpanSet(in);
             SpanSet *r = datespanset_to_tstzspanset(s);
             free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
         });
 }
 
 static void Gen_floatspanset_to_intspanset(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s = BlobToSpanSet(in);
             SpanSet *r = floatspanset_to_intspanset(s);
             free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
         });
 }
 
 static void Gen_intspanset_to_floatspanset(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s = BlobToSpanSet(in);
             SpanSet *r = intspanset_to_floatspanset(s);
             free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
         });
 }
 
 static void Gen_tstzspanset_to_datespanset(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s = BlobToSpanSet(in);
             SpanSet *r = tstzspanset_to_datespanset(s);
             free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
         });
 }
@@ -4681,48 +4691,52 @@ static void Gen_union_set_timestamptz(DataChunk &args, ExpressionState &, Vector
 
 static void Gen_intersection_span_span(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
             Span *s1 = BlobToSpan(a);
             Span *s2 = BlobToSpan(b);
             Span *r = intersection_span_span(s1, s2);
             free(s1); free(s2);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanToBlob(result, r);
         });
 }
 
 static void Gen_intersection_spanset_spanset(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s1 = BlobToSpanSet(a);
             SpanSet *s2 = BlobToSpanSet(b);
             SpanSet *r = intersection_spanset_spanset(s1, s2);
             free(s1); free(s2);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
         });
 }
 
 static void Gen_minus_spanset_spanset(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s1 = BlobToSpanSet(a);
             SpanSet *s2 = BlobToSpanSet(b);
             SpanSet *r = minus_spanset_spanset(s1, s2);
             free(s1); free(s2);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
         });
 }
 
 static void Gen_union_spanset_spanset(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s1 = BlobToSpanSet(a);
             SpanSet *s2 = BlobToSpanSet(b);
             SpanSet *r = union_spanset_spanset(s1, s2);
             free(s1); free(s2);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
         });
 }
@@ -5418,66 +5432,72 @@ static void Gen_textset_upper(DataChunk &args, ExpressionState &, Vector &result
 
 static void Gen_floatspan_ceil(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Span *s = BlobToSpan(in);
             Span *r = floatspan_ceil(s);
             free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanToBlob(result, r);
         });
 }
 
 static void Gen_floatspan_floor(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Span *s = BlobToSpan(in);
             Span *r = floatspan_floor(s);
             free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanToBlob(result, r);
         });
 }
 
 static void Gen_floatspan_radians(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Span *s = BlobToSpan(in);
             Span *r = floatspan_radians(s);
             free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanToBlob(result, r);
         });
 }
 
 static void Gen_floatspanset_ceil(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s = BlobToSpanSet(in);
             SpanSet *r = floatspanset_ceil(s);
             free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
         });
 }
 
 static void Gen_floatspanset_floor(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s = BlobToSpanSet(in);
             SpanSet *r = floatspanset_floor(s);
             free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
         });
 }
 
 static void Gen_floatspanset_radians(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s = BlobToSpanSet(in);
             SpanSet *r = floatspanset_radians(s);
             free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
         });
 }

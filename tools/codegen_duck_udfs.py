@@ -946,12 +946,13 @@ def emit_span(f, kind, C=SPAN_C):
                 f"        [&]({cpp1} a1, string_t b) {{\n"
                 f"            {cb} *s = {bt}(b);\n            bool r = {name}({marsh}, s);\n            free(s);\n"
                 f"            return r;\n        }});\n}}\n")
-    if kind == "u_span":            # (X) -> X
+    if kind == "u_span":            # (X) -> X (pointer return; MEOS NULL = empty -> SQL NULL)
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
-                f"    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),\n"
-                f"        [&](string_t in) {{\n"
+                f"    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
+                f"        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
                 f"            {cb} *s = {bt}(in);\n            {cb} *r = {name}(s);\n            free(s);\n"
+                f"            if (!r) {{ mask.SetInvalid(idx); return string_t(); }}\n"
                 f"            return {tb}(result, r);\n        }});\n}}\n")
     if kind.startswith("u_scalar:"):  # (X) -> scalar (by-value, time-converted, or owned Interval*)
         cct, rett, rexpr = byval_ret3(kind.split(':')[1])
@@ -969,17 +970,21 @@ def emit_span(f, kind, C=SPAN_C):
                 f"        [&](string_t in, {cpp2} a2) {{\n"
                 f"            {cb} *s = {bt}(in);\n            MeosInterval *r = {name}(s, {marsh});\n            free(s);\n"
                 f"            return TakeInterval(r);\n        }});\n}}\n")
-    if kind == "b_span":
-        inner = f"{cb} *r = {name}(s1, s2);\n            free(s1); free(s2);\n            return {tb}(result, r);"
-        rett = "string_t"
-    else:
-        inner = f"bool r = {name}(s1, s2);\n            free(s1); free(s2);\n            return r;"
-        rett = "bool"
+    if kind == "b_span":            # (X,X) -> X (pointer return; MEOS NULL = empty -> SQL NULL)
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                f"            {cb} *s1 = {bt}(a);\n            {cb} *s2 = {bt}(b);\n"
+                f"            {cb} *r = {name}(s1, s2);\n            free(s1); free(s2);\n"
+                f"            if (!r) {{ mask.SetInvalid(idx); return string_t(); }}\n"
+                f"            return {tb}(result, r);\n        }});\n}}\n")
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
-            f"    BinaryExecutor::Execute<string_t, string_t, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
+            f"    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),\n"
             f"        [&](string_t a, string_t b) {{\n"
-            f"            {cb} *s1 = {bt}(a);\n            {cb} *s2 = {bt}(b);\n            {inner}\n"
+            f"            {cb} *s1 = {bt}(a);\n            {cb} *s2 = {bt}(b);\n"
+            f"            bool r = {name}(s1, s2);\n            free(s1); free(s2);\n            return r;\n"
             f"        }});\n}}\n")
 
 # ---- coexistence prefix (TRANSITION scaffolding — NOT a canonical name) ----
