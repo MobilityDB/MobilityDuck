@@ -116,12 +116,49 @@ vcpkg_replace_string(
 # public leaf headers pg_date.h / pg_timestamp.h (see meos_wrapper_simple.hpp).
 # These patches were the contamination that broke the binding's own include path.
 
+# USER-APPROVED-PIN-WRITE (2026-06-27): POINTCLOUD=ON links
+# ${SOURCE_PATH}/pointcloud-pg/lib/libpc.a (see meos/CMakeLists.txt), a build
+# artifact not shipped in the source tarball. Build just the core library
+# (make -C lib) from the vendored pgPointCloud autotools tree; this also emits
+# the optional liblazperf.a. The pgsql/ subdir (PGXS extension, needs pg_config)
+# is intentionally skipped -- MEOS only links libpc.a. Proven on the pin source
+# (49c896b27): ./autogen.sh && ./configure && make -C lib yields both archives.
+vcpkg_execute_required_process(
+    COMMAND ./autogen.sh
+    WORKING_DIRECTORY "${SOURCE_PATH}/pointcloud-pg"
+    LOGNAME meos-pointcloud-autogen)
+vcpkg_execute_required_process(
+    COMMAND ./configure
+    WORKING_DIRECTORY "${SOURCE_PATH}/pointcloud-pg"
+    LOGNAME meos-pointcloud-configure)
+vcpkg_execute_required_process(
+    COMMAND make -C lib
+    WORKING_DIRECTORY "${SOURCE_PATH}/pointcloud-pg"
+    LOGNAME meos-pointcloud-makelib)
+
 vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}"
     OPTIONS
         -DMEOS=ON
-        -DH3=OFF
+        # USER-APPROVED-PIN-WRITE (2026-06-27): activate ALL families so the
+        # standalone libmeos matches the full catalog surface the binding
+        # generates against (catalog subseteq libmeos). Mirrors the existing
+        # -DQUADBIN=ON sibling idiom in this same file. H3 needs system libh3
+        # (auto-found via find_library); POINTCLOUD needs pointcloud-pg/lib/
+        # libpc.a, built from source just above. RGEO follows POSE automatically
+        # (CMAKE_DEPENDENT_OPTION). RASTER stays OFF (PG-only, no standalone link).
+        # USER-APPROVED-PIN-WRITE (2026-06-27): ARROW=ON exports the Apache Arrow C
+        # Data Interface roundtrip helpers (header-only; vendored arrow/ + nanoarrow/
+        # present at the pin, no libarrow link; regularized option(ARROW) per PRs
+        # #1144/#1041/#1071, validated ON and OFF). C-API only (sqlfn=None, not
+        # generated as UDFs) but completes catalog subseteq libmeos for Arrow/Iceberg.
+        -DARROW=ON
+        -DCBUFFER=ON
+        -DH3=ON
         -DJSON=ON
+        -DNPOINT=ON
+        -DPOINTCLOUD=ON
+        -DPOSE=ON
         -DQUADBIN=ON
         "-DJSON-C_LIBRARIES=${_MEOS_JSONC_LIB}"
         "-DJSON-C_INCLUDE_DIRS=${_MEOS_JSONC_INC}"
