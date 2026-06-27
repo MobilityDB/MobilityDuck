@@ -1020,30 +1020,25 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     mobilityduck::RegisterTemporalDatumAccessor<double>(
         loader, "getValue", TemporalTypes::tfloat(), LogicalType::DOUBLE,  tinstant_value_temporal);
 
-    // startValue / endValue on tint / tbool / tfloat
-    mobilityduck::RegisterTemporalDatumAccessor<int64_t>(
-        loader, "startValue", TemporalTypes::tint(),   LogicalType::BIGINT,  temporal_start_value);
+    // startValue / endValue on tbool / tfloat. The tint overloads are now owned by
+    // the generated surface (canonical INTEGER return, per the catalog `int` — not
+    // the legacy hand BIGINT); kept here only for the types the generated marshalling
+    // matches identically (tbool->BOOLEAN, tfloat->DOUBLE).
     mobilityduck::RegisterTemporalDatumAccessor<bool>(
         loader, "startValue", TemporalTypes::tbool(),  LogicalType::BOOLEAN, temporal_start_value);
     mobilityduck::RegisterTemporalDatumAccessor<double>(
         loader, "startValue", TemporalTypes::tfloat(), LogicalType::DOUBLE,  temporal_start_value);
 
-    mobilityduck::RegisterTemporalDatumAccessor<int64_t>(
-        loader, "endValue", TemporalTypes::tint(),   LogicalType::BIGINT,  temporal_end_value);
     mobilityduck::RegisterTemporalDatumAccessor<bool>(
         loader, "endValue", TemporalTypes::tbool(),  LogicalType::BOOLEAN, temporal_end_value);
     mobilityduck::RegisterTemporalDatumAccessor<double>(
         loader, "endValue", TemporalTypes::tfloat(), LogicalType::DOUBLE,  temporal_end_value);
 
-    // minValue / maxValue on tint / tfloat (tbool omitted — min/max on a
-    // boolean is meaningless and the existing API does not expose it)
-    mobilityduck::RegisterTemporalDatumAccessor<int64_t>(
-        loader, "minValue", TemporalTypes::tint(),   LogicalType::BIGINT, temporal_min_value);
+    // minValue / maxValue on tfloat (tint owned by the generated INTEGER surface;
+    // tbool omitted — min/max on a boolean is meaningless and the API omits it)
     mobilityduck::RegisterTemporalDatumAccessor<double>(
         loader, "minValue", TemporalTypes::tfloat(), LogicalType::DOUBLE, temporal_min_value);
 
-    mobilityduck::RegisterTemporalDatumAccessor<int64_t>(
-        loader, "maxValue", TemporalTypes::tint(),   LogicalType::BIGINT, temporal_max_value);
     mobilityduck::RegisterTemporalDatumAccessor<double>(
         loader, "maxValue", TemporalTypes::tfloat(), LogicalType::DOUBLE, temporal_max_value);
 
@@ -1375,7 +1370,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("deltaValue", {TemporalTypes::tint()},   TemporalTypes::tint(),   TemporalFunctions::Tnumber_delta_value));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("deltaValue", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Tnumber_delta_value));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("trend",      {TemporalTypes::tint()},   TemporalTypes::tint(),   TemporalFunctions::Tnumber_trend));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("trend",      {TemporalTypes::tfloat()}, TemporalTypes::tint(),   TemporalFunctions::Tnumber_trend));
+    // trend(tfloat) is owned by the generated surface, which returns a tfloat
+    // (consistent with deltaValue above); the hand line wrongly returned tint.
 
     // Named-function aliases for the arithmetic operators (MobilityDB exposes
     // both `+`/`-`/`*`/`/` and `tnumber_add`/`sub`/`mult`/`div`).
@@ -1418,10 +1414,12 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     //   SELECT 100.0::DOUBLE <-> tfloat '2.5@2000-01-01'; -- returns 2.5, expected 97.5
     // The temporal-temporal variant DOES work correctly, and so does nad_*.
     // Restore the value-distance registrations once the MEOS issue is resolved.
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<->", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tint(), TemporalFunctions::Tdistance_tnumber_tnumber));
+    // The (tint,tint) temporal distance is owned by the generated surface, which
+    // returns a tfloat (the temporal distance is always a tfloat — the hand line
+    // wrongly typed the result BLOB as tint). The tfloat,tfloat variant matches the
+    // generated return and is kept.
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<->", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Tdistance_tnumber_tnumber));
     // Named form of the same function for SQL portability.
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tdistance", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tint(), TemporalFunctions::Tdistance_tnumber_tnumber));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tdistance", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Tdistance_tnumber_tnumber));
 
     // nearestApproachDistance / nad — scalar return

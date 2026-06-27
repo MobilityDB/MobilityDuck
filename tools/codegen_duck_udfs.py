@@ -166,9 +166,18 @@ BYVAL_RET = set(SCALAR_RET_CPP) | {"TimestampTz", "DateADT"}
 
 def is_pred_int(f):
     """ever_*/always_* return MEOS `int` but are semantically BOOLEAN (everEq answers
-    'is it EVER equal?' = a single bool, vs teq = a pointwise tbool)."""
-    return base(f["returnType"]["canonical"]) in ("int", "int32_t") and \
-        re.match(r'(ever|always)_', f["name"]) is not None
+    'is it EVER equal?' = a single bool, vs teq = a pointwise tbool). The spatial
+    ever/always relationships (catalog group `*_rel_ever`/`*_rel_always`: aDisjoint,
+    eContains, eCovers, eIntersects, eTouches, eDwithin, ...) are the same shape — a
+    scalar `int` 0/1 that is a SQL BOOLEAN — but their names are the bare a*/e* form, so
+    key on the catalog group too (mirrors the increment-18 geo-comparison BOOLEAN rule).
+    The `*Pairs` array variants return `int *` (a SETOF) and are excluded by the no-`*`
+    guard."""
+    rc = f["returnType"]["canonical"]
+    if base(rc) not in ("int", "int32_t") or "*" in norm(rc):
+        return False
+    return (re.match(r'(ever|always)_', f["name"]) is not None
+            or re.search(r'_rel_(ever|always)$', f.get("group") or "") is not None)
 
 def scalar_ret_duck(f):
     """DuckDB registration return type for a by-value scalar return."""
@@ -272,12 +281,26 @@ def reg_scope(name):
 # PRESERVES its input type -> the arg's accessor (passed in).
 TO_TYPE = {"tint": "TemporalTypes::tint()", "tbigint": "TemporalTypes::tbigint()",
            "tfloat": "TemporalTypes::tfloat()",
-           "tbool": "TemporalTypes::tbool()", "ttext": "TemporalTypes::ttext()"}
-def ret_temporal_type(name, arg_acc):
+           "tbool": "TemporalTypes::tbool()", "ttext": "TemporalTypes::ttext()",
+           "tgeometry": "TGeometryTypes::tgeometry()", "tgeography": "TGeographyTypes::tgeography()",
+           "tgeompoint": "TgeompointType::tgeompoint()", "tgeogpoint": "TgeogpointType::tgeogpoint()"}
+def ret_temporal_type(name, arg_acc, group=""):
     # temporal comparison ops (teq/tne/tlt/tle/tgt/tge_*) return a tbool, NOT the input type
     if re.match(r't(eq|ne|lt|le|gt|ge)_', name):
         return "TemporalTypes::tbool()"
-    m = re.search(r'_to_(tint|tbigint|tfloat|tbool|ttext)$', name)
+    # temporal spatial relationships (catalog group `*_rel_temp`: tContains/tDisjoint/
+    # tIntersects/tTouches/tDwithin) answer a pointwise predicate over time -> a tbool, not
+    # the operand geo type (mirrors the teq->tbool rule and the *_rel_ever scalar-BOOLEAN one).
+    if re.search(r'_rel_temp$', group or ""):
+        return "TemporalTypes::tbool()"
+    # the temporal distance tDistance(a,b) is always a tfloat — whatever the operands
+    # (tnumber or tgeo); the generic MEOS `Temporal *` return doesn't carry that, so the
+    # name carries it (mirrors the teq->tbool rule above).
+    if re.match(r'tdistance_', name):
+        return "TemporalTypes::tfloat()"
+    # `<x>_to_<y>` conversions CHANGE type to the target -> the `_to_` suffix names it
+    # (geo targets tgeometry/tgeography/tgeompoint/tgeogpoint added alongside the base ones).
+    m = re.search(r'_to_(tint|tbigint|tfloat|tbool|ttext|tgeometry|tgeography|tgeompoint|tgeogpoint)$', name)
     return TO_TYPE[m.group(1)] if m else arg_acc
 
 # ---------------- SET family (additive; the temporal path is left untouched) ----------------
@@ -550,10 +573,16 @@ def header_symbols(incl_dir):
     import os
     # Scan ONLY the MEOS C headers the generated TU actually #includes (its include
     # closure). Globbing every *.h admits symbols from family headers we do NOT
-    # include (meos_h3.h/meos_npoint.h) — they pass the gate but are undeclared at
-    # compile time. Keep this list in lockstep with the preamble's C #includes.
+    # include — they pass the gate but are undeclared at compile time. Keep this list
+    # in lockstep with the preamble's C #includes: meos_wrapper_simple.hpp now pulls in
+    # every per-family public header (cross-family conversions like tbigint_to_th3index,
+    # tgeometry_to_tcbuffer, ttext_to_tjsonb live there, not in the meos.h umbrella —
+    # the port builds all families so all are installed), so the gate must see them too.
     TU_C_HEADERS = ("meos.h", "meos_catalog.h", "meos_internal.h",
-                    "meos_geo.h", "meos_internal_geo.h")
+                    "meos_geo.h", "meos_internal_geo.h",
+                    "meos_cbuffer.h", "meos_h3.h", "meos_json.h", "meos_npoint.h",
+                    "meos_pointcloud.h", "meos_pose.h", "meos_quadbin.h", "meos_rgeo.h",
+                    "pg_date.h", "pg_timestamp.h")
     syms = set()
     for name in TU_C_HEADERS:
         h = os.path.join(incl_dir, name)
@@ -1014,7 +1043,7 @@ def emit_span(f, kind, C=SPAN_C):
 # (hand code deleted) — then it emits the canonical pin name. Retiring a family =
 # delete its hand registrations + add its group to RETIRED_GROUPS. End state:
 # every family retired -> the prefix is dead and generated == the binding.
-COEXIST_PREFIX = "g_"
+COEXIST_PREFIX = ""
 # @ingroup groups whose hand registrations are deleted: the generated surface owns
 # their canonical names (no prefix). Grows as families migrate to generation.
 RETIRED_GROUPS = {"meos_temporal_analytics_similarity", "meos_temporal_comp_temp"}
@@ -1120,14 +1149,14 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         # nothing). The alias reuses the SAME backing body ([[aliases-reuse-backing]]).
         names = reg_names(f, sqlfn, aliases)
         if scope == "all":
-            rett = ret_temporal_type(fn, "type") if dret == "MD_TEMPORAL" else dret
+            rett = ret_temporal_type(fn, "type", f.get("group")) if dret == "MD_TEMPORAL" else dret
             for nm in names:
                 generic_regs.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
                                     f'"{reg_name(nm, f)}", {argsig}, {rett}, Gen_{fn}));')
         else:
             for a in accs:
                 sig = spec_sig % ((a,) * spec_sig.count("%s"))   # 1 or 2 accessor slots
-                r2 = ret_temporal_type(fn, a) if dret == "MD_TEMPORAL" else dret
+                r2 = ret_temporal_type(fn, a, f.get("group")) if dret == "MD_TEMPORAL" else dret
                 for nm in names:
                     specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {sig}, {r2}, Gen_{fn}));')
