@@ -37,6 +37,23 @@ endif()
 # MEOS from overlay port
 find_package(MEOS CONFIG REQUIRED)
 
+# H3 headers: the all-families libmeos exposes meos_h3.h, which includes
+# <h3api.h>. SIBLING-FROM MobilityDB CMakeLists.txt H3 block (find_path
+# H3_INCLUDE_DIR NAMES h3api.h PATH_SUFFIXES h3) so code compiling against
+# meos_h3.h sees the system libh3 headers, just as the meos port (-DH3=ON) does.
+# The dir is attached to the extension targets below (mirroring the json-c
+# block) because build_*_extension targets don't inherit directory includes.
+# SIBLING-FROM MobilityDB CMakeLists.txt H3 block; NO_CMAKE_FIND_ROOT_PATH + explicit
+# system PATHS are the binding-side adaptation: under the vcpkg toolchain find_path is
+# confined to the vcpkg root and never sees the system /usr/include/h3 that libh3-dev ships.
+find_path(H3_INCLUDE_DIR NAMES h3api.h
+  PATH_SUFFIXES h3
+  PATHS /usr/include /usr/local/include
+  NO_CMAKE_FIND_ROOT_PATH)
+if(NOT H3_INCLUDE_DIR)
+  message(FATAL_ERROR "h3api.h not found; install libh3-dev (the meos port is built with -DH3=ON).")
+endif()
+
 if(TARGET GEOS::geos_c)
   set(GEOS_TGT GEOS::geos_c)
 elseif(TARGET GEOS::geos)
@@ -111,6 +128,11 @@ else()
   target_include_directories(${LOADABLE_EXTENSION_NAME} PRIVATE ${JSON-C_INCLUDE_DIRS})
   set(JSONC_TGT ${JSON-C_LIBRARIES})
 endif()
+
+# H3 headers for meos_h3.h (see the find_path above) — attached per-target like
+# json-c, since build_*_extension targets don't inherit directory includes.
+target_include_directories(${EXTENSION_NAME} PRIVATE ${H3_INCLUDE_DIR})
+target_include_directories(${LOADABLE_EXTENSION_NAME} PRIVATE ${H3_INCLUDE_DIR})
 
 # -----------------------------
 # Link libraries 

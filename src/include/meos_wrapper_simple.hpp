@@ -8,6 +8,21 @@ extern "C" {
     #include <meos_geo.h>
     #include <meos_internal.h>
     #include <meos_internal_geo.h>
+    // Per-family public headers (alphabetical, per the family-block convention):
+    // family type declarations and cross-family conversions (e.g.
+    // tcbuffer_to_tfloat, ttext_to_tjsonb, tbigint_to_tquadbin) live here, not in
+    // the meos.h umbrella. The port builds all families, so all are installed; the
+    // generated UDFs call into every one. (Alphabetical also keeps meos_pose.h
+    // before meos_rgeo.h, which depends on it.)
+    #include <meos_arrow.h>
+    #include <meos_cbuffer.h>
+    #include <meos_h3.h>
+    #include <meos_json.h>
+    #include <meos_npoint.h>
+    #include <meos_pointcloud.h>
+    #include <meos_pose.h>
+    #include <meos_quadbin.h>
+    #include <meos_rgeo.h>
     // PG-compat date/timestamp arithmetic (add_date_int, add_timestamptz_interval)
     // lives in the pgtypes public leaf headers, not the meos.h umbrella.
     #include <pg_date.h>

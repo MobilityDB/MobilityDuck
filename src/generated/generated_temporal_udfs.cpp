@@ -376,6 +376,30 @@ static void Gen_intersection_tbox_tbox(DataChunk &args, ExpressionState &, Vecto
 }
 
 
+// ===== @ingroup meos_cbuffer_conversion =====
+static void Gen_tcbuffer_to_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tcbuffer_to_tfloat(t);
+            free(t);
+            return TemporalToBlob(result, r);  // frees r
+        });
+}
+
+static void Gen_tgeometry_to_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tgeometry_to_tcbuffer(t);
+            free(t);
+            return TemporalToBlob(result, r);  // frees r
+        });
+}
+
+
 // ===== @ingroup meos_geo_bbox_pos =====
 static void Gen_above_tspatial_tspatial(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -1816,6 +1840,115 @@ static void Gen_spatialset_transform(DataChunk &args, ExpressionState &, Vector 
             Set *r = spatialset_transform(s, a2);
             free(s);
             return SetToBlob(result, r);
+        });
+}
+
+
+// ===== @ingroup meos_h3_conversion =====
+static void Gen_tbigint_to_th3index(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tbigint_to_th3index(t);
+            free(t);
+            return TemporalToBlob(result, r);  // frees r
+        });
+}
+
+static void Gen_th3index_to_tbigint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = th3index_to_tbigint(t);
+            free(t);
+            return TemporalToBlob(result, r);  // frees r
+        });
+}
+
+
+// ===== @ingroup meos_h3_latlng =====
+static void Gen_tgeogpoint_to_th3index(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2) {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tgeogpoint_to_th3index(t, a2);
+            free(t);
+            return TemporalToBlob(result, r);
+        });
+}
+
+static void Gen_tgeompoint_to_th3index(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2) {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tgeompoint_to_th3index(t, a2);
+            free(t);
+            return TemporalToBlob(result, r);
+        });
+}
+
+
+// ===== @ingroup meos_json_conversion =====
+static void Gen_tjsonb_to_ttext(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tjsonb_to_ttext(t);
+            free(t);
+            return TemporalToBlob(result, r);  // frees r
+        });
+}
+
+static void Gen_ttext_to_tjsonb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = ttext_to_tjsonb(t);
+            free(t);
+            return TemporalToBlob(result, r);  // frees r
+        });
+}
+
+
+// ===== @ingroup meos_npoint_conversion =====
+static void Gen_tgeompoint_to_tnpoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tgeompoint_to_tnpoint(t);
+            free(t);
+            return TemporalToBlob(result, r);  // frees r
+        });
+}
+
+
+// ===== @ingroup meos_quadbin_conversion =====
+static void Gen_tbigint_to_tquadbin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tbigint_to_tquadbin(t);
+            free(t);
+            return TemporalToBlob(result, r);  // frees r
+        });
+}
+
+static void Gen_tquadbin_to_tbigint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tquadbin_to_tbigint(t);
+            free(t);
+            return TemporalToBlob(result, r);  // frees r
         });
 }
 
@@ -9923,6 +10056,13 @@ static void RegisterGenerated_meos_box_set(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("g_*", {TboxType::tbox(), TboxType::tbox()}, TboxType::tbox(), Gen_intersection_tbox_tbox));
 }
 
+static void RegisterGenerated_meos_cbuffer_conversion(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("g_tfloat", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tcbuffer_to_tfloat));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("g_::", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tcbuffer_to_tfloat));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("g_tcbuffer", {TGeometryTypes::tgeometry()}, TGeometryTypes::tgeometry(), Gen_tgeometry_to_tcbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("g_::", {TGeometryTypes::tgeometry()}, TGeometryTypes::tgeometry(), Gen_tgeometry_to_tcbuffer));
+}
+
 static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("g_above", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_above_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("g_|>>", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_above_tspatial_tspatial));
@@ -10643,6 +10783,37 @@ static void RegisterGenerated_meos_geo_rel_temp(ExtensionLoader &loader) {
 static void RegisterGenerated_meos_geo_set_srid(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("g_setSRID", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), Gen_spatialset_set_srid));
     RegisterSerializedScalarFunction(loader, ScalarFunction("g_transform", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), Gen_spatialset_transform));
+}
+
+static void RegisterGenerated_meos_h3_conversion(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("g_th3index", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_tbigint_to_th3index));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("g_::", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_tbigint_to_th3index));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("g_tbigint", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_th3index_to_tbigint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("g_::", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_th3index_to_tbigint));
+}
+
+static void RegisterGenerated_meos_h3_latlng(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("g_th3index", {TgeogpointType::tgeogpoint(), LogicalType::INTEGER}, TgeogpointType::tgeogpoint(), Gen_tgeogpoint_to_th3index));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("g_th3index", {TgeompointType::tgeompoint(), LogicalType::INTEGER}, TgeompointType::tgeompoint(), Gen_tgeompoint_to_th3index));
+}
+
+static void RegisterGenerated_meos_json_conversion(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("g_ttext", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_tjsonb_to_ttext));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("g_::", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_tjsonb_to_ttext));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("g_tjsonb", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_ttext_to_tjsonb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("g_::", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_ttext_to_tjsonb));
+}
+
+static void RegisterGenerated_meos_npoint_conversion(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("g_tnpoint", {TgeompointType::tgeompoint()}, TgeompointType::tgeompoint(), Gen_tgeompoint_to_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("g_::", {TgeompointType::tgeompoint()}, TgeompointType::tgeompoint(), Gen_tgeompoint_to_tnpoint));
+}
+
+static void RegisterGenerated_meos_quadbin_conversion(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("g_tquadbin", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_tbigint_to_tquadbin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("g_::", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_tbigint_to_tquadbin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("g_tbigint", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_tquadbin_to_tbigint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("g_::", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_tquadbin_to_tbigint));
 }
 
 static void RegisterGenerated_meos_setspan_accessor(ExtensionLoader &loader) {
@@ -12788,6 +12959,7 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_box_bbox_topo(loader);
     RegisterGenerated_meos_box_comp(loader);
     RegisterGenerated_meos_box_set(loader);
+    RegisterGenerated_meos_cbuffer_conversion(loader);
     RegisterGenerated_meos_geo_bbox_pos(loader);
     RegisterGenerated_meos_geo_bbox_topo(loader);
     RegisterGenerated_meos_geo_box_comp(loader);
@@ -12800,6 +12972,11 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_geo_rel_ever(loader);
     RegisterGenerated_meos_geo_rel_temp(loader);
     RegisterGenerated_meos_geo_set_srid(loader);
+    RegisterGenerated_meos_h3_conversion(loader);
+    RegisterGenerated_meos_h3_latlng(loader);
+    RegisterGenerated_meos_json_conversion(loader);
+    RegisterGenerated_meos_npoint_conversion(loader);
+    RegisterGenerated_meos_quadbin_conversion(loader);
     RegisterGenerated_meos_setspan_accessor(loader);
     RegisterGenerated_meos_setspan_comp(loader);
     RegisterGenerated_meos_setspan_conversion(loader);
