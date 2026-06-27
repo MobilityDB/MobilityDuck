@@ -287,7 +287,6 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TemporalTypes::RegisterWkbFunctions(loader);
 	TemporalTypes::RegisterTemporalTileSplit(loader);
 	TemporalTypes::RegisterTnumberValueSplit(loader);
-	TemporalTypes::RegisterSimilarityPath(loader);
 
 	TboxType::RegisterType(loader);
 	TboxType::RegisterCastFunctions(loader);

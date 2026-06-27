@@ -629,6 +629,97 @@ def emit_binary_tt(f, kind):
             f"            {inner}\n"
             f"        }});\n}}\n")
 
+# ---- array-return struct shape: C array-of-structs + int* count -> DuckDB LIST(STRUCT) ----
+# Driven ENTIRELY by the catalog: shape.arrayReturn (from MEOS-API shapeinfer) marks the
+# array return, lengthFrom.name identifies the count out-param, and the returned struct's
+# fields come from the catalog `structs` table. The similarity *Path fns (frechet/dtw) are
+# the instance: (Temporal, Temporal) -> Match* + int* count -> LIST(STRUCT(i,j)). The body
+# mirrors the hand RunSimilarityPath; the type mirrors temporal.cpp's path_type. STRUCTS is
+# populated from the catalog in main().
+STRUCTS = {}
+PATH_LT  = {"int": "LogicalType::INTEGER", "int64": "LogicalType::BIGINT",
+            "double": "LogicalType::DOUBLE", "bool": "LogicalType::BOOLEAN"}
+PATH_CPP = {"int": "int32_t", "int64": "int64_t", "double": "double", "bool": "bool"}
+
+def path_logical_type(flds):
+    members = ", ".join('{"%s", %s}' % (fl["name"], PATH_LT.get(fl["cType"], "LogicalType::INTEGER"))
+                        for fl in flds)
+    return "LogicalType::LIST(LogicalType::STRUCT({%s}))" % members
+
+def poc_path(f):
+    """Binary Temporal+Temporal whose catalog shape.arrayReturn returns a C array of a known
+    struct (+ int* count out-param) -> a DuckDB LIST(STRUCT(...)). The frechet/dtw *Path fns.
+    NOTE: this shape's struct-pointer return is exactly what supported() rejects ('ret:Match *'),
+    so we apply only the user-facing eligibility checks here, not the standard ret/arg gate."""
+    name = f["name"]
+    if name.startswith("meos_internal") or (f.get("group") or "").startswith("meos_internal"):
+        return None
+    if not f.get("sqlfn") or re.search(r'_(out|in|send|recv)$', f.get("sqlfn") or ""):
+        return None
+    ar = (f.get("shape") or {}).get("arrayReturn")
+    if not ar: return None
+    rb = base(f["returnType"]["canonical"])
+    flds = (STRUCTS.get(rb) or {}).get("fields")
+    if not flds: return None                       # only struct-element arrays handled here
+    lf = ar.get("lengthFrom") or {}
+    if lf.get("kind") != "param" or not lf.get("name"): return None
+    ins = [p for p in f["params"] if p.get("name") != lf["name"]]   # drop the count out-param
+    if len(ins) != 2: return None
+    if not all(base(p["canonical"]) == "Temporal" and norm(p["canonical"]).endswith("*") for p in ins):
+        return None
+    if reg_scope(f["name"]) is None: return None
+    return ("path", path_logical_type(flds))
+
+def emit_path_table(f):
+    """DuckDB TABLE function for a catalog array-return-struct fn (the canonical SETOF surface,
+    e.g. frechetDistancePath -> RETURNS SETOF warp). Mirrors the hand SimilarityPath bind/init/exec;
+    return schema + per-row marshalling are field-driven from the catalog struct (warp/Match)."""
+    name = f["name"]; sqlfn = f["sqlfn"]
+    rb = base(f["returnType"]["canonical"]); flds = STRUCTS[rb]["fields"]
+    state_cols = "".join(f"    std::vector<{PATH_CPP.get(fl['cType'],'int32_t')}> col{i};\n"
+                         for i, fl in enumerate(flds))
+    ret_types  = ", ".join(PATH_LT.get(fl["cType"], "LogicalType::INTEGER") for fl in flds)
+    names_list = ", ".join('"%s"' % fl["name"] for fl in flds)
+    reserve = "".join(f"            state->col{i}.reserve(count);\n" for i in range(len(flds)))
+    fill    = "".join(f"                state->col{i}.push_back(path[k].{fl['name']});\n"
+                      for i, fl in enumerate(flds))
+    out_decls = "".join(f"    auto out{i} = FlatVector::GetData<{PATH_CPP.get(fl['cType'],'int32_t')}>(output.data[{i}]);\n"
+                        for i, fl in enumerate(flds))
+    out_fill  = "".join(f"        out{i}[k] = state.col{i}[state.idx + k];\n" for i in range(len(flds)))
+    return (
+f"struct PathBind_{name} : public TableFunctionData {{ string_t a, b; }};\n"
+f"struct PathState_{name} : public GlobalTableFunctionState {{\n"
+f"    idx_t idx = 0;\n{state_cols}}};\n"
+f"static unique_ptr<FunctionData> PathBindFn_{name}(ClientContext &, TableFunctionBindInput &input,\n"
+f"        vector<LogicalType> &return_types, vector<string> &names) {{\n"
+f"    if (input.inputs.size() != 2 || input.inputs[0].IsNull() || input.inputs[1].IsNull())\n"
+f"        throw BinderException(\"{sqlfn}: expects two non-null temporal arguments\");\n"
+f"    auto bind = make_uniq<PathBind_{name}>();\n"
+f"    bind->a = StringValue::Get(input.inputs[0]);\n"
+f"    bind->b = StringValue::Get(input.inputs[1]);\n"
+f"    return_types = {{{ret_types}}};\n"
+f"    names = {{{names_list}}};\n"
+f"    return std::move(bind);\n}}\n"
+f"static unique_ptr<GlobalTableFunctionState> PathInit_{name}(ClientContext &, TableFunctionInitInput &input) {{\n"
+f"    EnsureMeosThreadInitialized();\n"
+f"    auto &bind = input.bind_data->Cast<PathBind_{name}>();\n"
+f"    auto state = make_uniq<PathState_{name}>();\n"
+f"    Temporal *t1 = BlobToTemporal(bind.a);\n"
+f"    Temporal *t2 = BlobToTemporal(bind.b);\n"
+f"    int count = 0;\n"
+f"    {rb} *path = {name}(t1, t2, &count);\n"
+f"    free(t1); free(t2);\n"
+f"    if (path) {{\n{reserve}"
+f"        for (int k = 0; k < count; k++) {{\n{fill}        }}\n"
+f"        free(path);\n    }}\n"
+f"    return std::move(state);\n}}\n"
+f"static void PathExec_{name}(ClientContext &, TableFunctionInput &input, DataChunk &output) {{\n"
+f"    auto &state = input.global_state->Cast<PathState_{name}>();\n"
+f"    idx_t total = state.col0.size();\n"
+f"    idx_t count = MinValue<idx_t>(STANDARD_VECTOR_SIZE, total - state.idx);\n"
+f"{out_decls}    for (idx_t k = 0; k < count; k++) {{\n{out_fill}    }}\n"
+f"    state.idx += count;\n    output.SetCardinality(count);\n}}\n")
+
 # Temporal + box (STBox/TBox) -> bool: the spatiotemporal/numeric topological predicates
 # (contains/overlaps/contained/adjacent/same/left/right/... between a temporal and a box).
 # Mixed-arg shape (one Temporal blob + one box blob); temporal scope from reg_scope
@@ -905,9 +996,7 @@ RETIRED_GROUPS = {"meos_temporal_analytics_similarity", "meos_temporal_comp_temp
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
-RETIRE_UNCOVERED_OK = {
-    "dynTimeWarpPath", "frechetDistancePath",  # LIST(STRUCT) path returns — not an emit shape yet
-}
+RETIRE_UNCOVERED_OK = set()  # empty: the *Path LIST(STRUCT) returns are now generated (poc_path)
 def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
 def reg_name(nm, f):
@@ -959,7 +1048,8 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         u = poc_emittable(f); b = None if u else poc_binary(f); t = None if (u or b) else poc_ternary(f)
         tt = None if (u or b or t) else poc_binary_tt(f)
         sf = None if (u or b or t or tt) else poc_scalar_first(f)
-        if not u and not b and not t and not tt and not sf:
+        pp = None if (u or b or t or tt or sf) else poc_path(f)
+        if not u and not b and not t and not tt and not sf and not pp:
             continue
         STATE["grp"] = f.get("group") or "meos_ungrouped"
         sqlfn, fn = f["sqlfn"], f["name"]
@@ -984,11 +1074,22 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             bodies.append(emit_binary_tt(f, kind))
             argsig = "{type, type}"
             spec_sig = "{%s, %s}"
-        else:
+        elif sf:
             kind, dret, arg1 = sf; n_bin += 1
             bodies.append(emit_scalar_first(f, kind, arg1))
             argsig = "{%s, type}" % arg1[0]
             spec_sig = "{%s, %%s}" % arg1[0]
+        else:
+            # array-return-struct shape -> the canonical SETOF surface = a DuckDB TABLE function
+            # (registered via loader.RegisterFunction, NOT the scalar path). Over AllTypes + geo
+            # via the {type, type} placeholder the writer wraps in its AllTypes/geo loops.
+            n_bin += 1
+            bodies.append(emit_path_table(f))
+            for nm in reg_names(f, sqlfn, aliases):
+                generic_regs.append(
+                    f'        loader.RegisterFunction(TableFunction("{reg_name(nm, f)}", {{type, type}}, '
+                    f'PathExec_{fn}, PathBindFn_{fn}, PathInit_{fn}));')
+            continue
         # Names to register: the native sqlfn + any portable bare-name alias the pin
         # assigns to this fn's operator (catalog portableAliases is the SoT — invent
         # nothing). The alias reuses the SAME backing body ([[aliases-reuse-backing]]).
@@ -1322,6 +1423,8 @@ def main():
     out = pos[1] if len(pos) > 1 else None
     d = json.load(open(cat))
     fns = d["functions"]
+    # struct layouts (e.g. Match {i,j}) for the array-return LIST(STRUCT) shape — from the catalog.
+    STRUCTS.update({s["name"]: s for s in d.get("structs", [])})
     # portable bare-name renderings: operator (@sqlop) -> bareName, straight from the
     # catalog's portableAliases (itself generated from the MEOS doxygen @sqlop tags +
     # the comparison dialect). The SoT; nothing invented here.
@@ -1367,7 +1470,7 @@ def main():
         # Retire-safety guards (build-failing) — the two retire traps, read off the actual
         # generated output so they cannot be reasoned-away by hand.
         gentext = open(out).read()
-        emitted = Counter(re.findall(r'ScalarFunction\("([^"]+)"', gentext))
+        emitted = Counter(re.findall(r'(?:Scalar|Table)Function\("([^"]+)"', gentext))
         # TRAP 1 (split name): a name emitted BOTH bare and g_-prefixed means a RETIRED group and
         # a NON-retired group share it (bare here, g_ there) -> a query finds only one. The shared
         # bare/operator dialect must be retired as a coherent wave (add the sibling groups).

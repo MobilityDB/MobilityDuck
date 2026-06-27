@@ -5255,69 +5255,6 @@ void TemporalFunctions::Temporal_hausdorff_distance(DataChunk &args, ExpressionS
     TempTempDoublePred(args, result, [](Temporal *a, Temporal *b) { return temporal_hausdorff_distance(a, b); });
 }
 
-namespace {
-
-void RunSimilarityPath(DataChunk &args, Vector &result,
-                      Match *(*path_fn)(const Temporal *, const Temporal *, int *),
-                      const char *fn_name) {
-    const idx_t row_count = args.size();
-    args.data[0].Flatten(row_count);
-    args.data[1].Flatten(row_count);
-
-    auto in_a = FlatVector::GetData<string_t>(args.data[0]);
-    auto in_b = FlatVector::GetData<string_t>(args.data[1]);
-    auto &valid_a = FlatVector::Validity(args.data[0]);
-    auto &valid_b = FlatVector::Validity(args.data[1]);
-
-    auto list_entries = FlatVector::GetData<list_entry_t>(result);
-    auto &out_validity = FlatVector::Validity(result);
-
-    idx_t total = 0;
-    for (idx_t row = 0; row < row_count; row++) {
-        if (!valid_a.RowIsValid(row) || !valid_b.RowIsValid(row)) {
-            out_validity.SetInvalid(row);
-            list_entries[row] = list_entry_t{total, 0};
-            continue;
-        }
-        Temporal *a = BlobToTemporal(in_a[row]);
-        Temporal *b = BlobToTemporal(in_b[row]);
-        int count = 0;
-        Match *matches = path_fn(a, b, &count);
-        free(a); free(b);
-        if (!matches || count <= 0) {
-            list_entries[row] = list_entry_t{total, 0};
-            if (matches) free(matches);
-            continue;
-        }
-        ListVector::Reserve(result, total + count);
-        ListVector::SetListSize(result, total + count);
-        list_entries[row] = list_entry_t{total, static_cast<uint64_t>(count)};
-        auto &child_struct = ListVector::GetEntry(result);
-        auto &struct_children = StructVector::GetEntries(child_struct);
-        auto i_data = FlatVector::GetData<int32_t>(*struct_children[0]);
-        auto j_data = FlatVector::GetData<int32_t>(*struct_children[1]);
-        for (int k = 0; k < count; k++) {
-            i_data[total + k] = matches[k].i;
-            j_data[total + k] = matches[k].j;
-        }
-        total += count;
-        free(matches);
-    }
-    if (row_count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-    (void) fn_name;
-}
-
-} // namespace
-
-void TemporalFunctions::Temporal_frechet_path(DataChunk &args, ExpressionState &state, Vector &result) {
-    RunSimilarityPath(args, result, &temporal_frechet_path, "frechetDistancePath");
-}
-
-void TemporalFunctions::Temporal_dyntimewarp_path(DataChunk &args, ExpressionState &state, Vector &result) {
-    RunSimilarityPath(args, result, &temporal_dyntimewarp_path, "dynTimeWarpPath");
-}
 
 /* ***************************************************
  * Temporal simplification — Douglas-Peucker, min/max-dist,

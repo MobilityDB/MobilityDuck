@@ -1568,23 +1568,10 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     REG_EA_ORD("always_ge", Always_ge)
 #undef REG_EA_ORD
 
-    // Similarity measures (tnumber × tnumber, tgeompoint × tgeompoint)
-    for (auto &t : {TemporalTypes::tint(), TemporalTypes::tfloat()}) {
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("discreteFrechet",     {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarp",         {t, t}, LogicalType::DOUBLE, TemporalFunctions::Temporal_dyntimewarp_distance));
-        auto path_type = LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}}));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistancePath", {t, t}, path_type, TemporalFunctions::Temporal_frechet_path));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpPath",     {t, t}, path_type, TemporalFunctions::Temporal_dyntimewarp_path));
-    }
-    // similarity on tgeompoint (including paths)
-    {
-        auto tg = TgeompointType::tgeompoint();
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("discreteFrechet",   {tg, tg}, LogicalType::DOUBLE, TemporalFunctions::Temporal_frechet_distance));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarp",       {tg, tg}, LogicalType::DOUBLE, TemporalFunctions::Temporal_dyntimewarp_distance));
-        auto path_type = LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}}));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistancePath", {tg, tg}, path_type, TemporalFunctions::Temporal_frechet_path));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpPath",     {tg, tg}, path_type, TemporalFunctions::Temporal_dyntimewarp_path));
-    }
+    // Similarity: frechetDistance/dynTimeWarpDistance/hausdorffDistance (scalar) and
+    // frechetDistancePath/dynTimeWarpPath (SETOF -> DuckDB table function) are all GENERATED
+    // from the catalog now. The non-canonical discreteFrechet/dynTimeWarp hand aliases were
+    // retired (MobilityDB canonical = frechetDistance/dynTimeWarpDistance).
 
     // simplify family (subtype-agnostic but only meaningful on linear temporal types)
     for (const auto &t : {TemporalTypes::tfloat(), TgeompointType::tgeompoint(),
@@ -2873,108 +2860,6 @@ static void TnumberValueSplitExec(ClientContext &context, TableFunctionInput &in
     output.SetCardinality(count);
 }
 
-/* ***************************************************
- * frechetDistancePath / dynTimeWarpPath table functions
- * ---------------------------------------------------
- * Wraps MEOS temporal_frechet_path / temporal_dyntimewarp_path. Returns the
- * (i, j) alignment pairs of the two input temporal sequences. Same shape on
- * tnumber × tnumber and tgeompoint × tgeompoint.
- ****************************************************/
-
-enum class SimilarityPathKind { Frechet, DynTimeWarp };
-
-struct SimilarityPathBindData : public TableFunctionData {
-    string_t blob1;
-    string_t blob2;
-    SimilarityPathKind kind;
-};
-
-struct SimilarityPathGlobalState : public GlobalTableFunctionState {
-    idx_t idx = 0;
-    std::vector<std::pair<int32_t, int32_t>> rows;
-};
-
-template <SimilarityPathKind KIND>
-static unique_ptr<FunctionData> SimilarityPathBind(ClientContext &context,
-                                                   TableFunctionBindInput &input,
-                                                   vector<LogicalType> &return_types,
-                                                   vector<string> &names) {
-    if (input.inputs.size() != 2 || input.inputs[0].IsNull() || input.inputs[1].IsNull()) {
-        throw BinderException("similarity path: expects two non-null temporal arguments");
-    }
-    auto bind = make_uniq<SimilarityPathBindData>();
-    bind->blob1 = StringValue::Get(input.inputs[0]);
-    bind->blob2 = StringValue::Get(input.inputs[1]);
-    bind->kind = KIND;
-    return_types = {LogicalType::INTEGER, LogicalType::INTEGER};
-    names = {"i", "j"};
-    return std::move(bind);
-}
-
-static unique_ptr<GlobalTableFunctionState> SimilarityPathInit(ClientContext &context,
-                                                               TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
-    auto &bind = input.bind_data->Cast<SimilarityPathBindData>();
-    auto state = make_uniq<SimilarityPathGlobalState>();
-
-    auto load = [](const string_t &blob) -> Temporal * {
-        const uint8_t *src = (const uint8_t *)blob.GetData();
-        size_t sz = blob.GetSize();
-        Temporal *t = (Temporal *)malloc(sz);
-        memcpy(t, src, sz);
-        return t;
-    };
-    Temporal *t1 = load(bind.blob1);
-    Temporal *t2 = load(bind.blob2);
-
-    int count = 0;
-    Match *path = (bind.kind == SimilarityPathKind::Frechet)
-                      ? temporal_frechet_path(t1, t2, &count)
-                      : temporal_dyntimewarp_path(t1, t2, &count);
-    if (path) {
-        state->rows.reserve(count);
-        for (int i = 0; i < count; ++i) {
-            state->rows.emplace_back((int32_t)path[i].i, (int32_t)path[i].j);
-        }
-        free(path);
-    }
-    free(t1);
-    free(t2);
-    return std::move(state);
-}
-
-static void SimilarityPathExec(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
-    auto &state = input.global_state->Cast<SimilarityPathGlobalState>();
-    auto count = MinValue<idx_t>(STANDARD_VECTOR_SIZE, state.rows.size() - state.idx);
-    auto i_data = FlatVector::GetData<int32_t>(output.data[0]);
-    auto j_data = FlatVector::GetData<int32_t>(output.data[1]);
-    for (idx_t k = 0; k < count; ++k) {
-        i_data[k] = state.rows[state.idx].first;
-        j_data[k] = state.rows[state.idx].second;
-        state.idx++;
-    }
-    output.SetCardinality(count);
-}
-
-void TemporalTypes::RegisterSimilarityPath(ExtensionLoader &loader) {
-    auto reg = [&](const char *name, const LogicalType &t1, const LogicalType &t2,
-                   SimilarityPathKind kind) {
-        TableFunction fn(name, {t1, t2}, SimilarityPathExec,
-                         (kind == SimilarityPathKind::Frechet)
-                             ? SimilarityPathBind<SimilarityPathKind::Frechet>
-                             : SimilarityPathBind<SimilarityPathKind::DynTimeWarp>,
-                         SimilarityPathInit);
-        loader.RegisterFunction(fn);
-    };
-
-    reg("frechetDistancePath", TemporalTypes::tint(),   TemporalTypes::tint(),   SimilarityPathKind::Frechet);
-    reg("frechetDistancePath", TemporalTypes::tfloat(), TemporalTypes::tfloat(), SimilarityPathKind::Frechet);
-    reg("frechetDistancePath", TgeompointType::tgeompoint(), TgeompointType::tgeompoint(), SimilarityPathKind::Frechet);
-
-    reg("dynTimeWarpPath", TemporalTypes::tint(),   TemporalTypes::tint(),   SimilarityPathKind::DynTimeWarp);
-    reg("dynTimeWarpPath", TemporalTypes::tfloat(), TemporalTypes::tfloat(), SimilarityPathKind::DynTimeWarp);
-    reg("dynTimeWarpPath", TgeompointType::tgeompoint(), TgeompointType::tgeompoint(), SimilarityPathKind::DynTimeWarp);
-}
 
 void TemporalTypes::RegisterTnumberValueSplit(ExtensionLoader &loader) {
     // tint variant
