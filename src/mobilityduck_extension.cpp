@@ -32,6 +32,7 @@
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include "index/rtree_module.hpp"
 #include "single_tile_getters.hpp"
+#include "temporal/temporal_parquet.hpp"
 
 #include <mutex>
 #include <fstream>
@@ -363,6 +364,8 @@ static void LoadInternal(ExtensionLoader &loader) {
 	// Catalog-driven scalar UDFs generated from the MEOS-API catalog, organized by
 	// doxygen @ingroup group. Registered last, after every type accessor exists.
 	RegisterGeneratedTemporalUdfs(loader);
+	// TemporalParquet footer helper for COPY ... TO '*.parquet' KV_METADATA.
+	TemporalParquetFunctions::Register(loader);
 }
 
 void MobilityduckExtension::Load(ExtensionLoader &loader) {

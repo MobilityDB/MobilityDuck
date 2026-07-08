@@ -1219,6 +1219,11 @@ void TgeompointFunctions::Tgeo_at_geom(DataChunk &args, ExpressionState &state, 
                 free(tgeom);
                 throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());
             }
+            if (MEOS_FLAGS_GET_GEODETIC(tgeom->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs);
+                gs = gs_geog;
+            }
 
             Temporal *ret = tgeo_at_geom(tgeom, gs);
             if (!ret) {
