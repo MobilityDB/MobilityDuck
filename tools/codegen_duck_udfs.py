@@ -121,6 +121,31 @@ def ret_type(f, out_canon):
         return ("LogicalType::VARCHAR", "scalar")
     return None
 
+# The temporal type families the BINDING registers as DuckDB types (SoT = the binding's
+# RegisterType calls in src/). A generated UDF is in scope only when EVERY type family its
+# name references is registered; a name that references an as-yet-unregistered family
+# (e.g. tcbuffer_to_tfloat, tbigint_to_th3index, tgeompoint_to_tnpoint, ttext_to_tjsonb)
+# would register under the wrong DuckDB type / be uncallable, and would drag an unused MEOS
+# module — so it is OUT OF SCOPE until that family's fast-follow wave registers the type,
+# at which point moving the token into REGISTERED_FAMILIES re-includes it automatically.
+# CODEGEN-REGULAR-EXCEPTION: registered-type-scope CLASSIFICATION — a positive allowlist
+# (= the binding's RegisterType set), reason-audited in main() as "unregistered-family";
+# NOT a skip-to-pass family filter. When a family is registered, add its token here.
+REGISTERED_FAMILIES = {
+    "temporal", "tnumber", "tint", "tbigint", "tfloat", "tbool", "ttext",
+    "tgeompoint", "tgeogpoint", "tgeometry", "tgeography", "tgeo", "tspatial", "tquadbin",
+}
+# Every temporal family token the catalog function names use; those NOT in REGISTERED_FAMILIES
+# are the fast-follow families whose DuckDB type the binding does not register yet.
+KNOWN_FAMILIES = REGISTERED_FAMILIES | {
+    "th3index", "tcbuffer", "tnpoint", "tpose", "trgeometry", "trgeo", "tpcpoint", "tpcpatch",
+    "tjsonb", "cbuffer", "npoint", "nsegment", "pose", "pcpoint", "pcpatch", "jsonb", "h3index",
+}
+def unregistered_family_ref(name):
+    """The first unregistered family token the name references, else None (in scope)."""
+    bad = (set(name.split("_")) & KNOWN_FAMILIES) - REGISTERED_FAMILIES
+    return sorted(bad)[0] if bad else None
+
 def supported(f):
     """Reason string if NOT emittable (mirrors Spark's supported()), else None."""
     name = f["name"]
@@ -132,6 +157,11 @@ def supported(f):
     # via RegisterCastFunctions, NOT standalone scalar UDFs. The real text fns are asText/interp.
     if re.search(r'_(out|in|send|recv)$', f.get("sqlfn") or ""):
         return "io-cast"
+    # registered-type scope: a UDF touching a family whose DuckDB type is not registered yet
+    # is out of scope until its fast-follow wave (see REGISTERED_FAMILIES above).
+    u = unregistered_family_ref(name)
+    if u is not None:
+        return "unregistered-family:" + u
     in_params, out = classify(f)
     if ret_type(f, out) is None:
         return "ret:" + norm(f["returnType"]["canonical"])
@@ -674,6 +704,118 @@ def emit_binary_tt(f, kind):
             f"            {inner}\n"
             f"        }});\n}}\n")
 
+def poc_binary_tt_scalar(f):
+    """Two Temporal blobs + one trailing by-value scalar (TernaryExecutor over two
+    Temporal args and a scalar). E.g. temporal_lcss_distance(Temporal,Temporal,double)
+    — the similarity distance with a threshold. Same correctness rules as binary_tt."""
+    if supported(f) is not None: return None
+    ins, out = classify(f)
+    if out is not None or len(ins) != 3: return None
+    if not all(base(ins[i]["canonical"]) == "Temporal" and norm(ins[i]["canonical"]).endswith("*")
+               for i in (0, 1)):
+        return None
+    b3 = base(ins[2]["canonical"])
+    if b3 not in SCALAR_ARG or "*" in norm(ins[2]["canonical"]): return None
+    if reg_scope(f["name"]) is None: return None
+    rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
+    if rb == "Temporal" and rn.endswith("*"):
+        return ("temporal", "MD_TEMPORAL", SCALAR_ARG[b3])
+    if rb in BYVAL_RET and "*" not in rn:
+        return ("scalar:" + rb, scalar_ret_duck(f), SCALAR_ARG[b3])
+    return None
+
+def emit_binary_tt_scalar(f, kind, arg3):
+    name = f["name"]; dt3, cpp3, e3 = arg3     # SCALAR_ARG marshal is templated on "a2"
+    if kind == "temporal":          # (Temporal,Temporal,scalar) -> Temporal (NULL-safe)
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    TernaryExecutor::ExecuteWithNulls<string_t, string_t, {cpp3}, string_t>("
+                f"args.data[0], args.data[1], args.data[2], result, args.size(),\n"
+                f"        [&](string_t in1, string_t in2, {cpp3} a2, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                f"            Temporal *t1 = BlobToTemporal(in1);\n            Temporal *t2 = BlobToTemporal(in2);\n"
+                f"            Temporal *r = {name}(t1, t2, {e3});\n            free(t1); free(t2);\n"
+                f"            return TemporalToBlobN(result, r, mask, idx);\n        }});\n}}\n")
+    ctype, rett, _rx = scalar_emit3(f)
+    inner = f"{ctype} r = {name}(t1, t2, {e3});\n            free(t1); free(t2);\n            return {_rx};"
+    return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+            f"    EnsureMeosThreadInitialized();\n"
+            f"    TernaryExecutor::Execute<string_t, string_t, {cpp3}, {rett}>("
+            f"args.data[0], args.data[1], args.data[2], result, args.size(),\n"
+            f"        [&](string_t in1, string_t in2, {cpp3} a2) {{\n"
+            f"            Temporal *t1 = BlobToTemporal(in1);\n"
+            f"            Temporal *t2 = BlobToTemporal(in2);\n"
+            f"            {inner}\n"
+            f"        }});\n}}\n")
+
+def poc_geo_temporal(f):
+    """Geometry-argument spatial relationships: one Temporal blob + one GSERIALIZED
+    (geometry) blob, optional trailing double. The geometry is marshalled
+    GeometryToGSerialized(blob, tspatial_srid(t)) — its SRID comes from the sibling
+    temporal arg (the hand geo executor pattern, tgeompoint_functions.cpp). Covers the
+    geo spatial relationships eContains/eIntersects/eDwithin/... (group *_rel_ever: MEOS
+    `int` tri-state, ret<0 -> SQL NULL, else BOOLEAN) and tContains/tIntersects/tDwithin/...
+    (group *_rel_temp: Temporal tbool). supported() rejects the GSERIALIZED arg, so the
+    non-arg eligibility checks are applied directly here."""
+    name = f["name"]
+    if name.startswith("meos_internal") or (f.get("group") or "").startswith("meos_internal"):
+        return None
+    if not f.get("sqlfn") or re.search(r'_(out|in|send|recv)$', f.get("sqlfn") or ""):
+        return None
+    if unregistered_family_ref(name) is not None:
+        return None
+    ins, out = classify(f)
+    if out is not None or len(ins) not in (2, 3):
+        return None
+    bs = [base(p["canonical"]) for p in ins]
+    # first two args = exactly one Temporal* and one GSERIALIZED* (either order), both ptrs
+    if sorted(bs[:2]) != ["GSERIALIZED", "Temporal"]:
+        return None
+    if not all(norm(ins[i]["canonical"]).endswith("*") for i in (0, 1)):
+        return None
+    geo_first = (bs[0] == "GSERIALIZED")
+    has_dbl = len(ins) == 3
+    if has_dbl and (base(ins[2]["canonical"]) != "double" or "*" in norm(ins[2]["canonical"])):
+        return None
+    if reg_scope(name) is None:
+        return None
+    rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
+    if rb == "Temporal" and rn.endswith("*"):
+        return ("temporal", "MD_TEMPORAL", geo_first, has_dbl)
+    if rb in ("int", "int32_t") and "*" not in rn:      # ea tri-state -> nullable BOOLEAN
+        return ("scalar", scalar_ret_duck(f), geo_first, has_dbl)
+    return None
+
+def emit_geo_temporal(f, kind, geo_first, has_dbl):
+    name = f["name"]
+    decl = "string_t in_g, string_t in_t" if geo_first else "string_t in_t, string_t in_g"
+    call_args = "gs, t" if geo_first else "t, gs"
+    marshal = ("            Temporal *t = BlobToTemporal(in_t);\n"
+               "            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));\n")
+    freeing = "            free(t); free(gs);\n"
+    if has_dbl:               # (Temporal,geometry,double) or (geometry,Temporal,double)
+        exec_head = ("TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, {ret}>("
+                     "args.data[0], args.data[1], args.data[2], result, args.size(),")
+        lam_decl = decl + ", double d, ValidityMask &mask, idx_t idx"
+        call = f"{name}({call_args}, d)"
+    else:                     # (Temporal,geometry) or (geometry,Temporal)
+        exec_head = ("BinaryExecutor::ExecuteWithNulls<string_t, string_t, {ret}>("
+                     "args.data[0], args.data[1], result, args.size(),")
+        lam_decl = decl + ", ValidityMask &mask, idx_t idx"
+        call = f"{name}({call_args})"
+    if kind == "temporal":    # -> Temporal tbool (NULL-safe pointer return)
+        head = exec_head.format(ret="string_t"); rett = "string_t"
+        body = (f"            Temporal *r = {call};\n{freeing}"
+                f"            return TemporalToBlobN(result, r, mask, idx);\n")
+    else:                     # ea int -> nullable BOOLEAN (hand semantics: ret<0 -> SQL NULL)
+        head = exec_head.format(ret="bool"); rett = "bool"
+        body = (f"            int r = {call};\n{freeing}"
+                f"            if (r < 0) {{ mask.SetInvalid(idx); return false; }}\n"
+                f"            return r != 0;\n")
+    return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+            f"    EnsureMeosThreadInitialized();\n"
+            f"    {head}\n"
+            f"        [&]({lam_decl}) -> {rett} {{\n{marshal}{body}        }});\n}}\n")
+
 # ---- array-return struct shape: C array-of-structs + int* count -> DuckDB LIST(STRUCT) ----
 # Driven ENTIRELY by the catalog: shape.arrayReturn (from MEOS-API shapeinfer) marks the
 # array return, lengthFrom.name identifies the count out-param, and the returned struct's
@@ -1036,16 +1178,15 @@ def emit_span(f, kind, C=SPAN_C):
             f"            bool r = {name}(s1, s2);\n            free(s1); free(s2);\n            return r;\n"
             f"        }});\n}}\n")
 
-# ---- coexistence prefix (TRANSITION scaffolding — NOT a canonical name) ----
-# Generated UDFs coexist in one binary with the not-yet-retired hand UDFs, which
-# own the canonical names; DuckDB errors on a duplicate (name, signature). So a
-# function emits the COEXIST_PREFIX UNLESS its @ingroup family has been RETIRED
-# (hand code deleted) — then it emits the canonical pin name. Retiring a family =
-# delete its hand registrations + add its group to RETIRED_GROUPS. End state:
-# every family retired -> the prefix is dead and generated == the binding.
-COEXIST_PREFIX = ""
-# @ingroup groups whose hand registrations are deleted: the generated surface owns
-# their canonical names (no prefix). Grows as families migrate to generation.
+# ---- canonical names only — NO coexistence prefix, ever ----
+# The North Star binding has ZERO hand-written UDFs, so there is nothing to coexist
+# with: the generator OWNS every canonical name it emits, and the hand registration it
+# would duplicate is DELETED in the same change (generate + delete-hand, suite-proved).
+# There is no g_ transition prefix — a generated function IS the binding's function.
+# RETIRED_GROUPS lists @ingroup families whose hand registrations are fully deleted, so
+# the retire-safety check below verifies the generator covers every @sqlfn of each
+# (dropping none). It gates SAFETY (per-family, suite-verified), not naming; naming is
+# always the canonical @sqlfn.
 RETIRED_GROUPS = {"meos_temporal_analytics_similarity", "meos_temporal_comp_temp"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
@@ -1054,7 +1195,7 @@ RETIRE_UNCOVERED_OK = set()  # empty: the *Path LIST(STRUCT) returns are now gen
 def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
 def reg_name(nm, f):
-    return nm if retired(f) else COEXIST_PREFIX + nm
+    return nm            # canonical always; the g_ coexistence prefix is removed for good
 def reg_names(f, sqlfn, aliases):
     """The SQL names a function registers under: its sqlfn, the portable bare
     alias for its operator (the cross-engine RFC dialect), and the operator symbol
@@ -1101,9 +1242,11 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             continue            # pin/ABI gate: skip catalog fns absent from the build headers
         u = poc_emittable(f); b = None if u else poc_binary(f); t = None if (u or b) else poc_ternary(f)
         tt = None if (u or b or t) else poc_binary_tt(f)
-        sf = None if (u or b or t or tt) else poc_scalar_first(f)
-        pp = None if (u or b or t or tt or sf) else poc_path(f)
-        if not u and not b and not t and not tt and not sf and not pp:
+        tts = None if (u or b or t or tt) else poc_binary_tt_scalar(f)
+        sf = None if (u or b or t or tt or tts) else poc_scalar_first(f)
+        gt = None if (u or b or t or tt or tts or sf) else poc_geo_temporal(f)
+        pp = None if (u or b or t or tt or tts or sf or gt) else poc_path(f)
+        if not u and not b and not t and not tt and not tts and not sf and not gt and not pp:
             continue
         STATE["grp"] = f.get("group") or "meos_ungrouped"
         sqlfn, fn = f["sqlfn"], f["name"]
@@ -1128,11 +1271,25 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             bodies.append(emit_binary_tt(f, kind))
             argsig = "{type, type}"
             spec_sig = "{%s, %s}"
+        elif tts:
+            kind, dret, arg3 = tts; n_ter += 1
+            bodies.append(emit_binary_tt_scalar(f, kind, arg3))
+            argsig = "{type, type, %s}" % arg3[0]
+            spec_sig = "{%%s, %%s, %s}" % arg3[0]
         elif sf:
             kind, dret, arg1 = sf; n_bin += 1
             bodies.append(emit_scalar_first(f, kind, arg1))
             argsig = "{%s, type}" % arg1[0]
             spec_sig = "{%s, %%s}" % arg1[0]
+        elif gt:
+            kind, dret, geo_first, has_dbl = gt
+            if has_dbl: n_ter += 1
+            else: n_bin += 1
+            bodies.append(emit_geo_temporal(f, kind, geo_first, has_dbl))
+            slots = ["GeoTypes::GEOMETRY()", "%s"] if geo_first else ["%s", "GeoTypes::GEOMETRY()"]
+            if has_dbl: slots.append("LogicalType::DOUBLE")
+            spec_sig = "{" + ", ".join(slots) + "}"       # geo rels are always scope=='types'
+            argsig = spec_sig.replace("%s", "type")
         else:
             # array-return-struct shape -> the canonical SETOF surface = a DuckDB TABLE function
             # (registered via loader.RegisterFunction, NOT the scalar path). Over AllTypes + geo
@@ -1329,6 +1486,8 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            '#include "geo/tgeogpoint.hpp"\n'
            '#include "geo/tgeometry.hpp"\n'
            '#include "geo/tgeography.hpp"\n'
+           '#include "spatial/spatial_types.hpp"\n'   # GeoTypes::GEOMETRY() (duckdb-spatial)
+           '#include "geo_util.hpp"\n'                # GeometryToGSerialized(blob, srid)
            '#include "meos_internal.h"\n'
            '#include "meos_geo.h"\n'
            '#include "meos_internal_geo.h"\n'
@@ -1472,13 +1631,12 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
     return n_un, n_bin, n_ter, n_reg, n_set, n_span
 
 def main():
-    global RETIRED_GROUPS, COEXIST_PREFIX
+    global RETIRED_GROUPS
     pos = [a for a in sys.argv[1:] if not a.startswith("--")]
     for fl in [a for a in sys.argv[1:] if a.startswith("--")]:
         if fl.startswith("--retire="):
             RETIRED_GROUPS = {x for x in fl[len("--retire="):].split(",") if x}
-        elif fl.startswith("--prefix="):
-            COEXIST_PREFIX = fl[len("--prefix="):]
+        # (the --prefix / g_ coexistence flag is removed for good — names are always canonical)
     cat = pos[0] if len(pos) > 0 else "/home/esteban/src/MEOS-API/output/meos-idl.json"
     out = pos[1] if len(pos) > 1 else None
     d = json.load(open(cat))
