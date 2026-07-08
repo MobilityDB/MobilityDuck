@@ -198,3 +198,66 @@ FROM read_parquet('__TEST_DIR__/tgeogpoint.parquet')
 WHERE vessel_id = 1
 ----
 90
+
+# =============================================================================
+# tgeogpoint — geodetic (spheroidal) round-trip; asBinary must preserve type tag
+# =============================================================================
+
+statement ok
+COPY (
+  SELECT 1 AS vessel_id,
+         asBinary(tgeogpointSeq(
+           list(TGEOGPOINT(ST_Point(lon, lat), ts) ORDER BY ts)
+         )) AS traj
+  FROM (VALUES
+    (4.35, 50.85, TIMESTAMPTZ '2026-01-01 00:00:00+00'),
+    (5.57, 50.63, TIMESTAMPTZ '2026-01-01 02:00:00+00')
+  ) t(lon, lat, ts)
+)
+TO '__TEST_DIR__/tgeogpoint.parquet' (FORMAT PARQUET)
+
+# Must land as BYTE_ARRAY
+query T
+SELECT type FROM parquet_schema('__TEST_DIR__/tgeogpoint.parquet')
+WHERE name = 'traj'
+----
+BYTE_ARRAY
+
+# Geodetic length survives round-trip: Brussels→Liège ~89500 m
+query I
+SELECT round(length(tgeogpointFromBinary(traj)) / 1000) AS length_km
+FROM read_parquet('__TEST_DIR__/tgeogpoint.parquet')
+WHERE vessel_id = 1
+----
+90
+
+# =============================================================================
+# temporalFooter — JSON metadata builder for KV_METADATA embedding
+# =============================================================================
+
+# Single-column map produces correct TemporalParquet JSON
+query T
+SELECT temporalFooter(MAP {'traj': 'tgeogpoint'})
+----
+{"version":"1.0.0","columns":{"traj":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tgeogpoint"}}}
+
+# Multi-column map preserves insertion order
+query T
+SELECT temporalFooter(MAP {'temperature': 'tfloat', 'position': 'tgeompoint'})
+----
+{"version":"1.0.0","columns":{"temperature":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tfloat"},"position":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tgeompoint"}}}
+
+# KV_METADATA round-trip: footer survives Parquet file-level metadata
+statement ok
+COPY (SELECT 1 AS id)
+TO '__TEST_DIR__/footer_meta.parquet' (
+    FORMAT PARQUET,
+    KV_METADATA {'temporal': temporalFooter(MAP {'traj': 'tgeogpoint'})}
+)
+
+query T
+SELECT value = temporalFooter(MAP {'traj': 'tgeogpoint'})::BLOB AS ok
+FROM parquet_kv_metadata('__TEST_DIR__/footer_meta.parquet')
+WHERE key = 'temporal'::BLOB
+----
+true

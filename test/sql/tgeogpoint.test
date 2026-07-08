@@ -1,0 +1,161 @@
+require mobilityduck
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Construction
+# ──────────────────────────────────────────────────────────────────────────────
+
+# MobilityDuck initializes MEOS with `Europe/Brussels` timezone at extension
+# load time (see `mobilityduck_extension.cpp` ConfigureMeosSridCsvOnce path).
+# Brussels is UTC+1 in winter (no DST); test fixtures use January dates so
+# the offset is deterministically `+01`.  See `docs/testing-tz-neutral-policy.md`.
+
+query I
+SELECT asText(TGEOGPOINT(ST_Point(1, 2), to_timestamp(946684800)));
+----
+POINT(1 2)@2000-01-01 01:00:00+01
+
+query I
+SELECT asEWKT(TGEOGPOINT(ST_Point(1, 2), to_timestamp(946684800)));
+----
+SRID=4326;POINT(1 2)@2000-01-01 01:00:00+01
+
+query I
+SELECT asText(tgeogpointSeq(ARRAY[
+    TGEOGPOINT(ST_Point(0, 0), to_timestamp(946684800)),
+    TGEOGPOINT(ST_Point(0, 1), to_timestamp(946771200))
+]));
+----
+[POINT(0 0)@2000-01-01 01:00:00+01, POINT(0 1)@2000-01-02 01:00:00+01]
+
+query I
+SELECT asText(tgeogpoint 'SRID=4326;Point(1 2)@2000-01-01');
+----
+POINT(1 2)@2000-01-01 00:00:00+01
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Geodetic length — must return metres, not degrees
+# ──────────────────────────────────────────────────────────────────────────────
+
+query I
+SELECT round(length(tgeogpointSeq(ARRAY[
+    TGEOGPOINT(ST_Point(0, 0), to_timestamp(946684800)),
+    TGEOGPOINT(ST_Point(0, 1), to_timestamp(946771200))
+]))) AS len_m;
+----
+110574.0
+
+# ──────────────────────────────────────────────────────────────────────────────
+# eIntersects(GEOMETRY, tgeogpoint) — (geo, temporal) direction
+#
+# Regression for the SRID=0 + geodetic-flag-mismatch bugs:
+#   Bug 1: srid was hardcoded 0 before tgeom deserialization → mixed-SRID error
+#   Bug 2: FLAGS_SET_GEODETIC alone corrupts bbox layout → wrong results / NULL
+# Fix: use tspatial_srid(tgeom) for SRID; use geom_to_geog() for flag+bbox.
+# ──────────────────────────────────────────────────────────────────────────────
+
+query I
+SELECT eIntersects(
+    ST_GeomFromText('POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))'),
+    TGEOGPOINT(ST_Point(1, 1), to_timestamp(946684800))
+);
+----
+true
+
+query I
+SELECT eIntersects(
+    ST_GeomFromText('POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))'),
+    TGEOGPOINT(ST_Point(5, 5), to_timestamp(946684800))
+);
+----
+false
+
+query I
+SELECT eIntersects(
+    ST_GeomFromText('POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))'),
+    tgeogpointSeq(ARRAY[
+        TGEOGPOINT(ST_Point(-1, 1), to_timestamp(946684800)),
+        TGEOGPOINT(ST_Point(3, 1),  to_timestamp(946771200))
+    ])
+);
+----
+true
+
+# ──────────────────────────────────────────────────────────────────────────────
+# eDisjoint(GEOMETRY, tgeogpoint) — (geo, temporal) direction
+# ──────────────────────────────────────────────────────────────────────────────
+
+query I
+SELECT eDisjoint(
+    ST_GeomFromText('POLYGON((10 10, 20 10, 20 20, 10 20, 10 10))'),
+    TGEOGPOINT(ST_Point(1, 1), to_timestamp(946684800))
+);
+----
+true
+
+query I
+SELECT eDisjoint(
+    ST_GeomFromText('POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))'),
+    TGEOGPOINT(ST_Point(1, 1), to_timestamp(946684800))
+);
+----
+false
+
+# ──────────────────────────────────────────────────────────────────────────────
+# eIntersects / eDisjoint — (tgeogpoint, GEOMETRY) direction
+# ──────────────────────────────────────────────────────────────────────────────
+
+query I
+SELECT eIntersects(
+    TGEOGPOINT(ST_Point(1, 1), to_timestamp(946684800)),
+    ST_GeomFromText('POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))')
+);
+----
+true
+
+query I
+SELECT eDisjoint(
+    TGEOGPOINT(ST_Point(1, 1), to_timestamp(946684800)),
+    ST_GeomFromText('POLYGON((10 10, 20 10, 20 20, 10 20, 10 10))')
+);
+----
+true
+
+query I
+SELECT eDisjoint(
+    TGEOGPOINT(ST_Point(1, 1), to_timestamp(946684800)),
+    ST_GeomFromText('POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))')
+);
+----
+false
+
+# ──────────────────────────────────────────────────────────────────────────────
+# eIntersects — (tgeogpoint, tgeogpoint)
+# ──────────────────────────────────────────────────────────────────────────────
+
+query I
+SELECT eIntersects(
+    TGEOGPOINT(ST_Point(1, 1), to_timestamp(946684800)),
+    TGEOGPOINT(ST_Point(1, 1), to_timestamp(946684800))
+);
+----
+true
+
+query I
+SELECT eIntersects(
+    TGEOGPOINT(ST_Point(1, 1), to_timestamp(946684800)),
+    TGEOGPOINT(ST_Point(5, 5), to_timestamp(946684800))
+);
+----
+false
+
+# ──────────────────────────────────────────────────────────────────────────────
+# duration
+# ──────────────────────────────────────────────────────────────────────────────
+
+query I
+SELECT duration(tgeogpointSeq(ARRAY[
+    TGEOGPOINT(ST_Point(0, 0), to_timestamp(946684800)),
+    TGEOGPOINT(ST_Point(1, 1), to_timestamp(946771200))
+]))::VARCHAR;
+----
+1 day
