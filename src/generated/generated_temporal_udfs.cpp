@@ -1869,6 +1869,19 @@ static void Gen_acovers_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &re
         });
 }
 
+static void Gen_adisjoint_geo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            int r = adisjoint_geo_tgeo(gs, t);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
 static void Gen_adisjoint_tgeo_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
@@ -1891,6 +1904,19 @@ static void Gen_adisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &
             int32_t r = adisjoint_tgeo_tgeo(t1, t2);
             free(t1); free(t2);
             return (r != 0);
+        });
+}
+
+static void Gen_adwithin_geo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, bool>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t in_g, string_t in_t, double d, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            int r = adwithin_geo_tgeo(gs, t, d);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
         });
 }
 
@@ -1919,6 +1945,19 @@ static void Gen_adwithin_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &r
         });
 }
 
+static void Gen_aintersects_geo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            int r = aintersects_geo_tgeo(gs, t);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
 static void Gen_aintersects_tgeo_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
@@ -1941,6 +1980,19 @@ static void Gen_aintersects_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector
             int32_t r = aintersects_tgeo_tgeo(t1, t2);
             free(t1); free(t2);
             return (r != 0);
+        });
+}
+
+static void Gen_atouches_geo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            int r = atouches_geo_tgeo(gs, t);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
         });
 }
 
@@ -2045,6 +2097,19 @@ static void Gen_ecovers_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &re
         });
 }
 
+static void Gen_edisjoint_geo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            int r = edisjoint_geo_tgeo(gs, t);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
 static void Gen_edisjoint_tgeo_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
@@ -2067,6 +2132,19 @@ static void Gen_edisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &
             int32_t r = edisjoint_tgeo_tgeo(t1, t2);
             free(t1); free(t2);
             return (r != 0);
+        });
+}
+
+static void Gen_edwithin_geo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, bool>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t in_g, string_t in_t, double d, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            int r = edwithin_geo_tgeo(gs, t, d);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
         });
 }
 
@@ -2095,6 +2173,19 @@ static void Gen_edwithin_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &r
         });
 }
 
+static void Gen_eintersects_geo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            int r = eintersects_geo_tgeo(gs, t);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
 static void Gen_eintersects_tgeo_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
@@ -2117,6 +2208,19 @@ static void Gen_eintersects_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector
             int32_t r = eintersects_tgeo_tgeo(t1, t2);
             free(t1); free(t2);
             return (r != 0);
+        });
+}
+
+static void Gen_etouches_geo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            int r = etouches_geo_tgeo(gs, t);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
         });
 }
 
@@ -2251,6 +2355,18 @@ static void Gen_tdisjoint_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = tdisjoint_tgeo_tgeo(t1, t2);
             free(t1); free(t2);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tdwithin_geo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t in_g, string_t in_t, double d, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            Temporal *r = tdwithin_geo_tgeo(gs, t, d);
+            free(t); free(gs);
             return TemporalToBlobN(result, r, mask, idx);
         });
 }
@@ -11434,6 +11550,10 @@ static void RegisterGenerated_meos_geo_rel_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("aCovers", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_acovers_tgeo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aCovers", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_acovers_tgeo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aCovers", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_acovers_tgeo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjoint", {GeoTypes::GEOMETRY(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_adisjoint_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjoint", {GeoTypes::GEOMETRY(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_adisjoint_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjoint", {GeoTypes::GEOMETRY(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_adisjoint_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjoint", {GeoTypes::GEOMETRY(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_adisjoint_geo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjoint", {TgeompointType::tgeompoint(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, Gen_adisjoint_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjoint", {TgeogpointType::tgeogpoint(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, Gen_adisjoint_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjoint", {TGeometryTypes::tgeometry(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, Gen_adisjoint_tgeo_geo));
@@ -11442,6 +11562,10 @@ static void RegisterGenerated_meos_geo_rel_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjoint", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_adisjoint_tgeo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjoint", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_adisjoint_tgeo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjoint", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_adisjoint_tgeo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDwithin", {GeoTypes::GEOMETRY(), TgeompointType::tgeompoint(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_adwithin_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDwithin", {GeoTypes::GEOMETRY(), TgeogpointType::tgeogpoint(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_adwithin_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDwithin", {GeoTypes::GEOMETRY(), TGeometryTypes::tgeometry(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_adwithin_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDwithin", {GeoTypes::GEOMETRY(), TGeographyTypes::tgeography(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_adwithin_geo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aDwithin", {TgeompointType::tgeompoint(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_adwithin_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aDwithin", {TgeogpointType::tgeogpoint(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_adwithin_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aDwithin", {TGeometryTypes::tgeometry(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_adwithin_tgeo_geo));
@@ -11450,6 +11574,10 @@ static void RegisterGenerated_meos_geo_rel_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("aDwithin", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_adwithin_tgeo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aDwithin", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_adwithin_tgeo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aDwithin", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_adwithin_tgeo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersects", {GeoTypes::GEOMETRY(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_aintersects_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersects", {GeoTypes::GEOMETRY(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_aintersects_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersects", {GeoTypes::GEOMETRY(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_aintersects_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersects", {GeoTypes::GEOMETRY(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_aintersects_geo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersects", {TgeompointType::tgeompoint(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, Gen_aintersects_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersects", {TgeogpointType::tgeogpoint(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, Gen_aintersects_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersects", {TGeometryTypes::tgeometry(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, Gen_aintersects_tgeo_geo));
@@ -11458,6 +11586,10 @@ static void RegisterGenerated_meos_geo_rel_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersects", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_aintersects_tgeo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersects", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_aintersects_tgeo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersects", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_aintersects_tgeo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aTouches", {GeoTypes::GEOMETRY(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_atouches_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aTouches", {GeoTypes::GEOMETRY(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_atouches_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aTouches", {GeoTypes::GEOMETRY(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_atouches_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aTouches", {GeoTypes::GEOMETRY(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_atouches_geo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aTouches", {TgeompointType::tgeompoint(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, Gen_atouches_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aTouches", {TgeogpointType::tgeogpoint(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, Gen_atouches_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aTouches", {TGeometryTypes::tgeometry(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, Gen_atouches_tgeo_geo));
@@ -11490,6 +11622,10 @@ static void RegisterGenerated_meos_geo_rel_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("eCovers", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_ecovers_tgeo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eCovers", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_ecovers_tgeo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eCovers", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_ecovers_tgeo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eDisjoint", {GeoTypes::GEOMETRY(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_edisjoint_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eDisjoint", {GeoTypes::GEOMETRY(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_edisjoint_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eDisjoint", {GeoTypes::GEOMETRY(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_edisjoint_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eDisjoint", {GeoTypes::GEOMETRY(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_edisjoint_geo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eDisjoint", {TgeompointType::tgeompoint(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, Gen_edisjoint_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eDisjoint", {TgeogpointType::tgeogpoint(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, Gen_edisjoint_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eDisjoint", {TGeometryTypes::tgeometry(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, Gen_edisjoint_tgeo_geo));
@@ -11498,6 +11634,10 @@ static void RegisterGenerated_meos_geo_rel_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("eDisjoint", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_edisjoint_tgeo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eDisjoint", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_edisjoint_tgeo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eDisjoint", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_edisjoint_tgeo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eDwithin", {GeoTypes::GEOMETRY(), TgeompointType::tgeompoint(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_edwithin_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eDwithin", {GeoTypes::GEOMETRY(), TgeogpointType::tgeogpoint(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_edwithin_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eDwithin", {GeoTypes::GEOMETRY(), TGeometryTypes::tgeometry(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_edwithin_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eDwithin", {GeoTypes::GEOMETRY(), TGeographyTypes::tgeography(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_edwithin_geo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eDwithin", {TgeompointType::tgeompoint(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_edwithin_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eDwithin", {TgeogpointType::tgeogpoint(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_edwithin_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eDwithin", {TGeometryTypes::tgeometry(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_edwithin_tgeo_geo));
@@ -11506,6 +11646,10 @@ static void RegisterGenerated_meos_geo_rel_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("eDwithin", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_edwithin_tgeo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eDwithin", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_edwithin_tgeo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eDwithin", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_edwithin_tgeo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersects", {GeoTypes::GEOMETRY(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_eintersects_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersects", {GeoTypes::GEOMETRY(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_eintersects_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersects", {GeoTypes::GEOMETRY(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_eintersects_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersects", {GeoTypes::GEOMETRY(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_eintersects_geo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersects", {TgeompointType::tgeompoint(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, Gen_eintersects_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersects", {TgeogpointType::tgeogpoint(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, Gen_eintersects_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersects", {TGeometryTypes::tgeometry(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, Gen_eintersects_tgeo_geo));
@@ -11514,6 +11658,10 @@ static void RegisterGenerated_meos_geo_rel_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersects", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_eintersects_tgeo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersects", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_eintersects_tgeo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersects", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_eintersects_tgeo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eTouches", {GeoTypes::GEOMETRY(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_etouches_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eTouches", {GeoTypes::GEOMETRY(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_etouches_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eTouches", {GeoTypes::GEOMETRY(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_etouches_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eTouches", {GeoTypes::GEOMETRY(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_etouches_geo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eTouches", {TgeompointType::tgeompoint(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, Gen_etouches_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eTouches", {TgeogpointType::tgeogpoint(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, Gen_etouches_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eTouches", {TGeometryTypes::tgeometry(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, Gen_etouches_tgeo_geo));
@@ -11561,6 +11709,10 @@ static void RegisterGenerated_meos_geo_rel_temp(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tDisjoint", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, TemporalTypes::tbool(), Gen_tdisjoint_tgeo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tDisjoint", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, TemporalTypes::tbool(), Gen_tdisjoint_tgeo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tDisjoint", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, TemporalTypes::tbool(), Gen_tdisjoint_tgeo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tDwithin", {GeoTypes::GEOMETRY(), TgeompointType::tgeompoint(), LogicalType::DOUBLE}, TemporalTypes::tbool(), Gen_tdwithin_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tDwithin", {GeoTypes::GEOMETRY(), TgeogpointType::tgeogpoint(), LogicalType::DOUBLE}, TemporalTypes::tbool(), Gen_tdwithin_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tDwithin", {GeoTypes::GEOMETRY(), TGeometryTypes::tgeometry(), LogicalType::DOUBLE}, TemporalTypes::tbool(), Gen_tdwithin_geo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tDwithin", {GeoTypes::GEOMETRY(), TGeographyTypes::tgeography(), LogicalType::DOUBLE}, TemporalTypes::tbool(), Gen_tdwithin_geo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tDwithin", {TgeompointType::tgeompoint(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE}, TemporalTypes::tbool(), Gen_tdwithin_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tDwithin", {TgeogpointType::tgeogpoint(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE}, TemporalTypes::tbool(), Gen_tdwithin_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tDwithin", {TGeometryTypes::tgeometry(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE}, TemporalTypes::tbool(), Gen_tdwithin_tgeo_geo));

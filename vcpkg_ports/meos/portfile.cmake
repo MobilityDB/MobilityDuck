@@ -1,8 +1,8 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO MobilityDB/MobilityDB
-    REF bb5f9e7086af18a965908a8db3550c054b297b5a
-    SHA512 722c7cfaef8d6ac7324d6f7bc53b13a0d28a6e5754fa527e20e67131b1c0ffd65167e7f6a97449730da0486274e5f0b51f095ee4339d9bdf0c3139a45104ed58
+    REF b71198726ab5a1b1948ab0ee6301088cf30de629
+    SHA512 8d7b5f3d2f1f9082ed5c46cd7bccb4bbb65f7fde8cdb9ec5878cfd29091a5b0f4eb5575c979ab002c05a69379f8b415ae4be5777380c579b6c1c96202c6a3777
 )
 
 
@@ -127,8 +127,10 @@ vcpkg_cmake_configure(
         # (auto-found via find_library). RGEO follows POSE automatically
         # (CMAKE_DEPENDENT_OPTION). POINTCLOUD stays OFF: its pointcloud-pg
         # autotools ./configure fails to build on arm64-linux, and the binding
-        # surfaces no pointcloud type or function yet. RASTER stays OFF (PG-only,
-        # no standalone link).
+        # surfaces no pointcloud type or function yet. RASTER=ON: the raquet tile
+        # type (T_RAQUET, MobilityDB #1332) is a GDAL-free varlena value type that
+        # links standalone (proven via the MEOS-API catalog + the JMEOS RASTER=ON
+        # chain), so libmeos matches the full catalog surface.
         # USER-APPROVED-PIN-WRITE (2026-06-27): ARROW=ON exports the Apache Arrow C
         # Data Interface roundtrip helpers (header-only; vendored arrow/ + nanoarrow/
         # present at the pin, no libarrow link; regularized option(ARROW) per PRs
@@ -141,6 +143,7 @@ vcpkg_cmake_configure(
         -DNPOINT=ON
         -DPOSE=ON
         -DQUADBIN=ON
+        -DRASTER=ON
         "-DJSON-C_LIBRARIES=${_MEOS_JSONC_LIB}"
         "-DJSON-C_INCLUDE_DIRS=${_MEOS_JSONC_INC}"
         -DBUILD_SHARED_LIBS=ON
