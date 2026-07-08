@@ -290,6 +290,10 @@ def reg_scope(name):
     for pre, acc in GEO_TYPES.items():
         if name.startswith(pre + "_"):
             return ("types", [acc])
+    # the abstract point supertype tpoint_* covers both point subtypes (getX/azimuth/
+    # speed/... live under this MEOS name); geometry-coupled variants auto-exclude.
+    if name.startswith("tpoint_"):
+        return ("types", [GEO_TYPES["tgeompoint"], GEO_TYPES["tgeogpoint"]])
     if re.search(r'_(tgeo|tspatial)(?=_|$)', name):
         return ("types", GEO_ALLTYPES)
     # temporal-type token ANYWHERE in the name (always_eq_tint_int, ever_lt_tfloat_tfloat,
@@ -314,7 +318,13 @@ TO_TYPE = {"tint": "TemporalTypes::tint()", "tbigint": "TemporalTypes::tbigint()
            "tbool": "TemporalTypes::tbool()", "ttext": "TemporalTypes::ttext()",
            "tgeometry": "TGeometryTypes::tgeometry()", "tgeography": "TGeographyTypes::tgeography()",
            "tgeompoint": "TgeompointType::tgeompoint()", "tgeogpoint": "TgeogpointType::tgeogpoint()"}
-def ret_temporal_type(name, arg_acc, group=""):
+def ret_temporal_type(name, arg_acc, group="", sql_ret=None):
+    # A single, unambiguous SQL return subtype from the catalog names the output
+    # temporal type directly (the catalog is the SoT). The name heuristics below are
+    # the fallback for functions the catalog leaves input-polymorphic (sqlReturnTypeAll),
+    # where the return preserves the input type via arg_acc.
+    if sql_ret and sql_ret in TO_TYPE:
+        return TO_TYPE[sql_ret]
     # temporal comparison ops (teq/tne/tlt/tle/tgt/tge_*) return a tbool, NOT the input type
     if re.match(r't(eq|ne|lt|le|gt|ge)_', name):
         return "TemporalTypes::tbool()"
@@ -1306,14 +1316,14 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         # nothing). The alias reuses the SAME backing body ([[aliases-reuse-backing]]).
         names = reg_names(f, sqlfn, aliases)
         if scope == "all":
-            rett = ret_temporal_type(fn, "type", f.get("group")) if dret == "MD_TEMPORAL" else dret
+            rett = ret_temporal_type(fn, "type", f.get("group"), f.get("sqlReturnType")) if dret == "MD_TEMPORAL" else dret
             for nm in names:
                 generic_regs.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
                                     f'"{reg_name(nm, f)}", {argsig}, {rett}, Gen_{fn}));')
         else:
             for a in accs:
                 sig = spec_sig % ((a,) * spec_sig.count("%s"))   # 1 or 2 accessor slots
-                r2 = ret_temporal_type(fn, a, f.get("group")) if dret == "MD_TEMPORAL" else dret
+                r2 = ret_temporal_type(fn, a, f.get("group"), f.get("sqlReturnType")) if dret == "MD_TEMPORAL" else dret
                 for nm in names:
                     specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {sig}, {r2}, Gen_{fn}));')
