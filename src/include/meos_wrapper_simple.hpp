@@ -11,15 +11,14 @@ extern "C" {
     // Per-family public headers (alphabetical, per the family-block convention):
     // family type declarations and cross-family conversions (e.g.
     // tcbuffer_to_tfloat, ttext_to_tjsonb, tbigint_to_tquadbin) live here, not in
-    // the meos.h umbrella. The port builds all families, so all are installed; the
-    // generated UDFs call into every one. (Alphabetical also keeps meos_pose.h
-    // before meos_rgeo.h, which depends on it.)
+    // the meos.h umbrella. The port builds every family the generated UDFs call
+    // into (pointcloud is off: it surfaces no type or UDF yet). (Alphabetical also
+    // keeps meos_pose.h before meos_rgeo.h, which depends on it.)
     #include <meos_arrow.h>
     #include <meos_cbuffer.h>
     #include <meos_h3.h>
     #include <meos_json.h>
     #include <meos_npoint.h>
-    #include <meos_pointcloud.h>
     #include <meos_pose.h>
     #include <meos_quadbin.h>
     #include <meos_rgeo.h>
