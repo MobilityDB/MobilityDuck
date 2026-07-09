@@ -825,8 +825,16 @@ def emit_geo_temporal(f, kind, geo_first, has_dbl):
     name = f["name"]
     decl = "string_t in_g, string_t in_t" if geo_first else "string_t in_t, string_t in_g"
     call_args = "gs, t" if geo_first else "t, gs"
+    # When the temporal operand is geodetic, coerce the geometry to geography so the
+    # planar/geodetic flags + bbox match before the MEOS call (MEOS correctly errors on a
+    # mixed planar/geodetic pair). DuckDB has a single GEOMETRY type, so this cross-argument
+    # coercion is the binding's job; the SRID likewise comes from the sibling temporal.
     marshal = ("            Temporal *t = BlobToTemporal(in_t);\n"
-               "            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));\n")
+               "            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));\n"
+               "            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {\n"
+               "                GSERIALIZED *gs_geog = geom_to_geog(gs);\n"
+               "                free(gs); gs = gs_geog;\n"
+               "            }\n")
     freeing = "            free(t); free(gs);\n"
     if has_dbl:               # (Temporal,geometry,double) or (geometry,Temporal,double)
         exec_head = ("TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, {ret}>("
