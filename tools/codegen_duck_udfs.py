@@ -657,7 +657,17 @@ def header_symbols(incl_dir):
         try:
             for line in open(h, errors="ignore"):
                 m = re.search(r'\b([a-z][a-z0-9_]+)\s*\(', line)
-                if m and ("extern" in line or line.lstrip().startswith(("int ", "bool ", "double ", "Temporal ", "void "))):
+                # A prototype counts if it is `extern`-qualified OR starts with a MEOS
+                # return type. The width-suffixed stdint types (int32_t/uint64/…) are
+                # included so by-value integer accessors like `int32_t tspatial_srid(...)`
+                # are seen by the gate — otherwise the plain `int `/`bool ` prefixes miss
+                # them and the function is silently dropped from the generated surface.
+                if m and ("extern" in line or line.lstrip().startswith((
+                        "int ", "bool ", "double ", "Temporal ", "void ",
+                        "int8 ", "int16 ", "int32 ", "int64 ",
+                        "uint8 ", "uint16 ", "uint32 ", "uint64 ",
+                        "int8_t ", "int16_t ", "int32_t ", "int64_t ",
+                        "uint8_t ", "uint16_t ", "uint32_t ", "uint64_t ", "size_t "))):
                     syms.add(m.group(1))
         except OSError:
             pass
