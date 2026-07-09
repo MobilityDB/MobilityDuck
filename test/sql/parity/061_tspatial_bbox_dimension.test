@@ -1,10 +1,12 @@
 # name: test/sql/parity/061_tspatial_bbox_dimension.test
-# description: Regression — the generated bounding-box topological ops (~=/@>/<@/&&/-|-
-#              and same_bbox/contains_bbox/…) must compare the FULL bounding box of each
-#              type, not only its time dimension. tspatial → space+time (stbox), tnumber
-#              incl. tbigint → value+time (tbox), tbool/ttext → time only (tstzspan).
-#              Guards against the generic *_temporal_temporal (time-only) op shadowing the
-#              type-specific *_tspatial_tspatial / *_tnumber_tnumber backing.
+# description: Regression — the bounding-box topological ops (operators ~=/@>/<@/&&/-|-
+#              and their canonical functions same/contains/…) must compare the FULL
+#              bounding box of each type, not only its time dimension. tspatial →
+#              space+time (stbox), tnumber incl. tbigint → value+time (tbox), tbool/ttext
+#              → time only (tstzspan). Guards against the generic *_temporal_temporal
+#              (time-only) op shadowing the type-specific *_tspatial_tspatial /
+#              *_tnumber_tnumber backing. Uses the canonical bare name `same` (the
+#              deployed MobilityDB SQL name), NOT the catalog-only `same_bbox` @sqlfn tag.
 # group: [sql]
 
 require mobilityduck
@@ -17,7 +19,7 @@ SELECT tgeompoint 'POINT(0 0)@2000-01-01' ~= tgeompoint 'POINT(1 1)@2000-01-01';
 false
 
 query I
-SELECT same_bbox(tgeompoint 'POINT(0 0)@2000-01-01', tgeompoint 'POINT(1 1)@2000-01-01');
+SELECT same(tgeompoint 'POINT(0 0)@2000-01-01', tgeompoint 'POINT(1 1)@2000-01-01');
 ----
 false
 
