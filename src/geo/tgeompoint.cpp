@@ -1353,16 +1353,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         const auto T = tgeompoint();
         const auto G = GeoTypes::GEOMETRY();
 
-#define REG_SPATIAL_EA(NAME, FN)                                                                                                                  \
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {G, T}, LogicalType::BOOLEAN, TgeompointFunctions::FN##_geo_tgeo)); \
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {T, G}, LogicalType::BOOLEAN, TgeompointFunctions::FN##_tgeo_geo)); \
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {T, T}, LogicalType::BOOLEAN, TgeompointFunctions::FN##_tgeo_tgeo));
-
-        REG_SPATIAL_EA("ever_eq",   Ever_eq)
-        REG_SPATIAL_EA("always_eq", Always_eq)
-        REG_SPATIAL_EA("ever_ne",   Ever_ne)
-        REG_SPATIAL_EA("always_ne", Always_ne)
-#undef REG_SPATIAL_EA
+        // ever/always spatial comparisons (meos_temporal_comp_ever) are supplied by
+        // the generated surface (geometry-arg overloads via the Temporal+GSERIALIZED path).
 
 #define REG_SPATIAL_TCMP(NAME, FN)                                                                                                                \
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {G, T}, TemporalTypes::tbool(), TgeompointFunctions::FN##_geo_tgeo)); \
