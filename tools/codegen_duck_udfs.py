@@ -14,7 +14,7 @@ polymorphism expansion are the documented next increments.
 
 Usage: python3 tools/codegen_duck_udfs.py <path-to-meos-idl.json> [out.cpp]
 """
-import json, sys, re
+import json, sys, re, os
 from collections import defaultdict, Counter
 
 def norm(c):
@@ -1688,7 +1688,12 @@ def main():
         if fl.startswith("--retire="):
             RETIRED_GROUPS = {x for x in fl[len("--retire="):].split(",") if x}
         # (the --prefix / g_ coexistence flag is removed for good — names are always canonical)
-    cat = pos[0] if len(pos) > 0 else "/home/esteban/src/MEOS-API/output/meos-idl.json"
+    # Default to the in-repo vendored catalog at a STABLE path (mirrors JMEOS's
+    # codegen/input/meos-idl.json, overwritten in place on each base refresh — no
+    # per-SHA filename, no PIN marker). Provenance is the vcpkg portfile REF + the
+    # regen commit message, never a versioned catalog copy.
+    _repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    cat = pos[0] if len(pos) > 0 else os.path.join(_repo_root, "tools/catalog/meos-idl.json")
     out = pos[1] if len(pos) > 1 else None
     d = json.load(open(cat))
     fns = d["functions"]
