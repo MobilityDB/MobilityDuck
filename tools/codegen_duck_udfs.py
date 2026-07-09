@@ -55,6 +55,12 @@ PTR_RET = {  # MEOS base type -> (DuckDB ret LogicalType, "C++ expr producing st
     "STBox":        ("LogicalType::BLOB", "StboxToBlob(result, %s)"),
     "TBox":         ("LogicalType::BLOB", "TboxToBlob(result, %s)"),
 }
+# The temporal-family pointer returns that marshal as one DuckDB temporal handle. A MEOS
+# accessor/cast can return a concrete subtype pointer (TInstant */TSequence */TSequenceSet *
+# — e.g. startInstant, tintSeqSet) but the wire representation and the SQL result type are the
+# base temporal type of the input (the subtype is erased in SQL), so they emit exactly like a
+# `Temporal *` return; the C++ subtype pointer is upcast to `Temporal *` before marshalling.
+TEMPORAL_PTR_RET = {k for k, v in PTR_RET.items() if v[0] == "MD_TEMPORAL"}
 # Scalar (by-value) args/returns -> (DuckDB LogicalType, C++ scalar type)
 SCALAR = {
     "int":          ("LogicalType::INTEGER",  "int32_t"),
@@ -543,7 +549,11 @@ def poc_emittable(f):
     if sc is None:
         return None
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
-    if rb == "Temporal" and rn.endswith("*"):
+    # A `const` temporal-pointer return is a BORROWED pointer into the input (MEOS `_p`/peek
+    # accessors, e.g. temporal_max_inst_p) — freeing the input or the result is a use-after-free,
+    # and every such peek has an owned non-const sibling with the same @sqlfn (temporal_max_instant).
+    # Take only the owned (non-const) return so the body's free(t)+TemporalToBlob stays correct.
+    if rb in TEMPORAL_PTR_RET and rn.endswith("*") and "const" not in f["returnType"]["canonical"]:
         return ("temporal", "MD_TEMPORAL")   # ret type resolved per-accessor via ret_temporal_type
     if rb in BYVAL_RET and "*" not in rn:
         return ("scalar:" + rb, scalar_ret_duck(f))
@@ -553,13 +563,16 @@ def poc_emittable(f):
 
 def emit_body(f, kind):
     name, sqlfn = f["name"], f["sqlfn"]
+    # A concrete subtype return (TInstant */TSequence */TSequenceSet *) upcasts to Temporal *
+    # before the uniform temporal marshalling; a plain Temporal * return needs no cast.
+    subcast = "" if base(f["returnType"]["canonical"]) == "Temporal" else "(Temporal *) "
     if kind == "temporal":          # (Temporal) -> Temporal (pointer return; MEOS NULL -> SQL NULL)
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
                 f"    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
                 f"        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
                 f"            Temporal *t = BlobToTemporal(in);\n"
-                f"            Temporal *r = {name}(t);\n"
+                f"            Temporal *r = {subcast}{name}(t);\n"
                 f"            free(t);\n"
                 f"            return TemporalToBlobN(result, r, mask, idx);\n"
                 f"        }});\n}}\n")
@@ -598,7 +611,7 @@ def poc_binary(f):
     if sc is None: return None
     arg2 = ("LogicalType::VARCHAR", "string_t", "__TEXT__") if is_text2 else SCALAR_ARG[b2]
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
-    if rb == "Temporal" and rn.endswith("*"):
+    if rb in TEMPORAL_PTR_RET and rn.endswith("*"):
         return ("temporal", "MD_TEMPORAL", arg2)
     if rb in BYVAL_RET and "*" not in rn:
         return ("scalar:" + rb, scalar_ret_duck(f), arg2)
@@ -612,13 +625,14 @@ def emit_body_binary(f, kind, arg2):
     pre = "text *a2t = MakeText(a2);\n            " if is_text else ""
     call2 = "a2t" if is_text else marsh
     post = "free(a2t); " if is_text else ""
+    subcast = "" if base(f["returnType"]["canonical"]) == "Temporal" else "(Temporal *) "
     if kind == "temporal":          # pointer return -> NULL-safe (MEOS NULL -> SQL NULL)
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
                 f"    BinaryExecutor::ExecuteWithNulls<string_t, {cpp2}, string_t>(args.data[0], args.data[1], result, args.size(),\n"
                 f"        [&](string_t in, {cpp2} a2, ValidityMask &mask, idx_t idx) -> string_t {{\n"
                 f"            Temporal *t = BlobToTemporal(in);\n"
-                f"            {pre}Temporal *r = {name}(t, {call2});\n            {post}free(t);\n"
+                f"            {pre}Temporal *r = {subcast}{name}(t, {call2});\n            {post}free(t);\n"
                 f"            return TemporalToBlobN(result, r, mask, idx);\n"
                 f"        }});\n}}\n")
     ctype, rett, _rx = scalar_emit3(f)

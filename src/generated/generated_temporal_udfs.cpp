@@ -6520,6 +6520,28 @@ static void Gen_temporal_duration(DataChunk &args, ExpressionState &, Vector &re
         });
 }
 
+static void Gen_temporal_end_instant(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = (Temporal *) temporal_end_instant(t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_end_sequence(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = (Temporal *) temporal_end_sequence(t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
 static void Gen_temporal_end_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, timestamp_tz_t>(args.data[0], result, args.size(),
@@ -6542,6 +6564,17 @@ static void Gen_temporal_hash(DataChunk &args, ExpressionState &, Vector &result
         });
 }
 
+static void Gen_temporal_instant_n(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = (Temporal *) temporal_instant_n(t, a2);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
 static void Gen_temporal_interp(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
@@ -6561,6 +6594,28 @@ static void Gen_temporal_lower_inc(DataChunk &args, ExpressionState &, Vector &r
             bool r = temporal_lower_inc(t);
             free(t);
             return r;
+        });
+}
+
+static void Gen_temporal_max_instant(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = (Temporal *) temporal_max_instant(t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_min_instant(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = (Temporal *) temporal_min_instant(t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -6594,6 +6649,39 @@ static void Gen_temporal_num_timestamps(DataChunk &args, ExpressionState &, Vect
             int32_t r = temporal_num_timestamps(t);
             free(t);
             return r;
+        });
+}
+
+static void Gen_temporal_sequence_n(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = (Temporal *) temporal_sequence_n(t, a2);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_start_instant(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = (Temporal *) temporal_start_instant(t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_start_sequence(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = (Temporal *) temporal_start_sequence(t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -11016,6 +11104,17 @@ static void Gen_temporal_round(DataChunk &args, ExpressionState &, Vector &resul
         });
 }
 
+static void Gen_temporal_to_tinstant(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = (Temporal *) temporal_to_tinstant(t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
 static void Gen_tfloat_ceil(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
@@ -12790,13 +12889,21 @@ static void RegisterGenerated_meos_setspan_transf(ExtensionLoader &loader) {
 static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     for (auto &type : TemporalTypes::AllTypes()) {
         RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {type, LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_temporal_duration));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("endInstant", {type}, type, Gen_temporal_end_instant));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("endSequence", {type}, type, Gen_temporal_end_sequence));
         RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {type}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
         RegisterSerializedScalarFunction(loader, ScalarFunction("tint_hash", {type}, LogicalType::INTEGER, Gen_temporal_hash));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {type, LogicalType::INTEGER}, type, Gen_temporal_instant_n));
         RegisterSerializedScalarFunction(loader, ScalarFunction("interp", {type}, LogicalType::VARCHAR, Gen_temporal_interp));
         RegisterSerializedScalarFunction(loader, ScalarFunction("lowerInc", {type}, LogicalType::BOOLEAN, Gen_temporal_lower_inc));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("maxInstant", {type}, type, Gen_temporal_max_instant));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("minInstant", {type}, type, Gen_temporal_min_instant));
         RegisterSerializedScalarFunction(loader, ScalarFunction("numInstants", {type}, LogicalType::INTEGER, Gen_temporal_num_instants));
         RegisterSerializedScalarFunction(loader, ScalarFunction("numSequences", {type}, LogicalType::INTEGER, Gen_temporal_num_sequences));
         RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {type}, LogicalType::INTEGER, Gen_temporal_num_timestamps));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("sequenceN", {type, LogicalType::INTEGER}, type, Gen_temporal_sequence_n));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("startInstant", {type}, type, Gen_temporal_start_instant));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("startSequence", {type}, type, Gen_temporal_start_sequence));
         RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {type}, LogicalType::TIMESTAMP_TZ, Gen_temporal_start_timestamptz));
         RegisterSerializedScalarFunction(loader, ScalarFunction("tempSubtype", {type}, LogicalType::VARCHAR, Gen_temporal_subtype));
         RegisterSerializedScalarFunction(loader, ScalarFunction("tempBasetype", {type}, LogicalType::VARCHAR, Gen_temporal_basetype_name));
@@ -12804,13 +12911,21 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     }
     for (auto &type : std::vector<LogicalType>{TgeompointType::tgeompoint(), TgeogpointType::tgeogpoint(), TGeometryTypes::tgeometry(), TGeographyTypes::tgeography()}) {
         RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {type, LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_temporal_duration));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("endInstant", {type}, type, Gen_temporal_end_instant));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("endSequence", {type}, type, Gen_temporal_end_sequence));
         RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {type}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
         RegisterSerializedScalarFunction(loader, ScalarFunction("tint_hash", {type}, LogicalType::INTEGER, Gen_temporal_hash));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {type, LogicalType::INTEGER}, type, Gen_temporal_instant_n));
         RegisterSerializedScalarFunction(loader, ScalarFunction("interp", {type}, LogicalType::VARCHAR, Gen_temporal_interp));
         RegisterSerializedScalarFunction(loader, ScalarFunction("lowerInc", {type}, LogicalType::BOOLEAN, Gen_temporal_lower_inc));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("maxInstant", {type}, type, Gen_temporal_max_instant));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("minInstant", {type}, type, Gen_temporal_min_instant));
         RegisterSerializedScalarFunction(loader, ScalarFunction("numInstants", {type}, LogicalType::INTEGER, Gen_temporal_num_instants));
         RegisterSerializedScalarFunction(loader, ScalarFunction("numSequences", {type}, LogicalType::INTEGER, Gen_temporal_num_sequences));
         RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {type}, LogicalType::INTEGER, Gen_temporal_num_timestamps));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("sequenceN", {type, LogicalType::INTEGER}, type, Gen_temporal_sequence_n));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("startInstant", {type}, type, Gen_temporal_start_instant));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("startSequence", {type}, type, Gen_temporal_start_sequence));
         RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {type}, LogicalType::TIMESTAMP_TZ, Gen_temporal_start_timestamptz));
         RegisterSerializedScalarFunction(loader, ScalarFunction("tempSubtype", {type}, LogicalType::VARCHAR, Gen_temporal_subtype));
         RegisterSerializedScalarFunction(loader, ScalarFunction("tempBasetype", {type}, LogicalType::VARCHAR, Gen_temporal_basetype_name));
@@ -13980,9 +14095,11 @@ static void RegisterGenerated_meos_temporal_text(ExtensionLoader &loader) {
 static void RegisterGenerated_meos_temporal_transf(ExtensionLoader &loader) {
     for (auto &type : TemporalTypes::AllTypes()) {
         RegisterSerializedScalarFunction(loader, ScalarFunction("round", {type, LogicalType::INTEGER}, type, Gen_temporal_round));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("tintInst", {type}, type, Gen_temporal_to_tinstant));
     }
     for (auto &type : std::vector<LogicalType>{TgeompointType::tgeompoint(), TgeogpointType::tgeogpoint(), TGeometryTypes::tgeometry(), TGeographyTypes::tgeography()}) {
         RegisterSerializedScalarFunction(loader, ScalarFunction("round", {type, LogicalType::INTEGER}, type, Gen_temporal_round));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("tintInst", {type}, type, Gen_temporal_to_tinstant));
     }
     RegisterSerializedScalarFunction(loader, ScalarFunction("ceil", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tfloat_ceil));
     RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {TemporalTypes::tfloat(), LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_tfloat_degrees));
