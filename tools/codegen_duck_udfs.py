@@ -1238,7 +1238,11 @@ def reg_names(f, sqlfn, aliases):
     itself so DuckDB exposes the operator like MobilityDB. The doxygen `@`-escape on
     the operator (`\\@>`) is normalized to the bare symbol (`@>`)."""
     op = (f.get("sqlop") or "").replace("\\", "")
-    names = [sqlfn]
+    # A backing-only @sqlfn (the shared bbox-topological tag same_bbox/contains_bbox/…,
+    # classified in the catalog by MEOS-API) is NOT a deployed SQL name — MobilityDB exposes
+    # only the operator's bare portable alias + the operator. Register the public bare name,
+    # never the `_bbox` backing tag. (catalog SoT: sqlfnBackingOnly / publicSqlName.)
+    names = [] if f.get("sqlfnBackingOnly") else [sqlfn]
     bare = aliases.get(op) if aliases else None
     if bare and bare not in names:
         names.append(bare)
