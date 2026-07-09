@@ -280,6 +280,27 @@ def reg_scope(name):
     (temporal_*/tint_*/...) OR a same-type SUFFIX (e.g. tand_tbool_tbool,
     distance_tfloat_tfloat, ever_eq_temporal_temporal). Mixed-type suffixes are
     skipped (ambiguous)."""
+    # Bounding-box TOPOLOGICAL ops (same/contains/contained/overlaps/adjacent) have
+    # TYPE-DEPENDENT bbox semantics, so MobilityDB backs each bbox shape with a distinct
+    # MEOS function: the generic *_temporal_temporal compares ONLY the time bbox, *_tnumber_
+    # tnumber the value+time (tbox), *_tspatial_tspatial the space+time (stbox). The generic
+    # C signature is `(Temporal *, Temporal *)`, so the plain name-token heuristic below would
+    # scope *_temporal_temporal to ("all") temporal types — registering the TIME-ONLY op for
+    # number and spatial types too. Since DuckDB overload resolution is last-registration-wins
+    # among the alias-BLOB overloads, that generic then SHADOWS the correct value-/space-aware
+    # backing (proven: ~=/same_bbox/@>/… on tgeompoint × tgeompoint silently compared only time).
+    # Scope each explicitly to the types whose bbox it actually models:
+    #   • *_temporal_temporal  -> tbool, ttext            (bbox = tstzspan, purely temporal)
+    #   • *_tnumber_tnumber     -> tint, tfloat, tbigint   (bbox = tbox; all three are tnumber_type
+    #                                                        per meos_catalog.c:1234, tbigint incl.)
+    #   • *_tspatial_tspatial   -> the 4 geo types         (handled by the tspatial/tgeo rules below)
+    _bbox_topo = re.match(r'^(?:same|contains|contained|overlaps|adjacent)_(\w+)$', name)
+    if _bbox_topo:
+        base = _bbox_topo.group(1)
+        if base == "temporal_temporal":
+            return ("types", CORE_TYPES["tbool"] + CORE_TYPES["ttext"])
+        if base == "tnumber_tnumber":
+            return ("types", CORE_TYPES["tint"] + CORE_TYPES["tfloat"] + CORE_TYPES["tbigint"])
     if name.startswith("temporal_"):
         return ("all", None)
     for pre, accs in CORE_TYPES.items():
