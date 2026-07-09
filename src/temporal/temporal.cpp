@@ -1353,25 +1353,12 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("/", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tint(), TemporalFunctions::Div_tnumber_tnumber));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("/", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Div_tnumber_tnumber));
 
-    // Unary tnumber functions
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("abs", {TemporalTypes::tint()}, TemporalTypes::tint(), TemporalFunctions::Tnumber_abs));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("abs", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Tnumber_abs));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("derivative", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Temporal_derivative));
+    // Unary tfloat transforms (meos_temporal_transf group; degrees/radians).
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Tfloat_degrees));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {TemporalTypes::tfloat(), LogicalType::BOOLEAN}, TemporalTypes::tfloat(), TemporalFunctions::Tfloat_degrees));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("radians", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Tfloat_radians));
-
-    // Unary tfloat math functions
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("exp",   {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Tfloat_exp));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("ln",    {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Tfloat_ln));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("log10", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Tfloat_log10));
-
-    // deltaValue / trend on tnumber
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("deltaValue", {TemporalTypes::tint()},   TemporalTypes::tint(),   TemporalFunctions::Tnumber_delta_value));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("deltaValue", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Tnumber_delta_value));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("trend",      {TemporalTypes::tint()},   TemporalTypes::tint(),   TemporalFunctions::Tnumber_trend));
-    // trend(tfloat) is owned by the generated surface, which returns a tfloat
-    // (consistent with deltaValue above); the hand line wrongly returned tint.
+    // The meos_temporal_math group (abs/derivative/exp/ln/log10/deltaValue/trend) is
+    // supplied by the generated surface (RETIRED_GROUPS in the codegen).
 
     // Named-function aliases for the arithmetic operators (MobilityDB exposes
     // both `+`/`-`/`*`/`/` and `tnumber_add`/`sub`/`mult`/`div`).
