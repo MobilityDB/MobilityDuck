@@ -30,7 +30,7 @@ struct SpanTypes {
 
 
 struct SpanTypeMapping {
-    static meosType GetMeosTypeFromAlias(const std::string &alias);
+    static MeosType GetMeosTypeFromAlias(const std::string &alias);
     static LogicalType GetChildType(const LogicalType &type);
 };
 

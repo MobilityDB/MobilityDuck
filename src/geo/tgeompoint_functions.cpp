@@ -454,7 +454,7 @@ void TgeompointFunctions::Tgeompoint_sequence_constructor(DataChunk &args, Expre
     
     auto arg_count = args.ColumnCount();
     auto row_count = args.size();
-    meosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
+    MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
     interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;
     bool lower_inc = true;
     bool upper_inc = true;

@@ -835,7 +835,7 @@ struct SetUnionFromSetFn {
 };
 
 // SetUnionAgg(<scalar>) — input is a primitive value lifted to a Datum.
-template <class IN, Datum (*TO_DATUM)(IN), meosType BASETYPE>
+template <class IN, Datum (*TO_DATUM)(IN), MeosType BASETYPE>
 struct SetUnionFromScalarFn {
     template <class STATE>
     static void Initialize(STATE &state) { state.value = nullptr; }
@@ -893,7 +893,7 @@ static AggregateFunction MakeSetAggregate(const LogicalType &input_type, const L
         SetAggState, string_t, string_t, OP, AggregateDestructorType::LEGACY>(input_type, return_type);
 }
 
-template <class IN, Datum (*TO_DATUM)(IN), meosType BASETYPE>
+template <class IN, Datum (*TO_DATUM)(IN), MeosType BASETYPE>
 static AggregateFunction MakeSetUnionScalarAggregate(const LogicalType &input_type,
                                                      const LogicalType &return_type) {
     return AggregateFunction::UnaryAggregateDestructor<

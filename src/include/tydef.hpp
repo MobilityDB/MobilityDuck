@@ -11,12 +11,6 @@ extern "C" {
     #include <meos_internal.h>
 }
 
-// Forward-compat alias for the meosType → MeosType rename (MobilityDB
-// pr785-sync-script).  Vcpkg's MEOS exposes `MeosType`; existing
-// MobilityDuck code still uses `meosType`.  This alias bridges the two
-// without touching every reference site.
-using meosType = MeosType;
-
 namespace duckdb {
 
 static inline Datum
