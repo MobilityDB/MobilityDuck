@@ -171,13 +171,13 @@ SELECT t1::tgeometry && t2::tgeometry FROM (VALUES
 true
 
 query I
-SELECT temporal_contains(t::tgeometry, '[2000-01-01, 2000-01-02]'::tstzspan) FROM
+SELECT contains(t::tgeometry, '[2000-01-01, 2000-01-02]'::tstzspan) FROM
   (VALUES ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
 ----
 true
 
 query I
-SELECT temporal_same(t::tgeometry, t::tgeometry) FROM (VALUES
+SELECT same(t::tgeometry, t::tgeometry) FROM (VALUES
   ('Point(0 0)@2000-01-01')) t(t);
 ----
 true

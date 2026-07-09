@@ -1224,7 +1224,8 @@ def emit_span(f, kind, C=SPAN_C):
 # (dropping none). It gates SAFETY (per-family, suite-verified), not naming; naming is
 # always the canonical @sqlfn.
 RETIRED_GROUPS = {"meos_temporal_analytics_similarity", "meos_temporal_comp_temp",
-                  "meos_geo_rel_ever", "meos_geo_rel_temp"}
+                  "meos_geo_rel_ever", "meos_geo_rel_temp",
+                  "meos_geo_bbox_topo"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
@@ -1756,7 +1757,11 @@ def main():
         # hand goes in RETIRE_UNCOVERED_OK (with a reason); anything else is a real coverage gap.
         retired_sqlfns = defaultdict(set)
         for f in fns:
-            if (f.get("group") in RETIRED_GROUPS) and f.get("sqlfn"):
+            # A backing-only @sqlfn (sqlfnBackingOnly, e.g. the bbox-topological same_bbox/
+            # contains_bbox tags) is NEVER a deployed SQL name — the generator emits its bare
+            # publicSqlName (same/~=/contains/@>/...) instead. So it cannot be dropped by a retire;
+            # exclude it from the coverage check (covered-by-construction, generalizes to any group).
+            if (f.get("group") in RETIRED_GROUPS) and f.get("sqlfn") and not f.get("sqlfnBackingOnly"):
                 retired_sqlfns[f["group"]].add(f["sqlfn"])
         uncovered = [(g, nm) for g, nms in retired_sqlfns.items() for nm in sorted(nms)
                      if emitted.get(nm, 0) == 0 and nm not in RETIRE_UNCOVERED_OK]

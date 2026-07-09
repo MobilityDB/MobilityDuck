@@ -95,7 +95,7 @@ SELECT t1::tgeography && t2::tgeography FROM (VALUES
 true
 
 query I
-SELECT temporal_contains(t::tgeography, '[2000-01-01, 2000-01-02]'::tstzspan) FROM
+SELECT contains(t::tgeography, '[2000-01-01, 2000-01-02]'::tstzspan) FROM
   (VALUES ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
 ----
 true
