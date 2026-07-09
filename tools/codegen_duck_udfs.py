@@ -294,6 +294,11 @@ def reg_scope(name):
     # speed/... live under this MEOS name); geometry-coupled variants auto-exclude.
     if name.startswith("tpoint_"):
         return ("types", [GEO_TYPES["tgeompoint"], GEO_TYPES["tgeogpoint"]])
+    # the abstract spatial supertype tspatial_* covers all four geo temporal types with
+    # type-preserving results (setSRID/transform/transformPipeline preserve the operand
+    # type; asText/asEWKT return text); geometry-coupled variants auto-exclude.
+    if name.startswith("tspatial_"):
+        return ("types", GEO_ALLTYPES)
     if re.search(r'_(tgeo|tspatial)(?=_|$)', name):
         return ("types", GEO_ALLTYPES)
     # temporal-type token ANYWHERE in the name (always_eq_tint_int, ever_lt_tfloat_tfloat,
