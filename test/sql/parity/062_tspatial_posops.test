@@ -8,15 +8,15 @@
 
 require mobilityduck
 
-# X-axis: temporal_left / temporal_overright
+# X-axis: left / overright
 
 query I
-SELECT temporal_left(tgeompoint '[POINT(0 0)@2000-01-01]', stbox 'STBOX X((5, 0), (10, 5))');
+SELECT left(tgeompoint '[POINT(0 0)@2000-01-01]', stbox 'STBOX X((5, 0), (10, 5))');
 ----
 true
 
 query I
-SELECT temporal_overright(tgeompoint '[POINT(10 10)@2000-01-01]', stbox 'STBOX X((0, 0), (10, 10))');
+SELECT overright(tgeompoint '[POINT(10 10)@2000-01-01]', stbox 'STBOX X((0, 0), (10, 10))');
 ----
 true
 
@@ -24,47 +24,47 @@ true
 
 query I
 SELECT (tgeompoint '[POINT(0 0)@2000-01-01]' << stbox 'STBOX X((5, 0), (10, 5))')
-     = temporal_left(tgeompoint '[POINT(0 0)@2000-01-01]', stbox 'STBOX X((5, 0), (10, 5))');
+     = left(tgeompoint '[POINT(0 0)@2000-01-01]', stbox 'STBOX X((5, 0), (10, 5))');
 ----
 true
 
 # Y-axis (named-only)
 
 query I
-SELECT temporal_below(tgeompoint '[POINT(0 0)@2000-01-01]', stbox 'STBOX X((0, 5), (10, 10))');
+SELECT below(tgeompoint '[POINT(0 0)@2000-01-01]', stbox 'STBOX X((0, 5), (10, 10))');
 ----
 true
 
 query I
-SELECT temporal_above(stbox 'STBOX X((0, 0), (10, 5))', tgeompoint '[POINT(5 10)@2000-01-01]');
+SELECT above(stbox 'STBOX X((0, 0), (10, 5))', tgeompoint '[POINT(5 10)@2000-01-01]');
 ----
 false
 
 # Z-axis: requires 3D inputs
 
 query I
-SELECT temporal_front(tgeompoint '[POINT Z (0 0 0)@2000-01-01]', stbox 'STBOX Z((0, 0, 5), (10, 10, 10))');
+SELECT front(tgeompoint '[POINT Z (0 0 0)@2000-01-01]', stbox 'STBOX Z((0, 0, 5), (10, 10, 10))');
 ----
 true
 
 # tspatial × tspatial
 
 query I
-SELECT temporal_left(tgeompoint '[POINT(0 0)@2000-01-01]',
+SELECT left(tgeompoint '[POINT(0 0)@2000-01-01]',
                      tgeompoint '[POINT(5 5)@2000-01-01, POINT(10 10)@2000-01-02]');
 ----
 true
 
-# Time-axis: temporal_before / temporal_overafter
+# Time-axis: before / overafter
 
 query I
-SELECT temporal_before(tgeompoint '[POINT(5 5)@2000-01-01]',
+SELECT before(tgeompoint '[POINT(5 5)@2000-01-01]',
                        stbox 'STBOX XT(((0, 0), (10, 10)), [2000-01-02, 2000-01-03])');
 ----
 true
 
 query I
-SELECT temporal_overafter(tgeompoint '[POINT(5 5)@2000-01-03]',
+SELECT overafter(tgeompoint '[POINT(5 5)@2000-01-03]',
                           stbox 'STBOX XT(((0, 0), (10, 10)), [2000-01-01, 2000-01-02])');
 ----
 true
@@ -72,7 +72,7 @@ true
 # tspatial × tspatial time-axis
 
 query I
-SELECT temporal_after(tgeompoint '[POINT(5 5)@2000-01-03]',
+SELECT after(tgeompoint '[POINT(5 5)@2000-01-03]',
                       tgeompoint '[POINT(0 0)@2000-01-01]');
 ----
 true

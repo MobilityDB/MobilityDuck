@@ -1223,11 +1223,21 @@ def emit_span(f, kind, C=SPAN_C):
 # the retire-safety check below verifies the generator covers every @sqlfn of each
 # (dropping none). It gates SAFETY (per-family, suite-verified), not naming; naming is
 # always the canonical @sqlfn.
-RETIRED_GROUPS = {"meos_temporal_analytics_similarity", "meos_temporal_comp_temp"}
+RETIRED_GROUPS = {"meos_temporal_analytics_similarity", "meos_temporal_comp_temp",
+                  "meos_geo_rel_ever", "meos_geo_rel_temp"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
-RETIRE_UNCOVERED_OK = set()  # empty: the *Path LIST(STRUCT) returns are now generated (poc_path)
+# The LIST-returning *Pairs relations (ever/always int*->LIST(bool); temporal SpanSet***)
+# take array returns the generator does not marshal yet AND were never in the hand layer
+# either (git grep: 0 hand regs) - so retiring meos_geo_rel_ever / meos_geo_rel_temp drops
+# none of them; they are additive future work, not a regression. (*Path LIST(STRUCT) returns
+# ARE generated now via poc_path, so they are not listed here.)
+RETIRE_UNCOVERED_OK = {
+    "aDisjointPairs", "aDwithinPairs", "aIntersectsPairs", "aTouchesPairs",
+    "eDisjointPairs", "eDwithinPairs", "eIntersectsPairs", "eTouchesPairs",
+    "tDisjointPairs", "tDwithinPairs", "tIntersectsPairs", "tTouchesPairs",
+}
 def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
 def reg_name(nm, f):

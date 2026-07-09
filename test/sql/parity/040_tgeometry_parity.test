@@ -187,13 +187,13 @@ true
 # =============================================================================
 
 query I
-SELECT temporal_left(t1::tgeometry, t2::tgeometry) FROM (VALUES
+SELECT left(t1::tgeometry, t2::tgeometry) FROM (VALUES
   ('Point(0 0)@2000-01-01', 'Point(5 5)@2000-01-01')) t(t1, t2);
 ----
 true
 
 query I
-SELECT temporal_below(t1::tgeometry, t2::tgeometry) FROM (VALUES
+SELECT below(t1::tgeometry, t2::tgeometry) FROM (VALUES
   ('Point(0 0)@2000-01-01', 'Point(0 5)@2000-01-01')) t(t1, t2);
 ----
 true
