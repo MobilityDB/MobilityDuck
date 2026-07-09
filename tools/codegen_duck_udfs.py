@@ -1244,7 +1244,7 @@ def emit_span(f, kind, C=SPAN_C):
 RETIRED_GROUPS = {"meos_temporal_analytics_similarity", "meos_temporal_comp_temp",
                   "meos_geo_rel_ever", "meos_geo_rel_temp",
                   "meos_geo_bbox_topo",
-                  "meos_temporal_math"}
+                  "meos_temporal_math", "meos_temporal_comp_ever"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).

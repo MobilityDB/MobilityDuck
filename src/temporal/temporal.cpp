@@ -1517,41 +1517,9 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     // Ever / always equality and inequality (named functions; DuckDB
     // parser does not accept ?= / #= operator names).
-#define REG_EA(NAME, FN)                                                                                                                                                          \
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {LogicalType::BOOLEAN,        TemporalTypes::tbool()},   LogicalType::BOOLEAN, TemporalFunctions::FN##_bool_tbool));             \
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {TemporalTypes::tbool(),      LogicalType::BOOLEAN},     LogicalType::BOOLEAN, TemporalFunctions::FN##_tbool_bool));             \
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {LogicalType::INTEGER,        TemporalTypes::tint()},    LogicalType::BOOLEAN, TemporalFunctions::FN##_int_tint));               \
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {TemporalTypes::tint(),       LogicalType::INTEGER},     LogicalType::BOOLEAN, TemporalFunctions::FN##_tint_int));               \
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {LogicalType::DOUBLE,         TemporalTypes::tfloat()},  LogicalType::BOOLEAN, TemporalFunctions::FN##_float_tfloat));           \
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {TemporalTypes::tfloat(),     LogicalType::DOUBLE},      LogicalType::BOOLEAN, TemporalFunctions::FN##_tfloat_float));           \
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {TemporalTypes::tint(),       TemporalTypes::tint()},    LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal));      \
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {TemporalTypes::tfloat(),     TemporalTypes::tfloat()},  LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal));      \
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {TemporalTypes::tbool(),      TemporalTypes::tbool()},   LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal));
-
-    REG_EA("ever_eq",   Ever_eq)
-    REG_EA("always_eq", Always_eq)
-    REG_EA("ever_ne",   Ever_ne)
-    REG_EA("always_ne", Always_ne)
-#undef REG_EA
-
-    // Ordering ever/always — no tbool variant (booleans have no ordering)
-#define REG_EA_ORD(NAME, FN)                                                                                                                                          \
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {LogicalType::INTEGER,    TemporalTypes::tint()},   LogicalType::BOOLEAN, TemporalFunctions::FN##_int_tint));        \
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {TemporalTypes::tint(),   LogicalType::INTEGER},    LogicalType::BOOLEAN, TemporalFunctions::FN##_tint_int));        \
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {LogicalType::DOUBLE,     TemporalTypes::tfloat()}, LogicalType::BOOLEAN, TemporalFunctions::FN##_float_tfloat));    \
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {TemporalTypes::tfloat(), LogicalType::DOUBLE},     LogicalType::BOOLEAN, TemporalFunctions::FN##_tfloat_float));    \
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {TemporalTypes::tint(),   TemporalTypes::tint()},   LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal)); \
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, TemporalFunctions::FN##_temporal_temporal));
-
-    REG_EA_ORD("ever_lt",   Ever_lt)
-    REG_EA_ORD("always_lt", Always_lt)
-    REG_EA_ORD("ever_le",   Ever_le)
-    REG_EA_ORD("always_le", Always_le)
-    REG_EA_ORD("ever_gt",   Ever_gt)
-    REG_EA_ORD("always_gt", Always_gt)
-    REG_EA_ORD("ever_ge",   Ever_ge)
-    REG_EA_ORD("always_ge", Always_ge)
-#undef REG_EA_ORD
+    // Traditional/ever/always temporal comparisons (meos_temporal_comp_ever) are
+    // supplied by the generated surface (RETIRED_GROUPS). The spatial (geometry-arg)
+    // ever/always overloads remain hand-registered in the geo module.
 
     // Similarity: frechetDistance/dynTimeWarpDistance/hausdorffDistance (scalar) and
     // frechetDistancePath/dynTimeWarpPath (SETOF -> DuckDB table function) are all GENERATED
