@@ -1244,7 +1244,20 @@ def emit_span(f, kind, C=SPAN_C):
 RETIRED_GROUPS = {"meos_temporal_analytics_similarity", "meos_temporal_comp_temp",
                   "meos_geo_rel_ever", "meos_geo_rel_temp",
                   "meos_geo_bbox_topo",
-                  "meos_temporal_math", "meos_temporal_comp_ever"}
+                  "meos_temporal_math", "meos_temporal_comp_ever",
+                  # The temporal value-comparison surface (eEq/aEq/eNe/aNe + tEq/tNe)
+                  # for every spatial family is generated from the same comp shape as the
+                  # base temporal_comp_* groups (geo×T, T×geo literal regs + the T×T
+                  # AllTypes loop that includes tgeometry/tgeography). Retire the whole
+                  # surface as one wave so the safety ledger fails the build if a future
+                  # catalog change ever drops a family's comparison coverage.
+                  "meos_geo_comp_ever", "meos_geo_comp_temp",
+                  "meos_cbuffer_comp_ever", "meos_cbuffer_comp_temp",
+                  "meos_h3_comp_ever", "meos_h3_comp_temp",
+                  "meos_npoint_comp_ever", "meos_npoint_comp_temp",
+                  "meos_pose_comp_ever", "meos_pose_comp_temp",
+                  "meos_rgeo_comp_ever", "meos_rgeo_comp_temp",
+                  "meos_json_comp_ever", "meos_json_comp_temp"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
