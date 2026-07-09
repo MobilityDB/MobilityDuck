@@ -375,6 +375,31 @@ def ret_temporal_type(name, arg_acc, group="", sql_ret=None):
     m = re.search(r'_to_(tint|tbigint|tfloat|tbool|ttext|tgeometry|tgeography|tgeompoint|tgeogpoint)$', name)
     return TO_TYPE[m.group(1)] if m else arg_acc
 
+# The concrete DuckDB accessors the generic temporal track can emit, keyed by the catalog
+# SQL type name: the 5 core types (TemporalTypes::AllTypes()) plus the 4 geo types (the
+# second emit loop). Ordered so the generated registrations come out canonically (core
+# order, then geo). Accessor strings reuse GEO_TYPES / TO_TYPE verbatim.
+SIG_TEMPORAL_ACC = {
+    "tint":       "TemporalTypes::tint()",     "tbigint":    "TemporalTypes::tbigint()",
+    "tbool":      "TemporalTypes::tbool()",     "tfloat":     "TemporalTypes::tfloat()",
+    "ttext":      "TemporalTypes::ttext()",
+    "tgeompoint": "TgeompointType::tgeompoint()", "tgeogpoint": "TgeogpointType::tgeogpoint()",
+    "tgeometry":  "TGeometryTypes::tgeometry()",  "tgeography": "TGeographyTypes::tgeography()",
+}
+def sig_declared_accs(f):
+    """The exact temporal-operand types this GENERIC (`Temporal *`) function is CREATE
+    FUNCTION'd for, read from the catalog's per-overload `sqlSignatures` (the SoT) — so the
+    generic AllTypes()+geo blanket registration is replaced by the catalog-declared type set
+    (minInstant/maxInstant land on the four ordered types, not all nine; tintInst on tint
+    alone). The mechanical replacement for the name/return heuristics on generic functions.
+    Returns the accessor list in canonical order, or None when the catalog carries no
+    signature for the function (keep the generic loop as the fallback)."""
+    sigs = f.get("sqlSignatures")
+    if not sigs:
+        return None
+    have = {a for s in sigs for a in s["args"] if a in SIG_TEMPORAL_ACC}
+    return [SIG_TEMPORAL_ACC[t] for t in SIG_TEMPORAL_ACC if t in have] or None
+
 # ---------------- SET family (additive; the temporal path is left untouched) ----------------
 # Self-contained Blob<->Set marshalling reuses the hand binding's exact method
 # (malloc+memcpy in; set_mem_size out). Per-element accessors mirror CORE_TYPES.
@@ -1348,6 +1373,15 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         STATE["grp"] = f.get("group") or "meos_ungrouped"
         sqlfn, fn = f["sqlfn"], f["name"]
         scope, accs = reg_scope(fn)
+        # A generic (`Temporal *`) function whose name carries no type is scoped "all" by
+        # reg_scope and blanket-registered over AllTypes()+geo. When the catalog declares its
+        # concrete overloads, register over exactly that set instead (the SoT) — dropping the
+        # over-registrations (minInstant on tbool/geo, tintInst on all nine). Per-type C fns
+        # keep their name scope (the type is in the canonical MEOS symbol, not a heuristic).
+        if scope == "all":
+            _declared = sig_declared_accs(f)
+            if _declared is not None:
+                scope, accs = "types", _declared
         if u:
             kind, dret = u; n_un += 1
             bodies.append(emit_body(f, kind))

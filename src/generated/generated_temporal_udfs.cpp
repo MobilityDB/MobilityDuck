@@ -12888,51 +12888,174 @@ static void RegisterGenerated_meos_setspan_transf(ExtensionLoader &loader) {
 
 static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     for (auto &type : TemporalTypes::AllTypes()) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {type, LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_temporal_duration));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("endInstant", {type}, type, Gen_temporal_end_instant));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("endSequence", {type}, type, Gen_temporal_end_sequence));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {type}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
         RegisterSerializedScalarFunction(loader, ScalarFunction("tint_hash", {type}, LogicalType::INTEGER, Gen_temporal_hash));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {type, LogicalType::INTEGER}, type, Gen_temporal_instant_n));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("interp", {type}, LogicalType::VARCHAR, Gen_temporal_interp));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("lowerInc", {type}, LogicalType::BOOLEAN, Gen_temporal_lower_inc));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("maxInstant", {type}, type, Gen_temporal_max_instant));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("minInstant", {type}, type, Gen_temporal_min_instant));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("numInstants", {type}, LogicalType::INTEGER, Gen_temporal_num_instants));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("numSequences", {type}, LogicalType::INTEGER, Gen_temporal_num_sequences));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {type}, LogicalType::INTEGER, Gen_temporal_num_timestamps));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("sequenceN", {type, LogicalType::INTEGER}, type, Gen_temporal_sequence_n));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("startInstant", {type}, type, Gen_temporal_start_instant));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("startSequence", {type}, type, Gen_temporal_start_sequence));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {type}, LogicalType::TIMESTAMP_TZ, Gen_temporal_start_timestamptz));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("tempSubtype", {type}, LogicalType::VARCHAR, Gen_temporal_subtype));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("tempBasetype", {type}, LogicalType::VARCHAR, Gen_temporal_basetype_name));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("upperInc", {type}, LogicalType::BOOLEAN, Gen_temporal_upper_inc));
     }
     for (auto &type : std::vector<LogicalType>{TgeompointType::tgeompoint(), TgeogpointType::tgeogpoint(), TGeometryTypes::tgeometry(), TGeographyTypes::tgeography()}) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {type, LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_temporal_duration));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("endInstant", {type}, type, Gen_temporal_end_instant));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("endSequence", {type}, type, Gen_temporal_end_sequence));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {type}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
         RegisterSerializedScalarFunction(loader, ScalarFunction("tint_hash", {type}, LogicalType::INTEGER, Gen_temporal_hash));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {type, LogicalType::INTEGER}, type, Gen_temporal_instant_n));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("interp", {type}, LogicalType::VARCHAR, Gen_temporal_interp));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("lowerInc", {type}, LogicalType::BOOLEAN, Gen_temporal_lower_inc));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("maxInstant", {type}, type, Gen_temporal_max_instant));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("minInstant", {type}, type, Gen_temporal_min_instant));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("numInstants", {type}, LogicalType::INTEGER, Gen_temporal_num_instants));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("numSequences", {type}, LogicalType::INTEGER, Gen_temporal_num_sequences));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {type}, LogicalType::INTEGER, Gen_temporal_num_timestamps));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("sequenceN", {type, LogicalType::INTEGER}, type, Gen_temporal_sequence_n));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("startInstant", {type}, type, Gen_temporal_start_instant));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("startSequence", {type}, type, Gen_temporal_start_sequence));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {type}, LogicalType::TIMESTAMP_TZ, Gen_temporal_start_timestamptz));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("tempSubtype", {type}, LogicalType::VARCHAR, Gen_temporal_subtype));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("tempBasetype", {type}, LogicalType::VARCHAR, Gen_temporal_basetype_name));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("upperInc", {type}, LogicalType::BOOLEAN, Gen_temporal_upper_inc));
     }
     RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_tbool_end_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_tbool_start_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {TemporalTypes::tint(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_temporal_duration));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {TemporalTypes::tbigint(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_temporal_duration));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_temporal_duration));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {TemporalTypes::tfloat(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_temporal_duration));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {TemporalTypes::ttext(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_temporal_duration));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {TgeompointType::tgeompoint(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_temporal_duration));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {TgeogpointType::tgeogpoint(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_temporal_duration));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {TGeometryTypes::tgeometry(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_temporal_duration));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {TGeographyTypes::tgeography(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_temporal_duration));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endInstant", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_end_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endInstant", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_end_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endInstant", {TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_temporal_end_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endInstant", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_end_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endInstant", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_temporal_end_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endInstant", {TgeompointType::tgeompoint()}, TgeompointType::tgeompoint(), Gen_temporal_end_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endInstant", {TgeogpointType::tgeogpoint()}, TgeogpointType::tgeogpoint(), Gen_temporal_end_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endInstant", {TGeometryTypes::tgeometry()}, TGeometryTypes::tgeometry(), Gen_temporal_end_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endInstant", {TGeographyTypes::tgeography()}, TGeographyTypes::tgeography(), Gen_temporal_end_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endSequence", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_end_sequence));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endSequence", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_end_sequence));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endSequence", {TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_temporal_end_sequence));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endSequence", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_end_sequence));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endSequence", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_temporal_end_sequence));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endSequence", {TgeompointType::tgeompoint()}, TgeompointType::tgeompoint(), Gen_temporal_end_sequence));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endSequence", {TgeogpointType::tgeogpoint()}, TgeogpointType::tgeogpoint(), Gen_temporal_end_sequence));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endSequence", {TGeometryTypes::tgeometry()}, TGeometryTypes::tgeometry(), Gen_temporal_end_sequence));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endSequence", {TGeographyTypes::tgeography()}, TGeographyTypes::tgeography(), Gen_temporal_end_sequence));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {TemporalTypes::tint()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {TemporalTypes::tbigint()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {TemporalTypes::tbool()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {TemporalTypes::tfloat()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {TemporalTypes::ttext()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {TgeompointType::tgeompoint()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {TgeogpointType::tgeogpoint()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {TGeometryTypes::tgeometry()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {TGeographyTypes::tgeography()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tint(), Gen_temporal_instant_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {TemporalTypes::tbigint(), LogicalType::INTEGER}, TemporalTypes::tbigint(), Gen_temporal_instant_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {TemporalTypes::tbool(), LogicalType::INTEGER}, TemporalTypes::tbool(), Gen_temporal_instant_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {TemporalTypes::tfloat(), LogicalType::INTEGER}, TemporalTypes::tfloat(), Gen_temporal_instant_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {TemporalTypes::ttext(), LogicalType::INTEGER}, TemporalTypes::ttext(), Gen_temporal_instant_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {TgeompointType::tgeompoint(), LogicalType::INTEGER}, TgeompointType::tgeompoint(), Gen_temporal_instant_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {TgeogpointType::tgeogpoint(), LogicalType::INTEGER}, TgeogpointType::tgeogpoint(), Gen_temporal_instant_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {TGeometryTypes::tgeometry(), LogicalType::INTEGER}, TGeometryTypes::tgeometry(), Gen_temporal_instant_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {TGeographyTypes::tgeography(), LogicalType::INTEGER}, TGeographyTypes::tgeography(), Gen_temporal_instant_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("interp", {TemporalTypes::tint()}, LogicalType::VARCHAR, Gen_temporal_interp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("interp", {TemporalTypes::tbigint()}, LogicalType::VARCHAR, Gen_temporal_interp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("interp", {TemporalTypes::tbool()}, LogicalType::VARCHAR, Gen_temporal_interp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("interp", {TemporalTypes::tfloat()}, LogicalType::VARCHAR, Gen_temporal_interp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("interp", {TemporalTypes::ttext()}, LogicalType::VARCHAR, Gen_temporal_interp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("interp", {TgeompointType::tgeompoint()}, LogicalType::VARCHAR, Gen_temporal_interp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("interp", {TgeogpointType::tgeogpoint()}, LogicalType::VARCHAR, Gen_temporal_interp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("interp", {TGeometryTypes::tgeometry()}, LogicalType::VARCHAR, Gen_temporal_interp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("interp", {TGeographyTypes::tgeography()}, LogicalType::VARCHAR, Gen_temporal_interp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lowerInc", {TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_lower_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lowerInc", {TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_lower_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lowerInc", {TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_temporal_lower_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lowerInc", {TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_temporal_lower_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lowerInc", {TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_temporal_lower_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lowerInc", {TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_temporal_lower_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lowerInc", {TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_temporal_lower_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lowerInc", {TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_temporal_lower_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lowerInc", {TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_temporal_lower_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("maxInstant", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_max_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("maxInstant", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_max_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("maxInstant", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_max_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("maxInstant", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_temporal_max_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minInstant", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_min_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minInstant", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_min_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minInstant", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_min_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minInstant", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_temporal_min_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numInstants", {TemporalTypes::tint()}, LogicalType::INTEGER, Gen_temporal_num_instants));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numInstants", {TemporalTypes::tbigint()}, LogicalType::INTEGER, Gen_temporal_num_instants));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numInstants", {TemporalTypes::tbool()}, LogicalType::INTEGER, Gen_temporal_num_instants));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numInstants", {TemporalTypes::tfloat()}, LogicalType::INTEGER, Gen_temporal_num_instants));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numInstants", {TemporalTypes::ttext()}, LogicalType::INTEGER, Gen_temporal_num_instants));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numInstants", {TgeompointType::tgeompoint()}, LogicalType::INTEGER, Gen_temporal_num_instants));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numInstants", {TgeogpointType::tgeogpoint()}, LogicalType::INTEGER, Gen_temporal_num_instants));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numInstants", {TGeometryTypes::tgeometry()}, LogicalType::INTEGER, Gen_temporal_num_instants));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numInstants", {TGeographyTypes::tgeography()}, LogicalType::INTEGER, Gen_temporal_num_instants));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numSequences", {TemporalTypes::tint()}, LogicalType::INTEGER, Gen_temporal_num_sequences));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numSequences", {TemporalTypes::tbigint()}, LogicalType::INTEGER, Gen_temporal_num_sequences));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numSequences", {TemporalTypes::tbool()}, LogicalType::INTEGER, Gen_temporal_num_sequences));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numSequences", {TemporalTypes::tfloat()}, LogicalType::INTEGER, Gen_temporal_num_sequences));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numSequences", {TemporalTypes::ttext()}, LogicalType::INTEGER, Gen_temporal_num_sequences));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numSequences", {TgeompointType::tgeompoint()}, LogicalType::INTEGER, Gen_temporal_num_sequences));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numSequences", {TgeogpointType::tgeogpoint()}, LogicalType::INTEGER, Gen_temporal_num_sequences));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numSequences", {TGeometryTypes::tgeometry()}, LogicalType::INTEGER, Gen_temporal_num_sequences));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numSequences", {TGeographyTypes::tgeography()}, LogicalType::INTEGER, Gen_temporal_num_sequences));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {TemporalTypes::tint()}, LogicalType::INTEGER, Gen_temporal_num_timestamps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {TemporalTypes::tbigint()}, LogicalType::INTEGER, Gen_temporal_num_timestamps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {TemporalTypes::tbool()}, LogicalType::INTEGER, Gen_temporal_num_timestamps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {TemporalTypes::tfloat()}, LogicalType::INTEGER, Gen_temporal_num_timestamps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {TemporalTypes::ttext()}, LogicalType::INTEGER, Gen_temporal_num_timestamps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {TgeompointType::tgeompoint()}, LogicalType::INTEGER, Gen_temporal_num_timestamps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {TgeogpointType::tgeogpoint()}, LogicalType::INTEGER, Gen_temporal_num_timestamps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {TGeometryTypes::tgeometry()}, LogicalType::INTEGER, Gen_temporal_num_timestamps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {TGeographyTypes::tgeography()}, LogicalType::INTEGER, Gen_temporal_num_timestamps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("sequenceN", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tint(), Gen_temporal_sequence_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("sequenceN", {TemporalTypes::tbigint(), LogicalType::INTEGER}, TemporalTypes::tbigint(), Gen_temporal_sequence_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("sequenceN", {TemporalTypes::tbool(), LogicalType::INTEGER}, TemporalTypes::tbool(), Gen_temporal_sequence_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("sequenceN", {TemporalTypes::tfloat(), LogicalType::INTEGER}, TemporalTypes::tfloat(), Gen_temporal_sequence_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("sequenceN", {TemporalTypes::ttext(), LogicalType::INTEGER}, TemporalTypes::ttext(), Gen_temporal_sequence_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("sequenceN", {TgeompointType::tgeompoint(), LogicalType::INTEGER}, TgeompointType::tgeompoint(), Gen_temporal_sequence_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("sequenceN", {TgeogpointType::tgeogpoint(), LogicalType::INTEGER}, TgeogpointType::tgeogpoint(), Gen_temporal_sequence_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("sequenceN", {TGeometryTypes::tgeometry(), LogicalType::INTEGER}, TGeometryTypes::tgeometry(), Gen_temporal_sequence_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("sequenceN", {TGeographyTypes::tgeography(), LogicalType::INTEGER}, TGeographyTypes::tgeography(), Gen_temporal_sequence_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startInstant", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_start_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startInstant", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_start_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startInstant", {TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_temporal_start_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startInstant", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_start_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startInstant", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_temporal_start_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startInstant", {TgeompointType::tgeompoint()}, TgeompointType::tgeompoint(), Gen_temporal_start_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startInstant", {TgeogpointType::tgeogpoint()}, TgeogpointType::tgeogpoint(), Gen_temporal_start_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startInstant", {TGeometryTypes::tgeometry()}, TGeometryTypes::tgeometry(), Gen_temporal_start_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startInstant", {TGeographyTypes::tgeography()}, TGeographyTypes::tgeography(), Gen_temporal_start_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startSequence", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_start_sequence));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startSequence", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_start_sequence));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startSequence", {TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_temporal_start_sequence));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startSequence", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_start_sequence));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startSequence", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_temporal_start_sequence));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startSequence", {TgeompointType::tgeompoint()}, TgeompointType::tgeompoint(), Gen_temporal_start_sequence));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startSequence", {TgeogpointType::tgeogpoint()}, TgeogpointType::tgeogpoint(), Gen_temporal_start_sequence));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startSequence", {TGeometryTypes::tgeometry()}, TGeometryTypes::tgeometry(), Gen_temporal_start_sequence));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startSequence", {TGeographyTypes::tgeography()}, TGeographyTypes::tgeography(), Gen_temporal_start_sequence));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {TemporalTypes::tint()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_start_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {TemporalTypes::tbigint()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_start_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {TemporalTypes::tbool()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_start_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {TemporalTypes::tfloat()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_start_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {TemporalTypes::ttext()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_start_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {TgeompointType::tgeompoint()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_start_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {TgeogpointType::tgeogpoint()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_start_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {TGeometryTypes::tgeometry()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_start_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {TGeographyTypes::tgeography()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_start_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tempSubtype", {TemporalTypes::tint()}, LogicalType::VARCHAR, Gen_temporal_subtype));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tempSubtype", {TemporalTypes::tbigint()}, LogicalType::VARCHAR, Gen_temporal_subtype));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tempSubtype", {TemporalTypes::tbool()}, LogicalType::VARCHAR, Gen_temporal_subtype));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tempSubtype", {TemporalTypes::tfloat()}, LogicalType::VARCHAR, Gen_temporal_subtype));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tempSubtype", {TemporalTypes::ttext()}, LogicalType::VARCHAR, Gen_temporal_subtype));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tempSubtype", {TgeompointType::tgeompoint()}, LogicalType::VARCHAR, Gen_temporal_subtype));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tempSubtype", {TgeogpointType::tgeogpoint()}, LogicalType::VARCHAR, Gen_temporal_subtype));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tempSubtype", {TGeometryTypes::tgeometry()}, LogicalType::VARCHAR, Gen_temporal_subtype));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tempSubtype", {TGeographyTypes::tgeography()}, LogicalType::VARCHAR, Gen_temporal_subtype));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tempBasetype", {TemporalTypes::tint()}, LogicalType::VARCHAR, Gen_temporal_basetype_name));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tempBasetype", {TemporalTypes::tbigint()}, LogicalType::VARCHAR, Gen_temporal_basetype_name));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tempBasetype", {TemporalTypes::tbool()}, LogicalType::VARCHAR, Gen_temporal_basetype_name));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tempBasetype", {TemporalTypes::tfloat()}, LogicalType::VARCHAR, Gen_temporal_basetype_name));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tempBasetype", {TemporalTypes::ttext()}, LogicalType::VARCHAR, Gen_temporal_basetype_name));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tempBasetype", {TgeompointType::tgeompoint()}, LogicalType::VARCHAR, Gen_temporal_basetype_name));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tempBasetype", {TgeogpointType::tgeogpoint()}, LogicalType::VARCHAR, Gen_temporal_basetype_name));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tempBasetype", {TGeometryTypes::tgeometry()}, LogicalType::VARCHAR, Gen_temporal_basetype_name));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tempBasetype", {TGeographyTypes::tgeography()}, LogicalType::VARCHAR, Gen_temporal_basetype_name));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("upperInc", {TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_upper_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("upperInc", {TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_upper_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("upperInc", {TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_temporal_upper_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("upperInc", {TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_temporal_upper_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("upperInc", {TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_temporal_upper_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("upperInc", {TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_temporal_upper_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("upperInc", {TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_temporal_upper_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("upperInc", {TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_temporal_upper_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("upperInc", {TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_temporal_upper_inc));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {TemporalTypes::tfloat()}, LogicalType::DOUBLE, Gen_tfloat_end_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minValue", {TemporalTypes::tfloat()}, LogicalType::DOUBLE, Gen_tfloat_min_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("maxValue", {TemporalTypes::tfloat()}, LogicalType::DOUBLE, Gen_tfloat_max_value));
@@ -12957,61 +13080,71 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
 
 static void RegisterGenerated_meos_temporal_analytics_similarity(ExtensionLoader &loader) {
     for (auto &type : TemporalTypes::AllTypes()) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpDistance", {type, type}, LogicalType::DOUBLE, Gen_temporal_dyntimewarp_distance));
         loader.RegisterFunction(TableFunction("dynTimeWarpPath", {type, type}, PathExec_temporal_dyntimewarp_path, PathBindFn_temporal_dyntimewarp_path, PathInit_temporal_dyntimewarp_path));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistance", {type, type}, LogicalType::DOUBLE, Gen_temporal_frechet_distance));
         loader.RegisterFunction(TableFunction("frechetDistancePath", {type, type}, PathExec_temporal_frechet_path, PathBindFn_temporal_frechet_path, PathInit_temporal_frechet_path));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("hausdorffDistance", {type, type}, LogicalType::DOUBLE, Gen_temporal_hausdorff_distance));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("averageHausdorffDistance", {type, type}, LogicalType::DOUBLE, Gen_temporal_average_hausdorff_distance));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("lcssDistance", {type, type, LogicalType::DOUBLE}, LogicalType::DOUBLE, Gen_temporal_lcss_distance));
     }
     for (auto &type : std::vector<LogicalType>{TgeompointType::tgeompoint(), TgeogpointType::tgeogpoint(), TGeometryTypes::tgeometry(), TGeographyTypes::tgeography()}) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpDistance", {type, type}, LogicalType::DOUBLE, Gen_temporal_dyntimewarp_distance));
         loader.RegisterFunction(TableFunction("dynTimeWarpPath", {type, type}, PathExec_temporal_dyntimewarp_path, PathBindFn_temporal_dyntimewarp_path, PathInit_temporal_dyntimewarp_path));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistance", {type, type}, LogicalType::DOUBLE, Gen_temporal_frechet_distance));
         loader.RegisterFunction(TableFunction("frechetDistancePath", {type, type}, PathExec_temporal_frechet_path, PathBindFn_temporal_frechet_path, PathInit_temporal_frechet_path));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("hausdorffDistance", {type, type}, LogicalType::DOUBLE, Gen_temporal_hausdorff_distance));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("averageHausdorffDistance", {type, type}, LogicalType::DOUBLE, Gen_temporal_average_hausdorff_distance));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("lcssDistance", {type, type, LogicalType::DOUBLE}, LogicalType::DOUBLE, Gen_temporal_lcss_distance));
     }
+    RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpDistance", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::DOUBLE, Gen_temporal_dyntimewarp_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpDistance", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::DOUBLE, Gen_temporal_dyntimewarp_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpDistance", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::DOUBLE, Gen_temporal_dyntimewarp_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpDistance", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::DOUBLE, Gen_temporal_dyntimewarp_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpDistance", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::DOUBLE, Gen_temporal_dyntimewarp_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistance", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::DOUBLE, Gen_temporal_frechet_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistance", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::DOUBLE, Gen_temporal_frechet_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistance", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::DOUBLE, Gen_temporal_frechet_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistance", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::DOUBLE, Gen_temporal_frechet_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistance", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::DOUBLE, Gen_temporal_frechet_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hausdorffDistance", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::DOUBLE, Gen_temporal_hausdorff_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hausdorffDistance", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::DOUBLE, Gen_temporal_hausdorff_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hausdorffDistance", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::DOUBLE, Gen_temporal_hausdorff_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hausdorffDistance", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::DOUBLE, Gen_temporal_hausdorff_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hausdorffDistance", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::DOUBLE, Gen_temporal_hausdorff_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("averageHausdorffDistance", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::DOUBLE, Gen_temporal_average_hausdorff_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("averageHausdorffDistance", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::DOUBLE, Gen_temporal_average_hausdorff_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("averageHausdorffDistance", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::DOUBLE, Gen_temporal_average_hausdorff_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("averageHausdorffDistance", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::DOUBLE, Gen_temporal_average_hausdorff_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lcssDistance", {TemporalTypes::tint(), TemporalTypes::tint(), LogicalType::DOUBLE}, LogicalType::DOUBLE, Gen_temporal_lcss_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lcssDistance", {TemporalTypes::tfloat(), TemporalTypes::tfloat(), LogicalType::DOUBLE}, LogicalType::DOUBLE, Gen_temporal_lcss_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lcssDistance", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint(), LogicalType::DOUBLE}, LogicalType::DOUBLE, Gen_temporal_lcss_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lcssDistance", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint(), LogicalType::DOUBLE}, LogicalType::DOUBLE, Gen_temporal_lcss_distance));
 }
 
 static void RegisterGenerated_meos_temporal_analytics_simplify(ExtensionLoader &loader) {
-    for (auto &type : TemporalTypes::AllTypes()) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("douglasPeuckerSimplify", {type, LogicalType::DOUBLE, LogicalType::BOOLEAN}, type, Gen_temporal_simplify_dp));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("maxDistSimplify", {type, LogicalType::DOUBLE, LogicalType::BOOLEAN}, type, Gen_temporal_simplify_max_dist));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("minDistSimplify", {type, LogicalType::DOUBLE}, type, Gen_temporal_simplify_min_dist));
-    }
-    for (auto &type : std::vector<LogicalType>{TgeompointType::tgeompoint(), TgeogpointType::tgeogpoint(), TGeometryTypes::tgeometry(), TGeographyTypes::tgeography()}) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("douglasPeuckerSimplify", {type, LogicalType::DOUBLE, LogicalType::BOOLEAN}, type, Gen_temporal_simplify_dp));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("maxDistSimplify", {type, LogicalType::DOUBLE, LogicalType::BOOLEAN}, type, Gen_temporal_simplify_max_dist));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("minDistSimplify", {type, LogicalType::DOUBLE}, type, Gen_temporal_simplify_min_dist));
-    }
+    RegisterSerializedScalarFunction(loader, ScalarFunction("douglasPeuckerSimplify", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_temporal_simplify_dp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("douglasPeuckerSimplify", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::BOOLEAN}, TgeompointType::tgeompoint(), Gen_temporal_simplify_dp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("douglasPeuckerSimplify", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::BOOLEAN}, TGeometryTypes::tgeometry(), Gen_temporal_simplify_dp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("maxDistSimplify", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_temporal_simplify_max_dist));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("maxDistSimplify", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::BOOLEAN}, TgeompointType::tgeompoint(), Gen_temporal_simplify_max_dist));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("maxDistSimplify", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::BOOLEAN}, TGeometryTypes::tgeometry(), Gen_temporal_simplify_max_dist));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minDistSimplify", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_temporal_simplify_min_dist));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minDistSimplify", {TgeompointType::tgeompoint(), LogicalType::DOUBLE}, TgeompointType::tgeompoint(), Gen_temporal_simplify_min_dist));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minDistSimplify", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE}, TgeogpointType::tgeogpoint(), Gen_temporal_simplify_min_dist));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minDistSimplify", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE}, TGeometryTypes::tgeometry(), Gen_temporal_simplify_min_dist));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minDistSimplify", {TGeographyTypes::tgeography(), LogicalType::DOUBLE}, TGeographyTypes::tgeography(), Gen_temporal_simplify_min_dist));
 }
 
 static void RegisterGenerated_meos_temporal_bbox_pos(ExtensionLoader &loader) {
-    for (auto &type : TemporalTypes::AllTypes()) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("after", {type, type}, LogicalType::BOOLEAN, Gen_after_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("before", {type, type}, LogicalType::BOOLEAN, Gen_before_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {type, type}, LogicalType::BOOLEAN, Gen_overafter_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {type, type}, LogicalType::BOOLEAN, Gen_overbefore_temporal_temporal));
-    }
-    for (auto &type : std::vector<LogicalType>{TgeompointType::tgeompoint(), TgeogpointType::tgeogpoint(), TGeometryTypes::tgeometry(), TGeographyTypes::tgeography()}) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("after", {type, type}, LogicalType::BOOLEAN, Gen_after_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("before", {type, type}, LogicalType::BOOLEAN, Gen_before_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {type, type}, LogicalType::BOOLEAN, Gen_overafter_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {type, type}, LogicalType::BOOLEAN, Gen_overbefore_temporal_temporal));
-    }
+    RegisterSerializedScalarFunction(loader, ScalarFunction("after", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_after_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("after", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_after_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_after_tnumber_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_after_tnumber_tnumber));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("before", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_before_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("before", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_before_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_before_tnumber_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_before_tnumber_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("left", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_left_tnumber_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_left_tnumber_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("left", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_left_tnumber_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_left_tnumber_tnumber));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_overafter_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_overafter_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_overafter_tnumber_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_overafter_tnumber_tnumber));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_overbefore_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_overbefore_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_overbefore_tnumber_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_overbefore_tnumber_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_overleft_tnumber_tnumber));
@@ -13511,58 +13644,6 @@ static void RegisterGenerated_meos_temporal_bool(ExtensionLoader &loader) {
 }
 
 static void RegisterGenerated_meos_temporal_comp_ever(ExtensionLoader &loader) {
-    for (auto &type : TemporalTypes::AllTypes()) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("aEq", {type, type}, LogicalType::BOOLEAN, Gen_always_eq_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("%=", {type, type}, LogicalType::BOOLEAN, Gen_always_eq_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("aGe", {type, type}, LogicalType::BOOLEAN, Gen_always_ge_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("%>=", {type, type}, LogicalType::BOOLEAN, Gen_always_ge_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("aGt", {type, type}, LogicalType::BOOLEAN, Gen_always_gt_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("%>", {type, type}, LogicalType::BOOLEAN, Gen_always_gt_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("aLe", {type, type}, LogicalType::BOOLEAN, Gen_always_le_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("%<=", {type, type}, LogicalType::BOOLEAN, Gen_always_le_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("aLt", {type, type}, LogicalType::BOOLEAN, Gen_always_lt_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("%<", {type, type}, LogicalType::BOOLEAN, Gen_always_lt_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("aNe", {type, type}, LogicalType::BOOLEAN, Gen_always_ne_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("%<>", {type, type}, LogicalType::BOOLEAN, Gen_always_ne_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("eEq", {type, type}, LogicalType::BOOLEAN, Gen_ever_eq_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("?=", {type, type}, LogicalType::BOOLEAN, Gen_ever_eq_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("eGe", {type, type}, LogicalType::BOOLEAN, Gen_ever_ge_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("?>=", {type, type}, LogicalType::BOOLEAN, Gen_ever_ge_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("eGt", {type, type}, LogicalType::BOOLEAN, Gen_ever_gt_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("?>", {type, type}, LogicalType::BOOLEAN, Gen_ever_gt_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("eLe", {type, type}, LogicalType::BOOLEAN, Gen_ever_le_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("?<=", {type, type}, LogicalType::BOOLEAN, Gen_ever_le_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("eLt", {type, type}, LogicalType::BOOLEAN, Gen_ever_lt_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("?<", {type, type}, LogicalType::BOOLEAN, Gen_ever_lt_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("eNe", {type, type}, LogicalType::BOOLEAN, Gen_ever_ne_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {type, type}, LogicalType::BOOLEAN, Gen_ever_ne_temporal_temporal));
-    }
-    for (auto &type : std::vector<LogicalType>{TgeompointType::tgeompoint(), TgeogpointType::tgeogpoint(), TGeometryTypes::tgeometry(), TGeographyTypes::tgeography()}) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("aEq", {type, type}, LogicalType::BOOLEAN, Gen_always_eq_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("%=", {type, type}, LogicalType::BOOLEAN, Gen_always_eq_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("aGe", {type, type}, LogicalType::BOOLEAN, Gen_always_ge_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("%>=", {type, type}, LogicalType::BOOLEAN, Gen_always_ge_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("aGt", {type, type}, LogicalType::BOOLEAN, Gen_always_gt_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("%>", {type, type}, LogicalType::BOOLEAN, Gen_always_gt_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("aLe", {type, type}, LogicalType::BOOLEAN, Gen_always_le_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("%<=", {type, type}, LogicalType::BOOLEAN, Gen_always_le_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("aLt", {type, type}, LogicalType::BOOLEAN, Gen_always_lt_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("%<", {type, type}, LogicalType::BOOLEAN, Gen_always_lt_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("aNe", {type, type}, LogicalType::BOOLEAN, Gen_always_ne_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("%<>", {type, type}, LogicalType::BOOLEAN, Gen_always_ne_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("eEq", {type, type}, LogicalType::BOOLEAN, Gen_ever_eq_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("?=", {type, type}, LogicalType::BOOLEAN, Gen_ever_eq_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("eGe", {type, type}, LogicalType::BOOLEAN, Gen_ever_ge_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("?>=", {type, type}, LogicalType::BOOLEAN, Gen_ever_ge_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("eGt", {type, type}, LogicalType::BOOLEAN, Gen_ever_gt_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("?>", {type, type}, LogicalType::BOOLEAN, Gen_ever_gt_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("eLe", {type, type}, LogicalType::BOOLEAN, Gen_ever_le_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("?<=", {type, type}, LogicalType::BOOLEAN, Gen_ever_le_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("eLt", {type, type}, LogicalType::BOOLEAN, Gen_ever_lt_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("?<", {type, type}, LogicalType::BOOLEAN, Gen_ever_lt_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("eNe", {type, type}, LogicalType::BOOLEAN, Gen_ever_ne_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {type, type}, LogicalType::BOOLEAN, Gen_ever_ne_temporal_temporal));
-    }
     RegisterSerializedScalarFunction(loader, ScalarFunction("aEq", {LogicalType::BOOLEAN, TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_always_eq_bool_tbool));
     RegisterSerializedScalarFunction(loader, ScalarFunction("%=", {LogicalType::BOOLEAN, TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_always_eq_bool_tbool));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aEq", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_always_eq_float_tfloat));
@@ -13571,6 +13652,16 @@ static void RegisterGenerated_meos_temporal_comp_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("%=", {LogicalType::INTEGER, TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_eq_int_tint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aEq", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, LogicalType::BOOLEAN, Gen_always_eq_tbool_bool));
     RegisterSerializedScalarFunction(loader, ScalarFunction("%=", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, LogicalType::BOOLEAN, Gen_always_eq_tbool_bool));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aEq", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_eq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%=", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_eq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aEq", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_always_eq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%=", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_always_eq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aEq", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_always_eq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%=", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_always_eq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aEq", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_always_eq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%=", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_always_eq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aEq", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_eq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%=", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_eq_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aEq", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_eq_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("%=", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_eq_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aEq", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_always_eq_tfloat_float));
@@ -13587,6 +13678,14 @@ static void RegisterGenerated_meos_temporal_comp_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("%>=", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_always_ge_float_tfloat));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aGe", {LogicalType::INTEGER, TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_ge_int_tint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("%>=", {LogicalType::INTEGER, TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_ge_int_tint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aGe", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_ge_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%>=", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_ge_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aGe", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_always_ge_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%>=", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_always_ge_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aGe", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_always_ge_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%>=", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_always_ge_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aGe", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_ge_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%>=", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_ge_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aGe", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_ge_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("%>=", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_ge_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aGe", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_always_ge_tfloat_float));
@@ -13603,6 +13702,14 @@ static void RegisterGenerated_meos_temporal_comp_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("%>", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_always_gt_float_tfloat));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aGt", {LogicalType::INTEGER, TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_gt_int_tint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("%>", {LogicalType::INTEGER, TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_gt_int_tint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aGt", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_gt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%>", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_gt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aGt", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_always_gt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%>", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_always_gt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aGt", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_always_gt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%>", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_always_gt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aGt", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_gt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%>", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_gt_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aGt", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_gt_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("%>", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_gt_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aGt", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_always_gt_tfloat_float));
@@ -13619,6 +13726,14 @@ static void RegisterGenerated_meos_temporal_comp_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("%<=", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_always_le_float_tfloat));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aLe", {LogicalType::INTEGER, TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_le_int_tint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("%<=", {LogicalType::INTEGER, TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_le_int_tint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aLe", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_le_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%<=", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_le_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aLe", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_always_le_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%<=", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_always_le_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aLe", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_always_le_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%<=", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_always_le_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aLe", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_le_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%<=", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_le_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aLe", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_le_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("%<=", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_le_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aLe", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_always_le_tfloat_float));
@@ -13635,6 +13750,14 @@ static void RegisterGenerated_meos_temporal_comp_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("%<", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_always_lt_float_tfloat));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aLt", {LogicalType::INTEGER, TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_lt_int_tint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("%<", {LogicalType::INTEGER, TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_lt_int_tint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aLt", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_lt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%<", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_lt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aLt", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_always_lt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%<", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_always_lt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aLt", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_always_lt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%<", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_always_lt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aLt", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_lt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%<", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_lt_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aLt", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_lt_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("%<", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_lt_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aLt", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_always_lt_tfloat_float));
@@ -13655,6 +13778,16 @@ static void RegisterGenerated_meos_temporal_comp_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("%<>", {LogicalType::INTEGER, TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_ne_int_tint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aNe", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, LogicalType::BOOLEAN, Gen_always_ne_tbool_bool));
     RegisterSerializedScalarFunction(loader, ScalarFunction("%<>", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, LogicalType::BOOLEAN, Gen_always_ne_tbool_bool));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aNe", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_ne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%<>", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_always_ne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aNe", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_always_ne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%<>", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_always_ne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aNe", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_always_ne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%<>", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_always_ne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aNe", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_always_ne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%<>", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_always_ne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aNe", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_ne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%<>", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_ne_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aNe", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_ne_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("%<>", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_always_ne_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aNe", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_always_ne_tfloat_float));
@@ -13675,6 +13808,16 @@ static void RegisterGenerated_meos_temporal_comp_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("?=", {LogicalType::INTEGER, TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_eq_int_tint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eEq", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, LogicalType::BOOLEAN, Gen_ever_eq_tbool_bool));
     RegisterSerializedScalarFunction(loader, ScalarFunction("?=", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, LogicalType::BOOLEAN, Gen_ever_eq_tbool_bool));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eEq", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_eq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?=", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_eq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eEq", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_ever_eq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?=", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_ever_eq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eEq", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_ever_eq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?=", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_ever_eq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eEq", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_ever_eq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?=", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_ever_eq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eEq", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_eq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?=", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_eq_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eEq", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_eq_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("?=", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_eq_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eEq", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_ever_eq_tfloat_float));
@@ -13691,6 +13834,14 @@ static void RegisterGenerated_meos_temporal_comp_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("?>=", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_ever_ge_float_tfloat));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eGe", {LogicalType::INTEGER, TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_ge_int_tint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("?>=", {LogicalType::INTEGER, TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_ge_int_tint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eGe", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_ge_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?>=", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_ge_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eGe", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_ever_ge_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?>=", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_ever_ge_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eGe", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_ever_ge_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?>=", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_ever_ge_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eGe", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_ge_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?>=", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_ge_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eGe", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_ge_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("?>=", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_ge_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eGe", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_ever_ge_tfloat_float));
@@ -13707,6 +13858,14 @@ static void RegisterGenerated_meos_temporal_comp_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("?>", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_ever_gt_float_tfloat));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eGt", {LogicalType::INTEGER, TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_gt_int_tint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("?>", {LogicalType::INTEGER, TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_gt_int_tint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eGt", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_gt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?>", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_gt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eGt", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_ever_gt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?>", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_ever_gt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eGt", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_ever_gt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?>", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_ever_gt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eGt", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_gt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?>", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_gt_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eGt", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_gt_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("?>", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_gt_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eGt", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_ever_gt_tfloat_float));
@@ -13723,6 +13882,14 @@ static void RegisterGenerated_meos_temporal_comp_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("?<=", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_ever_le_float_tfloat));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eLe", {LogicalType::INTEGER, TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_le_int_tint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("?<=", {LogicalType::INTEGER, TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_le_int_tint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eLe", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_le_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?<=", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_le_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eLe", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_ever_le_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?<=", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_ever_le_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eLe", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_ever_le_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?<=", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_ever_le_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eLe", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_le_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?<=", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_le_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eLe", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_le_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("?<=", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_le_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eLe", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_ever_le_tfloat_float));
@@ -13739,6 +13906,14 @@ static void RegisterGenerated_meos_temporal_comp_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("?<", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_ever_lt_float_tfloat));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eLt", {LogicalType::INTEGER, TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_lt_int_tint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("?<", {LogicalType::INTEGER, TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_lt_int_tint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eLt", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_lt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?<", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_lt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eLt", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_ever_lt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?<", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_ever_lt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eLt", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_ever_lt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?<", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_ever_lt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eLt", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_lt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?<", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_lt_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eLt", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_lt_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("?<", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_lt_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eLt", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_ever_lt_tfloat_float));
@@ -13759,6 +13934,16 @@ static void RegisterGenerated_meos_temporal_comp_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {LogicalType::INTEGER, TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_ne_int_tint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eNe", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, LogicalType::BOOLEAN, Gen_ever_ne_tbool_bool));
     RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, LogicalType::BOOLEAN, Gen_ever_ne_tbool_bool));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eNe", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_ne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_ever_ne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eNe", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_ever_ne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_ever_ne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eNe", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_ever_ne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_ever_ne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eNe", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_ever_ne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_ever_ne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eNe", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_ne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_ne_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eNe", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_ne_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {LogicalType::VARCHAR, TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_ever_ne_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eNe", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_ever_ne_tfloat_float));
@@ -13774,50 +13959,59 @@ static void RegisterGenerated_meos_temporal_comp_ever(ExtensionLoader &loader) {
 }
 
 static void RegisterGenerated_meos_temporal_comp_temp(ExtensionLoader &loader) {
-    for (auto &type : TemporalTypes::AllTypes()) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {type, type}, TemporalTypes::tbool(), Gen_teq_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("tGe", {type, type}, TemporalTypes::tbool(), Gen_tge_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("tGt", {type, type}, TemporalTypes::tbool(), Gen_tgt_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("tLe", {type, type}, TemporalTypes::tbool(), Gen_tle_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("tLt", {type, type}, TemporalTypes::tbool(), Gen_tlt_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {type, type}, TemporalTypes::tbool(), Gen_tne_temporal_temporal));
-    }
-    for (auto &type : std::vector<LogicalType>{TgeompointType::tgeompoint(), TgeogpointType::tgeogpoint(), TGeometryTypes::tgeometry(), TGeographyTypes::tgeography()}) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {type, type}, TemporalTypes::tbool(), Gen_teq_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("tGe", {type, type}, TemporalTypes::tbool(), Gen_tge_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("tGt", {type, type}, TemporalTypes::tbool(), Gen_tgt_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("tLe", {type, type}, TemporalTypes::tbool(), Gen_tle_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("tLt", {type, type}, TemporalTypes::tbool(), Gen_tlt_temporal_temporal));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {type, type}, TemporalTypes::tbool(), Gen_tne_temporal_temporal));
-    }
     RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {LogicalType::BOOLEAN, TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_teq_bool_tbool));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, TemporalTypes::tbool(), Gen_teq_float_tfloat));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {LogicalType::INTEGER, TemporalTypes::tint()}, TemporalTypes::tbool(), Gen_teq_int_tint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_teq_tbool_bool));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tbool(), Gen_teq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, TemporalTypes::tbool(), Gen_teq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {TemporalTypes::tbool(), TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_teq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tbool(), Gen_teq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {TemporalTypes::ttext(), TemporalTypes::ttext()}, TemporalTypes::tbool(), Gen_teq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, TemporalTypes::tbool(), Gen_teq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, TemporalTypes::tbool(), Gen_teq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, TemporalTypes::tbool(), Gen_teq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, TemporalTypes::tbool(), Gen_teq_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {LogicalType::VARCHAR, TemporalTypes::ttext()}, TemporalTypes::tbool(), Gen_teq_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tbool(), Gen_teq_tfloat_float));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tbool(), Gen_teq_tint_int));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {TemporalTypes::ttext(), LogicalType::VARCHAR}, TemporalTypes::tbool(), Gen_teq_ttext_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tGe", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, TemporalTypes::tbool(), Gen_tge_float_tfloat));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tGe", {LogicalType::INTEGER, TemporalTypes::tint()}, TemporalTypes::tbool(), Gen_tge_int_tint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tGe", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tbool(), Gen_tge_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tGe", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, TemporalTypes::tbool(), Gen_tge_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tGe", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tbool(), Gen_tge_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tGe", {TemporalTypes::ttext(), TemporalTypes::ttext()}, TemporalTypes::tbool(), Gen_tge_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tGe", {LogicalType::VARCHAR, TemporalTypes::ttext()}, TemporalTypes::tbool(), Gen_tge_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tGe", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tbool(), Gen_tge_tfloat_float));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tGe", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tbool(), Gen_tge_tint_int));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tGe", {TemporalTypes::ttext(), LogicalType::VARCHAR}, TemporalTypes::tbool(), Gen_tge_ttext_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tGt", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, TemporalTypes::tbool(), Gen_tgt_float_tfloat));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tGt", {LogicalType::INTEGER, TemporalTypes::tint()}, TemporalTypes::tbool(), Gen_tgt_int_tint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tGt", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tbool(), Gen_tgt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tGt", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, TemporalTypes::tbool(), Gen_tgt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tGt", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tbool(), Gen_tgt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tGt", {TemporalTypes::ttext(), TemporalTypes::ttext()}, TemporalTypes::tbool(), Gen_tgt_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tGt", {LogicalType::VARCHAR, TemporalTypes::ttext()}, TemporalTypes::tbool(), Gen_tgt_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tGt", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tbool(), Gen_tgt_tfloat_float));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tGt", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tbool(), Gen_tgt_tint_int));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tGt", {TemporalTypes::ttext(), LogicalType::VARCHAR}, TemporalTypes::tbool(), Gen_tgt_ttext_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tLe", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, TemporalTypes::tbool(), Gen_tle_float_tfloat));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tLe", {LogicalType::INTEGER, TemporalTypes::tint()}, TemporalTypes::tbool(), Gen_tle_int_tint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tLe", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tbool(), Gen_tle_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tLe", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, TemporalTypes::tbool(), Gen_tle_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tLe", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tbool(), Gen_tle_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tLe", {TemporalTypes::ttext(), TemporalTypes::ttext()}, TemporalTypes::tbool(), Gen_tle_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tLe", {LogicalType::VARCHAR, TemporalTypes::ttext()}, TemporalTypes::tbool(), Gen_tle_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tLe", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tbool(), Gen_tle_tfloat_float));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tLe", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tbool(), Gen_tle_tint_int));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tLe", {TemporalTypes::ttext(), LogicalType::VARCHAR}, TemporalTypes::tbool(), Gen_tle_ttext_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tLt", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, TemporalTypes::tbool(), Gen_tlt_float_tfloat));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tLt", {LogicalType::INTEGER, TemporalTypes::tint()}, TemporalTypes::tbool(), Gen_tlt_int_tint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tLt", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tbool(), Gen_tlt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tLt", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, TemporalTypes::tbool(), Gen_tlt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tLt", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tbool(), Gen_tlt_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tLt", {TemporalTypes::ttext(), TemporalTypes::ttext()}, TemporalTypes::tbool(), Gen_tlt_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tLt", {LogicalType::VARCHAR, TemporalTypes::ttext()}, TemporalTypes::tbool(), Gen_tlt_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tLt", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tbool(), Gen_tlt_tfloat_float));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tLt", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tbool(), Gen_tlt_tint_int));
@@ -13826,6 +14020,15 @@ static void RegisterGenerated_meos_temporal_comp_temp(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, TemporalTypes::tbool(), Gen_tne_float_tfloat));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {LogicalType::INTEGER, TemporalTypes::tint()}, TemporalTypes::tbool(), Gen_tne_int_tint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_tne_tbool_bool));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tbool(), Gen_tne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, TemporalTypes::tbool(), Gen_tne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {TemporalTypes::tbool(), TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_tne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tbool(), Gen_tne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {TemporalTypes::ttext(), TemporalTypes::ttext()}, TemporalTypes::tbool(), Gen_tne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, TemporalTypes::tbool(), Gen_tne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, TemporalTypes::tbool(), Gen_tne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, TemporalTypes::tbool(), Gen_tne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, TemporalTypes::tbool(), Gen_tne_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {LogicalType::VARCHAR, TemporalTypes::ttext()}, TemporalTypes::tbool(), Gen_tne_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tbool(), Gen_tne_tfloat_float));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tbool(), Gen_tne_tint_int));
@@ -13833,36 +14036,123 @@ static void RegisterGenerated_meos_temporal_comp_temp(ExtensionLoader &loader) {
 }
 
 static void RegisterGenerated_meos_temporal_comp_trad(ExtensionLoader &loader) {
-    for (auto &type : TemporalTypes::AllTypes()) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {type, type}, LogicalType::INTEGER, Gen_temporal_cmp));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {type, type}, LogicalType::BOOLEAN, Gen_temporal_eq));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("=", {type, type}, LogicalType::BOOLEAN, Gen_temporal_eq));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {type, type}, LogicalType::BOOLEAN, Gen_temporal_ge));
-        RegisterSerializedScalarFunction(loader, ScalarFunction(">", {type, type}, LogicalType::BOOLEAN, Gen_temporal_ge));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {type, type}, LogicalType::BOOLEAN, Gen_temporal_gt));
-        RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {type, type}, LogicalType::BOOLEAN, Gen_temporal_gt));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("le", {type, type}, LogicalType::BOOLEAN, Gen_temporal_le));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("<=", {type, type}, LogicalType::BOOLEAN, Gen_temporal_le));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {type, type}, LogicalType::BOOLEAN, Gen_temporal_lt));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("<", {type, type}, LogicalType::BOOLEAN, Gen_temporal_lt));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {type, type}, LogicalType::BOOLEAN, Gen_temporal_ne));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {type, type}, LogicalType::BOOLEAN, Gen_temporal_ne));
-    }
-    for (auto &type : std::vector<LogicalType>{TgeompointType::tgeompoint(), TgeogpointType::tgeogpoint(), TGeometryTypes::tgeometry(), TGeographyTypes::tgeography()}) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {type, type}, LogicalType::INTEGER, Gen_temporal_cmp));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {type, type}, LogicalType::BOOLEAN, Gen_temporal_eq));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("=", {type, type}, LogicalType::BOOLEAN, Gen_temporal_eq));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {type, type}, LogicalType::BOOLEAN, Gen_temporal_ge));
-        RegisterSerializedScalarFunction(loader, ScalarFunction(">", {type, type}, LogicalType::BOOLEAN, Gen_temporal_ge));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {type, type}, LogicalType::BOOLEAN, Gen_temporal_gt));
-        RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {type, type}, LogicalType::BOOLEAN, Gen_temporal_gt));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("le", {type, type}, LogicalType::BOOLEAN, Gen_temporal_le));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("<=", {type, type}, LogicalType::BOOLEAN, Gen_temporal_le));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {type, type}, LogicalType::BOOLEAN, Gen_temporal_lt));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("<", {type, type}, LogicalType::BOOLEAN, Gen_temporal_lt));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {type, type}, LogicalType::BOOLEAN, Gen_temporal_ne));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {type, type}, LogicalType::BOOLEAN, Gen_temporal_ne));
-    }
+    RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::INTEGER, Gen_temporal_cmp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::INTEGER, Gen_temporal_cmp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::INTEGER, Gen_temporal_cmp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::INTEGER, Gen_temporal_cmp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::INTEGER, Gen_temporal_cmp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::INTEGER, Gen_temporal_cmp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::INTEGER, Gen_temporal_cmp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::INTEGER, Gen_temporal_cmp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::INTEGER, Gen_temporal_cmp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("=", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("=", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_temporal_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("=", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_temporal_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_temporal_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("=", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_temporal_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_temporal_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("=", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_temporal_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_temporal_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("=", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_temporal_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_temporal_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("=", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_temporal_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_temporal_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("=", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_temporal_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_temporal_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("=", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_temporal_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_temporal_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_temporal_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_temporal_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_temporal_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_temporal_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_temporal_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_temporal_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_temporal_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_temporal_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_temporal_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_temporal_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_temporal_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_temporal_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_temporal_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_temporal_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_temporal_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_temporal_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_temporal_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_temporal_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_temporal_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_temporal_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_temporal_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_temporal_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_temporal_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_temporal_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_temporal_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_temporal_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_temporal_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("le", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<=", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("le", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<=", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("le", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_temporal_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<=", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_temporal_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("le", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_temporal_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<=", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_temporal_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("le", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_temporal_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<=", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_temporal_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("le", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_temporal_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<=", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_temporal_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("le", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_temporal_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<=", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_temporal_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("le", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_temporal_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<=", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_temporal_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("le", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_temporal_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<=", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_temporal_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_temporal_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_temporal_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_temporal_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_temporal_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_temporal_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_temporal_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_temporal_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_temporal_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_temporal_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_temporal_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_temporal_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_temporal_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_temporal_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_temporal_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_temporal_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {TemporalTypes::tbool(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_temporal_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_temporal_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_temporal_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_temporal_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {TemporalTypes::ttext(), TemporalTypes::ttext()}, LogicalType::BOOLEAN, Gen_temporal_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_temporal_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_temporal_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_temporal_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_temporal_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_temporal_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_temporal_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_temporal_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_temporal_ne));
 }
 
 static void RegisterGenerated_meos_temporal_conversion(ExtensionLoader &loader) {
@@ -13898,12 +14188,6 @@ static void RegisterGenerated_meos_temporal_dist(ExtensionLoader &loader) {
 }
 
 static void RegisterGenerated_meos_temporal_math(ExtensionLoader &loader) {
-    for (auto &type : TemporalTypes::AllTypes()) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("derivative", {type}, TemporalTypes::tfloat(), Gen_temporal_derivative));
-    }
-    for (auto &type : std::vector<LogicalType>{TgeompointType::tgeompoint(), TgeogpointType::tgeogpoint(), TGeometryTypes::tgeometry(), TGeographyTypes::tgeography()}) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("derivative", {type}, TemporalTypes::tfloat(), Gen_temporal_derivative));
-    }
     RegisterSerializedScalarFunction(loader, ScalarFunction("tAdd", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_add_float_tfloat));
     RegisterSerializedScalarFunction(loader, ScalarFunction("+", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_add_float_tfloat));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tAdd", {LogicalType::INTEGER, TemporalTypes::tint()}, TemporalTypes::tint(), Gen_add_int_tint));
@@ -13964,6 +14248,7 @@ static void RegisterGenerated_meos_temporal_math(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("-", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tint(), Gen_sub_tnumber_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tSub", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_sub_tnumber_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("-", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_sub_tnumber_tnumber));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("derivative", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_derivative));
     RegisterSerializedScalarFunction(loader, ScalarFunction("exp", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tfloat_exp));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ln", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tfloat_ln));
     RegisterSerializedScalarFunction(loader, ScalarFunction("log10", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tfloat_log10));
@@ -13981,43 +14266,95 @@ static void RegisterGenerated_meos_temporal_math(ExtensionLoader &loader) {
 }
 
 static void RegisterGenerated_meos_temporal_modif(ExtensionLoader &loader) {
-    for (auto &type : TemporalTypes::AllTypes()) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {type, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, type, Gen_temporal_delete_timestamptz));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {type, type, LogicalType::BOOLEAN}, type, Gen_temporal_insert));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {type, type}, type, Gen_temporal_merge));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("update", {type, type, LogicalType::BOOLEAN}, type, Gen_temporal_update));
-    }
-    for (auto &type : std::vector<LogicalType>{TgeompointType::tgeompoint(), TgeogpointType::tgeogpoint(), TGeometryTypes::tgeometry(), TGeographyTypes::tgeography()}) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {type, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, type, Gen_temporal_delete_timestamptz));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {type, type, LogicalType::BOOLEAN}, type, Gen_temporal_insert));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {type, type}, type, Gen_temporal_merge));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("update", {type, type, LogicalType::BOOLEAN}, type, Gen_temporal_update));
-    }
+    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TemporalTypes::tint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tint(), Gen_temporal_delete_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TemporalTypes::tbigint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tbigint(), Gen_temporal_delete_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TemporalTypes::tbool(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_temporal_delete_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TemporalTypes::tfloat(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_temporal_delete_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TemporalTypes::ttext(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::ttext(), Gen_temporal_delete_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TgeompointType::tgeompoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TgeompointType::tgeompoint(), Gen_temporal_delete_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TgeogpointType::tgeogpoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TgeogpointType::tgeogpoint(), Gen_temporal_delete_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TGeometryTypes::tgeometry(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TGeometryTypes::tgeometry(), Gen_temporal_delete_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TGeographyTypes::tgeography(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TGeographyTypes::tgeography(), Gen_temporal_delete_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {TemporalTypes::tint(), TemporalTypes::tint(), LogicalType::BOOLEAN}, TemporalTypes::tint(), Gen_temporal_insert));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {TemporalTypes::tbigint(), TemporalTypes::tbigint(), LogicalType::BOOLEAN}, TemporalTypes::tbigint(), Gen_temporal_insert));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {TemporalTypes::tbool(), TemporalTypes::tbool(), LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_temporal_insert));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {TemporalTypes::tfloat(), TemporalTypes::tfloat(), LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_temporal_insert));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {TemporalTypes::ttext(), TemporalTypes::ttext(), LogicalType::BOOLEAN}, TemporalTypes::ttext(), Gen_temporal_insert));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_merge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_merge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {TemporalTypes::tbool(), TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_temporal_merge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_merge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {TemporalTypes::ttext(), TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_temporal_merge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, TgeompointType::tgeompoint(), Gen_temporal_merge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, TgeogpointType::tgeogpoint(), Gen_temporal_merge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, TGeometryTypes::tgeometry(), Gen_temporal_merge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, TGeographyTypes::tgeography(), Gen_temporal_merge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("update", {TemporalTypes::tint(), TemporalTypes::tint(), LogicalType::BOOLEAN}, TemporalTypes::tint(), Gen_temporal_update));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("update", {TemporalTypes::tbigint(), TemporalTypes::tbigint(), LogicalType::BOOLEAN}, TemporalTypes::tbigint(), Gen_temporal_update));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("update", {TemporalTypes::tbool(), TemporalTypes::tbool(), LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_temporal_update));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("update", {TemporalTypes::tfloat(), TemporalTypes::tfloat(), LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_temporal_update));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("update", {TemporalTypes::ttext(), TemporalTypes::ttext(), LogicalType::BOOLEAN}, TemporalTypes::ttext(), Gen_temporal_update));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("update", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint(), LogicalType::BOOLEAN}, TgeompointType::tgeompoint(), Gen_temporal_update));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("update", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint(), LogicalType::BOOLEAN}, TgeogpointType::tgeogpoint(), Gen_temporal_update));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("update", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry(), LogicalType::BOOLEAN}, TGeometryTypes::tgeometry(), Gen_temporal_update));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("update", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography(), LogicalType::BOOLEAN}, TGeographyTypes::tgeography(), Gen_temporal_update));
 }
 
 static void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
-    for (auto &type : TemporalTypes::AllTypes()) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {type, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, type, Gen_temporal_after_timestamptz));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("atMax", {type}, type, Gen_temporal_at_max));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("atMin", {type}, type, Gen_temporal_at_min));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {type, LogicalType::TIMESTAMP_TZ}, type, Gen_temporal_at_timestamptz));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {type, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, type, Gen_temporal_before_timestamptz));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("minusMax", {type}, type, Gen_temporal_minus_max));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("minusMin", {type}, type, Gen_temporal_minus_min));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {type, LogicalType::TIMESTAMP_TZ}, type, Gen_temporal_minus_timestamptz));
-    }
-    for (auto &type : std::vector<LogicalType>{TgeompointType::tgeompoint(), TgeogpointType::tgeogpoint(), TGeometryTypes::tgeometry(), TGeographyTypes::tgeography()}) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {type, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, type, Gen_temporal_after_timestamptz));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("atMax", {type}, type, Gen_temporal_at_max));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("atMin", {type}, type, Gen_temporal_at_min));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {type, LogicalType::TIMESTAMP_TZ}, type, Gen_temporal_at_timestamptz));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {type, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, type, Gen_temporal_before_timestamptz));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("minusMax", {type}, type, Gen_temporal_minus_max));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("minusMin", {type}, type, Gen_temporal_minus_min));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {type, LogicalType::TIMESTAMP_TZ}, type, Gen_temporal_minus_timestamptz));
-    }
     RegisterSerializedScalarFunction(loader, ScalarFunction("atValue", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_tbool_at_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusValue", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_tbool_minus_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TemporalTypes::tint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tint(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TemporalTypes::tbigint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tbigint(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TemporalTypes::tbool(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TemporalTypes::tfloat(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TemporalTypes::ttext(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::ttext(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TgeompointType::tgeompoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TgeompointType::tgeompoint(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TgeogpointType::tgeogpoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TgeogpointType::tgeogpoint(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TGeometryTypes::tgeometry(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TGeometryTypes::tgeometry(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TGeographyTypes::tgeography(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TGeographyTypes::tgeography(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atMax", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_at_max));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atMax", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_at_max));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atMax", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_at_max));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atMax", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_temporal_at_max));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atMin", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_at_min));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atMin", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_at_min));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atMin", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_at_min));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atMin", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_temporal_at_min));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tint(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tint(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tbigint(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tbigint(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tbool(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tbool(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tfloat(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tfloat(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::ttext(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::ttext(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TgeompointType::tgeompoint(), LogicalType::TIMESTAMP_TZ}, TgeompointType::tgeompoint(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TgeogpointType::tgeogpoint(), LogicalType::TIMESTAMP_TZ}, TgeogpointType::tgeogpoint(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TGeometryTypes::tgeometry(), LogicalType::TIMESTAMP_TZ}, TGeometryTypes::tgeometry(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TGeographyTypes::tgeography(), LogicalType::TIMESTAMP_TZ}, TGeographyTypes::tgeography(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::tint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tint(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::tbigint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tbigint(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::tbool(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::tfloat(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::ttext(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::ttext(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TgeompointType::tgeompoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TgeompointType::tgeompoint(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TgeogpointType::tgeogpoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TgeogpointType::tgeogpoint(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TGeometryTypes::tgeometry(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TGeometryTypes::tgeometry(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TGeographyTypes::tgeography(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TGeographyTypes::tgeography(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusMax", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_minus_max));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusMax", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_minus_max));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusMax", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_minus_max));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusMax", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_temporal_minus_max));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusMin", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_minus_min));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusMin", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_minus_min));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusMin", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_minus_min));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusMin", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_temporal_minus_min));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tint(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tint(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tbigint(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tbigint(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tbool(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tbool(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tfloat(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tfloat(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::ttext(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::ttext(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TgeompointType::tgeompoint(), LogicalType::TIMESTAMP_TZ}, TgeompointType::tgeompoint(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TgeogpointType::tgeogpoint(), LogicalType::TIMESTAMP_TZ}, TgeogpointType::tgeogpoint(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TGeometryTypes::tgeometry(), LogicalType::TIMESTAMP_TZ}, TGeometryTypes::tgeometry(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TGeographyTypes::tgeography(), LogicalType::TIMESTAMP_TZ}, TGeographyTypes::tgeography(), Gen_temporal_minus_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atValue", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_tfloat_at_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusValue", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_tfloat_minus_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atValue", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tint(), Gen_tint_at_value));
@@ -14093,14 +14430,12 @@ static void RegisterGenerated_meos_temporal_text(ExtensionLoader &loader) {
 }
 
 static void RegisterGenerated_meos_temporal_transf(ExtensionLoader &loader) {
-    for (auto &type : TemporalTypes::AllTypes()) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("round", {type, LogicalType::INTEGER}, type, Gen_temporal_round));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("tintInst", {type}, type, Gen_temporal_to_tinstant));
-    }
-    for (auto &type : std::vector<LogicalType>{TgeompointType::tgeompoint(), TgeogpointType::tgeogpoint(), TGeometryTypes::tgeometry(), TGeographyTypes::tgeography()}) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("round", {type, LogicalType::INTEGER}, type, Gen_temporal_round));
-        RegisterSerializedScalarFunction(loader, ScalarFunction("tintInst", {type}, type, Gen_temporal_to_tinstant));
-    }
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {TemporalTypes::tfloat(), LogicalType::INTEGER}, TemporalTypes::tfloat(), Gen_temporal_round));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {TgeompointType::tgeompoint(), LogicalType::INTEGER}, TgeompointType::tgeompoint(), Gen_temporal_round));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {TgeogpointType::tgeogpoint(), LogicalType::INTEGER}, TgeogpointType::tgeogpoint(), Gen_temporal_round));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {TGeometryTypes::tgeometry(), LogicalType::INTEGER}, TGeometryTypes::tgeometry(), Gen_temporal_round));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {TGeographyTypes::tgeography(), LogicalType::INTEGER}, TGeographyTypes::tgeography(), Gen_temporal_round));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tintInst", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_to_tinstant));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ceil", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tfloat_ceil));
     RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {TemporalTypes::tfloat(), LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_tfloat_degrees));
     RegisterSerializedScalarFunction(loader, ScalarFunction("floor", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tfloat_floor));
