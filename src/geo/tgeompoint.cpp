@@ -1356,17 +1356,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         // ever/always spatial comparisons (meos_temporal_comp_ever) are supplied by
         // the generated surface (geometry-arg overloads via the Temporal+GSERIALIZED path).
 
-#define REG_SPATIAL_TCMP(NAME, FN)                                                                                                                \
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {G, T}, TemporalTypes::tbool(), TgeompointFunctions::FN##_geo_tgeo)); \
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {T, G}, TemporalTypes::tbool(), TgeompointFunctions::FN##_tgeo_geo)); \
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(NAME, {T, T}, TemporalTypes::tbool(), TgeompointFunctions::FN##_tgeo_tgeo));
-
-        REG_SPATIAL_TCMP("temporal_teq", Teq)
-        REG_SPATIAL_TCMP("temporal_tne", Tne)
-        // Portable-SQL aliases (MobilityDB names): tgeo_teq / tgeo_tne
-        REG_SPATIAL_TCMP("tgeo_teq", Teq)
-        REG_SPATIAL_TCMP("tgeo_tne", Tne)
-#undef REG_SPATIAL_TCMP
+        // spatial temporal comparisons tEq/tNe (meos_temporal_comp_temp) are supplied
+        // by the generated surface (geometry-arg overloads via the Temporal+GSERIALIZED path).
     }
 
     /* tdistance named form (mirrors the <-> operator) */
