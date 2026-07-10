@@ -421,6 +421,39 @@ def ret_set_type(name, arg_acc):
     m = re.search(r'_to_(intset|bigintset|floatset|textset|dateset|tstzset)$', name)
     return SET_TYPES[m.group(1)] if m else arg_acc
 
+# SQL set-type name -> the CORE Duck accessor. Extended sets (geomset/geogset/
+# cbufferset/npointset/poseset/...) are absent -> a scalar-param overload on them
+# registers nothing here (they are gated to their own family files).
+SET_SQL_TO_ACC = dict(SET_TYPES)
+
+def set_scalar_param_sigs(f):
+    """For a 2-arg (Set, scalar)->Set function, decide from the catalog sqlSignatures
+    whether arg2 is a fixed PARAM (precision/SRID) rather than a set ELEMENT, and if so
+    return the [(set accessor, ret accessor)] over the catalog-declared set types.
+
+    The mechanical tell: a scalar param keeps the SAME arg2 SQL type across overloads
+    whose set arg1 differs (round: (floatset,integer)+(geomset,integer); setSRID/
+    transform: (geomset,integer)+(geogset,integer)), whereas a genuine element-add has
+    arg2 co-vary with the set base (setUnion: (geomset,geometry)+(cbufferset,cbuffer)).
+    So the set type must come from the signature (floatset), NOT be inferred from the
+    element scalar (which wrongly yields intset). Returns the (possibly empty) core-type
+    list when arg2 is a param; None when it is an element (keep the element path)."""
+    sigs = f.get("sqlSignatures")
+    two = [s for s in (sigs or []) if len(s["args"]) == 2]
+    if len(two) < 2:
+        return None
+    by_arg2 = defaultdict(set)
+    for s in two:
+        by_arg2[s["args"][1]].add(s["args"][0])
+    if not any(len(sets) >= 2 for sets in by_arg2.values()):
+        return None                                   # arg2 co-varies -> element-add
+    out = []
+    for s in two:
+        acc = SET_SQL_TO_ACC.get(s["args"][0])
+        if acc:
+            out.append((acc, SET_SQL_TO_ACC.get(s["ret"], acc)))
+    return out                                        # may be [] (only extended sets)
+
 # Element scalar type -> the Set type it implies (for contains/contained/left/...
 # predicates the set type is picked by the element, not the name). Only the
 # already-marshalled scalars (text/date deferred — need new marshalling).
@@ -1456,18 +1489,30 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         if s is None:
             continue
         STATE["grp"] = f.get("group") or "meos_ungrouped"
-        kind, dret = s; n_set += 1
+        kind, dret = s
+        # (Set, scalar PARAM)->Set (round/setSRID/transform): the 2nd arg is a precision/
+        # SRID, not a set element, so the set type comes from the catalog signature, not the
+        # element scalar. Skip entirely when the catalog declares only extended (non-core)
+        # sets -> no body emitted (else an unused static), no registration.
+        sp = set_scalar_param_sigs(f) if kind.startswith("setsc_set:") else None
+        if sp is not None and not sp:
+            continue
+        n_set += 1
         set_bodies.append(emit_set(f, kind))
         fn, sqlfn = f["name"], f["sqlfn"]
         # portable bare-name alias; normalize the doxygen `@`-escape (sqlop "\@>" -> "@>").
         names = reg_names(f, sqlfn, aliases)
         # element-typed predicates: accessor from the scalar element type, BOOLEAN ret.
         if kind.startswith("setsc_set:"):   # (Set, scalar element) -> Set (same set type)
-            b = kind.split(':')[1]; acc = ELEM_TO_SET[b]
+            b = kind.split(':')[1]
             scd = "LogicalType::VARCHAR" if b == "text" else SCALAR_ARG[b][0]
-            for nm in names:
-                set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
-                                         f'"{reg_name(nm, f)}", {{{acc}, {scd}}}, {acc}, Gen_{fn}));')
+            # scalar-param: register over the catalog-declared core set types (round->floatset);
+            # element-add: the accessor is the element's set type (setUnion(intset)->intset).
+            pairs = sp if sp is not None else [(ELEM_TO_SET[b], ELEM_TO_SET[b])]
+            for acc, rett in pairs:
+                for nm in names:
+                    set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                             f'"{reg_name(nm, f)}", {{{acc}, {scd}}}, {rett}, Gen_{fn}));')
             continue
         if kind.startswith("setsc:") or kind.startswith("scset:"):
             b = kind.split(':')[1]; acc = ELEM_TO_SET[b]
