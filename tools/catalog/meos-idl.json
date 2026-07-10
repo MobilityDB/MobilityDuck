@@ -392525,64 +392525,6 @@
       },
       "status": "scanned",
       "raises": {
-        "ensure_same_geodetic_tspatial_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "tspatial_as_ewkt": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "datum_div": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "ensure_tgeodetic_type": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "ensure_same_geodetic_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "tspatial_transform": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_srid_known"
-          }
-        ],
-        "temporal_set_interp": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_valid_interp"
-          }
-        ],
-        "ensure_same_dimensionality_tbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "right_tnumber_tbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tbox"
-          }
-        ],
         "temporal_frechet_path": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
@@ -392590,18 +392532,30 @@
             "through": "ensure_valid_temporal_temporal"
           }
         ],
-        "overlaps_set_set": [
+        "spantype_basetype": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "datum_double": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "tint_tmax_transfn": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
-            "through": "ensure_valid_set_set"
+            "through": "ensure_temporal_isof_type"
           }
         ],
-        "temporal_value_n": [
+        "geo_tpose_to_trgeometry": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
-            "through": "ensure_positive"
+            "through": "ensure_not_empty"
           }
         ],
         "double_parse": [
@@ -392610,186 +392564,126 @@
             "via": "direct"
           }
         ],
-        "stbox_parse": [
-          {
-            "code": "MEOS_ERR_TEXT_INPUT",
-            "via": "direct"
-          }
-        ],
-        "span_bins": [
+        "tpointseq_from_base_tstzset": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
-            "through": "ensure_not_negative_datum"
+            "through": "ensure_not_empty"
           }
         ],
-        "intset_make": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "ensure_tpoint_type": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "trgeometry_sequence_n": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_continuous"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "pose_round": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "npoint_make": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_route_exists"
-          }
-        ],
-        "ensure_same_dimensionality_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "trgeometry_geom": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_has_geom"
-          }
-        ],
-        "tsequenceset_parse": [
+        "set_parse": [
           {
             "code": "MEOS_ERR_TEXT_INPUT",
             "via": "ensure",
             "through": "ensure_cbrace"
           }
         ],
-        "geom_to_nsegment": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "ensure_valid_cbuffer_stbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_srid"
-          }
-        ],
-        "always_ne_temporal_temporal": [
+        "nad_tfloat_tbox": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
+            "through": "ensure_valid_tnumber_numspan"
           }
         ],
-        "ensure_same_srid": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "ensure_valid_tcbuffer_stbox": [
+        "ensure_valid_cbuffer_geo": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
             "through": "ensure_same_srid"
           }
         ],
-        "set_union_transfn": [
+        "overleft_set_set": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
             "through": "ensure_valid_set_set"
           }
         ],
-        "same_tnumber_numspan": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
-          }
-        ],
-        "ensure_has_M_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "adjacent_tnumber_tbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tbox"
-          }
-        ],
-        "geog_centroid": [
-          {
-            "code": "MEOS_ERR_INTERNAL_ERROR",
-            "via": "direct"
-          }
-        ],
-        "left_tnumber_numspan": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
-          }
-        ],
-        "geog_length": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "ensure_valid_tpose_stbox": [
+        "ensure_valid_poseset_pose": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
             "through": "ensure_same_srid"
           }
         ],
-        "meos_array_get": [
+        "contains_tnumber_tbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tbox"
+          }
+        ],
+        "ensure_has_X": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "direct"
           }
         ],
-        "tinstant_make": [
+        "adjacent_tbox_tnumber": [
           {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
-            "through": "ensure_not_empty"
-          },
-          {
-            "code": "MEOS_ERR_TEXT_INPUT",
-            "via": "ensure",
-            "through": "ensure_srid_is_latlong"
+            "through": "ensure_valid_tnumber_tbox"
           }
         ],
-        "ensure_positive_duration": [
+        "ensure_has_Z": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "direct"
+          }
+        ],
+        "tnumber_minus_span": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspan"
+          }
+        ],
+        "ensure_numset_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "temporal_sequence_n": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_continuous"
+          }
+        ],
+        "tnumber_split_n_tboxes": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "ensure_temporal_isof_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "always_ge_temporal_temporal": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "overright_set_set": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_set_set"
+          }
+        ],
+        "timestamptz_union_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_set_isof_type"
           }
         ],
         "tpoint_tcentroid_transfn": [
@@ -392804,25 +392698,33 @@
             "through": "ensure_tpoint_type"
           }
         ],
-        "pose_union_transfn": [
+        "bool_in": [
           {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_set_isof_type"
+            "code": "MEOS_ERR_TEXT_INPUT",
+            "via": "direct"
           }
         ],
-        "temporal_hausdorff_distance": [
+        "temporal_tsequence": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
+            "through": "ensure_valid_interp"
           }
         ],
-        "trgeometry_start_sequence": [
+        "temporal_merge": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_continuous_interp"
+          },
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
-            "through": "ensure_continuous"
+            "through": "ensure_same_temporal_type"
           }
         ],
         "npoint_union_transfn": [
@@ -392832,49 +392734,18 @@
             "through": "ensure_set_isof_type"
           }
         ],
-        "intersection_tbox_tbox": [
+        "nad_tboxfloat_tboxfloat": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
-            "through": "ensure_same_span_type"
+            "through": "ensure_span_isof_type"
           }
         ],
-        "ensure_tnumber_basetype": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "temporal_from_mfjson": [
-          {
-            "code": "MEOS_ERR_MFJSON_INPUT",
-            "via": "direct"
-          }
-        ],
-        "ensure_valid_tspatial_base": [
+        "cbufferset_make": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
-            "through": "ensure_same_geodetic_tspatial_base"
-          }
-        ],
-        "ensure_set_isof_type": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "spatial_set_srid": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "int_union_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_set_isof_type"
+            "through": "ensure_positive"
           }
         ],
         "tgeoseq_from_base_tstzset": [
@@ -392884,300 +392755,17 @@
             "through": "ensure_not_empty"
           }
         ],
-        "int_extent_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_span_isof_type"
-          }
-        ],
-        "contains_numspan_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
-          }
-        ],
-        "timestamptz_union_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_set_isof_type"
-          }
-        ],
-        "ttext_tmax_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_temporal_isof_type"
-          }
-        ],
-        "ensure_not_negative_datum": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "geom_azimuth": [
-          {
-            "code": "MEOS_ERR_INTERNAL_ERROR",
-            "via": "direct"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "ensure_valid_spanset_spanset": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_same_spanset_type"
-          }
-        ],
-        "tsequenceset_to_step": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "trgeoseqset_to_tsequence": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "ensure_valid_geo_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_geodetic_geo"
-          }
-        ],
-        "left_set_set": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_set_set"
-          }
-        ],
-        "ensure_same_geodetic_tspatial_base": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "stbox_to_box3d": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_geodetic"
-          }
-        ],
-        "tfloat_log10": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "tfloat_ln": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "ensure_same_geodetic": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "contains_set_set": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_set_set"
-          }
-        ],
-        "dist_double_value_value": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "tdiscseq_parse": [
-          {
-            "code": "MEOS_ERR_TEXT_INPUT",
-            "via": "ensure",
-            "through": "ensure_cbrace"
-          }
-        ],
-        "ensure_valid_tgeo_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_geodetic_tspatial_geo"
-          }
-        ],
-        "tspatial_parse": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_point_type"
-          }
-        ],
-        "temporal_tsequenceset": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "right_tnumber_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tnumber"
-          }
-        ],
-        "tdistance_trgeometry_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "floatspanset_round": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "set_tbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "box3d_out": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "tnumber_minus_span": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
-          }
-        ],
-        "ensure_temporal_isof_basetype": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "geog_area": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "right_tbox_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tbox"
-          }
-        ],
-        "date_extent_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_span_isof_type"
-          }
-        ],
-        "pose_out": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "geo_equals": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "ensure_tspatial_type": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "ensure_valid_pose_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_srid"
-          }
-        ],
-        "tspatial_extent_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_dimensionality"
-          }
-        ],
-        "geom_buffer": [
-          {
-            "code": "MEOS_ERR_INTERNAL_ERROR",
-            "via": "direct"
-          },
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "geog_perimeter": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "overlaps_tnumber_tbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tbox"
-          }
-        ],
-        "ensure_not_null": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG",
-            "via": "direct"
-          }
-        ],
-        "ensure_spatialset_type": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "posearr_round": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "geo_tposeinst_to_trgeo": [
+        "cbuffer_make": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
             "through": "ensure_not_empty"
+          }
+        ],
+        "datum_sub": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
           }
         ],
         "tdistance_tgeo_tgeo": [
@@ -393187,136 +392775,32 @@
             "through": "ensure_same_dimensionality"
           }
         ],
-        "geo_num_geos": [
+        "gbox_out": [
           {
-            "code": "MEOS_ERR_INVALID_ARG",
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
-            "through": "ensure_not_null"
+            "through": "ensure_not_negative"
           }
         ],
-        "overright_tbox_tnumber": [
+        "tnumber_at_tbox": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
             "through": "ensure_valid_tnumber_tbox"
           }
         ],
-        "trgeoseq_to_tinstant": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "overlaps_tnumber_tnumber": [
+        "contains_set_set": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
-            "through": "ensure_valid_tnumber_tnumber"
+            "through": "ensure_valid_set_set"
           }
         ],
-        "round_fn": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "timestamptz_bin_start": [
-          {
-            "code": "MEOS_ERR_VALUE_OUT_OF_RANGE",
-            "via": "direct"
-          }
-        ],
-        "ensure_valid_interp": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "timestamptz_extent_transfn": [
+        "tfloat_tmin_transfn": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
-            "through": "ensure_span_isof_type"
-          }
-        ],
-        "ensure_cbrace": [
-          {
-            "code": "MEOS_ERR_TEXT_INPUT",
-            "via": "direct"
-          }
-        ],
-        "ever_ge_temporal_temporal": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "distance_dateset_dateset": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_set_isof_type"
-          }
-        ],
-        "tgeo_split_n_stboxes": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "tle_temporal_temporal": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "contained_tnumber_numspan": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
-          }
-        ],
-        "ensure_span_tbox_type": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "ensure_numset_type": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "overlaps_tnumber_numspan": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
-          }
-        ],
-        "ensure_same_skiplist_subtype": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "text_union_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_set_isof_type"
-          }
-        ],
-        "overleft_tnumber_tbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tbox"
+            "through": "ensure_temporal_isof_type"
           }
         ],
         "ensure_valid_set_set": [
@@ -393330,474 +392814,43 @@
             "through": "ensure_same_srid"
           }
         ],
-        "ensure_numspan_type": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "ensure_spanset_isof_type": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "tnumber_trend": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_linear_interp"
-          }
-        ],
-        "geog_distance": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "tboxint_xmax": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_span_isof_type"
-          }
-        ],
-        "distance_intset_intset": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_set_isof_type"
-          }
-        ],
-        "minus_set_set": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_set_set"
-          }
-        ],
-        "temporal_split_n_spans": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "settype_basetype": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "add_tnumber_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "tspatialseq_expand_stbox": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "tint_tmax_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_temporal_isof_type"
-          }
-        ],
-        "tintbox_expand": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_span_isof_type"
-          }
-        ],
-        "set_parse": [
-          {
-            "code": "MEOS_ERR_TEXT_INPUT",
-            "via": "ensure",
-            "through": "ensure_cbrace"
-          }
-        ],
-        "adjacent_numspan_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
-          }
-        ],
-        "int_get_bin": [
-          {
-            "code": "MEOS_ERR_VALUE_OUT_OF_RANGE",
-            "via": "direct"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "nad_tbox_tbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_same_span_type"
-          }
-        ],
-        "ensure_same_rid_tnpointinst": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "union_tbox_tbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_same_span_type"
-          }
-        ],
-        "meostype_length": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "overleft_tnumber_numspan": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
-          }
-        ],
-        "same_tnumber_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tnumber"
-          }
-        ],
-        "point_transf_pj": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG",
-            "via": "direct"
-          }
-        ],
-        "overleft_tbox_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tbox"
-          }
-        ],
-        "tnumber_extent_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tbox"
-          }
-        ],
-        "ensure_geoaggstate": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "trgeometry_sequences": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_continuous"
-          }
-        ],
-        "contains_tbox_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tbox"
-          }
-        ],
-        "tnpoint_restrict_geom": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_srid"
-          }
-        ],
-        "nad_tint_tbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
-          }
-        ],
-        "geo_geo_n": [
-          {
-            "code": "MEOS_ERR_INTERNAL_ERROR",
-            "via": "direct"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG",
-            "via": "ensure",
-            "through": "ensure_not_null"
-          }
-        ],
-        "always_ge_temporal_temporal": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "temporal_merge_array": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "ensure_valid_tspatial_tspatial": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_geodetic"
-          }
-        ],
-        "shortestline_tgeo_tgeo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_dimensionality"
-          }
-        ],
-        "stbox_volume": [
+        "ea_touches_tpoint_geo": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
             "through": "ensure_not_geodetic"
           }
         ],
-        "temporal_sequence_n": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_continuous"
-          }
-        ],
-        "ensure_valid_trgeo_trgeo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_dimensionality"
-          }
-        ],
-        "textset_make": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "gbox_out": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "ensure_span_isof_type": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "tne_temporal_temporal": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_dimensionality"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "set_out_fn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "tstzset_tcount_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_skiplist_subtype"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_set_isof_type"
-          }
-        ],
-        "ensure_valid_tpose_tpose": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_srid"
-          }
-        ],
-        "floatspan_round": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "shortestline_tgeo_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_geodetic_tspatial_geo"
-          }
-        ],
-        "npoint_parse": [
+        "ensure_end_input": [
           {
             "code": "MEOS_ERR_TEXT_INPUT",
             "via": "direct"
           }
         ],
-        "npointset_make": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "bool_in": [
-          {
-            "code": "MEOS_ERR_TEXT_INPUT",
-            "via": "direct"
-          }
-        ],
-        "tge_temporal_temporal": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "tfloat_tsum_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_temporal_isof_type"
-          }
-        ],
-        "set_split_n_spans": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "tsequenceset_to_tsequence": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "overleft_numspan_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
-          }
-        ],
-        "ever_lt_temporal_temporal": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "tbox_round": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_span_isof_type"
-          }
-        ],
-        "cbuffer_as_text": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "ttouches_tgeo_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_geodetic_geo"
-          }
-        ],
-        "float_get_bin": [
+        "pose_make_2d": [
           {
             "code": "MEOS_ERR_VALUE_OUT_OF_RANGE",
-            "via": "direct"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
-            "through": "ensure_positive_datum"
+            "through": "ensure_valid_rotation"
           }
         ],
-        "tdistance_tgeo_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_point_type"
-          }
-        ],
-        "spantype_basetype": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "ensure_valid_tnumber_tbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "tfloat_to_tint": [
+        "tfloat_ln": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "direct"
           }
         ],
-        "left_numspan_tnumber": [
+        "pose_transform": [
           {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
+            "through": "ensure_srid_known"
+          }
+        ],
+        "union_stbox_stbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
           }
         ],
         "tbox_make": [
@@ -393812,106 +392865,28 @@
             "through": "ensure_one_not_null"
           }
         ],
-        "sub_tnumber_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tnumber"
-          }
-        ],
-        "tsequenceset_to_discrete": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "ensure_valid_day_duration": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "npoint_as_ewkt": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "tdwithin_tcbuffer_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative_datum"
-          }
-        ],
-        "ensure_valid_trgeo_geo": [
+        "tgeompoint_to_tnpoint": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
             "through": "ensure_same_srid"
           }
         ],
-        "ensure_valid_tseqarr": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "floatset_make": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "pose_make_2d": [
-          {
-            "code": "MEOS_ERR_VALUE_OUT_OF_RANGE",
-            "via": "ensure",
-            "through": "ensure_valid_rotation"
-          }
-        ],
-        "ensure_valid_stbox_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_geodetic_stbox_geo"
-          }
-        ],
-        "ensure_valid_cbufferset_cbuffer": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_srid"
-          }
-        ],
-        "ensure_valid_tpose_pose": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_srid"
-          }
-        ],
-        "temporal_num_sequences": [
+        "always_le_temporal_temporal": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
-            "through": "ensure_continuous"
+            "through": "ensure_valid_temporal_temporal"
           }
         ],
-        "cbuffer_round": [
+        "temporal_derivative": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
-            "through": "ensure_not_negative"
+            "through": "ensure_linear_interp"
           }
         ],
-        "ensure_not_geodetic_geo": [
+        "ensure_same_geodetic_geo": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "direct"
@@ -393924,615 +392899,11 @@
             "through": "ensure_srid_known"
           }
         ],
-        "ensure_has_Z": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "tbox_parse": [
-          {
-            "code": "MEOS_ERR_TEXT_INPUT",
-            "via": "direct"
-          }
-        ],
-        "ensure_valid_temporal_set": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "geom_array_union": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "ensure_valid_tnumber_numspan": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "overright_tnumber_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tnumber"
-          }
-        ],
-        "mul_tnumber_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tnumber"
-          }
-        ],
-        "spanset_extent_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_same_spanset_span_type"
-          }
-        ],
-        "left_tnumber_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tnumber"
-          }
-        ],
-        "pose_make_point2d": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_empty"
-          },
-          {
-            "code": "MEOS_ERR_VALUE_OUT_OF_RANGE",
-            "via": "ensure",
-            "through": "ensure_valid_rotation"
-          }
-        ],
-        "ensure_valid_trgeo_tpoint": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_dimensionality"
-          }
-        ],
-        "tfloat_tmax_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_temporal_isof_type"
-          }
-        ],
-        "temporal_insert": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_continuous_interp"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "distance_bigintset_bigintset": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_set_isof_type"
-          }
-        ],
-        "tint_tmin_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_temporal_isof_type"
-          }
-        ],
-        "tgeo_traversed_area": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_nonlinear_interp"
-          }
-        ],
-        "geompoint_to_npoint": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_empty"
-          }
-        ],
-        "cbuffer_transform": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_srid_known"
-          }
-        ],
-        "union_set_set": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_set_set"
-          }
-        ],
-        "tlt_temporal_temporal": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "geo_collect_garray": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_srid"
-          }
-        ],
-        "interptype_from_string": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "temparr_round": [
+        "trgeometry_round": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
             "through": "ensure_not_negative"
-          }
-        ],
-        "nsegment_make": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_route_exists"
-          }
-        ],
-        "tpose_make": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_geodetic"
-          }
-        ],
-        "basetype_spantype": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "ensure_end_input": [
-          {
-            "code": "MEOS_ERR_TEXT_INPUT",
-            "via": "direct"
-          }
-        ],
-        "ensure_positive_datum": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "tsequenceset_to_tinstant": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "spanset_to_tbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_span_tbox_type"
-          }
-        ],
-        "same_tbox_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tbox"
-          }
-        ],
-        "ensure_same_geodetic_stbox_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "ensure_geoaggstate_state": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_geoaggstate"
-          }
-        ],
-        "ensure_valid_tnpoint_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_srid"
-          }
-        ],
-        "same_tnumber_tbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tbox"
-          }
-        ],
-        "tgeo_tpoint": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_tgeo_type_all"
-          }
-        ],
-        "div_tnumber_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tnumber"
-          }
-        ],
-        "nai_tgeo_tgeo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_dimensionality"
-          }
-        ],
-        "cbuffer_union_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_set_isof_type"
-          }
-        ],
-        "tnumber_split_each_n_tboxes": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "number_tbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_tnumber_basetype"
-          }
-        ],
-        "tbool_tor_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_temporal_isof_type"
-          }
-        ],
-        "contained_tnumber_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tnumber"
-          }
-        ],
-        "tint_tsum_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_temporal_isof_type"
-          }
-        ],
-        "temporal_start_sequence": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_continuous"
-          }
-        ],
-        "span_to_tbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_span_tbox_type"
-          }
-        ],
-        "ensure_not_negative": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "datum_hash": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "tinstant_parse": [
-          {
-            "code": "MEOS_ERR_TEXT_INPUT",
-            "via": "ensure",
-            "through": "ensure_end_input"
-          }
-        ],
-        "before_tnumber_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tnumber"
-          }
-        ],
-        "ea_touches_tgeo_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_geodetic"
-          }
-        ],
-        "datum_sub": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "ensure_valid_pose_stbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_srid"
-          }
-        ],
-        "temporal_frechet_distance": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "double_datum": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "spantype_spansettype": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "ensure_has_geom": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "ensure_valid_tnumber_numspanset": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "temporal_restrict_values": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_spatial_dimensionality"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_set"
-          }
-        ],
-        "ensure_spatial_validity": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_dimensionality"
-          }
-        ],
-        "tstzspanset_tcount_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_skiplist_subtype"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_spanset_isof_type"
-          }
-        ],
-        "contained_tbox_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tbox"
-          }
-        ],
-        "adjacent_tnumber_numspan": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
-          }
-        ],
-        "span_extent_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_same_span_type"
-          }
-        ],
-        "ensure_valid_tnpoint_npoint": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_srid"
-          }
-        ],
-        "contained_tnumber_tbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tbox"
-          }
-        ],
-        "cbuffer_parse": [
-          {
-            "code": "MEOS_ERR_TEXT_INPUT",
-            "via": "direct"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_empty"
-          }
-        ],
-        "stbox_transform": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_srid_known"
-          }
-        ],
-        "ensure_oparen": [
-          {
-            "code": "MEOS_ERR_TEXT_INPUT",
-            "via": "direct"
-          }
-        ],
-        "tspatial_set_srid": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_srid_known"
-          }
-        ],
-        "stboxarr_round": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "tnumber_at_tbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tbox"
-          }
-        ],
-        "trgeoinst_geom_p": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_has_geom"
-          }
-        ],
-        "ensure_nonlinear_interp": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "temporal_sequences_p": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_continuous"
-          }
-        ],
-        "tnumber_split_n_tboxes": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "tboxfloat_xmax": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_span_isof_type"
-          }
-        ],
-        "spatialbase_as_text": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "same_numspan_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
-          }
-        ],
-        "ensure_valid_tspatial_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_geodetic_tspatial_geo"
-          }
-        ],
-        "ttext_tmin_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_temporal_isof_type"
-          }
-        ],
-        "tnpoint_tcentroid_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_geoaggstate"
-          }
-        ],
-        "bigint_get_bin": [
-          {
-            "code": "MEOS_ERR_VALUE_OUT_OF_RANGE",
-            "via": "direct"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive_datum"
-          }
-        ],
-        "spatial_set_stbox": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "distance_value_value": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "nad_tgeo_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_geodetic_tspatial_geo"
           }
         ],
         "date_get_bin": [
@@ -394542,305 +392913,13 @@
             "through": "ensure_valid_day_duration"
           }
         ],
-        "tdwithin_tcbuffer_cbuffer": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative_datum"
-          }
-        ],
-        "always_lt_temporal_temporal": [
+        "ensure_continuous": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "tboxint_xmin": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_span_isof_type"
-          }
-        ],
-        "ensure_valid_trgeo_stbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_spatial_dimensionality"
-          }
-        ],
-        "ea_touches_tgeo_tgeo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_geodetic"
-          }
-        ],
-        "cbufferset_make": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "ensure_same_spatial_dimensionality": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "direct"
-          }
-        ],
-        "ensure_srid_known": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "npoint_out": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "temporal_dyntimewarp_distance": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "ensure_has_T": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "distance_tstzset_tstzset": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_set_isof_type"
-          }
-        ],
-        "ensure_has_X": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "temporal_minus_values": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_set"
-          }
-        ],
-        "ever_eq_temporal_temporal": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "temporal_simplify_min_dist": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive_datum"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_tnumber_tpoint_type"
-          }
-        ],
-        "ever_gt_temporal_temporal": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "temporal_simplify_min_tdelta": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive_duration"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_tnumber_tpoint_type"
           }
         ],
         "spanset_make": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "tfloatbox_expand": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_span_isof_type"
-          }
-        ],
-        "npoint_as_text": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "ensure_valid_tnumber_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "overright_tnumber_tbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tbox"
-          }
-        ],
-        "geom_convex_hull": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "tnpoint_speed": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_linear_interp"
-          }
-        ],
-        "union_stbox_stbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "nad_tboxfloat_tboxfloat": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_span_isof_type"
-          }
-        ],
-        "ensure_valid_tnpoint_stbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_srid"
-          }
-        ],
-        "datum_bin": [
-          {
-            "code": "MEOS_ERR_INTERNAL_ERROR",
-            "via": "direct"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive_datum"
-          }
-        ],
-        "right_tnumber_numspan": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
-          }
-        ],
-        "tcontains_geo_tgeo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_geodetic_geo"
-          }
-        ],
-        "ensure_valid_tcbuffer_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_srid"
-          }
-        ],
-        "ensure_has_not_Z_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "poseset_make": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "span_parse": [
-          {
-            "code": "MEOS_ERR_TEXT_INPUT",
-            "via": "direct"
-          }
-        ],
-        "trgeo_wkt_out": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "tgt_temporal_temporal": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "ever_ne_temporal_temporal": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "trgeoseqset_geom_p": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_has_geom"
-          }
-        ],
-        "right_numspan_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
-          }
-        ],
-        "tfloat_tmin_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_temporal_isof_type"
-          }
-        ],
-        "geom_relate_pattern": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "tsequenceset_make": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
@@ -394854,152 +392933,17 @@
             "through": "ensure_valid_tnumber_numspanset"
           }
         ],
-        "ensure_srid_is_latlong": [
+        "tdiscseq_parse": [
           {
             "code": "MEOS_ERR_TEXT_INPUT",
-            "via": "direct"
-          }
-        ],
-        "contained_numspan_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
+            "through": "ensure_cbrace"
           }
         ],
-        "always_eq_temporal_temporal": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "ensure_tnumber_tpoint_type": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "route_geom": [
+        "tfloat_to_tint": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "direct"
-          }
-        ],
-        "tspatial_set_stbox": [
-          {
-            "code": "MEOS_ERR_INTERNAL_ERROR",
-            "via": "direct"
-          }
-        ],
-        "ensure_span_isof_basetype": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "ensure_valid_tcbuffer_cbuffer": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_srid"
-          }
-        ],
-        "datum_hash_extended": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "cbuffer_make": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_empty"
-          }
-        ],
-        "temporal_update": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_continuous_interp"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "ensure_valid_cbuffer_cbuffer": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_srid"
-          }
-        ],
-        "ensure_cparen": [
-          {
-            "code": "MEOS_ERR_TEXT_INPUT",
-            "via": "direct"
-          }
-        ],
-        "set_split_each_n_spans": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "teq_temporal_temporal": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_dimensionality"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "temporal_out": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "ensure_same_interp": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "stbox_round": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "spanset_split_n_spans": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "ensure_not_empty": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "dateset_make": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
           }
         ],
         "nsegment_out": [
@@ -395007,404 +392951,6 @@
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
             "through": "ensure_not_negative"
-          }
-        ],
-        "ensure_circle_type": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "tbox_out": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "tgeoinst_make": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_empty"
-          }
-        ],
-        "ensure_valid_poseset_pose": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_srid"
-          }
-        ],
-        "cbufferarr_to_geom": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_srid"
-          }
-        ],
-        "ensure_one_not_null": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG",
-            "via": "direct"
-          }
-        ],
-        "datum_cmp": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "temporal_at_values": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_set"
-          }
-        ],
-        "tbool_tand_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_temporal_isof_type"
-          }
-        ],
-        "ensure_valid_tgeo_tgeo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_geodetic"
-          }
-        ],
-        "ensure_mline_type": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "ensure_same_spanset_span_type": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "geo_round": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "temporal_end_sequence": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_continuous"
-          }
-        ],
-        "bigintset_make": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "geo_tpose_to_trgeometry": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_empty"
-          }
-        ],
-        "tnumber_minus_tbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tbox"
-          }
-        ],
-        "geo_stboxes": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_mline_type"
-          }
-        ],
-        "tpointseq_from_base_tstzset": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_empty"
-          }
-        ],
-        "trgeometry_to_tpose": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_has_geom"
-          }
-        ],
-        "left_tnumber_tbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tbox"
-          }
-        ],
-        "ensure_temporal_isof_type": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "float_union_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_set_isof_type"
-          }
-        ],
-        "ensure_same_geom": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "datum_distance": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "nad_tboxint_tboxint": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_span_isof_type"
-          }
-        ],
-        "temporal_simplify_max_dist": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive_datum"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_tnumber_tpoint_type"
-          }
-        ],
-        "overright_set_set": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_set_set"
-          }
-        ],
-        "temporal_eq": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_spatial_dimensionality"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "ensure_same_temporal_type": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "datum_add": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "overright_tnumber_numspan": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
-          }
-        ],
-        "bigint_extent_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_span_isof_type"
-          }
-        ],
-        "cbufferarr_round": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "nsegment_parse": [
-          {
-            "code": "MEOS_ERR_TEXT_INPUT",
-            "via": "direct"
-          }
-        ],
-        "set_cmp": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_set_set"
-          }
-        ],
-        "tgeompoint_to_tnpoint": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_srid"
-          }
-        ],
-        "temptype_basetype": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "trgeoseqset_to_tinstant": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "tspatialinst_set_stbox": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "ensure_same_spanset_type": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "intersection_stbox_stbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_dimensionality"
-          }
-        ],
-        "distance_floatset_floatset": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_set_isof_type"
-          }
-        ],
-        "trgeometry_round": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "tnumber_at_span": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
-          }
-        ],
-        "bigint_union_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_set_isof_type"
-          }
-        ],
-        "ensure_has_not_M_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "trgeometry_value_n": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "span_out": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "trgeometry_append_tsequence": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_interp"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_temporal_isof_subtype"
-          }
-        ],
-        "spatial_flags": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "basetype_out": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "overlaps_tbox_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tbox"
-          }
-        ],
-        "timestamptz_tcount_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_skiplist_subtype"
-          }
-        ],
-        "temporal_tsequence": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_valid_interp"
-          }
-        ],
-        "ensure_valid_temporal_temporal": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "overright_numspan_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
           }
         ],
         "temporal_cmp": [
@@ -395419,30 +392965,227 @@
             "through": "ensure_valid_temporal_temporal"
           }
         ],
-        "tspatialseq_disc_parse": [
+        "ensure_srid_is_latlong": [
           {
             "code": "MEOS_ERR_TEXT_INPUT",
-            "via": "ensure",
-            "through": "ensure_cbrace"
+            "via": "direct"
           }
         ],
-        "pose_wkt_out": [
+        "span_union_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_same_span_type"
+          }
+        ],
+        "ensure_spatial_validity": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_dimensionality"
+          }
+        ],
+        "ensure_not_null": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG",
+            "via": "direct"
+          }
+        ],
+        "ensure_timespanset_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "set_out_fn": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
             "through": "ensure_not_negative"
           }
         ],
-        "stbox_out": [
+        "tnumber_at_span": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspan"
+          }
+        ],
+        "ea_touches_tgeo_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_geodetic"
+          }
+        ],
+        "set_union_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_set_set"
+          }
+        ],
+        "contained_tnumber_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tnumber"
+          }
+        ],
+        "geo_tposeseq_to_trgeo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_empty"
+          }
+        ],
+        "route_length": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "ensure_same_geodetic_tspatial_base": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "always_gt_temporal_temporal": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "left_tbox_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tbox"
+          }
+        ],
+        "ensure_valid_pose_stbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_srid"
+          }
+        ],
+        "tle_temporal_temporal": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "cbufferarr_to_geom": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_srid"
+          }
+        ],
+        "overleft_tbox_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tbox"
+          }
+        ],
+        "tbox_expand_value": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "temporal_append_tsequence": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_interp"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_temporal_isof_subtype"
+          }
+        ],
+        "tnumber_trend": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_linear_interp"
+          }
+        ],
+        "ensure_valid_tnumber_numspan": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "cbuffer_round": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
             "through": "ensure_not_negative"
           }
         ],
-        "ensure_common_dimension": [
+        "get_srid_ways": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "intersection_set_set": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_set_set"
+          }
+        ],
+        "right_tnumber_numspan": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspan"
+          }
+        ],
+        "point_transf_pj": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG",
+            "via": "direct"
+          }
+        ],
+        "tsequenceset_to_tsequence": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "basetype_parse": [
+          {
+            "code": "MEOS_ERR_TEXT_INPUT",
+            "via": "direct"
+          }
+        ],
+        "left_tnumber_numspan": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspan"
+          }
+        ],
+        "pose_union_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_set_isof_type"
+          }
+        ],
+        "ensure_span_tbox_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "direct"
           }
         ],
@@ -395453,6 +393196,99 @@
             "through": "ensure_continuous"
           }
         ],
+        "tbox_out": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "posearr_round": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "tdwithin_tcbuffer_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative_datum"
+          }
+        ],
+        "ensure_valid_geo_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_geodetic_geo"
+          }
+        ],
+        "dist_double_value_value": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "tnpoint_restrict_geom": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_srid"
+          }
+        ],
+        "temporal_insert": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_continuous_interp"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "dateset_make": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "ensure_tgeodetic_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "overlaps_tnumber_tbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tbox"
+          }
+        ],
+        "spatial_srid": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "ensure_valid_tgeo_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_geodetic_tspatial_geo"
+          }
+        ],
+        "right_tnumber_tbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tbox"
+          }
+        ],
         "tstzset_tprecision": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
@@ -395460,44 +393296,38 @@
             "through": "ensure_positive_duration"
           }
         ],
-        "ensure_linear_interp": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "geo_split_each_n_stboxes": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_mline_type"
-          }
-        ],
-        "geoset_make": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "ensure_temporal_isof_subtype": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "spanset_union_transfn": [
+        "tbool_tand_transfn": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
-            "through": "ensure_same_span_type"
+            "through": "ensure_temporal_isof_type"
           }
         ],
-        "overleft_tnumber_tnumber": [
+        "before_tnumber_tnumber": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
             "through": "ensure_valid_tnumber_tnumber"
+          }
+        ],
+        "tspatial_set_stbox": [
+          {
+            "code": "MEOS_ERR_INTERNAL_ERROR",
+            "via": "direct"
+          }
+        ],
+        "ensure_valid_tpose_tpose": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_srid"
+          }
+        ],
+        "span_extent_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_same_span_type"
           }
         ],
         "ensure_valid_tpoint_geo": [
@@ -395507,187 +393337,79 @@
             "through": "ensure_same_geodetic_tspatial_geo"
           }
         ],
-        "tdwithin_tgeo_geo": [
+        "trgeometry_sequence_n": [
           {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
-            "through": "ensure_not_geodetic_geo"
-          }
-        ],
-        "pose_parse": [
-          {
-            "code": "MEOS_ERR_TEXT_INPUT",
-            "via": "direct"
+            "through": "ensure_continuous"
           },
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
-            "through": "ensure_not_empty"
+            "through": "ensure_positive"
+          }
+        ],
+        "trgeo_wkt_out": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "ensure_not_empty": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "ensure_spanset_isof_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "ensure_same_spanset_span_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "tspatial_as_ewkt": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "union_tbox_tbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
           },
           {
-            "code": "MEOS_ERR_VALUE_OUT_OF_RANGE",
-            "via": "ensure",
-            "through": "ensure_unit_norm"
-          }
-        ],
-        "contains_tnumber_tbox": [
-          {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
-            "through": "ensure_valid_tnumber_tbox"
+            "through": "ensure_same_span_type"
           }
         ],
-        "ensure_valid_cbuffer_geo": [
+        "temporal_merge_array": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
-            "through": "ensure_same_srid"
+            "through": "ensure_positive"
           }
         ],
-        "ensure_continuous": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "ensure_valid_spanset_span": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_same_spanset_span_type"
-          }
-        ],
-        "nad_stbox_stbox": [
+        "span_bins": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
-            "through": "ensure_same_spatial_dimensionality"
+            "through": "ensure_not_negative_datum"
           }
         ],
-        "adjacent_tnumber_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tnumber"
-          }
-        ],
-        "nad_tgeo_tgeo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_dimensionality"
-          }
-        ],
-        "contains_tnumber_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tnumber"
-          }
-        ],
-        "ensure_point_type": [
+        "ensure_valid_day_duration": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "direct"
-          }
-        ],
-        "ensure_not_geodetic": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "ensure_positive": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "ensure_valid_tpoint_tpoint": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_geodetic"
-          }
-        ],
-        "tnpoint_route": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "set_eq": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_set_set"
-          }
-        ],
-        "spatial_srid": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "ensure_valid_tpose_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_srid"
-          }
-        ],
-        "temporal_restrict_value": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_spatial_dimensionality"
-          }
-        ],
-        "geo_split_n_stboxes": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_mline_type"
-          }
-        ],
-        "geo_tposeseq_to_trgeo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_empty"
-          }
-        ],
-        "tsequence_to_tinstant": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "datum_double": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "spanset_parse": [
-          {
-            "code": "MEOS_ERR_TEXT_INPUT",
-            "via": "ensure",
-            "through": "ensure_cbrace"
-          }
-        ],
-        "tboxfloat_xmin": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_span_isof_type"
-          }
-        ],
-        "spatialset_set_srid": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_srid_known"
           }
         ],
         "set_to_span": [
@@ -395704,30 +393426,71 @@
             "through": "ensure_same_srid"
           }
         ],
-        "geo_union_transfn": [
+        "trgeometry_sequences": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
-            "through": "ensure_geoset_type"
+            "through": "ensure_continuous"
           }
         ],
-        "ensure_set_spantype": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "geo_makeline_garray": [
+        "ensure_srid_known": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "direct"
           }
         ],
-        "ensure_valid_tgeo_stbox": [
+        "ensure_tgeometry_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "tintbox_expand": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_span_isof_type"
+          }
+        ],
+        "ensure_same_geom": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "int_extent_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_span_isof_type"
+          }
+        ],
+        "shortestline_tgeo_tgeo": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
-            "through": "ensure_same_geodetic"
+            "through": "ensure_same_dimensionality"
+          }
+        ],
+        "trgeometry_value_n": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "add_tnumber_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "trgeometry_instant_n": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
           }
         ],
         "geom_in": [
@@ -395756,18 +393519,38 @@
             "via": "direct"
           }
         ],
-        "left_tbox_tnumber": [
+        "spatialbase_as_text": [
           {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tbox"
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
           }
         ],
-        "tspatial_out": [
+        "temporal_split_n_spans": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
             "through": "ensure_positive"
+          }
+        ],
+        "contains_tnumber_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tnumber"
+          }
+        ],
+        "always_lt_temporal_temporal": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "ensure_valid_tspatial_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_geodetic_tspatial_geo"
           }
         ],
         "ensure_valid_tnpoint_tnpoint": [
@@ -395777,10 +393560,49 @@
             "through": "ensure_same_srid"
           }
         ],
-        "ensure_same_continuous_interp": [
+        "ensure_valid_cbuffer_stbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_srid"
+          }
+        ],
+        "spatialset_set_srid": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_srid_known"
+          }
+        ],
+        "geom_convex_hull": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "ensure_set_isof_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "datum_hash": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "ensure_has_not_Z_geo": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "direct"
+          }
+        ],
+        "ensure_valid_trgeo_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_srid"
           }
         ],
         "set_round": [
@@ -395790,35 +393612,810 @@
             "through": "ensure_not_negative"
           }
         ],
-        "cbuffer_out": [
+        "set_extent_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_set_spantype"
+          }
+        ],
+        "tdwithin_tgeo_geo": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
-            "through": "ensure_not_negative"
+            "through": "ensure_not_geodetic_geo"
           }
         ],
-        "intersection_set_set": [
+        "ensure_valid_stbox_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_geodetic_stbox_geo"
+          }
+        ],
+        "ensure_valid_tnumber_tbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "textset_make": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "ensure_valid_spanset_spanset": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_same_spanset_type"
+          }
+        ],
+        "adjacent_tnumber_numspan": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspan"
+          }
+        ],
+        "geo_tposeseqset_to_trgeo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_empty"
+          }
+        ],
+        "tbox_parse": [
+          {
+            "code": "MEOS_ERR_TEXT_INPUT",
+            "via": "direct"
+          }
+        ],
+        "same_tnumber_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tnumber"
+          }
+        ],
+        "datum_distance": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "ever_gt_temporal_temporal": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "nai_tgeo_tgeo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_dimensionality"
+          }
+        ],
+        "temptype_basetype": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "tdistance_trgeometry_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "ensure_cparen": [
+          {
+            "code": "MEOS_ERR_TEXT_INPUT",
+            "via": "direct"
+          }
+        ],
+        "tspatial_parse": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_point_type"
+          }
+        ],
+        "ensure_temporal_isof_basetype": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "geom_azimuth": [
+          {
+            "code": "MEOS_ERR_INTERNAL_ERROR",
+            "via": "direct"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "tsequenceset_parse": [
+          {
+            "code": "MEOS_ERR_TEXT_INPUT",
+            "via": "ensure",
+            "through": "ensure_cbrace"
+          }
+        ],
+        "tfloatbox_expand": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_span_isof_type"
+          }
+        ],
+        "meostype_length": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "ensure_same_geodetic_stbox_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "overlaps_set_set": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
             "through": "ensure_valid_set_set"
           }
         ],
-        "p_obrace": [
+        "geog_distance": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "set_to_spanset": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_set_spantype"
+          }
+        ],
+        "pose_parse": [
+          {
+            "code": "MEOS_ERR_TEXT_INPUT",
+            "via": "direct"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_empty"
+          },
+          {
+            "code": "MEOS_ERR_VALUE_OUT_OF_RANGE",
+            "via": "ensure",
+            "through": "ensure_unit_norm"
+          }
+        ],
+        "npoint_out": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "temporal_segments": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "npointset_make": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "bigint_get_bin": [
+          {
+            "code": "MEOS_ERR_VALUE_OUT_OF_RANGE",
+            "via": "direct"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive_datum"
+          }
+        ],
+        "number_tbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_tnumber_basetype"
+          }
+        ],
+        "temporal_end_sequence": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_continuous"
+          }
+        ],
+        "ensure_valid_tnpoint_stbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_srid"
+          }
+        ],
+        "geo_split_n_stboxes": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_mline_type"
+          }
+        ],
+        "spanset_to_tbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_span_tbox_type"
+          }
+        ],
+        "tstzspanset_tcount_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_skiplist_subtype"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_spanset_isof_type"
+          }
+        ],
+        "datum_hash_extended": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "ensure_valid_spanset_span": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_same_spanset_span_type"
+          }
+        ],
+        "geo_collect_garray": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_srid"
+          }
+        ],
+        "ensure_same_spatial_dimensionality": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "npoint_as_ewkt": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "tbool_tor_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_temporal_isof_type"
+          }
+        ],
+        "tspatial_extent_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_dimensionality"
+          }
+        ],
+        "ensure_one_not_null": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG",
+            "via": "direct"
+          }
+        ],
+        "contains_numspan_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspan"
+          }
+        ],
+        "poseset_make": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "datum_bin": [
+          {
+            "code": "MEOS_ERR_INTERNAL_ERROR",
+            "via": "direct"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive_datum"
+          }
+        ],
+        "ensure_not_negative": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "ensure_span_isof_basetype": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "tgt_temporal_temporal": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "datum_add": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "text_union_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_set_isof_type"
+          }
+        ],
+        "tinstant_make": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_empty"
+          },
+          {
+            "code": "MEOS_ERR_TEXT_INPUT",
+            "via": "ensure",
+            "through": "ensure_srid_is_latlong"
+          }
+        ],
+        "temporal_simplify_min_tdelta": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive_duration"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_tnumber_tpoint_type"
+          }
+        ],
+        "ensure_numspan_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "geompoint_to_npoint": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_empty"
+          }
+        ],
+        "nai_tgeo_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_geodetic_tspatial_geo"
+          }
+        ],
+        "ea_touches_tgeo_tgeo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_geodetic"
+          }
+        ],
+        "right_tnumber_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tnumber"
+          }
+        ],
+        "ensure_valid_trgeo_tpoint": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_dimensionality"
+          }
+        ],
+        "ensure_mline_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "overleft_tnumber_numspan": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspan"
+          }
+        ],
+        "ensure_valid_temporal_temporal": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "ensure_positive": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "npoint_parse": [
           {
             "code": "MEOS_ERR_TEXT_INPUT",
             "via": "direct"
           }
         ],
-        "ensure_same_span_type": [
+        "ensure_valid_trgeo_stbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_spatial_dimensionality"
+          }
+        ],
+        "set_split_n_spans": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "meos_array_get": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "tbox_round": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_span_isof_type"
+          }
+        ],
+        "ensure_not_negative_datum": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "ever_eq_temporal_temporal": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "geom_relate_pattern": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "floatspan_round": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "shortestline_tgeo_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_geodetic_tspatial_geo"
+          }
+        ],
+        "stbox_transform": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_srid_known"
+          }
+        ],
+        "cbuffer_parse": [
+          {
+            "code": "MEOS_ERR_TEXT_INPUT",
+            "via": "direct"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_empty"
+          }
+        ],
+        "ttext_tmax_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_temporal_isof_type"
+          }
+        ],
+        "ensure_same_dimensionality_tbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "geo_split_each_n_stboxes": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_mline_type"
+          }
+        ],
+        "overafter_tnumber_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tnumber"
+          }
+        ],
+        "union_set_set": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_set_set"
+          }
+        ],
+        "ensure_valid_tnpoint_npoint": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_srid"
+          }
+        ],
+        "tgeoinst_make": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_empty"
+          }
+        ],
+        "ensure_geoaggstate": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "set_cmp": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_set_set"
+          }
+        ],
+        "geog_centroid": [
+          {
+            "code": "MEOS_ERR_INTERNAL_ERROR",
+            "via": "direct"
+          }
+        ],
+        "spatial_set_srid": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "set_tbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "ever_ne_temporal_temporal": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "rtree_insert_temporal": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_rtree_temporal_compatible"
+          }
+        ],
+        "ensure_set_spantype": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "direct"
           }
         ],
-        "ensure_tgeo_type": [
+        "ensure_valid_trgeo_trgeo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_dimensionality"
+          }
+        ],
+        "intset_make": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "temporal_sequences_p": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_continuous"
+          }
+        ],
+        "date_extent_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_span_isof_type"
+          }
+        ],
+        "spatial_flags": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "contains_tbox_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tbox"
+          }
+        ],
+        "tboxfloat_xmax": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_span_isof_type"
+          }
+        ],
+        "ensure_circle_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "right_numspan_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspan"
+          }
+        ],
+        "ensure_same_srid": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "ensure_valid_tpose_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_srid"
+          }
+        ],
+        "same_tnumber_numspan": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspan"
+          }
+        ],
+        "ensure_span_isof_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "ensure_geoaggstate_state": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_geoaggstate"
+          }
+        ],
+        "spansettype_spantype": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "temporal_num_sequences": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_continuous"
+          }
+        ],
+        "tnumber_valuespans": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_tnumber_type"
+          }
+        ],
+        "nad_tbox_tbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_same_span_type"
+          }
+        ],
+        "datum_mul": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "ensure_cbrace": [
+          {
+            "code": "MEOS_ERR_TEXT_INPUT",
+            "via": "direct"
+          }
+        ],
+        "trgeometry_start_sequence": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_continuous"
+          }
+        ],
+        "ensure_has_geom": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "direct"
           }
         ],
@@ -395829,55 +394426,128 @@
             "through": "ensure_same_geodetic"
           }
         ],
-        "nad_tgeo_stbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_spatial_dimensionality"
-          }
-        ],
-        "trgeometry_instant_n": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "span_union_transfn": [
+        "overlaps_tbox_tnumber": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
-            "through": "ensure_same_span_type"
+            "through": "ensure_valid_tnumber_tbox"
           }
         ],
-        "set_out": [
+        "floatspanset_round": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
             "through": "ensure_not_negative"
           }
         ],
-        "always_gt_temporal_temporal": [
+        "ensure_valid_tpoint_tpoint": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_geodetic"
+          }
+        ],
+        "tspatial_as_text": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "temporal_restrict_values": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_spatial_dimensionality"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_set"
+          }
+        ],
+        "set_split_each_n_spans": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "contained_numspan_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspan"
+          }
+        ],
+        "ensure_linear_interp": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "trgeometry_to_tpose": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_has_geom"
+          }
+        ],
+        "ensure_valid_span_span": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_same_span_type"
+          }
+        ],
+        "ensure_positive_datum": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "overright_tnumber_numspan": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspan"
+          }
+        ],
+        "spantype_spansettype": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "temporal_frechet_distance": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
             "through": "ensure_valid_temporal_temporal"
           }
         ],
-        "geomeas_to_tpoint": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          },
+        "trgeometry_geom": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
-            "through": "ensure_not_empty"
+            "through": "ensure_has_geom"
           }
         ],
-        "ensure_timespanset_type": [
+        "tstzset_tcount_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_skiplist_subtype"
+          },
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_set_isof_type"
+          }
+        ],
+        "ensure_common_dimension": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "direct"
           }
         ],
@@ -395888,174 +394558,87 @@
             "through": "ensure_valid_tnumber_tnumber"
           }
         ],
-        "ensure_tgeometry_type": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "pose_transform": [
+        "temporal_simplify_max_dist": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
-            "through": "ensure_srid_known"
-          }
-        ],
-        "tspatial_as_text": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_not_negative"
-          }
-        ],
-        "tnumber_tavg_transfn": [
+            "through": "ensure_positive_datum"
+          },
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
-            "through": "ensure_tnumber_type"
+            "through": "ensure_tnumber_tpoint_type"
           }
         ],
-        "spansettype_spantype": [
+        "geog_perimeter": [
           {
             "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
             "via": "direct"
           }
         ],
-        "ea_touches_tpoint_geo": [
+        "ensure_valid_tpose_pose": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
-            "through": "ensure_not_geodetic"
+            "through": "ensure_same_srid"
           }
         ],
-        "float_extent_transfn": [
+        "ensure_valid_pose_pose": [
           {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
-            "through": "ensure_span_isof_type"
+            "through": "ensure_same_srid"
           }
         ],
-        "temporal_segments": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "datum_mul": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "ensure_one_true": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG",
-            "via": "direct"
-          }
-        ],
-        "contains_tnumber_numspan": [
+        "contained_tnumber_numspan": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
             "through": "ensure_valid_tnumber_numspan"
           }
         ],
-        "ensure_geoset_type": [
+        "pose_make_point2d": [
           {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_empty"
+          },
+          {
+            "code": "MEOS_ERR_VALUE_OUT_OF_RANGE",
+            "via": "ensure",
+            "through": "ensure_valid_rotation"
           }
         ],
-        "spanset_bins": [
+        "tdistance_tgeo_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_point_type"
+          }
+        ],
+        "tdwithin_tcbuffer_cbuffer": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
             "through": "ensure_not_negative_datum"
           }
         ],
-        "overbefore_tnumber_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tnumber"
-          }
-        ],
-        "tnumber_at_spanset": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_numspanset"
-          }
-        ],
-        "nad_tfloat_tbox": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
-          }
-        ],
-        "ensure_has_not_Z": [
+        "route_geom": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "direct"
           }
         ],
-        "overafter_tnumber_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tnumber"
-          }
-        ],
-        "datum_eq": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "ensure_tnumber_type": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "geo_cluster_kmeans": [
+        "ensure_same_continuous_interp": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "direct"
           }
         ],
-        "nai_tgeo_geo": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_geodetic_tspatial_geo"
-          }
-        ],
-        "ensure_same_dimensionality": [
+        "ensure_point_type": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "direct"
-          }
-        ],
-        "always_le_temporal_temporal": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "basetype_parse": [
-          {
-            "code": "MEOS_ERR_TEXT_INPUT",
-            "via": "direct"
-          }
-        ],
-        "adjacent_tbox_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tbox"
           }
         ],
         "date_union_transfn": [
@@ -396065,38 +394648,222 @@
             "through": "ensure_set_isof_type"
           }
         ],
-        "ensure_has_Z_geo": [
+        "tsequenceset_to_tinstant": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "direct"
           }
         ],
-        "ensure_valid_span_span": [
+        "type_from_wkb": [
           {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_same_span_type"
+            "code": "MEOS_ERR_WKB_INPUT",
+            "via": "direct"
           }
         ],
-        "tdistance_tnumber_tnumber": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_tnumber_tnumber"
-          }
-        ],
-        "tpointinst_make": [
+        "set_out": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
-            "through": "ensure_not_empty"
+            "through": "ensure_not_negative"
           }
         ],
-        "overleft_set_set": [
+        "tboxint_xmax": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_span_isof_type"
+          }
+        ],
+        "tint_tsum_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_temporal_isof_type"
+          }
+        ],
+        "tspatial_transform": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_srid_known"
+          }
+        ],
+        "ensure_valid_tseqarr": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "temporal_update": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_continuous_interp"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "cbuffer_as_text": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "temporal_set_interp": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_valid_interp"
+          }
+        ],
+        "same_tbox_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tbox"
+          }
+        ],
+        "ensure_same_geodetic": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "ensure_valid_tgeo_tgeo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_geodetic"
+          }
+        ],
+        "left_set_set": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
             "through": "ensure_valid_set_set"
+          }
+        ],
+        "ensure_has_not_Z": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "settype_basetype": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "ensure_same_dimensionality": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "ensure_valid_tcbuffer_stbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_srid"
+          }
+        ],
+        "cbuffer_transform": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_srid_known"
+          }
+        ],
+        "tnumber_at_spanset": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspanset"
+          }
+        ],
+        "tnpoint_route": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "datum_eq": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "ensure_tgeo_type_all": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "p_obrace": [
+          {
+            "code": "MEOS_ERR_TEXT_INPUT",
+            "via": "direct"
+          }
+        ],
+        "trgeoseq_to_tinstant": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "always_eq_temporal_temporal": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "ensure_same_geodetic_tspatial_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "temporal_hausdorff_distance": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "ensure_tgeo_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "tspatialseq_disc_parse": [
+          {
+            "code": "MEOS_ERR_TEXT_INPUT",
+            "via": "ensure",
+            "through": "ensure_cbrace"
+          }
+        ],
+        "timestamptz_tcount_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_skiplist_subtype"
+          }
+        ],
+        "basetype_settype": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
           }
         ],
         "tgeo_split_each_n_stboxes": [
@@ -396106,10 +394873,392 @@
             "through": "ensure_positive"
           }
         ],
-        "type_from_wkb": [
+        "round_fn": [
           {
-            "code": "MEOS_ERR_WKB_INPUT",
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
             "via": "direct"
+          }
+        ],
+        "span_to_tbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_span_tbox_type"
+          }
+        ],
+        "adjacent_tnumber_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tnumber"
+          }
+        ],
+        "spanset_split_n_spans": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "basetype_spantype": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "intersection_stbox_stbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_dimensionality"
+          }
+        ],
+        "cbufferarr_round": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "ensure_same_interp": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "tfloat_log10": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "spanset_extent_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_same_spanset_span_type"
+          }
+        ],
+        "ensure_valid_tnumber_numspanset": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "stbox_round": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "ensure_valid_tcbuffer_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_srid"
+          }
+        ],
+        "bigint_extent_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_span_isof_type"
+          }
+        ],
+        "overright_tnumber_tbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tbox"
+          }
+        ],
+        "stboxarr_round": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "ensure_nonlinear_interp": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "ensure_has_Z_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "temporal_dyntimewarp_distance": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "tsequenceset_make": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "overleft_tnumber_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tnumber"
+          }
+        ],
+        "overlaps_tnumber_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tnumber"
+          }
+        ],
+        "tsequenceset_to_discrete": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "ever_lt_temporal_temporal": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "nad_tgeo_tgeo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_dimensionality"
+          }
+        ],
+        "geom_array_union": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "ensure_valid_tcbuffer_cbuffer": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_srid"
+          }
+        ],
+        "geom_buffer": [
+          {
+            "code": "MEOS_ERR_INTERNAL_ERROR",
+            "via": "direct"
+          },
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "trgeoseqset_to_tinstant": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "geo_stboxes": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_mline_type"
+          }
+        ],
+        "tfloat_tsum_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_temporal_isof_type"
+          }
+        ],
+        "tfloat_tmax_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_temporal_isof_type"
+          }
+        ],
+        "left_numspan_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspan"
+          }
+        ],
+        "overleft_tnumber_tbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tbox"
+          }
+        ],
+        "tspatial_set_srid": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_srid_known"
+          }
+        ],
+        "bigintset_make": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "ttouches_tgeo_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_geodetic_geo"
+          }
+        ],
+        "double_datum": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "tlt_temporal_temporal": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "ensure_one_true": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG",
+            "via": "direct"
+          }
+        ],
+        "basetype_out": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "geo_union_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_geoset_type"
+          }
+        ],
+        "ever_le_temporal_temporal": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "ensure_valid_interp": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "ensure_geoset_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "trgeoseqset_to_tsequence": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "tpointinst_make": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_empty"
+          }
+        ],
+        "temporal_minus_values": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_set"
+          }
+        ],
+        "span_parse": [
+          {
+            "code": "MEOS_ERR_TEXT_INPUT",
+            "via": "direct"
+          }
+        ],
+        "same_numspan_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspan"
+          }
+        ],
+        "ensure_has_not_M_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "spanset_parse": [
+          {
+            "code": "MEOS_ERR_TEXT_INPUT",
+            "via": "ensure",
+            "through": "ensure_cbrace"
+          }
+        ],
+        "tsequenceset_to_step": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "nsegment_parse": [
+          {
+            "code": "MEOS_ERR_TEXT_INPUT",
+            "via": "direct"
+          }
+        ],
+        "tint_tmin_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_temporal_isof_type"
+          }
+        ],
+        "left_tnumber_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tnumber"
+          }
+        ],
+        "ensure_spatialset_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "contains_tnumber_numspan": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspan"
           }
         ],
         "temporal_simplify_dp": [
@@ -396124,21 +395273,155 @@
             "through": "ensure_tnumber_tpoint_type"
           }
         ],
-        "set_to_spanset": [
+        "cbuffer_union_transfn": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
-            "through": "ensure_set_spantype"
+            "through": "ensure_set_isof_type"
           }
         ],
-        "geo_tposeseqset_to_trgeo": [
+        "int_union_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_set_isof_type"
+          }
+        ],
+        "ttext_tmin_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_temporal_isof_type"
+          }
+        ],
+        "ensure_same_spanset_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "left_tnumber_tbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tbox"
+          }
+        ],
+        "geo_num_geos": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG",
+            "via": "ensure",
+            "through": "ensure_not_null"
+          }
+        ],
+        "nad_tgeo_stbox": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
-            "through": "ensure_not_empty"
+            "through": "ensure_same_spatial_dimensionality"
           }
         ],
-        "temporal_append_tsequence": [
+        "ensure_same_rid_tnpointinst": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "temporal_value_n": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "ensure_has_M_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "distance_floatset_floatset": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_set_isof_type"
+          }
+        ],
+        "geo_makeline_garray": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "geoset_make": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "tnumber_minus_tbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tbox"
+          }
+        ],
+        "tspatial_out": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "contained_tnumber_tbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tbox"
+          }
+        ],
+        "ensure_not_geodetic": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "temporal_at_values": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_set"
+          }
+        ],
+        "tboxfloat_xmin": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_span_isof_type"
+          }
+        ],
+        "npoint_as_text": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "distance_bigintset_bigintset": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_set_isof_type"
+          }
+        ],
+        "ensure_valid_temporal_set": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "trgeometry_append_tsequence": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
@@ -396150,115 +395433,63 @@
             "through": "ensure_temporal_isof_subtype"
           }
         ],
-        "ensure_valid_tcbuffer_tcbuffer": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_srid"
-          }
-        ],
-        "route_length": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "get_srid_ways": [
-          {
-            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
-            "via": "direct"
-          }
-        ],
-        "ensure_tgeo_type_all": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "direct"
-          }
-        ],
-        "geo_transform": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "temporal_merge": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_continuous_interp"
-          },
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_same_temporal_type"
-          }
-        ],
-        "ever_le_temporal_temporal": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_valid_temporal_temporal"
-          }
-        ],
-        "tbox_expand_value": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "direct"
-          }
-        ],
-        "temporal_derivative": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_linear_interp"
-          }
-        ],
-        "tstzset_make": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "spanset_split_each_n_spans": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_positive"
-          }
-        ],
-        "ensure_valid_pose_pose": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_VALUE",
-            "via": "ensure",
-            "through": "ensure_same_srid"
-          }
-        ],
-        "set_extent_transfn": [
-          {
-            "code": "MEOS_ERR_INVALID_ARG_TYPE",
-            "via": "ensure",
-            "through": "ensure_set_spantype"
-          }
-        ],
-        "spanset_out": [
+        "temparr_round": [
           {
             "code": "MEOS_ERR_INVALID_ARG_VALUE",
             "via": "ensure",
             "through": "ensure_not_negative"
           }
         ],
-        "basetype_settype": [
+        "timestamptz_extent_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_span_isof_type"
+          }
+        ],
+        "overright_numspan_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspan"
+          }
+        ],
+        "ensure_valid_tpose_stbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_srid"
+          }
+        ],
+        "ensure_same_skiplist_subtype": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "tspatialseq_expand_stbox": [
           {
             "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
             "via": "direct"
           }
         ],
-        "overlaps_numspan_tnumber": [
+        "tge_temporal_temporal": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
-            "through": "ensure_valid_tnumber_numspan"
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "tsequence_to_tinstant": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "ensure_tspatial_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
           }
         ],
         "tstzspan_tcount_transfn": [
@@ -396273,18 +395504,787 @@
             "through": "ensure_span_isof_type"
           }
         ],
-        "rtree_insert_temporal": [
+        "ensure_tnumber_tpoint_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "temporal_simplify_min_dist": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive_datum"
+          },
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
-            "through": "ensure_rtree_temporal_compatible"
+            "through": "ensure_tnumber_tpoint_type"
           }
         ],
-        "tnumber_valuespans": [
+        "trgeoseqset_geom_p": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_has_geom"
+          }
+        ],
+        "stbox_out": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "tgeo_tpoint": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_tgeo_type_all"
+          }
+        ],
+        "ensure_same_span_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "span_out": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "geo_geo_n": [
+          {
+            "code": "MEOS_ERR_INTERNAL_ERROR",
+            "via": "direct"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG",
+            "via": "ensure",
+            "through": "ensure_not_null"
+          }
+        ],
+        "ensure_not_geodetic_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "spanset_out": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "adjacent_tnumber_tbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tbox"
+          }
+        ],
+        "ensure_tnumber_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "tpose_make": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_geodetic"
+          }
+        ],
+        "spanset_bins": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative_datum"
+          }
+        ],
+        "datum_cmp": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "tnumber_extent_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tbox"
+          }
+        ],
+        "tne_temporal_temporal": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_dimensionality"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "geo_transform": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "distance_value_value": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "distance_intset_intset": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_set_isof_type"
+          }
+        ],
+        "spanset_union_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_same_span_type"
+          }
+        ],
+        "adjacent_numspan_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspan"
+          }
+        ],
+        "datum_div": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "tdistance_tnumber_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tnumber"
+          }
+        ],
+        "tnumber_tavg_transfn": [
           {
             "code": "MEOS_ERR_INVALID_ARG_TYPE",
             "via": "ensure",
             "through": "ensure_tnumber_type"
+          }
+        ],
+        "tnpoint_speed": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_linear_interp"
+          }
+        ],
+        "npoint_make": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_route_exists"
+          }
+        ],
+        "ensure_tpoint_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "ensure_valid_tnpoint_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_srid"
+          }
+        ],
+        "ensure_same_temporal_type": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "nsegment_make": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_route_exists"
+          }
+        ],
+        "tboxint_xmin": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_span_isof_type"
+          }
+        ],
+        "always_ne_temporal_temporal": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "pose_out": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "minus_set_set": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_set_set"
+          }
+        ],
+        "nad_tgeo_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_geodetic_tspatial_geo"
+          }
+        ],
+        "same_tnumber_tbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tbox"
+          }
+        ],
+        "tnumber_split_each_n_tboxes": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "div_tnumber_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tnumber"
+          }
+        ],
+        "pose_wkt_out": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "geo_equals": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "temporal_out": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "ensure_same_dimensionality_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "ensure_has_T": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "pose_round": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "float_union_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_set_isof_type"
+          }
+        ],
+        "tcontains_geo_tgeo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_geodetic_geo"
+          }
+        ],
+        "tstzset_make": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "ensure_valid_tcbuffer_tcbuffer": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_srid"
+          }
+        ],
+        "geo_tposeinst_to_trgeo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_empty"
+          }
+        ],
+        "overlaps_numspan_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspan"
+          }
+        ],
+        "geog_length": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "ensure_tnumber_basetype": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "int_get_bin": [
+          {
+            "code": "MEOS_ERR_VALUE_OUT_OF_RANGE",
+            "via": "direct"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "geomeas_to_tpoint": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_empty"
+          }
+        ],
+        "ensure_valid_pose_geo": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_srid"
+          }
+        ],
+        "ensure_valid_cbuffer_cbuffer": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_srid"
+          }
+        ],
+        "ensure_valid_tnumber_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "temporal_from_mfjson": [
+          {
+            "code": "MEOS_ERR_MFJSON_INPUT",
+            "via": "direct"
+          }
+        ],
+        "tgeo_split_n_stboxes": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "spatial_set_stbox": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "cbuffer_out": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "stbox_volume": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_geodetic"
+          }
+        ],
+        "nad_tint_tbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspan"
+          }
+        ],
+        "geo_round": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "ensure_positive_duration": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "overright_tnumber_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tnumber"
+          }
+        ],
+        "float_get_bin": [
+          {
+            "code": "MEOS_ERR_VALUE_OUT_OF_RANGE",
+            "via": "direct"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive_datum"
+          }
+        ],
+        "geom_to_nsegment": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "temporal_eq": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_spatial_dimensionality"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "temporal_restrict_value": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_spatial_dimensionality"
+          }
+        ],
+        "box3d_out": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_negative"
+          }
+        ],
+        "tnpoint_tcentroid_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_geoaggstate"
+          }
+        ],
+        "overright_tbox_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tbox"
+          }
+        ],
+        "ensure_temporal_isof_subtype": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "direct"
+          }
+        ],
+        "bigint_union_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_set_isof_type"
+          }
+        ],
+        "contained_tbox_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tbox"
+          }
+        ],
+        "overleft_numspan_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspan"
+          }
+        ],
+        "distance_tstzset_tstzset": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_set_isof_type"
+          }
+        ],
+        "geo_cluster_kmeans": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "stbox_parse": [
+          {
+            "code": "MEOS_ERR_TEXT_INPUT",
+            "via": "direct"
+          }
+        ],
+        "intersection_tbox_tbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_same_span_type"
+          }
+        ],
+        "sub_tnumber_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tnumber"
+          }
+        ],
+        "geog_area": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "overbefore_tnumber_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tnumber"
+          }
+        ],
+        "ever_ge_temporal_temporal": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "interptype_from_string": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "stbox_to_box3d": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_not_geodetic"
+          }
+        ],
+        "spanset_split_each_n_spans": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "nad_tboxint_tboxint": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_span_isof_type"
+          }
+        ],
+        "distance_dateset_dateset": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_set_isof_type"
+          }
+        ],
+        "ensure_oparen": [
+          {
+            "code": "MEOS_ERR_TEXT_INPUT",
+            "via": "direct"
+          }
+        ],
+        "float_extent_transfn": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_span_isof_type"
+          }
+        ],
+        "temporal_tsequenceset": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "direct"
+          }
+        ],
+        "overlaps_tnumber_numspan": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_numspan"
+          }
+        ],
+        "tspatialinst_set_stbox": [
+          {
+            "code": "MEOS_ERR_INTERNAL_TYPE_ERROR",
+            "via": "direct"
+          }
+        ],
+        "timestamptz_bin_start": [
+          {
+            "code": "MEOS_ERR_VALUE_OUT_OF_RANGE",
+            "via": "direct"
+          }
+        ],
+        "ensure_valid_tspatial_tspatial": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_geodetic"
+          }
+        ],
+        "ensure_valid_tgeo_stbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_geodetic"
+          }
+        ],
+        "right_tbox_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tbox"
+          }
+        ],
+        "set_eq": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_set_set"
+          }
+        ],
+        "mul_tnumber_tnumber": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_tnumber_tnumber"
+          }
+        ],
+        "ensure_valid_cbufferset_cbuffer": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_srid"
+          }
+        ],
+        "tinstant_parse": [
+          {
+            "code": "MEOS_ERR_TEXT_INPUT",
+            "via": "ensure",
+            "through": "ensure_end_input"
+          }
+        ],
+        "temporal_start_sequence": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_continuous"
+          }
+        ],
+        "trgeoinst_geom_p": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_has_geom"
+          }
+        ],
+        "tgeo_traversed_area": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_nonlinear_interp"
+          }
+        ],
+        "floatset_make": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_positive"
+          }
+        ],
+        "nad_stbox_stbox": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_spatial_dimensionality"
+          }
+        ],
+        "teq_temporal_temporal": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_dimensionality"
+          },
+          {
+            "code": "MEOS_ERR_INVALID_ARG_TYPE",
+            "via": "ensure",
+            "through": "ensure_valid_temporal_temporal"
+          }
+        ],
+        "ensure_valid_tspatial_base": [
+          {
+            "code": "MEOS_ERR_INVALID_ARG_VALUE",
+            "via": "ensure",
+            "through": "ensure_same_geodetic_tspatial_base"
           }
         ]
       },

@@ -1,8 +1,8 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO MobilityDB/MobilityDB
-    REF 363bd228e547ec9429dfdb0d3a3b05436c2b94ae
-    SHA512 ebe7bc9d1c6a46c70eac6c5028ba09cdc6ee49f6f1a0f475c9776e946d1bfe7691a13246b5806acb84b18e9ac8a73db45dc427bec171b9b7676c91a4f52fb148
+    REF 79f24b79483fea2d0a7041ef759012ad08ef9ddb
+    SHA512 803b3a56a55cee46e023dea6328d8e90f1cf3ba92236be76d3fbff80219aa745a48d195729bc5d15f45aa40b785c0a08b92ec4d3f344a509841556853a79aaed
 )
 
 
@@ -120,33 +120,17 @@ vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}"
     OPTIONS
         -DMEOS=ON
-        # USER-APPROVED-PIN-WRITE (2026-06-27): activate ALL families so the
-        # standalone libmeos matches the full catalog surface the binding
-        # generates against (catalog subseteq libmeos). Mirrors the existing
-        # -DQUADBIN=ON sibling idiom in this same file. H3 (find_library h3 +
-        # find_path h3api.h) and RASTER (find_package GDAL) are satisfied by the
-        # vcpkg h3 and gdal ports declared in this port's vcpkg.json, so they build
-        # on every triplet (x64/arm64/osx/wasm) instead of relying on a system
-        # libh3-dev/libgdal-dev that the DuckDB extension CI containers do not ship
-        # (the cross-arch equivalent of provision-meos's apt libh3-dev/libgdal-dev).
-        # RGEO follows POSE automatically (CMAKE_DEPENDENT_OPTION). POINTCLOUD stays
-        # OFF: it FORCE-requires the vendored pgPointCloud PGXS build (a live pg_config)
-        # which has no vcpkg port, so -DALL cannot build in the vcpkg model; the binding
-        # surfaces no pointcloud type yet. Flip to true -DALL once a vcpkg pointcloud
-        # port exists. RASTER=ON adds the raquet tile type (T_RAQUET, MobilityDB #1332).
-        # USER-APPROVED-PIN-WRITE (2026-06-27): ARROW=ON exports the Apache Arrow C
-        # Data Interface roundtrip helpers (header-only; vendored arrow/ + nanoarrow/
-        # present at the pin, no libarrow link; regularized option(ARROW) per PRs
-        # #1144/#1041/#1071, validated ON and OFF). C-API only (sqlfn=None, not
-        # generated as UDFs) but completes catalog subseteq libmeos for Arrow/Iceberg.
-        -DARROW=ON
-        -DCBUFFER=ON
-        -DH3=ON
-        -DJSON=ON
-        -DNPOINT=ON
-        -DPOSE=ON
-        -DQUADBIN=ON
-        -DRASTER=ON
+        # Activate EVERY optional family so the standalone libmeos matches the full
+        # catalog surface the binding generates against (catalog subseteq libmeos).
+        # -DALL=ON FORCE-sets every family (ARROW/CBUFFER/H3/JSON/NPOINT/POINTCLOUD/
+        # POSE/QUADBIN/RASTER; RGEO follows POSE via CMAKE_DEPENDENT_OPTION). Their
+        # external dependencies come from this port's vcpkg.json — H3 from vcpkg h3,
+        # RASTER from vcpkg gdal, POINTCLOUD from vcpkg libxml2 + zlib — so they build
+        # on every triplet (x64/arm64/osx/wasm) with no system -dev packages, the
+        # cross-arch equivalent of provision-meos's apt install set. POINTCLOUD builds
+        # its pgPointCloud core (libpc) directly from lib/*.c as a CMake static library
+        # with no pg_config (MobilityDB #1370), so -DALL now builds in the vcpkg model.
+        -DALL=ON
         "-DJSON-C_LIBRARIES=${_MEOS_JSONC_LIB}"
         "-DJSON-C_INCLUDE_DIRS=${_MEOS_JSONC_INC}"
         -DBUILD_SHARED_LIBS=ON
