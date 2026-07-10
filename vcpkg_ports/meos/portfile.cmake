@@ -123,14 +123,17 @@ vcpkg_cmake_configure(
         # USER-APPROVED-PIN-WRITE (2026-06-27): activate ALL families so the
         # standalone libmeos matches the full catalog surface the binding
         # generates against (catalog subseteq libmeos). Mirrors the existing
-        # -DQUADBIN=ON sibling idiom in this same file. H3 needs system libh3
-        # (auto-found via find_library). RGEO follows POSE automatically
-        # (CMAKE_DEPENDENT_OPTION). POINTCLOUD stays OFF: its pointcloud-pg
-        # autotools ./configure fails to build on arm64-linux, and the binding
-        # surfaces no pointcloud type or function yet. RASTER=ON: the raquet tile
-        # type (T_RAQUET, MobilityDB #1332) is a GDAL-free varlena value type that
-        # links standalone (proven via the MEOS-API catalog + the JMEOS RASTER=ON
-        # chain), so libmeos matches the full catalog surface.
+        # -DQUADBIN=ON sibling idiom in this same file. H3 (find_library h3 +
+        # find_path h3api.h) and RASTER (find_package GDAL) are satisfied by the
+        # vcpkg h3 and gdal ports declared in this port's vcpkg.json, so they build
+        # on every triplet (x64/arm64/osx/wasm) instead of relying on a system
+        # libh3-dev/libgdal-dev that the DuckDB extension CI containers do not ship
+        # (the cross-arch equivalent of provision-meos's apt libh3-dev/libgdal-dev).
+        # RGEO follows POSE automatically (CMAKE_DEPENDENT_OPTION). POINTCLOUD stays
+        # OFF: it FORCE-requires the vendored pgPointCloud PGXS build (a live pg_config)
+        # which has no vcpkg port, so -DALL cannot build in the vcpkg model; the binding
+        # surfaces no pointcloud type yet. Flip to true -DALL once a vcpkg pointcloud
+        # port exists. RASTER=ON adds the raquet tile type (T_RAQUET, MobilityDB #1332).
         # USER-APPROVED-PIN-WRITE (2026-06-27): ARROW=ON exports the Apache Arrow C
         # Data Interface roundtrip helpers (header-only; vendored arrow/ + nanoarrow/
         # present at the pin, no libarrow link; regularized option(ARROW) per PRs
