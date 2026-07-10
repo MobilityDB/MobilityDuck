@@ -824,8 +824,7 @@ void SpansetFunctions::Numspanset_width(DataChunk &args, ExpressionState &state,
         }
 
         auto blob = FlatVector::GetData<string_t>(input_vec)[i];
-        // Second argument registered as BOOLEAN; read as bool, not int32_t
-        // (see set_functions.cpp:Floatset_degrees for the same pattern).
+        // Second argument registered as BOOLEAN; read as bool, not int32_t.
         bool bools = has_bools ? FlatVector::GetData<bool>(*bools_vec_ptr)[i] : false;
 
         const uint8_t *data = (const uint8_t *)blob.GetData();
@@ -1479,155 +1478,8 @@ void SpansetFunctions::Tstzspanset_shift_scale(DataChunk &args, ExpressionState 
     }
 }
 
-void SpansetFunctions::Floatspanset_floor(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)blob.GetData();
-            size_t size = blob.GetSize();
-            SpanSet *s = (SpanSet *)malloc(size);
-            memcpy(s, data, size);
-            VALIDATE_FLOATSPANSET(s, NULL);
-            SpanSet *r = floatspanset_floor(s);
-            free(s);
-            if (!r) {
-                throw InvalidInputException("floatspan_floor failed");
-            }
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-            free(r);
-            return out;
-        });
-}
-
-void SpansetFunctions::Floatspanset_ceil(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)blob.GetData();
-            size_t size = blob.GetSize();
-            SpanSet *s = (SpanSet *)malloc(size);
-            memcpy(s, data, size);
-            VALIDATE_FLOATSPANSET(s, NULL);
-            SpanSet *r = floatspanset_ceil(s);
-            free(s);
-            if (!r) {
-                throw InvalidInputException("floatspan_ceil failed");
-            }
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-            free(r);
-            return out;
-        });
-}
-
-void SpansetFunctions::Floatspanset_round(DataChunk &args, ExpressionState &state, Vector &result) {
-    D_ASSERT(args.ColumnCount() == 1 || args.ColumnCount() == 2);
-    auto &args0 = args.data[0];
-    Vector *args1 = args.ColumnCount() == 2 ? &args.data[1] : 0;
-    if (args.ColumnCount() == 2) {
-        BinaryExecutor::Execute<string_t, int32_t, string_t>(
-            args0, *args1, result, args.size(),
-            [&](string_t blob, int32_t precision) -> string_t {
-                const uint8_t *data = (const uint8_t *)blob.GetData();
-                size_t size = blob.GetSize();
-                SpanSet *s = (SpanSet *)malloc(size);
-                memcpy(s, data, size);
-                VALIDATE_FLOATSPANSET(s, NULL);
-                SpanSet *r = floatspanset_round(s, precision);
-                free(s);
-                if (!r) {
-                    throw InvalidInputException("floatspanset_round failed");
-                }
-                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-                free(r);
-                return out;
-            });
-    } else {
-        UnaryExecutor::Execute<string_t, string_t>(
-            args0, result, args.size(),
-            [&](string_t blob) -> string_t {
-                const uint8_t *data = (const uint8_t *)blob.GetData();
-                size_t size = blob.GetSize();
-                SpanSet *s = (SpanSet *)malloc(size);
-                memcpy(s, data, size);
-                VALIDATE_FLOATSPANSET(s, NULL);
-                SpanSet *r = floatspanset_round(s, 0); // default precision is 0
-                free(s);
-                if (!r) {
-                    throw InvalidInputException("floatspanset_round failed");
-                }
-                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-                free(r);
-                return out;
-            });
-    }
-}
-
-void SpansetFunctions::Floatspanset_degrees(DataChunk &args, ExpressionState &state, Vector &result) {
-    D_ASSERT(args.ColumnCount() == 1|| args.ColumnCount() == 2);
-    auto &args0 = args.data[0];
-    Vector *args1 = args.ColumnCount() == 2 ? &args.data[1] : 0;
-    if (args.ColumnCount() == 2) {
-        BinaryExecutor::Execute<string_t, int32_t, string_t>(
-            args0, *args1, result, args.size(),
-            [&](string_t blob, int32_t precision) -> string_t {
-                const uint8_t *data = (const uint8_t *)blob.GetData();
-                size_t size = blob.GetSize();
-                SpanSet *s = (SpanSet *)malloc(size);
-                memcpy(s, data, size);
-                VALIDATE_FLOATSPANSET(s, NULL);
-                SpanSet *r = floatspanset_degrees(s, precision);
-                free(s);
-                if (!r) {
-                    throw InvalidInputException("floatspanset_degrees failed");
-                }
-                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-                free(r);
-                return out;
-            });
-    } else {
-        UnaryExecutor::Execute<string_t, string_t>(
-            args0, result, args.size(),
-            [&](string_t blob) -> string_t {
-                const uint8_t *data = (const uint8_t *)blob.GetData();
-                size_t size = blob.GetSize();
-                SpanSet *s = (SpanSet *)malloc(size);
-                memcpy(s, data, size);
-                VALIDATE_FLOATSPANSET(s, NULL);
-                SpanSet *r = floatspanset_degrees(s, false); // default precision is false
-                free(s);
-                if (!r) {
-                    throw InvalidInputException("floatspanset_degrees failed");
-                }
-                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-                free(r);
-                return out;
-            });
-    }
-    
-}
-
-void SpansetFunctions::Floatspanset_radians(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &args0 = args.data[0];
-    UnaryExecutor::Execute<string_t, string_t>(
-        args0, result, args.size(),
-        [&](string_t blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)blob.GetData();
-            size_t size = blob.GetSize();
-            SpanSet *s = (SpanSet *)malloc(size);
-            memcpy(s, data, size);
-            VALIDATE_FLOATSPANSET(s, NULL);
-            SpanSet *r = floatspanset_radians(s); 
-            if (!r) {
-                throw InvalidInputException("floatspanset_radians failed");
-            }
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-            free(r);
-            return out;
-        });
-    
-}
+// floor/ceil/round/degrees/radians on floatspanset are generated from the catalog
+// (generated_temporal_udfs.cpp); no hand bodies remain.
 
 void SpansetFunctions::Spanset_spans(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &spanset_vec = args.data[0];

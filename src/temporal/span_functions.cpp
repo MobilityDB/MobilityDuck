@@ -1479,47 +1479,9 @@ void SpanFunctions::Tstzspan_shift_scale(DataChunk &args, ExpressionState &state
     }
 }
 
-void SpanFunctions::Floatspan_floor(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)blob.GetData();
-            size_t size = blob.GetSize();
-            Span *s = (Span *)malloc(size);
-            memcpy(s, data, size);
-            VALIDATE_FLOATSPAN(s, NULL);
-            Span *r = floatspan_floor(s);
-            free(s);
-            if (!r) {
-                throw InvalidInputException("floatspan_floor failed");
-            }
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-            free(r);
-            return out;
-        });
-}
-
-void SpanFunctions::Floatspan_ceil(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)blob.GetData();
-            size_t size = blob.GetSize();
-            Span *s = (Span *)malloc(size);
-            memcpy(s, data, size);
-            VALIDATE_FLOATSPAN(s, NULL);
-            Span *r = floatspan_ceil(s);
-            free(s);
-            if (!r) {
-                throw InvalidInputException("floatspan_ceil failed");
-            }
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-            free(r);
-            return out;
-        });
-}
+// floor/ceil/round/degrees/radians on floatspan are generated from the catalog
+// (generated_temporal_udfs.cpp); only round(DOUBLE) below, the scalar base helper
+// with no catalog signature, remains hand-written.
 
 void SpanFunctions::Float_round(DataChunk &args, ExpressionState &state, Vector &result) {
     D_ASSERT(args.ColumnCount() == 1 || args.ColumnCount() == 2);
@@ -1544,113 +1506,6 @@ void SpanFunctions::Float_round(DataChunk &args, ExpressionState &state, Vector 
     }
 }
 
-void SpanFunctions::Floatspan_round(DataChunk &args, ExpressionState &state, Vector &result) {
-    D_ASSERT(args.ColumnCount() == 1 || args.ColumnCount() == 2);
-    auto &args0 = args.data[0];
-    Vector *args1 = args.ColumnCount() == 2 ? &args.data[1] : 0;
-    if (args.ColumnCount() == 2) {
-        BinaryExecutor::Execute<string_t, int32_t, string_t>(
-            args0, *args1, result, args.size(),
-            [&](string_t blob, int32_t precision) -> string_t {
-                const uint8_t *data = (const uint8_t *)blob.GetData();
-                size_t size = blob.GetSize();
-                Span *s = (Span *)malloc(size);
-                memcpy(s, data, size);
-                VALIDATE_FLOATSPAN(s, NULL);
-                Span *r = floatspan_round(s, precision);
-                free(s);
-                if (!r) {
-                    throw InvalidInputException("floatspan_round failed");
-                }
-                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-                free(r);
-                return out;
-            });
-    } else {
-        UnaryExecutor::Execute<string_t, string_t>(
-            args0, result, args.size(),
-            [&](string_t blob) -> string_t {
-                const uint8_t *data = (const uint8_t *)blob.GetData();
-                size_t size = blob.GetSize();
-                Span *s = (Span *)malloc(size);
-                memcpy(s, data, size);
-                VALIDATE_FLOATSPAN(s, NULL);
-                Span *r = floatspan_round(s, 0); // default precision is 0
-                free(s);
-                if (!r) {
-                    throw InvalidInputException("floatspan_round failed");
-                }
-                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-                free(r);
-                return out;
-            });
-    }
-}
-
-void SpanFunctions::Floatspan_degrees(DataChunk &args, ExpressionState &state, Vector &result) {
-    D_ASSERT(args.ColumnCount() == 1|| args.ColumnCount() == 2);
-    auto &args0 = args.data[0];
-    Vector *args1 = args.ColumnCount() == 2 ? &args.data[1] : 0;
-    if (args.ColumnCount() == 2) {
-        BinaryExecutor::Execute<string_t, int32_t, string_t>(
-            args0, *args1, result, args.size(),
-            [&](string_t blob, int32_t precision) -> string_t {
-                const uint8_t *data = (const uint8_t *)blob.GetData();
-                size_t size = blob.GetSize();
-                Span *s = (Span *)malloc(size);
-                memcpy(s, data, size);
-                VALIDATE_FLOATSPAN(s, NULL);
-                Span *r = floatspan_degrees(s, precision);
-                free(s);
-                if (!r) {
-                    throw InvalidInputException("floatspan_degrees failed");
-                }
-                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-                free(r);
-                return out;
-            });
-    } else {
-        UnaryExecutor::Execute<string_t, string_t>(
-            args0, result, args.size(),
-            [&](string_t blob) -> string_t {
-                const uint8_t *data = (const uint8_t *)blob.GetData();
-                size_t size = blob.GetSize();
-                Span *s = (Span *)malloc(size);
-                memcpy(s, data, size);
-                VALIDATE_FLOATSPAN(s, NULL);
-                Span *r = floatspan_degrees(s, false); // default precision is false
-                free(s);
-                if (!r) {
-                    throw InvalidInputException("floatspan_degrees failed");
-                }
-                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-                free(r);
-                return out;
-            });
-    }
-    
-}
-
-void SpanFunctions::Floatspan_radians(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &args0 = args.data[0];
-    UnaryExecutor::Execute<string_t, string_t>(
-        args0, result, args.size(),
-        [&](string_t blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)blob.GetData();
-            size_t size = blob.GetSize();
-            Span *s = (Span *)malloc(size);
-            memcpy(s, data, size);
-            VALIDATE_FLOATSPAN(s, NULL);
-            Span *r = floatspan_radians(s); 
-            if (!r) {
-                throw InvalidInputException("floatspan_radians failed");
-            }
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-            free(r);
-            return out;
-        });
-    
-}
 // --- OPERATOR: span = span ---
 void SpanFunctions::Span_eq(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::Execute<string_t, string_t, bool>(

@@ -461,15 +461,34 @@ def sql_default_to_cpp(val):
     u = val.strip().upper()
     return {"NULL": "nullptr", "TRUE": "true", "FALSE": "false"}.get(u, val.strip())
 
-def emit_set_defaulted_unary(name, dval):
-    """The shorter (Set)->Set overload of a (Set, scalar-param DEFAULT)->Set function:
-    a UnaryExecutor body calling the MEOS fn with the SQL-declared default substituted."""
+def trailing_arg_default(f):
+    """The SQL default of the LAST argument if the catalog declares one uniformly across
+    overloads (round -> '0', degrees -> 'FALSE'), else None. This is the value to substitute
+    when emitting the shorter overload of a SQL-optional trailing argument."""
+    defs = {s["argDefaults"][-1] for s in (f.get("sqlSignatures") or []) if s.get("argDefaults")}
+    return next(iter(defs)) if len(defs) == 1 and None not in defs else None
+
+def emit_defaulted_unary(name, blobto, toblob, ctype, dval):
+    """The shorter (X)->X overload of an (X, scalar-param DEFAULT)->X blob-container function
+    (set/span/spanset): a UnaryExecutor body calling the MEOS fn with the default substituted."""
     return (f"static void Gen_{name}_d(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
             f"    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),\n"
             f"        [&](string_t a) {{\n"
-            f"            Set *s = BlobToSet(a);\n            Set *r = {name}(s, {dval});\n            free(s);\n"
-            f"            return SetToBlob(result, r);\n        }});\n}}\n")
+            f"            {ctype} *s = {blobto}(a);\n            {ctype} *r = {name}(s, {dval});\n            free(s);\n"
+            f"            return {toblob}(result, r);\n        }});\n}}\n")
+
+def emit_defaulted_unary_temporal(name, subcast, dval):
+    """The shorter (temporal)->temporal overload — NULL-safe like emit_body_binary's temporal
+    kind (MEOS NULL -> SQL NULL via TemporalToBlobN), with the SQL default substituted."""
+    return (f"static void Gen_{name}_d(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+            f"    EnsureMeosThreadInitialized();\n"
+            f"    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
+            f"        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+            f"            Temporal *t = BlobToTemporal(in);\n"
+            f"            Temporal *r = {subcast}{name}(t, {dval});\n            free(t);\n"
+            f"            return TemporalToBlobN(result, r, mask, idx);\n"
+            f"        }});\n}}\n")
 
 # Element scalar type -> the Set type it implies (for contains/contained/left/...
 # predicates the set type is picked by the element, not the name). Only the
@@ -513,6 +532,13 @@ def poc_set(f):
     if len(ins) == 2 and rb == "Set" and rn.endswith("*"):
         e1 = selem(ins[1])
         if setp(ins[0]) and e1: return ("setsc_set:" + e1, "LogicalType::BLOB")
+    # (Set, scalar PARAM) -> Set where arg2 is NOT a set element (degrees(floatset, bool)):
+    # a same-set-type return whose trailing scalar is a fixed param, name-scoped to its set
+    # (<elem>set_*). Distinct from the element-add setsc_set above (arg2 co-varies there).
+    if (len(ins) == 2 and setp(ins[0]) and rb == "Set" and rn.endswith("*")
+            and not selem(ins[1]) and base(ins[1]["canonical"]) in SCALAR_ARG
+            and "*" not in norm(ins[1]["canonical"]) and set_reg_scope(f["name"])):
+        return ("setcsc:" + base(ins[1]["canonical"]), "LogicalType::BLOB")
     if set_reg_scope(f["name"]) is None: return None
     if len(ins) == 1 and setp(ins[0]):
         if rb == "Set" and rn.endswith("*"):       return ("u_set", "LogicalType::BLOB")
@@ -551,6 +577,14 @@ def emit_set(f, kind):
                     f"            Set *r = {name}(s, t2);\n            free(t2); free(s);\n"
                     f"            return SetToBlob(result, r);\n        }});\n}}\n")
         _dt, cpp2, marsh = SCALAR_ARG[e]
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::Execute<string_t, {cpp2}, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t a, {cpp2} a2) {{\n"
+                f"            Set *s = BlobToSet(a);\n            Set *r = {name}(s, {marsh});\n            free(s);\n"
+                f"            return SetToBlob(result, r);\n        }});\n}}\n")
+    if kind.startswith("setcsc:"):  # (Set, by-value scalar param) -> Set (degrees(floatset, bool))
+        _dt, cpp2, marsh = SCALAR_ARG[kind.split(':')[1]]
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
                 f"    BinaryExecutor::Execute<string_t, {cpp2}, string_t>(args.data[0], args.data[1], result, args.size(),\n"
@@ -1256,6 +1290,13 @@ def poc_span(f, C=SPAN_C):
             and "*" not in norm(ins[1]["canonical"]) and rb == "Interval" and rn.endswith("*")
             and C["scope"] is not None and C["scope"](f["name"]) is not None):
         return ("u2iv:" + base(ins[1]["canonical"]), "LogicalType::INTERVAL")
+    # (X, scalar PARAM) -> X : a same-container return whose scalar is NOT an element
+    # (floatspan_round/floatspanset_round's precision integer). Name-scoped (<elem>span_round
+    # -> that container type), so the round=float-only base-value scoping falls out.
+    if (contp(ins[0]) and base(ins[1]["canonical"]) in SCALAR_ARG
+            and "*" not in norm(ins[1]["canonical"]) and rb == cb and rn.endswith("*")
+            and C["scope"] is not None and C["scope"](f["name"]) is not None):
+        return ("csc:" + base(ins[1]["canonical"]), "type")
     # generic (X,X) -> bool|X
     if not (contp(ins[0]) and contp(ins[1])): return None
     if rb == cb and rn.endswith("*"):  return ("b_span", "type")
@@ -1304,6 +1345,15 @@ def emit_span(f, kind, C=SPAN_C):
                 f"        [&](string_t in, {cpp2} a2) {{\n"
                 f"            {cb} *s = {bt}(in);\n            MeosInterval *r = {name}(s, {marsh});\n            free(s);\n"
                 f"            return TakeInterval(r);\n        }});\n}}\n")
+    if kind.startswith("csc:"):     # (X, by-value scalar param) -> X (round(floatspan, integer))
+        _dt, cpp2, marsh = SCALAR_ARG[kind.split(':')[1]]
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::ExecuteWithNulls<string_t, {cpp2}, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t in, {cpp2} a2, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                f"            {cb} *s = {bt}(in);\n            {cb} *r = {name}(s, {marsh});\n            free(s);\n"
+                f"            if (!r) {{ mask.SetInvalid(idx); return string_t(); }}\n"
+                f"            return {tb}(result, r);\n        }});\n}}\n")
     if kind == "b_span":            # (X,X) -> X (pointer return; MEOS NULL = empty -> SQL NULL)
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
@@ -1498,6 +1548,24 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 for nm in names:
                     specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {sig}, {r2}, Gen_{fn}));')
+        # A (temporal, scalar-param DEFAULT)->temporal fn (round's precision integer DEFAULT 0)
+        # is callable at the shorter arity; emit the (temporal)->temporal overload with the
+        # catalog default substituted, over the same types.
+        if b and kind == "temporal" and dret == "MD_TEMPORAL" and trailing_arg_default(f):
+            dflt = sql_default_to_cpp(trailing_arg_default(f))
+            subcast = "" if base(f["returnType"]["canonical"]) == "Temporal" else "(Temporal *) "
+            bodies.append(emit_defaulted_unary_temporal(fn, subcast, dflt))
+            if scope == "all":
+                rett = ret_temporal_type(fn, "type", f.get("group"), f.get("sqlReturnType"))
+                for nm in names:
+                    generic_regs.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                        f'"{reg_name(nm, f)}", {{type}}, {rett}, Gen_{fn}_d));')
+            else:
+                for a in accs:
+                    r2 = ret_temporal_type(fn, a, f.get("group"), f.get("sqlReturnType"))
+                    for nm in names:
+                        specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                             f'"{reg_name(nm, f)}", {{{a}}}, {r2}, Gen_{fn}_d));')
     # SET family — separate loop (the temporal path above is untouched).
     for f in fns:
         if declared is not None and f["name"] not in declared:
@@ -1534,11 +1602,28 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             # A SQL-optional trailing param (round's precision DEFAULT 0) is callable at the
             # shorter arity; emit the (Set)->Set overload with the catalog default substituted.
             if dflt is not None:
-                set_bodies.append(emit_set_defaulted_unary(fn, sql_default_to_cpp(dflt)))
+                set_bodies.append(emit_defaulted_unary(fn, "BlobToSet", "SetToBlob", "Set", sql_default_to_cpp(dflt)))
                 for acc, rett, _d in pairs:
                     for nm in names:
                         set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                                  f'"{reg_name(nm, f)}", {{{acc}}}, {rett}, Gen_{fn}_d));')
+            continue
+        if kind.startswith("setcsc:"):   # (Set, scalar PARAM)->Set: degrees(floatset, bool)
+            b = kind.split(':')[1]; scd = SCALAR_ARG[b][0]
+            scope, accs = set_reg_scope(fn)
+            dflt = trailing_arg_default(f)
+            if dflt is not None:
+                set_bodies.append(emit_defaulted_unary(fn, "BlobToSet", "SetToBlob", "Set",
+                                                       sql_default_to_cpp(dflt)))
+            acc_list = ["type"] if scope == "all" else accs
+            sink = set_generic_regs if scope == "all" else set_specific_regs
+            for a in acc_list:
+                for nm in names:
+                    sink.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                f'"{reg_name(nm, f)}", {{{a}, {scd}}}, {a}, Gen_{fn}));')
+                    if dflt is not None:
+                        sink.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                    f'"{reg_name(nm, f)}", {{{a}}}, {a}, Gen_{fn}_d));')
             continue
         if kind.startswith("setsc:") or kind.startswith("scset:"):
             b = kind.split(':')[1]; acc = ELEM_TO_SET[b]
@@ -1616,6 +1701,25 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                         for nm in names:
                             span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                                       f'"{reg_name(nm, f)}", {{{a}, {argdt}}}, {dret}, Gen_{fn}));')
+                continue
+            # (X, scalar PARAM)->X: floatspan(set)_round. Name-scoped 2-arg {X, argtype}->X;
+            # plus the shorter {X}->X overload when the trailing scalar has a SQL default.
+            if kind.startswith("csc:"):
+                argdt = SCALAR_ARG[kind.split(':')[1]][0]
+                scope, accs = C["scope"](fn)
+                dflt = trailing_arg_default(f)
+                if dflt is not None:
+                    span_bodies.append(emit_defaulted_unary(fn, C["blobto"], C["toblob"], C["cbase"],
+                                                            sql_default_to_cpp(dflt)))
+                acc_list = ["type"] if scope == "all" else accs
+                sink = gen if scope == "all" else span_specific_regs
+                for a in acc_list:
+                    for nm in names:
+                        sink.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                    f'"{reg_name(nm, f)}", {{{a}, {argdt}}}, {a}, Gen_{fn}));')
+                        if dflt is not None:
+                            sink.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                        f'"{reg_name(nm, f)}", {{{a}}}, {a}, Gen_{fn}_d));')
                 continue
             # generic (X,X)->bool|X.
             if C.get("single"):   # box: single type, concrete accessor (no AllTypes loop)

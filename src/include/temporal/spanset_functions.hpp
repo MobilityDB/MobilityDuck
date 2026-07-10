@@ -78,11 +78,7 @@ struct SpansetFunctions{
     static void Tstzspanset_scale(DataChunk &args, ExpressionState &state, Vector &result);
     static void Numspanset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tstzspanset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Floatspanset_floor(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Floatspanset_ceil(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Floatspanset_round(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Floatspanset_degrees(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Floatspanset_radians(DataChunk &args, ExpressionState &state, Vector &result);
+    // floor/ceil/round/degrees/radians on floatspanset are generated (generated_temporal_udfs.cpp).
     static void Spanset_spans(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spanset_split_n_spans(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spanset_split_each_n_spans(DataChunk &args, ExpressionState &state, Vector &result);

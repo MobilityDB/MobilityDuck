@@ -233,8 +233,7 @@ struct TemporalFunctions {
     static void Tfloat_ln(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tfloat_log10(DataChunk &args, ExpressionState &state, Vector &result);
     // Temporal_derivative declared in the math-functions block below.
-    static void Tfloat_degrees(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tfloat_radians(DataChunk &args, ExpressionState &state, Vector &result);
+    // floor/ceil/round/degrees/radians on tfloat are generated (generated_temporal_udfs.cpp).
 
     /* ***************************************************
      * Temporal comparison predicates returning Temporal
@@ -555,7 +554,7 @@ struct TemporalFunctions {
     /* ***************************************************
      * Math functions
      ****************************************************/
-    static void Temporal_round(DataChunk &args, ExpressionState &state, Vector &result);
+    // round(tfloat/tgeompoint/tgeogpoint/...) is generated (generated_temporal_udfs.cpp).
     static void Temporal_derivative(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************

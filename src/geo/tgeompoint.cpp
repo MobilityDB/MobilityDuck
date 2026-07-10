@@ -1242,23 +1242,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "round",
-            {tgeompoint(), LogicalType::INTEGER},
-            tgeompoint(),
-            TemporalFunctions::Temporal_round
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "round",
-            {tgeompoint()},
-            tgeompoint(),
-            TemporalFunctions::Temporal_round
-        )
-    );
+    // round(tgeompoint) at both arities is generated from the catalog temporal_round
+    // signature (generated_temporal_udfs.cpp); no hand registration remains.
 
 
     

@@ -6311,6 +6311,28 @@ static void Gen_floatset_ceil(DataChunk &args, ExpressionState &, Vector &result
         });
 }
 
+static void Gen_floatset_degrees(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, bool a2) {
+            Set *s = BlobToSet(a);
+            Set *r = floatset_degrees(s, a2);
+            free(s);
+            return SetToBlob(result, r);
+        });
+}
+
+static void Gen_floatset_degrees_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a) {
+            Set *s = BlobToSet(a);
+            Set *r = floatset_degrees(s, false);
+            free(s);
+            return SetToBlob(result, r);
+        });
+}
+
 static void Gen_floatset_floor(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
@@ -6400,6 +6422,42 @@ static void Gen_textset_upper(DataChunk &args, ExpressionState &, Vector &result
         });
 }
 
+static void Gen_bigintspan_expand(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *s = BlobToSpan(in);
+            Span *r = bigintspan_expand(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanToBlob(result, r);
+        });
+}
+
+static void Gen_floatspan_expand(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *s = BlobToSpan(in);
+            Span *r = floatspan_expand(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanToBlob(result, r);
+        });
+}
+
+static void Gen_intspan_expand(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *s = BlobToSpan(in);
+            Span *r = intspan_expand(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanToBlob(result, r);
+        });
+}
+
 static void Gen_floatspan_ceil(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
@@ -6408,6 +6466,29 @@ static void Gen_floatspan_ceil(DataChunk &args, ExpressionState &, Vector &resul
             Span *r = floatspan_ceil(s);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanToBlob(result, r);
+        });
+}
+
+static void Gen_floatspan_degrees(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, bool a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *s = BlobToSpan(in);
+            Span *r = floatspan_degrees(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanToBlob(result, r);
+        });
+}
+
+static void Gen_floatspan_degrees_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a) {
+            Span *s = BlobToSpan(a);
+            Span *r = floatspan_degrees(s, false);
+            free(s);
             return SpanToBlob(result, r);
         });
 }
@@ -6436,6 +6517,29 @@ static void Gen_floatspan_radians(DataChunk &args, ExpressionState &, Vector &re
         });
 }
 
+static void Gen_floatspan_round(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *s = BlobToSpan(in);
+            Span *r = floatspan_round(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanToBlob(result, r);
+        });
+}
+
+static void Gen_floatspan_round_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a) {
+            Span *s = BlobToSpan(a);
+            Span *r = floatspan_round(s, 0);
+            free(s);
+            return SpanToBlob(result, r);
+        });
+}
+
 static void Gen_floatspanset_ceil(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
@@ -6460,6 +6564,29 @@ static void Gen_floatspanset_floor(DataChunk &args, ExpressionState &, Vector &r
         });
 }
 
+static void Gen_floatspanset_degrees(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, bool a2, ValidityMask &mask, idx_t idx) -> string_t {
+            SpanSet *s = BlobToSpanSet(in);
+            SpanSet *r = floatspanset_degrees(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
+        });
+}
+
+static void Gen_floatspanset_degrees_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a) {
+            SpanSet *s = BlobToSpanSet(a);
+            SpanSet *r = floatspanset_degrees(s, false);
+            free(s);
+            return SpanSetToBlob(result, r);
+        });
+}
+
 static void Gen_floatspanset_radians(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
@@ -6468,6 +6595,29 @@ static void Gen_floatspanset_radians(DataChunk &args, ExpressionState &, Vector 
             SpanSet *r = floatspanset_radians(s);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
+        });
+}
+
+static void Gen_floatspanset_round(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            SpanSet *s = BlobToSpanSet(in);
+            SpanSet *r = floatspanset_round(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
+        });
+}
+
+static void Gen_floatspanset_round_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a) {
+            SpanSet *s = BlobToSpanSet(a);
+            SpanSet *r = floatspanset_round(s, 0);
+            free(s);
             return SpanSetToBlob(result, r);
         });
 }
@@ -11091,6 +11241,17 @@ static void Gen_temporal_round(DataChunk &args, ExpressionState &, Vector &resul
         });
 }
 
+static void Gen_temporal_round_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = temporal_round(t, 0);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
 static void Gen_temporal_to_tinstant(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
@@ -11119,6 +11280,17 @@ static void Gen_tfloat_degrees(DataChunk &args, ExpressionState &, Vector &resul
         [&](string_t in, bool a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tfloat_degrees(t, a2);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tfloat_degrees_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tfloat_degrees(t, false);
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -12852,6 +13024,8 @@ static void RegisterGenerated_meos_setspan_topo(ExtensionLoader &loader) {
 
 static void RegisterGenerated_meos_setspan_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("ceil", {SetTypes::floatset()}, SetTypes::floatset(), Gen_floatset_ceil));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {SetTypes::floatset(), LogicalType::BOOLEAN}, SetTypes::floatset(), Gen_floatset_degrees));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {SetTypes::floatset()}, SetTypes::floatset(), Gen_floatset_degrees_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("floor", {SetTypes::floatset()}, SetTypes::floatset(), Gen_floatset_floor));
     RegisterSerializedScalarFunction(loader, ScalarFunction("radians", {SetTypes::floatset()}, SetTypes::floatset(), Gen_floatset_radians));
     RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::floatset(), LogicalType::INTEGER}, SetTypes::floatset(), Gen_set_round));
@@ -12861,12 +13035,23 @@ static void RegisterGenerated_meos_setspan_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("initcap", {SetTypes::textset()}, SetTypes::textset(), Gen_textset_initcap));
     RegisterSerializedScalarFunction(loader, ScalarFunction("lower", {SetTypes::textset()}, SetTypes::textset(), Gen_textset_lower));
     RegisterSerializedScalarFunction(loader, ScalarFunction("upper", {SetTypes::textset()}, SetTypes::textset(), Gen_textset_upper));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("expand", {SpanTypes::bigintspan(), LogicalType::BIGINT}, SpanTypes::bigintspan(), Gen_bigintspan_expand));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("expand", {SpanTypes::floatspan(), LogicalType::DOUBLE}, SpanTypes::floatspan(), Gen_floatspan_expand));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("expand", {SpanTypes::intspan(), LogicalType::INTEGER}, SpanTypes::intspan(), Gen_intspan_expand));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ceil", {SpanTypes::floatspan()}, SpanTypes::floatspan(), Gen_floatspan_ceil));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {SpanTypes::floatspan(), LogicalType::BOOLEAN}, SpanTypes::floatspan(), Gen_floatspan_degrees));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {SpanTypes::floatspan()}, SpanTypes::floatspan(), Gen_floatspan_degrees_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("floor", {SpanTypes::floatspan()}, SpanTypes::floatspan(), Gen_floatspan_floor));
     RegisterSerializedScalarFunction(loader, ScalarFunction("radians", {SpanTypes::floatspan()}, SpanTypes::floatspan(), Gen_floatspan_radians));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SpanTypes::floatspan(), LogicalType::INTEGER}, SpanTypes::floatspan(), Gen_floatspan_round));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SpanTypes::floatspan()}, SpanTypes::floatspan(), Gen_floatspan_round_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ceil", {SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_floatspanset_ceil));
     RegisterSerializedScalarFunction(loader, ScalarFunction("floor", {SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_floatspanset_floor));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {SpansetTypes::floatspanset(), LogicalType::BOOLEAN}, SpansetTypes::floatspanset(), Gen_floatspanset_degrees));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_floatspanset_degrees_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("radians", {SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_floatspanset_radians));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SpansetTypes::floatspanset(), LogicalType::INTEGER}, SpansetTypes::floatspanset(), Gen_floatspanset_round));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_floatspanset_round_d));
 }
 
 static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
@@ -14418,9 +14603,15 @@ static void RegisterGenerated_meos_temporal_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("round", {TgeogpointType::tgeogpoint(), LogicalType::INTEGER}, TgeogpointType::tgeogpoint(), Gen_temporal_round));
     RegisterSerializedScalarFunction(loader, ScalarFunction("round", {TGeometryTypes::tgeometry(), LogicalType::INTEGER}, TGeometryTypes::tgeometry(), Gen_temporal_round));
     RegisterSerializedScalarFunction(loader, ScalarFunction("round", {TGeographyTypes::tgeography(), LogicalType::INTEGER}, TGeographyTypes::tgeography(), Gen_temporal_round));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_round_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {TgeompointType::tgeompoint()}, TgeompointType::tgeompoint(), Gen_temporal_round_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {TgeogpointType::tgeogpoint()}, TgeogpointType::tgeogpoint(), Gen_temporal_round_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {TGeometryTypes::tgeometry()}, TGeometryTypes::tgeometry(), Gen_temporal_round_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {TGeographyTypes::tgeography()}, TGeographyTypes::tgeography(), Gen_temporal_round_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tintInst", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_to_tinstant));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ceil", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tfloat_ceil));
     RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {TemporalTypes::tfloat(), LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_tfloat_degrees));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tfloat_degrees_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("floor", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tfloat_floor));
     RegisterSerializedScalarFunction(loader, ScalarFunction("radians", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tfloat_radians));
     RegisterSerializedScalarFunction(loader, ScalarFunction("scaleValue", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_tfloat_scale_value));

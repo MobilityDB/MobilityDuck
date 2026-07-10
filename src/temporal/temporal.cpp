@@ -1208,25 +1208,11 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "round",
-            {TemporalTypes::tfloat()},
-            TemporalTypes::tfloat(),
-            TemporalFunctions::Temporal_round
-        )
-    );
+    // round(tfloat) and round(tfloat, integer) are float-base scalar transforms
+    // generated from the catalog (generated_temporal_udfs.cpp): the shorter
+    // DEFAULT-arg overload comes from sqlSignatures argDefaults.
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "round",
-            {TemporalTypes::tfloat(), LogicalType::INTEGER},
-            TemporalTypes::tfloat(),
-            TemporalFunctions::Temporal_round
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tint",
             {TemporalTypes::tbool()},
@@ -1353,10 +1339,9 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("/", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tint(), TemporalFunctions::Div_tnumber_tnumber));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("/", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Div_tnumber_tnumber));
 
-    // Unary tfloat transforms (meos_temporal_transf group; degrees/radians).
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Tfloat_degrees));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {TemporalTypes::tfloat(), LogicalType::BOOLEAN}, TemporalTypes::tfloat(), TemporalFunctions::Tfloat_degrees));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("radians", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Tfloat_radians));
+    // Unary tfloat transforms floor/ceil/round/degrees/radians are float-base scalar
+    // transforms generated from the catalog (generated_temporal_udfs.cpp), full arity
+    // plus the shorter DEFAULT-arg overload via sqlSignatures argDefaults.
     // The meos_temporal_math group (abs/derivative/exp/ln/log10/deltaValue/trend) is
     // supplied by the generated surface (RETIRED_GROUPS in the codegen).
 

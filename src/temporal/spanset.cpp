@@ -237,20 +237,9 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 ScalarFunction("shiftScale", {spanset_type, LogicalType::DOUBLE, LogicalType::DOUBLE}, spanset_type, SpansetFunctions::Numspanset_shift_scale)
             );
 
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("floor", {spanset_type}, spanset_type, SpansetFunctions::Floatspanset_floor)
-            );
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("ceil", {spanset_type}, spanset_type, SpansetFunctions::Floatspanset_ceil)
-            );
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("round", {spanset_type}, spanset_type, SpansetFunctions::Floatspanset_round)
-            );
-
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("round", {spanset_type, LogicalType::INTEGER}, spanset_type, SpansetFunctions::Floatspanset_round)
-            );
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("degrees", {spanset_type}, spanset_type, SpansetFunctions::Floatspanset_degrees)
-            );
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("radians", {spanset_type}, spanset_type, SpansetFunctions::Floatspanset_radians)
-            );
-
+            // floor/ceil/round/degrees/radians on floatspanset are float-base scalar
+            // transforms generated from the catalog (generated_temporal_udfs.cpp), full
+            // arity plus the shorter DEFAULT-arg overload via sqlSignatures argDefaults.
         }
         else if( spanset_type == SpansetTypes::tstzspanset() ){
             duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("shift", {spanset_type, LogicalType::INTERVAL}, spanset_type, SpansetFunctions::Tstzspanset_shift)

@@ -361,32 +361,15 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         ScalarFunction("splitEachNspans", {SetTypes::tstzset(), LogicalType::INTEGER},
                        LogicalType::LIST(SpanTypes::tstzspan()), SpanFunctions::Set_split_each_n_spans));
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("floor", {SpanTypes::floatspan()}, SpanTypes::floatspan(), SpanFunctions::Floatspan_floor)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("ceil", {SpanTypes::floatspan()}, SpanTypes::floatspan(), SpanFunctions::Floatspan_ceil)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    // floor/ceil/round/degrees/radians on floatspan are float-base scalar transforms
+    // generated from the catalog (generated_temporal_udfs.cpp), full arity plus the
+    // shorter DEFAULT-arg overload via sqlSignatures argDefaults. Only round(DOUBLE),
+    // the scalar base helper with no catalog signature, remains hand-registered.
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction("round", {LogicalType::DOUBLE}, LogicalType::DOUBLE, SpanFunctions::Float_round)
     );
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction("round", {LogicalType::DOUBLE, LogicalType::INTEGER}, LogicalType::DOUBLE, SpanFunctions::Float_round)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("round", {SpanTypes::floatspan(), LogicalType::INTEGER}, SpanTypes::floatspan(), SpanFunctions::Floatspan_round)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("round", {SpanTypes::floatspan()}, SpanTypes::floatspan(), SpanFunctions::Floatspan_round)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("degrees", {SpanTypes::floatspan(), LogicalType::BOOLEAN}, SpanTypes::floatspan(), SpanFunctions::Floatspan_degrees)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("degrees", {SpanTypes::floatspan()}, SpanTypes::floatspan(), SpanFunctions::Floatspan_degrees)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("radians", {SpanTypes::floatspan()}, SpanTypes::floatspan(), SpanFunctions::Floatspan_radians)
     );
 
     for (const auto &span_type : SpanTypes::AllTypes()) {

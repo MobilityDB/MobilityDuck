@@ -212,31 +212,13 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("shiftScale", {SetTypes::tstzset(), LogicalType::INTERVAL, LogicalType::INTERVAL}, SetTypes::tstzset(), SetFunctions::Tstzset_shift_scale)
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("floor", {SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Floatset_floor)                 
-        );
-        
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("ceil", {SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Floatset_ceil)                 
-        );
-
-        // round(floatset) and round(floatset, integer) are both generated
-        // (generated_temporal_udfs.cpp) from the catalog set_round signature and its
-        // integer DEFAULT 0 (sqlSignatures argDefaults), so no hand registration remains.
+        // floor/ceil/round/degrees/radians on floatset are float-base scalar transforms
+        // generated from the catalog (generated_temporal_udfs.cpp): both the full arity
+        // and the shorter DEFAULT-arg overload (round(floatset,integer DEFAULT 0),
+        // degrees(floatset,boolean DEFAULT FALSE)) come from sqlSignatures argDefaults,
+        // so no hand registration remains.
 
         duckdb::RegisterSerializedScalarFunction(loader,
-            ScalarFunction("degrees", {SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Floatset_degrees)
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("degrees", {SetTypes::floatset(), LogicalType::BOOLEAN}, SetTypes::floatset(), SetFunctions::Floatset_degrees)
-        );
-        
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("radians", {SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Floatset_radians)
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
             ScalarFunction("lower", {SetTypes::textset()}, SetTypes::textset(), SetFunctions::Textset_lower)
         );
 
