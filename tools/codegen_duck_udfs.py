@@ -1149,7 +1149,7 @@ def ret_span_type(name, arg_acc):
 # machinery (poc_coll/emit_coll) via a descriptor, so SpanSet is added without duplication.
 SPANSET_TYPES = {
     "intspanset": "SpansetTypes::intspanset()", "bigintspanset": "SpansetTypes::bigintspanset()",
-    "floatspanset": "SpansetTypes::floatspanset()", "textspanset": "SpansetTypes::textspanset()",
+    "floatspanset": "SpansetTypes::floatspanset()",
     "datespanset": "SpansetTypes::datespanset()", "tstzspanset": "SpansetTypes::tstzspanset()",
 }
 ELEM_TO_SPANSET = {
@@ -1163,7 +1163,7 @@ def spanset_reg_scope(name):
         if name.startswith(pre + "_") or name == pre: return ("types", [acc])
     return None
 def ret_spanset_type(name, arg_acc):
-    m = re.search(r'_to_(intspanset|bigintspanset|floatspanset|textspanset|datespanset|tstzspanset)$', name)
+    m = re.search(r'_to_(intspanset|bigintspanset|floatspanset|datespanset|tstzspanset)$', name)
     return SPANSET_TYPES[m.group(1)] if m else arg_acc
 
 # Collection-family descriptors (Span + SpanSet share ALL shape logic).

@@ -20,7 +20,6 @@ struct SpanTypes {
     static LogicalType intspan();
     static LogicalType bigintspan();
     static LogicalType floatspan();
-    static LogicalType textspan();
     static LogicalType datespan();
     static LogicalType tstzspan();
     static void RegisterTypes(ExtensionLoader &loader);

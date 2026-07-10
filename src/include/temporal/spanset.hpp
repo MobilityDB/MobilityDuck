@@ -18,7 +18,6 @@ struct SpansetTypes {
     static LogicalType intspanset();
     static LogicalType bigintspanset();
     static LogicalType floatspanset();
-    static LogicalType textspanset();
     static LogicalType datespanset();
     static LogicalType tstzspanset();
 
