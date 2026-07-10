@@ -537,14 +537,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "timestamps",
-            {tgeogpoint()},
-            LogicalType::LIST(LogicalType::TIMESTAMP_TZ),
-            TemporalFunctions::Temporal_timestamps
-        )
-    );
+    // timestamps(tgeogpoint) is generated from the catalog (temporal_timestamps) in generated_temporal_udfs.cpp.
 
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
@@ -2777,9 +2770,7 @@ void TGeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction(
         "numTimestamps", {TGEOM}, LogicalType::INTEGER,
         TemporalFunctions::Temporal_num_timestamps));
-    loader.RegisterFunction(ScalarFunction(
-        "timestamps", {TGEOM}, LogicalType::LIST(TSTZ),
-        TemporalFunctions::Temporal_timestamps));
+    // timestamps(tgeogpoint) is generated from the catalog (temporal_timestamps) in generated_temporal_udfs.cpp.
     loader.RegisterFunction(ScalarFunction(
         "startTimestamp", {TGEOM}, TSTZ,
         TemporalFunctions::Temporal_start_timestamptz));

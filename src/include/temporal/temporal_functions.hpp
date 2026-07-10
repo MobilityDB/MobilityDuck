@@ -89,7 +89,7 @@ struct TemporalFunctions {
     static void Temporal_sequences(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_start_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_end_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_timestamps(DataChunk &args, ExpressionState &state, Vector &result);
+    // Temporal_timestamps retired: timestamps(<temporal>) is generated (temporal_timestamps) in generated_temporal_udfs.cpp.
     static void Temporal_instants(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_num_sequences(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_lower_inc(DataChunk &args, ExpressionState &state, Vector &result);
@@ -224,7 +224,7 @@ struct TemporalFunctions {
      * Unary tnumber functions
      ****************************************************/
     static void Tnumber_abs(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tnumber_tboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    // Tnumber_tboxes retired: tboxes(<tnumber>) is generated (tnumber_tboxes) in generated_temporal_udfs.cpp.
     static void Tnumber_split_n_tboxes(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_split_each_n_tboxes(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_delta_value(DataChunk &args, ExpressionState &state, Vector &result);

@@ -146,11 +146,9 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("valueN", {set_type, LogicalType::INTEGER}, base_type, SetFunctions::Set_value_n)
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader,  
-            ScalarFunction("getValues", {set_type}, LogicalType::LIST(base_type), SetFunctions::Set_values)
-        );
+        // getValues(<set_type>) is generated from the catalog (<elem>set_values) in generated_temporal_udfs.cpp.
 
-        duckdb::RegisterSerializedScalarFunction(loader,  
+        duckdb::RegisterSerializedScalarFunction(loader,
             ScalarFunction("shift", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), SetFunctions::Numset_shift)
         );
 

@@ -252,10 +252,8 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             );
 
         } 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("spans", {spanset_type}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_spans)
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
+        // spans(<spanset_type>) is generated from the catalog (spanset_spans) in generated_temporal_udfs.cpp.
+        duckdb::RegisterSerializedScalarFunction(loader,
             ScalarFunction("splitNSpans", {spanset_type, LogicalType::INTEGER}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_split_n_spans)
         );
         duckdb::RegisterSerializedScalarFunction(loader, 

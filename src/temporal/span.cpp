@@ -279,24 +279,9 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
 
 
-    // spans(<set_type>) — list of unit spans, one per set element
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("spans", {SetTypes::intset()},
-                       LogicalType::LIST(SpanTypes::intspan()), SpanFunctions::Set_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("spans", {SetTypes::bigintset()},
-                       LogicalType::LIST(SpanTypes::bigintspan()), SpanFunctions::Set_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("spans", {SetTypes::floatset()},
-                       LogicalType::LIST(SpanTypes::floatspan()), SpanFunctions::Set_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("spans", {SetTypes::dateset()},
-                       LogicalType::LIST(SpanTypes::datespan()), SpanFunctions::Set_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("spans", {SetTypes::tstzset()},
-                       LogicalType::LIST(SpanTypes::tstzspan()), SpanFunctions::Set_spans));
+    // spans(<set_type>) is generated from the catalog (set_spans) in generated_temporal_udfs.cpp.
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction("splitNSpans", {SetTypes::intset(), LogicalType::INTEGER},
                        LogicalType::LIST(SpanTypes::intspan()), SpanFunctions::Set_split_n_spans));
     duckdb::RegisterSerializedScalarFunction(loader, 

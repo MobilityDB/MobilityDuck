@@ -1661,49 +1661,6 @@ void TemporalFunctions::Temporal_end_timestamptz(DataChunk &args, ExpressionStat
     }
 }
 
-void TemporalFunctions::Temporal_timestamps(DataChunk &args, ExpressionState &state, Vector &result) {
-    idx_t total_count = 0;
-    UnaryExecutor::Execute<string_t, list_entry_t>(
-        args.data[0], result, args.size(),
-        [&](string_t temp_str) -> list_entry_t {
-            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
-            size_t data_size = temp_str.GetSize();
-            if (data_size < sizeof(void*)) {
-                throw InvalidInputException("[Temporal_timestamps] Invalid Temporal data: insufficient size");
-            }
-            uint8_t *data_copy = (uint8_t*)malloc(data_size);
-            memcpy(data_copy, data, data_size);
-            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-            if (!temp) {
-                free(data_copy);
-                throw InternalException("Failure in Temporal_timestamps: unable to cast string to temporal");
-            }
-
-            int ts_count;
-            TimestampTz *times = temporal_timestamps(temp, &ts_count);
-            timestamp_tz_t *times_duckdb = (timestamp_tz_t*)malloc(ts_count * sizeof(timestamp_tz_t));
-            for (idx_t i = 0; i < ts_count; i++) {
-                times_duckdb[i] = MeosToDuckDBTimestamp((timestamp_tz_t)times[i]);
-            }
-            const auto entry = list_entry_t(total_count, ts_count);
-            total_count += ts_count;
-            ListVector::Reserve(result, total_count);
-
-            auto &ts_vec = ListVector::GetEntry(result);
-            const auto ts_data = FlatVector::GetData<timestamp_tz_t>(ts_vec);
-
-            for (idx_t i = 0; i < ts_count; i++) {
-                ts_data[entry.offset + i] = times_duckdb[i];
-            }
-
-            free(times);
-            free(times_duckdb);
-            free(temp);
-            return entry;
-        }
-    );
-    ListVector::SetListSize(result, total_count);
-}
 
 void TemporalFunctions::Temporal_instants(DataChunk &args, ExpressionState &state, Vector &result) {
     idx_t total_count = 0;
@@ -4875,11 +4832,6 @@ void RunTboxesEmit(DataChunk &args, Vector &result, Producer produce, bool has_n
 
 } // namespace
 
-void TemporalFunctions::Tnumber_tboxes(DataChunk &args, ExpressionState &state, Vector &result) {
-    RunTboxesEmit(args, result,
-        [](const Temporal *t, int /*unused*/, int *count) { return tnumber_tboxes(t, count); },
-        /*has_n_arg=*/false);
-}
 
 void TemporalFunctions::Tnumber_split_n_tboxes(DataChunk &args, ExpressionState &state, Vector &result) {
     RunTboxesEmit(args, result,

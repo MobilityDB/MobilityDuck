@@ -45,7 +45,7 @@ struct SetFunctions {
     static void Set_start_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_end_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_value_n(DataChunk &args, ExpressionState &state, Vector &result_vec);
-    static void Set_values(DataChunk &args, ExpressionState &state, Vector &result);
+    // Set_values retired: getValues(<set>) is generated (set_values) in generated_temporal_udfs.cpp.
     static void Numset_shift(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tstzset_shift(DataChunk &args, ExpressionState &state, Vector &result);
     static void Numset_scale(DataChunk &args, ExpressionState &state, Vector &result);

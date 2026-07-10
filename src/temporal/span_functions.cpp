@@ -488,57 +488,7 @@ bool SpanFunctions::Set_to_span_cast(Vector &source, Vector &result, idx_t count
     return true;
 }
 
-// spans(<set_type>) — returns a LIST(<span_type>) of unit spans, one per
-// element of the input set. Mirrors SpansetFunctions::Spanset_spans but
-// reads a Set and uses set_spans() / set_num_values() from MEOS.
-void SpanFunctions::Set_spans(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &set_vec = args.data[0];
-    idx_t row_count = args.size();
-    set_vec.Flatten(row_count);
-
-    auto &result_validity = FlatVector::Validity(result);
-    auto list_entries = FlatVector::GetData<list_entry_t>(result);
-    auto &child_vector = ListVector::GetEntry(result);
-    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
-    ListVector::Reserve(result, row_count);
-
-    idx_t total_offset = 0;
-    const size_t span_bytes = sizeof(Span);
-
-    for (idx_t i = 0; i < row_count; ++i) {
-        if (FlatVector::IsNull(set_vec, i)) {
-            result_validity.SetInvalid(i);
-            continue;
-        }
-
-        string_t blob = FlatVector::GetData<string_t>(set_vec)[i];
-        Set *s = (Set *)malloc(blob.GetSize());
-        memcpy(s, blob.GetData(), blob.GetSize());
-
-        int num = set_num_values(s);
-        Span *spans = set_spans(s);
-        free(s);
-
-        if (!spans || num <= 0) {
-            if (spans) free(spans);
-            result_validity.SetInvalid(i);
-            continue;
-        }
-
-        ListVector::SetListSize(result, total_offset + num);
-        list_entries[i] = list_entry_t{total_offset, static_cast<uint64_t>(num)};
-
-        auto *child_data = FlatVector::GetData<string_t>(child_vector);
-        for (int j = 0; j < num; ++j) {
-            child_data[total_offset + j] =
-                StringVector::AddStringOrBlob(child_vector, reinterpret_cast<const char *>(&spans[j]), span_bytes);
-        }
-
-        free(spans);
-        total_offset += num;
-        result_validity.SetValid(i);
-    }
-}
+// spans(<set_type>) is generated from the catalog (set_spans) in generated_temporal_udfs.cpp.
 
 // --- Conversion: intspan <-> floatspan ---
 static void Intspan_to_floatspan_common(Vector &source, Vector &result, idx_t count) {

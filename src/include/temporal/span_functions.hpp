@@ -41,7 +41,6 @@ struct SpanFunctions {
     static void Datespan_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tstzspan_to_datespan(DataChunk &args, ExpressionState &state, Vector &result);    
     static void Set_to_span(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Set_spans(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_split_n_spans(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_split_each_n_spans(DataChunk &args, ExpressionState &state, Vector &result);
     // TODO (Type Range): static void Range_to_span(DataChunk &args, ExpressionState &state, Vector &result);

@@ -1084,6 +1084,183 @@ f"    idx_t count = MinValue<idx_t>(STANDARD_VECTOR_SIZE, total - state.idx);\n"
 f"{out_decls}    for (idx_t k = 0; k < count; k++) {{\n{out_fill}    }}\n"
 f"    state.idx += count;\n    output.SetCardinality(count);\n}}\n")
 
+# ---- general array-return shape: <elem>* + int* count -> DuckDB LIST(<elem-duck>) ----
+# The flat-LIST general case of shape_path (which handles the LIST(STRUCT) *Path structs).
+# Entirely catalog-driven: shape.arrayReturn carries the element type (from MEOS-API shapeinfer)
+# and lengthFrom.name the trailing int* count out-param. Element marshalling is ONE boundary
+# table keyed on the canonical element type (zero heuristics): a scalar element goes to a typed
+# child vector; a text* element to a VARCHAR child (each varlena freed); a MEOS value-type struct
+# (Span/STBox/TBox) to a BLOB child by sizeof (the array is freed once, elements are inline).
+# elem canonical(normalized) -> (LIST child LogicalType, child C++ type, per-element marshal stmt)
+ARRAY_ELEM = {
+    "int":         ("LogicalType::INTEGER",      "int32_t",        "cd[off + j] = arr[j];"),
+    "int32_t":     ("LogicalType::INTEGER",      "int32_t",        "cd[off + j] = arr[j];"),
+    "int64_t":     ("LogicalType::BIGINT",       "int64_t",        "cd[off + j] = arr[j];"),
+    "double":      ("LogicalType::DOUBLE",       "double",         "cd[off + j] = arr[j];"),
+    "bool":        ("LogicalType::BOOLEAN",      "bool",           "cd[off + j] = arr[j];"),
+    # date/timestamp elements carry the MEOS (PG) epoch: convert to the DuckDB epoch with the
+    # same helpers the scalar-return bodies use (TakeTimestamp / FromMeosDate), never a raw cast.
+    "TimestampTz": ("LogicalType::TIMESTAMP_TZ", "timestamp_tz_t", "cd[off + j] = TakeTimestamp(arr[j]);"),
+    "DateADT":     ("LogicalType::DATE",         "date_t",         "cd[off + j] = FromMeosDate((int32_t) arr[j]);"),
+    "text *":      ("LogicalType::VARCHAR", "string_t", "cd[off + j] = TakeText(child_vector, arr[j]);"),
+    "Span":  ("LogicalType::BLOB", "string_t",
+              "cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span));"),
+    "STBox": ("LogicalType::BLOB", "string_t",
+              "cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox));"),
+    "TBox":  ("LogicalType::BLOB", "string_t",
+              "cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox));"),
+}
+# container-input family (base of the single non-count param) -> (C container type, Blob->container fn)
+ARRAY_IN = {
+    "Set":          ("Set",      "BlobToSet"),
+    "SpanSet":      ("SpanSet",  "BlobToSpanSet"),
+    "Temporal":     ("Temporal", "BlobToTemporal"),
+    "TInstant":     ("Temporal", "BlobToTemporal"),
+    "TSequence":    ("Temporal", "BlobToTemporal"),
+    "TSequenceSet": ("Temporal", "BlobToTemporal"),
+}
+
+def _acc_sqlname(acc):
+    """The canonical SQL type name inside an accessor string, e.g. SetTypes::intset() -> intset,
+    TemporalTypes::tbool() -> tbool (the meos_catalog.c lowercase name the sqlSignatures key on)."""
+    m = re.search(r'::(\w+)\(\)', acc)
+    return m.group(1) if m else acc
+
+def _sig_ret_for(f, sqlname):
+    """The catalog sqlSignature return for the single-arg overload on SQL type `sqlname`, else None."""
+    for s in (f.get("sqlSignatures") or []):
+        if s.get("args") == [sqlname]:
+            return s.get("ret")
+    return None
+
+def array_declared_accs(f):
+    """The registered DuckDB accessors this array-return is CREATE FUNCTION'd for, from the catalog
+    sqlSignatures whose SQL return is an array (`<base>[]`). Extended/unregistered arg types map to
+    no accessor and drop out. This is the SoT for a generic (scope='all') array-return's type set,
+    excluding types whose canonical return is NOT an array (e.g. set_spans over textset: no sig)."""
+    m = {**SET_TYPES, **SPANSET_TYPES, **SIG_TEMPORAL_ACC}
+    out = []
+    for s in (f.get("sqlSignatures") or []):
+        if len(s.get("args", [])) != 1 or not (s.get("ret") or "").endswith("[]"):
+            continue
+        a = m.get(s["args"][0])
+        if a and a not in out:
+            out.append(a)
+    return out
+
+# The DuckDB LIST child LOGICAL type, keyed on the canonical SQL array element (the sig ret base).
+# Struct-blob elements use the NAMED span/box type (BLOB-backed, but typed so results display /
+# typeof / cast like the hand surface), not a raw BLOB. Physical marshalling stays keyed on the C
+# element (ARRAY_ELEM); this only fixes the LOGICAL element type per the catalog sqlSignatures.
+SQL_BASE_TO_DUCK = {
+    "integer": "LogicalType::INTEGER", "bigint": "LogicalType::BIGINT", "float": "LogicalType::DOUBLE",
+    "boolean": "LogicalType::BOOLEAN", "text": "LogicalType::VARCHAR", "date": "LogicalType::DATE",
+    "timestamptz": "LogicalType::TIMESTAMP_TZ",
+    "intspan": "SpanTypes::intspan()", "bigintspan": "SpanTypes::bigintspan()",
+    "floatspan": "SpanTypes::floatspan()", "datespan": "SpanTypes::datespan()",
+    "tstzspan": "SpanTypes::tstzspan()", "tbox": "TboxType::tbox()", "stbox": "StboxType::stbox()",
+}
+
+def array_ret_duck(f, acc):
+    """The DuckDB LIST return type for this array-return on input accessor `acc`, from the catalog
+    sqlSignature (e.g. spans(intset)->intspan[] -> LIST(SpanTypes::intspan())). None if not an
+    array sig or the element type is not mapped (deferred)."""
+    r = _sig_ret_for(f, _acc_sqlname(acc)) or ""
+    if not r.endswith("[]"):
+        return None
+    d = SQL_BASE_TO_DUCK.get(r[:-2])
+    return "LogicalType::LIST(%s)" % d if d else None
+
+def shape_array(f):
+    """Flat array-return -> DuckDB LIST(<elem>). Like shape_path, the trailing int* count arg
+    makes supported() reject it (arg:int *), so gate on user-facing eligibility + a single
+    marshallable container input, not the standard arg gate. Returns ('array', elem_canon,
+    in_base, scope, accs) or None. Geo/extended element types (GSERIALIZED*/Cbuffer*/... ) and
+    multi-arg array-returns (*Pairs/splitN, table-fn shapes) are not in ARRAY_ELEM -> deferred.
+
+    CANONICAL GATE (the catalog sqlSignatures are the SoT): a LIST overload is emitted for an input
+    type ONLY where MobilityDB's SQL surface returns a SQL array (`<base>[]`) for it. Several MEOS
+    accessors carry @sqlfn=getValues but their canonical SQL return is a spanset/set, not an array
+    (getValues(tint)->intspanset via Tnumber_valuespans; getValues(ttext)->textset), so no LIST
+    overload is emitted for them."""
+    name = f["name"]
+    if name.startswith("meos_internal") or (f.get("group") or "").startswith("meos_internal"):
+        return None
+    sqlfn = f.get("sqlfn")
+    if not sqlfn or re.search(r'_(out|in|send|recv)$', sqlfn):
+        return None
+    if name.endswith("_p"):
+        return None                       # internal pointer-preserving twin (temporal_sequences_p)
+    ar = (f.get("shape") or {}).get("arrayReturn")
+    if not ar:
+        return None
+    # NB: no STRUCTS-fields exclusion here — the MEOS value-type structs Span/STBox/TBox ARE handled
+    # (as opaque BLOB elements, in ARRAY_ELEM); the LIST(STRUCT) path structs (Match/warp) are routed
+    # out below because their element is not in ARRAY_ELEM (shape_path handles those separately).
+    lf = ar.get("lengthFrom") or {}
+    if lf.get("kind") != "param" or not lf.get("name"):
+        return None
+    ec = norm((ar.get("element") or {}).get("canonical") or (ar.get("element") or {}).get("c") or "")
+    if ec not in ARRAY_ELEM:
+        return None
+    ins = [p for p in f["params"] if p.get("name") != lf["name"]]
+    if len(ins) != 1:
+        return None
+    ib = base(ins[0]["canonical"])
+    if ib not in ARRAY_IN or not norm(ins[0]["canonical"]).endswith("*"):
+        return None
+    sc = set_reg_scope(name) if ib == "Set" else spanset_reg_scope(name) if ib == "SpanSet" else reg_scope(name)
+    if sc is None:
+        return None
+    scope, accs = sc
+    if scope == "all":
+        accs = array_declared_accs(f)                       # generic C fn: sig-declared types (SoT)
+    else:
+        accs = [a for a in accs if (_sig_ret_for(f, _acc_sqlname(a)) or "").endswith("[]")]
+    if not accs:
+        return None
+    return ("array", ec, ib, accs)
+
+def emit_array(f, ec, ib):
+    """The Gen_<name> body: marshal the container in, call the MEOS accessor with a local count,
+    and build a DuckDB LIST from the returned <elem>* array (per-element marshal from ARRAY_ELEM).
+    Reserve grows the child capacity to the running total; GetEntry is re-fetched after Reserve."""
+    name = f["name"]
+    cbase, blobto = ARRAY_IN[ib]
+    _lt, ccpp, marsh = ARRAY_ELEM[ec]
+    retc = norm(f["returnType"]["canonical"])          # e.g. "TimestampTz *", "text **", "Span *"
+    return (
+f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+f"    EnsureMeosThreadInitialized();\n"
+f"    auto &in_vec = args.data[0];\n"
+f"    idx_t row_count = args.size();\n"
+f"    in_vec.Flatten(row_count);\n"
+f"    auto &result_validity = FlatVector::Validity(result);\n"
+f"    auto list_entries = FlatVector::GetData<list_entry_t>(result);\n"
+f"    idx_t off = 0;\n"
+f"    for (idx_t i = 0; i < row_count; ++i) {{\n"
+f"        if (in_vec.GetValue(i).IsNull()) {{ result_validity.SetInvalid(i); continue; }}\n"
+f"        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];\n"
+f"        {cbase} *in = {blobto}(blob);\n"
+f"        int count = 0;\n"
+f"        {retc} arr = {name}(in, &count);\n"
+f"        free(in);\n"
+f"        int n = (arr && count > 0) ? count : 0;\n"
+f"        ListVector::Reserve(result, off + n);\n"
+f"        ListVector::SetListSize(result, off + n);\n"
+f"        list_entries[i] = list_entry_t{{off, (uint64_t) n}};\n"
+f"        if (n > 0) {{\n"
+f"            auto &child_vector = ListVector::GetEntry(result);\n"
+f"            child_vector.SetVectorType(VectorType::FLAT_VECTOR);\n"
+f"            auto *cd = FlatVector::GetData<{ccpp}>(child_vector);\n"
+f"            for (int j = 0; j < n; ++j) {{ {marsh} }}\n"
+f"            off += n;\n"
+f"        }}\n"
+f"        if (arr) free(arr);\n"
+f"        result_validity.SetValid(i);\n"
+f"    }}\n"
+f"}}\n")
+
 # Temporal + box (STBox/TBox) -> bool: the spatiotemporal/numeric topological predicates
 # (contains/overlaps/contained/adjacent/same/left/right/... between a temporal and a box).
 # Mixed-arg shape (one Temporal blob + one box blob); temporal scope from reg_scope
@@ -1882,6 +2059,36 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "inline string_t TakeCString(Vector &result, char *s) {\n"
            "    string_t out = StringVector::AddString(result, s);\n    free(s);\n    return out;\n}\n\n"
            )
+
+    # ---- ARRAY-RETURN family: <elem>* + int* count -> LIST(<elem>) (getValues/timestamps/
+    # spans/tboxes). Standalone pass because these span Set/Temporal/SpanSet inputs and because
+    # supported() rejects them (the trailing int* count arg), so they are disjoint from the family
+    # loops above. Registration reuses each input family's scope + writer loop; the LIST child type
+    # is fixed per fn by the catalog element type. ----
+    for f in fns:
+        if declared is not None and f["name"] not in declared:
+            continue
+        a = shape_array(f)
+        if a is None:
+            continue
+        _tag, ec, ib, accs = a
+        STATE["grp"] = f.get("group") or "meos_ungrouped"
+        fn, sqlfn = f["name"], f["sqlfn"]
+        names = reg_names(f, sqlfn, aliases)
+        if ib == "Set":
+            set_bodies.append(emit_array(f, ec, ib)); n_set += 1; spec_sink = set_specific_regs
+        else:
+            (span_bodies if ib == "SpanSet" else bodies).append(emit_array(f, ec, ib))
+            if ib == "SpanSet": n_span += 1
+            else: n_un += 1
+            spec_sink = specific_regs
+        for acc in accs:                                    # sig-declared canonical types; per-acc LIST type
+            ret = array_ret_duck(f, acc)
+            if ret is None:
+                continue
+            for nm in names:
+                spec_sink.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                 f'"{reg_name(nm, f)}", {{{acc}}}, {ret}, Gen_{fn}));')
 
     # ---- bodies, sectioned by @ingroup group (one section per group) ----
     body_by_grp = defaultdict(list)

@@ -548,14 +548,7 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "timestamps",
-                {type},
-                LogicalType::LIST(LogicalType::TIMESTAMP_TZ),
-                TemporalFunctions::Temporal_timestamps
-            )
-        );
+        // timestamps(<temporal_type>) is generated from the catalog (temporal_timestamps) in generated_temporal_udfs.cpp.
 
         duckdb::RegisterSerializedScalarFunction(loader, 
             ScalarFunction(
@@ -1693,8 +1686,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // tboxes / splitNTboxes / splitEachNTboxes — tnumber → LIST(tbox)
     {
         auto tbox_list = LogicalType::LIST(TboxType::tbox());
+        // tboxes(<tnumber>) is generated from the catalog (tnumber_tboxes) in generated_temporal_udfs.cpp.
         for (auto &t : {TemporalTypes::tint(), TemporalTypes::tfloat()}) {
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tboxes",           {t},                      tbox_list, TemporalFunctions::Tnumber_tboxes));
             duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("splitNTboxes",     {t, LogicalType::INTEGER}, tbox_list, TemporalFunctions::Tnumber_split_n_tboxes));
             duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("splitEachNTboxes", {t, LogicalType::INTEGER}, tbox_list, TemporalFunctions::Tnumber_split_each_n_tboxes));
         }
