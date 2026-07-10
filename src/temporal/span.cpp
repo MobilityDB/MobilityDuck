@@ -25,68 +25,11 @@ extern "C" {
 
 namespace duckdb {
 
-#define DEFINE_SPAN_TYPE(NAME)                                        \
-    LogicalType SpanTypes::NAME() {                                   \
-        auto type = LogicalType(LogicalTypeId::BLOB);                \
-        type.SetAlias(#NAME);                                        \
-        return type;                                                 \
-    }
+// Collection type registration (accessors, RegisterTypes, AllTypes, alias->MeosType,
+// GetChildType) is generated from the catalog MeosType enum into
+// src/generated/generated_type_registration.cpp.
 
-DEFINE_SPAN_TYPE(intspan)
-DEFINE_SPAN_TYPE(bigintspan)
-DEFINE_SPAN_TYPE(floatspan)
-DEFINE_SPAN_TYPE(datespan)
-DEFINE_SPAN_TYPE(tstzspan)
-
-#undef DEFINE_SPAN_TYPE
-
-void SpanTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType( "intspan", intspan());
-    loader.RegisterType( "bigintspan", bigintspan());
-    loader.RegisterType( "floatspan", floatspan());
-    loader.RegisterType( "datespan", datespan());
-    loader.RegisterType( "tstzspan", tstzspan());    
-}
-
-const std::vector<LogicalType> &SpanTypes::AllTypes() {
-    static std::vector<LogicalType> types = {
-        intspan(),
-        bigintspan(),
-        floatspan(),
-        datespan(),
-        tstzspan()
-    };
-    return types;
-}
-
-MeosType SpanTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
-    static const std::unordered_map<std::string, MeosType> alias_to_type = {
-        {"intspan", T_INTSPAN},
-        {"bigintspan", T_BIGINTSPAN},
-        {"floatspan", T_FLOATSPAN},
-        {"datespan", T_DATESPAN},
-        {"tstzspan", T_TSTZSPAN}        
-    };
-
-    auto it = alias_to_type.find(alias);
-    if (it != alias_to_type.end()) {
-        return it->second;
-    } else {
-        return T_UNKNOWN;
-    }
-}
-
-LogicalType SpanTypeMapping::GetChildType(const LogicalType &type) {
-    auto alias = type.ToString();
-    if (alias == "intspan") return LogicalType::INTEGER;
-    if (alias == "bigintspan") return LogicalType::BIGINT;
-    if (alias == "floatspan") return LogicalType::DOUBLE;
-    if (alias == "datespan") return LogicalType::DATE;
-    if (alias == "tstzspan") return LogicalType::TIMESTAMP_TZ;    
-    throw NotImplementedException("GetChildType: unsupported alias: " + alias);
-}
-
-// Register all cast functions 
+// Register all cast functions
 void SpanTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     for (const auto &span_type : SpanTypes::AllTypes()) {
         RegisterMeosCastFunction(loader, 

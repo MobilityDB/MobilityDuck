@@ -1761,6 +1761,129 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
              + len(spanset_generic_regs) + len(box_regs) + len(temporal_box_regs))
     return n_un, n_bin, n_ter, n_reg, n_set, n_span
 
+# ---------------------------------------------------------------------------
+# Collection type registration (set / span / spanset) generated from the
+# catalog MeosType enum. The RegisterType / AllTypes / accessor set plus the
+# alias->MeosType and Get{Child,Set,Base}Type mappings are uniform macro
+# boilerplate whose ONLY per-family variation is the (base-value x container)
+# grid — which the catalog enum encodes exactly. Deriving the type list from
+# T_<BASE><SUFFIX> membership makes the orthogonality mechanical: a base that
+# has no span (text) simply produces no accessor, so a phantom textspan() can
+# never be fabricated. The base LogicalType per base value is the same fixed
+# map the hand code used.
+BASE_LOGICAL = {
+    "int": "LogicalType::INTEGER", "bigint": "LogicalType::BIGINT",
+    "float": "LogicalType::DOUBLE", "text": "LogicalType::VARCHAR",
+    "date": "LogicalType::DATE", "tstz": "LogicalType::TIMESTAMP_TZ",
+}
+BASE_ORDER = ["int", "bigint", "float", "text", "date", "tstz"]
+# suffix (longest first so spanset wins over span), class, mapping struct, DEFINE
+# macro, and whether the family carries the spanset-only Set/Base child mappings.
+TYPEREG_FAMILIES = [
+    dict(suffix="spanset", cls="SpansetTypes", mapping="SpansetTypeMapping",
+         macro="DEFINE_SPAN_SET_TYPE", child="span", spanset_extra=True),
+    dict(suffix="span", cls="SpanTypes", mapping="SpanTypeMapping",
+         macro="DEFINE_SPAN_TYPE", child="base", spanset_extra=False),
+    dict(suffix="set", cls="SetTypes", mapping="SetTypeMapping",
+         macro="DEFINE_SET_TYPE", child="base", spanset_extra=False),
+]
+
+def typereg_members(enum_names, suffix):
+    """Bases (in canonical order) for which T_<BASE><SUFFIX> exists in the enum."""
+    return [b for b in BASE_ORDER if ("T_" + (b + suffix).upper()) in enum_names]
+
+def emit_typereg_family(fam, enum_names):
+    cls, mp, suf, macro = fam["cls"], fam["mapping"], fam["suffix"], fam["macro"]
+    bases = typereg_members(enum_names, suf)
+    names = [b + suf for b in bases]                       # e.g. intspanset
+    L = []
+    L.append(f"// --- {cls}: {len(names)} type(s) from the catalog MeosType enum ---")
+    L.append(f"#define {macro}(NAME)                                          \\")
+    L.append(f"    LogicalType {cls}::NAME() {{                               \\")
+    L.append( "        auto type = LogicalType(LogicalTypeId::BLOB);          \\")
+    L.append( "        type.SetAlias(#NAME);                                  \\")
+    L.append( "        return type;                                           \\")
+    L.append( "    }")
+    for n in names:
+        L.append(f"{macro}({n})")
+    L.append(f"#undef {macro}")
+    L.append("")
+    L.append(f"void {cls}::RegisterTypes(ExtensionLoader &loader) {{")
+    for n in names:
+        L.append(f'    loader.RegisterType("{n}", {n}());')
+    L.append("}")
+    L.append("")
+    L.append(f"const std::vector<LogicalType> &{cls}::AllTypes() {{")
+    L.append("    static std::vector<LogicalType> types = {")
+    L.append("        " + ", ".join(f"{n}()" for n in names))
+    L.append("    };")
+    L.append("    return types;")
+    L.append("}")
+    L.append("")
+    L.append(f"MeosType {mp}::GetMeosTypeFromAlias(const std::string &alias) {{")
+    L.append("    static const std::unordered_map<std::string, MeosType> alias_to_type = {")
+    L.append("        " + ", ".join(f'{{"{n}", T_{n.upper()}}}' for n in names))
+    L.append("    };")
+    L.append("    auto it = alias_to_type.find(alias);")
+    L.append("    return it != alias_to_type.end() ? it->second : T_UNKNOWN;")
+    L.append("}")
+    L.append("")
+    # GetChildType: spanset -> the sibling span type; set/span -> the base LogicalType.
+    L.append(f"LogicalType {mp}::GetChildType(const LogicalType &type) {{")
+    L.append("    auto alias = type.ToString();")
+    for b, n in zip(bases, names):
+        rhs = f"SpanTypes::{b}span()" if fam["child"] == "span" else BASE_LOGICAL[b]
+        L.append(f'    if (alias == "{n}") return {rhs};')
+    L.append('    throw NotImplementedException("GetChildType: unsupported alias: " + alias);')
+    L.append("}")
+    if fam["spanset_extra"]:
+        L.append("")
+        L.append(f"LogicalType {mp}::GetSetType(const LogicalType &type) {{")
+        L.append("    auto alias = type.ToString();")
+        for b, n in zip(bases, names):
+            L.append(f'    if (alias == "{n}") return SetTypes::{b}set();')
+        L.append('    throw NotImplementedException("GetSetType: unsupported alias: " + alias);')
+        L.append("}")
+        L.append("")
+        L.append(f"LogicalType {mp}::GetBaseType(const LogicalType &type) {{")
+        L.append("    auto alias = type.ToString();")
+        for b, n in zip(bases, names):
+            L.append(f'    if (alias == "{n}") return {BASE_LOGICAL[b]};')
+        L.append('    throw NotImplementedException("GetBaseType: unsupported alias: " + alias);')
+        L.append("}")
+    L.append("")
+    return "\n".join(L)
+
+def gen_type_registration(catalog, out_path):
+    enum = [e for e in catalog.get("enums", []) if e["name"] == "MeosType"][0]
+    enum_names = {v["name"] for v in enum["values"]}
+    parts = [
+        "// GENERATED by tools/codegen_duck_udfs.py — do not edit by hand.",
+        "// Collection type registration (set / span / spanset). The type list of",
+        "// each family is the (base-value x container) grid the catalog MeosType",
+        "// enum declares, so the orthogonality is mechanical and phantom-free.",
+        "",
+        '#include "temporal/set.hpp"',
+        '#include "temporal/span.hpp"',
+        '#include "temporal/spanset.hpp"',
+        '#include "duckdb/main/extension/extension_loader.hpp"',
+        "#include <unordered_map>",
+        "",
+        "extern \"C\" {",
+        "    #include <meos.h>",
+        "    #include <meos_internal.h>",
+        "}",
+        "",
+        "namespace duckdb {",
+        "",
+    ]
+    for fam in TYPEREG_FAMILIES:
+        parts.append(emit_typereg_family(fam, enum_names))
+    parts.append("} // namespace duckdb")
+    open(out_path, "w").write("\n".join(parts))
+    counts = {f["cls"]: len(typereg_members(enum_names, f["suffix"])) for f in TYPEREG_FAMILIES}
+    return counts
+
 def main():
     global RETIRED_GROUPS
     pos = [a for a in sys.argv[1:] if not a.startswith("--")]
@@ -1807,6 +1930,11 @@ def main():
             print(f"pin/ABI gate: {len(declared)} fns declared in {hdr}")
         nu, nb, nt, nr, ns, nsp = gen_cpp(fns, out, declared, aliases)
         print(f"wrote {nu} unary + {nb} binary + {nt} ternary + {ns} set + {nsp} span UDF bodies, {nr} registrations -> {out}")
+        # Collection type registration (set/span/spanset) — the (base x container)
+        # grid straight from the catalog MeosType enum, emitted as a sibling file.
+        treg = os.path.join(os.path.dirname(out), "generated_type_registration.cpp")
+        tc = gen_type_registration(d, treg)
+        print(f"wrote collection type registration {tc} -> {treg}")
         # Regularity invariant (build-failing): MEOS keeps locale/collation, session
         # timezone, PROJ context and RNGs in thread-local storage, so every UDF body
         # must run EnsureMeosThreadInitialized() before any MEOS call. Verify it for

@@ -19,86 +19,9 @@ extern "C" {
 
 namespace duckdb {
 
-#define DEFINE_SPAN_SET_TYPE(NAME)                                        \
-    LogicalType SpansetTypes::NAME() {                                   \
-        auto type = LogicalType(LogicalTypeId::BLOB);             \
-        type.SetAlias(#NAME);                                        \
-        return type;                                                 \
-    }
-
-DEFINE_SPAN_SET_TYPE(intspanset)
-DEFINE_SPAN_SET_TYPE(bigintspanset)
-DEFINE_SPAN_SET_TYPE(floatspanset)
-DEFINE_SPAN_SET_TYPE(datespanset)
-DEFINE_SPAN_SET_TYPE(tstzspanset)
-
-#undef DEFINE_SET_TYPE
-
-void SpansetTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType( "intspanset", intspanset());
-    loader.RegisterType( "bigintspanset", bigintspanset());
-    loader.RegisterType( "floatspanset", floatspanset());    
-    loader.RegisterType( "datespanset", datespanset());
-    loader.RegisterType( "tstzspanset", tstzspanset());    
-}
-
-const std::vector<LogicalType> &SpansetTypes::AllTypes() {
-    static std::vector<LogicalType> types = {
-        intspanset(),
-        bigintspanset(),
-        floatspanset(),        
-        datespanset(),
-        tstzspanset()
-    };
-    return types;
-}
-
-MeosType SpansetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
-    static const std::unordered_map<std::string, MeosType> alias_to_type = {
-        {"intspanset", T_INTSPANSET},
-        {"bigintspanset", T_BIGINTSPANSET},
-        {"floatspanset", T_FLOATSPANSET},        
-        {"datespanset", T_DATESPANSET},
-        {"tstzspanset", T_TSTZSPANSET}                
-    };
-
-    auto it = alias_to_type.find(alias);
-    if (it != alias_to_type.end()) {
-        return it->second;
-    } else {
-        return T_UNKNOWN;
-    }
-}
-
-LogicalType SpansetTypeMapping::GetChildType(const LogicalType &type) {
-    auto alias = type.ToString();        
-    if (alias == "intspanset") return SpanTypes::intspan();
-    if (alias == "bigintspanset") return SpanTypes::bigintspan();
-    if (alias == "floatspanset") return SpanTypes::floatspan();    
-    if (alias == "datespanset") return SpanTypes::datespan();
-    if (alias == "tstzspanset") return SpanTypes::tstzspan();   
-    throw NotImplementedException("GetChildType: unsupported alias: " + alias); 
-}
-
-LogicalType SpansetTypeMapping::GetSetType(const LogicalType &type) {
-    auto alias = type.ToString();        
-    if (alias == "intspanset") return SetTypes::intset();
-    if (alias == "bigintspanset") return SetTypes::bigintset();
-    if (alias == "floatspanset") return SetTypes::floatset();    
-    if (alias == "datespanset") return SetTypes::dateset();
-    if (alias == "tstzspanset") return SetTypes::tstzset();
-    throw NotImplementedException("GetChildType: unsupported alias: " + alias);
-}
-
-LogicalType SpansetTypeMapping::GetBaseType(const LogicalType &type) {
-    auto alias = type.ToString();
-    if (alias == "intspanset") return LogicalType::INTEGER;
-    if (alias == "bigintspanset") return LogicalType::BIGINT;
-    if (alias == "floatspanset") return LogicalType::DOUBLE;    
-    if (alias == "datespanset") return LogicalType::DATE;
-    if (alias == "tstzspanset") return LogicalType::TIMESTAMP_TZ; 
-    throw NotImplementedException("GetChildType: unsupported alias: " + alias);
-}
+// Collection type registration (accessors, RegisterTypes, AllTypes, alias->MeosType,
+// GetChildType/GetSetType/GetBaseType) is generated from the catalog MeosType enum
+// into src/generated/generated_type_registration.cpp.
 
 // --- Register Cast ---
 void SpansetTypes::RegisterCastFunctions(ExtensionLoader &loader) {

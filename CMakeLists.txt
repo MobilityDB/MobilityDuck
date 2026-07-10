@@ -76,6 +76,7 @@ set(EXTENSION_SOURCES
     src/spatial_ref_sys_csv.inc
     src/mobilityduck_extension.cpp
     src/generated/generated_temporal_udfs.cpp
+    src/generated/generated_type_registration.cpp
     src/temporal/temporal.cpp
     src/temporal/temporal_functions.cpp
     src/temporal/temporal_aggregates.cpp

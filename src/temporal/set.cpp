@@ -23,74 +23,11 @@ extern "C" {
 
 namespace duckdb {
 
-#define DEFINE_SET_TYPE(NAME)                                        \
-    LogicalType SetTypes::NAME() {                                   \
-        auto type = LogicalType(LogicalTypeId::BLOB);             \
-        type.SetAlias(#NAME);                                        \
-        return type;                                                 \
-    }
+// Collection type registration (accessors, RegisterTypes, AllTypes, alias->MeosType,
+// GetChildType) is generated from the catalog MeosType enum into
+// src/generated/generated_type_registration.cpp.
 
-DEFINE_SET_TYPE(intset)
-DEFINE_SET_TYPE(bigintset)
-DEFINE_SET_TYPE(floatset)
-DEFINE_SET_TYPE(textset)
-DEFINE_SET_TYPE(dateset)
-DEFINE_SET_TYPE(tstzset)
-
-#undef DEFINE_SET_TYPE
-
-void SetTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType( "intset", intset());
-    loader.RegisterType( "bigintset", bigintset());
-    loader.RegisterType( "floatset", floatset());
-    loader.RegisterType( "textset", textset());
-    loader.RegisterType( "dateset", dateset());
-    loader.RegisterType( "tstzset", tstzset());    
-}
-
-const std::vector<LogicalType> &SetTypes::AllTypes() {
-    static std::vector<LogicalType> types = {
-        intset(),
-        bigintset(),
-        floatset(),
-        textset(),
-        dateset(),
-        tstzset()
-    };
-    return types;
-}
-
-MeosType SetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
-    static const std::unordered_map<std::string, MeosType> alias_to_type = {
-        {"intset", T_INTSET},
-        {"bigintset", T_BIGINTSET},
-        {"floatset", T_FLOATSET},
-        {"textset", T_TEXTSET},
-        {"dateset", T_DATESET},
-        {"tstzset", T_TSTZSET}                
-    };
-
-    auto it = alias_to_type.find(alias);
-    if (it != alias_to_type.end()) {
-        return it->second;
-    } else {
-        return T_UNKNOWN;
-    }
-}
-
-LogicalType SetTypeMapping::GetChildType(const LogicalType &type) {
-    auto alias = type.ToString();
-    if (alias == "intset") return LogicalType::INTEGER;
-    if (alias == "bigintset") return LogicalType::BIGINT;
-    if (alias == "floatset") return LogicalType::DOUBLE;
-    if (alias == "textset") return LogicalType::VARCHAR;
-    if (alias == "dateset") return LogicalType::DATE;
-    if (alias == "tstzset") return LogicalType::TIMESTAMP_TZ;    
-    throw NotImplementedException("GetChildType: unsupported alias: " + alias);
-}
-
-
-// Register all cast functions 
+// Register all cast functions
 void SetTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     for (const auto &set_type : SetTypes::AllTypes()) {
         RegisterMeosCastFunction(loader, 
