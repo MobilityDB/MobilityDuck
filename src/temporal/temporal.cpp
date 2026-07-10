@@ -465,26 +465,11 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "timeSpan",
-                {type},
-                SpanTypes::tstzspan(),
-                TemporalFunctions::Temporal_to_tstzspan
-            )
-        );
-
+        // timeSpan/valueSpan (temporal_to_tstzspan / tnumber_to_span, group
+        // meos_temporal_conversion) are generated from the catalog sqlSignatures
+        // in src/generated/generated_temporal_udfs.cpp (RETIRED_GROUPS).
         if (type.GetAlias() == "tint") {
-            duckdb::RegisterSerializedScalarFunction(loader, 
-                ScalarFunction(
-                    "valueSpan",
-                    {type},
-                    SpanTypes::intspan(),
-                    TemporalFunctions::Tnumber_to_span
-                )
-            );
-
-            duckdb::RegisterSerializedScalarFunction(loader, 
+            duckdb::RegisterSerializedScalarFunction(loader,
                 ScalarFunction(
                     "valueSet",
                     {type},
@@ -493,16 +478,7 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 )
             );
         } else if (type.GetAlias() == "tfloat") {
-            duckdb::RegisterSerializedScalarFunction(loader, 
-                ScalarFunction(
-                    "valueSpan",
-                    {type},
-                    SpanTypes::floatspan(),
-                    TemporalFunctions::Tnumber_to_span
-                )
-            );
-
-            duckdb::RegisterSerializedScalarFunction(loader, 
+            duckdb::RegisterSerializedScalarFunction(loader,
                 ScalarFunction(
                     "valueSet",
                     {type},
@@ -1205,52 +1181,13 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // generated from the catalog (generated_temporal_udfs.cpp): the shorter
     // DEFAULT-arg overload comes from sqlSignatures argDefaults.
 
+    // The temporal-number casts (tint/tfloat) and tbox() conversion function forms
+    // (tbool_to_tint / tint_to_tfloat / tfloat_to_tint / tnumber_to_tbox, group
+    // meos_temporal_conversion) are generated from the catalog sqlSignatures in
+    // src/generated/generated_temporal_udfs.cpp (RETIRED_GROUPS) — incl the tbigint
+    // overloads the hand layer was missing.
+
     duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "tint",
-            {TemporalTypes::tbool()},
-            TemporalTypes::tint(),
-            TemporalFunctions::Tbool_to_tint
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "tfloat",
-            {TemporalTypes::tint()},
-            TemporalTypes::tfloat(),
-            TemporalFunctions::Tint_to_tfloat
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "tint",
-            {TemporalTypes::tfloat()},
-            TemporalTypes::tint(),
-            TemporalFunctions::Tfloat_to_tint
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "tbox",
-            {TemporalTypes::tint()},
-            TboxType::tbox(),
-            TemporalFunctions::Tnumber_to_tbox
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "tbox",
-            {TemporalTypes::tfloat()},
-            TboxType::tbox(),
-            TemporalFunctions::Tnumber_to_tbox
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "getValues",
             {TemporalTypes::tint()},

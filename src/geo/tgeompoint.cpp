@@ -248,14 +248,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Conversion functions
      ****************************************************/
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "timeSpan",
-            {tgeompoint()},
-            SpanTypes::tstzspan(),
-            TgeompointFunctions::Temporal_to_tstzspan
-        )
-    );
+    // timeSpan(tgeompoint) (temporal_to_tstzspan, group meos_temporal_conversion) is
+    // generated from the catalog in generated_temporal_udfs.cpp (RETIRED_GROUPS).
 
     /***************************************************
      * Transformation functions

@@ -1153,12 +1153,7 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tgeometryseqarr_4params);
 
-    auto tgeometry_to_timespan_function = ScalarFunction(
-        "timeSpan",
-        {TGeometryTypes::tgeometry()},     
-        SpanTypes::tstzspan(),               
-        Temporal_to_tstzspan);
-    duckdb::RegisterSerializedScalarFunction(loader,  tgeometry_to_timespan_function);
+    // timeSpan(tgeometry) is generated (meos_temporal_conversion, RETIRED_GROUPS).
 
     auto tgeometry_to_tinstant_function = ScalarFunction(
         "tgeometryInst",

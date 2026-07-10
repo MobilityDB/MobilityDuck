@@ -224,14 +224,8 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Conversion functions
      ****************************************************/
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "timeSpan",
-            {tgeogpoint()},
-            SpanTypes::tstzspan(),
-            TgeompointFunctions::Temporal_to_tstzspan
-        )
-    );
+    // timeSpan(tgeogpoint) (temporal_to_tstzspan, group meos_temporal_conversion) is
+    // generated from the catalog in generated_temporal_udfs.cpp (RETIRED_GROUPS).
 
     /***************************************************
      * Transformation functions
@@ -2595,12 +2589,7 @@ void TGeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
     loader.RegisterFunction( tgeogpointseqarr_4params);
 
-    auto tgeogpoint_to_timespan_function = ScalarFunction(
-        "timeSpan",
-        {TGeogpointType::tgeogpoint()},     
-        SpanTypes::tstzspan(),               
-        Temporal_to_tstzspan);
-    loader.RegisterFunction( tgeogpoint_to_timespan_function);
+    // timeSpan(tgeogpoint) is generated (meos_temporal_conversion, RETIRED_GROUPS).
 
     auto tgeogpoint_to_tinstant_function = ScalarFunction(
         "tgeogpointInst",

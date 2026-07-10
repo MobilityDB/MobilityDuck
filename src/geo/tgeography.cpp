@@ -1152,12 +1152,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
     loader.RegisterFunction( tgeographyseqarr_4params);
 
-    auto tgeography_to_timespan_function = ScalarFunction(
-        "timeSpan",
-        {TGeographyTypes::tgeography()},     
-        SpanTypes::tstzspan(),               
-        Temporal_to_tstzspan);
-    loader.RegisterFunction( tgeography_to_timespan_function);
+    // timeSpan(tgeography) is generated (meos_temporal_conversion, RETIRED_GROUPS).
 
     auto tgeography_to_tinstant_function = ScalarFunction(
         "tgeographyInst",

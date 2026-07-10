@@ -1339,6 +1339,54 @@ def emit_temporal_span(f, kind):
             f"    BinaryExecutor::Execute<string_t, string_t, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
             f"        [&](string_t a, string_t b) {{\n{body}\n        }});\n}}\n")
 
+# ---- Temporal -> container conversion (timeSpan/valueSpan/tbox), sqlSignatures-DRIVEN ----
+# A unary `Temporal -> Span/SpanSet/TBox/STBox` cast (timeSpan=temporal_to_tstzspan,
+# valueSpan=tnumber_to_span, tbox=tnumber_to_tbox). Registration is a PURE PROJECTION of the
+# catalog sqlSignatures — each overload's (temporal arg type -> container ret type) is read
+# straight from the catalog (mechanical, zero heuristic, no `flav`). The container return
+# marshals via PTR_RET (SpanToBlob/TboxToBlob/...), already present.
+SQL_CONTAINER_ACC = {
+    "tstzspan": "SpanTypes::tstzspan()", "intspan": "SpanTypes::intspan()",
+    "bigintspan": "SpanTypes::bigintspan()", "floatspan": "SpanTypes::floatspan()",
+    "datespan": "SpanTypes::datespan()",
+    "tstzspanset": "SpansetTypes::tstzspanset()", "intspanset": "SpansetTypes::intspanset()",
+    "bigintspanset": "SpansetTypes::bigintspanset()", "floatspanset": "SpansetTypes::floatspanset()",
+    "datespanset": "SpansetTypes::datespanset()",
+    "tbox": "TboxType::tbox()", "stbox": "StboxType::stbox()",
+}
+def shape_temporal_to_container(f):
+    """(Temporal) -> Span/SpanSet/TBox/STBox conversion, registered per catalog sqlSignature.
+    Returns (Cbase, [(arg_acc, ret_acc)...]) over the overloads whose BOTH types are registered,
+    or None (no sqlSignatures / unmappable / not this shape) -> the fn is left to the hand layer."""
+    if supported(f) is not None:
+        return None
+    ins, out = classify(f)
+    if out is not None or len(ins) != 1:
+        return None
+    if base(ins[0]["canonical"]) != "Temporal" or not norm(ins[0]["canonical"]).endswith("*"):
+        return None
+    rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
+    if rb not in ("Span", "SpanSet", "TBox", "STBox") or not rn.endswith("*"):
+        return None
+    pairs = []
+    for s in (f.get("sqlSignatures") or []):
+        if len(s["args"]) != 1:
+            continue
+        aacc = SIG_TEMPORAL_ACC.get(s["args"][0]); racc = SQL_CONTAINER_ACC.get(s.get("ret"))
+        if aacc and racc and (aacc, racc) not in pairs:
+            pairs.append((aacc, racc))
+    return (rb, pairs) if pairs else None
+
+def emit_temporal_to_container(f, rb):
+    name = f["name"]; toblob = PTR_RET[rb][1] % "r"      # 'SpanToBlob(result, r)'
+    return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+            f"    EnsureMeosThreadInitialized();\n"
+            f"    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
+            f"        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+            f"            Temporal *t = BlobToTemporal(in);\n            {rb} *r = {name}(t);\n            free(t);\n"
+            f"            if (!r) {{ mask.SetInvalid(idx); return string_t(); }}\n"
+            f"            return {toblob};\n        }});\n}}\n")
+
 def shape_scalar_first(f):
     """(by-value scalar, Temporal) — the mirror of shape_binary. Covers the scalar-first
     overloads the hand registers (ever_eq_int_tint, teq_int_tint, …)."""
@@ -1561,6 +1609,11 @@ RETIRED_GROUPS = {"meos_temporal_analytics_similarity", "meos_temporal_comp_temp
                   "meos_geo_rel_ever", "meos_geo_rel_temp",
                   "meos_geo_bbox_topo",
                   "meos_temporal_math", "meos_temporal_comp_ever",
+                  # Temporal conversions: the tnumber temporal->temporal casts (tint/tbigint/
+                  # tfloat) come from shape_emittable; timeSpan/valueSpan/tbox come from
+                  # shape_temporal_to_container (sqlSignatures-driven). Retire the group as one
+                  # wave once every @sqlfn is generated.
+                  "meos_temporal_conversion",
                   # The temporal value-comparison surface (eEq/aEq/eNe/aNe + tEq/tNe)
                   # for every spatial family is generated from the same comp shape as the
                   # base temporal_comp_* groups (geo×T, T×geo literal regs + the T×T
@@ -1954,6 +2007,28 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             for nm in names:
                 temporal_box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {sig}, {rett}, Gen_{fn}));')
+    # Temporal -> container conversion (timeSpan/valueSpan/tbox), sqlSignatures-driven — the
+    # per-overload (temporal arg type -> container ret type) comes straight from the catalog
+    # (mechanical, no flav). Gated on retired(f): emit+register only for a group being retired
+    # as a coherent wave, so a not-yet-migrated hand @sqlfn (getTime/getValues/stbox/whenTrue,
+    # other groups) is never double-registered against its hand reg.
+    for f in fns:
+        if declared is not None and f["name"] not in declared:
+            continue
+        if not retired(f):
+            continue
+        s = shape_temporal_to_container(f)
+        if s is None:
+            continue
+        STATE["grp"] = f.get("group") or "meos_ungrouped"
+        rb, pairs = s; n_un += 1
+        fn, sqlfn = f["name"], f["sqlfn"]
+        temporal_box_bodies.append(emit_temporal_to_container(f, rb))
+        names = reg_names(f, sqlfn, aliases)
+        for aacc, racc in pairs:
+            for nm in names:
+                temporal_box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                         f'"{reg_name(nm, f)}", {{{aacc}}}, {racc}, Gen_{fn}));')
     # Include order mirrors the hand .cpp files (meos_wrapper + common FIRST, before
     # anything pulls duckdb::Interval into scope; all outside `namespace duckdb`).
     src = ("// GENERATED by tools/codegen_duck_udfs.py from the MEOS-API catalog — DO NOT EDIT.\n"
