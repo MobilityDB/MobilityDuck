@@ -506,7 +506,7 @@ def selem(p):
     if b == "text" and ptr: return "text"
     if b in ELEM_TO_SET and not ptr: return b
     return None
-def poc_set(f):
+def shape_set(f):
     """Set-family shapes. Returns (kind, duck_ret) or None.
       - element-typed predicates (accessor from the scalar element type, NOT the name):
         (Set,scalar)->bool / (scalar,Set)->bool  [contains/contained/left/right/over*]
@@ -524,7 +524,7 @@ def poc_set(f):
         if setp(ins[1]) and e0: return ("scset:" + e0, "LogicalType::BOOLEAN")
     # generic (Set,Set)->Set|bool — base-typed (register over AllTypes), NOT name-scoped:
     # the C names are <op>_set_set (union/minus/intersection/contains/overlaps/...), which the
-    # name-based set_reg_scope misses. Mirror poc_span's contp detection.
+    # name-based set_reg_scope misses. Mirror shape_span's contp detection.
     if len(ins) == 2 and setp(ins[0]) and setp(ins[1]):
         if rb == "Set" and rn.endswith("*"):  return ("b_set", "LogicalType::BLOB")
         if rb == "bool" and "*" not in rn:    return ("b_bool", "LogicalType::BOOLEAN")
@@ -640,7 +640,7 @@ def emit_set(f, kind):
             f"        [&](string_t a, string_t b) {{\n"
             f"            Set *s1 = BlobToSet(a);\n            Set *s2 = BlobToSet(b);\n{inner}\n        }});\n}}\n")
 
-def poc_emittable(f):
+def shape_emittable(f):
     """Guaranteed-compilable AND correctly-scoped subset, or None.
     To avoid emitting a wrong registration we take only the UNAMBIGUOUS shapes:
       - scalar return (int/int64/double/bool) — correct for any temporal type; OR
@@ -706,9 +706,9 @@ SCALAR_ARG = {
     "TimestampTz": ("LogicalType::TIMESTAMP_TZ", "timestamp_tz_t", "DuckDBToMeosTimestamp(a2).value"),
     "DateADT":     ("LogicalType::DATE", "date_t", "ToMeosDate(a2)"),  # single-expr, no lifecycle
 }
-def poc_binary(f):
+def shape_binary(f):
     """Binary Temporal + by-value-scalar shape (BinaryExecutor). Same correctness
-    rules as poc_emittable: scalar return OR generic same-type temporal return."""
+    rules as shape_emittable: scalar return OR generic same-type temporal return."""
     if supported(f) is not None: return None
     ins, out = classify(f)
     if out is not None or len(ins) != 2: return None
@@ -796,7 +796,7 @@ def header_symbols(incl_dir):
             pass
     return syms
 
-def poc_ternary(f):
+def shape_ternary(f):
     """Ternary Temporal + 2 by-value scalars (TernaryExecutor). Same correctness rules."""
     if supported(f) is not None: return None
     ins, out = classify(f)
@@ -836,7 +836,7 @@ def emit_body_ternary(f, kind, arg2, arg3):
             f"            {inner}\n"
             f"        }});\n}}\n")
 
-def poc_binary_tt(f):
+def shape_binary_tt(f):
     """Binary Temporal + Temporal (both via BlobToTemporal) — the big 2-arg shape
     (comparisons, boolean ops, distance, etc.). Both args same temporal type."""
     if supported(f) is not None: return None
@@ -873,7 +873,7 @@ def emit_binary_tt(f, kind):
             f"            {inner}\n"
             f"        }});\n}}\n")
 
-def poc_binary_tt_scalar(f):
+def shape_binary_tt_scalar(f):
     """Two Temporal blobs + one trailing by-value scalar (TernaryExecutor over two
     Temporal args and a scalar). E.g. temporal_lcss_distance(Temporal,Temporal,double)
     — the similarity distance with a threshold. Same correctness rules as binary_tt."""
@@ -916,7 +916,7 @@ def emit_binary_tt_scalar(f, kind, arg3):
             f"            {inner}\n"
             f"        }});\n}}\n")
 
-def poc_geo_temporal(f):
+def shape_geo_temporal(f):
     """Geometry-argument spatial relationships: one Temporal blob + one GSERIALIZED
     (geometry) blob, optional trailing double. The geometry is marshalled
     GeometryToGSerialized(blob, tspatial_srid(t)) — its SRID comes from the sibling
@@ -1010,7 +1010,7 @@ def path_logical_type(flds):
                         for fl in flds)
     return "LogicalType::LIST(LogicalType::STRUCT({%s}))" % members
 
-def poc_path(f):
+def shape_path(f):
     """Binary Temporal+Temporal whose catalog shape.arrayReturn returns a C array of a known
     struct (+ int* count out-param) -> a DuckDB LIST(STRUCT(...)). The frechet/dtw *Path fns.
     NOTE: this shape's struct-pointer return is exactly what supported() rejects ('ret:Match *'),
@@ -1090,7 +1090,7 @@ f"    state.idx += count;\n    output.SetCardinality(count);\n}}\n")
 # (tspatial->geo for STBox, tnumber->{tint,tfloat} for TBox).
 BOX_MARSH = {"STBox": ("BlobToStbox", "StboxType::stbox()"),
              "TBox":  ("BlobToTbox",  "TboxType::tbox()")}
-def poc_temporal_box(f):
+def shape_temporal_box(f):
     if supported(f) is not None: return None
     ins, out = classify(f)
     if out is not None or len(ins) != 2: return None
@@ -1125,7 +1125,7 @@ NUMSPAN_PAIR = {"TemporalTypes::tint()": "SpanTypes::intspan()",
                 "TemporalTypes::tfloat()": "SpanTypes::floatspan()"}
 ALL_TEMPORAL_ACCS = (["TemporalTypes::tint()", "TemporalTypes::tbigint()", "TemporalTypes::tbool()",
                       "TemporalTypes::tfloat()", "TemporalTypes::ttext()"] + GEO_ALLTYPES)
-def poc_temporal_span(f):
+def shape_temporal_span(f):
     if supported(f) is not None: return None
     ins, out = classify(f)
     if out is not None or len(ins) != 2: return None
@@ -1162,8 +1162,8 @@ def emit_temporal_span(f, kind):
             f"    BinaryExecutor::Execute<string_t, string_t, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
             f"        [&](string_t a, string_t b) {{\n{body}\n        }});\n}}\n")
 
-def poc_scalar_first(f):
-    """(by-value scalar, Temporal) — the mirror of poc_binary. Covers the scalar-first
+def shape_scalar_first(f):
+    """(by-value scalar, Temporal) — the mirror of shape_binary. Covers the scalar-first
     overloads the hand registers (ever_eq_int_tint, teq_int_tint, …)."""
     if supported(f) is not None: return None
     ins, out = classify(f)
@@ -1230,7 +1230,7 @@ def ret_span_type(name, arg_acc):
 
 # SpanSet mirrors Span (varlena -> spanset_mem_size; SpansetTypes accessors verified
 # lowercase spanset.hpp + meos_catalog.c). Same shapes -> handled by the SAME collection
-# machinery (poc_coll/emit_coll) via a descriptor, so SpanSet is added without duplication.
+# machinery (shape_coll/emit_coll) via a descriptor, so SpanSet is added without duplication.
 SPANSET_TYPES = {
     "intspanset": "SpansetTypes::intspanset()", "bigintspanset": "SpansetTypes::bigintspanset()",
     "floatspanset": "SpansetTypes::floatspanset()",
@@ -1264,7 +1264,7 @@ STBOX_C = dict(cbase="STBox", blobto="BlobToStbox", toblob="StboxToBlob",
                elem={}, scope=None, ret=lambda n, a: a, single="StboxType::stbox()")
 TBOX_C  = dict(cbase="TBox",  blobto="BlobToTbox",  toblob="TboxToBlob",
                elem={}, scope=None, ret=lambda n, a: a, single="TboxType::tbox()")
-def poc_span(f, C=SPAN_C):
+def shape_span(f, C=SPAN_C):
     if supported(f) is not None: return None
     if re.search(r'_(transfn|finalfn|combinefn)$', f["name"]): return None
     ins, out = classify(f)
@@ -1404,7 +1404,7 @@ RETIRED_GROUPS = {"meos_temporal_analytics_similarity", "meos_temporal_comp_temp
 # take array returns the generator does not marshal yet AND were never in the hand layer
 # either (git grep: 0 hand regs) - so retiring meos_geo_rel_ever / meos_geo_rel_temp drops
 # none of them; they are additive future work, not a regression. (*Path LIST(STRUCT) returns
-# ARE generated now via poc_path, so they are not listed here.)
+# ARE generated now via shape_path, so they are not listed here.)
 RETIRE_UNCOVERED_OK = {
     "aDisjointPairs", "aDwithinPairs", "aIntersectsPairs", "aTouchesPairs",
     "eDisjointPairs", "eDwithinPairs", "eIntersectsPairs", "eTouchesPairs",
@@ -1462,12 +1462,12 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
     for f in fns:
         if declared is not None and f["name"] not in declared:
             continue            # pin/ABI gate: skip catalog fns absent from the build headers
-        u = poc_emittable(f); b = None if u else poc_binary(f); t = None if (u or b) else poc_ternary(f)
-        tt = None if (u or b or t) else poc_binary_tt(f)
-        tts = None if (u or b or t or tt) else poc_binary_tt_scalar(f)
-        sf = None if (u or b or t or tt or tts) else poc_scalar_first(f)
-        gt = None if (u or b or t or tt or tts or sf) else poc_geo_temporal(f)
-        pp = None if (u or b or t or tt or tts or sf or gt) else poc_path(f)
+        u = shape_emittable(f); b = None if u else shape_binary(f); t = None if (u or b) else shape_ternary(f)
+        tt = None if (u or b or t) else shape_binary_tt(f)
+        tts = None if (u or b or t or tt) else shape_binary_tt_scalar(f)
+        sf = None if (u or b or t or tt or tts) else shape_scalar_first(f)
+        gt = None if (u or b or t or tt or tts or sf) else shape_geo_temporal(f)
+        pp = None if (u or b or t or tt or tts or sf or gt) else shape_path(f)
         if not u and not b and not t and not tt and not tts and not sf and not gt and not pp:
             continue
         STATE["grp"] = f.get("group") or "meos_ungrouped"
@@ -1570,7 +1570,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
     for f in fns:
         if declared is not None and f["name"] not in declared:
             continue
-        s = poc_set(f)
+        s = shape_set(f)
         if s is None:
             continue
         STATE["grp"] = f.get("group") or "meos_ungrouped"
@@ -1650,14 +1650,14 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 for nm in names:
                     set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                              f'"{reg_name(nm, f)}", {sig}, {r2}, Gen_{fn}));')
-    # COLLECTION families (Span + SpanSet) — ONE machinery via descriptor (poc_span/emit_span
+    # COLLECTION families (Span + SpanSet) — ONE machinery via descriptor (shape_span/emit_span
     # take C). Per-container generic list (its own AllTypes loop); specific list shared.
     for C in (SPAN_C, SPANSET_C, STBOX_C, TBOX_C):
         gen = {"Span": span_generic_regs, "SpanSet": spanset_generic_regs}.get(C["cbase"])
         for f in fns:
             if declared is not None and f["name"] not in declared:
                 continue
-            s = poc_span(f, C)
+            s = shape_span(f, C)
             if s is None:
                 continue
             STATE["grp"] = f.get("group") or "meos_ungrouped"
@@ -1737,7 +1737,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
     for f in fns:
         if declared is not None and f["name"] not in declared:
             continue
-        s = poc_temporal_box(f)
+        s = shape_temporal_box(f)
         if s is None:
             continue
         STATE["grp"] = f.get("group") or "meos_ungrouped"
@@ -1756,7 +1756,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
     for f in fns:
         if declared is not None and f["name"] not in declared:
             continue
-        s = poc_temporal_span(f)
+        s = shape_temporal_span(f)
         if s is None:
             continue
         STATE["grp"] = f.get("group") or "meos_ungrouped"
@@ -2096,7 +2096,7 @@ def main():
     print(f"EMITTABLE (POC scalar shapes): {len(emittable)}")
     print("top exclusion reasons:", dict(reasons.most_common(8)))
     print(f"families: {len(by_fam)} ->", dict(sorted(((k, len(v)) for k, v in by_fam.items()), key=lambda x:-x[1])[:10]))
-    poc = [f for f in fns if poc_emittable(f)]
+    poc = [f for f in fns if shape_emittable(f)]
     print(f"\nCOMPILABLE-POC subset (unary generic-Temporal*, full bodies): {len(poc)}")
     if out:
         hdr = pos[2] if len(pos) > 2 else None
