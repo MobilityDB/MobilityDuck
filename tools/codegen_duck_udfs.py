@@ -451,8 +451,25 @@ def set_scalar_param_sigs(f):
     for s in two:
         acc = SET_SQL_TO_ACC.get(s["args"][0])
         if acc:
-            out.append((acc, SET_SQL_TO_ACC.get(s["ret"], acc)))
+            defs = s.get("argDefaults") or [None] * len(s["args"])
+            out.append((acc, SET_SQL_TO_ACC.get(s["ret"], acc), defs[1]))
     return out                                        # may be [] (only extended sets)
+
+def sql_default_to_cpp(val):
+    """A SQL DEFAULT literal -> the C++ literal to substitute for the omitted argument.
+    NULL -> nullptr, TRUE/FALSE -> true/false, a numeric literal (0/15/0.0) verbatim."""
+    u = val.strip().upper()
+    return {"NULL": "nullptr", "TRUE": "true", "FALSE": "false"}.get(u, val.strip())
+
+def emit_set_defaulted_unary(name, dval):
+    """The shorter (Set)->Set overload of a (Set, scalar-param DEFAULT)->Set function:
+    a UnaryExecutor body calling the MEOS fn with the SQL-declared default substituted."""
+    return (f"static void Gen_{name}_d(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+            f"    EnsureMeosThreadInitialized();\n"
+            f"    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),\n"
+            f"        [&](string_t a) {{\n"
+            f"            Set *s = BlobToSet(a);\n            Set *r = {name}(s, {dval});\n            free(s);\n"
+            f"            return SetToBlob(result, r);\n        }});\n}}\n")
 
 # Element scalar type -> the Set type it implies (for contains/contained/left/...
 # predicates the set type is picked by the element, not the name). Only the
@@ -1508,11 +1525,20 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             scd = "LogicalType::VARCHAR" if b == "text" else SCALAR_ARG[b][0]
             # scalar-param: register over the catalog-declared core set types (round->floatset);
             # element-add: the accessor is the element's set type (setUnion(intset)->intset).
-            pairs = sp if sp is not None else [(ELEM_TO_SET[b], ELEM_TO_SET[b])]
-            for acc, rett in pairs:
+            pairs = sp if sp is not None else [(ELEM_TO_SET[b], ELEM_TO_SET[b], None)]
+            dflt = next((d for *_, d in pairs if d is not None), None)
+            for acc, rett, _d in pairs:
                 for nm in names:
                     set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                              f'"{reg_name(nm, f)}", {{{acc}, {scd}}}, {rett}, Gen_{fn}));')
+            # A SQL-optional trailing param (round's precision DEFAULT 0) is callable at the
+            # shorter arity; emit the (Set)->Set overload with the catalog default substituted.
+            if dflt is not None:
+                set_bodies.append(emit_set_defaulted_unary(fn, sql_default_to_cpp(dflt)))
+                for acc, rett, _d in pairs:
+                    for nm in names:
+                        set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                                 f'"{reg_name(nm, f)}", {{{acc}}}, {rett}, Gen_{fn}_d));')
             continue
         if kind.startswith("setsc:") or kind.startswith("scset:"):
             b = kind.split(':')[1]; acc = ELEM_TO_SET[b]

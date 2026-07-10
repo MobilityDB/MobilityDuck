@@ -220,13 +220,9 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("ceil", {SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Floatset_ceil)                 
         );
 
-        // The 2-arg round(floatset, integer) is generated (generated_temporal_udfs.cpp,
-        // from the catalog set_round signature). Only the 1-arg round(floatset) default-arg
-        // form stays hand-registered: the catalog carries sqlArity=1..2 but no default value,
-        // so the generator cannot yet emit the shorter overload (a catalog-gated remnant).
-        duckdb::RegisterSerializedScalarFunction(loader,
-            ScalarFunction("round", {SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Floatset_round)
-        );
+        // round(floatset) and round(floatset, integer) are both generated
+        // (generated_temporal_udfs.cpp) from the catalog set_round signature and its
+        // integer DEFAULT 0 (sqlSignatures argDefaults), so no hand registration remains.
 
         duckdb::RegisterSerializedScalarFunction(loader,
             ScalarFunction("degrees", {SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Floatset_degrees)

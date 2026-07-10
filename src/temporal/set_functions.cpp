@@ -1227,36 +1227,7 @@ void SetFunctions::Floatset_ceil(DataChunk &args, ExpressionState &state, Vector
         });
 }
 
-// --- Round (floatset) ---
-void SetFunctions::Floatset_round(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input_vec = args.data[0];
-    input_vec.Flatten(args.size());
-
-    bool has_digits = args.ColumnCount() > 1;
-    Vector *digits_vec_ptr = has_digits ? &args.data[1] : nullptr;
-    if (has_digits) digits_vec_ptr->Flatten(args.size());
-
-    for (idx_t i = 0; i < args.size(); i++) {
-        if (FlatVector::IsNull(input_vec, i) || (has_digits && FlatVector::IsNull(*digits_vec_ptr, i))) {
-            FlatVector::SetNull(result, i, true);
-            continue;
-        }
-
-        auto blob = FlatVector::GetData<string_t>(input_vec)[i];
-        int digits = has_digits ? FlatVector::GetData<int32_t>(*digits_vec_ptr)[i] : 0;
-
-        const uint8_t *data = (const uint8_t *)blob.GetData();
-        size_t size = blob.GetSize();
-
-        Set *s = (Set *)malloc(size);
-        memcpy(s, data, size);
-        Set *r = set_round(s, digits);
-        free(s);
-        string_t str = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-        FlatVector::GetData<string_t>(result)[i] = str;
-        free(r);
-    }
-}
+// Round (floatset) at both arities is generated from the catalog set_round signature.
 
 // --- Degrees (floatset) ---
 void SetFunctions::Floatset_degrees(DataChunk &args, ExpressionState &state, Vector &result) {
