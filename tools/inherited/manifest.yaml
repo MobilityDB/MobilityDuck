@@ -1,0 +1,45 @@
+# Inherited-behaviour generator (DuckDB) — subtype matrix.
+#
+# This is the DuckDB sibling of MobilityDB's tools/codegen/inherited/manifest.yaml.
+# It drives the SAME inherited-behaviour skeleton (the SQL surface every Temporal<T>
+# subtype inherits via late binding + lifting), but the emitted OUTPUT is DuckDB
+# scalar-function registrations instead of PostgreSQL CREATE OPERATOR statements —
+# "same objective, only the output changes".
+#
+# Each behaviour (topops, posops, compops, spatialrels, ...) is UNIFORM-marshalling:
+# the actual work is done by family-agnostic Gen_<op>_<direction> executors (the
+# BLOB×BLOB→bool bridges) that the catalog generator already emits, one per
+# (op, direction). This manifest + the per-behaviour template only wire each family
+# to those shared executors — which is exactly what topops.sql.tmpl does for PG.
+#
+# Modes (tools/inherited/generate.py):
+#   --check      list what would be emitted
+#   --emit       write the registration fragment
+#   --validate   prove the generated wiring == the registrations the catalog
+#                generator currently emits for these families/behaviours
+
+# Temporal<T> subtypes that inherit the spatial (stbox-based) behaviours.
+# `factory` is the DuckDB LogicalType factory for the temporal type — NOT
+# mechanically derivable from the type name (tgeometry -> TGeometryTypes::tgeometry(),
+# tgeompoint -> TgeompointType::tgeompoint()), so it is carried explicitly, the
+# DuckDB analogue of the PG manifest's {TEMP} token.
+subtypes:
+  - temp:     tgeompoint
+    factory:  "TgeompointType::tgeompoint()"
+    brief:    "temporal geometry points"
+    category: tspatial
+
+  - temp:     tgeogpoint
+    factory:  "TgeogpointType::tgeogpoint()"
+    brief:    "temporal geography points"
+    category: tspatial
+
+  - temp:     tgeometry
+    factory:  "TGeometryTypes::tgeometry()"
+    brief:    "temporal geometries"
+    category: tspatial
+
+  - temp:     tgeography
+    factory:  "TGeographyTypes::tgeography()"
+    brief:    "temporal geographies"
+    category: tspatial

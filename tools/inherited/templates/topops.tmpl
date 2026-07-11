@@ -1,0 +1,70 @@
+// ---------------------------------------------------------------------------
+// Topological bounding-box operators for @BRIEF@ (@TEMP@)
+//
+// DuckDB port of MobilityDB tools/codegen/inherited/templates/topops.sql.tmpl.
+// Per operator (contains @>, contained <@, overlaps &&, same ~=, adjacent -|-),
+// the temporal type is wired against its time-dimension bounding box (tstzspan,
+// both directions), its spatiotemporal bounding box (stbox, both directions) and
+// itself (temporal × temporal), through the shared Gen_<op>_<direction> executors.
+// Every operator is registered under both its bare name and its symbol.
+// ---------------------------------------------------------------------------
+
+// -------- Contains --------
+RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {SpanTypes::tstzspan(), @FACTORY@}, LogicalType::BOOLEAN, Gen_contains_tstzspan_temporal));
+RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {SpanTypes::tstzspan(), @FACTORY@}, LogicalType::BOOLEAN, Gen_contains_tstzspan_temporal));
+RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {@FACTORY@, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_contains_temporal_tstzspan));
+RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {@FACTORY@, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_contains_temporal_tstzspan));
+RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {StboxType::stbox(), @FACTORY@}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
+RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {StboxType::stbox(), @FACTORY@}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
+RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {@FACTORY@, StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
+RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {@FACTORY@, StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
+RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {@FACTORY@, @FACTORY@}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
+RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {@FACTORY@, @FACTORY@}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
+
+// -------- Contained --------
+RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {SpanTypes::tstzspan(), @FACTORY@}, LogicalType::BOOLEAN, Gen_contained_tstzspan_temporal));
+RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {SpanTypes::tstzspan(), @FACTORY@}, LogicalType::BOOLEAN, Gen_contained_tstzspan_temporal));
+RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {@FACTORY@, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_contained_temporal_tstzspan));
+RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {@FACTORY@, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_contained_temporal_tstzspan));
+RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {StboxType::stbox(), @FACTORY@}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
+RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {StboxType::stbox(), @FACTORY@}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
+RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {@FACTORY@, StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
+RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {@FACTORY@, StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
+RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {@FACTORY@, @FACTORY@}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
+RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {@FACTORY@, @FACTORY@}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
+
+// -------- Overlaps --------
+RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {SpanTypes::tstzspan(), @FACTORY@}, LogicalType::BOOLEAN, Gen_overlaps_tstzspan_temporal));
+RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {SpanTypes::tstzspan(), @FACTORY@}, LogicalType::BOOLEAN, Gen_overlaps_tstzspan_temporal));
+RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {@FACTORY@, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_overlaps_temporal_tstzspan));
+RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {@FACTORY@, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_overlaps_temporal_tstzspan));
+RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {StboxType::stbox(), @FACTORY@}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
+RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {StboxType::stbox(), @FACTORY@}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
+RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {@FACTORY@, StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
+RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {@FACTORY@, StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
+RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {@FACTORY@, @FACTORY@}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
+RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {@FACTORY@, @FACTORY@}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
+
+// -------- Same --------
+RegisterSerializedScalarFunction(loader, ScalarFunction("same", {SpanTypes::tstzspan(), @FACTORY@}, LogicalType::BOOLEAN, Gen_same_tstzspan_temporal));
+RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {SpanTypes::tstzspan(), @FACTORY@}, LogicalType::BOOLEAN, Gen_same_tstzspan_temporal));
+RegisterSerializedScalarFunction(loader, ScalarFunction("same", {@FACTORY@, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_same_temporal_tstzspan));
+RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {@FACTORY@, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_same_temporal_tstzspan));
+RegisterSerializedScalarFunction(loader, ScalarFunction("same", {StboxType::stbox(), @FACTORY@}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
+RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {StboxType::stbox(), @FACTORY@}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
+RegisterSerializedScalarFunction(loader, ScalarFunction("same", {@FACTORY@, StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
+RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {@FACTORY@, StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
+RegisterSerializedScalarFunction(loader, ScalarFunction("same", {@FACTORY@, @FACTORY@}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
+RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {@FACTORY@, @FACTORY@}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
+
+// -------- Adjacent --------
+RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {SpanTypes::tstzspan(), @FACTORY@}, LogicalType::BOOLEAN, Gen_adjacent_tstzspan_temporal));
+RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {SpanTypes::tstzspan(), @FACTORY@}, LogicalType::BOOLEAN, Gen_adjacent_tstzspan_temporal));
+RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {@FACTORY@, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_adjacent_temporal_tstzspan));
+RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {@FACTORY@, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_adjacent_temporal_tstzspan));
+RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {StboxType::stbox(), @FACTORY@}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
+RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {StboxType::stbox(), @FACTORY@}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
+RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {@FACTORY@, StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
+RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {@FACTORY@, StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
+RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {@FACTORY@, @FACTORY@}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
+RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {@FACTORY@, @FACTORY@}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
