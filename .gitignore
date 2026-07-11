@@ -9,3 +9,6 @@ test/python/__pycache__/
 vcpkg/
 *.log
 examples/quickstart/*.parquet
+
+# Derived in CI from MobilityDB via MEOS-API provision-meos (see .github/workflows/generate.yml); not vendored.
+tools/catalog/meos-idl.json

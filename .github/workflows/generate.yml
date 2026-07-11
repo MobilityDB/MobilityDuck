@@ -1,0 +1,77 @@
+#
+# Derives the MEOS catalog from MobilityDB in CI (instead of committing a
+# meos-idl.json snapshot) and verifies that the committed generated UDF surface
+# still matches a fresh derivation. This is the shared ecosystem model: bindings
+# stop vendoring the catalog and derive it from one MobilityDB commit via the
+# MEOS-API provision-meos action (the JMEOS/Spark/Flink/Kafka pattern).
+#
+name: Derive catalog and verify generated code
+
+on:
+  pull_request:
+    branches:
+      - main
+      - 'feat/**'
+      - 'fix/**'
+    paths-ignore:
+      - '**/README.md'
+      - 'doc/**'
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**/README.md'
+      - 'doc/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.head_ref || '' }}
+  cancel-in-progress: true
+
+jobs:
+  derive-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The catalog is derived from the SAME MobilityDB commit the vcpkg MEOS
+      # port builds libmeos from, so the generated code always matches the
+      # libmeos it is compiled against. The portfile REF is the single source of
+      # truth for that commit — read it here rather than committing a duplicate.
+      - name: Resolve the MobilityDB source commit
+        id: ref
+        run: |
+          sha=$(grep -oE 'REF[[:space:]]+[0-9a-f]{40}' vcpkg_ports/meos/portfile.cmake | grep -oE '[0-9a-f]{40}')
+          if [ -z "$sha" ]; then
+            echo "::error::could not read the MobilityDB REF from vcpkg_ports/meos/portfile.cmake"
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      # Generate meos-idl.json from that commit via the shared MEOS-API action.
+      # Catalog only (build-libmeos: false): the generator is pure Python and
+      # reads the catalog JSON, so no libmeos build is needed here.
+      - name: Provision the MEOS catalog
+        id: provision
+        uses: MobilityDB/MEOS-API/.github/actions/provision-meos@master
+        with:
+          mobilitydb-ref: ${{ steps.ref.outputs.sha }}
+          build-libmeos: "false"
+
+      - name: Stage the catalog
+        run: |
+          mkdir -p tools/catalog
+          cp "${{ steps.provision.outputs.catalog-path }}" tools/catalog/meos-idl.json
+
+      # Regenerate the committed UDF surface and fail if it drifts. The committed
+      # src/generated/*.cpp (compiled by the distribution pipeline) must always
+      # equal a fresh derivation from the current catalog.
+      - name: Regenerate and check for drift
+        run: |
+          python3 tools/codegen_duck_udfs.py \
+            tools/catalog/meos-idl.json \
+            src/generated/generated_temporal_udfs.cpp
+          if ! git diff --exit-code src/generated/; then
+            echo "::error::src/generated is stale — re-run tools/codegen_duck_udfs.py against a freshly derived catalog and commit the result"
+            exit 1
+          fi
