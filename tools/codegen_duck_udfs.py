@@ -1653,7 +1653,12 @@ RETIRED_GROUPS = {"meos_temporal_analytics_similarity", "meos_temporal_comp_temp
                   # over*, value and time axes) — generated from the span/set shapes incl the
                   # mixed span<->spanset case; the hand span_left/set_left + operator regs are
                   # deleted in the same wave.
-                  "meos_setspan_pos"}
+                  "meos_setspan_pos",
+                  # Set/span/spanset topological operators (contains/contained/overlaps/
+                  # adjacent + @>/<@/&&/-|-) — bare names + operators from the span/set shapes,
+                  # both argument orders incl the symmetric adjacent(value, span); the hand
+                  # set_contains/span_contains snake + operator regs are deleted.
+                  "meos_setspan_topo"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).

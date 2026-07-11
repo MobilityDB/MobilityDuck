@@ -354,7 +354,7 @@ SELECT asText(textset '{"highway","car"}' || '_suf');
 # Set operators (MEOS): contains, overlaps, union with value, distance
 
 query I
-SELECT set_contains(intset '{1,2,3}', 2);
+SELECT contains(intset '{1,2,3}', 2);
 ----
 true
 
