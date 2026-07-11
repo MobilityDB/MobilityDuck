@@ -538,22 +538,11 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     const LogicalType DBL = LogicalType::DOUBLE;
     const LogicalType tfloat = TemporalTypes::tfloat();
 
-    // Time-axis position predicates also accept a tstzspan operand on the
-    // non-tspatial side — these reuse the generic temporal_* MEOS exports
-    // rather than the tspatial_* ones since they don't touch the spatial
-    // axes.
-#define TIME_POS_REG(NAME, F_TEMP_TSTZSPAN, F_TSTZSPAN_TEMP) \
-    do { \
-        loader.RegisterFunction(ScalarFunction(NAME, {TGEOM, tstzspan}, BOOL, \
-            TemporalTstzspanBoolExec<F_TEMP_TSTZSPAN>)); \
-        loader.RegisterFunction(ScalarFunction(NAME, {tstzspan, TGEOM}, BOOL, \
-            TstzspanTemporalBoolExec<F_TSTZSPAN_TEMP>)); \
-    } while (0)
-    TIME_POS_REG("temporal_before",     before_temporal_tstzspan,     before_tstzspan_temporal);
-    TIME_POS_REG("temporal_overbefore", overbefore_temporal_tstzspan, overbefore_tstzspan_temporal);
-    TIME_POS_REG("temporal_after",      after_temporal_tstzspan,      after_tstzspan_temporal);
-    TIME_POS_REG("temporal_overafter",  overafter_temporal_tstzspan,  overafter_tstzspan_temporal);
-#undef TIME_POS_REG
+    // Time-axis position predicates on tgeometry × tstzspan (both directions;
+    // before/after/overbefore/overafter, backing fns before_temporal_tstzspan etc.
+    // @ingroup meos_temporal_bbox_pos) are generated from the catalog sqlSignatures
+    // in src/generated/generated_temporal_udfs.cpp. The stale-snake temporal_*
+    // aliases are dropped (bare names supersede them).
 
 
     // -----------------------------------------------------------------
