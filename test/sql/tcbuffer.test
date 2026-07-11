@@ -110,6 +110,18 @@ SELECT asText(atTime(tcbuffer '[Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Poin
 ----
 [Cbuffer(POINT(1 1),0.5)@2000-01-01 00:00:00+01, Cbuffer(POINT(2 2),1)@2000-01-02 00:00:00+01]
 
+# base-value accessors (Temporal<T>: startValue/endValue return the base value = a cbuffer,
+# rendered by the cbuffer output cast in the canonical HEXEWKB point form)
+query I
+SELECT startValue(tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02}');
+----
+Cbuffer(0101000000000000000000F03F000000000000F03F,0.5)
+
+query I
+SELECT endValue(tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02}');
+----
+Cbuffer(010100000000000000000000400000000000000040,1)
+
 # inherited bbox topological operators (same, overlaps)
 query I
 SELECT tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01' ~= tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01';

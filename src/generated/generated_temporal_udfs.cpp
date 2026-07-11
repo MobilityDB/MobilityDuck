@@ -407,6 +407,30 @@ static void Gen_intersection_tbox_tbox(DataChunk &args, ExpressionState &, Vecto
 }
 
 
+// ===== @ingroup meos_cbuffer_accessor =====
+static void Gen_tcbuffer_end_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Cbuffer * r = tcbuffer_end_value(t);
+            free(t);
+            return CbufferToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tcbuffer_start_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Cbuffer * r = tcbuffer_start_value(t);
+            free(t);
+            return CbufferToBlobN(result, r, mask, idx);
+        });
+}
+
+
 // ===== @ingroup meos_cbuffer_comp_ever =====
 static void Gen_always_eq_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -12902,6 +12926,11 @@ static void RegisterGenerated_meos_box_set(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("*", {TboxType::tbox(), TboxType::tbox()}, TboxType::tbox(), Gen_intersection_tbox_tbox));
 }
 
+static void RegisterGenerated_meos_cbuffer_accessor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {CbufferTypes::tcbuffer()}, CbufferTypes::cbuffer(), Gen_tcbuffer_end_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {CbufferTypes::tcbuffer()}, CbufferTypes::cbuffer(), Gen_tcbuffer_start_value));
+}
+
 static void RegisterGenerated_meos_cbuffer_comp_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("aEq", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_always_eq_tcbuffer_tcbuffer));
     RegisterSerializedScalarFunction(loader, ScalarFunction("%=", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_always_eq_tcbuffer_tcbuffer));
@@ -16526,6 +16555,7 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_box_bbox_topo(loader);
     RegisterGenerated_meos_box_comp(loader);
     RegisterGenerated_meos_box_set(loader);
+    RegisterGenerated_meos_cbuffer_accessor(loader);
     RegisterGenerated_meos_cbuffer_comp_ever(loader);
     RegisterGenerated_meos_cbuffer_conversion(loader);
     RegisterGenerated_meos_cbuffer_dist(loader);

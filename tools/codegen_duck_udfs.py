@@ -63,6 +63,13 @@ PTR_RET = {  # MEOS base type -> (DuckDB ret LogicalType, "C++ expr producing st
 # base temporal type of the input (the subtype is erased in SQL), so they emit exactly like a
 # `Temporal *` return; the C++ subtype pointer is upcast to `Temporal *` before marshalling.
 TEMPORAL_PTR_RET = {k for k, v in PTR_RET.items() if v[0] == "MD_TEMPORAL"}
+# Base-value pointer returns: a family's BASE value (Cbuffer today; Npoint/Pose/... follow),
+# neither a temporal handle nor a container. A Temporal<T> Accessor such as startValue/endValue
+# returns the base value via the per-type MEOS symbol (tcbuffer_start_value -> Cbuffer *) and is
+# marshalled by the base-value blob marshaller ({Base}ToBlobN). Derived from PTR_RET so adding a
+# base value there (with its type + {Base}ToBlobN marshaller) auto-enables its accessors.
+_CONTAINER_PTR_RET = {"Set", "Span", "SpanSet", "STBox", "TBox"}
+BASEVAL_PTR_RET = set(PTR_RET) - TEMPORAL_PTR_RET - _CONTAINER_PTR_RET
 # Scalar (by-value) args/returns -> (DuckDB LogicalType, C++ scalar type)
 SCALAR = {
     "int":          ("LogicalType::INTEGER",  "int32_t"),
@@ -732,6 +739,12 @@ def shape_emittable(f):
         return ("scalar:" + rb, scalar_ret_duck(f))
     if rb in ("Interval", "text", "char") and rn.endswith("*"):   # owned-pointer scalar return (duration / text / cstring)
         return ("scalar:" + rb, scalar_ret_duck(f))
+    # base-value pointer return (Temporal<T> accessor: startValue/endValue -> the family base value,
+    # e.g. tcbuffer_start_value -> Cbuffer *). reg_scope keys the per-type MEOS symbol to its own
+    # family (tcbuffer_ prefix -> tcbuffer only), so no cross-type over-registration; the owned
+    # pointer is marshalled + freed by {Base}ToBlobN. `const` returns are borrowed peeks — excluded.
+    if rb in BASEVAL_PTR_RET and rn.endswith("*") and "const" not in f["returnType"]["canonical"]:
+        return ("baseval:" + rb, PTR_RET[rb][0])
     return None
 
 def emit_body(f, kind):
@@ -748,6 +761,18 @@ def emit_body(f, kind):
                 f"            Temporal *r = {subcast}{name}(t);\n"
                 f"            free(t);\n"
                 f"            return TemporalToBlobN(result, r, mask, idx);\n"
+                f"        }});\n}}\n")
+    if kind.startswith("baseval:"):   # (Temporal) -> base value ptr (startValue/endValue -> Cbuffer *)
+        rb = kind.split(":", 1)[1]    # {Base}ToBlobN owns the free + NULL-safe marshalling
+        cct = norm(f["returnType"]["canonical"])   # e.g. "Cbuffer *"
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
+                f"        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                f"            Temporal *t = BlobToTemporal(in);\n"
+                f"            {cct} r = {name}(t);\n"
+                f"            free(t);\n"
+                f"            return {rb}ToBlobN(result, r, mask, idx);\n"
                 f"        }});\n}}\n")
     cct, rett, rexpr = scalar_emit3(f)
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
