@@ -12956,6 +12956,30 @@ static void Gen_temporal_minus_values(DataChunk &args, ExpressionState &, Vector
         });
 }
 
+static void Gen_tnumber_at_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(a);
+            Span *cc = BlobToSpan(b);
+            Temporal *r = tnumber_at_span(t, cc);
+            free(t); free(cc);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tnumber_at_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(a);
+            SpanSet *cc = BlobToSpanSet(b);
+            Temporal *r = tnumber_at_spanset(t, cc);
+            free(t); free(cc);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
 static void Gen_tnumber_at_tbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
@@ -12963,6 +12987,30 @@ static void Gen_tnumber_at_tbox(DataChunk &args, ExpressionState &, Vector &resu
             Temporal *t = BlobToTemporal(a);
             TBox *cc = BlobToTbox(b);
             Temporal *r = tnumber_at_tbox(t, cc);
+            free(t); free(cc);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tnumber_minus_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(a);
+            Span *cc = BlobToSpan(b);
+            Temporal *r = tnumber_minus_span(t, cc);
+            free(t); free(cc);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tnumber_minus_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(a);
+            SpanSet *cc = BlobToSpanSet(b);
+            Temporal *r = tnumber_minus_spanset(t, cc);
             free(t); free(cc);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -16912,9 +16960,21 @@ static void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {TemporalTypes::tbigint(), SetTypes::bigintset()}, TemporalTypes::tbigint(), Gen_temporal_minus_values));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {TemporalTypes::tfloat(), SetTypes::floatset()}, TemporalTypes::tfloat(), Gen_temporal_minus_values));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {TemporalTypes::ttext(), SetTypes::textset()}, TemporalTypes::ttext(), Gen_temporal_minus_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atSpan", {TemporalTypes::tint(), SpanTypes::intspan()}, TemporalTypes::tint(), Gen_tnumber_at_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atSpan", {TemporalTypes::tbigint(), SpanTypes::bigintspan()}, TemporalTypes::tbigint(), Gen_tnumber_at_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atSpan", {TemporalTypes::tfloat(), SpanTypes::floatspan()}, TemporalTypes::tfloat(), Gen_tnumber_at_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atSpanset", {TemporalTypes::tint(), SpansetTypes::intspanset()}, TemporalTypes::tint(), Gen_tnumber_at_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atSpanset", {TemporalTypes::tbigint(), SpansetTypes::bigintspanset()}, TemporalTypes::tbigint(), Gen_tnumber_at_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atSpanset", {TemporalTypes::tfloat(), SpansetTypes::floatspanset()}, TemporalTypes::tfloat(), Gen_tnumber_at_spanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTbox", {TemporalTypes::tint(), TboxType::tbox()}, TemporalTypes::tint(), Gen_tnumber_at_tbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTbox", {TemporalTypes::tbigint(), TboxType::tbox()}, TemporalTypes::tbigint(), Gen_tnumber_at_tbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTbox", {TemporalTypes::tfloat(), TboxType::tbox()}, TemporalTypes::tfloat(), Gen_tnumber_at_tbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusSpan", {TemporalTypes::tint(), SpanTypes::intspan()}, TemporalTypes::tint(), Gen_tnumber_minus_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusSpan", {TemporalTypes::tbigint(), SpanTypes::bigintspan()}, TemporalTypes::tbigint(), Gen_tnumber_minus_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusSpan", {TemporalTypes::tfloat(), SpanTypes::floatspan()}, TemporalTypes::tfloat(), Gen_tnumber_minus_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusSpanset", {TemporalTypes::tint(), SpansetTypes::intspanset()}, TemporalTypes::tint(), Gen_tnumber_minus_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusSpanset", {TemporalTypes::tbigint(), SpansetTypes::bigintspanset()}, TemporalTypes::tbigint(), Gen_tnumber_minus_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusSpanset", {TemporalTypes::tfloat(), SpansetTypes::floatspanset()}, TemporalTypes::tfloat(), Gen_tnumber_minus_spanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTbox", {TemporalTypes::tint(), TboxType::tbox()}, TemporalTypes::tint(), Gen_tnumber_minus_tbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTbox", {TemporalTypes::tbigint(), TboxType::tbox()}, TemporalTypes::tbigint(), Gen_tnumber_minus_tbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTbox", {TemporalTypes::tfloat(), TboxType::tbox()}, TemporalTypes::tfloat(), Gen_tnumber_minus_tbox));
