@@ -109,6 +109,7 @@ set(EXTENSION_SOURCES
     src/geo/tgeogpoint_in_out.cpp
     src/geo/tgeogpoint_ops.cpp
     src/quadbin/tquadbin.cpp
+    src/cbuffer/tcbuffer.cpp
     src/index/rtree_module.cpp
     src/single_tile_getters.cpp
     src/index/rtree_index_create_physical.cpp

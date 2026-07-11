@@ -43,6 +43,7 @@ PTR_IN  = {  # MEOS base type -> (DuckDB arg LogicalType, "C++ expr producing th
     "SpanSet":      ("LogicalType::BLOB", "BlobToSpanSet(%s)"),
     "STBox":        ("LogicalType::BLOB", "BlobToStbox(%s)"),
     "TBox":         ("LogicalType::BLOB", "BlobToTbox(%s)"),
+    "Cbuffer":      ("CbufferTypes::cbuffer()", "BlobToCbuffer(%s)"),
 }
 PTR_RET = {  # MEOS base type -> (DuckDB ret LogicalType, "C++ expr producing string_t from MEOS ptr `%s` in `result`")
     "Temporal":     ("MD_TEMPORAL", "TemporalToBlob(result, %s)"),
@@ -54,6 +55,7 @@ PTR_RET = {  # MEOS base type -> (DuckDB ret LogicalType, "C++ expr producing st
     "SpanSet":      ("LogicalType::BLOB", "SpanSetToBlob(result, %s)"),
     "STBox":        ("LogicalType::BLOB", "StboxToBlob(result, %s)"),
     "TBox":         ("LogicalType::BLOB", "TboxToBlob(result, %s)"),
+    "Cbuffer":      ("CbufferTypes::cbuffer()", "CbufferToBlob(result, %s)"),
 }
 # The temporal-family pointer returns that marshal as one DuckDB temporal handle. A MEOS
 # accessor/cast can return a concrete subtype pointer (TInstant */TSequence */TSequenceSet *
@@ -140,17 +142,42 @@ def ret_type(f, out_canon):
 REGISTERED_FAMILIES = {
     "temporal", "tnumber", "tint", "tbigint", "tfloat", "tbool", "ttext",
     "tgeompoint", "tgeogpoint", "tgeometry", "tgeography", "tgeo", "tspatial", "tquadbin",
+    "tcbuffer", "cbuffer",
 }
 # Every temporal family token the catalog function names use; those NOT in REGISTERED_FAMILIES
 # are the fast-follow families whose DuckDB type the binding does not register yet.
 KNOWN_FAMILIES = REGISTERED_FAMILIES | {
-    "th3index", "tcbuffer", "tnpoint", "tpose", "trgeometry", "trgeo", "tpcpoint", "tpcpatch",
-    "tjsonb", "cbuffer", "npoint", "nsegment", "pose", "pcpoint", "pcpatch", "jsonb", "h3index",
+    "th3index", "tnpoint", "tpose", "trgeometry", "trgeo", "tpcpoint", "tpcpatch",
+    "tjsonb", "npoint", "nsegment", "pose", "pcpoint", "pcpatch", "jsonb", "h3index",
 }
 def unregistered_family_ref(name):
     """The first unregistered family token the name references, else None (in scope)."""
     bad = (set(name.split("_")) & KNOWN_FAMILIES) - REGISTERED_FAMILIES
     return sorted(bad)[0] if bad else None
+
+# Param-name tokens that denote a SPECIFIC temporal family (vs the generic `temp`/`temp1`/
+# `inst`/... used for same-type operands). Read straight from the catalog `params[].name`.
+_PARAM_FAMILY_TOK = re.compile(
+    r'^(tpoint|tfloat|tgeo|tnpoint|tcbuffer|tnumber|tint|tbigint|tbool|ttext'
+    r'|tgeompoint|tgeogpoint|tgeometry|tgeography)')
+def hetero_temporal_args(f):
+    """True when a function's operands are ALL generic `Temporal *` in the C signature but
+    the catalog param NAMES denote two or more DISTINCT temporal families (e.g.
+    tcbuffer_make(tpoint, tfloat) -> tcbuffer). Such a function cannot be typed per-argument
+    from the current catalog — the C args are polymorphic and there are no per-overload
+    sqlSignatures — so the single-family specialization would register WRONG argument types.
+    Excluded until the catalog carries per-arg SQL types (Track B); reachable meanwhile via
+    the text-I/O cast the binding registers by hand."""
+    tps = [p for p in (f.get("params") or [])
+           if base(p.get("canonical", "")) == "Temporal" and norm(p.get("canonical", "")).endswith("*")]
+    if len(tps) < 2:
+        return False
+    fams = set()
+    for p in tps:
+        m = _PARAM_FAMILY_TOK.match(p.get("name") or "")
+        if m:
+            fams.add(m.group(1))
+    return len(fams) >= 2
 
 def supported(f):
     """Reason string if NOT emittable (mirrors Spark's supported()), else None."""
@@ -168,6 +195,9 @@ def supported(f):
     u = unregistered_family_ref(name)
     if u is not None:
         return "unregistered-family:" + u
+    # heterogeneous generic-Temporal operands the catalog can't type per-arg yet (Track B)
+    if hetero_temporal_args(f):
+        return "hetero-temporal-args"
     in_params, out = classify(f)
     if ret_type(f, out) is None:
         return "ret:" + norm(f["returnType"]["canonical"])
@@ -328,6 +358,12 @@ def reg_scope(name):
         return ("types", GEO_ALLTYPES)
     if re.search(r'_(tgeo|tspatial)(?=_|$)', name):
         return ("types", GEO_ALLTYPES)
+    # the circular-buffer temporal family (its own gated spatial type, NOT one of the geo
+    # types): a tcbuffer_* prefix, or a _tcbuffer token anywhere (ever_eq_tcbuffer_tcbuffer,
+    # tdwithin_tcbuffer_tcbuffer, contains_tcbuffer_tcbuffer). GSERIALIZED/Datum-coupled
+    # variants auto-exclude on their unmarshallable arg.
+    if name.startswith("tcbuffer_") or re.search(r'_tcbuffer(?=_|$)', name):
+        return ("types", ["CbufferTypes::tcbuffer()"])
     # temporal-type token ANYWHERE in the name (always_eq_tint_int, ever_lt_tfloat_tfloat,
     # tdistance_tfloat_tfloat, teq_temporal_temporal). Skip if >1 DISTINCT temporal type
     # appears (mixed/ambiguous) — geo tokens (tgeompoint/tgeo/th3index/tnpoint) aren't in
@@ -349,7 +385,8 @@ TO_TYPE = {"tint": "TemporalTypes::tint()", "tbigint": "TemporalTypes::tbigint()
            "tfloat": "TemporalTypes::tfloat()",
            "tbool": "TemporalTypes::tbool()", "ttext": "TemporalTypes::ttext()",
            "tgeometry": "TGeometryTypes::tgeometry()", "tgeography": "TGeographyTypes::tgeography()",
-           "tgeompoint": "TgeompointType::tgeompoint()", "tgeogpoint": "TgeogpointType::tgeogpoint()"}
+           "tgeompoint": "TgeompointType::tgeompoint()", "tgeogpoint": "TgeogpointType::tgeogpoint()",
+           "tcbuffer": "CbufferTypes::tcbuffer()"}
 def ret_temporal_type(name, arg_acc, group="", sql_ret=None):
     # A single, unambiguous SQL return subtype from the catalog names the output
     # temporal type directly (the catalog is the SoT). The name heuristics below are
@@ -372,7 +409,7 @@ def ret_temporal_type(name, arg_acc, group="", sql_ret=None):
         return "TemporalTypes::tfloat()"
     # `<x>_to_<y>` conversions CHANGE type to the target -> the `_to_` suffix names it
     # (geo targets tgeometry/tgeography/tgeompoint/tgeogpoint added alongside the base ones).
-    m = re.search(r'_to_(tint|tbigint|tfloat|tbool|ttext|tgeometry|tgeography|tgeompoint|tgeogpoint)$', name)
+    m = re.search(r'_to_(tint|tbigint|tfloat|tbool|ttext|tgeometry|tgeography|tgeompoint|tgeogpoint|tcbuffer)$', name)
     return TO_TYPE[m.group(1)] if m else arg_acc
 
 # The concrete DuckDB accessors the generic temporal track can emit, keyed by the catalog
@@ -385,6 +422,7 @@ SIG_TEMPORAL_ACC = {
     "ttext":      "TemporalTypes::ttext()",
     "tgeompoint": "TgeompointType::tgeompoint()", "tgeogpoint": "TgeogpointType::tgeogpoint()",
     "tgeometry":  "TGeometryTypes::tgeometry()",  "tgeography": "TGeographyTypes::tgeography()",
+    "tcbuffer":   "CbufferTypes::tcbuffer()",
 }
 def sig_declared_accs(f):
     """The exact temporal-operand types this GENERIC (`Temporal *`) function is CREATE
@@ -2099,6 +2137,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            '#include "geo/tgeogpoint.hpp"\n'
            '#include "geo/tgeometry.hpp"\n'
            '#include "geo/tgeography.hpp"\n'
+           '#include "cbuffer/tcbuffer.hpp"\n'         # CbufferTypes::cbuffer()/tcbuffer()
            '#include "spatial/spatial_types.hpp"\n'   # GeoTypes::GEOMETRY() (duckdb-spatial)
            '#include "geo_util.hpp"\n'                # GeometryToGSerialized(blob, srid)
            '#include "meos_internal.h"\n'
@@ -2156,6 +2195,18 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "    uint8_t *copy = (uint8_t *)malloc(sz);\n"
            "    memcpy(copy, blob.GetData(), sz);\n"
            "    return reinterpret_cast<SpanSet *>(copy);\n}\n"
+           "// Self-contained blob<->Cbuffer marshalling. Cbuffer is a 4-byte-header varlena\n"
+           "// (int32 vl_len_ + point + radius) -> VARSIZE out; the stored BLOB is the raw bytes.\n"
+           "inline string_t CbufferToBlob(Vector &result, Cbuffer *cb) {\n"
+           "    string_t out = StringVector::AddStringOrBlob(result, (const char *)cb, VARSIZE(cb));\n"
+           "    free(cb);\n    return out;\n}\n"
+           "inline string_t CbufferToBlobN(Vector &result, Cbuffer *cb, ValidityMask &mask, idx_t idx) {\n"
+           "    if (!cb) { mask.SetInvalid(idx); return string_t(); }\n    return CbufferToBlob(result, cb);\n}\n"
+           "inline Cbuffer *BlobToCbuffer(string_t blob) {\n"
+           "    size_t sz = blob.GetSize();\n"
+           "    uint8_t *copy = (uint8_t *)malloc(sz);\n"
+           "    memcpy(copy, blob.GetData(), sz);\n"
+           "    return reinterpret_cast<Cbuffer *>(copy);\n}\n"
            "// Self-contained blob<->STBox/TBox marshalling (FIXED-size structs -> sizeof).\n"
            "inline string_t StboxToBlob(Vector &result, STBox *b) {\n"
            "    string_t out = StringVector::AddStringOrBlob(result, (const char *)b, sizeof(STBox));\n"

@@ -1,0 +1,75 @@
+# name: test/sql/tcbuffer.test
+# description: Circular-buffer temporal type (cbuffer / tcbuffer) — type + text I/O and
+#             the catalog-generated operation surface.
+
+require mobilityduck
+
+# ---------------------------------------------------------------------------
+# Type + text I/O (hand-registered boundary; the point renders as HEXEWKB, the
+# canonical #Cbuffer_out() form — asText produces the WKT POINT(..) form).
+# ---------------------------------------------------------------------------
+
+# Static cbuffer value round-trip
+query I
+SELECT cbuffer 'Cbuffer(Point(1 1),0.5)';
+----
+Cbuffer(0101000000000000000000F03F000000000000F03F,0.5)
+
+# tcbuffer instant round-trip
+query I
+SELECT tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01';
+----
+Cbuffer(0101000000000000000000F03F000000000000F03F,0.5)@2000-01-01 00:00:00+01
+
+# tcbuffer sequence round-trip
+query I
+SELECT tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02}';
+----
+{Cbuffer(0101000000000000000000F03F000000000000F03F,0.5)@2000-01-01 00:00:00+01, Cbuffer(010100000000000000000000400000000000000040,1)@2000-01-02 00:00:00+01}
+
+# ---------------------------------------------------------------------------
+# Catalog-generated operation surface (accessors, conversions, distance,
+# spatial relationships) — one thin marshalling shell per MEOS function.
+# ---------------------------------------------------------------------------
+
+# Accessor: number of instants
+query I
+SELECT numInstants(tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02}');
+----
+2
+
+# Accessor: start instant (returns a tcbuffer)
+query I
+SELECT startInstant(tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02}');
+----
+Cbuffer(0101000000000000000000F03F000000000000F03F,0.5)@2000-01-01 00:00:00+01
+
+# Conversion: the radius as a tfloat
+query I
+SELECT tfloat(tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02}');
+----
+{0.5@2000-01-01 00:00:00+01, 1@2000-01-02 00:00:00+01}
+
+# Conversion: the centre trajectory as a tgeompoint
+query I
+SELECT asText(tgeompoint(tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02}'));
+----
+{POINT(1 1)@2000-01-01 00:00:00+01, POINT(2 2)@2000-01-02 00:00:00+01}
+
+# Temporal distance (Point(0 0) to Point(3 4), radii 0) = 5
+query I
+SELECT tDistance(tcbuffer 'Cbuffer(Point(0 0),0)@2000-01-01', tcbuffer 'Cbuffer(Point(3 4),0)@2000-01-01');
+----
+5@2000-01-01 00:00:00+01
+
+# Ever intersects itself
+query I
+SELECT eIntersects(tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01', tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01');
+----
+true
+
+# Ever dwithin 1.0 of a far buffer -> false
+query I
+SELECT eDwithin(tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01', tcbuffer 'Cbuffer(Point(5 5),0.5)@2000-01-01', 1.0);
+----
+false
