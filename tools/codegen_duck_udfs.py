@@ -1658,7 +1658,13 @@ RETIRED_GROUPS = {"meos_temporal_analytics_similarity", "meos_temporal_comp_temp
                   # adjacent + @>/<@/&&/-|-) — bare names + operators from the span/set shapes,
                   # both argument orders incl the symmetric adjacent(value, span); the hand
                   # set_contains/span_contains snake + operator regs are deleted.
-                  "meos_setspan_topo"}
+                  "meos_setspan_topo",
+                  # Temporal bounding-box topological operators (contains/contained/
+                  # overlaps/same/adjacent + @>/<@/&&/~=/-|-) for temporal × temporal,
+                  # temporal × tstzspan, and tnumber × {numspan, tbox} — generated from
+                  # the box/span shapes; the hand temporal_* snake aliases and the mixed
+                  # cross-product operator regs in temporal.cpp are deleted.
+                  "meos_temporal_bbox_topo"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).

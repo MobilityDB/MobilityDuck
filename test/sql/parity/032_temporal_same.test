@@ -1,7 +1,7 @@
-# name: test/sql/parity/032_temporal_same.test
-# description: Same predicate (`~=`) and `temporal_same` named alias on
+# name: test/sql/parity/032_same.test
+# description: Same predicate (`~=`) and `same` named alias on
 #              temporal × {temporal, tstzspan, numspan, tbox} (and reverses).
-#              Closes the deferral from PR #72: temporal_boxops `temporal_same`
+#              Closes the deferral from PR #72: temporal_boxops `same`
 #              is the last named-alias gap in that section, requiring new
 #              Same_* handlers (other 4 ops were already wired).
 # group: [sql]
@@ -12,28 +12,28 @@ require mobilityduck
 
 query I
 SELECT (tint '[1@2000-01-01]' ~= tint '[1@2000-01-01]')
-     = temporal_same(tint '[1@2000-01-01]', tint '[1@2000-01-01]');
+     = same(tint '[1@2000-01-01]', tint '[1@2000-01-01]');
 ----
 true
 
 # Same x temporal — different values
 
 query I
-SELECT temporal_same(tint '[1@2000-01-01]', tint '[2@2000-01-02]');
+SELECT same(tint '[1@2000-01-01]', tint '[2@2000-01-02]');
 ----
 false
 
 # Same on tbool × tbool
 
 query I
-SELECT temporal_same(tbool '[t@2000-01-01]', tbool '[t@2000-01-01]');
+SELECT same(tbool '[t@2000-01-01]', tbool '[t@2000-01-01]');
 ----
 true
 
 # Same on temporal × tstzspan (matching time domain)
 
 query I
-SELECT temporal_same(tint '[1@2000-01-01]', tstzspan '[2000-01-01, 2000-01-01]');
+SELECT same(tint '[1@2000-01-01]', tstzspan '[2000-01-01, 2000-01-01]');
 ----
 true
 
@@ -45,26 +45,26 @@ true
 # Same on tnumber × numspan (matching value domain)
 
 query I
-SELECT temporal_same(tint '[1@2000-01-01, 5@2000-01-05]', intspan '[1, 6)');
+SELECT same(tint '[1@2000-01-01, 5@2000-01-05]', intspan '[1, 6)');
 ----
 true
 
 query I
-SELECT temporal_same(tint '[1@2000-01-01, 5@2000-01-05]', intspan '[2, 6)');
+SELECT same(tint '[1@2000-01-01, 5@2000-01-05]', intspan '[2, 6)');
 ----
 false
 
 # numspan × tnumber
 
 query I
-SELECT temporal_same(intspan '[1, 6)', tint '[1@2000-01-01, 5@2000-01-05]');
+SELECT same(intspan '[1, 6)', tint '[1@2000-01-01, 5@2000-01-05]');
 ----
 true
 
 # Same on tnumber × tbox
 
 query I
-SELECT temporal_same(tint '[1@2000-01-01, 5@2000-01-05]',
+SELECT same(tint '[1@2000-01-01, 5@2000-01-05]',
                      tbox 'TBOXINT XT([1, 6),[2000-01-01, 2000-01-05])');
 ----
 true
@@ -72,7 +72,7 @@ true
 # tbox × tnumber
 
 query I
-SELECT temporal_same(tbox 'TBOXINT XT([1, 6),[2000-01-01, 2000-01-05])',
+SELECT same(tbox 'TBOXINT XT([1, 6),[2000-01-01, 2000-01-05])',
                      tint '[1@2000-01-01, 5@2000-01-05]');
 ----
 true

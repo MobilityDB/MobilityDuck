@@ -1334,46 +1334,12 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, LogicalType::DOUBLE, TemporalFunctions::Nad_tfloat_float));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::DOUBLE, TemporalFunctions::Nad_tfloat_tfloat));
 
-    // Temporal topological predicates: temporal × temporal (5 ops × 4 type pairs).
-    // Each operator also registers the matching `temporal_*` named alias.
-    for (auto &t1 : TemporalTypes::AllTypes()) {
-        for (auto &t2 : TemporalTypes::AllTypes()) {
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",            {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Contains_temporal_temporal));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",            {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Contained_temporal_temporal));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",            {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_temporal_temporal));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("~=",            {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Same_temporal_temporal));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_same", {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Same_temporal_temporal));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-",           {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_temporal_temporal));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contains",  {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Contains_temporal_temporal));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contained", {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Contained_temporal_temporal));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overlaps",  {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_temporal_temporal));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_adjacent",  {t1, t2}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_temporal_temporal));
-        }
-    }
-    // Temporal × tstzspan (and the reverse direction)
-    for (auto &t : TemporalTypes::AllTypes()) {
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",            {t, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, TemporalFunctions::Contains_temporal_tstzspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",            {t, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, TemporalFunctions::Contained_temporal_tstzspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",            {t, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_temporal_tstzspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("~=",            {t, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, TemporalFunctions::Same_temporal_tstzspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_same", {t, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, TemporalFunctions::Same_temporal_tstzspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-",           {t, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_temporal_tstzspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contains",  {t, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, TemporalFunctions::Contains_temporal_tstzspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contained", {t, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, TemporalFunctions::Contained_temporal_tstzspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overlaps",  {t, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_temporal_tstzspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_adjacent",  {t, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_temporal_tstzspan));
-
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",            {SpanTypes::tstzspan(), t}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tstzspan_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",            {SpanTypes::tstzspan(), t}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tstzspan_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",            {SpanTypes::tstzspan(), t}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tstzspan_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("~=",            {SpanTypes::tstzspan(), t}, LogicalType::BOOLEAN, TemporalFunctions::Same_tstzspan_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_same", {SpanTypes::tstzspan(), t}, LogicalType::BOOLEAN, TemporalFunctions::Same_tstzspan_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-",           {SpanTypes::tstzspan(), t}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tstzspan_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contains",  {SpanTypes::tstzspan(), t}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tstzspan_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contained", {SpanTypes::tstzspan(), t}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tstzspan_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overlaps",  {SpanTypes::tstzspan(), t}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tstzspan_temporal));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_adjacent",  {SpanTypes::tstzspan(), t}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tstzspan_temporal));
-    }
+    // Temporal topological predicates (contains/contained/overlaps/same/adjacent +
+    // @>/<@/&&/~=/-|-) for temporal × temporal (same base family) and temporal ×
+    // tstzspan (both directions) are generated from the catalog sqlSignatures in
+    // src/generated/generated_temporal_udfs.cpp (@ingroup meos_temporal_bbox_topo).
+    // The non-canonical temporal_* snake aliases and the spurious mixed-family
+    // cross-product overloads are dropped (bare same-family names supersede them).
 
     // Temporal time-position predicates (before/after/overbefore/overafter for
     // temporal×temporal, temporal×tstzspan both directions, and tgeompoint;
@@ -1414,87 +1380,10 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             TemporalFunctions::Temporal_simplify_min_tdelta));
     }
 
-    // tnumber × {numspan, tbox} topological predicates (4 ops × 8 shape pairs)
-    {
-        auto tint  = TemporalTypes::tint();
-        auto tflt  = TemporalTypes::tfloat();
-        auto ispan = SpanTypes::intspan();
-        auto fspan = SpanTypes::floatspan();
-        auto tbox  = TboxType::tbox();
-
-        // tnumber × numspan (5 ops each: @>, <@, &&, ~=, -|-)
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",             {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",             {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",             {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("~=",             {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Same_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_same",  {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Same_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-",            {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contains",  {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contained", {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overlaps",  {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_adjacent",  {tint, ispan}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",             {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",             {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",             {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("~=",             {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Same_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_same",  {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Same_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-",            {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contains",  {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contained", {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overlaps",  {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tnumber_numspan));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_adjacent",  {tflt, fspan}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tnumber_numspan));
-        // numspan × tnumber
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",             {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Contains_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",             {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Contained_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",             {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("~=",             {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Same_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_same",  {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Same_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-",            {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contains",  {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Contains_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contained", {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Contained_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overlaps",  {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_adjacent",  {ispan, tint}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",             {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Contains_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",             {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Contained_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",             {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("~=",             {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Same_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_same",  {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Same_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-",            {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contains",  {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Contains_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contained", {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Contained_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overlaps",  {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_numspan_tnumber));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_adjacent",  {fspan, tflt}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_numspan_tnumber));
-        // tnumber × tbox
-        for (auto &t : {tint, tflt}) {
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",             {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tnumber_tbox));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",             {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tnumber_tbox));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",             {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tnumber_tbox));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("~=",             {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Same_tnumber_tbox));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_same",  {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Same_tnumber_tbox));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-",            {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tnumber_tbox));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contains",  {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tnumber_tbox));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contained", {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tnumber_tbox));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overlaps",  {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tnumber_tbox));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_adjacent",  {t, tbox}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tnumber_tbox));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("@>",             {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tbox_tnumber));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<@",             {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tbox_tnumber));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&&",             {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tbox_tnumber));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("~=",             {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Same_tbox_tnumber));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_same",  {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Same_tbox_tnumber));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-|-",            {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tbox_tnumber));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contains",  {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Contains_tbox_tnumber));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_contained", {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Contained_tbox_tnumber));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_overlaps",  {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Overlaps_tbox_tnumber));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_adjacent",  {tbox, t}, LogicalType::BOOLEAN, TemporalFunctions::Adjacent_tbox_tnumber));
-        }
-
-        // Numeric-axis position predicates (left/right/overleft/overright for
-        // tnumber × {numspan, tbox, tnumber}, both directions; @ingroup
-        // meos_setspan_pos / meos_temporal_bbox_pos) — bare names AND the <<, >>,
-        // &<, &> operator forms — are generated from the catalog sqlSignatures in
-        // src/generated/generated_temporal_udfs.cpp. The stale-snake temporal_*
-        // aliases are dropped (bare names supersede them).
-    }
+    // tnumber × {numspan, tbox} topological predicates (contains/contained/overlaps/
+    // same/adjacent + @>/<@/&&/~=/-|-, both directions) are generated from the catalog
+    // sqlSignatures (@ingroup meos_temporal_bbox_topo); the temporal_* snake aliases
+    // are dropped. The numeric-axis positional predicates are likewise generated.
 
     // Temporal #= comparison (temporal_teq/tne/tlt/tle/tgt/tge) is generated
     // (group meos_temporal_comp_temp).
