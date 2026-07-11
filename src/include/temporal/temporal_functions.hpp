@@ -140,8 +140,6 @@ struct TemporalFunctions {
     static void Temporal_minus_min(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_at_max(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_minus_max(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tnumber_at_tbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tnumber_minus_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_at_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_minus_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_value_at_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);

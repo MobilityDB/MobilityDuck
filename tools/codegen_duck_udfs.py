@@ -1525,12 +1525,17 @@ def emit_temporal_to_container(f, rb):
             f"            if (!r) {{ mask.SetInvalid(idx); return string_t(); }}\n"
             f"            return {toblob};\n        }});\n}}\n")
 
-# Temporal x finite-subset-of-range -> Temporal restriction (atValues/minusValues), driven by the
-# catalog sqlSignatures pairings (heuristic-free, no flav). The generic temporal_at_values(Temporal,
-# Set) / temporal_minus_values carry explicit [temporal-type, container-type] overloads; register one
-# per pairing whose BOTH accessors are registered (cbufferset/geomset/npointset are skipped until
-# their Duck set type lands). Complements shape_temporal_span, which owns the tstz time restrictions
-# (atTime) and the numspan value restrictions via the name heuristic; this handles what it does not.
+# Temporal x finite-subset-of-domain -> Temporal restriction, driven by the catalog sqlSignatures
+# pairings (heuristic-free, no flav). Covers the two-operand value restrictions whose second operand
+# is a finite-subset representation of the value RANGE: atValues/minusValues (Set-of-T) and
+# atTbox/minusTbox (TBox = the joint value x time box for numbers). Each generic MEOS fn
+# (temporal_at_values, tnumber_at_tbox, ...) carries explicit [temporal-type, container-type]
+# overloads; register one per pairing whose BOTH accessors are registered (cbufferset/geomset are
+# skipped until their Duck set type lands). Complements shape_temporal_span, which owns the tstz time
+# restrictions (atTime) and the numspan value restrictions via the name heuristic; this handles what
+# it does not. The 3-operand box restrictions (atStbox with a border bool) are a separate shape.
+# Marshalling map extends CONT_BLOB with the box types (BlobToTbox/BlobToStbox already emitted).
+RESTRICT_CONT_BLOB = {**CONT_BLOB, "TBox": "BlobToTbox", "STBox": "BlobToStbox"}
 FINITE_SUBSET_ACC = {**SET_TYPES, **SQL_CONTAINER_ACC}
 def shape_temporal_restrict_sig(f):
     if supported(f) is not None: return None
@@ -1538,7 +1543,7 @@ def shape_temporal_restrict_sig(f):
     if out is not None or len(ins) != 2: return None
     if base(ins[0]["canonical"]) != "Temporal" or not norm(ins[0]["canonical"]).endswith("*"): return None
     cont = base(ins[1]["canonical"])
-    if cont not in CONT_BLOB or not norm(ins[1]["canonical"]).endswith("*"): return None
+    if cont not in RESTRICT_CONT_BLOB or not norm(ins[1]["canonical"]).endswith("*"): return None
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
     if rb != "Temporal" or not rn.endswith("*"): return None
     pairs = []
@@ -1549,7 +1554,7 @@ def shape_temporal_restrict_sig(f):
     return (cont, pairs) if pairs else None
 
 def emit_temporal_restrict_sig(f, cont):
-    name = f["name"]; blob = CONT_BLOB[cont]   # NULL-safe: a restriction that removes all -> SQL NULL
+    name = f["name"]; blob = RESTRICT_CONT_BLOB[cont]   # NULL-safe: a restriction that removes all -> SQL NULL
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
             f"    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),\n"

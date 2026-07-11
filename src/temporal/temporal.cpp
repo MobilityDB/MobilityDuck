@@ -1097,41 +1097,11 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "atTbox",
-            {TemporalTypes::tint(), TboxType::tbox()},
-            TemporalTypes::tint(),
-            TemporalFunctions::Tnumber_at_tbox
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "atTbox",
-            {TemporalTypes::tfloat(), TboxType::tbox()},
-            TemporalTypes::tfloat(),
-            TemporalFunctions::Tnumber_at_tbox
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "minusTbox",
-            {TemporalTypes::tint(), TboxType::tbox()},
-            TemporalTypes::tint(),
-            TemporalFunctions::Tnumber_minus_tbox
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "minusTbox",
-            {TemporalTypes::tfloat(), TboxType::tbox()},
-            TemporalTypes::tfloat(),
-            TemporalFunctions::Tnumber_minus_tbox
-        )
-    );
+    // atTbox / minusTbox (TNumber<T>, tbox) are now generated from the catalog
+    // (tnumber_at_tbox / tnumber_minus_tbox, sqlSignatures-driven) — see
+    // src/generated/generated_temporal_udfs.cpp. Behaviour-equivalent to the retired hand
+    // regs (both call the MEOS box restriction), and the generated surface adds the
+    // previously-missing tbigint overload.
 
     // round(tfloat) and round(tfloat, integer) are float-base scalar transforms
     // generated from the catalog (generated_temporal_udfs.cpp): the shorter

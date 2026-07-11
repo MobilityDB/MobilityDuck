@@ -3254,85 +3254,9 @@ void TemporalFunctions::Tnumber_minus_spanset(DataChunk &args, ExpressionState &
     }
 }
 
-void TemporalFunctions::Tnumber_at_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
-    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t temp_str, string_t tbox_str, ValidityMask &mask, idx_t idx) -> string_t {
-            size_t data_size = temp_str.GetSize();
-            if (data_size < sizeof(void*)) {
-                throw InvalidInputException("[Tnumber_at_tbox] Invalid Temporal data: insufficient size");
-            }
-            uint8_t *data_copy = (uint8_t*)malloc(data_size);
-            memcpy(data_copy, temp_str.GetData(), data_size);
-            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-
-            if (tbox_str.GetSize() < sizeof(TBox)) {
-                free(data_copy);
-                throw InvalidInputException("[Tnumber_at_tbox] Invalid TBox data: insufficient size");
-            }
-            TBox *box = (TBox*)malloc(sizeof(TBox));
-            memcpy(box, tbox_str.GetData(), sizeof(TBox));
-
-            Temporal *ret = tnumber_at_tbox(temp, box);
-            if (!ret) {
-                free(box);
-                free(data_copy);
-                mask.SetInvalid(idx);
-                return string_t();
-            }
-            size_t ret_size = temporal_mem_size(ret);
-            string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
-            string_t stored = StringVector::AddStringOrBlob(result, ret_str);
-            free(ret);
-            free(box);
-            free(data_copy);
-            return stored;
-        }
-    );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-void TemporalFunctions::Tnumber_minus_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
-    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t temp_str, string_t tbox_str, ValidityMask &mask, idx_t idx) -> string_t {
-            size_t data_size = temp_str.GetSize();
-            if (data_size < sizeof(void*)) {
-                throw InvalidInputException("[Tnumber_minus_tbox] Invalid Temporal data: insufficient size");
-            }
-            uint8_t *data_copy = (uint8_t*)malloc(data_size);
-            memcpy(data_copy, temp_str.GetData(), data_size);
-            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-
-            if (tbox_str.GetSize() < sizeof(TBox)) {
-                free(data_copy);
-                throw InvalidInputException("[Tnumber_minus_tbox] Invalid TBox data: insufficient size");
-            }
-            TBox *box = (TBox*)malloc(sizeof(TBox));
-            memcpy(box, tbox_str.GetData(), sizeof(TBox));
-
-            Temporal *ret = tnumber_minus_tbox(temp, box);
-            if (!ret) {
-                free(box);
-                free(data_copy);
-                mask.SetInvalid(idx);
-                return string_t();
-            }
-            size_t ret_size = temporal_mem_size(ret);
-            string_t ret_str(reinterpret_cast<const char*>(ret), ret_size);
-            string_t stored = StringVector::AddStringOrBlob(result, ret_str);
-            free(ret);
-            free(box);
-            free(data_copy);
-            return stored;
-        }
-    );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
+// Tnumber_at_tbox / Tnumber_minus_tbox retired: atTbox/minusTbox are generated from the
+// catalog (Gen_tnumber_at_tbox / Gen_tnumber_minus_tbox in generated_temporal_udfs.cpp),
+// which call the same MEOS tnumber_at_tbox / tnumber_minus_tbox.
 
 void TemporalFunctions::Temporal_minus_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(
