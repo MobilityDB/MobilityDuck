@@ -122,6 +122,15 @@ SELECT endValue(tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2
 ----
 Cbuffer(010100000000000000000000400000000000000040,1)
 
+# spatial accessor: convex hull of the swept region. convexHull is a linear (GEOS-polygonized)
+# hull of the traversed area, not a curved CURVEDPOLYGON (see the tcbuffer manual note); a
+# zero-radius input yields the point trajectory's stable, arc-free triangle. The geometry
+# marshals to the DuckDB GEOMETRY type.
+query I
+SELECT ST_AsText(convexHull(tcbuffer '[Cbuffer(Point(0 0),0)@2000-01-01, Cbuffer(Point(3 0),0)@2000-01-02, Cbuffer(Point(3 4),0)@2000-01-03]'));
+----
+POLYGON ((0 0, 3 4, 3 0, 0 0))
+
 # inherited bbox topological operators (same, overlaps)
 query I
 SELECT tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01' ~= tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01';

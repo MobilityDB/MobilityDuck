@@ -128,6 +128,8 @@ def ret_type(f, out_canon):
     rc = f["returnType"]["canonical"]; nc = norm(rc); b = base(rc)
     if b in PTR_RET and nc.endswith("*"):  return (PTR_RET[b][0], "ptr")
     if b in SCALAR and "*" not in nc:      return (SCALAR[b][0], "scalar")
+    if b == "GSERIALIZED" and nc.endswith("*"):  # owned geometry -> DuckDB GEOMETRY (geo marshaller)
+        return ("GeoTypes::GEOMETRY()", "geo")
     if b == "Interval" and nc.endswith("*"):  # owned ptr -> by-value interval_t (TakeInterval)
         return ("LogicalType::INTERVAL", "scalar")
     if b == "text" and nc.endswith("*"):       # owned text* varlena -> VARCHAR (TakeText)
@@ -745,6 +747,17 @@ def shape_emittable(f):
     # pointer is marshalled + freed by {Base}ToBlobN. `const` returns are borrowed peeks — excluded.
     if rb in BASEVAL_PTR_RET and rn.endswith("*") and "const" not in f["returnType"]["canonical"]:
         return ("baseval:" + rb, PTR_RET[rb][0])
+    # spatial accessor returning a geometry (TSpatial<T>: convexHull -> the family's hull
+    # GSERIALIZED). The owned GSERIALIZED marshals to the DuckDB GEOMETRY via the geo helper
+    # (inverse of GeometryToGSerialized); reg_scope keys the per-type symbol to its own family.
+    if rb == "GSERIALIZED" and rn.endswith("*") and "const" not in f["returnType"]["canonical"]:
+        # The geo temporal types carry a HAND geometry-accessor layer (twCentroid/convexHull on
+        # tgeompoint/tgeogpoint/tgeometry/tgeography); a bare generated name double-registers
+        # against it. Emit only for the non-geo spatial families (tcbuffer, …) whose geometry
+        # accessors have no hand reg, until the geo hand layer is retired.
+        if sc[0] == "types" and set(sc[1]).issubset(set(GEO_ALLTYPES)):
+            return None
+        return ("geo", "GeoTypes::GEOMETRY()")
     return None
 
 def emit_body(f, kind):
@@ -773,6 +786,20 @@ def emit_body(f, kind):
                 f"            {cct} r = {name}(t);\n"
                 f"            free(t);\n"
                 f"            return {rb}ToBlobN(result, r, mask, idx);\n"
+                f"        }});\n}}\n")
+    if kind == "geo":   # (Temporal) -> owned GSERIALIZED -> DuckDB GEOMETRY (freed after marshalling)
+        cct = norm(f["returnType"]["canonical"])   # "GSERIALIZED *"
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &state, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
+                f"        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                f"            Temporal *t = BlobToTemporal(in);\n"
+                f"            {cct} r = {name}(t);\n"
+                f"            free(t);\n"
+                f"            if (!r) {{ mask.SetInvalid(idx); return string_t(); }}\n"
+                f"            string_t out = GSerializedToGeometry(r, state, result);\n"
+                f"            free(r);\n"
+                f"            return out;\n"
                 f"        }});\n}}\n")
     cct, rett, rexpr = scalar_emit3(f)
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
