@@ -70,6 +70,15 @@ TEMPORAL_PTR_RET = {k for k, v in PTR_RET.items() if v[0] == "MD_TEMPORAL"}
 # base value there (with its type + {Base}ToBlobN marshaller) auto-enables its accessors.
 _CONTAINER_PTR_RET = {"Set", "Span", "SpanSet", "STBox", "TBox"}
 BASEVAL_PTR_RET = set(PTR_RET) - TEMPORAL_PTR_RET - _CONTAINER_PTR_RET
+# Base-value pointer ARGS: the mirror of BASEVAL_PTR_RET on the input side — a family's BASE
+# value passed by pointer (Cbuffer today; Pose/Npoint/... when their PTR_IN entry + DuckDB type
+# land), as opposed to the temporal handles and the collection/box pointers (owned by other
+# shapes). This is the 2nd operand of the uniform (Temporal<T>, T) -> Temporal<T> range-point
+# restriction (atValue/minusValue) for the pointer-valued base families; marshalled via PTR_IN
+# and freed after the MEOS call.
+_CONTAINER_PTR_IN = {"Temporal", "TInstant", "TSequence", "TSequenceSet",
+                     "Set", "Span", "SpanSet", "STBox", "TBox"}
+BASEVAL_PTR_IN = set(PTR_IN) - _CONTAINER_PTR_IN
 # Scalar (by-value) args/returns -> (DuckDB LogicalType, C++ scalar type)
 SCALAR = {
     "int":          ("LogicalType::INTEGER",  "int32_t"),
@@ -831,10 +840,16 @@ def shape_binary(f):
     if base(ins[0]["canonical"]) != "Temporal" or not norm(ins[0]["canonical"]).endswith("*"): return None
     b2 = base(ins[1]["canonical"]); n2 = norm(ins[1]["canonical"])
     is_text2 = (b2 == "text" and n2.endswith("*"))   # owned text* arg via MakeText
-    if not is_text2 and (b2 not in SCALAR_ARG or "*" in n2): return None
+    is_baseptr2 = (b2 in BASEVAL_PTR_IN and n2.endswith("*"))  # base value by pointer (Cbuffer, ...)
+    if not is_text2 and not is_baseptr2 and (b2 not in SCALAR_ARG or "*" in n2): return None
     sc = reg_scope(f["name"])
     if sc is None: return None
-    arg2 = ("LogicalType::VARCHAR", "string_t", "__TEXT__") if is_text2 else SCALAR_ARG[b2]
+    if is_text2:
+        arg2 = ("LogicalType::VARCHAR", "string_t", "__TEXT__")
+    elif is_baseptr2:                                 # marshal via PTR_IN (BlobTo<Base>) + free after
+        arg2 = (PTR_IN[b2][0], "string_t", "__PTRFREE__:" + b2)
+    else:
+        arg2 = SCALAR_ARG[b2]
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
     if rb in TEMPORAL_PTR_RET and rn.endswith("*"):
         return ("temporal", "MD_TEMPORAL", arg2)
@@ -847,9 +862,14 @@ def shape_binary(f):
 def emit_body_binary(f, kind, arg2):
     name = f["name"]; dt2, cpp2, marsh = arg2
     is_text = (marsh == "__TEXT__")
-    pre = "text *a2t = MakeText(a2);\n            " if is_text else ""
-    call2 = "a2t" if is_text else marsh
-    post = "free(a2t); " if is_text else ""
+    is_ptr = marsh.startswith("__PTRFREE__:")   # base value by pointer: marshal via BlobTo<Base>, then free
+    if is_text:
+        pre, call2, post = "text *a2t = MakeText(a2);\n            ", "a2t", "free(a2t); "
+    elif is_ptr:
+        pb = marsh.split(":", 1)[1]
+        pre, call2, post = f"{pb} *a2p = {PTR_IN[pb][1] % 'a2'};\n            ", "a2p", "free(a2p); "
+    else:
+        pre, call2, post = "", marsh, ""
     subcast = "" if base(f["returnType"]["canonical"]) == "Temporal" else "(Temporal *) "
     if kind == "temporal":          # pointer return -> NULL-safe (MEOS NULL -> SQL NULL)
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"

@@ -131,6 +131,25 @@ SELECT ST_AsText(convexHull(tcbuffer '[Cbuffer(Point(0 0),0)@2000-01-01, Cbuffer
 ----
 POLYGON ((0 0, 3 4, 3 0, 0 0))
 
+# range restriction by a base value (Temporal<T>, T): atValue keeps the instants whose value
+# equals the cbuffer, minusValue keeps the complement. The cbuffer 2nd operand is marshalled
+# from its blob, so the whole (tcbuffer, cbuffer) binary surface is generated uniformly.
+query I
+SELECT asText(atValue(tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02}', cbuffer 'Cbuffer(Point(1 1),0.5)'));
+----
+{Cbuffer(POINT(1 1),0.5)@2000-01-01 00:00:00+01}
+
+query I
+SELECT asText(minusValue(tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02}', cbuffer 'Cbuffer(Point(1 1),0.5)'));
+----
+{Cbuffer(POINT(2 2),1)@2000-01-02 00:00:00+01}
+
+# spatial relationship against a static cbuffer value (same (tcbuffer, cbuffer) shape)
+query I
+SELECT eIntersects(tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01', cbuffer 'Cbuffer(Point(1 1),0.5)');
+----
+true
+
 # inherited bbox topological operators (same, overlaps)
 query I
 SELECT tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01' ~= tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01';
