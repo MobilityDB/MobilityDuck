@@ -98,7 +98,7 @@ true
 # =============================================================================
 
 query I
-SELECT temporal_before(t::tgeogpoint, '[2000-01-05, 2000-01-06]'::tstzspan) FROM
+SELECT before(t::tgeogpoint, '[2000-01-05, 2000-01-06]'::tstzspan) FROM
   (VALUES ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
 ----
 true
