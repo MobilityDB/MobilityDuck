@@ -310,6 +310,14 @@ GEO_TYPES = {
     "tgeometry":  "TGeometryTypes::tgeometry()",  "tgeography": "TGeographyTypes::tgeography()",
 }
 GEO_ALLTYPES = list(GEO_TYPES.values())
+# The TSpatial<T> subtypes = the geo types PLUS the other spatial temporal families
+# (tcbuffer first; tnpoint/tpose/trgeometry/th3index/tpcpoint follow). A spatial family
+# inherits the abstract `tspatial_*` surface (SRID/setSRID/transform/asText/asEWKT/atStbox)
+# and the generic Temporal<T> surface by BEING IN THIS LIST — it is looped alongside the geo
+# types by the `tspatial_*` scope and the generic-temporal "all" writer. Distinct from
+# GEO_ALLTYPES, which stays geo-only for the `tgeo` supertype (geometry+geography) and the
+# geometry-argument spatial relationships. Add a new spatial family here to inherit the surface.
+SPATIAL_ALLTYPES = GEO_ALLTYPES + ["CbufferTypes::tcbuffer()"]
 def reg_scope(name):
     """('all', None) generic | ('types', [accessors]) specific | None = not core family.
     Resolves the temporal type from the MobilityDB naming convention: a PREFIX
@@ -351,12 +359,14 @@ def reg_scope(name):
     # speed/... live under this MEOS name); geometry-coupled variants auto-exclude.
     if name.startswith("tpoint_"):
         return ("types", [GEO_TYPES["tgeompoint"], GEO_TYPES["tgeogpoint"]])
-    # the abstract spatial supertype tspatial_* covers all four geo temporal types with
-    # type-preserving results (setSRID/transform/transformPipeline preserve the operand
-    # type; asText/asEWKT return text); geometry-coupled variants auto-exclude.
-    if name.startswith("tspatial_"):
-        return ("types", GEO_ALLTYPES)
-    if re.search(r'_(tgeo|tspatial)(?=_|$)', name):
+    # the abstract spatial supertype tspatial_* covers ALL spatial temporal types (the 4 geo
+    # types + tcbuffer + future spatial families) with type-preserving results (setSRID/
+    # transform/transformPipeline preserve the operand type; asText/asEWKT return text);
+    # geometry-coupled variants auto-exclude. This is the TSpatial<T> inherited surface.
+    if name.startswith("tspatial_") or re.search(r'_tspatial(?=_|$)', name):
+        return ("types", SPATIAL_ALLTYPES)
+    # the geo supertype tgeo covers ONLY geometry+geography (NOT cbuffer/other spatial types).
+    if re.search(r'_tgeo(?=_|$)', name):
         return ("types", GEO_ALLTYPES)
     # the circular-buffer temporal family (its own gated spatial type, NOT one of the geo
     # types): a tcbuffer_* prefix, or a _tcbuffer token anywhere (ever_eq_tcbuffer_tcbuffer,
@@ -526,6 +536,22 @@ def emit_defaulted_unary_temporal(name, subcast, dval):
             f"            Temporal *t = BlobToTemporal(in);\n"
             f"            Temporal *r = {subcast}{name}(t, {dval});\n            free(t);\n"
             f"            return TemporalToBlobN(result, r, mask, idx);\n"
+            f"        }});\n}}\n")
+
+def emit_defaulted_unary_temporal_scalar(f, dval):
+    """The shorter (Temporal)->scalar overload of a (Temporal, scalar-param DEFAULT)->scalar
+    function (duration(temporal[,boolean]), asText/asEWKT(tspatial[,int])): a UnaryExecutor
+    calling the MEOS fn with the trailing default substituted, marshalling the by-value/owned
+    scalar return exactly like emit_body's scalar branch (scalar_emit3)."""
+    name = f["name"]
+    cct, rett, rexpr = scalar_emit3(f)
+    return (f"static void Gen_{name}_d(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+            f"    EnsureMeosThreadInitialized();\n"
+            f"    UnaryExecutor::Execute<string_t, {rett}>(args.data[0], result, args.size(),\n"
+            f"        [&](string_t in) {{\n"
+            f"            Temporal *t = BlobToTemporal(in);\n"
+            f"            {cct} r = {name}(t, {dval});\n            free(t);\n"
+            f"            return {rexpr};\n"
             f"        }});\n}}\n")
 
 # Element scalar type -> the Set type it implies (for contains/contained/left/...
@@ -1335,11 +1361,13 @@ def emit_temporal_box(f, kind):
 
 # Temporal + span -> bool: topological predicates across the value (numspan) or time
 # (tstzspan) dimension. numspan PAIRS to the tnumber's value type; tstzspan is fixed and
-# applies to every temporal type. ALL_TEMPORAL_ACCS = the full temporal type set (core+geo).
+# applies to every temporal type. ALL_TEMPORAL_ACCS = the full temporal type set (core + all
+# spatial subtypes via SPATIAL_ALLTYPES, so a new spatial family inherits the time-restriction
+# surface atTime/minusTime/deleteTime over tstzspan/tstzset/tstzspanset).
 NUMSPAN_PAIR = {"TemporalTypes::tint()": "SpanTypes::intspan()",
                 "TemporalTypes::tfloat()": "SpanTypes::floatspan()"}
 ALL_TEMPORAL_ACCS = (["TemporalTypes::tint()", "TemporalTypes::tbigint()", "TemporalTypes::tbool()",
-                      "TemporalTypes::tfloat()", "TemporalTypes::ttext()"] + GEO_ALLTYPES)
+                      "TemporalTypes::tfloat()", "TemporalTypes::ttext()"] + SPATIAL_ALLTYPES)
 def shape_temporal_span(f):
     if supported(f) is not None: return None
     ins, out = classify(f)
@@ -1872,6 +1900,22 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     for nm in names:
                         specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                              f'"{reg_name(nm, f)}", {{{a}}}, {r2}, Gen_{fn}_d));')
+        # Same shorter-arity overload for a (Temporal, scalar-param DEFAULT)->SCALAR fn
+        # (duration(temporal[,boolean]) DEFAULT FALSE; asText/asEWKT(tspatial[,int]) DEFAULT 15):
+        # the 1-arg form is canonical SQL but geo-only-hand today — generate it for every type
+        # so a new family inherits it too. The return type is the fixed scalar dret.
+        if b and kind.startswith("scalar:") and trailing_arg_default(f):
+            dflt = sql_default_to_cpp(trailing_arg_default(f))
+            bodies.append(emit_defaulted_unary_temporal_scalar(f, dflt))
+            if scope == "all":
+                for nm in names:
+                    generic_regs.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                        f'"{reg_name(nm, f)}", {{type}}, {dret}, Gen_{fn}_d));')
+            else:
+                for a in accs:
+                    for nm in names:
+                        specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                             f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
     # SET family — separate loop (the temporal path above is untouched).
     for f in fns:
         if declared is not None and f["name"] not in declared:
@@ -2301,7 +2345,10 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         b = "static void %s(ExtensionLoader &loader) {\n" % fname
         if tgen.get(g):
             b += _loop("for (auto &type : TemporalTypes::AllTypes()) {", tgen[g])
-            b += _loop("for (auto &type : std::vector<LogicalType>{" + ", ".join(GEO_ALLTYPES) + "}) {", tgen[g])
+            # the generic Temporal<T> surface registers over the spatial subtypes too (geo +
+            # tcbuffer + future) — a spatial family inherits every generic temporal op by being
+            # in SPATIAL_ALLTYPES, not via incidental BLOB-alias coercion.
+            b += _loop("for (auto &type : std::vector<LogicalType>{" + ", ".join(SPATIAL_ALLTYPES) + "}) {", tgen[g])
         b += _flat(tspec.get(g, []))
         if sgen.get(g): b += _loop("for (auto &type : SetTypes::AllTypes()) {", sgen[g])
         b += _flat(sspec.get(g, []))

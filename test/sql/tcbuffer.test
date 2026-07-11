@@ -73,3 +73,50 @@ query I
 SELECT eDwithin(tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01', tcbuffer 'Cbuffer(Point(5 5),0.5)@2000-01-01', 1.0);
 ----
 false
+
+# ---------------------------------------------------------------------------
+# Inherited TSpatial<T> + Temporal<T> surface — tcbuffer is a TSpatial<T> subtype,
+# so it inherits the spatial (asText/asEWKT/SRID/topological) and generic temporal
+# (duration/atTime) behaviour previously confined to the geo types.
+# ---------------------------------------------------------------------------
+
+# asText -> WKT point form (vs the hexewkb of the plain output cast)
+query I
+SELECT asText(tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01');
+----
+Cbuffer(POINT(1 1),0.5)@2000-01-01 00:00:00+01
+
+# asEWKT
+query I
+SELECT asEWKT(tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01');
+----
+Cbuffer(POINT(1 1),0.5)@2000-01-01 00:00:00+01
+
+# SRID (unset -> 0)
+query I
+SELECT SRID(tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01');
+----
+0
+
+# duration of a continuous sequence
+query I
+SELECT duration(tcbuffer '[Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(3 3),1.5)@2000-01-03]');
+----
+2 days
+
+# atTime restricts to a period, interpolating the buffer at the endpoint
+query I
+SELECT asText(atTime(tcbuffer '[Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(3 3),1.5)@2000-01-03]', tstzspan '[2000-01-01,2000-01-02]'));
+----
+[Cbuffer(POINT(1 1),0.5)@2000-01-01 00:00:00+01, Cbuffer(POINT(2 2),1)@2000-01-02 00:00:00+01]
+
+# inherited bbox topological operators (same, overlaps)
+query I
+SELECT tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01' ~= tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01';
+----
+true
+
+query I
+SELECT tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01' && tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01';
+----
+true
