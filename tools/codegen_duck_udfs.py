@@ -1525,6 +1525,40 @@ def emit_temporal_to_container(f, rb):
             f"            if (!r) {{ mask.SetInvalid(idx); return string_t(); }}\n"
             f"            return {toblob};\n        }});\n}}\n")
 
+# Temporal x finite-subset-of-range -> Temporal restriction (atValues/minusValues), driven by the
+# catalog sqlSignatures pairings (heuristic-free, no flav). The generic temporal_at_values(Temporal,
+# Set) / temporal_minus_values carry explicit [temporal-type, container-type] overloads; register one
+# per pairing whose BOTH accessors are registered (cbufferset/geomset/npointset are skipped until
+# their Duck set type lands). Complements shape_temporal_span, which owns the tstz time restrictions
+# (atTime) and the numspan value restrictions via the name heuristic; this handles what it does not.
+FINITE_SUBSET_ACC = {**SET_TYPES, **SQL_CONTAINER_ACC}
+def shape_temporal_restrict_sig(f):
+    if supported(f) is not None: return None
+    ins, out = classify(f)
+    if out is not None or len(ins) != 2: return None
+    if base(ins[0]["canonical"]) != "Temporal" or not norm(ins[0]["canonical"]).endswith("*"): return None
+    cont = base(ins[1]["canonical"])
+    if cont not in CONT_BLOB or not norm(ins[1]["canonical"]).endswith("*"): return None
+    rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
+    if rb != "Temporal" or not rn.endswith("*"): return None
+    pairs = []
+    for s in (f.get("sqlSignatures") or []):
+        if len(s.get("args", [])) != 2: continue
+        aacc = SIG_TEMPORAL_ACC.get(s["args"][0]); cacc = FINITE_SUBSET_ACC.get(s["args"][1])
+        if aacc and cacc and (aacc, cacc) not in pairs: pairs.append((aacc, cacc))
+    return (cont, pairs) if pairs else None
+
+def emit_temporal_restrict_sig(f, cont):
+    name = f["name"]; blob = CONT_BLOB[cont]   # NULL-safe: a restriction that removes all -> SQL NULL
+    return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+            f"    EnsureMeosThreadInitialized();\n"
+            f"    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+            f"        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+            f"            Temporal *t = BlobToTemporal(a);\n            {cont} *cc = {blob}(b);\n"
+            f"            Temporal *r = {name}(t, cc);\n            free(t); free(cc);\n"
+            f"            return TemporalToBlobN(result, r, mask, idx);\n"
+            f"        }});\n}}\n")
+
 def shape_scalar_first(f):
     """(by-value scalar, Temporal) — the mirror of shape_binary. Covers the scalar-first
     overloads the hand registers (ever_eq_int_tint, teq_int_tint, …)."""
@@ -2216,6 +2250,26 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             for nm in names:
                 temporal_box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {sig}, {rett}, Gen_{fn}));')
+    # Temporal x finite-subset-of-range -> Temporal restriction (atValues/minusValues),
+    # sqlSignatures-driven. Runs only for restrictions the flav path (shape_temporal_span) did NOT
+    # claim (atTime), so a function is registered by exactly one path — no double-registration.
+    for f in fns:
+        if declared is not None and f["name"] not in declared:
+            continue
+        if shape_temporal_span(f) is not None:
+            continue
+        s = shape_temporal_restrict_sig(f)
+        if s is None:
+            continue
+        STATE["grp"] = f.get("group") or "meos_ungrouped"
+        cont, pairs = s; n_bin += 1
+        fn, sqlfn = f["name"], f["sqlfn"]
+        temporal_box_bodies.append(emit_temporal_restrict_sig(f, cont))
+        names = reg_names(f, sqlfn, aliases)
+        for tacc, cacc in pairs:
+            for nm in names:
+                temporal_box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                         f'"{reg_name(nm, f)}", {{{tacc}, {cacc}}}, {tacc}, Gen_{fn}));')
     # Temporal -> container conversion (timeSpan/valueSpan/tbox), sqlSignatures-driven — the
     # per-overload (temporal arg type -> container ret type) comes straight from the catalog
     # (mechanical, no flav). Gated on retired(f): emit+register only for a group being retired

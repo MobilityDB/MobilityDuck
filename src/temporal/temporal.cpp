@@ -1011,56 +1011,12 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     mobilityduck::RegisterTemporalDatumAccessor<double>(
         loader, "maxValue", TemporalTypes::tfloat(), LogicalType::DOUBLE, temporal_max_value);
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "atValues",
-            {TemporalTypes::tint(), SetTypes::intset()},
-            TemporalTypes::tint(),
-            TemporalFunctions::Temporal_at_values
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "atValues",
-            {TemporalTypes::tfloat(), SetTypes::floatset()},
-            TemporalTypes::tfloat(),
-            TemporalFunctions::Temporal_at_values
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "atValues",
-            {TemporalTypes::ttext(), SetTypes::textset()},
-            TemporalTypes::ttext(),
-            TemporalFunctions::Temporal_at_values
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "minusValues",
-            {TemporalTypes::tint(), SetTypes::intset()},
-            TemporalTypes::tint(),
-            TemporalFunctions::Temporal_minus_value
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "minusValues",
-            {TemporalTypes::tfloat(), SetTypes::floatset()},
-            TemporalTypes::tfloat(),
-            TemporalFunctions::Temporal_minus_value
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "minusValues",
-            {TemporalTypes::ttext(), SetTypes::textset()},
-            TemporalTypes::ttext(),
-            TemporalFunctions::Temporal_minus_value
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    // atValues / minusValues (Temporal<T>, set-of-T) are now generated from the catalog
+    // (temporal_at_values / temporal_minus_values, sqlSignatures-driven) — see
+    // src/generated/generated_temporal_udfs.cpp. Behaviour-equivalent to the retired hand
+    // regs (both call the MEOS set restriction), and the generated surface adds the
+    // previously-missing tbigint overload.
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "whenTrue",
             {TemporalTypes::tbool()},
