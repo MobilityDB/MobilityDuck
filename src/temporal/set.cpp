@@ -10,7 +10,6 @@
 #include "time_util.hpp"
 #include "mobilityduck/meos_exec_serial.hpp"
 
-
 extern "C" {
     #include "meos.h"    
     #include "meos_internal.h"   
@@ -321,7 +320,6 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<@", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Contained_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<@", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Contained_set_set));
 
-    // --- set_overlaps / && ---
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overlaps", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Overlaps_set_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overlaps", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Overlaps_set_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overlaps", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Overlaps_set_set));
@@ -334,158 +332,6 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&&", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Overlaps_set_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&&", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Overlaps_set_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&&", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Overlaps_set_set));
-
-    // --- Position: set_left / << ---
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_left", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_left", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_left", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_left", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_left", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_left", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_left", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_left", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_left", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_left", {LogicalType::VARCHAR, SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_left", {SetTypes::textset(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_left", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_left", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_left", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_left", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_left", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_left", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_left", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {LogicalType::VARCHAR, SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {SetTypes::textset(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Left_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SetFunctions::Left_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Left_set_set));
-
-    // --- set_right / >> ---
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_right", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_right", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_right", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_right", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_right", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_right", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_right", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_right", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_right", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_right", {LogicalType::VARCHAR, SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_right", {SetTypes::textset(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_right", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_right", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_right", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_right", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_right", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_right", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_right", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {LogicalType::VARCHAR, SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {SetTypes::textset(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Right_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SetFunctions::Right_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Right_set_set));
-
-    // --- set_overleft / &< ---
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overleft", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overleft", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overleft", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overleft", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overleft", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overleft", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overleft", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overleft", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overleft", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overleft", {LogicalType::VARCHAR, SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overleft", {SetTypes::textset(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overleft", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overleft", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overleft", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overleft", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overleft", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overleft", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overleft", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {LogicalType::VARCHAR, SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {SetTypes::textset(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Overleft_set_set));
-
-    // --- set_overright / &> ---
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overright", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overright", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overright", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overright", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overright", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overright", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overright", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overright", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overright", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overright", {LogicalType::VARCHAR, SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overright", {SetTypes::textset(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overright", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overright", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overright", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overright", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overright", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overright", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_overright", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {LogicalType::VARCHAR, SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {SetTypes::textset(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {SetTypes::textset(), SetTypes::textset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Overright_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SetFunctions::Overright_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Overright_set_set));
 
     // --- set_union / + (value forms) ---
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_union", {LogicalType::INTEGER, SetTypes::intset()}, SetTypes::intset(), SetFunctions::Union_value_set));
@@ -660,7 +506,6 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<>", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::BOOLEAN, SetFunctions::Set_ne));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<>", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::BOOLEAN, SetFunctions::Set_ne));
 
-
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_lt", {SetTypes::intset(), SetTypes::intset()}, LogicalType::BOOLEAN, SetFunctions::Set_lt));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_lt", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BOOLEAN, SetFunctions::Set_lt));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_lt", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::BOOLEAN, SetFunctions::Set_lt));
@@ -734,7 +579,6 @@ struct SetUnnestBindData : public TableFunctionData {
     SetUnnestBindData(string_t blob, MeosType set_type, LogicalType return_type)
         : blob(std::move(blob)), set_type(set_type), return_type(std::move(return_type)) {}
 };
-
 
 struct SetUnnestGlobalState : public GlobalTableFunctionState {
     idx_t idx = 0;

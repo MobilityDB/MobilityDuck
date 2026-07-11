@@ -1522,6 +1522,17 @@ def shape_span(f, C=SPAN_C):
             and "*" not in norm(ins[1]["canonical"]) and rb == cb and rn.endswith("*")
             and C["scope"] is not None and C["scope"](f["name"]) is not None):
         return ("csc:" + base(ins[1]["canonical"]), "type")
+    # mixed container (Span, SpanSet) / (SpanSet, Span) -> bool : the span<->spanset
+    # positional operators (left/right/overleft/overright span_spanset|spanset_span).
+    # A 1-D span and its spanset order on the same axis, but the two operands are
+    # DIFFERENT containers, so the same-base (X,X) case below skips them. Marshal each
+    # operand as its own container; drive the concrete type pairs from sqlSignatures.
+    # Detect once under Span (cbase=="Span") so it is emitted exactly once, not per-C.
+    if (cb == "Span" and rb == "bool" and "*" not in rn
+            and norm(ins[0]["canonical"]).endswith("*") and norm(ins[1]["canonical"]).endswith("*")):
+        b0, b1 = base(ins[0]["canonical"]), base(ins[1]["canonical"])
+        if {b0, b1} == {"Span", "SpanSet"}:
+            return ("b_mix:%s_%s" % (b0.lower(), b1.lower()), "LogicalType::BOOLEAN")
     # generic (X,X) -> bool|X
     if not (contp(ins[0]) and contp(ins[1])): return None
     if rb == cb and rn.endswith("*"):  return ("b_span", "type")
@@ -1530,6 +1541,17 @@ def shape_span(f, C=SPAN_C):
 
 def emit_span(f, kind, C=SPAN_C):
     name = f["name"]; cb, bt, tb = C["cbase"], C["blobto"], C["toblob"]
+    if kind.startswith("b_mix:"):   # (Span,SpanSet)/(SpanSet,Span) -> bool
+        t0, t1 = kind.split(':', 1)[1].split('_')     # "span"/"spanset" in operand order
+        BT = {"span": "BlobToSpan", "spanset": "BlobToSpanSet"}
+        CT = {"span": "Span", "spanset": "SpanSet"}
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t a, string_t b) {{\n"
+                f"            {CT[t0]} *x = {BT[t0]}(a);\n            {CT[t1]} *y = {BT[t1]}(b);\n"
+                f"            bool r = {name}(x, y);\n            free(x); free(y);\n"
+                f"            return r;\n        }});\n}}\n")
     if kind.startswith("setsc:"):   # (X, scalar) -> bool
         _dt, cpp2, marsh = SCALAR_ARG[kind.split(':')[1]]
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
@@ -1626,7 +1648,12 @@ RETIRED_GROUPS = {"meos_temporal_analytics_similarity", "meos_temporal_comp_temp
                   "meos_npoint_comp_ever", "meos_npoint_comp_temp",
                   "meos_pose_comp_ever", "meos_pose_comp_temp",
                   "meos_rgeo_comp_ever", "meos_rgeo_comp_temp",
-                  "meos_json_comp_ever", "meos_json_comp_temp"}
+                  "meos_json_comp_ever", "meos_json_comp_temp",
+                  # Set/span/spanset relative-position operators (left/right/before/after +
+                  # over*, value and time axes) — generated from the span/set shapes incl the
+                  # mixed span<->spanset case; the hand span_left/set_left + operator regs are
+                  # deleted in the same wave.
+                  "meos_setspan_pos"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
@@ -1902,6 +1929,23 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 for nm in names:
                     span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                               f'"{reg_name(nm, f)}", {sig}, LogicalType::BOOLEAN, Gen_{fn}));')
+                continue
+            # mixed span<->spanset positional: typed per the catalog sqlSignatures
+            # (intspan x intspanset, ...); accessors from the span + spanset type maps.
+            if kind.startswith("b_mix:"):
+                _accmap = {**SPAN_TYPES, **SPANSET_TYPES}
+                _seen = set()
+                for s in (f.get("sqlSignatures") or []):
+                    a0, a1 = _accmap.get(s["args"][0]), _accmap.get(s["args"][1])
+                    if not (a0 and a1):
+                        continue
+                    sig = "{%s, %s}" % (a0, a1)
+                    if sig in _seen:
+                        continue
+                    _seen.add(sig)
+                    for nm in names:
+                        span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                                  f'"{reg_name(nm, f)}", {sig}, LogicalType::BOOLEAN, Gen_{fn}));')
                 continue
             # unary (X)->X|scalar: name-scoped (X_*→AllTypes, <elem>X_*→accessor).
             if kind == "u_span" or kind.startswith("u_scalar:"):

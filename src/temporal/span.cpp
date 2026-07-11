@@ -164,7 +164,6 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("tstzspan", {SpanTypes::datespan()}, SpanTypes::tstzspan(), SpanFunctions::Datespan_to_tstzspan)                 
         );
 
-
         duckdb::RegisterSerializedScalarFunction(loader, 
             ScalarFunction("span", {SetTypes::intset()},SpanTypes::intspan(), SpanFunctions::Set_to_span)
         );
@@ -276,8 +275,6 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction("duration", {SpanTypes::tstzspan()}, LogicalType::INTERVAL, SpanFunctions::Tstzspan_duration)
     );
-
-
 
     // spans(<set_type>) is generated from the catalog (set_spans) in generated_temporal_udfs.cpp.
 
@@ -584,246 +581,7 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("-|-", {SpanTypes::tstzspan(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Adjacent_span_value)    
     );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_left", {SpanTypes::intspan(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Left_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {SpanTypes::intspan(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Left_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_left", {LogicalType::INTEGER, SpanTypes::intspan()}, LogicalType::BOOLEAN, SpanFunctions::Left_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {LogicalType::INTEGER, SpanTypes::intspan()}, LogicalType::BOOLEAN, SpanFunctions::Left_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_left", {SpanTypes::intspan(), SpanTypes::intspan()}, LogicalType::BOOLEAN, SpanFunctions::Left_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {SpanTypes::intspan(), SpanTypes::intspan()}, LogicalType::BOOLEAN, SpanFunctions::Left_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_left", {SpanTypes::bigintspan(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SpanFunctions::Left_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {SpanTypes::bigintspan(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SpanFunctions::Left_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_left", {LogicalType::BIGINT, SpanTypes::bigintspan()}, LogicalType::BOOLEAN, SpanFunctions::Left_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {LogicalType::BIGINT, SpanTypes::bigintspan()}, LogicalType::BOOLEAN, SpanFunctions::Left_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_left", {SpanTypes::bigintspan(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, SpanFunctions::Left_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {SpanTypes::bigintspan(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, SpanFunctions::Left_span_span)
-    );  
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_left", {SpanTypes::floatspan(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SpanFunctions::Left_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {SpanTypes::floatspan(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SpanFunctions::Left_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_left", {LogicalType::DOUBLE, SpanTypes::floatspan()}, LogicalType::BOOLEAN, SpanFunctions::Left_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {LogicalType::DOUBLE, SpanTypes::floatspan()}, LogicalType::BOOLEAN, SpanFunctions::Left_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_left", {SpanTypes::floatspan(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, SpanFunctions::Left_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<", {SpanTypes::floatspan(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, SpanFunctions::Left_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_left", {SpanTypes::datespan(), LogicalType::DATE}, LogicalType::BOOLEAN, SpanFunctions::Left_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<#", {SpanTypes::datespan(), LogicalType::DATE}, LogicalType::BOOLEAN, SpanFunctions::Left_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_left", {LogicalType::DATE, SpanTypes::datespan()}, LogicalType::BOOLEAN, SpanFunctions::Left_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<#", {LogicalType::DATE, SpanTypes::datespan()}, LogicalType::BOOLEAN, SpanFunctions::Left_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_left", {SpanTypes::datespan(), SpanTypes::datespan()}, LogicalType::BOOLEAN, SpanFunctions::Left_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<#", {SpanTypes::datespan(), SpanTypes::datespan()}, LogicalType::BOOLEAN, SpanFunctions::Left_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_left", {SpanTypes::tstzspan(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Left_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<#", {SpanTypes::tstzspan(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Left_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_left", {LogicalType::TIMESTAMP_TZ, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, SpanFunctions::Left_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<#", {LogicalType::TIMESTAMP_TZ, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, SpanFunctions::Left_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_left", {SpanTypes::tstzspan(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, SpanFunctions::Left_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<<#", {SpanTypes::tstzspan(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, SpanFunctions::Left_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_right", {SpanTypes::intspan(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Right_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {SpanTypes::intspan(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Right_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_right", {LogicalType::INTEGER, SpanTypes::intspan()}, LogicalType::BOOLEAN, SpanFunctions::Right_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {LogicalType::INTEGER, SpanTypes::intspan()}, LogicalType::BOOLEAN, SpanFunctions::Right_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_right", {SpanTypes::intspan(), SpanTypes::intspan()}, LogicalType::BOOLEAN, SpanFunctions::Right_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {SpanTypes::intspan(), SpanTypes::intspan()}, LogicalType::BOOLEAN, SpanFunctions::Right_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_right", {SpanTypes::bigintspan(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SpanFunctions::Right_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {SpanTypes::bigintspan(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SpanFunctions::Right_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_right", {LogicalType::BIGINT, SpanTypes::bigintspan()}, LogicalType::BOOLEAN, SpanFunctions::Right_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {LogicalType::BIGINT, SpanTypes::bigintspan()}, LogicalType::BOOLEAN, SpanFunctions::Right_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_right", {SpanTypes::bigintspan(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, SpanFunctions::Right_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {SpanTypes::bigintspan(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, SpanFunctions::Right_span_span)
-    );      
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_right", {SpanTypes::floatspan(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SpanFunctions::Right_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {SpanTypes::floatspan(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SpanFunctions::Right_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_right", {LogicalType::DOUBLE, SpanTypes::floatspan()}, LogicalType::BOOLEAN, SpanFunctions::Right_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {LogicalType::DOUBLE, SpanTypes::floatspan()}, LogicalType::BOOLEAN, SpanFunctions::Right_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_right", {SpanTypes::floatspan(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, SpanFunctions::Right_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(">>", {SpanTypes::floatspan(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, SpanFunctions::Right_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_right", {SpanTypes::datespan(), LogicalType::DATE}, LogicalType::BOOLEAN, SpanFunctions::Right_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("#>>", {SpanTypes::datespan(), LogicalType::DATE}, LogicalType::BOOLEAN, SpanFunctions::Right_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_right", {LogicalType::DATE, SpanTypes::datespan()}, LogicalType::BOOLEAN, SpanFunctions::Right_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("#>>", {LogicalType::DATE, SpanTypes::datespan()}, LogicalType::BOOLEAN, SpanFunctions::Right_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_right", {SpanTypes::datespan(), SpanTypes::datespan()}, LogicalType::BOOLEAN, SpanFunctions::Right_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("#>>", {SpanTypes::datespan(), SpanTypes::datespan()}, LogicalType::BOOLEAN, SpanFunctions::Right_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_right", {SpanTypes::tstzspan(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Right_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("#>>", {SpanTypes::tstzspan(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Right_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_right", {LogicalType::TIMESTAMP_TZ, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, SpanFunctions::Right_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("#>>", {LogicalType::TIMESTAMP_TZ, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, SpanFunctions::Right_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_right", {SpanTypes::tstzspan(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, SpanFunctions::Right_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("#>>", {SpanTypes::tstzspan(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, SpanFunctions::Right_span_span)
-    );  
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overleft", {SpanTypes::intspan(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {SpanTypes::intspan(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overleft", {LogicalType::INTEGER, SpanTypes::intspan()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {LogicalType::INTEGER, SpanTypes::intspan()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overleft", {SpanTypes::intspan(), SpanTypes::intspan()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {SpanTypes::intspan(), SpanTypes::intspan()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overleft", {SpanTypes::bigintspan(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {SpanTypes::bigintspan(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overleft", {LogicalType::BIGINT, SpanTypes::bigintspan()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {LogicalType::BIGINT, SpanTypes::bigintspan()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overleft", {SpanTypes::bigintspan(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {SpanTypes::bigintspan(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_span)
-    );  
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overleft", {SpanTypes::floatspan(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {SpanTypes::floatspan(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overleft", {LogicalType::DOUBLE, SpanTypes::floatspan()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {LogicalType::DOUBLE, SpanTypes::floatspan()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overleft", {SpanTypes::floatspan(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {SpanTypes::floatspan(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overleft", {SpanTypes::datespan(), LogicalType::DATE}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<#", {SpanTypes::datespan(), LogicalType::DATE}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overleft", {LogicalType::DATE, SpanTypes::datespan()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<#", {LogicalType::DATE, SpanTypes::datespan()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overleft", {SpanTypes::datespan(), SpanTypes::datespan()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<#", {SpanTypes::datespan(), SpanTypes::datespan()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overleft", {SpanTypes::tstzspan(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {SpanTypes::tstzspan(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overleft", {LogicalType::TIMESTAMP_TZ, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_value_span)
-    );  
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<", {LogicalType::TIMESTAMP_TZ, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overleft", {SpanTypes::tstzspan(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&<#", {SpanTypes::tstzspan(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, SpanFunctions::Overleft_span_span)
-    );
     
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overright", {SpanTypes::intspan(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {SpanTypes::intspan(), LogicalType::INTEGER}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overright", {LogicalType::INTEGER, SpanTypes::intspan()}, LogicalType::BOOLEAN, SpanFunctions::Overright_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {LogicalType::INTEGER, SpanTypes::intspan()}, LogicalType::BOOLEAN, SpanFunctions::Overright_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overright", {SpanTypes::intspan(), SpanTypes::intspan()}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {SpanTypes::intspan(), SpanTypes::intspan()}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overright", {SpanTypes::bigintspan(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {SpanTypes::bigintspan(), LogicalType::BIGINT}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overright", {LogicalType::BIGINT, SpanTypes::bigintspan()}, LogicalType::BOOLEAN, SpanFunctions::Overright_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overright", {SpanTypes::bigintspan(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {SpanTypes::bigintspan(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_span)
-    );      
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overright", {SpanTypes::floatspan(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {SpanTypes::floatspan(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overright", {LogicalType::DOUBLE, SpanTypes::floatspan()}, LogicalType::BOOLEAN, SpanFunctions::Overright_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {LogicalType::DOUBLE, SpanTypes::floatspan()}, LogicalType::BOOLEAN, SpanFunctions::Overright_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overright", {SpanTypes::floatspan(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("&>", {SpanTypes::floatspan(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overright", {SpanTypes::datespan(), LogicalType::DATE}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("#&>", {SpanTypes::datespan(), LogicalType::DATE}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overright", {LogicalType::DATE, SpanTypes::datespan()}, LogicalType::BOOLEAN, SpanFunctions::Overright_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("#&>", {LogicalType::DATE, SpanTypes::datespan()}, LogicalType::BOOLEAN, SpanFunctions::Overright_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overright", {SpanTypes::datespan(), SpanTypes::datespan()}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("#&>", {SpanTypes::datespan(), SpanTypes::datespan()}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overright", {SpanTypes::tstzspan(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("#&>", {SpanTypes::tstzspan(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_value)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overright", {LogicalType::TIMESTAMP_TZ, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, SpanFunctions::Overright_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("#&>", {LogicalType::TIMESTAMP_TZ, SpanTypes::tstzspan()}, LogicalType::BOOLEAN, SpanFunctions::Overright_value_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_overright", {SpanTypes::tstzspan(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_span)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("#&>", {SpanTypes::tstzspan(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, SpanFunctions::Overright_span_span)
-    );  
-
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_union", {SpanTypes::intspan(), LogicalType::INTEGER}, SpansetTypes::intspanset(), SpanFunctions::Union_span_value)
     );
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_union", {LogicalType::INTEGER, SpanTypes::intspan()}, SpansetTypes::intspanset(), SpanFunctions::Union_value_span)
@@ -1083,7 +841,6 @@ loader.RegisterFunction( ScalarFunction("+", {SpanTypes::tstzspan(), SpanTypes::
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<->", {SpanTypes::tstzspan(), SpanTypes::tstzspan()}, LogicalType::INTERVAL, SpanFunctions::Distance_span_span)
     );
 }
-
 
 } // namespace duckdb
 

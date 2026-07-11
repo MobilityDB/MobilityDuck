@@ -4849,6 +4849,30 @@ static void Gen_left_span_span(DataChunk &args, ExpressionState &, Vector &resul
         });
 }
 
+static void Gen_left_span_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Span *x = BlobToSpan(a);
+            SpanSet *y = BlobToSpanSet(b);
+            bool r = left_span_spanset(x, y);
+            free(x); free(y);
+            return r;
+        });
+}
+
+static void Gen_left_spanset_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            SpanSet *x = BlobToSpanSet(a);
+            Span *y = BlobToSpan(b);
+            bool r = left_spanset_span(x, y);
+            free(x); free(y);
+            return r;
+        });
+}
+
 static void Gen_overafter_date_span(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<date_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
@@ -5015,6 +5039,30 @@ static void Gen_overleft_span_span(DataChunk &args, ExpressionState &, Vector &r
         });
 }
 
+static void Gen_overleft_span_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Span *x = BlobToSpan(a);
+            SpanSet *y = BlobToSpanSet(b);
+            bool r = overleft_span_spanset(x, y);
+            free(x); free(y);
+            return r;
+        });
+}
+
+static void Gen_overleft_spanset_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            SpanSet *x = BlobToSpanSet(a);
+            Span *y = BlobToSpan(b);
+            bool r = overleft_spanset_span(x, y);
+            free(x); free(y);
+            return r;
+        });
+}
+
 static void Gen_overright_bigint_span(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<int64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
@@ -5093,6 +5141,30 @@ static void Gen_overright_span_span(DataChunk &args, ExpressionState &, Vector &
         });
 }
 
+static void Gen_overright_span_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Span *x = BlobToSpan(a);
+            SpanSet *y = BlobToSpanSet(b);
+            bool r = overright_span_spanset(x, y);
+            free(x); free(y);
+            return r;
+        });
+}
+
+static void Gen_overright_spanset_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            SpanSet *x = BlobToSpanSet(a);
+            Span *y = BlobToSpan(b);
+            bool r = overright_spanset_span(x, y);
+            free(x); free(y);
+            return r;
+        });
+}
+
 static void Gen_right_bigint_span(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<int64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
@@ -5167,6 +5239,30 @@ static void Gen_right_span_span(DataChunk &args, ExpressionState &, Vector &resu
             Span *s2 = BlobToSpan(b);
             bool r = right_span_span(s1, s2);
             free(s1); free(s2);
+            return r;
+        });
+}
+
+static void Gen_right_span_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Span *x = BlobToSpan(a);
+            SpanSet *y = BlobToSpanSet(b);
+            bool r = right_span_spanset(x, y);
+            free(x); free(y);
+            return r;
+        });
+}
+
+static void Gen_right_spanset_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            SpanSet *x = BlobToSpanSet(a);
+            Span *y = BlobToSpan(b);
+            bool r = right_spanset_span(x, y);
+            free(x); free(y);
             return r;
         });
 }
@@ -6178,6 +6274,18 @@ static void Gen_adjacent_span_span(DataChunk &args, ExpressionState &, Vector &r
         });
 }
 
+static void Gen_adjacent_span_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Span *x = BlobToSpan(a);
+            SpanSet *y = BlobToSpanSet(b);
+            bool r = adjacent_span_spanset(x, y);
+            free(x); free(y);
+            return r;
+        });
+}
+
 static void Gen_adjacent_span_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, timestamp_tz_t, bool>(args.data[0], args.data[1], result, args.size(),
@@ -6185,6 +6293,18 @@ static void Gen_adjacent_span_timestamptz(DataChunk &args, ExpressionState &, Ve
             Span *s = BlobToSpan(a);
             bool r = adjacent_span_timestamptz(s, DuckDBToMeosTimestamp(a2).value);
             free(s);
+            return r;
+        });
+}
+
+static void Gen_adjacent_spanset_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            SpanSet *x = BlobToSpanSet(a);
+            Span *y = BlobToSpan(b);
+            bool r = adjacent_spanset_span(x, y);
+            free(x); free(y);
             return r;
         });
 }
@@ -6241,6 +6361,30 @@ static void Gen_contained_span_span(DataChunk &args, ExpressionState &, Vector &
             Span *s2 = BlobToSpan(b);
             bool r = contained_span_span(s1, s2);
             free(s1); free(s2);
+            return r;
+        });
+}
+
+static void Gen_contained_span_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Span *x = BlobToSpan(a);
+            SpanSet *y = BlobToSpanSet(b);
+            bool r = contained_span_spanset(x, y);
+            free(x); free(y);
+            return r;
+        });
+}
+
+static void Gen_contained_spanset_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            SpanSet *x = BlobToSpanSet(a);
+            Span *y = BlobToSpan(b);
+            bool r = contained_spanset_span(x, y);
+            free(x); free(y);
             return r;
         });
 }
@@ -6312,6 +6456,18 @@ static void Gen_contains_span_span(DataChunk &args, ExpressionState &, Vector &r
         });
 }
 
+static void Gen_contains_span_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Span *x = BlobToSpan(a);
+            SpanSet *y = BlobToSpanSet(b);
+            bool r = contains_span_spanset(x, y);
+            free(x); free(y);
+            return r;
+        });
+}
+
 static void Gen_contains_span_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, timestamp_tz_t, bool>(args.data[0], args.data[1], result, args.size(),
@@ -6319,6 +6475,18 @@ static void Gen_contains_span_timestamptz(DataChunk &args, ExpressionState &, Ve
             Span *s = BlobToSpan(a);
             bool r = contains_span_timestamptz(s, DuckDBToMeosTimestamp(a2).value);
             free(s);
+            return r;
+        });
+}
+
+static void Gen_contains_spanset_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            SpanSet *x = BlobToSpanSet(a);
+            Span *y = BlobToSpan(b);
+            bool r = contains_spanset_span(x, y);
+            free(x); free(y);
             return r;
         });
 }
@@ -6331,6 +6499,30 @@ static void Gen_overlaps_span_span(DataChunk &args, ExpressionState &, Vector &r
             Span *s2 = BlobToSpan(b);
             bool r = overlaps_span_span(s1, s2);
             free(s1); free(s2);
+            return r;
+        });
+}
+
+static void Gen_overlaps_span_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Span *x = BlobToSpan(a);
+            SpanSet *y = BlobToSpanSet(b);
+            bool r = overlaps_span_spanset(x, y);
+            free(x); free(y);
+            return r;
+        });
+}
+
+static void Gen_overlaps_spanset_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            SpanSet *x = BlobToSpanSet(a);
+            Span *y = BlobToSpan(b);
+            bool r = overlaps_spanset_span(x, y);
+            free(x); free(y);
             return r;
         });
 }
@@ -13113,6 +13305,18 @@ static void RegisterGenerated_meos_setspan_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {SpanTypes::floatspan(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_left_span_float));
     RegisterSerializedScalarFunction(loader, ScalarFunction("left", {SpanTypes::intspan(), LogicalType::INTEGER}, LogicalType::BOOLEAN, Gen_left_span_int));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {SpanTypes::intspan(), LogicalType::INTEGER}, LogicalType::BOOLEAN, Gen_left_span_int));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("left", {SpanTypes::intspan(), SpansetTypes::intspanset()}, LogicalType::BOOLEAN, Gen_left_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {SpanTypes::intspan(), SpansetTypes::intspanset()}, LogicalType::BOOLEAN, Gen_left_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("left", {SpanTypes::bigintspan(), SpansetTypes::bigintspanset()}, LogicalType::BOOLEAN, Gen_left_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {SpanTypes::bigintspan(), SpansetTypes::bigintspanset()}, LogicalType::BOOLEAN, Gen_left_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("left", {SpanTypes::floatspan(), SpansetTypes::floatspanset()}, LogicalType::BOOLEAN, Gen_left_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {SpanTypes::floatspan(), SpansetTypes::floatspanset()}, LogicalType::BOOLEAN, Gen_left_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("left", {SpansetTypes::intspanset(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_left_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {SpansetTypes::intspanset(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_left_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("left", {SpansetTypes::bigintspanset(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_left_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {SpansetTypes::bigintspanset(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_left_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("left", {SpansetTypes::floatspanset(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_left_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {SpansetTypes::floatspanset(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_left_spanset_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {LogicalType::DATE, SpanTypes::datespan()}, LogicalType::BOOLEAN, Gen_overafter_date_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {SpanTypes::datespan(), LogicalType::DATE}, LogicalType::BOOLEAN, Gen_overafter_span_date));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {SpanTypes::tstzspan(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, Gen_overafter_span_timestamptz));
@@ -13133,6 +13337,18 @@ static void RegisterGenerated_meos_setspan_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {SpanTypes::floatspan(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_overleft_span_float));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {SpanTypes::intspan(), LogicalType::INTEGER}, LogicalType::BOOLEAN, Gen_overleft_span_int));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {SpanTypes::intspan(), LogicalType::INTEGER}, LogicalType::BOOLEAN, Gen_overleft_span_int));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {SpanTypes::intspan(), SpansetTypes::intspanset()}, LogicalType::BOOLEAN, Gen_overleft_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {SpanTypes::intspan(), SpansetTypes::intspanset()}, LogicalType::BOOLEAN, Gen_overleft_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {SpanTypes::bigintspan(), SpansetTypes::bigintspanset()}, LogicalType::BOOLEAN, Gen_overleft_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {SpanTypes::bigintspan(), SpansetTypes::bigintspanset()}, LogicalType::BOOLEAN, Gen_overleft_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {SpanTypes::floatspan(), SpansetTypes::floatspanset()}, LogicalType::BOOLEAN, Gen_overleft_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {SpanTypes::floatspan(), SpansetTypes::floatspanset()}, LogicalType::BOOLEAN, Gen_overleft_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {SpansetTypes::intspanset(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_overleft_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {SpansetTypes::intspanset(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_overleft_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {SpansetTypes::bigintspanset(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_overleft_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {SpansetTypes::bigintspanset(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_overleft_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {SpansetTypes::floatspanset(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_overleft_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {SpansetTypes::floatspanset(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_overleft_spanset_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {LogicalType::BIGINT, SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_overright_bigint_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {LogicalType::BIGINT, SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_overright_bigint_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {LogicalType::DOUBLE, SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_overright_float_span));
@@ -13145,6 +13361,18 @@ static void RegisterGenerated_meos_setspan_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {SpanTypes::floatspan(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_overright_span_float));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {SpanTypes::intspan(), LogicalType::INTEGER}, LogicalType::BOOLEAN, Gen_overright_span_int));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {SpanTypes::intspan(), LogicalType::INTEGER}, LogicalType::BOOLEAN, Gen_overright_span_int));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {SpanTypes::intspan(), SpansetTypes::intspanset()}, LogicalType::BOOLEAN, Gen_overright_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {SpanTypes::intspan(), SpansetTypes::intspanset()}, LogicalType::BOOLEAN, Gen_overright_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {SpanTypes::bigintspan(), SpansetTypes::bigintspanset()}, LogicalType::BOOLEAN, Gen_overright_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {SpanTypes::bigintspan(), SpansetTypes::bigintspanset()}, LogicalType::BOOLEAN, Gen_overright_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {SpanTypes::floatspan(), SpansetTypes::floatspanset()}, LogicalType::BOOLEAN, Gen_overright_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {SpanTypes::floatspan(), SpansetTypes::floatspanset()}, LogicalType::BOOLEAN, Gen_overright_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {SpansetTypes::intspanset(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_overright_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {SpansetTypes::intspanset(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_overright_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {SpansetTypes::bigintspanset(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_overright_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {SpansetTypes::bigintspanset(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_overright_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {SpansetTypes::floatspanset(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_overright_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {SpansetTypes::floatspanset(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_overright_spanset_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("right", {LogicalType::BIGINT, SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_right_bigint_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {LogicalType::BIGINT, SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_right_bigint_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("right", {LogicalType::DOUBLE, SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_right_float_span));
@@ -13157,6 +13385,18 @@ static void RegisterGenerated_meos_setspan_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {SpanTypes::floatspan(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_right_span_float));
     RegisterSerializedScalarFunction(loader, ScalarFunction("right", {SpanTypes::intspan(), LogicalType::INTEGER}, LogicalType::BOOLEAN, Gen_right_span_int));
     RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {SpanTypes::intspan(), LogicalType::INTEGER}, LogicalType::BOOLEAN, Gen_right_span_int));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("right", {SpanTypes::intspan(), SpansetTypes::intspanset()}, LogicalType::BOOLEAN, Gen_right_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {SpanTypes::intspan(), SpansetTypes::intspanset()}, LogicalType::BOOLEAN, Gen_right_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("right", {SpanTypes::bigintspan(), SpansetTypes::bigintspanset()}, LogicalType::BOOLEAN, Gen_right_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {SpanTypes::bigintspan(), SpansetTypes::bigintspanset()}, LogicalType::BOOLEAN, Gen_right_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("right", {SpanTypes::floatspan(), SpansetTypes::floatspanset()}, LogicalType::BOOLEAN, Gen_right_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {SpanTypes::floatspan(), SpansetTypes::floatspanset()}, LogicalType::BOOLEAN, Gen_right_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("right", {SpansetTypes::intspanset(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_right_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {SpansetTypes::intspanset(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_right_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("right", {SpansetTypes::bigintspanset(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_right_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {SpansetTypes::bigintspanset(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_right_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("right", {SpansetTypes::floatspanset(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_right_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {SpansetTypes::floatspanset(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_right_spanset_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {LogicalType::DATE, SpansetTypes::datespanset()}, LogicalType::BOOLEAN, Gen_after_date_spanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {SpansetTypes::datespanset(), LogicalType::DATE}, LogicalType::BOOLEAN, Gen_after_spanset_date));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {SpansetTypes::tstzspanset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, Gen_after_spanset_timestamptz));
