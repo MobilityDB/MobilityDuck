@@ -231,7 +231,24 @@ SELECT tfloat '1.5@2000-01-01' > tfloat '{[1.5@2000-01-01, 2.5@2000-01-02, 1.5@2
 ----
 false
 
-query I 
+query I
 SELECT duration(tfloat 'Interp=Step;[1.5@2000-01-01, 2.5@2000-01-02, 1.5@2000-01-03]');
 ----
 2 days
+
+# tsequenceset_make_gaps: split an array of instants into sequences at time gaps (> maxt)
+# and/or value gaps (> maxdist).
+query I
+SELECT tfloatSeqSetGaps([tfloat '1@2000-01-01', tfloat '2@2000-01-02', tfloat '10@2000-01-10'], interval '2 days');
+----
+{[1@2000-01-01 00:00:00+01, 2@2000-01-02 00:00:00+01], [10@2000-01-10 00:00:00+01]}
+
+query I
+SELECT tfloatSeqSetGaps([tfloat '1@2000-01-01', tfloat '2@2000-01-02', tfloat '10@2000-01-03'], interval '5 days', 5.0);
+----
+{[1@2000-01-01 00:00:00+01, 2@2000-01-02 00:00:00+01], [10@2000-01-03 00:00:00+01]}
+
+query I
+SELECT tfloatSeqSetGaps([tfloat '1@2000-01-01', tfloat '2@2000-01-02', tfloat '3@2000-01-03'], interval '5 days', 5.0);
+----
+{[1@2000-01-01 00:00:00+01, 3@2000-01-03 00:00:00+01]}

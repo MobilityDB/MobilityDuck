@@ -2017,6 +2017,151 @@ class GReg:
         return d
     def __len__(self): return len(self.items)
 
+# ---- Temporal constructor / transform NAME FAMILY (per-sqlName over the core types) ----
+# One base-type-generic MEOS wrapper backs a per-type SQL name FAMILY: temporal_to_tinstant is
+# exposed as tintInst/tbigintInst/.../ttextInst, tsequence_make as tintSeq/..., etc. The catalog
+# sqlSignatures carry each overload's own `sqlName`, so the generator registers every core-type name
+# from the catalog rather than the single representative. Scoped to the 5 CORE
+# types (TemporalTypes::AllTypes) — the geo/cbuffer constructors live in their own family files, so
+# emitting them here would double-register. This self-contained path (like the NxN `ga` path) REPLACES
+# the hand loop in src/temporal/temporal.cpp; the hand loop is deleted in the same wave to avoid a
+# bare-name collision. tsequenceset_make_gaps is NOT included yet (needs DuckDB->MEOS Interval
+# marshalling; absent from the hand loop today, so deferring it is a pure follow-on, no regression).
+CORE_CTOR_ACC = {
+    "tint": "TemporalTypes::tint()", "tbigint": "TemporalTypes::tbigint()",
+    "tbool": "TemporalTypes::tbool()", "tfloat": "TemporalTypes::tfloat()",
+    "ttext": "TemporalTypes::ttext()",
+}
+TEMPORAL_CTOR = {
+    "temporal_to_tinstant":     "to_inst",     # <t>Inst(<t>)
+    "temporal_to_tsequence":    "to_seq",      # <t>Seq(<t>[, text interp])
+    "temporal_to_tsequenceset": "to_seqset",   # <t>SeqSet(<t>[, text interp])
+    "tsequence_make":           "make_seq",    # <t>Seq(<t>[][, text, bool, bool])
+    "tsequenceset_make":        "make_seqset", # <t>SeqSet(<t>[])
+    "tsequenceset_make_gaps":   "make_gaps",   # <t>SeqSetGaps(<t>[][, interval maxt, float maxdist, text])
+}
+def shape_temporal_ctor(f):
+    return TEMPORAL_CTOR.get(f["name"])
+
+def ctor_arg_slot(a, acc):
+    """A catalog SQL arg type -> the DuckDB LogicalType slot for a constructor overload."""
+    if a.endswith("[]"): return f"LogicalType::LIST({acc})"
+    if a == "text":      return "LogicalType::VARCHAR"
+    if a == "boolean":   return "LogicalType::BOOLEAN"
+    if a == "interval":  return "LogicalType::INTERVAL"
+    if a == "float":     return "LogicalType::DOUBLE"
+    return acc                                  # the temporal operand itself
+
+# The Gen_<fn> body per kind, transcribed from the proven hand impls
+# (src/temporal/temporal_functions.cpp: Temporal_to_t*, Tsequence(set)_constructor). The transforms
+# read an optional VARCHAR interp from data[1]; the array makes marshal the LIST child into a fresh
+# Temporal** (ListToTemporalArr), reinterpret to TInstant**/TSequence**, call the MEOS kernel, and
+# free. temptype (for the array interp default) comes from the registered result type's alias.
+_CTOR_BODY = {
+  "to_inst":
+    "static void Gen_{fn}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+    "    EnsureMeosThreadInitialized();\n"
+    "    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
+    "        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+    "            Temporal *t = BlobToTemporal(in);\n"
+    "            Temporal *r = (Temporal *) temporal_to_tinstant(t);\n"
+    "            free(t);\n"
+    "            return TemporalToBlobN(result, r, mask, idx);\n"
+    "        }});\n"
+    "}}\n",
+  "to_seq":     None,   # filled below (shares the transform template)
+  "to_seqset":  None,
+  "make_seq":
+    "static void Gen_{fn}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+    "    EnsureMeosThreadInitialized();\n"
+    "    auto rc = args.size();\n"
+    "    auto &arr = args.data[0]; arr.Flatten(rc);\n"
+    "    auto &child = ListVector::GetEntry(arr);\n"
+    "    child.Flatten(ListVector::GetListSize(arr));\n"
+    "    MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());\n"
+    "    interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;\n"
+    "    bool lower_inc = true, upper_inc = true;\n"
+    "    if (args.ColumnCount() > 1) {{ auto &c = args.data[1]; c.Flatten(rc); Value v = c.GetValue(0); if (!v.IsNull()) interp = interptype_from_string(v.ToString().c_str()); }}\n"
+    "    if (args.ColumnCount() > 2) {{ auto &c = args.data[2]; c.Flatten(rc); Value v = c.GetValue(0); if (!v.IsNull()) lower_inc = v.GetValue<bool>(); }}\n"
+    "    if (args.ColumnCount() > 3) {{ auto &c = args.data[3]; c.Flatten(rc); Value v = c.GetValue(0); if (!v.IsNull()) upper_inc = v.GetValue<bool>(); }}\n"
+    "    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(arr, result, rc,\n"
+    "        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+    "            int n = 0;\n"
+    "            const Temporal **a = ListToTemporalArr(child, le, &n);\n"
+    "            TSequence *seq = tsequence_make((TInstant **) a, n, lower_inc, upper_inc, interp, true);\n"
+    "            string_t out = TemporalToBlobN(result, (Temporal *) seq, mask, idx);\n"
+    "            FreeTemporalArr(a, n);\n"
+    "            return out;\n"
+    "        }});\n"
+    "}}\n",
+  "make_seqset":
+    "static void Gen_{fn}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+    "    EnsureMeosThreadInitialized();\n"
+    "    auto rc = args.size();\n"
+    "    auto &arr = args.data[0]; arr.Flatten(rc);\n"
+    "    auto &child = ListVector::GetEntry(arr);\n"
+    "    child.Flatten(ListVector::GetListSize(arr));\n"
+    "    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(arr, result, rc,\n"
+    "        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+    "            int n = 0;\n"
+    "            const Temporal **a = ListToTemporalArr(child, le, &n);\n"
+    "            TSequenceSet *ss = tsequenceset_make((TSequence **) a, n, true);\n"
+    "            string_t out = TemporalToBlobN(result, (Temporal *) ss, mask, idx);\n"
+    "            FreeTemporalArr(a, n);\n"
+    "            return out;\n"
+    "        }});\n"
+    "}}\n",
+  # <t>SeqSetGaps(<t>[][, interval maxt, float maxdist, text interp]): split the array of instants
+  # into sequences at temporal gaps > maxt and/or value gaps > maxdist. Optional args mirror the PG
+  # wrapper defaults (maxdist -1.0 = ignore value gaps, maxt NULL = ignore time gaps, interp default
+  # from temptype); the per-type arg subset (bool/text: only maxt; float: adds a text interp) comes
+  # from the catalog signatures, so the same body serves every callable arity.
+  "make_gaps":
+    "static void Gen_{fn}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+    "    EnsureMeosThreadInitialized();\n"
+    "    auto rc = args.size();\n"
+    "    auto &arr = args.data[0]; arr.Flatten(rc);\n"
+    "    auto &child = ListVector::GetEntry(arr);\n"
+    "    child.Flatten(ListVector::GetListSize(arr));\n"
+    "    MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());\n"
+    "    interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;\n"
+    "    MeosInterval maxt_val; bool has_maxt = false; double maxdist = -1.0;\n"
+    "    if (args.ColumnCount() > 1) {{ auto &c = args.data[1]; c.Flatten(rc); Value v = c.GetValue(0); if (!v.IsNull()) {{ maxt_val = IntervaltToInterval(v.GetValue<interval_t>()); has_maxt = true; }} }}\n"
+    "    if (args.ColumnCount() > 2) {{ auto &c = args.data[2]; c.Flatten(rc); Value v = c.GetValue(0); if (!v.IsNull()) maxdist = v.GetValue<double>(); }}\n"
+    "    if (args.ColumnCount() > 3) {{ auto &c = args.data[3]; c.Flatten(rc); Value v = c.GetValue(0); if (!v.IsNull()) interp = interptype_from_string(v.ToString().c_str()); }}\n"
+    "    const MeosInterval *maxt = has_maxt ? &maxt_val : NULL;\n"
+    "    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(arr, result, rc,\n"
+    "        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+    "            int n = 0;\n"
+    "            const Temporal **a = ListToTemporalArr(child, le, &n);\n"
+    "            TSequenceSet *ss = tsequenceset_make_gaps((TInstant **) a, n, interp, maxt, maxdist);\n"
+    "            string_t out = TemporalToBlobN(result, (Temporal *) ss, mask, idx);\n"
+    "            FreeTemporalArr(a, n);\n"
+    "            return out;\n"
+    "        }});\n"
+    "}}\n",
+}
+_CTOR_TRANSFORM = (
+    "static void Gen_{fn}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+    "    EnsureMeosThreadInitialized();\n"
+    "    interpType interp = INTERP_NONE;\n"
+    "    if (args.ColumnCount() > 1) {{ auto &c = args.data[1]; c.Flatten(args.size()); Value v = c.GetValue(0); if (!v.IsNull()) interp = interptype_from_string(v.ToString().c_str()); }}\n"
+    "    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
+    "        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+    "            Temporal *t = BlobToTemporal(in);\n"
+    "            Temporal *r = (Temporal *) {meos}(t, interp);\n"
+    "            free(t);\n"
+    "            return TemporalToBlobN(result, r, mask, idx);\n"
+    "        }});\n"
+    "}}\n")
+def emit_temporal_ctor(f, kind):
+    fn = f["name"]
+    if kind == "to_seq":
+        return _CTOR_TRANSFORM.format(fn=fn, meos="temporal_to_tsequence")
+    if kind == "to_seqset":
+        return _CTOR_TRANSFORM.format(fn=fn, meos="temporal_to_tsequenceset")
+    return _CTOR_BODY[kind].format(fn=fn)
+
 def gen_cpp(fns, out_path, declared=None, aliases=None):
     bodies, generic_regs, specific_regs = GReg(), GReg(), GReg()
     set_bodies, set_generic_regs, set_specific_regs = GReg(), GReg(), GReg()
@@ -2027,6 +2172,30 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
     for f in fns:
         if declared is not None and f["name"] not in declared:
             continue            # pin/ABI gate: skip catalog fns absent from the build headers
+        tc = shape_temporal_ctor(f)
+        if tc:
+            # Temporal constructor / transform NAME FAMILY: one Gen_<fn> body, registered per
+            # core-type sqlName over each callable arity (the catalog argDefaults give the shorter
+            # overloads). Self-contained (own body + regs + continue), so the generic shapes below
+            # never also emit these — the bare names are owned here and by the retired hand loop.
+            STATE["grp"] = f.get("group") or "meos_ungrouped"
+            fn = f["name"]
+            bodies.append(emit_temporal_ctor(f, tc))
+            for s in f.get("sqlSignatures", []):
+                a0 = s["args"][0]
+                bt = a0[:-2] if a0.endswith("[]") else a0
+                acc = CORE_CTOR_ACC.get(bt)
+                if not acc:
+                    continue    # non-core (geo/cbuffer) -> registered in its own family file
+                nm = s.get("sqlName", f["sqlfn"])
+                argd = s.get("argDefaults") or [None] * len(s["args"])
+                required = sum(1 for d in argd if d is None)
+                for k in range(required, len(s["args"]) + 1):
+                    slots = ", ".join(ctor_arg_slot(s["args"][i], acc) for i in range(k))
+                    specific_regs.append(
+                        f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        f'"{reg_name(nm, f)}", {{{slots}}}, {acc}, Gen_{fn}));')
+            continue
         u = shape_emittable(f); b = None if u else shape_binary(f); t = None if (u or b) else shape_ternary(f)
         tt = None if (u or b or t) else shape_binary_tt(f)
         tts = None if (u or b or t or tt) else shape_binary_tt_scalar(f)
@@ -2476,6 +2645,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            '#include "meos_wrapper_simple.hpp"\n'
            '#include "common.hpp"\n'
            '#include "temporal/temporal.hpp"\n'
+           '#include "temporal/temporal_functions.hpp"\n'   # TemporalHelpers::GetTemptypeFromAlias
            '#include "temporal/set.hpp"\n'
            '#include "temporal/span.hpp"\n'
            '#include "temporal/spanset.hpp"\n'

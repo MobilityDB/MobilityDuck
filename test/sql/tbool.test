@@ -170,7 +170,13 @@ SELECT temporal_cmp(tbool 't@2000-01-01', tbool 't@2000-01-01');
 ----
 0
 
-query I 
+query I
 SELECT tbool 't@2000-01-01' = tbool '{[t@2000-01-01, f@2000-01-02, t@2000-01-03],[t@2000-01-04, t@2000-01-05]}';
 ----
 false
+
+# tsequenceset_make_gaps: tbool has only the maxt (time-gap) overload; a value distance is undefined.
+query I
+SELECT tboolSeqSetGaps([tbool 't@2000-01-01', tbool 'f@2000-01-10'], interval '3 days');
+----
+{[t@2000-01-01 00:00:00+01], [f@2000-01-10 00:00:00+01]}
