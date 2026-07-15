@@ -1262,26 +1262,34 @@ ARRAY_IN = {
 }
 
 def shape_tgeoarr(f):
-    """The NxN set-set functions take two arrays-of-temporal (const Temporal ** + int count) pairs:
-    minDistance(tgeo[],tgeo[]) -> double (SCALAR) and the *Pairs SRFs (int* + count). The Temporal**
-    args make base()=='__INTERNAL__' so every other shape rejects them. Only the SCALAR double-return
-    form (minDistance) is emitted here; the int*-return *Pairs SRFs are a later (table-fn) phase."""
+    """The NxN set-set functions take two arrays-of-temporal (const Temporal ** + int count) pairs.
+    Two catalog shapes are emitted as DuckDB scalars over LIST(<geo>) x LIST(<geo>):
+      minDistance(tgeo[],tgeo[]) -> double                 = ('scalar_double',)
+      the *Pairs SRFs: int* flattened [i,j] pairs + int* count (+ double dist, + SpanSet*** periods)
+        -> LIST(STRUCT(i,j[,periods]))                      = ('pairs', has_dist, has_periods)
+    The Temporal** args make base()=='__INTERNAL__' so every other shape rejects them, so this shape
+    applies its own eligibility checks. The *Pairs result is a scalar LIST(STRUCT) (UNNEST to rows),
+    NOT a table fn: the BerlinMOD q06/q10 args are per-row collect_list LISTs, which a DuckDB table
+    fn (bind-time-const args) cannot take without LATERAL."""
     name = f["name"]
     if name.startswith("meos_internal") or (f.get("group") or "").startswith("meos_internal"):
         return None
     if not f.get("sqlfn") or re.search(r'_(out|in|send|recv)$', f.get("sqlfn") or ""):
         return None
     ps = f["params"]
-    # exactly (const Temporal ** arr1, int count1, const Temporal ** arr2, int count2) = minDistance
-    if len(ps) != 4:
-        return None
     def is_temp_arr(p): return norm(p["canonical"]) == "Temporal **"
     def is_int(p): return base(p["canonical"]) in ("int", "int32_t") and "*" not in norm(p["canonical"])
-    if not (is_temp_arr(ps[0]) and is_int(ps[1]) and is_temp_arr(ps[2]) and is_int(ps[3])):
+    # both forms begin (const Temporal ** arr1, int count1, const Temporal ** arr2, int count2)
+    if len(ps) < 4 or not (is_temp_arr(ps[0]) and is_int(ps[1]) and is_temp_arr(ps[2]) and is_int(ps[3])):
         return None
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
-    if rb == "double" and "*" not in rn:
+    if len(ps) == 4 and rb == "double" and "*" not in rn:
         return ("scalar_double",)
+    # *Pairs: int* return with a catalog arrayReturn (flattened index pairs) + int* count out-param
+    ar = (f.get("shape") or {}).get("arrayReturn")
+    if ar and rb == "int" and rn.endswith("*"):
+        pnames = [p.get("name") for p in ps]
+        return ("pairs", "dist" in pnames, "periods" in pnames)
     return None
 
 def emit_tgeoarr_scalar(f):
@@ -1304,6 +1312,74 @@ f"            double r = {name}(a1, n1, a2, n2);\n"
 f"            FreeTemporalArr(a1, n1); FreeTemporalArr(a2, n2);\n"
 f"            return r;\n"
 f"        }});\n}}\n")
+
+def emit_pairs_scalar(f, has_dist, has_periods):
+    """DuckDB scalar over two LIST(temporal-blob) args (+ optional double dist) -> a
+    LIST(STRUCT(i INTEGER, j INTEGER[, periods TSTZSPANSET])) (the NxN *Pairs SRFs). The MEOS kernel
+    returns a flattened [i0,j0,i1,j1,...] int array of `count` index pairs (+ for the t-variants a
+    parallel SpanSet** of `count` tstzspansets); each row is reshaped into a DuckDB LIST(STRUCT) that
+    UNNEST expands to rows. Mirrors emit_array's Reserve/SetListSize LIST-build over a STRUCT child."""
+    name = f["name"]
+    dist_flat = ("    args.data[2].Flatten(row_count);\n"
+                 "    auto dd = FlatVector::GetData<double>(args.data[2]);\n") if has_dist else ""
+    dist_arg  = "dd[r], " if has_dist else ""
+    per_decl  = "        SpanSet **periods = nullptr;\n" if has_periods else ""
+    per_arg   = ", &periods" if has_periods else ""
+    per_field = "            auto &pv = *sf[2];\n" if has_periods else ""
+    per_fill  = ("                FlatVector::GetData<string_t>(pv)[off + k] = SpanSetToBlob(pv, periods[k]);\n"
+                 if has_periods else "")
+    # Each periods[k] SpanSet* is consumed+freed by SpanSetToBlob above; free only the outer array.
+    per_free  = "        if (periods) free(periods);\n" if has_periods else ""
+    return (
+f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+f"    EnsureMeosThreadInitialized();\n"
+f"    idx_t row_count = args.size();\n"
+f"    auto &lv1 = args.data[0]; auto &lv2 = args.data[1];\n"
+f"    lv1.Flatten(row_count); lv2.Flatten(row_count);\n"
+f"    auto le1 = FlatVector::GetData<list_entry_t>(lv1);\n"
+f"    auto le2 = FlatVector::GetData<list_entry_t>(lv2);\n"
+f"    auto &v1 = FlatVector::Validity(lv1);\n"
+f"    auto &v2 = FlatVector::Validity(lv2);\n"
+f"    auto &child1 = ListVector::GetEntry(lv1); child1.Flatten(ListVector::GetListSize(lv1));\n"
+f"    auto &child2 = ListVector::GetEntry(lv2); child2.Flatten(ListVector::GetListSize(lv2));\n"
+f"{dist_flat}"
+f"    auto list_entries = FlatVector::GetData<list_entry_t>(result);\n"
+f"    auto &result_validity = FlatVector::Validity(result);\n"
+f"    idx_t off = 0;\n"
+f"    for (idx_t r = 0; r < row_count; r++) {{\n"
+f"        if (!v1.RowIsValid(r) || !v2.RowIsValid(r)) {{\n"
+f"            result_validity.SetInvalid(r); list_entries[r] = list_entry_t{{off, 0}}; continue;\n"
+f"        }}\n"
+f"        int n1, n2;\n"
+f"        const Temporal **a1 = ListToTemporalArr(child1, le1[r], &n1);\n"
+f"        const Temporal **a2 = ListToTemporalArr(child2, le2[r], &n2);\n"
+f"        int cnt = 0;\n"
+f"{per_decl}"
+f"        int *res = {name}(a1, n1, a2, n2, {dist_arg}&cnt{per_arg});\n"
+f"        FreeTemporalArr(a1, n1); FreeTemporalArr(a2, n2);\n"
+f"        int n = (res && cnt > 0) ? cnt : 0;\n"
+f"        ListVector::Reserve(result, off + n);\n"
+f"        ListVector::SetListSize(result, off + n);\n"
+f"        list_entries[r] = list_entry_t{{off, (uint64_t) n}};\n"
+f"        if (n > 0) {{\n"
+f"            auto &sv = ListVector::GetEntry(result);\n"
+f"            auto &sf = StructVector::GetEntries(sv);\n"
+f"            auto id = FlatVector::GetData<int32_t>(*sf[0]);\n"
+f"            auto jd = FlatVector::GetData<int32_t>(*sf[1]);\n"
+f"{per_field}"
+f"            for (int k = 0; k < n; k++) {{\n"
+f"                id[off + k] = res[2 * k];\n"
+f"                jd[off + k] = res[2 * k + 1];\n"
+f"{per_fill}"
+f"            }}\n"
+f"            off += n;\n"
+f"        }}\n"
+f"        if (res) free(res);\n"
+f"{per_free}"
+f"        result_validity.SetValid(r);\n"
+f"    }}\n"
+f"    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);\n"
+f"}}\n")
 
 def _acc_sqlname(acc):
     """The canonical SQL type name inside an accessor string, e.g. SetTypes::intset() -> intset,
@@ -1894,16 +1970,11 @@ RETIRED_GROUPS = {"meos_temporal_analytics_similarity", "meos_temporal_comp_temp
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
-# The LIST-returning *Pairs relations (ever/always int*->LIST(bool); temporal SpanSet***)
-# take array returns the generator does not marshal yet AND were never in the hand layer
-# either (git grep: 0 hand regs) - so retiring meos_geo_rel_ever / meos_geo_rel_temp drops
-# none of them; they are additive future work, not a regression. (*Path LIST(STRUCT) returns
-# ARE generated now via shape_path, so they are not listed here.)
-RETIRE_UNCOVERED_OK = {
-    "aDisjointPairs", "aDwithinPairs", "aIntersectsPairs", "aTouchesPairs",
-    "eDisjointPairs", "eDwithinPairs", "eIntersectsPairs", "eTouchesPairs",
-    "tDisjointPairs", "tDwithinPairs", "tIntersectsPairs", "tTouchesPairs",
-}
+# The NxN *Pairs relations (ever/always int*->LIST(STRUCT(i,j)); temporal + SpanSet*** periods)
+# are now GENERATED as scalar LIST(STRUCT) UDFs via shape_tgeoarr/emit_pairs_scalar (the 'pairs'
+# form), over exactly the catalog sqlSignature geo types, so they are covered by construction —
+# no longer listed here. Empty: every @sqlfn of a retired group is generated.
+RETIRE_UNCOVERED_OK = set()
 def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
 def reg_name(nm, f):
@@ -2032,11 +2103,11 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             spec_sig = "{" + ", ".join(slots) + "}"       # geo rels are always scope=='types'
             argsig = spec_sig.replace("%s", "type")
         elif ga:
-            # NxN array-of-temporal scalar (minDistance(tgeo[],tgeo[])->double): registered over the
-            # element geo types the catalog CREATE FUNCTION's it for, as LIST(<geo>) x LIST(<geo>).
-            # Self-contained (own registration + continue), like the table-fn path.
+            # NxN array-of-temporal scalars over LIST(<geo>) x LIST(<geo>), registered over exactly
+            # the element geo types the catalog CREATE FUNCTION's them for (sqlSignatures = SoT).
+            # Self-contained (own registration + continue), like the table-fn path. Two forms:
+            #   minDistance -> DOUBLE ; the *Pairs SRFs -> LIST(STRUCT(i,j[,periods])) (UNNEST to rows).
             n_bin += 1
-            bodies.append(emit_tgeoarr_scalar(f))
             have = set()
             for s in (f.get("sqlSignatures") or []):
                 for a in s.get("args", []):
@@ -2044,12 +2115,29 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     if bt in SIG_TEMPORAL_ACC:
                         have.add(bt)
             elems = [SIG_TEMPORAL_ACC[t] for t in SIG_TEMPORAL_ACC if t in have]
-            for a in elems:
-                for nm in reg_names(f, sqlfn, aliases):
-                    specific_regs.append(
-                        f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
-                        f'"{reg_name(nm, f)}", {{LogicalType::LIST({a}), LogicalType::LIST({a})}}, '
-                        f'LogicalType::DOUBLE, Gen_{fn}));')
+            if ga[0] == "scalar_double":
+                bodies.append(emit_tgeoarr_scalar(f))
+                for a in elems:
+                    for nm in reg_names(f, sqlfn, aliases):
+                        specific_regs.append(
+                            f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                            f'"{reg_name(nm, f)}", {{LogicalType::LIST({a}), LogicalType::LIST({a})}}, '
+                            f'LogicalType::DOUBLE, Gen_{fn}));')
+            else:
+                _pk, has_dist, has_periods = ga
+                bodies.append(emit_pairs_scalar(f, has_dist, has_periods))
+                sfields = '{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}'
+                if has_periods:
+                    sfields += ', {"periods", SpansetTypes::tstzspanset()}'
+                rett = f"LogicalType::LIST(LogicalType::STRUCT({{{sfields}}}))"
+                for a in elems:
+                    slots = f"LogicalType::LIST({a}), LogicalType::LIST({a})"
+                    if has_dist:
+                        slots += ", LogicalType::DOUBLE"
+                    for nm in reg_names(f, sqlfn, aliases):
+                        specific_regs.append(
+                            f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                            f'"{reg_name(nm, f)}", {{{slots}}}, {rett}, Gen_{fn}));')
             continue
         else:
             # array-return-struct shape -> the canonical SETOF surface = a DuckDB TABLE function

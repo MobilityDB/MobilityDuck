@@ -3657,6 +3657,370 @@ static void Gen_etouches_geo_tpoint(DataChunk &args, ExpressionState &, Vector &
         });
 }
 
+static void Gen_edwithin_tgeoarr_tgeoarr(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    idx_t row_count = args.size();
+    auto &lv1 = args.data[0]; auto &lv2 = args.data[1];
+    lv1.Flatten(row_count); lv2.Flatten(row_count);
+    auto le1 = FlatVector::GetData<list_entry_t>(lv1);
+    auto le2 = FlatVector::GetData<list_entry_t>(lv2);
+    auto &v1 = FlatVector::Validity(lv1);
+    auto &v2 = FlatVector::Validity(lv2);
+    auto &child1 = ListVector::GetEntry(lv1); child1.Flatten(ListVector::GetListSize(lv1));
+    auto &child2 = ListVector::GetEntry(lv2); child2.Flatten(ListVector::GetListSize(lv2));
+    args.data[2].Flatten(row_count);
+    auto dd = FlatVector::GetData<double>(args.data[2]);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &result_validity = FlatVector::Validity(result);
+    idx_t off = 0;
+    for (idx_t r = 0; r < row_count; r++) {
+        if (!v1.RowIsValid(r) || !v2.RowIsValid(r)) {
+            result_validity.SetInvalid(r); list_entries[r] = list_entry_t{off, 0}; continue;
+        }
+        int n1, n2;
+        const Temporal **a1 = ListToTemporalArr(child1, le1[r], &n1);
+        const Temporal **a2 = ListToTemporalArr(child2, le2[r], &n2);
+        int cnt = 0;
+        int *res = edwithin_tgeoarr_tgeoarr(a1, n1, a2, n2, dd[r], &cnt);
+        FreeTemporalArr(a1, n1); FreeTemporalArr(a2, n2);
+        int n = (res && cnt > 0) ? cnt : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[r] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &sv = ListVector::GetEntry(result);
+            auto &sf = StructVector::GetEntries(sv);
+            auto id = FlatVector::GetData<int32_t>(*sf[0]);
+            auto jd = FlatVector::GetData<int32_t>(*sf[1]);
+            for (int k = 0; k < n; k++) {
+                id[off + k] = res[2 * k];
+                jd[off + k] = res[2 * k + 1];
+            }
+            off += n;
+        }
+        if (res) free(res);
+        result_validity.SetValid(r);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_adwithin_tgeoarr_tgeoarr(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    idx_t row_count = args.size();
+    auto &lv1 = args.data[0]; auto &lv2 = args.data[1];
+    lv1.Flatten(row_count); lv2.Flatten(row_count);
+    auto le1 = FlatVector::GetData<list_entry_t>(lv1);
+    auto le2 = FlatVector::GetData<list_entry_t>(lv2);
+    auto &v1 = FlatVector::Validity(lv1);
+    auto &v2 = FlatVector::Validity(lv2);
+    auto &child1 = ListVector::GetEntry(lv1); child1.Flatten(ListVector::GetListSize(lv1));
+    auto &child2 = ListVector::GetEntry(lv2); child2.Flatten(ListVector::GetListSize(lv2));
+    args.data[2].Flatten(row_count);
+    auto dd = FlatVector::GetData<double>(args.data[2]);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &result_validity = FlatVector::Validity(result);
+    idx_t off = 0;
+    for (idx_t r = 0; r < row_count; r++) {
+        if (!v1.RowIsValid(r) || !v2.RowIsValid(r)) {
+            result_validity.SetInvalid(r); list_entries[r] = list_entry_t{off, 0}; continue;
+        }
+        int n1, n2;
+        const Temporal **a1 = ListToTemporalArr(child1, le1[r], &n1);
+        const Temporal **a2 = ListToTemporalArr(child2, le2[r], &n2);
+        int cnt = 0;
+        int *res = adwithin_tgeoarr_tgeoarr(a1, n1, a2, n2, dd[r], &cnt);
+        FreeTemporalArr(a1, n1); FreeTemporalArr(a2, n2);
+        int n = (res && cnt > 0) ? cnt : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[r] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &sv = ListVector::GetEntry(result);
+            auto &sf = StructVector::GetEntries(sv);
+            auto id = FlatVector::GetData<int32_t>(*sf[0]);
+            auto jd = FlatVector::GetData<int32_t>(*sf[1]);
+            for (int k = 0; k < n; k++) {
+                id[off + k] = res[2 * k];
+                jd[off + k] = res[2 * k + 1];
+            }
+            off += n;
+        }
+        if (res) free(res);
+        result_validity.SetValid(r);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_eintersects_tgeoarr_tgeoarr(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    idx_t row_count = args.size();
+    auto &lv1 = args.data[0]; auto &lv2 = args.data[1];
+    lv1.Flatten(row_count); lv2.Flatten(row_count);
+    auto le1 = FlatVector::GetData<list_entry_t>(lv1);
+    auto le2 = FlatVector::GetData<list_entry_t>(lv2);
+    auto &v1 = FlatVector::Validity(lv1);
+    auto &v2 = FlatVector::Validity(lv2);
+    auto &child1 = ListVector::GetEntry(lv1); child1.Flatten(ListVector::GetListSize(lv1));
+    auto &child2 = ListVector::GetEntry(lv2); child2.Flatten(ListVector::GetListSize(lv2));
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &result_validity = FlatVector::Validity(result);
+    idx_t off = 0;
+    for (idx_t r = 0; r < row_count; r++) {
+        if (!v1.RowIsValid(r) || !v2.RowIsValid(r)) {
+            result_validity.SetInvalid(r); list_entries[r] = list_entry_t{off, 0}; continue;
+        }
+        int n1, n2;
+        const Temporal **a1 = ListToTemporalArr(child1, le1[r], &n1);
+        const Temporal **a2 = ListToTemporalArr(child2, le2[r], &n2);
+        int cnt = 0;
+        int *res = eintersects_tgeoarr_tgeoarr(a1, n1, a2, n2, &cnt);
+        FreeTemporalArr(a1, n1); FreeTemporalArr(a2, n2);
+        int n = (res && cnt > 0) ? cnt : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[r] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &sv = ListVector::GetEntry(result);
+            auto &sf = StructVector::GetEntries(sv);
+            auto id = FlatVector::GetData<int32_t>(*sf[0]);
+            auto jd = FlatVector::GetData<int32_t>(*sf[1]);
+            for (int k = 0; k < n; k++) {
+                id[off + k] = res[2 * k];
+                jd[off + k] = res[2 * k + 1];
+            }
+            off += n;
+        }
+        if (res) free(res);
+        result_validity.SetValid(r);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_aintersects_tgeoarr_tgeoarr(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    idx_t row_count = args.size();
+    auto &lv1 = args.data[0]; auto &lv2 = args.data[1];
+    lv1.Flatten(row_count); lv2.Flatten(row_count);
+    auto le1 = FlatVector::GetData<list_entry_t>(lv1);
+    auto le2 = FlatVector::GetData<list_entry_t>(lv2);
+    auto &v1 = FlatVector::Validity(lv1);
+    auto &v2 = FlatVector::Validity(lv2);
+    auto &child1 = ListVector::GetEntry(lv1); child1.Flatten(ListVector::GetListSize(lv1));
+    auto &child2 = ListVector::GetEntry(lv2); child2.Flatten(ListVector::GetListSize(lv2));
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &result_validity = FlatVector::Validity(result);
+    idx_t off = 0;
+    for (idx_t r = 0; r < row_count; r++) {
+        if (!v1.RowIsValid(r) || !v2.RowIsValid(r)) {
+            result_validity.SetInvalid(r); list_entries[r] = list_entry_t{off, 0}; continue;
+        }
+        int n1, n2;
+        const Temporal **a1 = ListToTemporalArr(child1, le1[r], &n1);
+        const Temporal **a2 = ListToTemporalArr(child2, le2[r], &n2);
+        int cnt = 0;
+        int *res = aintersects_tgeoarr_tgeoarr(a1, n1, a2, n2, &cnt);
+        FreeTemporalArr(a1, n1); FreeTemporalArr(a2, n2);
+        int n = (res && cnt > 0) ? cnt : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[r] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &sv = ListVector::GetEntry(result);
+            auto &sf = StructVector::GetEntries(sv);
+            auto id = FlatVector::GetData<int32_t>(*sf[0]);
+            auto jd = FlatVector::GetData<int32_t>(*sf[1]);
+            for (int k = 0; k < n; k++) {
+                id[off + k] = res[2 * k];
+                jd[off + k] = res[2 * k + 1];
+            }
+            off += n;
+        }
+        if (res) free(res);
+        result_validity.SetValid(r);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_etouches_tgeoarr_tgeoarr(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    idx_t row_count = args.size();
+    auto &lv1 = args.data[0]; auto &lv2 = args.data[1];
+    lv1.Flatten(row_count); lv2.Flatten(row_count);
+    auto le1 = FlatVector::GetData<list_entry_t>(lv1);
+    auto le2 = FlatVector::GetData<list_entry_t>(lv2);
+    auto &v1 = FlatVector::Validity(lv1);
+    auto &v2 = FlatVector::Validity(lv2);
+    auto &child1 = ListVector::GetEntry(lv1); child1.Flatten(ListVector::GetListSize(lv1));
+    auto &child2 = ListVector::GetEntry(lv2); child2.Flatten(ListVector::GetListSize(lv2));
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &result_validity = FlatVector::Validity(result);
+    idx_t off = 0;
+    for (idx_t r = 0; r < row_count; r++) {
+        if (!v1.RowIsValid(r) || !v2.RowIsValid(r)) {
+            result_validity.SetInvalid(r); list_entries[r] = list_entry_t{off, 0}; continue;
+        }
+        int n1, n2;
+        const Temporal **a1 = ListToTemporalArr(child1, le1[r], &n1);
+        const Temporal **a2 = ListToTemporalArr(child2, le2[r], &n2);
+        int cnt = 0;
+        int *res = etouches_tgeoarr_tgeoarr(a1, n1, a2, n2, &cnt);
+        FreeTemporalArr(a1, n1); FreeTemporalArr(a2, n2);
+        int n = (res && cnt > 0) ? cnt : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[r] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &sv = ListVector::GetEntry(result);
+            auto &sf = StructVector::GetEntries(sv);
+            auto id = FlatVector::GetData<int32_t>(*sf[0]);
+            auto jd = FlatVector::GetData<int32_t>(*sf[1]);
+            for (int k = 0; k < n; k++) {
+                id[off + k] = res[2 * k];
+                jd[off + k] = res[2 * k + 1];
+            }
+            off += n;
+        }
+        if (res) free(res);
+        result_validity.SetValid(r);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_atouches_tgeoarr_tgeoarr(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    idx_t row_count = args.size();
+    auto &lv1 = args.data[0]; auto &lv2 = args.data[1];
+    lv1.Flatten(row_count); lv2.Flatten(row_count);
+    auto le1 = FlatVector::GetData<list_entry_t>(lv1);
+    auto le2 = FlatVector::GetData<list_entry_t>(lv2);
+    auto &v1 = FlatVector::Validity(lv1);
+    auto &v2 = FlatVector::Validity(lv2);
+    auto &child1 = ListVector::GetEntry(lv1); child1.Flatten(ListVector::GetListSize(lv1));
+    auto &child2 = ListVector::GetEntry(lv2); child2.Flatten(ListVector::GetListSize(lv2));
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &result_validity = FlatVector::Validity(result);
+    idx_t off = 0;
+    for (idx_t r = 0; r < row_count; r++) {
+        if (!v1.RowIsValid(r) || !v2.RowIsValid(r)) {
+            result_validity.SetInvalid(r); list_entries[r] = list_entry_t{off, 0}; continue;
+        }
+        int n1, n2;
+        const Temporal **a1 = ListToTemporalArr(child1, le1[r], &n1);
+        const Temporal **a2 = ListToTemporalArr(child2, le2[r], &n2);
+        int cnt = 0;
+        int *res = atouches_tgeoarr_tgeoarr(a1, n1, a2, n2, &cnt);
+        FreeTemporalArr(a1, n1); FreeTemporalArr(a2, n2);
+        int n = (res && cnt > 0) ? cnt : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[r] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &sv = ListVector::GetEntry(result);
+            auto &sf = StructVector::GetEntries(sv);
+            auto id = FlatVector::GetData<int32_t>(*sf[0]);
+            auto jd = FlatVector::GetData<int32_t>(*sf[1]);
+            for (int k = 0; k < n; k++) {
+                id[off + k] = res[2 * k];
+                jd[off + k] = res[2 * k + 1];
+            }
+            off += n;
+        }
+        if (res) free(res);
+        result_validity.SetValid(r);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_edisjoint_tgeoarr_tgeoarr(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    idx_t row_count = args.size();
+    auto &lv1 = args.data[0]; auto &lv2 = args.data[1];
+    lv1.Flatten(row_count); lv2.Flatten(row_count);
+    auto le1 = FlatVector::GetData<list_entry_t>(lv1);
+    auto le2 = FlatVector::GetData<list_entry_t>(lv2);
+    auto &v1 = FlatVector::Validity(lv1);
+    auto &v2 = FlatVector::Validity(lv2);
+    auto &child1 = ListVector::GetEntry(lv1); child1.Flatten(ListVector::GetListSize(lv1));
+    auto &child2 = ListVector::GetEntry(lv2); child2.Flatten(ListVector::GetListSize(lv2));
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &result_validity = FlatVector::Validity(result);
+    idx_t off = 0;
+    for (idx_t r = 0; r < row_count; r++) {
+        if (!v1.RowIsValid(r) || !v2.RowIsValid(r)) {
+            result_validity.SetInvalid(r); list_entries[r] = list_entry_t{off, 0}; continue;
+        }
+        int n1, n2;
+        const Temporal **a1 = ListToTemporalArr(child1, le1[r], &n1);
+        const Temporal **a2 = ListToTemporalArr(child2, le2[r], &n2);
+        int cnt = 0;
+        int *res = edisjoint_tgeoarr_tgeoarr(a1, n1, a2, n2, &cnt);
+        FreeTemporalArr(a1, n1); FreeTemporalArr(a2, n2);
+        int n = (res && cnt > 0) ? cnt : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[r] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &sv = ListVector::GetEntry(result);
+            auto &sf = StructVector::GetEntries(sv);
+            auto id = FlatVector::GetData<int32_t>(*sf[0]);
+            auto jd = FlatVector::GetData<int32_t>(*sf[1]);
+            for (int k = 0; k < n; k++) {
+                id[off + k] = res[2 * k];
+                jd[off + k] = res[2 * k + 1];
+            }
+            off += n;
+        }
+        if (res) free(res);
+        result_validity.SetValid(r);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_adisjoint_tgeoarr_tgeoarr(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    idx_t row_count = args.size();
+    auto &lv1 = args.data[0]; auto &lv2 = args.data[1];
+    lv1.Flatten(row_count); lv2.Flatten(row_count);
+    auto le1 = FlatVector::GetData<list_entry_t>(lv1);
+    auto le2 = FlatVector::GetData<list_entry_t>(lv2);
+    auto &v1 = FlatVector::Validity(lv1);
+    auto &v2 = FlatVector::Validity(lv2);
+    auto &child1 = ListVector::GetEntry(lv1); child1.Flatten(ListVector::GetListSize(lv1));
+    auto &child2 = ListVector::GetEntry(lv2); child2.Flatten(ListVector::GetListSize(lv2));
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &result_validity = FlatVector::Validity(result);
+    idx_t off = 0;
+    for (idx_t r = 0; r < row_count; r++) {
+        if (!v1.RowIsValid(r) || !v2.RowIsValid(r)) {
+            result_validity.SetInvalid(r); list_entries[r] = list_entry_t{off, 0}; continue;
+        }
+        int n1, n2;
+        const Temporal **a1 = ListToTemporalArr(child1, le1[r], &n1);
+        const Temporal **a2 = ListToTemporalArr(child2, le2[r], &n2);
+        int cnt = 0;
+        int *res = adisjoint_tgeoarr_tgeoarr(a1, n1, a2, n2, &cnt);
+        FreeTemporalArr(a1, n1); FreeTemporalArr(a2, n2);
+        int n = (res && cnt > 0) ? cnt : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[r] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &sv = ListVector::GetEntry(result);
+            auto &sf = StructVector::GetEntries(sv);
+            auto id = FlatVector::GetData<int32_t>(*sf[0]);
+            auto jd = FlatVector::GetData<int32_t>(*sf[1]);
+            for (int k = 0; k < n; k++) {
+                id[off + k] = res[2 * k];
+                jd[off + k] = res[2 * k + 1];
+            }
+            off += n;
+        }
+        if (res) free(res);
+        result_validity.SetValid(r);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_acovers_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
@@ -3957,6 +4321,204 @@ static void Gen_ttouches_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &r
             free(t1); free(t2);
             return TemporalToBlobN(result, r, mask, idx);
         });
+}
+
+static void Gen_tdwithin_tgeoarr_tgeoarr(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    idx_t row_count = args.size();
+    auto &lv1 = args.data[0]; auto &lv2 = args.data[1];
+    lv1.Flatten(row_count); lv2.Flatten(row_count);
+    auto le1 = FlatVector::GetData<list_entry_t>(lv1);
+    auto le2 = FlatVector::GetData<list_entry_t>(lv2);
+    auto &v1 = FlatVector::Validity(lv1);
+    auto &v2 = FlatVector::Validity(lv2);
+    auto &child1 = ListVector::GetEntry(lv1); child1.Flatten(ListVector::GetListSize(lv1));
+    auto &child2 = ListVector::GetEntry(lv2); child2.Flatten(ListVector::GetListSize(lv2));
+    args.data[2].Flatten(row_count);
+    auto dd = FlatVector::GetData<double>(args.data[2]);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &result_validity = FlatVector::Validity(result);
+    idx_t off = 0;
+    for (idx_t r = 0; r < row_count; r++) {
+        if (!v1.RowIsValid(r) || !v2.RowIsValid(r)) {
+            result_validity.SetInvalid(r); list_entries[r] = list_entry_t{off, 0}; continue;
+        }
+        int n1, n2;
+        const Temporal **a1 = ListToTemporalArr(child1, le1[r], &n1);
+        const Temporal **a2 = ListToTemporalArr(child2, le2[r], &n2);
+        int cnt = 0;
+        SpanSet **periods = nullptr;
+        int *res = tdwithin_tgeoarr_tgeoarr(a1, n1, a2, n2, dd[r], &cnt, &periods);
+        FreeTemporalArr(a1, n1); FreeTemporalArr(a2, n2);
+        int n = (res && cnt > 0) ? cnt : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[r] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &sv = ListVector::GetEntry(result);
+            auto &sf = StructVector::GetEntries(sv);
+            auto id = FlatVector::GetData<int32_t>(*sf[0]);
+            auto jd = FlatVector::GetData<int32_t>(*sf[1]);
+            auto &pv = *sf[2];
+            for (int k = 0; k < n; k++) {
+                id[off + k] = res[2 * k];
+                jd[off + k] = res[2 * k + 1];
+                FlatVector::GetData<string_t>(pv)[off + k] = SpanSetToBlob(pv, periods[k]);
+            }
+            off += n;
+        }
+        if (res) free(res);
+        if (periods) free(periods);
+        result_validity.SetValid(r);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tintersects_tgeoarr_tgeoarr(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    idx_t row_count = args.size();
+    auto &lv1 = args.data[0]; auto &lv2 = args.data[1];
+    lv1.Flatten(row_count); lv2.Flatten(row_count);
+    auto le1 = FlatVector::GetData<list_entry_t>(lv1);
+    auto le2 = FlatVector::GetData<list_entry_t>(lv2);
+    auto &v1 = FlatVector::Validity(lv1);
+    auto &v2 = FlatVector::Validity(lv2);
+    auto &child1 = ListVector::GetEntry(lv1); child1.Flatten(ListVector::GetListSize(lv1));
+    auto &child2 = ListVector::GetEntry(lv2); child2.Flatten(ListVector::GetListSize(lv2));
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &result_validity = FlatVector::Validity(result);
+    idx_t off = 0;
+    for (idx_t r = 0; r < row_count; r++) {
+        if (!v1.RowIsValid(r) || !v2.RowIsValid(r)) {
+            result_validity.SetInvalid(r); list_entries[r] = list_entry_t{off, 0}; continue;
+        }
+        int n1, n2;
+        const Temporal **a1 = ListToTemporalArr(child1, le1[r], &n1);
+        const Temporal **a2 = ListToTemporalArr(child2, le2[r], &n2);
+        int cnt = 0;
+        SpanSet **periods = nullptr;
+        int *res = tintersects_tgeoarr_tgeoarr(a1, n1, a2, n2, &cnt, &periods);
+        FreeTemporalArr(a1, n1); FreeTemporalArr(a2, n2);
+        int n = (res && cnt > 0) ? cnt : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[r] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &sv = ListVector::GetEntry(result);
+            auto &sf = StructVector::GetEntries(sv);
+            auto id = FlatVector::GetData<int32_t>(*sf[0]);
+            auto jd = FlatVector::GetData<int32_t>(*sf[1]);
+            auto &pv = *sf[2];
+            for (int k = 0; k < n; k++) {
+                id[off + k] = res[2 * k];
+                jd[off + k] = res[2 * k + 1];
+                FlatVector::GetData<string_t>(pv)[off + k] = SpanSetToBlob(pv, periods[k]);
+            }
+            off += n;
+        }
+        if (res) free(res);
+        if (periods) free(periods);
+        result_validity.SetValid(r);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_ttouches_tgeoarr_tgeoarr(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    idx_t row_count = args.size();
+    auto &lv1 = args.data[0]; auto &lv2 = args.data[1];
+    lv1.Flatten(row_count); lv2.Flatten(row_count);
+    auto le1 = FlatVector::GetData<list_entry_t>(lv1);
+    auto le2 = FlatVector::GetData<list_entry_t>(lv2);
+    auto &v1 = FlatVector::Validity(lv1);
+    auto &v2 = FlatVector::Validity(lv2);
+    auto &child1 = ListVector::GetEntry(lv1); child1.Flatten(ListVector::GetListSize(lv1));
+    auto &child2 = ListVector::GetEntry(lv2); child2.Flatten(ListVector::GetListSize(lv2));
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &result_validity = FlatVector::Validity(result);
+    idx_t off = 0;
+    for (idx_t r = 0; r < row_count; r++) {
+        if (!v1.RowIsValid(r) || !v2.RowIsValid(r)) {
+            result_validity.SetInvalid(r); list_entries[r] = list_entry_t{off, 0}; continue;
+        }
+        int n1, n2;
+        const Temporal **a1 = ListToTemporalArr(child1, le1[r], &n1);
+        const Temporal **a2 = ListToTemporalArr(child2, le2[r], &n2);
+        int cnt = 0;
+        SpanSet **periods = nullptr;
+        int *res = ttouches_tgeoarr_tgeoarr(a1, n1, a2, n2, &cnt, &periods);
+        FreeTemporalArr(a1, n1); FreeTemporalArr(a2, n2);
+        int n = (res && cnt > 0) ? cnt : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[r] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &sv = ListVector::GetEntry(result);
+            auto &sf = StructVector::GetEntries(sv);
+            auto id = FlatVector::GetData<int32_t>(*sf[0]);
+            auto jd = FlatVector::GetData<int32_t>(*sf[1]);
+            auto &pv = *sf[2];
+            for (int k = 0; k < n; k++) {
+                id[off + k] = res[2 * k];
+                jd[off + k] = res[2 * k + 1];
+                FlatVector::GetData<string_t>(pv)[off + k] = SpanSetToBlob(pv, periods[k]);
+            }
+            off += n;
+        }
+        if (res) free(res);
+        if (periods) free(periods);
+        result_validity.SetValid(r);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tdisjoint_tgeoarr_tgeoarr(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    idx_t row_count = args.size();
+    auto &lv1 = args.data[0]; auto &lv2 = args.data[1];
+    lv1.Flatten(row_count); lv2.Flatten(row_count);
+    auto le1 = FlatVector::GetData<list_entry_t>(lv1);
+    auto le2 = FlatVector::GetData<list_entry_t>(lv2);
+    auto &v1 = FlatVector::Validity(lv1);
+    auto &v2 = FlatVector::Validity(lv2);
+    auto &child1 = ListVector::GetEntry(lv1); child1.Flatten(ListVector::GetListSize(lv1));
+    auto &child2 = ListVector::GetEntry(lv2); child2.Flatten(ListVector::GetListSize(lv2));
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    auto &result_validity = FlatVector::Validity(result);
+    idx_t off = 0;
+    for (idx_t r = 0; r < row_count; r++) {
+        if (!v1.RowIsValid(r) || !v2.RowIsValid(r)) {
+            result_validity.SetInvalid(r); list_entries[r] = list_entry_t{off, 0}; continue;
+        }
+        int n1, n2;
+        const Temporal **a1 = ListToTemporalArr(child1, le1[r], &n1);
+        const Temporal **a2 = ListToTemporalArr(child2, le2[r], &n2);
+        int cnt = 0;
+        SpanSet **periods = nullptr;
+        int *res = tdisjoint_tgeoarr_tgeoarr(a1, n1, a2, n2, &cnt, &periods);
+        FreeTemporalArr(a1, n1); FreeTemporalArr(a2, n2);
+        int n = (res && cnt > 0) ? cnt : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[r] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &sv = ListVector::GetEntry(result);
+            auto &sf = StructVector::GetEntries(sv);
+            auto id = FlatVector::GetData<int32_t>(*sf[0]);
+            auto jd = FlatVector::GetData<int32_t>(*sf[1]);
+            auto &pv = *sf[2];
+            for (int k = 0; k < n; k++) {
+                id[off + k] = res[2 * k];
+                jd[off + k] = res[2 * k + 1];
+                FlatVector::GetData<string_t>(pv)[off + k] = SpanSetToBlob(pv, periods[k]);
+            }
+            off += n;
+        }
+        if (res) free(res);
+        if (periods) free(periods);
+        result_validity.SetValid(r);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 
@@ -14489,6 +15051,32 @@ static void RegisterGenerated_meos_geo_rel_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("eTouches", {TGeometryTypes::tgeometry(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, Gen_etouches_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eTouches", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_etouches_tgeo_tgeo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eTouches", {GeoTypes::GEOMETRY(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_etouches_geo_tpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eDwithinPairs", {LogicalType::LIST(TgeompointType::tgeompoint()), LogicalType::LIST(TgeompointType::tgeompoint()), LogicalType::DOUBLE}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_edwithin_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eDwithinPairs", {LogicalType::LIST(TgeogpointType::tgeogpoint()), LogicalType::LIST(TgeogpointType::tgeogpoint()), LogicalType::DOUBLE}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_edwithin_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eDwithinPairs", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::DOUBLE}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_edwithin_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eDwithinPairs", {LogicalType::LIST(TGeographyTypes::tgeography()), LogicalType::LIST(TGeographyTypes::tgeography()), LogicalType::DOUBLE}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_edwithin_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDwithinPairs", {LogicalType::LIST(TgeompointType::tgeompoint()), LogicalType::LIST(TgeompointType::tgeompoint()), LogicalType::DOUBLE}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_adwithin_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDwithinPairs", {LogicalType::LIST(TgeogpointType::tgeogpoint()), LogicalType::LIST(TgeogpointType::tgeogpoint()), LogicalType::DOUBLE}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_adwithin_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDwithinPairs", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::DOUBLE}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_adwithin_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDwithinPairs", {LogicalType::LIST(TGeographyTypes::tgeography()), LogicalType::LIST(TGeographyTypes::tgeography()), LogicalType::DOUBLE}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_adwithin_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersectsPairs", {LogicalType::LIST(TgeompointType::tgeompoint()), LogicalType::LIST(TgeompointType::tgeompoint())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_eintersects_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersectsPairs", {LogicalType::LIST(TgeogpointType::tgeogpoint()), LogicalType::LIST(TgeogpointType::tgeogpoint())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_eintersects_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersectsPairs", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::LIST(TGeometryTypes::tgeometry())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_eintersects_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersectsPairs", {LogicalType::LIST(TGeographyTypes::tgeography()), LogicalType::LIST(TGeographyTypes::tgeography())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_eintersects_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersectsPairs", {LogicalType::LIST(TgeompointType::tgeompoint()), LogicalType::LIST(TgeompointType::tgeompoint())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_aintersects_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersectsPairs", {LogicalType::LIST(TgeogpointType::tgeogpoint()), LogicalType::LIST(TgeogpointType::tgeogpoint())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_aintersects_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersectsPairs", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::LIST(TGeometryTypes::tgeometry())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_aintersects_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersectsPairs", {LogicalType::LIST(TGeographyTypes::tgeography()), LogicalType::LIST(TGeographyTypes::tgeography())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_aintersects_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eTouchesPairs", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::LIST(TGeometryTypes::tgeometry())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_etouches_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aTouchesPairs", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::LIST(TGeometryTypes::tgeometry())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_atouches_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eDisjointPairs", {LogicalType::LIST(TgeompointType::tgeompoint()), LogicalType::LIST(TgeompointType::tgeompoint())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_edisjoint_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eDisjointPairs", {LogicalType::LIST(TgeogpointType::tgeogpoint()), LogicalType::LIST(TgeogpointType::tgeogpoint())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_edisjoint_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eDisjointPairs", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::LIST(TGeometryTypes::tgeometry())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_edisjoint_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eDisjointPairs", {LogicalType::LIST(TGeographyTypes::tgeography()), LogicalType::LIST(TGeographyTypes::tgeography())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_edisjoint_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjointPairs", {LogicalType::LIST(TgeompointType::tgeompoint()), LogicalType::LIST(TgeompointType::tgeompoint())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_adisjoint_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjointPairs", {LogicalType::LIST(TgeogpointType::tgeogpoint()), LogicalType::LIST(TgeogpointType::tgeogpoint())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_adisjoint_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjointPairs", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::LIST(TGeometryTypes::tgeometry())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_adisjoint_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjointPairs", {LogicalType::LIST(TGeographyTypes::tgeography()), LogicalType::LIST(TGeographyTypes::tgeography())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}})), Gen_adisjoint_tgeoarr_tgeoarr));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aCovers", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_acovers_tcbuffer_tcbuffer));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eCovers", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_ecovers_tcbuffer_tcbuffer));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eTouches", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_etouches_tcbuffer_tcbuffer));
@@ -14529,6 +15117,17 @@ static void RegisterGenerated_meos_geo_rel_temp(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tTouches", {TgeompointType::tgeompoint(), GeoTypes::GEOMETRY()}, TemporalTypes::tbool(), Gen_ttouches_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tTouches", {TGeometryTypes::tgeometry(), GeoTypes::GEOMETRY()}, TemporalTypes::tbool(), Gen_ttouches_tgeo_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tTouches", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, TemporalTypes::tbool(), Gen_ttouches_tgeo_tgeo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tDwithinPairs", {LogicalType::LIST(TgeompointType::tgeompoint()), LogicalType::LIST(TgeompointType::tgeompoint()), LogicalType::DOUBLE}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}, {"periods", SpansetTypes::tstzspanset()}})), Gen_tdwithin_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tDwithinPairs", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::DOUBLE}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}, {"periods", SpansetTypes::tstzspanset()}})), Gen_tdwithin_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tIntersectsPairs", {LogicalType::LIST(TgeompointType::tgeompoint()), LogicalType::LIST(TgeompointType::tgeompoint())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}, {"periods", SpansetTypes::tstzspanset()}})), Gen_tintersects_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tIntersectsPairs", {LogicalType::LIST(TgeogpointType::tgeogpoint()), LogicalType::LIST(TgeogpointType::tgeogpoint())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}, {"periods", SpansetTypes::tstzspanset()}})), Gen_tintersects_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tIntersectsPairs", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::LIST(TGeometryTypes::tgeometry())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}, {"periods", SpansetTypes::tstzspanset()}})), Gen_tintersects_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tIntersectsPairs", {LogicalType::LIST(TGeographyTypes::tgeography()), LogicalType::LIST(TGeographyTypes::tgeography())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}, {"periods", SpansetTypes::tstzspanset()}})), Gen_tintersects_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tTouchesPairs", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::LIST(TGeometryTypes::tgeometry())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}, {"periods", SpansetTypes::tstzspanset()}})), Gen_ttouches_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tDisjointPairs", {LogicalType::LIST(TgeompointType::tgeompoint()), LogicalType::LIST(TgeompointType::tgeompoint())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}, {"periods", SpansetTypes::tstzspanset()}})), Gen_tdisjoint_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tDisjointPairs", {LogicalType::LIST(TgeogpointType::tgeogpoint()), LogicalType::LIST(TgeogpointType::tgeogpoint())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}, {"periods", SpansetTypes::tstzspanset()}})), Gen_tdisjoint_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tDisjointPairs", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::LIST(TGeometryTypes::tgeometry())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}, {"periods", SpansetTypes::tstzspanset()}})), Gen_tdisjoint_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tDisjointPairs", {LogicalType::LIST(TGeographyTypes::tgeography()), LogicalType::LIST(TGeographyTypes::tgeography())}, LogicalType::LIST(LogicalType::STRUCT({{"i", LogicalType::INTEGER}, {"j", LogicalType::INTEGER}, {"periods", SpansetTypes::tstzspanset()}})), Gen_tdisjoint_tgeoarr_tgeoarr));
 }
 
 static void RegisterGenerated_meos_geo_restrict(ExtensionLoader &loader) {

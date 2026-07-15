@@ -1,0 +1,90 @@
+# NxN set-set relationships between two arrays of temporal geos:
+#   minDistance(LIST(tgeo), LIST(tgeo)) -> DOUBLE
+#   the *Pairs SRFs -> LIST(STRUCT(i INTEGER, j INTEGER[, periods TSTZSPANSET])), UNNEST to rows.
+# Pair indices are 0-based (the MEOS kernel indices; the PG wrapper exposes +1).
+
+require mobilityduck
+
+# ---- minDistance: the minimum distance over the NxN cross product ----
+query I
+SELECT minDistance([tgeompoint 'Point(0 0)@2000-01-01'], [tgeompoint 'Point(3 4)@2000-01-01']) = 5.0;
+----
+true
+
+query I
+SELECT minDistance([tgeometry 'Point(0 0)@2000-01-01'], [tgeometry 'Point(6 8)@2000-01-01']) = 10.0;
+----
+true
+
+# ---- eDwithinPairs: [(0,0),(10,10)] x [(0,0),(1,1)] within dist 2 -> (0,0),(0,1) ----
+query II
+SELECT u.i, u.j FROM (SELECT UNNEST(eDwithinPairs(
+  [tgeompoint 'Point(0 0)@2000-01-01', tgeompoint 'Point(10 10)@2000-01-01'],
+  [tgeompoint 'Point(0 0)@2000-01-01', tgeompoint 'Point(1 1)@2000-01-01'], 2.0)) AS u) t
+ORDER BY 1, 2;
+----
+0	0
+0	1
+
+# ---- aDwithinPairs: instantaneous points -> always == ever ----
+query II
+SELECT u.i, u.j FROM (SELECT UNNEST(aDwithinPairs(
+  [tgeompoint 'Point(0 0)@2000-01-01', tgeompoint 'Point(10 10)@2000-01-01'],
+  [tgeompoint 'Point(0 0)@2000-01-01', tgeompoint 'Point(1 1)@2000-01-01'], 2.0)) AS u) t
+ORDER BY 1, 2;
+----
+0	0
+0	1
+
+# ---- eIntersectsPairs: only coincident points intersect ----
+query II
+SELECT u.i, u.j FROM (SELECT UNNEST(eIntersectsPairs(
+  [tgeompoint 'Point(0 0)@2000-01-01', tgeompoint 'Point(5 5)@2000-01-01'],
+  [tgeompoint 'Point(0 0)@2000-01-01', tgeompoint 'Point(9 9)@2000-01-01'])) AS u) t
+ORDER BY 1, 2;
+----
+0	0
+
+query II
+SELECT u.i, u.j FROM (SELECT UNNEST(aIntersectsPairs(
+  [tgeompoint 'Point(0 0)@2000-01-01', tgeompoint 'Point(5 5)@2000-01-01'],
+  [tgeompoint 'Point(0 0)@2000-01-01', tgeompoint 'Point(9 9)@2000-01-01'])) AS u) t
+ORDER BY 1, 2;
+----
+0	0
+
+# ---- eDisjointPairs: the complement of the intersecting pair ----
+query II
+SELECT u.i, u.j FROM (SELECT UNNEST(eDisjointPairs(
+  [tgeompoint 'Point(0 0)@2000-01-01', tgeompoint 'Point(5 5)@2000-01-01'],
+  [tgeompoint 'Point(0 0)@2000-01-01', tgeompoint 'Point(9 9)@2000-01-01'])) AS u) t
+ORDER BY 1, 2;
+----
+0	1
+1	0
+1	1
+
+# ---- eTouchesPairs: tgeometry-only; points never touch -> empty ----
+query I
+SELECT count(*) FROM (SELECT UNNEST(eTouchesPairs(
+  [tgeometry 'Point(0 0)@2000-01-01'], [tgeometry 'Point(0 0)@2000-01-01'])) AS u) t;
+----
+0
+
+# ---- tDwithinPairs: a moving point 0->10 over a day vs the origin, within dist 1 for 2.4h ----
+query III
+SELECT u.i, u.j, asText(u.periods) FROM (SELECT UNNEST(tDwithinPairs(
+  [tgeompoint '[Point(0 0)@2000-01-01, Point(0 10)@2000-01-02]'],
+  [tgeompoint '[Point(0 0)@2000-01-01, Point(0 0)@2000-01-02]'], 1.0)) AS u) t
+ORDER BY 1, 2;
+----
+0	0	{[2000-01-01 00:00:00+01, 2000-01-01 02:24:00+01]}
+
+# ---- tIntersectsPairs: two coincident stationary sequences intersect over the whole overlap ----
+query III
+SELECT u.i, u.j, asText(u.periods) FROM (SELECT UNNEST(tIntersectsPairs(
+  [tgeompoint '[Point(0 0)@2000-01-01, Point(0 0)@2000-01-02]'],
+  [tgeompoint '[Point(0 0)@2000-01-01, Point(0 0)@2000-01-02]'])) AS u) t
+ORDER BY 1, 2;
+----
+0	0	{[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01]}
