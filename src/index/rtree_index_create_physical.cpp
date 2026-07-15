@@ -153,8 +153,6 @@ public:
 
 			auto &vec_vec = scan_chunk.data[0];  
 			auto &rowid_vec = scan_chunk.data[1]; 
-
-			auto vector_type = vec_vec.GetType();
 			
 			if (vec_vec.GetVectorType() != VectorType::FLAT_VECTOR) {
 				vec_vec.Flatten(count);
@@ -163,86 +161,16 @@ public:
 				rowid_vec.Flatten(count);
 			}
 
-			UnifiedVectorFormat vec_format;
-			UnifiedVectorFormat rowid_format;
+			DataChunk col_chunk;
+			vector<LogicalType> col_types = {vec_vec.GetType()};
+			col_chunk.Initialize(Allocator::DefaultAllocator(), col_types);
+			col_chunk.SetCardinality(count);
+			col_chunk.data[0].Reference(vec_vec);
 
-			vec_vec.ToUnifiedFormat(count, vec_format);
-			rowid_vec.ToUnifiedFormat(count, rowid_format);
-
-			const auto row_ptr = UnifiedVectorFormat::GetData<row_t>(rowid_format);
-			STBox* boxes = (STBox*)malloc(sizeof(STBox) * count);
-			if (!boxes) {
-				executor.PushError(ErrorData("Failed to allocate memory for STBox array"));
-				return TaskExecutionResult::TASK_ERROR;
+			{
+				lock_guard<mutex> l(gstate.glock);
+				gstate.global_index->Construct(col_chunk, rowid_vec);
 			}
-
-			idx_t valid_count = 0;
-			vector<row_t> valid_row_ids;
-
-			for (idx_t i = 0; i < count; i++) {
-				const auto vec_idx = vec_format.sel->get_index(i);
-				const auto row_idx = rowid_format.sel->get_index(i);
-
-				const auto vec_valid = vec_format.validity.RowIsValid(vec_idx);
-				const auto rowid_valid = rowid_format.validity.RowIsValid(row_idx);
-				
-				if (!vec_valid || !rowid_valid) {
-					continue;
-				}
-
-				fprintf(stderr, "Processing row %zu (vec_idx=%zu, row_idx=%zu)\n", i, vec_idx, row_idx);
-
-				STBox *box = nullptr;
-				
-				if (vector_type.id() == LogicalTypeId::BLOB) {
-					
-					const auto stbox_data_ptr = UnifiedVectorFormat::GetData<string_t>(vec_format);
-					auto blob_data = stbox_data_ptr[vec_idx];
-					const uint8_t *stbox_bytes = reinterpret_cast<const uint8_t*>(blob_data.GetData());
-					size_t stbox_size = blob_data.GetSize();
-					box = (STBox*)malloc(stbox_size);
-					memcpy(box, stbox_bytes, stbox_size);
-
-					int32_t box_srid = stbox_srid(box);
-					
-					if (box_srid != 0) {
-						STBox *normalized_box = stbox_set_srid(box, 0);
-						if (normalized_box) {
-							free(box);
-							box = normalized_box;
-						}
-					}
-					
-					// Copy to our batch array
-					memcpy(&boxes[valid_count], box, sizeof(STBox));
-					valid_row_ids.push_back(row_ptr[row_idx]);
-					valid_count++;
-					
-					free(box);
-					
-					
-				}
-				else {
-					free(boxes);
-					executor.PushError(ErrorData("Unsupported data type for RTree index: " + vector_type.ToString()));
-					return TaskExecutionResult::TASK_ERROR;
-				}
-			}
-
-			// Now batch insert the valid STBoxes into the index
-			if (valid_count > 0) {
-				auto &rtree_index = gstate.global_index;
-				
-				auto result = rtree_index->BulkConstruct(boxes, valid_row_ids.data(), valid_count);
-				if (result.HasError()) {
-					free(boxes);
-					executor.PushError(result);
-					return TaskExecutionResult::TASK_ERROR;
-				}
-				
-			}
-
-			free(boxes);
 
 			gstate.built_count += count;
 
