@@ -180,3 +180,15 @@ query I
 SELECT tboolSeqSetGaps([tbool 't@2000-01-01', tbool 'f@2000-01-10'], interval '3 days');
 ----
 {[t@2000-01-01 00:00:00+01], [f@2000-01-10 00:00:00+01]}
+
+# From MF-JSON / HexWKB parsers (generated base-type name family). Strings are the
+# MEOS encodings of the corresponding literals (Europe/Brussels session tz).
+query I
+SELECT tboolFromMFJSON('{"type":"MovingBoolean","values":[true],"datetimes":["2000-01-01T00:00:00+01"],"interpolation":"None"}') = tbool 't@2000-01-01';
+----
+true
+
+query I
+SELECT tboolFromHexWKB('011A000101005C6C29FFFFFFFF') = tbool 't@2000-01-01';
+----
+true

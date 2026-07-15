@@ -599,7 +599,29 @@ SELECT tint '{1@2000-01-01, 2@2000-01-02, 1@2000-01-03}' <= tint '1@2000-01-01';
 ----
 false
 
-query I 
+query I
 SELECT duration(tint '{[1@2000-01-01, 2@2000-01-02, 1@2000-01-03],[3@2000-01-04, 3@2000-01-05]}');
 ----
 3 days
+
+# From MF-JSON / HexWKB parsers (base-type name family, generated). The strings are
+# the MEOS encodings of the corresponding literals (Europe/Brussels session tz).
+query I
+SELECT tintFromMFJSON('{"type":"MovingInteger","values":[1],"datetimes":["2000-01-01T00:00:00+01"],"interpolation":"None"}') = tint '1@2000-01-01';
+----
+true
+
+query I
+SELECT tintFromHexWKB('0123000101000000005C6C29FFFFFFFF') = tint '1@2000-01-01';
+----
+true
+
+query I
+SELECT tbigintFromMFJSON('{"type":"MovingBigInteger","values":[42],"datetimes":["2000-01-01T00:00:00+01"],"interpolation":"None"}') = tbigint '42@2000-01-01';
+----
+true
+
+query I
+SELECT tbigintFromHexWKB('014300012A00000000000000005C6C29FFFFFFFF') = tbigint '42@2000-01-01';
+----
+true

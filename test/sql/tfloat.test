@@ -252,3 +252,15 @@ query I
 SELECT tfloatSeqSetGaps([tfloat '1@2000-01-01', tfloat '2@2000-01-02', tfloat '3@2000-01-03'], interval '5 days', 5.0);
 ----
 {[1@2000-01-01 00:00:00+01, 3@2000-01-03 00:00:00+01]}
+
+# From MF-JSON / HexWKB parsers (generated base-type name family). Strings are the
+# MEOS encodings of the corresponding literals (Europe/Brussels session tz).
+query I
+SELECT tfloatFromMFJSON('{"type":"MovingFloat","values":[1.5,2.5],"datetimes":["2000-01-01T00:00:00+01","2000-01-02T00:00:00+01"],"lower_inc":true,"upper_inc":true,"interpolation":"Linear"}') = tfloat '[1.5@2000-01-01, 2.5@2000-01-02]';
+----
+true
+
+query I
+SELECT tfloatFromHexWKB('0121000E0200000003000000000000F83F005C6C29FFFFFFFF000000000000044000BC434713000000') = tfloat '[1.5@2000-01-01, 2.5@2000-01-02]';
+----
+true

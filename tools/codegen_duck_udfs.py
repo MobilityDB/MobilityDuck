@@ -2039,6 +2039,8 @@ TEMPORAL_CTOR = {
     "tsequence_make":           "make_seq",    # <t>Seq(<t>[][, text, bool, bool])
     "tsequenceset_make":        "make_seqset", # <t>SeqSet(<t>[])
     "tsequenceset_make_gaps":   "make_gaps",   # <t>SeqSetGaps(<t>[][, interval maxt, float maxdist, text])
+    "temporal_from_hexwkb":     "from_hexwkb", # <t>FromHexWKB(text)
+    "temporal_from_mfjson":     "from_mfjson", # <t>FromMFJSON(text)
 }
 def shape_temporal_ctor(f):
     return TEMPORAL_CTOR.get(f["name"])
@@ -2140,6 +2142,28 @@ _CTOR_BODY = {
     "            return out;\n"
     "        }});\n"
     "}}\n",
+  # <t>FromHexWKB(text): parse a hex-encoded WKB string into a temporal. The WKB is
+  # self-describing, so the kernel needs no temptype.
+  "from_hexwkb":
+    "static void Gen_{fn}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+    "    EnsureMeosThreadInitialized();\n"
+    "    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
+    "        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+    "            Temporal *r = temporal_from_hexwkb(in.GetString().c_str());\n"
+    "            return TemporalToBlobN(result, r, mask, idx);\n"
+    "        }});\n"
+    "}}\n",
+  # <t>FromMFJSON(text): parse a MF-JSON string into a temporal of the registered result type.
+  "from_mfjson":
+    "static void Gen_{fn}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+    "    EnsureMeosThreadInitialized();\n"
+    "    MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());\n"
+    "    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
+    "        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+    "            Temporal *r = temporal_from_mfjson(in.GetString().c_str(), temptype);\n"
+    "            return TemporalToBlobN(result, r, mask, idx);\n"
+    "        }});\n"
+    "}}\n",
 }
 _CTOR_TRANSFORM = (
     "static void Gen_{fn}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
@@ -2182,9 +2206,9 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             fn = f["name"]
             bodies.append(emit_temporal_ctor(f, tc))
             for s in f.get("sqlSignatures", []):
-                a0 = s["args"][0]
-                bt = a0[:-2] if a0.endswith("[]") else a0
-                acc = CORE_CTOR_ACC.get(bt)
+                # The registered SQL/return type is the RESULT temporal type (the parsers
+                # take a text/blob arg, the constructors an operand of the same type).
+                acc = CORE_CTOR_ACC.get(s["ret"])
                 if not acc:
                     continue    # non-core (geo/cbuffer) -> registered in its own family file
                 nm = s.get("sqlName", f["sqlfn"])
