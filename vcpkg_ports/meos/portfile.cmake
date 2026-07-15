@@ -1,8 +1,18 @@
+# The MobilityDB commit to build libmeos from is pinned once in
+# tools/meos-source-commit.txt — the single source of truth shared with the
+# catalog-derivation workflow (.github/workflows/generate.yml), so the libmeos
+# the binding links and the catalog it generates against always come from the
+# same commit. Mirrors the shared ecosystem provision-meos model. Bumping
+# the surface is one edit there plus the SHA512 below (the tarball hash for that
+# commit) and a port-version bump in vcpkg.json to force a rebuild.
+file(READ "${CMAKE_CURRENT_LIST_DIR}/../../tools/meos-source-commit.txt" _MEOS_REF)
+string(STRIP "${_MEOS_REF}" _MEOS_REF)
+
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO MobilityDB/MobilityDB
-    REF f26ad75164771c999f639f0b84fee8cb391fa861
-    SHA512 fc7ed9439164a9cd5410c66a5d6dfaab3396ac4c3029df3cac0559a41307b22f9060b07d34d4a119754132205a7b107357c1cc8651dcc67cd077ce8a5dcf15a2
+    REF ${_MEOS_REF}
+    SHA512 256c392790c5cf5832d3b0d996b73a32b54dedc2e4accd5fa48815895bda89cad43383f25be36a8e02ab738950ae75114fd78ed09a6d5c11f4829cdae28463a4
 )
 
 

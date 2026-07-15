@@ -36,17 +36,12 @@ jobs:
 
       # The catalog is derived from the SAME MobilityDB commit the vcpkg MEOS
       # port builds libmeos from, so the generated code always matches the
-      # libmeos it is compiled against. The portfile REF is the single source of
-      # truth for that commit — read it here rather than committing a duplicate.
+      # libmeos it is compiled against. tools/meos-source-commit.txt is the
+      # single source of truth for that commit (the vcpkg portfile reads the same
+      # file), mirroring the shared ecosystem provision-meos model.
       - name: Resolve the MobilityDB source commit
         id: ref
-        run: |
-          sha=$(grep -oE 'REF[[:space:]]+[0-9a-f]{40}' vcpkg_ports/meos/portfile.cmake | grep -oE '[0-9a-f]{40}')
-          if [ -z "$sha" ]; then
-            echo "::error::could not read the MobilityDB REF from vcpkg_ports/meos/portfile.cmake"
-            exit 1
-          fi
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+        run: echo "sha=$(tr -d '[:space:]' < tools/meos-source-commit.txt)" >> "$GITHUB_OUTPUT"
 
       # Generate meos-idl.json from that commit via the shared MEOS-API action.
       # Catalog only (build-libmeos: false): the generator is pure Python and
