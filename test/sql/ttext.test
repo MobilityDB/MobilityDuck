@@ -151,3 +151,9 @@ query I
 SELECT ttextFromHexWKB('012900010300000000000000616263005C6C29FFFFFFFF') = ttext 'abc@2000-01-01';
 ----
 true
+
+# asHexWKB output (base hex-WKB) — generated inherited Temporal<T> surface. Round-trips.
+query I
+SELECT ttextFromHexWKB(asHexWKB(ttext 'abc@2000-01-01')) = ttext 'abc@2000-01-01';
+----
+true

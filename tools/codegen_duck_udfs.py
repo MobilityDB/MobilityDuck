@@ -2218,6 +2218,58 @@ def emit_container_from_hexwkb(f, cont):
             "        }});\n"
             "}}\n").format(fn=fn, cont=cont, ser=_CFH_SERIALIZE[cont])
 
+# ---- asHexWKB serializer (Temporal<T> INHERITED output surface) ----
+# The mirror of the FromHexWKB input family: one base-type-generic MEOS wrapper
+# (temporal_as_hexwkb) backs the SQL asHexWKB over EVERY temporal subtype via late binding — the
+# Temporal<T> "Input and Output" <sect1> (023_temporal_inout.in.sql / geo/053_tpoint_inout.in.sql /
+# tools/codegen/inherited/INHERITANCE_MAP.md §4). Canonical surface: a single name with an optional
+# `endianenconding text DEFAULT ''` arg; asHexWKB is the BASE hex-WKB — Temporal_as_hexwkb calls
+# Datum_as_hexwkb(extended=false) (mobilitydb type_out.c:296), variant = endian only, no SRID flag.
+# (The extended asHexEWKB is a SEPARATE spatial wrapper Tspatial_as_hexewkb — its own follow-on.)
+# This REPLACES the per-family hand asHexWKB (the geo files register it by hand) with the ONE
+# inherited generation, and ADDS the base temporals (tint/tbigint/tfloat/tbool/ttext) that had no
+# asHexWKB at all. The registered type set is the catalog sqlSignatures (sqlName == asHexWKB)
+# intersected with the types the binding has (SIG_TEMPORAL_ACC) — subtypes whose Duck type is not
+# yet wired (tjsonb/th3index/tnpoint/tpc*) auto-drop and land in their own family file later. The
+# bare canonical name collides with the retired hand asHexWKB (deleted in the same wave).
+OUTPUT_HEXWKB = {
+    "temporal_as_hexwkb": ("Temporal", "BlobToTemporal"),
+}
+OUTPUT_HEXWKB_ACC = {**SIG_TEMPORAL_ACC}
+def emit_output_hexwkb(f, cls, blobto):
+    fn = f["name"]
+    # asHexWKB is the base variant; the optional endian text selects NDR/XDR/machine
+    # (wkb_variant_from_endian("") == 0). One Gen body serves both the 1-arg and 2-arg overloads.
+    return ("static void Gen_{fn}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+            "    EnsureMeosThreadInitialized();\n"
+            "    if (args.ColumnCount() > 1) {{\n"
+            "        BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+            "            [&](string_t in, string_t endian, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+            "                {cls} *x = {blobto}(in);\n"
+            "                uint8_t variant = wkb_variant_from_endian(endian.GetString().c_str());\n"
+            "                size_t sz = 0;\n"
+            "                char *hex = {fn}(x, variant, &sz);\n"
+            "                free(x);\n"
+            "                if (!hex) {{ mask.SetInvalid(idx); return string_t(); }}\n"
+            "                string_t out = StringVector::AddString(result, hex);\n"
+            "                free(hex);\n"
+            "                return out;\n"
+            "            }});\n"
+            "    }} else {{\n"
+            "        UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
+            "            [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+            "                {cls} *x = {blobto}(in);\n"
+            "                size_t sz = 0;\n"
+            "                char *hex = {fn}(x, (uint8_t) 0, &sz);\n"
+            "                free(x);\n"
+            "                if (!hex) {{ mask.SetInvalid(idx); return string_t(); }}\n"
+            "                string_t out = StringVector::AddString(result, hex);\n"
+            "                free(hex);\n"
+            "                return out;\n"
+            "            }});\n"
+            "    }}\n"
+            "}}\n").format(fn=fn, cls=cls, blobto=blobto)
+
 def gen_cpp(fns, out_path, declared=None, aliases=None):
     bodies, generic_regs, specific_regs = GReg(), GReg(), GReg()
     set_bodies, set_generic_regs, set_specific_regs = GReg(), GReg(), GReg()
@@ -2268,6 +2320,31 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 specific_regs.append(
                     f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                     f'"{reg_name(nm, f)}", {{LogicalType::VARCHAR}}, {acc}, Gen_{fn}));')
+            continue
+        oh = OUTPUT_HEXWKB.get(f["name"])
+        if oh:
+            # asHexWKB (Temporal<T> inherited output surface): one Gen_<fn> body, registered per
+            # catalog sqlSignature over the input type for the 1-arg and 2-arg (endian text)
+            # arities. Only the base-WKB sqlName asHexWKB is emitted here (the extended asHexEWKB
+            # is a distinct spatial wrapper). Self-contained (own body + regs + continue); the bare
+            # name replaces the retired hand asHexWKB registrations deleted in the same wave.
+            cls, blobto = oh
+            STATE["grp"] = f.get("group") or "meos_ungrouped"
+            fn = f["name"]
+            bodies.append(emit_output_hexwkb(f, cls, blobto))
+            for s in f.get("sqlSignatures", []):
+                nm = s.get("sqlName", f["sqlfn"])
+                if nm != "asHexWKB":
+                    continue    # asHexEWKB = extended/spatial wrapper (Tspatial_as_hexewkb), own PR
+                acc = OUTPUT_HEXWKB_ACC.get(s["args"][0])
+                if not acc:
+                    continue    # subtype whose Duck type isn't wired yet -> its own family file
+                specific_regs.append(
+                    f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    f'"{reg_name(nm, f)}", {{{acc}}}, LogicalType::VARCHAR, Gen_{fn}));')
+                specific_regs.append(
+                    f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    f'"{reg_name(nm, f)}", {{{acc}, LogicalType::VARCHAR}}, LogicalType::VARCHAR, Gen_{fn}));')
             continue
         u = shape_emittable(f); b = None if u else shape_binary(f); t = None if (u or b) else shape_ternary(f)
         tt = None if (u or b or t) else shape_binary_tt(f)

@@ -625,3 +625,15 @@ query I
 SELECT tbigintFromHexWKB('014300012A00000000000000005C6C29FFFFFFFF') = tbigint '42@2000-01-01';
 ----
 true
+
+# asHexWKB output (base hex-WKB) — the inherited Temporal<T> output surface generated over
+# every temporal subtype (was missing for the base temporals). Round-trips through FromHexWKB.
+query I
+SELECT tintFromHexWKB(asHexWKB(tint '1@2000-01-01')) = tint '1@2000-01-01';
+----
+true
+
+query I
+SELECT tbigintFromHexWKB(asHexWKB(tbigint '42@2000-01-01')) = tbigint '42@2000-01-01';
+----
+true

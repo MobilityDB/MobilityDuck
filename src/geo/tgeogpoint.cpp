@@ -1422,9 +1422,8 @@ void TgeogpointType::RegisterRoundtripIO(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {T}, B,
         [](DataChunk &a, ExpressionState &s, Vector &r) { TgeogAsWkbExec(a, s, r, WKB_EXTENDED); }));
 
-    /* asHexWKB / asHexEWKB */
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("asHexWKB", {T}, V,
-        [](DataChunk &a, ExpressionState &s, Vector &r) { TgeogAsHexWkbExec(a, s, r, GEOG_WKB_BASE); }));
+    /* asHexEWKB (extended hex-WKB, includes SRID). asHexWKB (base) is generated from the
+     * catalog as the inherited Temporal<T> output surface (generated_temporal_udfs.cpp). */
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {T}, V,
         [](DataChunk &a, ExpressionState &s, Vector &r) { TgeogAsHexWkbExec(a, s, r, WKB_EXTENDED); }));
 

@@ -192,3 +192,9 @@ query I
 SELECT tboolFromHexWKB('011A000101005C6C29FFFFFFFF') = tbool 't@2000-01-01';
 ----
 true
+
+# asHexWKB output (base hex-WKB) — generated inherited Temporal<T> surface. Round-trips.
+query I
+SELECT tboolFromHexWKB(asHexWKB(tbool 't@2000-01-01')) = tbool 't@2000-01-01';
+----
+true

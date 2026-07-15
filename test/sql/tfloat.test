@@ -264,3 +264,9 @@ query I
 SELECT tfloatFromHexWKB('0121000E0200000003000000000000F83F005C6C29FFFFFFFF000000000000044000BC434713000000') = tfloat '[1.5@2000-01-01, 2.5@2000-01-02]';
 ----
 true
+
+# asHexWKB output (base hex-WKB) — generated inherited Temporal<T> surface. Round-trips.
+query I
+SELECT tfloatFromHexWKB(asHexWKB(tfloat '[1.5@2000-01-01, 2.5@2000-01-02]')) = tfloat '[1.5@2000-01-01, 2.5@2000-01-02]';
+----
+true
