@@ -422,3 +422,20 @@ query I
 SELECT dateset '{2000-01-01}' >= dateset '{2000-01-01, 2000-01-02, 2000-01-03}';
 ----
 false
+
+# FromHexWKB parsers (per-element-type name family, generated). The strings are the
+# MEOS hex-WKB encodings of the corresponding literals.
+query I
+SELECT intsetFromHexWKB('0112000103000000010000000200000003000000') = intset '{1, 2, 3}';
+----
+true
+
+query I
+SELECT floatsetFromHexWKB('010C000102000000000000000000F83F0000000000000440') = floatset '{1.5, 2.5}';
+----
+true
+
+query I
+SELECT textsetFromHexWKB('0120000102000000010000000000000061010000000000000062') = textset '{"a", "b"}';
+----
+true

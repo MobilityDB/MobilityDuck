@@ -2186,6 +2186,38 @@ def emit_temporal_ctor(f, kind):
         return _CTOR_TRANSFORM.format(fn=fn, meos="temporal_to_tsequenceset")
     return _CTOR_BODY[kind].format(fn=fn)
 
+# ---- Set/Span/SpanSet FromHexWKB parsers (per-element-type NAME FAMILY) ----
+# The base-type-generic MEOS wrappers set_from_hexwkb/span_from_hexwkb/spanset_from_hexwkb back a
+# per-element-type SQL name family (intsetFromHexWKB, intspanFromHexWKB, ...). Same shape as the
+# temporal from_hexwkb: a NUL-terminated hex string parses into the container, marshalled to a BLOB.
+# The WKB is self-describing, so the kernel needs no element type. Core element types only; the
+# spatial set elements (geo/cbuffer/npoint/...) are registered in their own family files once their
+# Duck set type lands.
+CONTAINER_FROM_HEXWKB = {
+    "set_from_hexwkb":     "Set",
+    "span_from_hexwkb":    "Span",
+    "spanset_from_hexwkb": "SpanSet",
+}
+CONTAINER_FROMHEX_ACC = {**SET_TYPES,
+                         **{k: v for k, v in SQL_CONTAINER_ACC.items() if k not in ("tbox", "stbox")}}
+_CFH_SERIALIZE = {
+    "Set":     "            return SetToBlobN(result, r, mask, idx);\n",
+    "Span":    "            if (!r) { mask.SetInvalid(idx); return string_t(); }\n"
+               "            return SpanToBlob(result, r);\n",
+    "SpanSet": "            if (!r) { mask.SetInvalid(idx); return string_t(); }\n"
+               "            return SpanSetToBlob(result, r);\n",
+}
+def emit_container_from_hexwkb(f, cont):
+    fn = f["name"]
+    return ("static void Gen_{fn}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+            "    EnsureMeosThreadInitialized();\n"
+            "    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
+            "        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+            "            {cont} *r = {fn}(in.GetString().c_str());\n"
+            "{ser}"
+            "        }});\n"
+            "}}\n").format(fn=fn, cont=cont, ser=_CFH_SERIALIZE[cont])
+
 def gen_cpp(fns, out_path, declared=None, aliases=None):
     bodies, generic_regs, specific_regs = GReg(), GReg(), GReg()
     set_bodies, set_generic_regs, set_specific_regs = GReg(), GReg(), GReg()
@@ -2219,6 +2251,23 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     specific_regs.append(
                         f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                         f'"{reg_name(nm, f)}", {{{slots}}}, {acc}, Gen_{fn}));')
+            continue
+        cont = CONTAINER_FROM_HEXWKB.get(f["name"])
+        if cont:
+            # Set/Span/SpanSet FromHexWKB NAME FAMILY: one Gen_<fn> body, registered per core
+            # element-type sqlName over the single VARCHAR (hex) argument. Self-contained
+            # (own body + regs + continue) like the temporal constructor branch above.
+            STATE["grp"] = f.get("group") or "meos_ungrouped"
+            fn = f["name"]
+            bodies.append(emit_container_from_hexwkb(f, cont))
+            for s in f.get("sqlSignatures", []):
+                acc = CONTAINER_FROMHEX_ACC.get(s["ret"])
+                if not acc:
+                    continue    # spatial element (geo/cbuffer/npoint/...) -> its own family file
+                nm = s.get("sqlName", f["sqlfn"])
+                specific_regs.append(
+                    f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    f'"{reg_name(nm, f)}", {{LogicalType::VARCHAR}}, {acc}, Gen_{fn}));')
             continue
         u = shape_emittable(f); b = None if u else shape_binary(f); t = None if (u or b) else shape_ternary(f)
         tt = None if (u or b or t) else shape_binary_tt(f)
