@@ -1081,7 +1081,12 @@ def shape_geo_temporal(f):
     has_dbl = len(ins) == 3
     if has_dbl and (base(ins[2]["canonical"]) != "double" or "*" in norm(ins[2]["canonical"])):
         return None
-    if reg_scope(name) is None:
+    # A geo spatial-RELATIONSHIP backing (group *_rel_ever / *_rel_temp) is admitted even when
+    # the name heuristic leaves it unscoped: the point-specific _tpoint_geo touches carry no
+    # reg_scope token (etouches_tpoint_geo -> None), yet they are the correct trajectory-based
+    # backing for temporal points. Its exact per-type scope comes from the catalog sqlSignatures
+    # in gen_cpp (sig_declared_accs), not this heuristic.
+    if reg_scope(name) is None and not re.search(r'_rel_(ever|temp)$', f.get("group") or ""):
         return None
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
     if rb == "Temporal" and rn.endswith("*"):
@@ -1255,6 +1260,50 @@ ARRAY_IN = {
     "TSequence":    ("Temporal", "BlobToTemporal"),
     "TSequenceSet": ("Temporal", "BlobToTemporal"),
 }
+
+def shape_tgeoarr(f):
+    """The NxN set-set functions take two arrays-of-temporal (const Temporal ** + int count) pairs:
+    minDistance(tgeo[],tgeo[]) -> double (SCALAR) and the *Pairs SRFs (int* + count). The Temporal**
+    args make base()=='__INTERNAL__' so every other shape rejects them. Only the SCALAR double-return
+    form (minDistance) is emitted here; the int*-return *Pairs SRFs are a later (table-fn) phase."""
+    name = f["name"]
+    if name.startswith("meos_internal") or (f.get("group") or "").startswith("meos_internal"):
+        return None
+    if not f.get("sqlfn") or re.search(r'_(out|in|send|recv)$', f.get("sqlfn") or ""):
+        return None
+    ps = f["params"]
+    # exactly (const Temporal ** arr1, int count1, const Temporal ** arr2, int count2) = minDistance
+    if len(ps) != 4:
+        return None
+    def is_temp_arr(p): return norm(p["canonical"]) == "Temporal **"
+    def is_int(p): return base(p["canonical"]) in ("int", "int32_t") and "*" not in norm(p["canonical"])
+    if not (is_temp_arr(ps[0]) and is_int(ps[1]) and is_temp_arr(ps[2]) and is_int(ps[3])):
+        return None
+    rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
+    if rb == "double" and "*" not in rn:
+        return ("scalar_double",)
+    return None
+
+def emit_tgeoarr_scalar(f):
+    """DuckDB scalar over two LIST(temporal-blob) args -> double (minDistance). Each LIST row is
+    marshalled to a fresh Temporal** via ListToTemporalArr, the MEOS kernel called, the arrays freed."""
+    name = f["name"]
+    return (
+f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+f"    EnsureMeosThreadInitialized();\n"
+f"    auto &lv1 = args.data[0]; auto &lv2 = args.data[1];\n"
+f"    auto &child1 = ListVector::GetEntry(lv1); child1.Flatten(ListVector::GetListSize(lv1));\n"
+f"    auto &child2 = ListVector::GetEntry(lv2); child2.Flatten(ListVector::GetListSize(lv2));\n"
+f"    BinaryExecutor::Execute<list_entry_t, list_entry_t, double>(\n"
+f"        lv1, lv2, result, args.size(),\n"
+f"        [&](list_entry_t le1, list_entry_t le2) -> double {{\n"
+f"            int n1, n2;\n"
+f"            const Temporal **a1 = ListToTemporalArr(child1, le1, &n1);\n"
+f"            const Temporal **a2 = ListToTemporalArr(child2, le2, &n2);\n"
+f"            double r = {name}(a1, n1, a2, n2);\n"
+f"            FreeTemporalArr(a1, n1); FreeTemporalArr(a2, n2);\n"
+f"            return r;\n"
+f"        }});\n}}\n")
 
 def _acc_sqlname(acc):
     """The canonical SQL type name inside an accessor string, e.g. SetTypes::intset() -> intset,
@@ -1912,12 +1961,13 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         tts = None if (u or b or t or tt) else shape_binary_tt_scalar(f)
         sf = None if (u or b or t or tt or tts) else shape_scalar_first(f)
         gt = None if (u or b or t or tt or tts or sf) else shape_geo_temporal(f)
-        pp = None if (u or b or t or tt or tts or sf or gt) else shape_path(f)
-        if not u and not b and not t and not tt and not tts and not sf and not gt and not pp:
+        ga = None if (u or b or t or tt or tts or sf or gt) else shape_tgeoarr(f)
+        pp = None if (u or b or t or tt or tts or sf or gt or ga) else shape_path(f)
+        if not u and not b and not t and not tt and not tts and not sf and not gt and not ga and not pp:
             continue
         STATE["grp"] = f.get("group") or "meos_ungrouped"
         sqlfn, fn = f["sqlfn"], f["name"]
-        scope, accs = reg_scope(fn)
+        scope, accs = reg_scope(fn) or ("types", None)
         # A generic (`Temporal *`) function whose name carries no type is scoped "all" by
         # reg_scope and blanket-registered over AllTypes()+geo. When the catalog declares its
         # concrete overloads, register over exactly that set instead (the SoT) — dropping the
@@ -1927,6 +1977,21 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             _declared = sig_declared_accs(f)
             if _declared is not None:
                 scope, accs = "types", _declared
+        # Geo spatial-RELATIONSHIP predicates (group *_rel_ever / *_rel_temp) have NON-UNIFORM
+        # per-type support that the `_tgeo`/`_tpoint` name heuristic cannot express and over-expands:
+        #   eTouches/eContains/eCovers -> tgeometry only (points use the trajectory-based _tpoint_geo
+        #     for touches; are undefined for the others); eIntersects/eDisjoint -> all four geo types;
+        #     eDwithin -> mixed; the _tgeo_tgeo T x T forms mirror this.
+        # The catalog sqlSignatures are the SoT for exactly which temporal types each backing is
+        # CREATE FUNCTION'd over -> scope every relationship backing (both the Temporal x geometry and
+        # the Temporal x Temporal shapes) by them. This stops the generic _tgeo_geo from shadowing the
+        # point types, binds the point-specific _tpoint_geo to tgeompoint, and drops the fabricated
+        # geodetic/cross-type overloads MEOS never declares. Gated to the relationship groups so the
+        # gt-shaped restriction ops (atValue/atGeometry, group meos_geo_restrict) keep their name scope.
+        if re.search(r'_rel_(ever|temp)$', f.get("group") or ""):
+            _gaccs = sig_declared_accs(f)
+            if _gaccs is not None:
+                scope, accs = "types", _gaccs
         if u:
             kind, dret = u; n_un += 1
             bodies.append(emit_body(f, kind))
@@ -1966,6 +2031,26 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             if has_dbl: slots.append("LogicalType::DOUBLE")
             spec_sig = "{" + ", ".join(slots) + "}"       # geo rels are always scope=='types'
             argsig = spec_sig.replace("%s", "type")
+        elif ga:
+            # NxN array-of-temporal scalar (minDistance(tgeo[],tgeo[])->double): registered over the
+            # element geo types the catalog CREATE FUNCTION's it for, as LIST(<geo>) x LIST(<geo>).
+            # Self-contained (own registration + continue), like the table-fn path.
+            n_bin += 1
+            bodies.append(emit_tgeoarr_scalar(f))
+            have = set()
+            for s in (f.get("sqlSignatures") or []):
+                for a in s.get("args", []):
+                    bt = a[:-2] if a.endswith("[]") else a
+                    if bt in SIG_TEMPORAL_ACC:
+                        have.add(bt)
+            elems = [SIG_TEMPORAL_ACC[t] for t in SIG_TEMPORAL_ACC if t in have]
+            for a in elems:
+                for nm in reg_names(f, sqlfn, aliases):
+                    specific_regs.append(
+                        f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        f'"{reg_name(nm, f)}", {{LogicalType::LIST({a}), LogicalType::LIST({a})}}, '
+                        f'LogicalType::DOUBLE, Gen_{fn}));')
+            continue
         else:
             # array-return-struct shape -> the canonical SETOF surface = a DuckDB TABLE function
             # (registered via loader.RegisterFunction, NOT the scalar path). Over AllTypes + geo
@@ -2341,6 +2426,17 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "    uint8_t *copy = (uint8_t *)malloc(sz);\n"
            "    memcpy(copy, blob.GetData(), sz);\n"
            "    return reinterpret_cast<Temporal *>(copy);\n}\n"
+           "// Array-of-temporal (LIST(blob)) INPUT marshalling for the NxN set-set functions\n"
+           "// (minDistance(tgeo[],tgeo[]) etc.). Reads a DuckDB LIST row's child BLOBs into a fresh\n"
+           "// Temporal** (each element malloc'd by BlobToTemporal); the caller frees via FreeTemporalArr.\n"
+           "inline const Temporal **ListToTemporalArr(Vector &child, list_entry_t le, int *count) {\n"
+           "    auto data = FlatVector::GetData<string_t>(child);\n"
+           "    int n = (int) le.length;\n"
+           "    const Temporal **arr = (const Temporal **) malloc(sizeof(Temporal *) * (n > 0 ? n : 1));\n"
+           "    for (idx_t i = 0; i < le.length; i++) arr[i] = BlobToTemporal(data[le.offset + i]);\n"
+           "    *count = n;\n    return arr;\n}\n"
+           "inline void FreeTemporalArr(const Temporal **arr, int n) {\n"
+           "    for (int i = 0; i < n; i++) free((void *) arr[i]);\n    free((void *) arr);\n}\n"
            "// Self-contained blob<->Set marshalling (hand binding's exact method: set_mem_size out).\n"
            "inline string_t SetToBlob(Vector &result, Set *s) {\n"
            "    string_t out = StringVector::AddStringOrBlob(result, (const char *)s, set_mem_size(s));\n"
