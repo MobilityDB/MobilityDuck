@@ -241,32 +241,6 @@ void QuadbinFunctions::Tquadbin_make(
  * Accessors
  * ===================================================================== */
 
-void QuadbinFunctions::Tquadbin_start_value(
-    DataChunk &args, ExpressionState &state, Vector &result)
-{
-    UnaryExecutor::Execute<string_t, int64_t>(
-        args.data[0], result, args.size(),
-        [&](string_t blob) -> int64_t {
-            Temporal *t = BlobToTemp(blob);
-            Quadbin v = tquadbin_start_value(t);
-            free(t);
-            return static_cast<int64_t>(v);
-        });
-}
-
-void QuadbinFunctions::Tquadbin_end_value(
-    DataChunk &args, ExpressionState &state, Vector &result)
-{
-    UnaryExecutor::Execute<string_t, int64_t>(
-        args.data[0], result, args.size(),
-        [&](string_t blob) -> int64_t {
-            Temporal *t = BlobToTemp(blob);
-            Quadbin v = tquadbin_end_value(t);
-            free(t);
-            return static_cast<int64_t>(v);
-        });
-}
-
 void QuadbinFunctions::Tquadbin_value_n(
     DataChunk &args, ExpressionState &state, Vector &result)
 {
@@ -427,13 +401,8 @@ void QuadbinTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         "tquadbin", {QB, TS}, TQB,
         QuadbinFunctions::Tquadbin_make));
 
-    /* Accessors */
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "startValue", {TQB}, QB,
-        QuadbinFunctions::Tquadbin_start_value));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "endValue", {TQB}, QB,
-        QuadbinFunctions::Tquadbin_end_value));
+    /* Accessors — startValue/endValue are GENERATED (Tcell cell-id base value,
+     * CELL_BASEVAL); only the not-yet-generatable out-param/list accessors stay hand. */
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "valueN", {TQB, I32}, QB,
         QuadbinFunctions::Tquadbin_value_n));

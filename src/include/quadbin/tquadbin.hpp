@@ -42,9 +42,7 @@ struct QuadbinFunctions {
     /* Constructor */
     static void Tquadbin_make(DataChunk &args, ExpressionState &state, Vector &result);
 
-    /* Accessors */
-    static void Tquadbin_start_value(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tquadbin_end_value(DataChunk &args, ExpressionState &state, Vector &result);
+    /* Accessors (startValue/endValue are generated — see src/generated) */
     static void Tquadbin_value_n(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tquadbin_values(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tquadbin_value_at_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);

@@ -29,6 +29,19 @@ SELECT typeof(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'));
 ----
 tquadbin
 
+# ── generated generic Temporal<T> accessor (SIG_TEMPORAL_ACC) over tquadbin ───
+query I
+SELECT numInstants(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'));
+----
+1
+
+# ── generated traditional comparison (compops) over tquadbin ─────────────────
+query I
+SELECT tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01')
+     = tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01');
+----
+true
+
 # ── the cell-id value accessor reports the canonical lowercase base type ──────
 query I
 SELECT typeof(startValue(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01')));

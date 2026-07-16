@@ -14,6 +14,7 @@
 #include "geo/tgeography.hpp"
 #include "cbuffer/tcbuffer.hpp"
 #include "h3/th3index.hpp"
+#include "quadbin/tquadbin.hpp"
 #include "spatial/spatial_types.hpp"
 #include "geo_util.hpp"
 #include "meos_internal.h"
@@ -1447,6 +1448,19 @@ static void Gen_tcbuffer_expand(DataChunk &args, ExpressionState &, Vector &resu
         [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tcbuffer_expand(t, a2);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+
+// ===== @ingroup meos_cellindex =====
+static void Gen_tquadbin_cell_to_quadkey(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tquadbin_cell_to_quadkey(t);
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -5083,6 +5097,30 @@ static void Gen_temporal_from_mfjson(DataChunk &args, ExpressionState &, Vector 
         [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *r = temporal_from_mfjson(in.GetString().c_str(), temptype);
             return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+
+// ===== @ingroup meos_quadbin_accessor =====
+static void Gen_tquadbin_start_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
+        [&](string_t in) -> int64_t {
+            Temporal *t = BlobToTemporal(in);
+            int64_t r = (int64_t) tquadbin_start_value(t);
+            free(t);
+            return r;
+        });
+}
+
+static void Gen_tquadbin_end_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
+        [&](string_t in) -> int64_t {
+            Temporal *t = BlobToTemporal(in);
+            int64_t r = (int64_t) tquadbin_end_value(t);
+            free(t);
+            return r;
         });
 }
 
@@ -14746,6 +14784,10 @@ static void RegisterGenerated_meos_cbuffer_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("expand", {CbufferTypes::tcbuffer(), LogicalType::DOUBLE}, CbufferTypes::tcbuffer(), Gen_tcbuffer_expand));
 }
 
+static void RegisterGenerated_meos_cellindex(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbinCellToQuadkey", {QuadbinTypes::tquadbin()}, TemporalTypes::ttext(), Gen_tquadbin_cell_to_quadkey));
+}
+
 static void RegisterGenerated_meos_geo_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("angularDifference", {TgeompointType::tgeompoint()}, TemporalTypes::tfloat(), Gen_tpoint_angular_difference));
     RegisterSerializedScalarFunction(loader, ScalarFunction("angularDifference", {TgeogpointType::tgeogpoint()}, TemporalTypes::tfloat(), Gen_tpoint_angular_difference));
@@ -14780,12 +14822,15 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("|>>", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_above_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("above", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_above_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("|>>", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_above_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("above", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_above_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("|>>", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_above_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_after_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_after_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_after_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_after_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_after_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_after_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("after", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_after_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("back", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_back_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("/>>", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_back_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("back", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_back_tspatial_tspatial));
@@ -14798,12 +14843,15 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("/>>", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_back_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("back", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_back_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("/>>", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_back_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("back", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_back_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("/>>", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_back_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_before_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_before_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_before_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_before_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_before_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_before_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("before", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_before_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("below", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_below_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<|", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_below_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("below", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_below_tspatial_tspatial));
@@ -14816,6 +14864,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<|", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_below_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("below", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_below_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<|", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_below_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("below", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_below_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<<|", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_below_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("front", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_front_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<</", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_front_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("front", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_front_tspatial_tspatial));
@@ -14828,6 +14878,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("<</", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_front_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("front", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_front_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<</", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_front_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("front", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_front_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<</", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_front_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("left", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_left_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_left_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("left", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_left_tspatial_tspatial));
@@ -14840,6 +14892,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_left_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("left", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_left_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_left_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("left", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_left_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_left_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overabove", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overabove_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("|&>", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overabove_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overabove", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overabove_tspatial_tspatial));
@@ -14852,12 +14906,15 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("|&>", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overabove_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overabove", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overabove_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("|&>", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overabove_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overabove", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overabove_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("|&>", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overabove_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overafter_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overafter_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_overafter_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_overafter_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overafter_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overafter_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overafter_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overback", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overback_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("/&>", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overback_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overback", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overback_tspatial_tspatial));
@@ -14870,12 +14927,15 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("/&>", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overback_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overback", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overback_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("/&>", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overback_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overback", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overback_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("/&>", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overback_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overbefore_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overbefore_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_overbefore_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_overbefore_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overbefore_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overbefore_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overbefore_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbelow", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overbelow_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<|", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overbelow_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbelow", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overbelow_tspatial_tspatial));
@@ -14888,6 +14948,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<|", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overbelow_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbelow", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overbelow_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<|", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overbelow_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overbelow", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overbelow_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&<|", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overbelow_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overfront", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overfront_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&</", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overfront_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overfront", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overfront_tspatial_tspatial));
@@ -14900,6 +14962,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("&</", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overfront_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overfront", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overfront_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&</", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overfront_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overfront", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overfront_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&</", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overfront_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overleft_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overleft_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overleft_tspatial_tspatial));
@@ -14912,6 +14976,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overleft_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overleft_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overleft_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overleft_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overleft_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overright_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overright_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overright_tspatial_tspatial));
@@ -14924,6 +14990,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overright_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overright_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overright_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overright_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overright_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("right", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_right_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_right_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("right", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_right_tspatial_tspatial));
@@ -14936,6 +15004,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_right_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("right", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_right_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_right_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("right", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_right_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_right_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("above", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_above_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("|>>", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_above_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("above", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_above_stbox_tspatial));
@@ -14948,6 +15018,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("|>>", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_above_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("above", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_above_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("|>>", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_above_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("above", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_above_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("|>>", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_above_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("above", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_above_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("|>>", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_above_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("above", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_above_tspatial_stbox));
@@ -14960,18 +15032,22 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("|>>", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_above_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("above", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_above_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("|>>", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_above_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("above", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_above_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("|>>", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_above_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_after_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_after_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {StboxType::stbox(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_after_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {StboxType::stbox(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_after_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_after_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_after_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("after", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_after_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_after_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_after_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {TGeometryTypes::tgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_after_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {TGeographyTypes::tgeography(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_after_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_after_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_after_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("after", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_after_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("back", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_back_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("/>>", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_back_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("back", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_back_stbox_tspatial));
@@ -14984,6 +15060,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("/>>", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_back_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("back", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_back_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("/>>", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_back_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("back", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_back_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("/>>", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_back_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("back", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_back_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("/>>", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_back_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("back", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_back_tspatial_stbox));
@@ -14996,18 +15074,22 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("/>>", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_back_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("back", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_back_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("/>>", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_back_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("back", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_back_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("/>>", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_back_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_before_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_before_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {StboxType::stbox(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_before_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {StboxType::stbox(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_before_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_before_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_before_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("before", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_before_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_before_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_before_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {TGeometryTypes::tgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_before_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {TGeographyTypes::tgeography(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_before_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_before_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_before_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("before", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_before_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("below", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_below_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<|", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_below_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("below", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_below_stbox_tspatial));
@@ -15020,6 +15102,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<|", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_below_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("below", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_below_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<|", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_below_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("below", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_below_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<<|", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_below_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("below", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_below_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<|", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_below_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("below", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_below_tspatial_stbox));
@@ -15032,6 +15116,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<|", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_below_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("below", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_below_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<|", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_below_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("below", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_below_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<<|", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_below_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("front", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_front_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<</", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_front_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("front", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_front_stbox_tspatial));
@@ -15044,6 +15130,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("<</", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_front_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("front", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_front_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<</", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_front_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("front", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_front_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<</", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_front_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("front", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_front_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<</", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_front_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("front", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_front_tspatial_stbox));
@@ -15056,6 +15144,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("<</", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_front_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("front", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_front_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<</", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_front_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("front", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_front_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<</", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_front_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("left", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_left_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_left_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("left", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_left_stbox_tspatial));
@@ -15068,6 +15158,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_left_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("left", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_left_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_left_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("left", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_left_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_left_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("left", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_left_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_left_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("left", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_left_tspatial_stbox));
@@ -15080,6 +15172,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_left_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("left", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_left_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_left_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("left", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_left_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_left_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overabove", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overabove_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("|&>", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overabove_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overabove", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overabove_stbox_tspatial));
@@ -15092,6 +15186,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("|&>", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overabove_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overabove", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overabove_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("|&>", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overabove_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overabove", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overabove_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("|&>", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overabove_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overabove", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overabove_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("|&>", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overabove_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overabove", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overabove_tspatial_stbox));
@@ -15104,18 +15200,22 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("|&>", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overabove_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overabove", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overabove_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("|&>", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overabove_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overabove", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overabove_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("|&>", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overabove_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overafter_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overafter_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {StboxType::stbox(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_overafter_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {StboxType::stbox(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_overafter_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overafter_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overafter_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overafter_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overafter_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overafter_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {TGeometryTypes::tgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overafter_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {TGeographyTypes::tgeography(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overafter_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overafter_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overafter_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overafter_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overback", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overback_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("/&>", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overback_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overback", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overback_stbox_tspatial));
@@ -15128,24 +15228,29 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("/&>", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overback_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overback", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overback_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("/&>", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overback_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overback", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overback_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("/&>", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overback_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overback", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overback_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overback", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overback_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overback", {TGeometryTypes::tgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overback_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overback", {TGeographyTypes::tgeography(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overback_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overback", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overback_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overback", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overback_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overback", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overback_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overbefore_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overbefore_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {StboxType::stbox(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_overbefore_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {StboxType::stbox(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_overbefore_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overbefore_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overbefore_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overbefore_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overbefore_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overbefore_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {TGeometryTypes::tgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overbefore_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {TGeographyTypes::tgeography(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overbefore_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overbefore_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overbefore_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overbefore_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbelow", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overbelow_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<|", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overbelow_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbelow", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overbelow_stbox_tspatial));
@@ -15158,6 +15263,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<|", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overbelow_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbelow", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overbelow_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<|", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overbelow_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overbelow", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overbelow_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&<|", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overbelow_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbelow", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overbelow_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<|", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overbelow_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbelow", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overbelow_tspatial_stbox));
@@ -15170,6 +15277,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<|", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overbelow_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbelow", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overbelow_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<|", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overbelow_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overbelow", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overbelow_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&<|", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overbelow_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overfront", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overfront_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&</", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overfront_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overfront", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overfront_stbox_tspatial));
@@ -15182,6 +15291,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("&</", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overfront_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overfront", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overfront_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&</", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overfront_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overfront", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overfront_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&</", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overfront_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overfront", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overfront_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&</", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overfront_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overfront", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overfront_tspatial_stbox));
@@ -15194,6 +15305,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("&</", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overfront_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overfront", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overfront_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&</", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overfront_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overfront", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overfront_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&</", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overfront_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overleft_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overleft_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overleft_stbox_tspatial));
@@ -15206,6 +15319,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overleft_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overleft_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overleft_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overleft_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overleft_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overleft_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overleft_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overleft_tspatial_stbox));
@@ -15218,6 +15333,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overleft_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overleft_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overleft_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overleft_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overleft_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overright_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overright_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overright_stbox_tspatial));
@@ -15230,6 +15347,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overright_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overright_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overright_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overright_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overright_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overright_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overright_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overright_tspatial_stbox));
@@ -15242,6 +15361,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overright_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overright_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overright_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overright", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overright_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overright_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("right", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_right_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_right_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("right", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_right_stbox_tspatial));
@@ -15254,6 +15375,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_right_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("right", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_right_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_right_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("right", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_right_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_right_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("right", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_right_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_right_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("right", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_right_tspatial_stbox));
@@ -15266,6 +15389,8 @@ static void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_right_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("right", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_right_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_right_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("right", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_right_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_right_tspatial_stbox));
 }
 
 static void RegisterGenerated_meos_geo_bbox_topo(ExtensionLoader &loader) {
@@ -15281,6 +15406,8 @@ static void RegisterGenerated_meos_geo_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
@@ -15293,6 +15420,8 @@ static void RegisterGenerated_meos_geo_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
@@ -15305,6 +15434,8 @@ static void RegisterGenerated_meos_geo_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
@@ -15317,6 +15448,8 @@ static void RegisterGenerated_meos_geo_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("same", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("same", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
@@ -15329,6 +15462,8 @@ static void RegisterGenerated_meos_geo_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("same", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
@@ -15341,6 +15476,8 @@ static void RegisterGenerated_meos_geo_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
@@ -15353,6 +15490,8 @@ static void RegisterGenerated_meos_geo_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
@@ -15365,6 +15504,8 @@ static void RegisterGenerated_meos_geo_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
@@ -15377,6 +15518,8 @@ static void RegisterGenerated_meos_geo_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
@@ -15389,6 +15532,8 @@ static void RegisterGenerated_meos_geo_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
@@ -15401,6 +15546,8 @@ static void RegisterGenerated_meos_geo_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
@@ -15413,6 +15560,8 @@ static void RegisterGenerated_meos_geo_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
@@ -15425,6 +15574,8 @@ static void RegisterGenerated_meos_geo_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("same", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("same", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
@@ -15437,6 +15588,8 @@ static void RegisterGenerated_meos_geo_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("same", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
     RegisterSerializedScalarFunction(loader, ScalarFunction("same", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("same", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
@@ -15449,6 +15602,8 @@ static void RegisterGenerated_meos_geo_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("same", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
 }
 
 static void RegisterGenerated_meos_geo_box_comp(ExtensionLoader &loader) {
@@ -15686,24 +15841,28 @@ static void RegisterGenerated_meos_geo_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {TGeographyTypes::tgeography(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_tspatial_as_ewkt));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {CbufferTypes::tcbuffer(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_tspatial_as_ewkt));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {H3indexTypes::th3index(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_tspatial_as_ewkt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {QuadbinTypes::tquadbin(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_tspatial_as_ewkt));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {TgeompointType::tgeompoint()}, LogicalType::VARCHAR, Gen_tspatial_as_ewkt_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {TgeogpointType::tgeogpoint()}, LogicalType::VARCHAR, Gen_tspatial_as_ewkt_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {TGeometryTypes::tgeometry()}, LogicalType::VARCHAR, Gen_tspatial_as_ewkt_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {TGeographyTypes::tgeography()}, LogicalType::VARCHAR, Gen_tspatial_as_ewkt_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {CbufferTypes::tcbuffer()}, LogicalType::VARCHAR, Gen_tspatial_as_ewkt_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {H3indexTypes::th3index()}, LogicalType::VARCHAR, Gen_tspatial_as_ewkt_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {QuadbinTypes::tquadbin()}, LogicalType::VARCHAR, Gen_tspatial_as_ewkt_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {TgeompointType::tgeompoint(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_tspatial_as_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {TgeogpointType::tgeogpoint(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_tspatial_as_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {TGeometryTypes::tgeometry(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_tspatial_as_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {TGeographyTypes::tgeography(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_tspatial_as_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {CbufferTypes::tcbuffer(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_tspatial_as_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {H3indexTypes::th3index(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_tspatial_as_text));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {QuadbinTypes::tquadbin(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_tspatial_as_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {TgeompointType::tgeompoint()}, LogicalType::VARCHAR, Gen_tspatial_as_text_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {TgeogpointType::tgeogpoint()}, LogicalType::VARCHAR, Gen_tspatial_as_text_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {TGeometryTypes::tgeometry()}, LogicalType::VARCHAR, Gen_tspatial_as_text_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {TGeographyTypes::tgeography()}, LogicalType::VARCHAR, Gen_tspatial_as_text_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {CbufferTypes::tcbuffer()}, LogicalType::VARCHAR, Gen_tspatial_as_text_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {H3indexTypes::th3index()}, LogicalType::VARCHAR, Gen_tspatial_as_text_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {QuadbinTypes::tquadbin()}, LogicalType::VARCHAR, Gen_tspatial_as_text_d));
 }
 
 static void RegisterGenerated_meos_geo_rel_ever(ExtensionLoader &loader) {
@@ -15893,18 +16052,21 @@ static void RegisterGenerated_meos_geo_srid(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {TGeographyTypes::tgeography()}, LogicalType::INTEGER, Gen_tspatial_srid));
     RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {CbufferTypes::tcbuffer()}, LogicalType::INTEGER, Gen_tspatial_srid));
     RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {H3indexTypes::th3index()}, LogicalType::INTEGER, Gen_tspatial_srid));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {QuadbinTypes::tquadbin()}, LogicalType::INTEGER, Gen_tspatial_srid));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {TgeompointType::tgeompoint(), LogicalType::INTEGER}, TgeompointType::tgeompoint(), Gen_tspatial_set_srid));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {TgeogpointType::tgeogpoint(), LogicalType::INTEGER}, TgeogpointType::tgeogpoint(), Gen_tspatial_set_srid));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {TGeometryTypes::tgeometry(), LogicalType::INTEGER}, TGeometryTypes::tgeometry(), Gen_tspatial_set_srid));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {TGeographyTypes::tgeography(), LogicalType::INTEGER}, TGeographyTypes::tgeography(), Gen_tspatial_set_srid));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {CbufferTypes::tcbuffer(), LogicalType::INTEGER}, CbufferTypes::tcbuffer(), Gen_tspatial_set_srid));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {H3indexTypes::th3index(), LogicalType::INTEGER}, H3indexTypes::th3index(), Gen_tspatial_set_srid));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {QuadbinTypes::tquadbin(), LogicalType::INTEGER}, QuadbinTypes::tquadbin(), Gen_tspatial_set_srid));
     RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {TgeompointType::tgeompoint(), LogicalType::INTEGER}, TgeompointType::tgeompoint(), Gen_tspatial_transform));
     RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {TgeogpointType::tgeogpoint(), LogicalType::INTEGER}, TgeogpointType::tgeogpoint(), Gen_tspatial_transform));
     RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {TGeometryTypes::tgeometry(), LogicalType::INTEGER}, TGeometryTypes::tgeometry(), Gen_tspatial_transform));
     RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {TGeographyTypes::tgeography(), LogicalType::INTEGER}, TGeographyTypes::tgeography(), Gen_tspatial_transform));
     RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {CbufferTypes::tcbuffer(), LogicalType::INTEGER}, CbufferTypes::tcbuffer(), Gen_tspatial_transform));
     RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {H3indexTypes::th3index(), LogicalType::INTEGER}, H3indexTypes::th3index(), Gen_tspatial_transform));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {QuadbinTypes::tquadbin(), LogicalType::INTEGER}, QuadbinTypes::tquadbin(), Gen_tspatial_transform));
 }
 
 static void RegisterGenerated_meos_h3_accessor(ExtensionLoader &loader) {
@@ -15991,11 +16153,16 @@ static void RegisterGenerated_meos_internal_temporal_inout(ExtensionLoader &load
     RegisterSerializedScalarFunction(loader, ScalarFunction("ttextFromMFJSON", {LogicalType::VARCHAR}, TemporalTypes::ttext(), Gen_temporal_from_mfjson));
 }
 
+static void RegisterGenerated_meos_quadbin_accessor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {QuadbinTypes::tquadbin()}, QuadbinTypes::quadbin(), Gen_tquadbin_start_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {QuadbinTypes::tquadbin()}, QuadbinTypes::quadbin(), Gen_tquadbin_end_value));
+}
+
 static void RegisterGenerated_meos_quadbin_conversion(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbin", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_tbigint_to_tquadbin));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_tbigint_to_tquadbin));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tbigint", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_tquadbin_to_tbigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_tquadbin_to_tbigint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbin", {TemporalTypes::tbigint()}, QuadbinTypes::tquadbin(), Gen_tbigint_to_tquadbin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tbigint()}, QuadbinTypes::tquadbin(), Gen_tbigint_to_tquadbin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbigint", {QuadbinTypes::tquadbin()}, TemporalTypes::tbigint(), Gen_tquadbin_to_tbigint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {QuadbinTypes::tquadbin()}, TemporalTypes::tbigint(), Gen_tquadbin_to_tbigint));
 }
 
 static void RegisterGenerated_meos_setspan_accessor(ExtensionLoader &loader) {
@@ -16754,7 +16921,7 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     for (auto &type : TemporalTypes::AllTypes()) {
         RegisterSerializedScalarFunction(loader, ScalarFunction("tint_hash", {type}, LogicalType::INTEGER, Gen_temporal_hash));
     }
-    for (auto &type : std::vector<LogicalType>{TgeompointType::tgeompoint(), TgeogpointType::tgeogpoint(), TGeometryTypes::tgeometry(), TGeographyTypes::tgeography(), CbufferTypes::tcbuffer(), H3indexTypes::th3index()}) {
+    for (auto &type : std::vector<LogicalType>{TgeompointType::tgeompoint(), TgeogpointType::tgeogpoint(), TGeometryTypes::tgeometry(), TGeographyTypes::tgeography(), CbufferTypes::tcbuffer(), H3indexTypes::th3index(), QuadbinTypes::tquadbin()}) {
         RegisterSerializedScalarFunction(loader, ScalarFunction("tint_hash", {type}, LogicalType::INTEGER, Gen_temporal_hash));
     }
     RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_tbool_end_value));
@@ -16770,6 +16937,7 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {TGeographyTypes::tgeography(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_temporal_duration));
     RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {CbufferTypes::tcbuffer(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_temporal_duration));
     RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {H3indexTypes::th3index(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_temporal_duration));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {QuadbinTypes::tquadbin(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_temporal_duration));
     RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {TemporalTypes::tint()}, LogicalType::INTERVAL, Gen_temporal_duration_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {TemporalTypes::tbigint()}, LogicalType::INTERVAL, Gen_temporal_duration_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {TemporalTypes::tbool()}, LogicalType::INTERVAL, Gen_temporal_duration_d));
@@ -16781,6 +16949,7 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {TGeographyTypes::tgeography()}, LogicalType::INTERVAL, Gen_temporal_duration_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {CbufferTypes::tcbuffer()}, LogicalType::INTERVAL, Gen_temporal_duration_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {H3indexTypes::th3index()}, LogicalType::INTERVAL, Gen_temporal_duration_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {QuadbinTypes::tquadbin()}, LogicalType::INTERVAL, Gen_temporal_duration_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endInstant", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_end_instant));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endInstant", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_end_instant));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endInstant", {TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_temporal_end_instant));
@@ -16792,6 +16961,7 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("endInstant", {TGeographyTypes::tgeography()}, TGeographyTypes::tgeography(), Gen_temporal_end_instant));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endInstant", {CbufferTypes::tcbuffer()}, CbufferTypes::tcbuffer(), Gen_temporal_end_instant));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endInstant", {H3indexTypes::th3index()}, H3indexTypes::th3index(), Gen_temporal_end_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endInstant", {QuadbinTypes::tquadbin()}, QuadbinTypes::tquadbin(), Gen_temporal_end_instant));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endSequence", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_end_sequence));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endSequence", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_end_sequence));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endSequence", {TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_temporal_end_sequence));
@@ -16803,6 +16973,7 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("endSequence", {TGeographyTypes::tgeography()}, TGeographyTypes::tgeography(), Gen_temporal_end_sequence));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endSequence", {CbufferTypes::tcbuffer()}, CbufferTypes::tcbuffer(), Gen_temporal_end_sequence));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endSequence", {H3indexTypes::th3index()}, H3indexTypes::th3index(), Gen_temporal_end_sequence));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endSequence", {QuadbinTypes::tquadbin()}, QuadbinTypes::tquadbin(), Gen_temporal_end_sequence));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {TemporalTypes::tint()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {TemporalTypes::tbigint()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {TemporalTypes::tbool()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
@@ -16814,6 +16985,7 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {TGeographyTypes::tgeography()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {CbufferTypes::tcbuffer()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {H3indexTypes::th3index()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {QuadbinTypes::tquadbin()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tint(), Gen_temporal_instant_n));
     RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {TemporalTypes::tbigint(), LogicalType::INTEGER}, TemporalTypes::tbigint(), Gen_temporal_instant_n));
     RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {TemporalTypes::tbool(), LogicalType::INTEGER}, TemporalTypes::tbool(), Gen_temporal_instant_n));
@@ -16825,6 +16997,7 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {TGeographyTypes::tgeography(), LogicalType::INTEGER}, TGeographyTypes::tgeography(), Gen_temporal_instant_n));
     RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {CbufferTypes::tcbuffer(), LogicalType::INTEGER}, CbufferTypes::tcbuffer(), Gen_temporal_instant_n));
     RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {H3indexTypes::th3index(), LogicalType::INTEGER}, H3indexTypes::th3index(), Gen_temporal_instant_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {QuadbinTypes::tquadbin(), LogicalType::INTEGER}, QuadbinTypes::tquadbin(), Gen_temporal_instant_n));
     RegisterSerializedScalarFunction(loader, ScalarFunction("interp", {TemporalTypes::tint()}, LogicalType::VARCHAR, Gen_temporal_interp));
     RegisterSerializedScalarFunction(loader, ScalarFunction("interp", {TemporalTypes::tbigint()}, LogicalType::VARCHAR, Gen_temporal_interp));
     RegisterSerializedScalarFunction(loader, ScalarFunction("interp", {TemporalTypes::tbool()}, LogicalType::VARCHAR, Gen_temporal_interp));
@@ -16836,6 +17009,7 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("interp", {TGeographyTypes::tgeography()}, LogicalType::VARCHAR, Gen_temporal_interp));
     RegisterSerializedScalarFunction(loader, ScalarFunction("interp", {CbufferTypes::tcbuffer()}, LogicalType::VARCHAR, Gen_temporal_interp));
     RegisterSerializedScalarFunction(loader, ScalarFunction("interp", {H3indexTypes::th3index()}, LogicalType::VARCHAR, Gen_temporal_interp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("interp", {QuadbinTypes::tquadbin()}, LogicalType::VARCHAR, Gen_temporal_interp));
     RegisterSerializedScalarFunction(loader, ScalarFunction("lowerInc", {TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_lower_inc));
     RegisterSerializedScalarFunction(loader, ScalarFunction("lowerInc", {TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_lower_inc));
     RegisterSerializedScalarFunction(loader, ScalarFunction("lowerInc", {TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_temporal_lower_inc));
@@ -16847,6 +17021,7 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("lowerInc", {TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_temporal_lower_inc));
     RegisterSerializedScalarFunction(loader, ScalarFunction("lowerInc", {CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_temporal_lower_inc));
     RegisterSerializedScalarFunction(loader, ScalarFunction("lowerInc", {H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_temporal_lower_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lowerInc", {QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_temporal_lower_inc));
     RegisterSerializedScalarFunction(loader, ScalarFunction("maxInstant", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_max_instant));
     RegisterSerializedScalarFunction(loader, ScalarFunction("maxInstant", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_max_instant));
     RegisterSerializedScalarFunction(loader, ScalarFunction("maxInstant", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_max_instant));
@@ -16866,6 +17041,7 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("numInstants", {TGeographyTypes::tgeography()}, LogicalType::INTEGER, Gen_temporal_num_instants));
     RegisterSerializedScalarFunction(loader, ScalarFunction("numInstants", {CbufferTypes::tcbuffer()}, LogicalType::INTEGER, Gen_temporal_num_instants));
     RegisterSerializedScalarFunction(loader, ScalarFunction("numInstants", {H3indexTypes::th3index()}, LogicalType::INTEGER, Gen_temporal_num_instants));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numInstants", {QuadbinTypes::tquadbin()}, LogicalType::INTEGER, Gen_temporal_num_instants));
     RegisterSerializedScalarFunction(loader, ScalarFunction("numSequences", {TemporalTypes::tint()}, LogicalType::INTEGER, Gen_temporal_num_sequences));
     RegisterSerializedScalarFunction(loader, ScalarFunction("numSequences", {TemporalTypes::tbigint()}, LogicalType::INTEGER, Gen_temporal_num_sequences));
     RegisterSerializedScalarFunction(loader, ScalarFunction("numSequences", {TemporalTypes::tbool()}, LogicalType::INTEGER, Gen_temporal_num_sequences));
@@ -16877,6 +17053,7 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("numSequences", {TGeographyTypes::tgeography()}, LogicalType::INTEGER, Gen_temporal_num_sequences));
     RegisterSerializedScalarFunction(loader, ScalarFunction("numSequences", {CbufferTypes::tcbuffer()}, LogicalType::INTEGER, Gen_temporal_num_sequences));
     RegisterSerializedScalarFunction(loader, ScalarFunction("numSequences", {H3indexTypes::th3index()}, LogicalType::INTEGER, Gen_temporal_num_sequences));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numSequences", {QuadbinTypes::tquadbin()}, LogicalType::INTEGER, Gen_temporal_num_sequences));
     RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {TemporalTypes::tint()}, LogicalType::INTEGER, Gen_temporal_num_timestamps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {TemporalTypes::tbigint()}, LogicalType::INTEGER, Gen_temporal_num_timestamps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {TemporalTypes::tbool()}, LogicalType::INTEGER, Gen_temporal_num_timestamps));
@@ -16888,6 +17065,7 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {TGeographyTypes::tgeography()}, LogicalType::INTEGER, Gen_temporal_num_timestamps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {CbufferTypes::tcbuffer()}, LogicalType::INTEGER, Gen_temporal_num_timestamps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {H3indexTypes::th3index()}, LogicalType::INTEGER, Gen_temporal_num_timestamps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {QuadbinTypes::tquadbin()}, LogicalType::INTEGER, Gen_temporal_num_timestamps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("sequenceN", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tint(), Gen_temporal_sequence_n));
     RegisterSerializedScalarFunction(loader, ScalarFunction("sequenceN", {TemporalTypes::tbigint(), LogicalType::INTEGER}, TemporalTypes::tbigint(), Gen_temporal_sequence_n));
     RegisterSerializedScalarFunction(loader, ScalarFunction("sequenceN", {TemporalTypes::tbool(), LogicalType::INTEGER}, TemporalTypes::tbool(), Gen_temporal_sequence_n));
@@ -16899,6 +17077,7 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("sequenceN", {TGeographyTypes::tgeography(), LogicalType::INTEGER}, TGeographyTypes::tgeography(), Gen_temporal_sequence_n));
     RegisterSerializedScalarFunction(loader, ScalarFunction("sequenceN", {CbufferTypes::tcbuffer(), LogicalType::INTEGER}, CbufferTypes::tcbuffer(), Gen_temporal_sequence_n));
     RegisterSerializedScalarFunction(loader, ScalarFunction("sequenceN", {H3indexTypes::th3index(), LogicalType::INTEGER}, H3indexTypes::th3index(), Gen_temporal_sequence_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("sequenceN", {QuadbinTypes::tquadbin(), LogicalType::INTEGER}, QuadbinTypes::tquadbin(), Gen_temporal_sequence_n));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startInstant", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_start_instant));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startInstant", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_start_instant));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startInstant", {TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_temporal_start_instant));
@@ -16910,6 +17089,7 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("startInstant", {TGeographyTypes::tgeography()}, TGeographyTypes::tgeography(), Gen_temporal_start_instant));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startInstant", {CbufferTypes::tcbuffer()}, CbufferTypes::tcbuffer(), Gen_temporal_start_instant));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startInstant", {H3indexTypes::th3index()}, H3indexTypes::th3index(), Gen_temporal_start_instant));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startInstant", {QuadbinTypes::tquadbin()}, QuadbinTypes::tquadbin(), Gen_temporal_start_instant));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startSequence", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_start_sequence));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startSequence", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_start_sequence));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startSequence", {TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_temporal_start_sequence));
@@ -16921,6 +17101,7 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("startSequence", {TGeographyTypes::tgeography()}, TGeographyTypes::tgeography(), Gen_temporal_start_sequence));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startSequence", {CbufferTypes::tcbuffer()}, CbufferTypes::tcbuffer(), Gen_temporal_start_sequence));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startSequence", {H3indexTypes::th3index()}, H3indexTypes::th3index(), Gen_temporal_start_sequence));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startSequence", {QuadbinTypes::tquadbin()}, QuadbinTypes::tquadbin(), Gen_temporal_start_sequence));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {TemporalTypes::tint()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_start_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {TemporalTypes::tbigint()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_start_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {TemporalTypes::tbool()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_start_timestamptz));
@@ -16932,6 +17113,7 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {TGeographyTypes::tgeography()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_start_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {CbufferTypes::tcbuffer()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_start_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {H3indexTypes::th3index()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_start_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {QuadbinTypes::tquadbin()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_start_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tempSubtype", {TemporalTypes::tint()}, LogicalType::VARCHAR, Gen_temporal_subtype));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tempSubtype", {TemporalTypes::tbigint()}, LogicalType::VARCHAR, Gen_temporal_subtype));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tempSubtype", {TemporalTypes::tbool()}, LogicalType::VARCHAR, Gen_temporal_subtype));
@@ -16943,6 +17125,7 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tempSubtype", {TGeographyTypes::tgeography()}, LogicalType::VARCHAR, Gen_temporal_subtype));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tempSubtype", {CbufferTypes::tcbuffer()}, LogicalType::VARCHAR, Gen_temporal_subtype));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tempSubtype", {H3indexTypes::th3index()}, LogicalType::VARCHAR, Gen_temporal_subtype));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tempSubtype", {QuadbinTypes::tquadbin()}, LogicalType::VARCHAR, Gen_temporal_subtype));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tempBasetype", {TemporalTypes::tint()}, LogicalType::VARCHAR, Gen_temporal_basetype_name));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tempBasetype", {TemporalTypes::tbigint()}, LogicalType::VARCHAR, Gen_temporal_basetype_name));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tempBasetype", {TemporalTypes::tbool()}, LogicalType::VARCHAR, Gen_temporal_basetype_name));
@@ -16964,6 +17147,7 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("upperInc", {TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_temporal_upper_inc));
     RegisterSerializedScalarFunction(loader, ScalarFunction("upperInc", {CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_temporal_upper_inc));
     RegisterSerializedScalarFunction(loader, ScalarFunction("upperInc", {H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_temporal_upper_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("upperInc", {QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_temporal_upper_inc));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {TemporalTypes::tfloat()}, LogicalType::DOUBLE, Gen_tfloat_end_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minValue", {TemporalTypes::tfloat()}, LogicalType::DOUBLE, Gen_tfloat_min_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("maxValue", {TemporalTypes::tfloat()}, LogicalType::DOUBLE, Gen_tfloat_max_value));
@@ -16991,6 +17175,7 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("timestamps", {TgeompointType::tgeompoint()}, LogicalType::LIST(LogicalType::TIMESTAMP_TZ), Gen_temporal_timestamps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("timestamps", {TgeogpointType::tgeogpoint()}, LogicalType::LIST(LogicalType::TIMESTAMP_TZ), Gen_temporal_timestamps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("timestamps", {H3indexTypes::th3index()}, LogicalType::LIST(LogicalType::TIMESTAMP_TZ), Gen_temporal_timestamps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timestamps", {QuadbinTypes::tquadbin()}, LogicalType::LIST(LogicalType::TIMESTAMP_TZ), Gen_temporal_timestamps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("timestamps", {TemporalTypes::tbool()}, LogicalType::LIST(LogicalType::TIMESTAMP_TZ), Gen_temporal_timestamps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("timestamps", {TemporalTypes::tint()}, LogicalType::LIST(LogicalType::TIMESTAMP_TZ), Gen_temporal_timestamps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("timestamps", {TemporalTypes::tbigint()}, LogicalType::LIST(LogicalType::TIMESTAMP_TZ), Gen_temporal_timestamps));
@@ -17003,7 +17188,7 @@ static void RegisterGenerated_meos_temporal_analytics_similarity(ExtensionLoader
         loader.RegisterFunction(TableFunction("dynTimeWarpPath", {type, type}, PathExec_temporal_dyntimewarp_path, PathBindFn_temporal_dyntimewarp_path, PathInit_temporal_dyntimewarp_path));
         loader.RegisterFunction(TableFunction("frechetDistancePath", {type, type}, PathExec_temporal_frechet_path, PathBindFn_temporal_frechet_path, PathInit_temporal_frechet_path));
     }
-    for (auto &type : std::vector<LogicalType>{TgeompointType::tgeompoint(), TgeogpointType::tgeogpoint(), TGeometryTypes::tgeometry(), TGeographyTypes::tgeography(), CbufferTypes::tcbuffer(), H3indexTypes::th3index()}) {
+    for (auto &type : std::vector<LogicalType>{TgeompointType::tgeompoint(), TgeogpointType::tgeogpoint(), TGeometryTypes::tgeometry(), TGeographyTypes::tgeography(), CbufferTypes::tcbuffer(), H3indexTypes::th3index(), QuadbinTypes::tquadbin()}) {
         loader.RegisterFunction(TableFunction("dynTimeWarpPath", {type, type}, PathExec_temporal_dyntimewarp_path, PathBindFn_temporal_dyntimewarp_path, PathInit_temporal_dyntimewarp_path));
         loader.RegisterFunction(TableFunction("frechetDistancePath", {type, type}, PathExec_temporal_frechet_path, PathBindFn_temporal_frechet_path, PathInit_temporal_frechet_path));
     }
@@ -17138,6 +17323,7 @@ static void RegisterGenerated_meos_temporal_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {TGeographyTypes::tgeography(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_after_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {CbufferTypes::tcbuffer(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_after_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {H3indexTypes::th3index(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_after_temporal_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("after", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_after_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {SpanTypes::tstzspan(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_after_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {SpanTypes::tstzspan(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_after_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {SpanTypes::tstzspan(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_after_tstzspan_temporal));
@@ -17149,6 +17335,7 @@ static void RegisterGenerated_meos_temporal_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {SpanTypes::tstzspan(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_after_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {SpanTypes::tstzspan(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_after_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {SpanTypes::tstzspan(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_after_tstzspan_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("after", {SpanTypes::tstzspan(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_after_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {TemporalTypes::tint(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_before_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {TemporalTypes::tbigint(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_before_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {TemporalTypes::tbool(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_before_temporal_tstzspan));
@@ -17160,6 +17347,7 @@ static void RegisterGenerated_meos_temporal_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {TGeographyTypes::tgeography(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_before_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {CbufferTypes::tcbuffer(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_before_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {H3indexTypes::th3index(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_before_temporal_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("before", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_before_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {SpanTypes::tstzspan(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_before_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {SpanTypes::tstzspan(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_before_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {SpanTypes::tstzspan(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_before_tstzspan_temporal));
@@ -17171,6 +17359,7 @@ static void RegisterGenerated_meos_temporal_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {SpanTypes::tstzspan(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_before_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {SpanTypes::tstzspan(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_before_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {SpanTypes::tstzspan(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_before_tstzspan_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("before", {SpanTypes::tstzspan(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_before_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("left", {SpanTypes::intspan(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_left_numspan_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {SpanTypes::intspan(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_left_numspan_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("left", {SpanTypes::floatspan(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_left_numspan_tnumber));
@@ -17190,6 +17379,7 @@ static void RegisterGenerated_meos_temporal_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {TGeographyTypes::tgeography(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_overafter_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {CbufferTypes::tcbuffer(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_overafter_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {H3indexTypes::th3index(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_overafter_temporal_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_overafter_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {SpanTypes::tstzspan(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_overafter_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {SpanTypes::tstzspan(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_overafter_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {SpanTypes::tstzspan(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_overafter_tstzspan_temporal));
@@ -17201,6 +17391,7 @@ static void RegisterGenerated_meos_temporal_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {SpanTypes::tstzspan(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_overafter_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {SpanTypes::tstzspan(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overafter_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {SpanTypes::tstzspan(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overafter_tstzspan_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overafter", {SpanTypes::tstzspan(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overafter_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {TemporalTypes::tint(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_overbefore_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {TemporalTypes::tbigint(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_overbefore_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {TemporalTypes::tbool(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_overbefore_temporal_tstzspan));
@@ -17212,6 +17403,7 @@ static void RegisterGenerated_meos_temporal_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {TGeographyTypes::tgeography(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_overbefore_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {CbufferTypes::tcbuffer(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_overbefore_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {H3indexTypes::th3index(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_overbefore_temporal_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_overbefore_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {SpanTypes::tstzspan(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_overbefore_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {SpanTypes::tstzspan(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_overbefore_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {SpanTypes::tstzspan(), TemporalTypes::tbool()}, LogicalType::BOOLEAN, Gen_overbefore_tstzspan_temporal));
@@ -17223,6 +17415,7 @@ static void RegisterGenerated_meos_temporal_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {SpanTypes::tstzspan(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_overbefore_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {SpanTypes::tstzspan(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overbefore_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {SpanTypes::tstzspan(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overbefore_tstzspan_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overbefore", {SpanTypes::tstzspan(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overbefore_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {SpanTypes::intspan(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_overleft_numspan_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {SpanTypes::intspan(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_overleft_numspan_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overleft", {SpanTypes::floatspan(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_overleft_numspan_tnumber));
@@ -17380,6 +17573,8 @@ static void RegisterGenerated_meos_temporal_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {CbufferTypes::tcbuffer(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_adjacent_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {H3indexTypes::th3index(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_adjacent_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {H3indexTypes::th3index(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_adjacent_temporal_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_adjacent_temporal_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_adjacent_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {TemporalTypes::tint(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_adjacent_tnumber_numspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {TemporalTypes::tint(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_adjacent_tnumber_numspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {TemporalTypes::tfloat(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_adjacent_tnumber_numspan));
@@ -17406,6 +17601,8 @@ static void RegisterGenerated_meos_temporal_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {SpanTypes::tstzspan(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_adjacent_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {SpanTypes::tstzspan(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_adjacent_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {SpanTypes::tstzspan(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_adjacent_tstzspan_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {SpanTypes::tstzspan(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_adjacent_tstzspan_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {SpanTypes::tstzspan(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_adjacent_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {SpanTypes::intspan(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_contained_numspan_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {SpanTypes::intspan(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_contained_numspan_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {SpanTypes::floatspan(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_contained_numspan_tnumber));
@@ -17432,6 +17629,8 @@ static void RegisterGenerated_meos_temporal_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {CbufferTypes::tcbuffer(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_contained_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {H3indexTypes::th3index(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_contained_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {H3indexTypes::th3index(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_contained_temporal_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_contained_temporal_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_contained_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {TemporalTypes::tint(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_contained_tnumber_numspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {TemporalTypes::tint(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_contained_tnumber_numspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {TemporalTypes::tfloat(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_contained_tnumber_numspan));
@@ -17458,6 +17657,8 @@ static void RegisterGenerated_meos_temporal_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {SpanTypes::tstzspan(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_contained_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {SpanTypes::tstzspan(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_contained_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {SpanTypes::tstzspan(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_contained_tstzspan_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {SpanTypes::tstzspan(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_contained_tstzspan_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {SpanTypes::tstzspan(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_contained_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {SpanTypes::intspan(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_contains_numspan_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {SpanTypes::intspan(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_contains_numspan_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {SpanTypes::floatspan(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_contains_numspan_tnumber));
@@ -17484,6 +17685,8 @@ static void RegisterGenerated_meos_temporal_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {CbufferTypes::tcbuffer(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_contains_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {H3indexTypes::th3index(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_contains_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {H3indexTypes::th3index(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_contains_temporal_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_contains_temporal_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_contains_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {TemporalTypes::tint(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_contains_tnumber_numspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {TemporalTypes::tint(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_contains_tnumber_numspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {TemporalTypes::tfloat(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_contains_tnumber_numspan));
@@ -17510,6 +17713,8 @@ static void RegisterGenerated_meos_temporal_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {SpanTypes::tstzspan(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_contains_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {SpanTypes::tstzspan(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_contains_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {SpanTypes::tstzspan(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_contains_tstzspan_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {SpanTypes::tstzspan(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_contains_tstzspan_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {SpanTypes::tstzspan(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_contains_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {SpanTypes::intspan(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_overlaps_numspan_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {SpanTypes::intspan(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_overlaps_numspan_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {SpanTypes::floatspan(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_overlaps_numspan_tnumber));
@@ -17536,6 +17741,8 @@ static void RegisterGenerated_meos_temporal_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {CbufferTypes::tcbuffer(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_overlaps_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {H3indexTypes::th3index(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_overlaps_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {H3indexTypes::th3index(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_overlaps_temporal_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_overlaps_temporal_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_overlaps_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {TemporalTypes::tint(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_overlaps_tnumber_numspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {TemporalTypes::tint(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_overlaps_tnumber_numspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {TemporalTypes::tfloat(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_overlaps_tnumber_numspan));
@@ -17562,6 +17769,8 @@ static void RegisterGenerated_meos_temporal_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {SpanTypes::tstzspan(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overlaps_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {SpanTypes::tstzspan(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overlaps_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {SpanTypes::tstzspan(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overlaps_tstzspan_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {SpanTypes::tstzspan(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overlaps_tstzspan_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {SpanTypes::tstzspan(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overlaps_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("same", {SpanTypes::intspan(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_same_numspan_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {SpanTypes::intspan(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_same_numspan_tnumber));
     RegisterSerializedScalarFunction(loader, ScalarFunction("same", {SpanTypes::floatspan(), TemporalTypes::tfloat()}, LogicalType::BOOLEAN, Gen_same_numspan_tnumber));
@@ -17588,6 +17797,8 @@ static void RegisterGenerated_meos_temporal_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {CbufferTypes::tcbuffer(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_same_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("same", {H3indexTypes::th3index(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_same_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {H3indexTypes::th3index(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_same_temporal_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_same_temporal_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_same_temporal_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("same", {TemporalTypes::tint(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_same_tnumber_numspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {TemporalTypes::tint(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_same_tnumber_numspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("same", {TemporalTypes::tfloat(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_same_tnumber_numspan));
@@ -17614,6 +17825,8 @@ static void RegisterGenerated_meos_temporal_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {SpanTypes::tstzspan(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_same_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("same", {SpanTypes::tstzspan(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_same_tstzspan_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {SpanTypes::tstzspan(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_same_tstzspan_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {SpanTypes::tstzspan(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_same_tstzspan_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {SpanTypes::tstzspan(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_same_tstzspan_temporal));
 }
 
 static void RegisterGenerated_meos_temporal_bool(ExtensionLoader &loader) {
@@ -17964,6 +18177,7 @@ static void RegisterGenerated_meos_temporal_comp_temp(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, TemporalTypes::tbool(), Gen_teq_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, TemporalTypes::tbool(), Gen_teq_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {H3indexTypes::th3index(), H3indexTypes::th3index()}, TemporalTypes::tbool(), Gen_teq_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, TemporalTypes::tbool(), Gen_teq_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {LogicalType::VARCHAR, TemporalTypes::ttext()}, TemporalTypes::tbool(), Gen_teq_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tbool(), Gen_teq_tfloat_float));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tbool(), Gen_teq_tint_int));
@@ -18023,6 +18237,7 @@ static void RegisterGenerated_meos_temporal_comp_temp(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, TemporalTypes::tbool(), Gen_tne_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, TemporalTypes::tbool(), Gen_tne_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {H3indexTypes::th3index(), H3indexTypes::th3index()}, TemporalTypes::tbool(), Gen_tne_temporal_temporal));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, TemporalTypes::tbool(), Gen_tne_temporal_temporal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {LogicalType::VARCHAR, TemporalTypes::ttext()}, TemporalTypes::tbool(), Gen_tne_text_ttext));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tbool(), Gen_tne_tfloat_float));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tbool(), Gen_tne_tint_int));
@@ -18041,6 +18256,7 @@ static void RegisterGenerated_meos_temporal_comp_trad(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::INTEGER, Gen_temporal_cmp));
     RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::INTEGER, Gen_temporal_cmp));
     RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::INTEGER, Gen_temporal_cmp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::INTEGER, Gen_temporal_cmp));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_eq));
     RegisterSerializedScalarFunction(loader, ScalarFunction("=", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_eq));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_eq));
@@ -18063,6 +18279,8 @@ static void RegisterGenerated_meos_temporal_comp_trad(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("=", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_temporal_eq));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_temporal_eq));
     RegisterSerializedScalarFunction(loader, ScalarFunction("=", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_temporal_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_temporal_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("=", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_temporal_eq));
     RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_ge));
     RegisterSerializedScalarFunction(loader, ScalarFunction(">", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_ge));
     RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_ge));
@@ -18085,6 +18303,8 @@ static void RegisterGenerated_meos_temporal_comp_trad(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction(">", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_temporal_ge));
     RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_temporal_ge));
     RegisterSerializedScalarFunction(loader, ScalarFunction(">", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_temporal_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_temporal_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_temporal_ge));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_gt));
     RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_gt));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_gt));
@@ -18107,6 +18327,8 @@ static void RegisterGenerated_meos_temporal_comp_trad(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_temporal_gt));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_temporal_gt));
     RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_temporal_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_temporal_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_temporal_gt));
     RegisterSerializedScalarFunction(loader, ScalarFunction("le", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_le));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<=", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_le));
     RegisterSerializedScalarFunction(loader, ScalarFunction("le", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_le));
@@ -18129,6 +18351,8 @@ static void RegisterGenerated_meos_temporal_comp_trad(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("<=", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_temporal_le));
     RegisterSerializedScalarFunction(loader, ScalarFunction("le", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_temporal_le));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<=", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_temporal_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("le", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_temporal_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<=", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_temporal_le));
     RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_lt));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_lt));
     RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_lt));
@@ -18151,6 +18375,8 @@ static void RegisterGenerated_meos_temporal_comp_trad(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("<", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_temporal_lt));
     RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_temporal_lt));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_temporal_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_temporal_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_temporal_lt));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_ne));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::BOOLEAN, Gen_temporal_ne));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::BOOLEAN, Gen_temporal_ne));
@@ -18173,6 +18399,8 @@ static void RegisterGenerated_meos_temporal_comp_trad(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_temporal_ne));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_temporal_ne));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_temporal_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_temporal_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_temporal_ne));
 }
 
 static void RegisterGenerated_meos_temporal_constructor(ExtensionLoader &loader) {
@@ -18244,6 +18472,8 @@ static void RegisterGenerated_meos_temporal_conversion(ExtensionLoader &loader) 
     RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TgeogpointType::tgeogpoint()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {H3indexTypes::th3index()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("::", {H3indexTypes::th3index()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {QuadbinTypes::tquadbin()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {QuadbinTypes::tquadbin()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {TemporalTypes::tbool()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tbool()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {TemporalTypes::tint()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
@@ -18401,12 +18631,14 @@ static void RegisterGenerated_meos_temporal_modif(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TGeographyTypes::tgeography(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TGeographyTypes::tgeography(), Gen_temporal_delete_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {CbufferTypes::tcbuffer(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, CbufferTypes::tcbuffer(), Gen_temporal_delete_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {H3indexTypes::th3index(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, H3indexTypes::th3index(), Gen_temporal_delete_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {QuadbinTypes::tquadbin(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, QuadbinTypes::tquadbin(), Gen_temporal_delete_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {TemporalTypes::tint(), TemporalTypes::tint(), LogicalType::BOOLEAN}, TemporalTypes::tint(), Gen_temporal_insert));
     RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {TemporalTypes::tbigint(), TemporalTypes::tbigint(), LogicalType::BOOLEAN}, TemporalTypes::tbigint(), Gen_temporal_insert));
     RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {TemporalTypes::tbool(), TemporalTypes::tbool(), LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_temporal_insert));
     RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {TemporalTypes::tfloat(), TemporalTypes::tfloat(), LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_temporal_insert));
     RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {TemporalTypes::ttext(), TemporalTypes::ttext(), LogicalType::BOOLEAN}, TemporalTypes::ttext(), Gen_temporal_insert));
     RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {H3indexTypes::th3index(), H3indexTypes::th3index(), LogicalType::BOOLEAN}, H3indexTypes::th3index(), Gen_temporal_insert));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin(), LogicalType::BOOLEAN}, QuadbinTypes::tquadbin(), Gen_temporal_insert));
     RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_merge));
     RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_merge));
     RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {TemporalTypes::tbool(), TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_temporal_merge));
@@ -18418,6 +18650,7 @@ static void RegisterGenerated_meos_temporal_modif(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, TGeographyTypes::tgeography(), Gen_temporal_merge));
     RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, CbufferTypes::tcbuffer(), Gen_temporal_merge));
     RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {H3indexTypes::th3index(), H3indexTypes::th3index()}, H3indexTypes::th3index(), Gen_temporal_merge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, QuadbinTypes::tquadbin(), Gen_temporal_merge));
     RegisterSerializedScalarFunction(loader, ScalarFunction("update", {TemporalTypes::tint(), TemporalTypes::tint(), LogicalType::BOOLEAN}, TemporalTypes::tint(), Gen_temporal_update));
     RegisterSerializedScalarFunction(loader, ScalarFunction("update", {TemporalTypes::tbigint(), TemporalTypes::tbigint(), LogicalType::BOOLEAN}, TemporalTypes::tbigint(), Gen_temporal_update));
     RegisterSerializedScalarFunction(loader, ScalarFunction("update", {TemporalTypes::tbool(), TemporalTypes::tbool(), LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_temporal_update));
@@ -18429,6 +18662,7 @@ static void RegisterGenerated_meos_temporal_modif(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("update", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography(), LogicalType::BOOLEAN}, TGeographyTypes::tgeography(), Gen_temporal_update));
     RegisterSerializedScalarFunction(loader, ScalarFunction("update", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer(), LogicalType::BOOLEAN}, CbufferTypes::tcbuffer(), Gen_temporal_update));
     RegisterSerializedScalarFunction(loader, ScalarFunction("update", {H3indexTypes::th3index(), H3indexTypes::th3index(), LogicalType::BOOLEAN}, H3indexTypes::th3index(), Gen_temporal_update));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("update", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin(), LogicalType::BOOLEAN}, QuadbinTypes::tquadbin(), Gen_temporal_update));
 }
 
 static void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
@@ -18445,6 +18679,7 @@ static void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TGeographyTypes::tgeography(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TGeographyTypes::tgeography(), Gen_temporal_after_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {CbufferTypes::tcbuffer(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, CbufferTypes::tcbuffer(), Gen_temporal_after_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {H3indexTypes::th3index(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, H3indexTypes::th3index(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {QuadbinTypes::tquadbin(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, QuadbinTypes::tquadbin(), Gen_temporal_after_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atMax", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_at_max));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atMax", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_at_max));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atMax", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_at_max));
@@ -18464,6 +18699,7 @@ static void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TGeographyTypes::tgeography(), LogicalType::TIMESTAMP_TZ}, TGeographyTypes::tgeography(), Gen_temporal_at_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {CbufferTypes::tcbuffer(), LogicalType::TIMESTAMP_TZ}, CbufferTypes::tcbuffer(), Gen_temporal_at_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {H3indexTypes::th3index(), LogicalType::TIMESTAMP_TZ}, H3indexTypes::th3index(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {QuadbinTypes::tquadbin(), LogicalType::TIMESTAMP_TZ}, QuadbinTypes::tquadbin(), Gen_temporal_at_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::tint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tint(), Gen_temporal_before_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::tbigint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tbigint(), Gen_temporal_before_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::tbool(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_temporal_before_timestamptz));
@@ -18475,6 +18711,7 @@ static void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TGeographyTypes::tgeography(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TGeographyTypes::tgeography(), Gen_temporal_before_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {CbufferTypes::tcbuffer(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, CbufferTypes::tcbuffer(), Gen_temporal_before_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {H3indexTypes::th3index(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, H3indexTypes::th3index(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {QuadbinTypes::tquadbin(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, QuadbinTypes::tquadbin(), Gen_temporal_before_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusMax", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_minus_max));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusMax", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_minus_max));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusMax", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_minus_max));
@@ -18494,6 +18731,7 @@ static void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TGeographyTypes::tgeography(), LogicalType::TIMESTAMP_TZ}, TGeographyTypes::tgeography(), Gen_temporal_minus_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {CbufferTypes::tcbuffer(), LogicalType::TIMESTAMP_TZ}, CbufferTypes::tcbuffer(), Gen_temporal_minus_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {H3indexTypes::th3index(), LogicalType::TIMESTAMP_TZ}, H3indexTypes::th3index(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {QuadbinTypes::tquadbin(), LogicalType::TIMESTAMP_TZ}, QuadbinTypes::tquadbin(), Gen_temporal_minus_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atValue", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_tfloat_at_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusValue", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_tfloat_minus_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atValue", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tint(), Gen_tint_at_value));
@@ -18511,6 +18749,7 @@ static void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TGeographyTypes::tgeography(), SetTypes::tstzset()}, TGeographyTypes::tgeography(), Gen_temporal_at_tstzset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {CbufferTypes::tcbuffer(), SetTypes::tstzset()}, CbufferTypes::tcbuffer(), Gen_temporal_at_tstzset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {H3indexTypes::th3index(), SetTypes::tstzset()}, H3indexTypes::th3index(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {QuadbinTypes::tquadbin(), SetTypes::tstzset()}, QuadbinTypes::tquadbin(), Gen_temporal_at_tstzset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tint(), SpanTypes::tstzspan()}, TemporalTypes::tint(), Gen_temporal_at_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tbigint(), SpanTypes::tstzspan()}, TemporalTypes::tbigint(), Gen_temporal_at_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tbool(), SpanTypes::tstzspan()}, TemporalTypes::tbool(), Gen_temporal_at_tstzspan));
@@ -18522,6 +18761,7 @@ static void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TGeographyTypes::tgeography(), SpanTypes::tstzspan()}, TGeographyTypes::tgeography(), Gen_temporal_at_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {CbufferTypes::tcbuffer(), SpanTypes::tstzspan()}, CbufferTypes::tcbuffer(), Gen_temporal_at_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {H3indexTypes::th3index(), SpanTypes::tstzspan()}, H3indexTypes::th3index(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, QuadbinTypes::tquadbin(), Gen_temporal_at_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tint(), SpansetTypes::tstzspanset()}, TemporalTypes::tint(), Gen_temporal_at_tstzspanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tbigint(), SpansetTypes::tstzspanset()}, TemporalTypes::tbigint(), Gen_temporal_at_tstzspanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tbool(), SpansetTypes::tstzspanset()}, TemporalTypes::tbool(), Gen_temporal_at_tstzspanset));
@@ -18533,6 +18773,7 @@ static void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TGeographyTypes::tgeography(), SpansetTypes::tstzspanset()}, TGeographyTypes::tgeography(), Gen_temporal_at_tstzspanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {CbufferTypes::tcbuffer(), SpansetTypes::tstzspanset()}, CbufferTypes::tcbuffer(), Gen_temporal_at_tstzspanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {H3indexTypes::th3index(), SpansetTypes::tstzspanset()}, H3indexTypes::th3index(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {QuadbinTypes::tquadbin(), SpansetTypes::tstzspanset()}, QuadbinTypes::tquadbin(), Gen_temporal_at_tstzspanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tint(), SetTypes::tstzset()}, TemporalTypes::tint(), Gen_temporal_minus_tstzset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tbigint(), SetTypes::tstzset()}, TemporalTypes::tbigint(), Gen_temporal_minus_tstzset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tbool(), SetTypes::tstzset()}, TemporalTypes::tbool(), Gen_temporal_minus_tstzset));
@@ -18544,6 +18785,7 @@ static void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TGeographyTypes::tgeography(), SetTypes::tstzset()}, TGeographyTypes::tgeography(), Gen_temporal_minus_tstzset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {CbufferTypes::tcbuffer(), SetTypes::tstzset()}, CbufferTypes::tcbuffer(), Gen_temporal_minus_tstzset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {H3indexTypes::th3index(), SetTypes::tstzset()}, H3indexTypes::th3index(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {QuadbinTypes::tquadbin(), SetTypes::tstzset()}, QuadbinTypes::tquadbin(), Gen_temporal_minus_tstzset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tint(), SpanTypes::tstzspan()}, TemporalTypes::tint(), Gen_temporal_minus_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tbigint(), SpanTypes::tstzspan()}, TemporalTypes::tbigint(), Gen_temporal_minus_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tbool(), SpanTypes::tstzspan()}, TemporalTypes::tbool(), Gen_temporal_minus_tstzspan));
@@ -18555,6 +18797,7 @@ static void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TGeographyTypes::tgeography(), SpanTypes::tstzspan()}, TGeographyTypes::tgeography(), Gen_temporal_minus_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {CbufferTypes::tcbuffer(), SpanTypes::tstzspan()}, CbufferTypes::tcbuffer(), Gen_temporal_minus_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {H3indexTypes::th3index(), SpanTypes::tstzspan()}, H3indexTypes::th3index(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, QuadbinTypes::tquadbin(), Gen_temporal_minus_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tint(), SpansetTypes::tstzspanset()}, TemporalTypes::tint(), Gen_temporal_minus_tstzspanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tbigint(), SpansetTypes::tstzspanset()}, TemporalTypes::tbigint(), Gen_temporal_minus_tstzspanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tbool(), SpansetTypes::tstzspanset()}, TemporalTypes::tbool(), Gen_temporal_minus_tstzspanset));
@@ -18566,6 +18809,7 @@ static void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TGeographyTypes::tgeography(), SpansetTypes::tstzspanset()}, TGeographyTypes::tgeography(), Gen_temporal_minus_tstzspanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {CbufferTypes::tcbuffer(), SpansetTypes::tstzspanset()}, CbufferTypes::tcbuffer(), Gen_temporal_minus_tstzspanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {H3indexTypes::th3index(), SpansetTypes::tstzspanset()}, H3indexTypes::th3index(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {QuadbinTypes::tquadbin(), SpansetTypes::tstzspanset()}, QuadbinTypes::tquadbin(), Gen_temporal_minus_tstzspanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {TemporalTypes::tint(), SetTypes::intset()}, TemporalTypes::tint(), Gen_temporal_at_values));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {TemporalTypes::tbigint(), SetTypes::bigintset()}, TemporalTypes::tbigint(), Gen_temporal_at_values));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {TemporalTypes::tfloat(), SetTypes::floatset()}, TemporalTypes::tfloat(), Gen_temporal_at_values));
@@ -18675,6 +18919,7 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_cbuffer_rel_temp(loader);
     RegisterGenerated_meos_cbuffer_restrict(loader);
     RegisterGenerated_meos_cbuffer_transf(loader);
+    RegisterGenerated_meos_cellindex(loader);
     RegisterGenerated_meos_geo_accessor(loader);
     RegisterGenerated_meos_geo_bbox_pos(loader);
     RegisterGenerated_meos_geo_bbox_topo(loader);
@@ -18702,6 +18947,7 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_h3_traversal(loader);
     RegisterGenerated_meos_h3_vertex(loader);
     RegisterGenerated_meos_internal_temporal_inout(loader);
+    RegisterGenerated_meos_quadbin_accessor(loader);
     RegisterGenerated_meos_quadbin_conversion(loader);
     RegisterGenerated_meos_setspan_accessor(loader);
     RegisterGenerated_meos_setspan_bbox_split(loader);

@@ -339,7 +339,8 @@ GEO_ALLTYPES = list(GEO_TYPES.values())
 # types by the `tspatial_*` scope and the generic-temporal "all" writer. Distinct from
 # GEO_ALLTYPES, which stays geo-only for the `tgeo` supertype (geometry+geography) and the
 # geometry-argument spatial relationships. Add a new spatial family here to inherit the surface.
-SPATIAL_ALLTYPES = GEO_ALLTYPES + ["CbufferTypes::tcbuffer()", "H3indexTypes::th3index()"]
+SPATIAL_ALLTYPES = GEO_ALLTYPES + ["CbufferTypes::tcbuffer()", "H3indexTypes::th3index()",
+                                   "QuadbinTypes::tquadbin()"]
 def reg_scope(name):
     """('all', None) generic | ('types', [accessors]) specific | None = not core family.
     Resolves the temporal type from the MobilityDB naming convention: a PREFIX
@@ -401,6 +402,11 @@ def reg_scope(name):
     # h3index/h3indexset-coupled variants auto-exclude on their unmarshallable arg/return.
     if name.startswith("th3index_") or re.search(r'_th3index(?=_|$)', name):
         return ("types", ["H3indexTypes::th3index()"])
+    # the CARTO QUADBIN temporal cell index (its own gated spatial type, sibling of th3index):
+    # a tquadbin_* prefix, or a _tquadbin token anywhere. The static quadbin/quadbinset-coupled
+    # variants auto-exclude on their unmarshallable arg/return.
+    if name.startswith("tquadbin_") or re.search(r'_tquadbin(?=_|$)', name):
+        return ("types", ["QuadbinTypes::tquadbin()"])
     # temporal-type token ANYWHERE in the name (always_eq_tint_int, ever_lt_tfloat_tfloat,
     # tdistance_tfloat_tfloat, teq_temporal_temporal). Skip if >1 DISTINCT temporal type
     # appears (mixed/ambiguous) — geo tokens (tgeompoint/tgeo/th3index/tnpoint) aren't in
@@ -423,7 +429,8 @@ TO_TYPE = {"tint": "TemporalTypes::tint()", "tbigint": "TemporalTypes::tbigint()
            "tbool": "TemporalTypes::tbool()", "ttext": "TemporalTypes::ttext()",
            "tgeometry": "TGeometryTypes::tgeometry()", "tgeography": "TGeographyTypes::tgeography()",
            "tgeompoint": "TgeompointType::tgeompoint()", "tgeogpoint": "TgeogpointType::tgeogpoint()",
-           "tcbuffer": "CbufferTypes::tcbuffer()", "th3index": "H3indexTypes::th3index()"}
+           "tcbuffer": "CbufferTypes::tcbuffer()", "th3index": "H3indexTypes::th3index()",
+           "tquadbin": "QuadbinTypes::tquadbin()"}
 def ret_temporal_type(name, arg_acc, group="", sql_ret=None):
     # A single, unambiguous SQL return subtype from the catalog names the output
     # temporal type directly (the catalog is the SoT). The name heuristics below are
@@ -460,6 +467,7 @@ SIG_TEMPORAL_ACC = {
     "tgeompoint": "TgeompointType::tgeompoint()", "tgeogpoint": "TgeogpointType::tgeogpoint()",
     "tgeometry":  "TGeometryTypes::tgeometry()",  "tgeography": "TGeographyTypes::tgeography()",
     "tcbuffer":   "CbufferTypes::tcbuffer()",      "th3index":   "H3indexTypes::th3index()",
+    "tquadbin":   "QuadbinTypes::tquadbin()",
 }
 def sig_declared_accs(f):
     """The exact temporal-operand types this GENERIC (`Temporal *`) function is CREATE
@@ -741,6 +749,7 @@ def emit_set(f, kind):
 CELL_UINT = {"unsigned long", "uint64_t"}
 CELL_BASEVAL = {
     "H3indexTypes::th3index()": "H3indexTypes::h3index()",
+    "QuadbinTypes::tquadbin()": "QuadbinTypes::quadbin()",
 }
 
 def shape_emittable(f):
@@ -2846,6 +2855,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            '#include "geo/tgeography.hpp"\n'
            '#include "cbuffer/tcbuffer.hpp"\n'         # CbufferTypes::cbuffer()/tcbuffer()
            '#include "h3/th3index.hpp"\n'              # H3indexTypes::h3index()/th3index()
+           '#include "quadbin/tquadbin.hpp"\n'         # QuadbinTypes::quadbin()/tquadbin()
            '#include "spatial/spatial_types.hpp"\n'   # GeoTypes::GEOMETRY() (duckdb-spatial)
            '#include "geo_util.hpp"\n'                # GeometryToGSerialized(blob, srid)
            '#include "meos_internal.h"\n'
