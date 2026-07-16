@@ -30,31 +30,31 @@ extern "C" {
 
 namespace duckdb {
 
-LogicalType QuadbinTypes::QUADBIN() {
+LogicalType QuadbinTypes::quadbin() {
     LogicalType type = LogicalType::BIGINT;
-    type.SetAlias("QUADBIN");
+    type.SetAlias("quadbin");
     return type;
 }
 
-LogicalType QuadbinTypes::TQUADBIN() {
+LogicalType QuadbinTypes::tquadbin() {
     auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("TQUADBIN");
+    type.SetAlias("tquadbin");
     return type;
 }
 
 void QuadbinTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType("QUADBIN",  QUADBIN());
-    loader.RegisterType("TQUADBIN", TQUADBIN());
+    loader.RegisterType("quadbin",  quadbin());
+    loader.RegisterType("tquadbin", tquadbin());
 }
 
 void QuadbinTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, QUADBIN(),
+    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, quadbin(),
         QuadbinFunctions::Quadbin_in_cast);
-    RegisterMeosCastFunction(loader, QUADBIN(), LogicalType::VARCHAR,
+    RegisterMeosCastFunction(loader, quadbin(), LogicalType::VARCHAR,
         QuadbinFunctions::Quadbin_out_cast);
-    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, TQUADBIN(),
+    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, tquadbin(),
         QuadbinFunctions::Tquadbin_in_cast);
-    RegisterMeosCastFunction(loader, TQUADBIN(), LogicalType::VARCHAR,
+    RegisterMeosCastFunction(loader, tquadbin(), LogicalType::VARCHAR,
         QuadbinFunctions::Tquadbin_out_cast);
 }
 
@@ -395,8 +395,8 @@ void QuadbinFunctions::Tquadbin_to_tbigint(
  * ===================================================================== */
 
 void QuadbinTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
-    const auto QB  = QuadbinTypes::QUADBIN();
-    const auto TQB = QuadbinTypes::TQUADBIN();
+    const auto QB  = QuadbinTypes::quadbin();
+    const auto TQB = QuadbinTypes::tquadbin();
     const auto I32 = LogicalType::INTEGER;
     const auto B   = LogicalType::BOOLEAN;
     const auto V   = LogicalType::VARCHAR;

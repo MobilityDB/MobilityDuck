@@ -23,6 +23,18 @@ SELECT quadbinCellToTileX(quadbinTileToCell(2, 1, 2)),
 ----
 2	1	2
 
+# ── the temporal cell index reports the canonical lowercase type name ────────
+query I
+SELECT typeof(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'));
+----
+tquadbin
+
+# ── the cell-id value accessor reports the canonical lowercase base type ──────
+query I
+SELECT typeof(startValue(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01')));
+----
+quadbin
+
 # ── tquadbin instant constructor + accessor ─────────────────────────────────
 query I
 SELECT startValue(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'));

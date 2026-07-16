@@ -14,8 +14,8 @@ namespace duckdb {
  * care only about the bit pattern).  TQUADBIN is the temporal cell index,
  * stored as a Temporal* blob (BLOB).  Analogue of H3INDEX / TH3INDEX. */
 struct QuadbinTypes {
-    static LogicalType QUADBIN();
-    static LogicalType TQUADBIN();
+    static LogicalType quadbin();
+    static LogicalType tquadbin();
 
     static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
