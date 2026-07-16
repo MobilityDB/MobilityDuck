@@ -19,6 +19,7 @@
 #include "geo/tgeogpoint.hpp"
 #include "geo/tgeogpoint_ops.hpp"
 #include "quadbin/tquadbin.hpp"
+#include "h3/th3index.hpp"
 #include "cbuffer/tcbuffer.hpp"
 #include "temporal/span.hpp"
 #include "temporal/span_aggregates.hpp"
@@ -349,6 +350,11 @@ static void LoadInternal(ExtensionLoader &loader) {
 	QuadbinTypes::RegisterTypes(loader);
 	QuadbinTypes::RegisterCastFunctions(loader);
 	QuadbinTypes::RegisterScalarFunctions(loader);
+
+	// H3 cell index types (h3index/th3index). Type registration + casts are the
+	// hand layer; the H3 function surface is generated (no RegisterScalarFunctions).
+	H3indexTypes::RegisterTypes(loader);
+	H3indexTypes::RegisterCastFunctions(loader);
 
 	CbufferTypes::RegisterTypes(loader);
 	CbufferTypes::RegisterCastFunctions(loader);

@@ -160,7 +160,7 @@ def ret_type(f, out_canon):
 REGISTERED_FAMILIES = {
     "temporal", "tnumber", "tint", "tbigint", "tfloat", "tbool", "ttext",
     "tgeompoint", "tgeogpoint", "tgeometry", "tgeography", "tgeo", "tspatial", "tquadbin",
-    "tcbuffer", "cbuffer",
+    "tcbuffer", "cbuffer", "th3index", "h3index",
 }
 # Every temporal family token the catalog function names use; those NOT in REGISTERED_FAMILIES
 # are the fast-follow families whose DuckDB type the binding does not register yet.
@@ -335,7 +335,7 @@ GEO_ALLTYPES = list(GEO_TYPES.values())
 # types by the `tspatial_*` scope and the generic-temporal "all" writer. Distinct from
 # GEO_ALLTYPES, which stays geo-only for the `tgeo` supertype (geometry+geography) and the
 # geometry-argument spatial relationships. Add a new spatial family here to inherit the surface.
-SPATIAL_ALLTYPES = GEO_ALLTYPES + ["CbufferTypes::tcbuffer()"]
+SPATIAL_ALLTYPES = GEO_ALLTYPES + ["CbufferTypes::tcbuffer()", "H3indexTypes::th3index()"]
 def reg_scope(name):
     """('all', None) generic | ('types', [accessors]) specific | None = not core family.
     Resolves the temporal type from the MobilityDB naming convention: a PREFIX
@@ -392,6 +392,11 @@ def reg_scope(name):
     # variants auto-exclude on their unmarshallable arg.
     if name.startswith("tcbuffer_") or re.search(r'_tcbuffer(?=_|$)', name):
         return ("types", ["CbufferTypes::tcbuffer()"])
+    # the H3 temporal cell index (its own gated spatial type): a th3index_* prefix, or a
+    # _th3index token anywhere (ever_eq_h3index_th3index, teq_th3index_th3index). The static
+    # h3index/h3indexset-coupled variants auto-exclude on their unmarshallable arg/return.
+    if name.startswith("th3index_") or re.search(r'_th3index(?=_|$)', name):
+        return ("types", ["H3indexTypes::th3index()"])
     # temporal-type token ANYWHERE in the name (always_eq_tint_int, ever_lt_tfloat_tfloat,
     # tdistance_tfloat_tfloat, teq_temporal_temporal). Skip if >1 DISTINCT temporal type
     # appears (mixed/ambiguous) — geo tokens (tgeompoint/tgeo/th3index/tnpoint) aren't in
@@ -414,7 +419,7 @@ TO_TYPE = {"tint": "TemporalTypes::tint()", "tbigint": "TemporalTypes::tbigint()
            "tbool": "TemporalTypes::tbool()", "ttext": "TemporalTypes::ttext()",
            "tgeometry": "TGeometryTypes::tgeometry()", "tgeography": "TGeographyTypes::tgeography()",
            "tgeompoint": "TgeompointType::tgeompoint()", "tgeogpoint": "TgeogpointType::tgeogpoint()",
-           "tcbuffer": "CbufferTypes::tcbuffer()"}
+           "tcbuffer": "CbufferTypes::tcbuffer()", "th3index": "H3indexTypes::th3index()"}
 def ret_temporal_type(name, arg_acc, group="", sql_ret=None):
     # A single, unambiguous SQL return subtype from the catalog names the output
     # temporal type directly (the catalog is the SoT). The name heuristics below are
@@ -450,7 +455,7 @@ SIG_TEMPORAL_ACC = {
     "ttext":      "TemporalTypes::ttext()",
     "tgeompoint": "TgeompointType::tgeompoint()", "tgeogpoint": "TgeogpointType::tgeogpoint()",
     "tgeometry":  "TGeometryTypes::tgeometry()",  "tgeography": "TGeographyTypes::tgeography()",
-    "tcbuffer":   "CbufferTypes::tcbuffer()",
+    "tcbuffer":   "CbufferTypes::tcbuffer()",      "th3index":   "H3indexTypes::th3index()",
 }
 def sig_declared_accs(f):
     """The exact temporal-operand types this GENERIC (`Temporal *`) function is CREATE
@@ -2806,6 +2811,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            '#include "geo/tgeometry.hpp"\n'
            '#include "geo/tgeography.hpp"\n'
            '#include "cbuffer/tcbuffer.hpp"\n'         # CbufferTypes::cbuffer()/tcbuffer()
+           '#include "h3/th3index.hpp"\n'              # H3indexTypes::h3index()/th3index()
            '#include "spatial/spatial_types.hpp"\n'   # GeoTypes::GEOMETRY() (duckdb-spatial)
            '#include "geo_util.hpp"\n'                # GeometryToGSerialized(blob, srid)
            '#include "meos_internal.h"\n'

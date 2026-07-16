@@ -1,0 +1,36 @@
+require mobilityduck
+
+# ── th3index construction from a temporal point at an H3 resolution ──────────
+query I
+SELECT numInstants(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5));
+----
+1
+
+query I
+SELECT numTimestamps(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5));
+----
+1
+
+# ── H3-specific accessor: the cell resolution tracks the requested resolution ─
+query I
+SELECT startValue(th3GetResolution(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5)));
+----
+5
+
+query I
+SELECT startValue(th3GetResolution(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 8)));
+----
+8
+
+# ── traditional comparison operators ────────────────────────────────────────
+query I
+SELECT th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5)
+     = th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5);
+----
+true
+
+query I
+SELECT th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5)
+     = th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 8);
+----
+false
