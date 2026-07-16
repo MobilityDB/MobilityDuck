@@ -93,7 +93,13 @@ SCALAR = {
     "DateADT":      ("LogicalType::DATE",     "date_t"),
 }
 OUTPRIM = {"int *": "LogicalType::INTEGER", "int64_t *": "LogicalType::BIGINT",
+           "uint64_t *": "LogicalType::BIGINT",
            "double *": "LogicalType::DOUBLE", "bool *": "LogicalType::BOOLEAN"}
+# Out-param C pointer -> (by-value local the folded MEOS call writes into, DuckDB executor cpp).
+# A uint64 cell id rides in an int64_t (bit-preserving) to match the BIGINT-backed cell type.
+OUTPARAM_LOCAL = {"int *": ("int", "int32_t"), "int64_t *": ("int64_t", "int64_t"),
+                  "uint64_t *": ("uint64_t", "int64_t"), "double *": ("double", "double"),
+                  "bool *": ("bool", "bool")}
 
 def classify(f):
     """Mirror of the Spark generator: split params into (in_params, out_canon|None).
@@ -884,7 +890,7 @@ def shape_binary(f):
     rules as shape_emittable: scalar return OR generic same-type temporal return."""
     if supported(f) is not None: return None
     ins, out = classify(f)
-    if out is not None or len(ins) != 2: return None
+    if len(ins) != 2: return None
     if base(ins[0]["canonical"]) != "Temporal" or not norm(ins[0]["canonical"]).endswith("*"): return None
     b2 = base(ins[1]["canonical"]); n2 = norm(ins[1]["canonical"])
     is_text2 = (b2 == "text" and n2.endswith("*"))   # owned text* arg via MakeText
@@ -898,6 +904,18 @@ def shape_binary(f):
         arg2 = (PTR_IN[b2][0], "string_t", "__PTRFREE__:" + b2)
     else:
         arg2 = SCALAR_ARG[b2]
+    if out is not None:
+        # Out-param fold: bool <name>(Temporal, <scalar>, <base *out>) -> the folded base value.
+        # The inherited Temporal<T> value accessor valueN (meos_temporal_accessor). Only a
+        # concrete scalar out-param is folded here; the generic `Datum *` overload (temporal_value_n)
+        # drops out (varying per-type return) so exactly the per-type <t>_value_n emit, once each.
+        no = norm(out)
+        if no not in OUTPARAM_LOCAL: return None
+        if sc[0] == "types" and sc[1] and len(sc[1]) == 1 and sc[1][0] in CELL_BASEVAL:
+            dret = CELL_BASEVAL[sc[1][0]]            # Tcell<T> cell-id base value (h3index/quadbin)
+        else:
+            dret = OUTPRIM[no]
+        return ("outval:" + no, dret, arg2)
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
     if rb in TEMPORAL_PTR_RET and rn.endswith("*"):
         return ("temporal", "MD_TEMPORAL", arg2)
@@ -918,6 +936,18 @@ def emit_body_binary(f, kind, arg2):
         pre, call2, post = f"{pb} *a2p = {PTR_IN[pb][1] % 'a2'};\n            ", "a2p", "free(a2p); "
     else:
         pre, call2, post = "", marsh, ""
+    if kind.startswith("outval:"):  # bool <name>(t, a2, &v) -> the folded base value (valueN); false -> SQL NULL
+        loc, exec_cpp = OUTPARAM_LOCAL[kind.split(":", 1)[1]]
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::ExecuteWithNulls<string_t, {cpp2}, {exec_cpp}>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t in, {cpp2} a2, ValidityMask &mask, idx_t idx) -> {exec_cpp} {{\n"
+                f"            Temporal *t = BlobToTemporal(in);\n"
+                f"            {pre}{loc} v;\n"
+                f"            bool ok = {name}(t, {call2}, &v);\n            {post}free(t);\n"
+                f"            if (!ok) {{ mask.SetInvalid(idx); return {exec_cpp}(); }}\n"
+                f"            return ({exec_cpp}) v;\n"
+                f"        }});\n}}\n")
     subcast = "" if base(f["returnType"]["canonical"]) == "Temporal" else "(Temporal *) "
     if kind == "temporal":          # pointer return -> NULL-safe (MEOS NULL -> SQL NULL)
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
@@ -1285,6 +1315,9 @@ ARRAY_ELEM = {
     "int":         ("LogicalType::INTEGER",      "int32_t",        "cd[off + j] = arr[j];"),
     "int32_t":     ("LogicalType::INTEGER",      "int32_t",        "cd[off + j] = arr[j];"),
     "int64_t":     ("LogicalType::BIGINT",       "int64_t",        "cd[off + j] = arr[j];"),
+    # Tcell<T> cell id (uint64_t) rides in a signed int64_t child (bit-preserving), matching the
+    # BIGINT-backed cell alias; the LIST's LOGICAL element type is the cell alias (array_ret_duck).
+    "uint64_t":    ("LogicalType::BIGINT",       "int64_t",        "cd[off + j] = (int64_t) arr[j];"),
     "double":      ("LogicalType::DOUBLE",       "double",         "cd[off + j] = arr[j];"),
     "bool":        ("LogicalType::BOOLEAN",      "bool",           "cd[off + j] = arr[j];"),
     # date/timestamp elements carry the MEOS (PG) epoch: convert to the DuckDB epoch with the
@@ -1474,6 +1507,14 @@ def array_ret_duck(f, acc):
     """The DuckDB LIST return type for this array-return on input accessor `acc`, from the catalog
     sqlSignature (e.g. spans(intset)->intspan[] -> LIST(SpanTypes::intspan())). None if not an
     array sig or the element type is not mapped (deferred)."""
+    # Tcell<T> cell-id array: LIST of the cell alias (getValues(tquadbin)->LIST(quadbin)); the
+    # canonical <cell>set SQL return maps to a DuckDB LIST here (see the cell branch in shape_array).
+    # GATE on the ELEMENT being a cell uint64 — a cell temporal's timestamps()/other array accessors
+    # keep their own element type (e.g. LIST(TIMESTAMP_TZ)), so acc-in-CELL_BASEVAL alone is not enough.
+    ar = (f.get("shape") or {}).get("arrayReturn") or {}
+    ec = norm((ar.get("element") or {}).get("canonical") or (ar.get("element") or {}).get("c") or "")
+    if ec in CELL_UINT and acc in CELL_BASEVAL:
+        return "LogicalType::LIST(%s)" % CELL_BASEVAL[acc]
     r = _sig_ret_for(f, _acc_sqlname(acc)) or ""
     if not r.endswith("[]"):
         return None
@@ -1522,6 +1563,12 @@ def shape_array(f):
     if sc is None:
         return None
     scope, accs = sc
+    # Tcell<T> cell-id array (tquadbin_values/th3index_values): the canonical MobilityDB SQL return
+    # is a <cell>set, which MobilityDuck surfaces as LIST(<cell>) — matching the hand contract and the
+    # getValues(set)->LIST(base) / getValues(tbool)->LIST(boolean) precedent. Element is uint64_t
+    # (CELL_UINT); the <cell>set sig does not end in "[]", so it must bypass the array-sig filter.
+    if ec in CELL_UINT and scope == "types" and len(accs) == 1 and accs[0] in CELL_BASEVAL:
+        return ("array", ec, ib, accs)
     if scope == "all":
         accs = array_declared_accs(f)                       # generic C fn: sig-declared types (SoT)
     else:

@@ -241,58 +241,6 @@ void QuadbinFunctions::Tquadbin_make(
  * Accessors
  * ===================================================================== */
 
-void QuadbinFunctions::Tquadbin_value_n(
-    DataChunk &args, ExpressionState &state, Vector &result)
-{
-    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, int64_t>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t blob, int32_t n, ValidityMask &mask, idx_t idx) -> int64_t {
-            Temporal *t = BlobToTemp(blob);
-            Quadbin v;
-            bool ok = tquadbin_value_n(t, n, &v);
-            free(t);
-            if (!ok) { mask.SetInvalid(idx); return 0; }
-            return static_cast<int64_t>(v);
-        });
-}
-
-void QuadbinFunctions::Tquadbin_values(
-    DataChunk &args, ExpressionState &state, Vector &result)
-{
-    /* Quadbin[] → LIST<BIGINT>; cell ids returned as signed BIGINT. */
-    auto &input = args.data[0];
-    input.Flatten(args.size());
-    auto in_data   = FlatVector::GetData<string_t>(input);
-    auto list_entries = FlatVector::GetData<list_entry_t>(result);
-    auto &out_validity = FlatVector::Validity(result);
-    idx_t total = 0;
-
-    for (idx_t row = 0; row < args.size(); row++) {
-        if (!FlatVector::Validity(input).RowIsValid(row)) {
-            out_validity.SetInvalid(row);
-            list_entries[row] = list_entry_t{total, 0};
-            continue;
-        }
-        Temporal *t = BlobToTemp(in_data[row]);
-        int n = 0;
-        Quadbin *vals = tquadbin_values(t, &n);
-        free(t);
-        if (!vals || n <= 0) {
-            if (vals) free(vals);
-            list_entries[row] = list_entry_t{total, 0};
-            continue;
-        }
-        ListVector::Reserve(result, total + n);
-        ListVector::SetListSize(result, total + n);
-        list_entries[row] = list_entry_t{total, static_cast<uint64_t>(n)};
-        auto child = FlatVector::GetData<int64_t>(ListVector::GetEntry(result));
-        for (int i = 0; i < n; i++)
-            child[total + i] = static_cast<int64_t>(vals[i]);
-        total += n;
-        free(vals);
-    }
-}
-
 void QuadbinFunctions::Tquadbin_value_at_timestamptz(
     DataChunk &args, ExpressionState &state, Vector &result)
 {
@@ -401,14 +349,10 @@ void QuadbinTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         "tquadbin", {QB, TS}, TQB,
         QuadbinFunctions::Tquadbin_make));
 
-    /* Accessors — startValue/endValue are GENERATED (Tcell cell-id base value,
-     * CELL_BASEVAL); only the not-yet-generatable out-param/list accessors stay hand. */
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "valueN", {TQB, I32}, QB,
-        QuadbinFunctions::Tquadbin_value_n));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "values", {TQB}, LogicalType::LIST(QB),
-        QuadbinFunctions::Tquadbin_values));
+    /* Accessors — startValue/endValue, valueN AND getValues are GENERATED (the Tcell cell-id
+     * base value out-param fold + LIST(cell) array-return, CELL_BASEVAL). Only valueAtTimestamp
+     * stays hand: its MEOS wrapper binds strict=true, a value the catalog does not yet carry
+     * for generation (a source gap tracked in the MEOS lane); generated once it lands. */
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "valueAtTimestamp", {TQB, TS}, QB,
         QuadbinFunctions::Tquadbin_value_at_timestamptz));

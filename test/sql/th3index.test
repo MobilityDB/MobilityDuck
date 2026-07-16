@@ -54,3 +54,27 @@ SELECT startValue(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5))
      = startValue(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 8));
 ----
 false
+
+# ── generated cell-id valueN (Temporal<T> out-param fold) → h3index ───────────
+query I
+SELECT typeof(valueN(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5), 1));
+----
+h3index
+
+query I
+SELECT valueN(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5), 1)
+     = startValue(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5));
+----
+true
+
+# ── generated cell-id getValues → LIST(h3index) ──────────────────────────────
+query I
+SELECT typeof(getValues(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5))[1]);
+----
+h3index
+
+query I
+SELECT getValues(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5))[1]
+     = startValue(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5));
+----
+true
