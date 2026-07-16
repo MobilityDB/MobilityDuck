@@ -137,6 +137,10 @@ def ret_type(f, out_canon):
     rc = f["returnType"]["canonical"]; nc = norm(rc); b = base(rc)
     if b in PTR_RET and nc.endswith("*"):  return (PTR_RET[b][0], "ptr")
     if b in SCALAR and "*" not in nc:      return (SCALAR[b][0], "scalar")
+    if b in CELL_UINT and "*" not in nc:   # Tcell<T> cell-id base value (startValue/endValue)
+        sc = reg_scope(f["name"])
+        if sc and sc[0] == "types" and len(sc[1]) == 1 and sc[1][0] in CELL_BASEVAL:
+            return (CELL_BASEVAL[sc[1][0]], "scalar")
     if b == "GSERIALIZED" and nc.endswith("*"):  # owned geometry -> DuckDB GEOMETRY (geo marshaller)
         return ("GeoTypes::GEOMETRY()", "geo")
     if b == "Interval" and nc.endswith("*"):  # owned ptr -> by-value interval_t (TakeInterval)
@@ -727,6 +731,18 @@ def emit_set(f, kind):
             f"        [&](string_t a, string_t b) {{\n"
             f"            Set *s1 = BlobToSet(a);\n            Set *s2 = BlobToSet(b);\n{inner}\n        }});\n}}\n")
 
+# Tcell<T> cell-id base value. A per-type cell accessor (th3index_start_value /
+# tquadbin_start_value; reg_scope keys the single cell temporal type) returns the cell id as
+# the collapsed uint64 -- spelled "unsigned long" (libh3's H3Index) OR "uint64_t" (MobilityDB's
+# Quadbin, or after the MEOS-API canonical normalization). Both map to the family's
+# BIGINT-backed cell DuckDB type. A cell temporal type appears here only once its hand accessor
+# layer is gone (mirrors the line-772 geometry-accessor guard) -- tquadbin joins when its hand
+# src/quadbin/tquadbin.cpp accessors retire, so both Tcell subtypes are then generated identically.
+CELL_UINT = {"unsigned long", "uint64_t"}
+CELL_BASEVAL = {
+    "H3indexTypes::th3index()": "H3indexTypes::h3index()",
+}
+
 def shape_emittable(f):
     """Guaranteed-compilable AND correctly-scoped subset, or None.
     To avoid emitting a wrong registration we take only the UNAMBIGUOUS shapes:
@@ -753,6 +769,12 @@ def shape_emittable(f):
         return ("temporal", "MD_TEMPORAL")   # ret type resolved per-accessor via ret_temporal_type
     if rb in BYVAL_RET and "*" not in rn:
         return ("scalar:" + rb, scalar_ret_duck(f))
+    # Tcell<T> cell-id base value: a per-type cell accessor (reg_scope keys the single cell
+    # temporal type) returns the collapsed uint64 cell id -> the family's BIGINT-backed cell
+    # DuckDB type (startValue/endValue on th3index -> h3index()). See CELL_BASEVAL.
+    if rb in CELL_UINT and "*" not in rn and sc[0] == "types" and len(sc[1]) == 1 \
+            and sc[1][0] in CELL_BASEVAL:
+        return ("cellscalar", CELL_BASEVAL[sc[1][0]])
     if rb in ("Interval", "text", "char") and rn.endswith("*"):   # owned-pointer scalar return (duration / text / cstring)
         return ("scalar:" + rb, scalar_ret_duck(f))
     # base-value pointer return (Temporal<T> accessor: startValue/endValue -> the family base value,
@@ -800,6 +822,18 @@ def emit_body(f, kind):
                 f"            {cct} r = {name}(t);\n"
                 f"            free(t);\n"
                 f"            return {rb}ToBlobN(result, r, mask, idx);\n"
+                f"        }});\n}}\n")
+    if kind == "cellscalar":   # (Temporal) -> uint64 cell id -> BIGINT-backed cell DuckDB type
+        # The cell DuckDB type (h3index()/quadbin()) is BIGINT-backed, so the uint64 cell id
+        # writes as int64_t (bit-preserving; H3/quadbin cell ids clear the sign bit).
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),\n"
+                f"        [&](string_t in) -> int64_t {{\n"
+                f"            Temporal *t = BlobToTemporal(in);\n"
+                f"            int64_t r = (int64_t) {name}(t);\n"
+                f"            free(t);\n"
+                f"            return r;\n"
                 f"        }});\n}}\n")
     if kind == "geo":   # (Temporal) -> owned GSERIALIZED -> DuckDB GEOMETRY (freed after marshalling)
         cct = norm(f["returnType"]["canonical"])   # "GSERIALIZED *"
