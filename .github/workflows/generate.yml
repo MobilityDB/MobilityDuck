@@ -34,23 +34,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The catalog is derived from the SAME MobilityDB commit the vcpkg MEOS
-      # port builds libmeos from, so the generated code always matches the
-      # libmeos it is compiled against. tools/meos-source-commit.txt is the
-      # single source of truth for that commit (the vcpkg portfile reads the same
-      # file), mirroring the shared ecosystem provision-meos model.
-      - name: Resolve the MobilityDB source commit
-        id: ref
-        run: echo "sha=$(tr -d '[:space:]' < tools/meos-source-commit.txt)" >> "$GITHUB_OUTPUT"
-
-      # Generate meos-idl.json from that commit via the shared MEOS-API action.
-      # Catalog only (build-libmeos: false): the generator is pure Python and
-      # reads the catalog JSON, so no libmeos build is needed here.
+      # Derive the catalog from MobilityDB master — the same branch the vcpkg MEOS
+      # port builds libmeos from (its portfile resolves master's tip at build
+      # time), so the generated code always matches the libmeos it is compiled
+      # against. No committed source commit: the binding tracks latest master, per
+      # the shared ecosystem provision-meos model.
       - name: Provision the MEOS catalog
         id: provision
         uses: MobilityDB/MEOS-API/.github/actions/provision-meos@master
         with:
-          mobilitydb-ref: ${{ steps.ref.outputs.sha }}
+          mobilitydb-ref: master
           build-libmeos: "false"
 
       - name: Stage the catalog

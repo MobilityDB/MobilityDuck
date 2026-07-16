@@ -1,18 +1,31 @@
-# The MobilityDB commit to build libmeos from is pinned once in
-# tools/meos-source-commit.txt — the single source of truth shared with the
-# catalog-derivation workflow (.github/workflows/generate.yml), so the libmeos
-# the binding links and the catalog it generates against always come from the
-# same commit. Mirrors the shared ecosystem provision-meos model. Bumping
-# the surface is one edit there plus the SHA512 below (the tarball hash for that
-# commit) and a port-version bump in vcpkg.json to force a rebuild.
-file(READ "${CMAKE_CURRENT_LIST_DIR}/../../tools/meos-source-commit.txt" _MEOS_REF)
-string(STRIP "${_MEOS_REF}" _MEOS_REF)
+# MobilityDuck tracks MobilityDB/MobilityDB master for its MEOS source — there is
+# no committed commit pin. The tip of master is resolved at configure time and
+# fetched with vcpkg_from_git, which content-addresses through git (so no tarball
+# SHA512 is needed). The catalog-derivation workflow (.github/workflows/generate.yml)
+# likewise derives from master, so the libmeos this port builds and the generated
+# UDF surface always come from the same upstream branch. vcpkg requires a concrete
+# commit SHA (a moving branch ref is rejected), so master's tip is resolved here
+# rather than passed as a branch name.
+execute_process(
+    COMMAND git ls-remote https://github.com/MobilityDB/MobilityDB.git refs/heads/master
+    OUTPUT_VARIABLE _MEOS_LSREMOTE
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE _MEOS_LSREMOTE_RC
+)
+if(NOT _MEOS_LSREMOTE_RC EQUAL 0 OR _MEOS_LSREMOTE STREQUAL "")
+    message(FATAL_ERROR "MEOS port: could not resolve MobilityDB master tip via git ls-remote")
+endif()
+string(REGEX MATCH "^[0-9a-f]+" _MEOS_REF "${_MEOS_LSREMOTE}")
+message(STATUS "MEOS port: tracking MobilityDB master at ${_MEOS_REF}")
 
-vcpkg_from_github(
+# FETCH_REF names the branch (always advertised) so the fetch works even when the
+# server does not allow fetching an arbitrary commit SHA directly; REF then checks
+# out master's resolved tip from that fetched history.
+vcpkg_from_git(
     OUT_SOURCE_PATH SOURCE_PATH
-    REPO MobilityDB/MobilityDB
-    REF ${_MEOS_REF}
-    SHA512 94f0e8a595ac7924c1a51a7d817a8b7cc4b76355dea0cc6ed3f6d67e6d0d4c8de3dd2ab788024ec29cf71844445ddb7095080381437aca39111bd281a683508d
+    URL https://github.com/MobilityDB/MobilityDB.git
+    REF "${_MEOS_REF}"
+    FETCH_REF refs/heads/master
 )
 
 
