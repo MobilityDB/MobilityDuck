@@ -69,8 +69,11 @@ set(EXTENSION_NAME ${TARGET_NAME}_extension)
 set(LOADABLE_EXTENSION_NAME ${TARGET_NAME}_loadable_extension)
 
 include_directories(src/include)
-include_directories(duckdb-spatial/src)
-include_directories(duckdb-spatial/src/spatial)
+# Vendored duckdb-spatial headers are third-party: include them as SYSTEM so their
+# warnings (e.g. the two sgl.hpp variants redefining SGL_ASSERT) do not surface in
+# MobilityDuck translation units. MDB's own src/include stays non-SYSTEM (full warnings).
+include_directories(SYSTEM duckdb-spatial/src)
+include_directories(SYSTEM duckdb-spatial/src/spatial)
 
 set(EXTENSION_SOURCES
     src/spatial_ref_sys_csv.inc
@@ -127,15 +130,15 @@ build_loadable_extension(${TARGET_NAME} "" ${EXTENSION_SOURCES})
 if(TARGET json-c::json-c)
   set(JSONC_TGT json-c::json-c)
 else()
-  target_include_directories(${EXTENSION_NAME} PRIVATE ${JSON-C_INCLUDE_DIRS})
-  target_include_directories(${LOADABLE_EXTENSION_NAME} PRIVATE ${JSON-C_INCLUDE_DIRS})
+  target_include_directories(${EXTENSION_NAME} SYSTEM PRIVATE ${JSON-C_INCLUDE_DIRS})
+  target_include_directories(${LOADABLE_EXTENSION_NAME} SYSTEM PRIVATE ${JSON-C_INCLUDE_DIRS})
   set(JSONC_TGT ${JSON-C_LIBRARIES})
 endif()
 
 # H3 headers for meos_h3.h (see the find_path above) — attached per-target like
 # json-c, since build_*_extension targets don't inherit directory includes.
-target_include_directories(${EXTENSION_NAME} PRIVATE ${H3_INCLUDE_DIR})
-target_include_directories(${LOADABLE_EXTENSION_NAME} PRIVATE ${H3_INCLUDE_DIR})
+target_include_directories(${EXTENSION_NAME} SYSTEM PRIVATE ${H3_INCLUDE_DIR})
+target_include_directories(${LOADABLE_EXTENSION_NAME} SYSTEM PRIVATE ${H3_INCLUDE_DIR})
 
 # -----------------------------
 # Link libraries 
