@@ -2124,7 +2124,7 @@ class GReg:
     def __len__(self): return len(self.items)
 
 # ---- Temporal constructor / transform NAME FAMILY (per-sqlName over the core types) ----
-# One base-type-generic MEOS wrapper backs a per-type SQL name FAMILY: temporal_to_tinstant is
+# One base-type-generic MEOS wrapper backs a per-type SQL name FAMILY: temporal_as_tinstant is
 # exposed as tintInst/tbigintInst/.../ttextInst, tsequence_make as tintSeq/..., etc. The catalog
 # sqlSignatures carry each overload's own `sqlName`, so the generator registers every core-type name
 # from the catalog rather than the single representative. Scoped to the 5 CORE
@@ -2139,9 +2139,9 @@ CORE_CTOR_ACC = {
     "ttext": "TemporalTypes::ttext()",
 }
 TEMPORAL_CTOR = {
-    "temporal_to_tinstant":     "to_inst",     # <t>Inst(<t>)
-    "temporal_to_tsequence":    "to_seq",      # <t>Seq(<t>[, text interp])
-    "temporal_to_tsequenceset": "to_seqset",   # <t>SeqSet(<t>[, text interp])
+    "temporal_as_tinstant":     "to_inst",     # <t>Inst(<t>)
+    "temporal_as_tsequence":    "to_seq",      # <t>Seq(<t>[, text interp])
+    "temporal_as_tsequenceset": "to_seqset",   # <t>SeqSet(<t>[, text interp])
     "tsequence_make":           "make_seq",    # <t>Seq(<t>[][, text, bool, bool])
     "tsequenceset_make":        "make_seqset", # <t>SeqSet(<t>[])
     "tsequenceset_make_gaps":   "make_gaps",   # <t>SeqSetGaps(<t>[][, interval maxt, float maxdist, text])
@@ -2172,7 +2172,7 @@ _CTOR_BODY = {
     "    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
     "        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
     "            Temporal *t = BlobToTemporal(in);\n"
-    "            Temporal *r = (Temporal *) temporal_to_tinstant(t);\n"
+    "            Temporal *r = (Temporal *) temporal_as_tinstant(t);\n"
     "            free(t);\n"
     "            return TemporalToBlobN(result, r, mask, idx);\n"
     "        }});\n"
@@ -2287,9 +2287,9 @@ _CTOR_TRANSFORM = (
 def emit_temporal_ctor(f, kind):
     fn = f["name"]
     if kind == "to_seq":
-        return _CTOR_TRANSFORM.format(fn=fn, meos="temporal_to_tsequence")
+        return _CTOR_TRANSFORM.format(fn=fn, meos="temporal_as_tsequence")
     if kind == "to_seqset":
-        return _CTOR_TRANSFORM.format(fn=fn, meos="temporal_to_tsequenceset")
+        return _CTOR_TRANSFORM.format(fn=fn, meos="temporal_as_tsequenceset")
     return _CTOR_BODY[kind].format(fn=fn)
 
 # ---- Set/Span/SpanSet FromHexWKB parsers (per-element-type NAME FAMILY) ----
