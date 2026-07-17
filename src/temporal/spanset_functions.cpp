@@ -1276,7 +1276,7 @@ static inline string_t Numspanset_scale_common(const string_t &blob, Datum scale
         default: break;
     }    
     
-    SpanSet *r = numspanset_shift_scale(s, scale_datum, 0, /*do_shift=*/false, /*do_scale=*/true);
+    SpanSet *r = numspanset_shift_scale(s, 0, scale_datum, /*do_shift=*/false, /*do_scale=*/true);
     
     string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
     

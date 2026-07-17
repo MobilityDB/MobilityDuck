@@ -186,9 +186,9 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("shift", {span_type, LogicalType::INTEGER}, span_type, SpanFunctions::Numspan_shift)
             ); 
             
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Numspan_scale)
+            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {span_type, LogicalType::INTEGER}, span_type, SpanFunctions::Numspan_scale)
             );
-            duckdb::RegisterSerializedScalarFunction(loader, 
+            duckdb::RegisterSerializedScalarFunction(loader,
                 ScalarFunction("shiftScale", {span_type, LogicalType::INTEGER, LogicalType::INTEGER}, span_type,
                                SpanFunctions::Numspan_shift_scale));
 
@@ -198,9 +198,9 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ); 
             duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("expand", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Numspan_expand)
             );
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Numspan_scale)
+            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {span_type, LogicalType::BIGINT}, span_type, SpanFunctions::Numspan_scale)
             );
-            duckdb::RegisterSerializedScalarFunction(loader, 
+            duckdb::RegisterSerializedScalarFunction(loader,
                 ScalarFunction("shiftScale", {span_type, LogicalType::BIGINT, LogicalType::BIGINT}, span_type, SpanFunctions::Numspan_shift_scale)
             );    
         }
@@ -209,9 +209,9 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ); 
             duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("expand", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Numspan_expand)
             );
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Numspan_scale)
+            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {span_type, LogicalType::DOUBLE}, span_type, SpanFunctions::Numspan_scale)
             );
-            duckdb::RegisterSerializedScalarFunction(loader, 
+            duckdb::RegisterSerializedScalarFunction(loader,
                 ScalarFunction("shiftScale", {span_type, LogicalType::DOUBLE, LogicalType::DOUBLE}, span_type, SpanFunctions::Numspan_shift_scale)
             );
 
