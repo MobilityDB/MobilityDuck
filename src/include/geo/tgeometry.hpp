@@ -11,7 +11,7 @@ namespace duckdb {
 
 
 struct TGeometryTypes {
-    static LogicalType TGEOMETRY();
+    static LogicalType tgeometry();
     static LogicalType GEOMETRY();
     static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterScalarFunctions(ExtensionLoader &loader);

@@ -1,0 +1,83 @@
+require mobilityduck
+
+# ── static cell round-trip ──────────────────────────────────────────────────
+query I
+SELECT quadbinTileToCell(1, 0, 1);
+----
+5194902170171867135
+
+query I
+SELECT quadbinGetResolution(quadbinTileToCell(2, 1, 2));
+----
+2
+
+query I
+SELECT quadbinIsValidCell(quadbinTileToCell(5, 3, 3));
+----
+true
+
+query III
+SELECT quadbinCellToTileX(quadbinTileToCell(2, 1, 2)),
+       quadbinCellToTileY(quadbinTileToCell(2, 1, 2)),
+       quadbinCellToTileZ(quadbinTileToCell(2, 1, 2));
+----
+2	1	2
+
+# ── the temporal cell index reports the canonical lowercase type name ────────
+query I
+SELECT typeof(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'));
+----
+tquadbin
+
+# ── generated generic Temporal<T> accessor (SIG_TEMPORAL_ACC) over tquadbin ───
+query I
+SELECT numInstants(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'));
+----
+1
+
+# ── generated traditional comparison (compops) over tquadbin ─────────────────
+query I
+SELECT tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01')
+     = tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01');
+----
+true
+
+# ── the cell-id value accessor reports the canonical lowercase base type ──────
+query I
+SELECT typeof(startValue(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01')));
+----
+quadbin
+
+# ── tquadbin instant constructor + accessor ─────────────────────────────────
+query I
+SELECT startValue(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'));
+----
+5194902170171867135
+
+query I
+SELECT endValue(tquadbin(quadbinTileToCell(2,1,2), TIMESTAMPTZ '2024-06-01'));
+----
+5199124294822526975
+
+# ── generated cell-id valueN (Temporal<T> out-param fold) → quadbin ───────────
+query I
+SELECT typeof(valueN(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), 1));
+----
+quadbin
+
+query I
+SELECT valueN(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), 1)
+     = startValue(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'));
+----
+true
+
+# ── generated cell-id getValues → LIST(quadbin) ──────────────────────────────
+query I
+SELECT typeof(getValues(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'))[1]);
+----
+quadbin
+
+query I
+SELECT getValues(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'))[1];
+----
+5194902170171867135

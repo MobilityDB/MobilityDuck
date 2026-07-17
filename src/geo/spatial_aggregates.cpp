@@ -81,7 +81,7 @@ struct TspatialExtentFunction {
 
 static AggregateFunction MakeExtentTspatialAggregate(const LogicalType &input_type) {
     return AggregateFunction::UnaryAggregate<StboxExtentState, string_t, string_t, TspatialExtentFunction>(
-        input_type, StboxType::STBOX());
+        input_type, StboxType::stbox());
 }
 
 // extent(stbox) → stbox — input is a raw STBox blob (not a Temporal wrapper).
@@ -275,14 +275,14 @@ static AggregateFunction MakeTcentroidAggregate(const LogicalType &input_type) {
 } // namespace
 
 void SpatialAggregates::AddExtentOverloads(AggregateFunctionSet &extent_set) {
-    extent_set.AddFunction(MakeExtentTspatialAggregate(TgeompointType::TGEOMPOINT()));
+    extent_set.AddFunction(MakeExtentTspatialAggregate(TgeompointType::tgeompoint()));
     extent_set.AddFunction(AggregateFunction::UnaryAggregate<StboxExtentState, string_t, string_t, StboxExtentBoxFunction>(
-        StboxType::STBOX(), StboxType::STBOX()));
+        StboxType::stbox(), StboxType::stbox()));
 }
 
 void SpatialAggregates::RegisterTcentroid(ExtensionLoader &loader) {
     AggregateFunctionSet tcentroid_set("TcentroidAgg");
-    tcentroid_set.AddFunction(MakeTcentroidAggregate(TgeompointType::TGEOMPOINT()));
+    tcentroid_set.AddFunction(MakeTcentroidAggregate(TgeompointType::tgeompoint()));
     loader.RegisterFunction(std::move(tcentroid_set));
 }
 

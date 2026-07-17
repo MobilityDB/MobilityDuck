@@ -1,0 +1,76 @@
+#
+# Keeps the committed generated UDF surface (src/generated/) tracking
+# MobilityDB/MobilityDB master.
+#
+# MobilityDuck derives its catalog from master (via the shared provision-meos
+# action), and the vcpkg MEOS port builds libmeos from master's tip, so the
+# committed src/generated must always equal a fresh derivation from master. The
+# generated surface cannot be produced inside the cmake/vcpkg build (deriving the
+# catalog needs the provision-meos action — libclang + a MobilityDB checkout — not
+# runnable in cmake), so it is committed and refreshed by this workflow rather than
+# regenerated live during the build.
+#
+# On a schedule (and on demand) this re-derives the catalog from master and
+# regenerates src/generated; peter-evans/create-pull-request opens a PR only when
+# the surface actually drifted (it no-ops on a clean tree). The full distribution +
+# generate CI then gates the refresh like any other change.
+#
+name: Refresh generated surface from MobilityDB master
+
+on:
+  schedule:
+    # Daily; MobilityDB master rarely changes the derived surface more than once a day.
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: meos-surface-refresh
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Catalog only (build-libmeos: false): the generator is pure Python and
+      # reads the catalog JSON, so no libmeos build is needed here.
+      - name: Derive the MEOS catalog at master
+        id: provision
+        uses: MobilityDB/MEOS-API/.github/actions/provision-meos@master
+        with:
+          mobilitydb-ref: master
+          build-libmeos: "false"
+
+      - name: Stage the catalog and regenerate the UDF surface
+        run: |
+          mkdir -p tools/catalog
+          cp "${{ steps.provision.outputs.catalog-path }}" tools/catalog/meos-idl.json
+          python3 tools/codegen_duck_udfs.py \
+            tools/catalog/meos-idl.json \
+            src/generated/generated_temporal_udfs.cpp
+
+      # Opens a PR only if src/generated drifted. The bump PR must run the full
+      # distribution + generate CI. PRs opened with the default GITHUB_TOKEN do NOT
+      # trigger workflow runs; supply a PAT in the MEOS_AUTOBUMP_TOKEN secret to get
+      # CI on the refresh PR. Falls back to GITHUB_TOKEN (PR opens but must be
+      # re-triggered manually) when unset. The catalog stays gitignored (derived).
+      - name: Open a refresh PR if the surface drifted
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.MEOS_AUTOBUMP_TOKEN || secrets.GITHUB_TOKEN }}
+          branch: tooling/refresh-generated-surface
+          base: main
+          add-paths: src/generated
+          commit-message: "Regenerate the UDF surface from MobilityDB master"
+          title: "Regenerate the UDF surface from MobilityDB master"
+          body: |
+            The committed `src/generated/` drifted from a fresh derivation against
+            MobilityDB/MobilityDB master; this regenerates it.
+
+            Opened by the `Refresh generated surface from MobilityDB master` workflow.
+          delete-branch: true

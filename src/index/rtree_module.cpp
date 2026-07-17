@@ -53,15 +53,15 @@ TRTreeIndex::TRTreeIndex(const string &name, IndexConstraintType constraint_type
 
     // R-tree's bbox type is determined by the type of the indexed column
     
-    if (type == StboxType::STBOX()) {
+    if (type == StboxType::stbox()) {
         bbox_type_ = T_STBOX;
         bbox_size_ = sizeof(STBox);
         rtree_ = rtree_create_stbox();
-    } else if (type == SpanTypes::TSTZSPAN()) {
+    } else if (type == SpanTypes::tstzspan()) {
         bbox_type_ = T_TSTZSPAN;
         bbox_size_ = sizeof(Span);  
         rtree_ = rtree_create_tstzspan();
-    } else if (type == TgeompointType::TGEOMPOINT()) {
+    } else if (type == TgeompointType::tgeompoint()) {
         bbox_type_ = T_STBOX;
         bbox_size_ = sizeof(STBox);
         rtree_ = rtree_create_stbox();
@@ -233,7 +233,7 @@ void TRTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifier
         vector.Flatten(expression_result.size());
     }
 
-    const bool indexes_temporal = column_type_ == TgeompointType::TGEOMPOINT();
+    const bool indexes_temporal = column_type_ == TgeompointType::tgeompoint();
 
     void *boxes = indexes_temporal ? nullptr : malloc(bbox_size_ * expression_result.size());
     
@@ -416,25 +416,22 @@ vector<row_t> TRTreeIndex::Search(const void *query_box, RTreeSearchOp op) const
         return results;
     }
 
-    int count = 0;
-    int *ids = nullptr;
-    
+    MeosArray *ids = meos_array_create(sizeof(int));
+
     try {
-        ids = rtree_search(rtree_, op, query_box, &count);
-        
-        if (ids && count > 0) {
+        int count = rtree_search(rtree_, op, query_box, ids);
+
+        if (count > 0) {
             results.reserve(count);
             for (int i = 0; i < count; i++) {
-                results.push_back(static_cast<row_t>(ids[i]));
+                results.push_back(static_cast<row_t>(*(int *) meos_array_get(ids, i)));
             }
         }
     } catch (...) {
         fprintf(stderr, "Exception during rtree_search\n");
     }
-    
-    if (ids) {
-        free(ids);
-    }
+
+    meos_array_destroy(ids);
     
     return results;
 }
@@ -499,6 +496,16 @@ unique_ptr<ExpressionMatcher> TRTreeIndex::MakeFunctionMatcher() const {
     matcher->expr_type = make_uniq<SpecificExpressionTypeMatcher>(ExpressionType::BOUND_FUNCTION);
     matcher->policy = SetMatcher::Policy::UNORDERED;
 
+    LogicalType index_type;
+    if (bbox_type_ == T_STBOX) {
+        index_type = StboxType::stbox();
+    } else if (bbox_type_ == T_TSTZSPAN) {
+        index_type = SpanTypes::tstzspan();
+    } else {
+        index_type = LogicalType::BLOB;
+    }
+
+    // Left operand
     auto lhs_matcher = make_uniq<ExpressionMatcher>();
     lhs_matcher->type = make_uniq<SpecificTypeMatcher>(column_type_);
     matcher->matchers.push_back(std::move(lhs_matcher));

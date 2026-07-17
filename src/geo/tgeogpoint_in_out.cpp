@@ -1,3 +1,4 @@
+#include "mobilityduck/meos_exec_serial.hpp"
 #include "geo/tgeogpoint.hpp"
 #include "geo/tgeogpoint_functions.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
@@ -26,12 +27,12 @@ inline void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &re
             size_t data_size = input_geom_str.GetSize();
 
             if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TGEOGPOINT data: insufficient size");
+                throw InvalidInputException("Invalid tgeogpoint data: insufficient size");
             }
 
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for TGEOGPOINT deserialization");
+                throw InvalidInputException("Failed to allocate memory for tgeogpoint deserialization");
             }
             memcpy(data_copy, data, data_size);
 
@@ -39,14 +40,14 @@ inline void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &re
             
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOGPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeogpoint data: null pointer");
             }
 
             char *str = tspatial_as_text(temp, 0);
             
             if (!str) {
                 free(data_copy);
-                throw InvalidInputException("Failed to convert TGEOGPOINT to text");
+                throw InvalidInputException("Failed to convert tgeogpoint to text");
             }
             
             std::string result_str(str);
@@ -76,12 +77,12 @@ inline void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &re
             size_t data_size = input_geom_str.GetSize();
 
             if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TGEOGPOINT data: insufficient size");
+                throw InvalidInputException("Invalid tgeogpoint data: insufficient size");
             }
 
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for TGEOGPOINT deserialization");
+                throw InvalidInputException("Failed to allocate memory for tgeogpoint deserialization");
             }
             memcpy(data_copy, data, data_size);
 
@@ -89,14 +90,14 @@ inline void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &re
             
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOGPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeogpoint data: null pointer");
             }
 
             char *ewkt = tspatial_as_ewkt(temp, 0);
             
             if (!ewkt) {
                 free(data_copy);
-                throw InvalidInputException("Failed to convert TGEOGPOINT to EWKT");
+                throw InvalidInputException("Failed to convert tgeogpoint to EWKT");
             }
             
             std::string result_str(ewkt);
@@ -124,14 +125,14 @@ bool TgeogpointFunctions::StringToTgeogpoint(Vector &source, Vector &result, idx
 
             Temporal *temp = tgeogpoint_in(input_str.c_str());
             if (!temp) {
-                throw InvalidInputException("Invalid TGEOGPOINT input: " + input_str);
+                throw InvalidInputException("Invalid tgeogpoint input: " + input_str);
             }
             
             size_t data_size = temporal_mem_size(temp);
             uint8_t *data_buffer = (uint8_t*)malloc(data_size);
             if (!data_buffer) {
                 free(temp);
-                throw InvalidInputException("Failed to allocate memory for TGEOGPOINT data");
+                throw InvalidInputException("Failed to allocate memory for tgeogpoint data");
             }
             
             memcpy(data_buffer, temp, data_size);
@@ -159,25 +160,25 @@ bool TgeogpointFunctions::TgeogpointToString(Vector &source, Vector &result, idx
             size_t data_size = input_blob.GetSize();
             
             if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TGEOGPOINT data: insufficient size");
+                throw InvalidInputException("Invalid tgeogpoint data: insufficient size");
             }
 
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for TGEOGPOINT deserialization");
+                throw InvalidInputException("Failed to allocate memory for tgeogpoint deserialization");
             }
             memcpy(data_copy, data, data_size);
             
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOGPOINT data: null pointer");
+                throw InvalidInputException("Invalid tgeogpoint data: null pointer");
             }
             
             char *str = temporal_out(temp, 15);
             if (!str) {
                 free(data_copy);
-                throw InvalidInputException("Failed to convert TGEOGPOINT to string");
+                throw InvalidInputException("Failed to convert tgeogpoint to string");
             }
             
             std::string output(str);
@@ -198,7 +199,7 @@ bool TgeogpointFunctions::TgeogpointToString(Vector &source, Vector &result, idx
 void TGeogpointType::RegisterScalarInOutFunctions(ExtensionLoader &loader){
     auto TgeogpointAsText = ScalarFunction(
             "asText", 
-            {TGeogpointType::TGEOGPOINT()},
+            {TGeogpointType::tgeogpoint()},
             LogicalType::VARCHAR,
             Tspatial_as_text
         );
@@ -206,7 +207,7 @@ void TGeogpointType::RegisterScalarInOutFunctions(ExtensionLoader &loader){
 
     auto TgeogpointAsEWKT = ScalarFunction(
         "asEWKT",
-        {TGeogpointType::TGEOGPOINT()},
+        {TGeogpointType::tgeogpoint()},
         LogicalType::VARCHAR,
         Tspatial_as_ewkt
     );
@@ -215,8 +216,8 @@ void TGeogpointType::RegisterScalarInOutFunctions(ExtensionLoader &loader){
 
 
 void TGeogpointType::RegisterCastFunctions(ExtensionLoader &loader) {
-    loader.RegisterCastFunction( LogicalType::VARCHAR, TGeogpointType::TGEOGPOINT(), TgeogpointFunctions::StringToTgeogpoint);
-    loader.RegisterCastFunction( TGeogpointType::TGEOGPOINT(), LogicalType::VARCHAR, TgeogpointFunctions::TgeogpointToString);
+    RegisterMeosCastFunction(loader,  LogicalType::VARCHAR, TGeogpointType::tgeogpoint(), TgeogpointFunctions::StringToTgeogpoint);
+    RegisterMeosCastFunction(loader,  TGeogpointType::tgeogpoint(), LogicalType::VARCHAR, TgeogpointFunctions::TgeogpointToString);
 }
 
 }

@@ -14,11 +14,11 @@ class ExtensionLoader;
 
 typedef struct {
     char *alias;
-    meosType temptype;
+    MeosType temptype;
 } alias_type_struct;
 
 struct TemporalHelpers {
-    static meosType GetTemptypeFromAlias(const char *alias);
+    static MeosType GetTemptypeFromAlias(const char *alias);
     static vector<Value> TempArrToArray(Temporal **temparr, int32_t count, LogicalType element_type);
 };
 
@@ -89,7 +89,7 @@ struct TemporalFunctions {
     static void Temporal_sequences(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_start_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_end_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_timestamps(DataChunk &args, ExpressionState &state, Vector &result);
+    // Temporal_timestamps retired: timestamps(<temporal>) is generated (temporal_timestamps) in generated_temporal_udfs.cpp.
     static void Temporal_instants(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_num_sequences(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_lower_inc(DataChunk &args, ExpressionState &state, Vector &result);
@@ -140,8 +140,6 @@ struct TemporalFunctions {
     static void Temporal_minus_min(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_at_max(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_minus_max(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tnumber_at_tbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tnumber_minus_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_at_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_minus_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_value_at_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
@@ -224,7 +222,7 @@ struct TemporalFunctions {
      * Unary tnumber functions
      ****************************************************/
     static void Tnumber_abs(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tnumber_tboxes(DataChunk &args, ExpressionState &state, Vector &result);
+    // Tnumber_tboxes retired: tboxes(<tnumber>) is generated (tnumber_tboxes) in generated_temporal_udfs.cpp.
     static void Tnumber_split_n_tboxes(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_split_each_n_tboxes(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_delta_value(DataChunk &args, ExpressionState &state, Vector &result);
@@ -233,8 +231,7 @@ struct TemporalFunctions {
     static void Tfloat_ln(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tfloat_log10(DataChunk &args, ExpressionState &state, Vector &result);
     // Temporal_derivative declared in the math-functions block below.
-    static void Tfloat_degrees(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tfloat_radians(DataChunk &args, ExpressionState &state, Vector &result);
+    // floor/ceil/round/degrees/radians on tfloat are generated (generated_temporal_udfs.cpp).
 
     /* ***************************************************
      * Temporal comparison predicates returning Temporal
@@ -413,8 +410,6 @@ struct TemporalFunctions {
     static void Temporal_frechet_distance(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_dyntimewarp_distance(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_hausdorff_distance(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_frechet_path(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_dyntimewarp_path(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * tnumber × {numspan, tbox} topological predicates
@@ -551,13 +546,13 @@ struct TemporalFunctions {
      * Workaround functions
      ****************************************************/
     template <typename T>
-    static void Temporal_dump_common(DataChunk &args, Vector &result, meosType basetype);
+    static void Temporal_dump_common(DataChunk &args, Vector &result, MeosType basetype);
     static void Temporal_dump(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Math functions
      ****************************************************/
-    static void Temporal_round(DataChunk &args, ExpressionState &state, Vector &result);
+    // round(tfloat/tgeompoint/tgeogpoint/...) is generated (generated_temporal_udfs.cpp).
     static void Temporal_derivative(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************

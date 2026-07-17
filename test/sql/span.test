@@ -244,11 +244,23 @@ SELECT round(floatspan '[1.5, 2.5]');
 [2, 3]
 
 query I 
-SELECT span_contains(floatspan '[1.5, 2.5]', 1.5);
+SELECT contains(floatspan '[1.5, 2.5]', 1.5);
 ----
 true
 
-query I 
-SELECT span_contained(1.5, floatspan '[1.5, 2.5]');
+query I
+SELECT contained(1.5, floatspan '[1.5, 2.5]');
+----
+true
+
+# FromHexWKB parsers (per-element-type name family, generated). The strings are the
+# MEOS hex-WKB encodings of the corresponding literals.
+query I
+SELECT intspanFromHexWKB('011300010100000005000000') = intspan '[1, 5)';
+----
+true
+
+query I
+SELECT floatspanFromHexWKB('010D0003000000000000F83F0000000000000C40') = floatspan '[1.5, 3.5]';
 ----
 true

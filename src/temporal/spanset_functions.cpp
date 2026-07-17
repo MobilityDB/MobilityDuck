@@ -160,7 +160,7 @@ bool SpansetFunctions::Text_to_spanset(Vector &source, Vector &result, idx_t cou
     result.SetVectorType(VectorType::FLAT_VECTOR);
 
     auto target_type = result.GetType();
-    meosType spanset_type = SpansetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
+    MeosType spanset_type = SpansetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
 
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
@@ -226,7 +226,7 @@ static inline void Write_spanset(Vector &result, idx_t row, SpanSet *s) {
     free(s);
 }
 
-static inline void Value_to_spanset_core(Vector &source, Vector &result, idx_t count, meosType base_type) {
+static inline void Value_to_spanset_core(Vector &source, Vector &result, idx_t count, MeosType base_type) {
     source.Flatten(count);
     result.SetVectorType(VectorType::FLAT_VECTOR);
 
@@ -288,9 +288,9 @@ static inline void Value_to_spanset_core(Vector &source, Vector &result, idx_t c
 // --- CAST (conversion: base -> spanset) ----
 bool SpansetFunctions::Value_to_spanset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     auto target_type   = result.GetType();
-    meosType spanset_t = SpansetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
-    meosType span_t    = spansettype_spantype(spanset_t);
-    meosType base_t    = spantype_basetype(span_t);
+    MeosType spanset_t = SpansetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
+    MeosType span_t    = spansettype_spantype(spanset_t);
+    MeosType base_t    = spantype_basetype(span_t);
 
     Value_to_spanset_core(source, result, count, base_t);
     return true;
@@ -300,9 +300,9 @@ bool SpansetFunctions::Value_to_spanset_cast(Vector &source, Vector &result, idx
 void SpansetFunctions::Value_to_spanset(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &source      = args.data[0];
     auto out_type     = result.GetType();
-    meosType spanset_t= SpansetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
-    meosType span_t   = spansettype_spantype(spanset_t);
-    meosType base_t   = spantype_basetype(span_t);
+    MeosType spanset_t= SpansetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
+    MeosType span_t   = spansettype_spantype(spanset_t);
+    MeosType base_t   = spantype_basetype(span_t);
 
     Value_to_spanset_core(source, result, args.size(), base_t);
 }
@@ -824,8 +824,7 @@ void SpansetFunctions::Numspanset_width(DataChunk &args, ExpressionState &state,
         }
 
         auto blob = FlatVector::GetData<string_t>(input_vec)[i];
-        // Second argument registered as BOOLEAN; read as bool, not int32_t
-        // (see set_functions.cpp:Floatset_degrees for the same pattern).
+        // Second argument registered as BOOLEAN; read as bool, not int32_t.
         bool bools = has_bools ? FlatVector::GetData<bool>(*bools_vec_ptr)[i] : false;
 
         const uint8_t *data = (const uint8_t *)blob.GetData();
@@ -1161,7 +1160,7 @@ void SpansetFunctions::Tstzspanset_timestamps(DataChunk &args, ExpressionState &
 }
 
 static inline string_t Numspanset_shift_common(const string_t &blob, Datum shift_datum,
-                                        meosType validate_spanset_type, Vector &result) {
+                                        MeosType validate_spanset_type, Vector &result) {
     const uint8_t *data = (const uint8_t *)blob.GetData();
     size_t size = blob.GetSize();
     
@@ -1208,7 +1207,7 @@ static inline string_t Tstzspanset_shift_common(const string_t &blob, interval_t
 void SpansetFunctions::Numspanset_shift(DataChunk &args, ExpressionState &state, Vector &result) {    
     auto &spanset_vec = args.data[0];
     auto out_type  = result.GetType();    
-    meosType spanset_type = SpansetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    MeosType spanset_type = SpansetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
     
     switch (spanset_type) {
         case T_INTSPANSET: { // shift(intspanset, integer) -> intspanset
@@ -1262,7 +1261,7 @@ void SpansetFunctions::Tstzspanset_shift(DataChunk &args, ExpressionState &state
 }
 
 static inline string_t Numspanset_scale_common(const string_t &blob, Datum scale_datum,
-                                        meosType validate_spanset_type, Vector &result) {
+                                        MeosType validate_spanset_type, Vector &result) {
     const uint8_t *data = (const uint8_t *)blob.GetData();
     size_t size = blob.GetSize();
     
@@ -1289,7 +1288,7 @@ static inline string_t Numspanset_scale_common(const string_t &blob, Datum scale
 void SpansetFunctions::Numspanset_scale(DataChunk &args, ExpressionState &state, Vector &result) {    
     auto &spanset_vec = args.data[0];
     auto out_type  = result.GetType();    
-    meosType spanset_type = SpansetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    MeosType spanset_type = SpansetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
     
     switch (spanset_type) {
         case T_INTSPANSET: { // scale(intspanset, integer) -> intspanset
@@ -1386,7 +1385,7 @@ static inline string_t Tstzspanset_shift_scale_common(const string_t &blob, inte
 }
 
 static inline string_t Numspanset_shift_scale_common(const string_t &blob, Datum shift_datum, Datum scale_datum,
-                                                 meosType validate_spanset_type, Vector &result) {
+                                                 MeosType validate_spanset_type, Vector &result) {
     const uint8_t *data = (const uint8_t *)blob.GetData();
     size_t size = blob.GetSize();
 
@@ -1423,7 +1422,7 @@ static inline string_t Numspanset_shift_scale_common(const string_t &blob, Datum
 void SpansetFunctions::Numspanset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &spanset_vec = args.data[0];
     auto out_type = result.GetType();
-    meosType spanset_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
+    MeosType spanset_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
 
     switch (spanset_type) {
         case T_INTSPANSET: {
@@ -1479,203 +1478,10 @@ void SpansetFunctions::Tstzspanset_shift_scale(DataChunk &args, ExpressionState 
     }
 }
 
-void SpansetFunctions::Floatspanset_floor(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)blob.GetData();
-            size_t size = blob.GetSize();
-            SpanSet *s = (SpanSet *)malloc(size);
-            memcpy(s, data, size);
-            VALIDATE_FLOATSPANSET(s, NULL);
-            SpanSet *r = floatspanset_floor(s);
-            free(s);
-            if (!r) {
-                throw InvalidInputException("floatspan_floor failed");
-            }
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-            free(r);
-            return out;
-        });
-}
+// floor/ceil/round/degrees/radians on floatspanset are generated from the catalog
+// (generated_temporal_udfs.cpp); no hand bodies remain.
 
-void SpansetFunctions::Floatspanset_ceil(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)blob.GetData();
-            size_t size = blob.GetSize();
-            SpanSet *s = (SpanSet *)malloc(size);
-            memcpy(s, data, size);
-            VALIDATE_FLOATSPANSET(s, NULL);
-            SpanSet *r = floatspanset_ceil(s);
-            free(s);
-            if (!r) {
-                throw InvalidInputException("floatspan_ceil failed");
-            }
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-            free(r);
-            return out;
-        });
-}
-
-void SpansetFunctions::Floatspanset_round(DataChunk &args, ExpressionState &state, Vector &result) {
-    D_ASSERT(args.ColumnCount() == 1 || args.ColumnCount() == 2);
-    auto &args0 = args.data[0];
-    Vector *args1 = args.ColumnCount() == 2 ? &args.data[1] : 0;
-    if (args.ColumnCount() == 2) {
-        BinaryExecutor::Execute<string_t, int32_t, string_t>(
-            args0, *args1, result, args.size(),
-            [&](string_t blob, int32_t precision) -> string_t {
-                const uint8_t *data = (const uint8_t *)blob.GetData();
-                size_t size = blob.GetSize();
-                SpanSet *s = (SpanSet *)malloc(size);
-                memcpy(s, data, size);
-                VALIDATE_FLOATSPANSET(s, NULL);
-                SpanSet *r = floatspanset_round(s, precision);
-                free(s);
-                if (!r) {
-                    throw InvalidInputException("floatspanset_round failed");
-                }
-                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-                free(r);
-                return out;
-            });
-    } else {
-        UnaryExecutor::Execute<string_t, string_t>(
-            args0, result, args.size(),
-            [&](string_t blob) -> string_t {
-                const uint8_t *data = (const uint8_t *)blob.GetData();
-                size_t size = blob.GetSize();
-                SpanSet *s = (SpanSet *)malloc(size);
-                memcpy(s, data, size);
-                VALIDATE_FLOATSPANSET(s, NULL);
-                SpanSet *r = floatspanset_round(s, 0); // default precision is 0
-                free(s);
-                if (!r) {
-                    throw InvalidInputException("floatspanset_round failed");
-                }
-                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-                free(r);
-                return out;
-            });
-    }
-}
-
-void SpansetFunctions::Floatspanset_degrees(DataChunk &args, ExpressionState &state, Vector &result) {
-    D_ASSERT(args.ColumnCount() == 1|| args.ColumnCount() == 2);
-    auto &args0 = args.data[0];
-    Vector *args1 = args.ColumnCount() == 2 ? &args.data[1] : 0;
-    if (args.ColumnCount() == 2) {
-        BinaryExecutor::Execute<string_t, int32_t, string_t>(
-            args0, *args1, result, args.size(),
-            [&](string_t blob, int32_t precision) -> string_t {
-                const uint8_t *data = (const uint8_t *)blob.GetData();
-                size_t size = blob.GetSize();
-                SpanSet *s = (SpanSet *)malloc(size);
-                memcpy(s, data, size);
-                VALIDATE_FLOATSPANSET(s, NULL);
-                SpanSet *r = floatspanset_degrees(s, precision);
-                free(s);
-                if (!r) {
-                    throw InvalidInputException("floatspanset_degrees failed");
-                }
-                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-                free(r);
-                return out;
-            });
-    } else {
-        UnaryExecutor::Execute<string_t, string_t>(
-            args0, result, args.size(),
-            [&](string_t blob) -> string_t {
-                const uint8_t *data = (const uint8_t *)blob.GetData();
-                size_t size = blob.GetSize();
-                SpanSet *s = (SpanSet *)malloc(size);
-                memcpy(s, data, size);
-                VALIDATE_FLOATSPANSET(s, NULL);
-                SpanSet *r = floatspanset_degrees(s, false); // default precision is false
-                free(s);
-                if (!r) {
-                    throw InvalidInputException("floatspanset_degrees failed");
-                }
-                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-                free(r);
-                return out;
-            });
-    }
-    
-}
-
-void SpansetFunctions::Floatspanset_radians(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &args0 = args.data[0];
-    UnaryExecutor::Execute<string_t, string_t>(
-        args0, result, args.size(),
-        [&](string_t blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)blob.GetData();
-            size_t size = blob.GetSize();
-            SpanSet *s = (SpanSet *)malloc(size);
-            memcpy(s, data, size);
-            VALIDATE_FLOATSPANSET(s, NULL);
-            SpanSet *r = floatspanset_radians(s); 
-            if (!r) {
-                throw InvalidInputException("floatspanset_radians failed");
-            }
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-            free(r);
-            return out;
-        });
-    
-}
-
-void SpansetFunctions::Spanset_spans(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &spanset_vec = args.data[0];
-    idx_t row_count = args.size();
-    spanset_vec.Flatten(row_count);
-
-    auto &result_validity = FlatVector::Validity(result);
-    auto list_entries = FlatVector::GetData<list_entry_t>(result);
-    auto &child_vector = ListVector::GetEntry(result);
-    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
-    ListVector::Reserve(result, row_count);
-
-    idx_t total_offset = 0;
-    const size_t span_bytes = sizeof(Span);
-
-    for (idx_t i = 0; i < row_count; ++i) {
-        if (spanset_vec.GetValue(i).IsNull()) {
-            result_validity.SetInvalid(i);
-            continue;
-        }
-
-        string_t blob = FlatVector::GetData<string_t>(spanset_vec)[i];
-        SpanSet *s = (SpanSet *)malloc(blob.GetSize());
-        memcpy(s, blob.GetData(), blob.GetSize());
-
-        int num = spanset_num_spans(s);
-        Span *spans = spanset_spans(s);
-        free(s);
-
-        if (!spans || num <= 0) {
-            result_validity.SetInvalid(i);
-            continue;
-        }
-
-        ListVector::SetListSize(result, total_offset + num);
-        list_entries[i] = list_entry_t{total_offset, static_cast<uint64_t>(num)};
-
-        auto *child_data = FlatVector::GetData<string_t>(child_vector);
-        for (int j = 0; j < num; ++j) {
-            child_data[total_offset + j] =
-                StringVector::AddStringOrBlob(child_vector, reinterpret_cast<const char *>(&spans[j]), span_bytes);
-        }
-
-        free(spans);
-        total_offset += num;
-        result_validity.SetValid(i);
-    }
-}
+// spans(<spanset_type>) is generated from the catalog (spanset_spans) in generated_temporal_udfs.cpp.
 void SpansetFunctions::Spanset_split_n_spans(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &spanset_vec = args.data[0];
     auto &n_vec = args.data[1];

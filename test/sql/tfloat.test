@@ -27,7 +27,7 @@ SELECT tempDump(tfloat '[1.5@2001-01-01, 2.5@2001-01-02, 1.5@2001-01-03]');
 [{'value': 1.5, 'time': '{[2001-01-01 00:00:00+01, 2001-01-01 00:00:00+01], [2001-01-03 00:00:00+01, 2001-01-03 00:00:00+01]}'}, {'value': 2.5, 'time': '{[2001-01-02 00:00:00+01, 2001-01-02 00:00:00+01]}'}]
 
 query I
-SELECT atValues(tfloat 'Interp=Step;{[1.5@2000-01-01, 2.5@2000-01-02, 1.5@2000-01-03],[3.5@2000-01-04, 3.5@2000-01-05]}', floatspan '[1,3]');
+SELECT atSpan(tfloat 'Interp=Step;{[1.5@2000-01-01, 2.5@2000-01-02, 1.5@2000-01-03],[3.5@2000-01-04, 3.5@2000-01-05]}', floatspan '[1,3]');
 ----
 Interp=Step;{[1.5@2000-01-01 00:00:00+01, 2.5@2000-01-02 00:00:00+01, 1.5@2000-01-03 00:00:00+01]}
 
@@ -139,12 +139,12 @@ SELECT minusValues(tfloat '{1.5@2000-01-01, 2.5@2000-01-02, 1.5@2000-01-03}', fl
 {2.5@2000-01-02 00:00:00+01}
 
 query I 
-SELECT atValues(tfloat '[1.5@2000-01-01, 2.5@2000-01-02, 1.5@2000-01-03]', floatspan '[1,3]');
+SELECT atSpan(tfloat '[1.5@2000-01-01, 2.5@2000-01-02, 1.5@2000-01-03]', floatspan '[1,3]');
 ----
 {[1.5@2000-01-01 00:00:00+01, 2.5@2000-01-02 00:00:00+01, 1.5@2000-01-03 00:00:00+01]}
 
 query I 
-SELECT atValues(tfloat '{[1@2000-01-01, 3@2000-01-03],[4@2000-01-04]}', floatspanset '{[1,2],[3,4]}');
+SELECT atSpanset(tfloat '{[1@2000-01-01, 3@2000-01-03],[4@2000-01-04]}', floatspanset '{[1,2],[3,4]}');
 ----
 {[1@2000-01-01 00:00:00+01, 2@2000-01-02 00:00:00+01], [3@2000-01-03 00:00:00+01], [4@2000-01-04 00:00:00+01]}
 
@@ -211,7 +211,7 @@ SELECT segmentMinDuration(tfloat 'Interp=Step;{[1.5@2000-01-01, 2.5@2000-01-02, 
 ----
 {[f@2000-01-01 00:00:00+01, f@2000-01-03 00:00:00+01), [f@2000-01-04 00:00:00+01, f@2000-01-05 00:00:00+01)}
 
-query I 
+query I
 SELECT segmentMaxDuration(tfloat '{[1.5@2000-01-01, 2.5@2000-01-02, 1.5@2000-01-03],[3.5@2000-01-04, 3.5@2000-01-05]}', '1 day');
 ----
 {[f@2000-01-01 00:00:00+01, f@2000-01-03 00:00:00+01), [f@2000-01-04 00:00:00+01, f@2000-01-05 00:00:00+01)}
@@ -231,7 +231,42 @@ SELECT tfloat '1.5@2000-01-01' > tfloat '{[1.5@2000-01-01, 2.5@2000-01-02, 1.5@2
 ----
 false
 
-query I 
+query I
 SELECT duration(tfloat 'Interp=Step;[1.5@2000-01-01, 2.5@2000-01-02, 1.5@2000-01-03]');
 ----
 2 days
+
+# tsequenceset_make_gaps: split an array of instants into sequences at time gaps (> maxt)
+# and/or value gaps (> maxdist).
+query I
+SELECT tfloatSeqSetGaps([tfloat '1@2000-01-01', tfloat '2@2000-01-02', tfloat '10@2000-01-10'], interval '2 days');
+----
+{[1@2000-01-01 00:00:00+01, 2@2000-01-02 00:00:00+01], [10@2000-01-10 00:00:00+01]}
+
+query I
+SELECT tfloatSeqSetGaps([tfloat '1@2000-01-01', tfloat '2@2000-01-02', tfloat '10@2000-01-03'], interval '5 days', 5.0);
+----
+{[1@2000-01-01 00:00:00+01, 2@2000-01-02 00:00:00+01], [10@2000-01-03 00:00:00+01]}
+
+query I
+SELECT tfloatSeqSetGaps([tfloat '1@2000-01-01', tfloat '2@2000-01-02', tfloat '3@2000-01-03'], interval '5 days', 5.0);
+----
+{[1@2000-01-01 00:00:00+01, 3@2000-01-03 00:00:00+01]}
+
+# From MF-JSON / HexWKB parsers (generated base-type name family). Strings are the
+# MEOS encodings of the corresponding literals (Europe/Brussels session tz).
+query I
+SELECT tfloatFromMFJSON('{"type":"MovingFloat","values":[1.5,2.5],"datetimes":["2000-01-01T00:00:00+01","2000-01-02T00:00:00+01"],"lower_inc":true,"upper_inc":true,"interpolation":"Linear"}') = tfloat '[1.5@2000-01-01, 2.5@2000-01-02]';
+----
+true
+
+query I
+SELECT tfloatFromHexWKB('0121000E0200000003000000000000F83F005C6C29FFFFFFFF000000000000044000BC434713000000') = tfloat '[1.5@2000-01-01, 2.5@2000-01-02]';
+----
+true
+
+# asHexWKB output (base hex-WKB) — generated inherited Temporal<T> surface. Round-trips.
+query I
+SELECT tfloatFromHexWKB(asHexWKB(tfloat '[1.5@2000-01-01, 2.5@2000-01-02]')) = tfloat '[1.5@2000-01-01, 2.5@2000-01-02]';
+----
+true

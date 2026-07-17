@@ -13,7 +13,7 @@ namespace duckdb {
 class ExtensionLoader;
 
 struct TboxType {
-    static LogicalType TBOX();
+    static LogicalType tbox();
 
     static void RegisterType(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);

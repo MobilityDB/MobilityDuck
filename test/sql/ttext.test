@@ -135,7 +135,25 @@ SELECT duration(ttext '{[AAA@2000-01-01, BBB@2000-01-02, AAA@2000-01-03],[CCC@20
 ----
 4 days
 
-query I 
+query I
 SELECT duration(ttext '{[AAA@2000-01-01, BBB@2000-01-02, AAA@2000-01-03],[CCC@2000-01-04, CCC@2000-01-05]}');
 ----
 3 days
+
+# From MF-JSON / HexWKB parsers (generated base-type name family). Strings are the
+# MEOS encodings of the corresponding literals (Europe/Brussels session tz).
+query I
+SELECT ttextFromMFJSON('{"type":"MovingText","values":["abc"],"datetimes":["2000-01-01T00:00:00+01"],"interpolation":"None"}') = ttext 'abc@2000-01-01';
+----
+true
+
+query I
+SELECT ttextFromHexWKB('012900010300000000000000616263005C6C29FFFFFFFF') = ttext 'abc@2000-01-01';
+----
+true
+
+# asHexWKB output (base hex-WKB) — generated inherited Temporal<T> surface. Round-trips.
+query I
+SELECT ttextFromHexWKB(asHexWKB(ttext 'abc@2000-01-01')) = ttext 'abc@2000-01-01';
+----
+true

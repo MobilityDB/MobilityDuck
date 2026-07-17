@@ -17,12 +17,11 @@ namespace duckdb {
 struct SpanTypes {
     static const std::vector<LogicalType> &AllTypes();
 
-    static LogicalType INTSPAN();
-    static LogicalType BIGINTSPAN();
-    static LogicalType FLOATSPAN();
-    static LogicalType TEXTSPAN();
-    static LogicalType DATESPAN();
-    static LogicalType TSTZSPAN();
+    static LogicalType intspan();
+    static LogicalType bigintspan();
+    static LogicalType floatspan();
+    static LogicalType datespan();
+    static LogicalType tstzspan();
     static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterScalarFunctions(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
@@ -30,7 +29,7 @@ struct SpanTypes {
 
 
 struct SpanTypeMapping {
-    static meosType GetMeosTypeFromAlias(const std::string &alias);
+    static MeosType GetMeosTypeFromAlias(const std::string &alias);
     static LogicalType GetChildType(const LogicalType &type);
 };
 

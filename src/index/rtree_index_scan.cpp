@@ -58,7 +58,7 @@ static unique_ptr<GlobalTableFunctionState> RTreeIndexScanInitGlobal(ClientConte
 	result->local_storage_state.Initialize(result->column_ids, context, input.filters);
 	local_storage.InitializeScan(bind_data.table.GetStorage(), result->local_storage_state.local_state, input.filters);
 
-	// Initialize index scan - works for both STBOX and TSTZSPAN
+	// Initialize index scan - works for both stbox and tstzspan
 	if (bind_data.query_box) {
         result->index_state = bind_data.index.Cast<TRTreeIndex>().InitializeScan(
             bind_data.query_box.get(), 

@@ -37,6 +37,23 @@ endif()
 # MEOS from overlay port
 find_package(MEOS CONFIG REQUIRED)
 
+# H3 headers: the all-families libmeos exposes meos_h3.h, which includes
+# <h3api.h>. SIBLING-FROM MobilityDB CMakeLists.txt H3 block (find_path
+# H3_INCLUDE_DIR NAMES h3api.h PATH_SUFFIXES h3) so code compiling against
+# meos_h3.h sees the system libh3 headers, just as the meos port (-DH3=ON) does.
+# The dir is attached to the extension targets below (mirroring the json-c
+# block) because build_*_extension targets don't inherit directory includes.
+# SIBLING-FROM MobilityDB CMakeLists.txt H3 block; NO_CMAKE_FIND_ROOT_PATH + explicit
+# system PATHS are the binding-side adaptation: under the vcpkg toolchain find_path is
+# confined to the vcpkg root and never sees the system /usr/include/h3 that libh3-dev ships.
+find_path(H3_INCLUDE_DIR NAMES h3api.h
+  PATH_SUFFIXES h3
+  PATHS /usr/include /usr/local/include
+  NO_CMAKE_FIND_ROOT_PATH)
+if(NOT H3_INCLUDE_DIR)
+  message(FATAL_ERROR "h3api.h not found; install libh3-dev (the meos port is built with -DH3=ON).")
+endif()
+
 if(TARGET GEOS::geos_c)
   set(GEOS_TGT GEOS::geos_c)
 elseif(TARGET GEOS::geos)
@@ -52,12 +69,17 @@ set(EXTENSION_NAME ${TARGET_NAME}_extension)
 set(LOADABLE_EXTENSION_NAME ${TARGET_NAME}_loadable_extension)
 
 include_directories(src/include)
-include_directories(duckdb-spatial/src)
-include_directories(duckdb-spatial/src/spatial)
+# Vendored duckdb-spatial headers are third-party: include them as SYSTEM so their
+# warnings (e.g. the two sgl.hpp variants redefining SGL_ASSERT) do not surface in
+# MobilityDuck translation units. MDB's own src/include stays non-SYSTEM (full warnings).
+include_directories(SYSTEM duckdb-spatial/src)
+include_directories(SYSTEM duckdb-spatial/src/spatial)
 
 set(EXTENSION_SOURCES
     src/spatial_ref_sys_csv.inc
-    src/mobilityduck_extension.cpp        
+    src/mobilityduck_extension.cpp
+    src/generated/generated_temporal_udfs.cpp
+    src/generated/generated_type_registration.cpp
     src/temporal/temporal.cpp
     src/temporal/temporal_functions.cpp
     src/temporal/temporal_aggregates.cpp
@@ -89,6 +111,9 @@ set(EXTENSION_SOURCES
     src/geo/tgeogpoint.cpp
     src/geo/tgeogpoint_in_out.cpp
     src/geo/tgeogpoint_ops.cpp
+    src/quadbin/tquadbin.cpp
+    src/h3/th3index.cpp
+    src/cbuffer/tcbuffer.cpp
     src/index/rtree_module.cpp
     src/single_tile_getters.cpp
     src/index/rtree_index_create_physical.cpp
@@ -106,10 +131,15 @@ build_loadable_extension(${TARGET_NAME} "" ${EXTENSION_SOURCES})
 if(TARGET json-c::json-c)
   set(JSONC_TGT json-c::json-c)
 else()
-  target_include_directories(${EXTENSION_NAME} PRIVATE ${JSON-C_INCLUDE_DIRS})
-  target_include_directories(${LOADABLE_EXTENSION_NAME} PRIVATE ${JSON-C_INCLUDE_DIRS})
+  target_include_directories(${EXTENSION_NAME} SYSTEM PRIVATE ${JSON-C_INCLUDE_DIRS})
+  target_include_directories(${LOADABLE_EXTENSION_NAME} SYSTEM PRIVATE ${JSON-C_INCLUDE_DIRS})
   set(JSONC_TGT ${JSON-C_LIBRARIES})
 endif()
+
+# H3 headers for meos_h3.h (see the find_path above) — attached per-target like
+# json-c, since build_*_extension targets don't inherit directory includes.
+target_include_directories(${EXTENSION_NAME} SYSTEM PRIVATE ${H3_INCLUDE_DIR})
+target_include_directories(${LOADABLE_EXTENSION_NAME} SYSTEM PRIVATE ${H3_INCLUDE_DIR})
 
 # -----------------------------
 # Link libraries 

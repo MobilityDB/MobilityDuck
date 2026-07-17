@@ -41,7 +41,6 @@ struct SpanFunctions {
     static void Datespan_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tstzspan_to_datespan(DataChunk &args, ExpressionState &state, Vector &result);    
     static void Set_to_span(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Set_spans(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_split_n_spans(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_split_each_n_spans(DataChunk &args, ExpressionState &state, Vector &result);
     // TODO (Type Range): static void Range_to_span(DataChunk &args, ExpressionState &state, Vector &result);
@@ -65,12 +64,9 @@ struct SpanFunctions {
     static void Tstzspan_scale(DataChunk &args, ExpressionState &state, Vector &result);
     static  void Numspan_shift_scale(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tstzspan_shift_scale(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Floatspan_floor(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Floatspan_ceil(DataChunk &args, ExpressionState &state, Vector &result);
+    // floor/ceil/round/degrees/radians on floatspan are generated (generated_temporal_udfs.cpp);
+    // only round(DOUBLE), the scalar base helper, remains hand-written.
     static void Float_round(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Floatspan_round(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Floatspan_degrees(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Floatspan_radians(DataChunk &args, ExpressionState &state, Vector &result);
         // TODO: Selectivity functions
         // Comparison operators
     static void Span_eq(DataChunk &args, ExpressionState &state, Vector &result);

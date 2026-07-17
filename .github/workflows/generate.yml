@@ -1,0 +1,65 @@
+#
+# Derives the MEOS catalog from MobilityDB in CI (instead of committing a
+# meos-idl.json snapshot) and verifies that the committed generated UDF surface
+# still matches a fresh derivation. This is the shared ecosystem model: bindings
+# stop vendoring the catalog and derive it from one MobilityDB commit via the
+# MEOS-API provision-meos action (the JMEOS/Spark/Flink/Kafka pattern).
+#
+name: Derive catalog and verify generated code
+
+on:
+  pull_request:
+    branches:
+      - main
+      - 'feat/**'
+      - 'fix/**'
+    paths-ignore:
+      - '**/README.md'
+      - 'doc/**'
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**/README.md'
+      - 'doc/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.head_ref || '' }}
+  cancel-in-progress: true
+
+jobs:
+  derive-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Derive the catalog from MobilityDB master — the same branch the vcpkg MEOS
+      # port builds libmeos from (its portfile resolves master's tip at build
+      # time), so the generated code always matches the libmeos it is compiled
+      # against. No committed source commit: the binding tracks latest master, per
+      # the shared ecosystem provision-meos model.
+      - name: Provision the MEOS catalog
+        id: provision
+        uses: MobilityDB/MEOS-API/.github/actions/provision-meos@master
+        with:
+          mobilitydb-ref: master
+          build-libmeos: "false"
+
+      - name: Stage the catalog
+        run: |
+          mkdir -p tools/catalog
+          cp "${{ steps.provision.outputs.catalog-path }}" tools/catalog/meos-idl.json
+
+      # Regenerate the committed UDF surface and fail if it drifts. The committed
+      # src/generated/*.cpp (compiled by the distribution pipeline) must always
+      # equal a fresh derivation from the current catalog.
+      - name: Regenerate and check for drift
+        run: |
+          python3 tools/codegen_duck_udfs.py \
+            tools/catalog/meos-idl.json \
+            src/generated/generated_temporal_udfs.cpp
+          if ! git diff --exit-code src/generated/; then
+            echo "::error::src/generated is stale — re-run tools/codegen_duck_udfs.py against a freshly derived catalog and commit the result"
+            exit 1
+          fi

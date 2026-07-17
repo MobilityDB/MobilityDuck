@@ -411,7 +411,7 @@ select tempDump(tint '[1@2001-01-01, 2@2001-01-02, 1@2001-01-03]');
 [{'value': 1, 'time': '{[2001-01-01 00:00:00+01, 2001-01-02 00:00:00+01), [2001-01-03 00:00:00+01, 2001-01-03 00:00:00+01]}'}, {'value': 2, 'time': '{[2001-01-02 00:00:00+01, 2001-01-03 00:00:00+01)}'}]
 
 query I
-SELECT atValues(tint '{[1@2000-01-01, 2@2000-01-02, 1@2000-01-03],[3@2000-01-04, 3@2000-01-05]}', intspan '[1,3]');
+SELECT atSpan(tint '{[1@2000-01-01, 2@2000-01-02, 1@2000-01-03],[3@2000-01-04, 3@2000-01-05]}', intspan '[1,3]');
 ----
 {[1@2000-01-01 00:00:00+01, 2@2000-01-02 00:00:00+01, 1@2000-01-03 00:00:00+01], [3@2000-01-04 00:00:00+01, 3@2000-01-05 00:00:00+01]}
 
@@ -510,23 +510,35 @@ SELECT atValues(tint '[1@2000-01-01, 2@2000-01-02, 1@2000-01-03]', intset '{1}')
 ----
 {[1@2000-01-01 00:00:00+01, 1@2000-01-02 00:00:00+01), [1@2000-01-03 00:00:00+01]}
 
-query I 
+query I
 SELECT minusValues(tint '[1@2000-01-01, 2@2000-01-02, 1@2000-01-03]', intset '{1}');
 ----
 {[2@2000-01-02 00:00:00+01, 2@2000-01-03 00:00:00+01)}
 
-query I 
-SELECT atValues(tint '{[1@2000-01-01, 2@2000-01-02, 1@2000-01-03],[3@2000-01-04, 3@2000-01-05]}', intspan '[1,3]');
+# atValues / minusValues on tbigint with a bigintset — the overload the generated catalog
+# surface adds (the retired hand regs covered only tint/tfloat/ttext).
+query I
+SELECT atValues(tbigint '[1@2000-01-01, 2@2000-01-02, 1@2000-01-03]', bigintset '{1}');
+----
+{[1@2000-01-01 00:00:00+01, 1@2000-01-02 00:00:00+01), [1@2000-01-03 00:00:00+01]}
+
+query I
+SELECT minusValues(tbigint '[1@2000-01-01, 2@2000-01-02, 1@2000-01-03]', bigintset '{1}');
+----
+{[2@2000-01-02 00:00:00+01, 2@2000-01-03 00:00:00+01)}
+
+query I
+SELECT atSpan(tint '{[1@2000-01-01, 2@2000-01-02, 1@2000-01-03],[3@2000-01-04, 3@2000-01-05]}', intspan '[1,3]');
 ----
 {[1@2000-01-01 00:00:00+01, 2@2000-01-02 00:00:00+01, 1@2000-01-03 00:00:00+01], [3@2000-01-04 00:00:00+01, 3@2000-01-05 00:00:00+01]}
 
 query I 
-SELECT minusValues(tint '[1@2000-01-01, 2@2000-01-02, 1@2000-01-03]', intspan '[1,3]');
+SELECT minusSpan(tint '[1@2000-01-01, 2@2000-01-02, 1@2000-01-03]', intspan '[1,3]');
 ----
 NULL
 
 query I 
-SELECT minusValues(tint '[1@2000-01-01, 2@2000-01-02, 1@2000-01-03]', intspanset '{[1,3]}');
+SELECT minusSpanset(tint '[1@2000-01-01, 2@2000-01-02, 1@2000-01-03]', intspanset '{[1,3]}');
 ----
 NULL
 
@@ -545,12 +557,24 @@ SELECT atTBox(tint '{[1@2000-01-01, 2@2000-01-02, 1@2000-01-03],[3@2000-01-04, 3
 ----
 {[1@2000-01-01 00:00:00+01, 2@2000-01-02 00:00:00+01]}
 
-query I 
+query I
 SELECT minusTBox(tint '{[1@2000-01-01, 2@2000-01-02, 1@2000-01-03],[3@2000-01-04, 3@2000-01-05]}', tbox 'TBOXINT XT([1,2],[2000-01-01,2000-01-02])');
 ----
 {(2@2000-01-02 00:00:00+01, 1@2000-01-03 00:00:00+01], [3@2000-01-04 00:00:00+01, 3@2000-01-05 00:00:00+01]}
 
-query I 
+# atTbox / minusTbox on tbigint (with a bigint tbox) — the overload the generated catalog
+# surface adds (the retired hand regs covered only tint/tfloat).
+query I
+SELECT atTbox(tbigint '{[1@2000-01-01, 2@2000-01-02, 1@2000-01-03],[3@2000-01-04, 3@2000-01-05]}', tbox 'TBOXBIGINT XT([1,2],[2000-01-01,2000-01-02])');
+----
+{[1@2000-01-01 00:00:00+01, 2@2000-01-02 00:00:00+01]}
+
+query I
+SELECT minusTbox(tbigint '{[1@2000-01-01, 2@2000-01-02, 1@2000-01-03],[3@2000-01-04, 3@2000-01-05]}', tbox 'TBOXBIGINT XT([1,2],[2000-01-01,2000-01-02])');
+----
+{(2@2000-01-02 00:00:00+01, 1@2000-01-03 00:00:00+01], [3@2000-01-04 00:00:00+01, 3@2000-01-05 00:00:00+01]}
+
+query I
 SELECT beforeTimestamp(tint '1@2000-01-02', timestamptz '2000-01-02');
 ----
 NULL
@@ -575,7 +599,41 @@ SELECT tint '{1@2000-01-01, 2@2000-01-02, 1@2000-01-03}' <= tint '1@2000-01-01';
 ----
 false
 
-query I 
+query I
 SELECT duration(tint '{[1@2000-01-01, 2@2000-01-02, 1@2000-01-03],[3@2000-01-04, 3@2000-01-05]}');
 ----
 3 days
+
+# From MF-JSON / HexWKB parsers (base-type name family, generated). The strings are
+# the MEOS encodings of the corresponding literals (Europe/Brussels session tz).
+query I
+SELECT tintFromMFJSON('{"type":"MovingInteger","values":[1],"datetimes":["2000-01-01T00:00:00+01"],"interpolation":"None"}') = tint '1@2000-01-01';
+----
+true
+
+query I
+SELECT tintFromHexWKB('0123000101000000005C6C29FFFFFFFF') = tint '1@2000-01-01';
+----
+true
+
+query I
+SELECT tbigintFromMFJSON('{"type":"MovingBigInteger","values":[42],"datetimes":["2000-01-01T00:00:00+01"],"interpolation":"None"}') = tbigint '42@2000-01-01';
+----
+true
+
+query I
+SELECT tbigintFromHexWKB('014300012A00000000000000005C6C29FFFFFFFF') = tbigint '42@2000-01-01';
+----
+true
+
+# asHexWKB output (base hex-WKB) — the inherited Temporal<T> output surface generated over
+# every temporal subtype (was missing for the base temporals). Round-trips through FromHexWKB.
+query I
+SELECT tintFromHexWKB(asHexWKB(tint '1@2000-01-01')) = tint '1@2000-01-01';
+----
+true
+
+query I
+SELECT tbigintFromHexWKB(asHexWKB(tbigint '42@2000-01-01')) = tbigint '42@2000-01-01';
+----
+true
