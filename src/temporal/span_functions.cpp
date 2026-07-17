@@ -1028,22 +1028,25 @@ static inline string_t Numspan_expand_common(const string_t &blob, Datum value, 
     return out;
 }
 
-static inline string_t Tstzspan_expand_common(const string_t &blob, interval_t duckdb_interval, Vector &result) {
+static inline string_t Tstzspan_expand_common(const string_t &blob, interval_t duckdb_interval,
+                                              Vector &result, ValidityMask &mask, idx_t idx) {
     const uint8_t *data = (const uint8_t *)blob.GetData();
     size_t size = blob.GetSize();
-    
+
     Span *s = (Span *)malloc(size);
     memcpy(s, data, size);
-    
-    VALIDATE_TSTZSPAN(s, NULL);
-    
+
+    VALIDATE_TSTZSPAN(s, string_t());
+
     // Convert DuckDB interval_t to MEOS Interval
     MeosInterval meos_interval = IntervaltToInterval(duckdb_interval);
-    
+
     Span *r = tstzspan_expand(s, &meos_interval);
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-    
     free(s);
+    // A shrinking (negative) interval can collapse the span to empty; MEOS
+    // returns NULL, which maps to SQL NULL.
+    if (!r) { mask.SetInvalid(idx); return string_t(); }
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
     free(r);
     return out;
 }
@@ -1097,11 +1100,11 @@ void SpanFunctions::Tstzspan_expand(DataChunk &args, ExpressionState &state, Vec
     auto &span_vec = args.data[0];
     auto out_type  = result.GetType();    
     MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
-    BinaryExecutor::Execute<string_t, interval_t, string_t>(
+    BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(
         span_vec, args.data[1], result, args.size(),
-        [&](string_t blob, interval_t value) -> string_t {
-            return Tstzspan_expand_common(blob, value, result);
-        });        
+        [&](string_t blob, interval_t value, ValidityMask &mask, idx_t idx) -> string_t {
+            return Tstzspan_expand_common(blob, value, result, mask, idx);
+        });
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
@@ -1226,7 +1229,7 @@ static inline string_t Numspan_scale_common(const string_t &blob, Datum scale_da
         default: break;
     }    
     
-    Span *r = numspan_shift_scale(s, scale_datum, 0, /*do_shift=*/false, /*do_scale=*/true);
+    Span *r = numspan_shift_scale(s, 0, scale_datum, /*do_shift=*/false, /*do_scale=*/true);
     
     string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
     

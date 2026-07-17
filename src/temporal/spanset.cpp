@@ -204,10 +204,10 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("shift", {spanset_type, LogicalType::INTEGER}, spanset_type, SpansetFunctions::Numspanset_shift)
             ); 
             
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {spanset_type, LogicalType::INTERVAL}, spanset_type, SpansetFunctions::Numspanset_scale)
+            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {spanset_type, LogicalType::INTEGER}, spanset_type, SpansetFunctions::Numspanset_scale)
             );
 
-            duckdb::RegisterSerializedScalarFunction(loader, 
+            duckdb::RegisterSerializedScalarFunction(loader,
                 ScalarFunction("shiftScale", {spanset_type, LogicalType::INTEGER, LogicalType::INTEGER}, spanset_type,
                                SpansetFunctions::Numspanset_shift_scale));
 
@@ -216,18 +216,18 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("shift", {spanset_type, LogicalType::BIGINT}, spanset_type, SpansetFunctions::Numspanset_shift)
             ); 
 
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {spanset_type, LogicalType::INTERVAL}, spanset_type, SpansetFunctions::Numspanset_scale)
+            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {spanset_type, LogicalType::BIGINT}, spanset_type, SpansetFunctions::Numspanset_scale)
             );
-            duckdb::RegisterSerializedScalarFunction(loader, 
+            duckdb::RegisterSerializedScalarFunction(loader,
                 ScalarFunction("shiftScale", {spanset_type, LogicalType::BIGINT, LogicalType::BIGINT}, spanset_type, SpansetFunctions::Numspanset_shift_scale)
             );    
         }
         else if( spanset_type == SpansetTypes::floatspanset() ){
             duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("shift", {spanset_type, LogicalType::DOUBLE}, spanset_type, SpansetFunctions::Numspanset_shift)
             ); 
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {spanset_type, LogicalType::INTERVAL}, spanset_type, SpansetFunctions::Numspanset_scale)
+            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {spanset_type, LogicalType::DOUBLE}, spanset_type, SpansetFunctions::Numspanset_scale)
             );
-            duckdb::RegisterSerializedScalarFunction(loader, 
+            duckdb::RegisterSerializedScalarFunction(loader,
                 ScalarFunction("shiftScale", {spanset_type, LogicalType::DOUBLE, LogicalType::DOUBLE}, spanset_type, SpansetFunctions::Numspanset_shift_scale)
             );
 
