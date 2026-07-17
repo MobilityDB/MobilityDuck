@@ -19,146 +19,69 @@ extern "C" {
 
 namespace duckdb {
 
-#define DEFINE_SPAN_SET_TYPE(NAME)                                        \
-    LogicalType SpansetTypes::NAME() {                                   \
-        auto type = LogicalType(LogicalTypeId::BLOB);             \
-        type.SetAlias(#NAME);                                        \
-        return type;                                                 \
-    }
-
-DEFINE_SPAN_SET_TYPE(intspanset)
-DEFINE_SPAN_SET_TYPE(bigintspanset)
-DEFINE_SPAN_SET_TYPE(floatspanset)
-DEFINE_SPAN_SET_TYPE(datespanset)
-DEFINE_SPAN_SET_TYPE(tstzspanset)
-
-#undef DEFINE_SET_TYPE
-
-void SpansetTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType( "intspanset", intspanset());
-    loader.RegisterType( "bigintspanset", bigintspanset());
-    loader.RegisterType( "floatspanset", floatspanset());    
-    loader.RegisterType( "datespanset", datespanset());
-    loader.RegisterType( "tstzspanset", tstzspanset());    
-}
-
-const std::vector<LogicalType> &SpansetTypes::AllTypes() {
-    static std::vector<LogicalType> types = {
-        intspanset(),
-        bigintspanset(),
-        floatspanset(),        
-        datespanset(),
-        tstzspanset()
-    };
-    return types;
-}
-
-meosType SpansetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
-    static const std::unordered_map<std::string, meosType> alias_to_type = {
-        {"intspanset", T_INTSPANSET},
-        {"bigintspanset", T_BIGINTSPANSET},
-        {"floatspanset", T_FLOATSPANSET},        
-        {"datespanset", T_DATESPANSET},
-        {"tstzspanset", T_TSTZSPANSET}                
-    };
-
-    auto it = alias_to_type.find(alias);
-    if (it != alias_to_type.end()) {
-        return it->second;
-    } else {
-        return T_UNKNOWN;
-    }
-}
-
-LogicalType SpansetTypeMapping::GetChildType(const LogicalType &type) {
-    auto alias = type.ToString();        
-    if (alias == "intspanset") return SpanTypes::INTSPAN();
-    if (alias == "bigintspanset") return SpanTypes::BIGINTSPAN();
-    if (alias == "floatspanset") return SpanTypes::FLOATSPAN();    
-    if (alias == "datespanset") return SpanTypes::DATESPAN();
-    if (alias == "tstzspanset") return SpanTypes::TSTZSPAN();   
-    throw NotImplementedException("GetChildType: unsupported alias: " + alias); 
-}
-
-LogicalType SpansetTypeMapping::GetSetType(const LogicalType &type) {
-    auto alias = type.ToString();        
-    if (alias == "intspanset") return SetTypes::intset();
-    if (alias == "bigintspanset") return SetTypes::bigintset();
-    if (alias == "floatspanset") return SetTypes::floatset();    
-    if (alias == "datespanset") return SetTypes::dateset();
-    if (alias == "tstzspanset") return SetTypes::tstzset();
-    throw NotImplementedException("GetChildType: unsupported alias: " + alias);
-}
-
-LogicalType SpansetTypeMapping::GetBaseType(const LogicalType &type) {
-    auto alias = type.ToString();
-    if (alias == "intspanset") return LogicalType::INTEGER;
-    if (alias == "bigintspanset") return LogicalType::BIGINT;
-    if (alias == "floatspanset") return LogicalType::DOUBLE;    
-    if (alias == "datespanset") return LogicalType::DATE;
-    if (alias == "tstzspanset") return LogicalType::TIMESTAMP_TZ; 
-    throw NotImplementedException("GetChildType: unsupported alias: " + alias);
-}
+// Collection type registration (accessors, RegisterTypes, AllTypes, alias->MeosType,
+// GetChildType/GetSetType/GetBaseType) is generated from the catalog MeosType enum
+// into src/generated/generated_type_registration.cpp.
 
 // --- Register Cast ---
 void SpansetTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     for (const auto &spanset_type : SpansetTypes::AllTypes()) {
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader, 
             spanset_type,                      
             LogicalType::VARCHAR,   
             SpansetFunctions::Spanset_to_text   
         ); // Blob to text
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader, 
             LogicalType::VARCHAR, 
             spanset_type,                                    
             SpansetFunctions::Text_to_spanset   
         ); // text to blob
         
         auto base_type = SpansetTypeMapping::GetBaseType(spanset_type);
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader, 
             base_type,
             spanset_type,
             SpansetFunctions::Value_to_spanset_cast
         );
 
         auto set_type = SpansetTypeMapping::GetSetType(spanset_type);        
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader, 
             set_type,
             spanset_type,
             SpansetFunctions::Set_to_spanset_cast
         );
         auto child_type = SpansetTypeMapping::GetChildType(spanset_type); // span
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader, 
             child_type,
             spanset_type,
             SpansetFunctions::Span_to_spanset_cast
         );
 
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader, 
             spanset_type,
             child_type,
             SpansetFunctions::Spanset_to_span_cast
         );
 
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader, 
             SpansetTypes::intspanset(),
             SpansetTypes::floatspanset(),
             SpansetFunctions::Intspanset_to_floatspanset_cast
         );
 
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader, 
             SpansetTypes::floatspanset(),
             SpansetTypes::intspanset(),
             SpansetFunctions::Floatspanset_to_intspanset_cast
         );
 
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader, 
             SpansetTypes::datespanset(),
             SpansetTypes::tstzspanset(),
             SpansetFunctions::Datespanset_to_tstzspanset_cast
         );
 
-        loader.RegisterCastFunction(
+        RegisterMeosCastFunction(loader, 
             SpansetTypes::tstzspanset(),
             SpansetTypes::datespanset(),
             SpansetFunctions::Tstzspanset_to_datespanset_cast
@@ -240,13 +163,8 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("memSize", {spanset_type}, LogicalType::INTEGER, SpansetFunctions::Spanset_mem_size)
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("lower", {spanset_type}, base_type, SpansetFunctions::Spanset_lower)
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("upper", {spanset_type}, base_type, SpansetFunctions::Spanset_upper)
-        );
+        // lower / upper on spanset types are generated from the catalog
+        // (meos_setspan_accessor) in generated_temporal_udfs.cpp.
 
         duckdb::RegisterSerializedScalarFunction(loader, 
             ScalarFunction("lowerInc", {spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_lower_inc)
@@ -266,9 +184,8 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             );
         }
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("numSpans", {spanset_type}, LogicalType::INTEGER, SpansetFunctions::Spanset_num_spans)
-        );
+        // numSpans on spanset types is generated from the catalog
+        // (meos_setspan_accessor) in generated_temporal_udfs.cpp.
 
         duckdb::RegisterSerializedScalarFunction(loader, 
             ScalarFunction("startSpan", {spanset_type}, child_type, SpansetFunctions::Spanset_start_span)
@@ -314,20 +231,9 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 ScalarFunction("shiftScale", {spanset_type, LogicalType::DOUBLE, LogicalType::DOUBLE}, spanset_type, SpansetFunctions::Numspanset_shift_scale)
             );
 
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("floor", {spanset_type}, spanset_type, SpansetFunctions::Floatspanset_floor)
-            );
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("ceil", {spanset_type}, spanset_type, SpansetFunctions::Floatspanset_ceil)
-            );
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("round", {spanset_type}, spanset_type, SpansetFunctions::Floatspanset_round)
-            );
-
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("round", {spanset_type, LogicalType::INTEGER}, spanset_type, SpansetFunctions::Floatspanset_round)
-            );
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("degrees", {spanset_type}, spanset_type, SpansetFunctions::Floatspanset_degrees)
-            );
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("radians", {spanset_type}, spanset_type, SpansetFunctions::Floatspanset_radians)
-            );
-
+            // floor/ceil/round/degrees/radians on floatspanset are float-base scalar
+            // transforms generated from the catalog (generated_temporal_udfs.cpp), full
+            // arity plus the shorter DEFAULT-arg overload via sqlSignatures argDefaults.
         }
         else if( spanset_type == SpansetTypes::tstzspanset() ){
             duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("shift", {spanset_type, LogicalType::INTERVAL}, spanset_type, SpansetFunctions::Tstzspanset_shift)
@@ -340,10 +246,8 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             );
 
         } 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("spans", {spanset_type}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_spans)
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
+        // spans(<spanset_type>) is generated from the catalog (spanset_spans) in generated_temporal_udfs.cpp.
+        duckdb::RegisterSerializedScalarFunction(loader,
             ScalarFunction("splitNSpans", {spanset_type, LogicalType::INTEGER}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_split_n_spans)
         );
         duckdb::RegisterSerializedScalarFunction(loader, 
@@ -417,25 +321,12 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         ScalarFunction("duration", {SpansetTypes::tstzspanset()}, LogicalType::INTERVAL, SpansetFunctions::Tstzspanset_duration)
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("duration", {SpansetTypes::datespanset(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, SpansetFunctions::Datespanset_duration)
-    );
+    // duration(datespanset/tstzspanset, boolean) is generated from the catalog
+    // (meos_setspan_accessor) in generated_temporal_udfs.cpp. The 1-arg forms
+    // above are hand-only (not generated).
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("duration", {SpansetTypes::tstzspanset(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, SpansetFunctions::Tstzspanset_duration)
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("numDates", {SpansetTypes::datespanset()}, LogicalType::INTEGER, SpansetFunctions::Datespanset_num_dates)
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("startDate", {SpansetTypes::datespanset()}, LogicalType::DATE, SpansetFunctions::Datespanset_start_date)
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("endDate", {SpansetTypes::datespanset()}, LogicalType::DATE, SpansetFunctions::Datespanset_end_date)
-    );
+    // numDates / startDate / endDate on datespanset are generated from the
+    // catalog (meos_setspan_accessor) in generated_temporal_udfs.cpp.
 
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction("dateN", {SpansetTypes::datespanset(), LogicalType::INTEGER}, LogicalType::DATE, SpansetFunctions::Datespanset_date_n)
@@ -445,17 +336,8 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         ScalarFunction("dates", {SpansetTypes::datespanset()}, SetTypes::dateset(), SpansetFunctions::Datespanset_dates)
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("numTimestamps", {SpansetTypes::tstzspanset()}, LogicalType::INTEGER, SpansetFunctions::Tstzspanset_num_timestamps)
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("startTimestamp", {SpansetTypes::tstzspanset()}, LogicalType::TIMESTAMP_TZ, SpansetFunctions::Tstzspanset_start_timestamptz)
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("endTimestamp", {SpansetTypes::tstzspanset()}, LogicalType::TIMESTAMP_TZ, SpansetFunctions::Tstzspanset_end_timestamptz)
-    );
+    // numTimestamps / startTimestamp / endTimestamp on tstzspanset are generated
+    // from the catalog (meos_setspan_accessor) in generated_temporal_udfs.cpp.
 
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction("timestampN", {SpansetTypes::tstzspanset(), LogicalType::INTEGER}, LogicalType::TIMESTAMP_TZ, SpansetFunctions::Tstzspanset_timestamptz_n)

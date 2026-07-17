@@ -17,7 +17,7 @@ class ExtensionLoader;
 
 struct TboxFunctions {
     /* ***************************************************
-     * In/out functions: VARCHAR <-> TBOX
+     * In/out functions: VARCHAR <-> tbox
      ****************************************************/
     static bool Tbox_in(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Tbox_out(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
@@ -26,22 +26,22 @@ struct TboxFunctions {
      * Constructor functions
      ****************************************************/
     template <typename TA>
-    static void NumberTimestamptzToTboxExecutor(Vector &value, Vector &t, meosType basetype, Vector &result, idx_t count);
+    static void NumberTimestamptzToTboxExecutor(Vector &value, Vector &t, MeosType basetype, Vector &result, idx_t count);
     static void Number_timestamptz_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
 
     static void Numspan_timestamptz_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
 
     template <typename TA>
-    static void NumberTstzspanToTboxExecutor(Vector &value, Vector &span_str, meosType basetype, Vector &result, idx_t count);
+    static void NumberTstzspanToTboxExecutor(Vector &value, Vector &span_str, MeosType basetype, Vector &result, idx_t count);
     static void Number_tstzspan_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);;
 
     static void Numspan_tstzspan_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
-     * Conversion functions + cast functions: [TYPE] -> TBOX
+     * Conversion functions + cast functions: [TYPE] -> tbox
      ****************************************************/
     template <typename TA>
-    static void NumberToTboxExecutor(Vector &value, meosType basetype, Vector &result, idx_t count);
+    static void NumberToTboxExecutor(Vector &value, MeosType basetype, Vector &result, idx_t count);
     static void Number_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static bool Number_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
@@ -64,7 +64,7 @@ struct TboxFunctions {
     static void Spanset_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static bool Spanset_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     /* ***************************************************
-     * Conversion functions + cast functions: TBOX -> [TYPE]
+     * Conversion functions + cast functions: tbox -> [TYPE]
      ****************************************************/
     static void TboxToIntspanExecutor(Vector &value, Vector &result, idx_t count);
     static void Tbox_to_intspan(DataChunk &args, ExpressionState &state, Vector &result);
@@ -115,7 +115,7 @@ struct TboxFunctions {
     static void Tbox_shift_scale_time(DataChunk &args, ExpressionState &state, Vector &result);
 
     template <typename TB>
-    static void TboxExpandValueExecutor(Vector &tbox, Vector &value, meosType basetype, Vector &result, idx_t count);
+    static void TboxExpandValueExecutor(Vector &tbox, Vector &value, MeosType basetype, Vector &result, idx_t count);
     static void Tbox_expand_value(DataChunk &args, ExpressionState &state, Vector &result);
 
     static void Tbox_expand_time(DataChunk &args, ExpressionState &state, Vector &result);

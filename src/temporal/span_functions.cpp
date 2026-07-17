@@ -88,7 +88,7 @@ bool SpanFunctions::Text_to_span(Vector &source, Vector &result, idx_t count, Ca
     std::string type_alias = result_type.GetAlias();
     
     // Map the alias to the correct MEOS type
-    meosType target_meos_type = SpanTypeMapping::GetMeosTypeFromAlias(type_alias);
+    MeosType target_meos_type = SpanTypeMapping::GetMeosTypeFromAlias(type_alias);
     
     if (target_meos_type == T_UNKNOWN) {
         throw InvalidInputException("Unknown span type: " + type_alias);
@@ -203,7 +203,7 @@ void SpanFunctions::Span_constructor(DataChunk &args, ExpressionState &state, Ve
     auto &result_type = result.GetType();
     std::string type_alias = result_type.GetAlias();
     
-    meosType target_meos_type = SpanTypeMapping::GetMeosTypeFromAlias(type_alias);
+    MeosType target_meos_type = SpanTypeMapping::GetMeosTypeFromAlias(type_alias);
     
     if (target_meos_type == T_UNKNOWN) {
         throw InvalidInputException("Unknown span type: " + type_alias);
@@ -239,9 +239,9 @@ void SpanFunctions::Span_constructor(DataChunk &args, ExpressionState &state, Ve
 
 
 // --- Span binary constructor ---
-static string_t Span_make_blob(Datum lower_dat, Datum upper_dat, bool lower_inc, bool upper_inc, meosType span_type,
+static string_t Span_make_blob(Datum lower_dat, Datum upper_dat, bool lower_inc, bool upper_inc, MeosType span_type,
                                Vector &result) {
-    meosType basetype = spantype_basetype(span_type);
+    MeosType basetype = spantype_basetype(span_type);
     Span *span = span_make(lower_dat, upper_dat, lower_inc, upper_inc, basetype);
     if (span == NULL) {
         throw InvalidInputException("Failed to create span from bounds");
@@ -260,7 +260,7 @@ void SpanFunctions::Span_binary_constructor(DataChunk &args, ExpressionState &st
     Vector *args3 = args.ColumnCount() == 4 ? &args.data[3] : nullptr;
 
     auto out_type = result.GetType();
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
     const idx_t count = args.size();
 
     switch (span_type) {
@@ -369,7 +369,7 @@ static inline void Write_span(Vector &result, idx_t row, Span *s) {
     free(s);
 }
 
-static void Value_to_span_core(Vector &source, Vector &result, idx_t count, meosType base_type){
+static void Value_to_span_core(Vector &source, Vector &result, idx_t count, MeosType base_type){
     source.Flatten(count);
     result.SetVectorType(VectorType::FLAT_VECTOR);
 
@@ -440,16 +440,16 @@ static void Value_to_span_core(Vector &source, Vector &result, idx_t count, meos
 void SpanFunctions::Value_to_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &source = args.data[0];
     auto out_type = result.GetType();
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
-    meosType base_type = spantype_basetype(span_type);
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
+    MeosType base_type = spantype_basetype(span_type);
 
     Value_to_span_core(source, result, args.size(), base_type);
 
 }
 
 bool SpanFunctions::Value_to_span_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(result.GetType().GetAlias());
-    meosType base_type = spantype_basetype(span_type);
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(result.GetType().GetAlias());
+    MeosType base_type = spantype_basetype(span_type);
     Value_to_span_core(source, result, count, base_type);
     return true;
 }
@@ -488,57 +488,7 @@ bool SpanFunctions::Set_to_span_cast(Vector &source, Vector &result, idx_t count
     return true;
 }
 
-// spans(<set_type>) — returns a LIST(<span_type>) of unit spans, one per
-// element of the input set. Mirrors SpansetFunctions::Spanset_spans but
-// reads a Set and uses set_spans() / set_num_values() from MEOS.
-void SpanFunctions::Set_spans(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &set_vec = args.data[0];
-    idx_t row_count = args.size();
-    set_vec.Flatten(row_count);
-
-    auto &result_validity = FlatVector::Validity(result);
-    auto list_entries = FlatVector::GetData<list_entry_t>(result);
-    auto &child_vector = ListVector::GetEntry(result);
-    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
-    ListVector::Reserve(result, row_count);
-
-    idx_t total_offset = 0;
-    const size_t span_bytes = sizeof(Span);
-
-    for (idx_t i = 0; i < row_count; ++i) {
-        if (FlatVector::IsNull(set_vec, i)) {
-            result_validity.SetInvalid(i);
-            continue;
-        }
-
-        string_t blob = FlatVector::GetData<string_t>(set_vec)[i];
-        Set *s = (Set *)malloc(blob.GetSize());
-        memcpy(s, blob.GetData(), blob.GetSize());
-
-        int num = set_num_values(s);
-        Span *spans = set_spans(s);
-        free(s);
-
-        if (!spans || num <= 0) {
-            if (spans) free(spans);
-            result_validity.SetInvalid(i);
-            continue;
-        }
-
-        ListVector::SetListSize(result, total_offset + num);
-        list_entries[i] = list_entry_t{total_offset, static_cast<uint64_t>(num)};
-
-        auto *child_data = FlatVector::GetData<string_t>(child_vector);
-        for (int j = 0; j < num; ++j) {
-            child_data[total_offset + j] =
-                StringVector::AddStringOrBlob(child_vector, reinterpret_cast<const char *>(&spans[j]), span_bytes);
-        }
-
-        free(spans);
-        total_offset += num;
-        result_validity.SetValid(i);
-    }
-}
+// spans(<set_type>) is generated from the catalog (set_spans) in generated_temporal_udfs.cpp.
 
 // --- Conversion: intspan <-> floatspan ---
 static void Intspan_to_floatspan_common(Vector &source, Vector &result, idx_t count) {
@@ -1054,7 +1004,7 @@ void SpanFunctions::Tstzspan_duration(DataChunk &args, ExpressionState &state, V
         });
 }
 
-static inline string_t Numspan_expand_common(const string_t &blob, Datum value, meosType validate_span_type, Vector &result) {
+static inline string_t Numspan_expand_common(const string_t &blob, Datum value, MeosType validate_span_type, Vector &result) {
     const uint8_t *data = (const uint8_t *)blob.GetData();
     size_t size = blob.GetSize();
     
@@ -1100,7 +1050,7 @@ static inline string_t Tstzspan_expand_common(const string_t &blob, interval_t d
 void SpanFunctions::Numspan_expand(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
     auto out_type  = result.GetType();    
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
     
     switch (span_type) {
         case T_INTSPAN: { // expand(intspan, integer) -> intspan
@@ -1146,7 +1096,7 @@ void SpanFunctions::Numspan_expand(DataChunk &args, ExpressionState &state, Vect
 void SpanFunctions::Tstzspan_expand(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
     auto out_type  = result.GetType();    
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
     BinaryExecutor::Execute<string_t, interval_t, string_t>(
         span_vec, args.data[1], result, args.size(),
         [&](string_t blob, interval_t value) -> string_t {
@@ -1158,7 +1108,7 @@ void SpanFunctions::Tstzspan_expand(DataChunk &args, ExpressionState &state, Vec
 }
 
 static inline string_t Numspan_shift_common(const string_t &blob, Datum shift_datum,
-                                        meosType validate_span_type, Vector &result) {
+                                        MeosType validate_span_type, Vector &result) {
     const uint8_t *data = (const uint8_t *)blob.GetData();
     size_t size = blob.GetSize();
     
@@ -1206,7 +1156,7 @@ static inline string_t Tstzspan_shift_common(const string_t &blob, interval_t du
 void SpanFunctions::Numspan_shift(DataChunk &args, ExpressionState &state, Vector &result) {    
     auto &span_vec = args.data[0];
     auto out_type  = result.GetType();    
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
     
     switch (span_type) {
         case T_INTSPAN: { // shift(intspan, integer) -> intspan
@@ -1249,7 +1199,7 @@ void SpanFunctions::Numspan_shift(DataChunk &args, ExpressionState &state, Vecto
 void SpanFunctions::Tstzspan_shift(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
     auto out_type  = result.GetType();    
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
     BinaryExecutor::Execute<string_t, interval_t, string_t>(
         span_vec, args.data[1], result, args.size(),
         [&](string_t blob, interval_t shift_interval) -> string_t {
@@ -1261,7 +1211,7 @@ void SpanFunctions::Tstzspan_shift(DataChunk &args, ExpressionState &state, Vect
 }
 
 static inline string_t Numspan_scale_common(const string_t &blob, Datum scale_datum,
-                                        meosType validate_span_type, Vector &result) {
+                                        MeosType validate_span_type, Vector &result) {
     const uint8_t *data = (const uint8_t *)blob.GetData();
     size_t size = blob.GetSize();
     
@@ -1288,7 +1238,7 @@ static inline string_t Numspan_scale_common(const string_t &blob, Datum scale_da
 void SpanFunctions::Numspan_scale(DataChunk &args, ExpressionState &state, Vector &result) {    
     auto &span_vec = args.data[0];
     auto out_type  = result.GetType();    
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
     
     switch (span_type) {
         case T_INTSPAN: { // scale(intspan, integer) -> intspan
@@ -1351,7 +1301,7 @@ static inline string_t Tstzspan_scale_common(const string_t &blob, interval_t du
 void SpanFunctions::Tstzspan_scale(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
     auto out_type  = result.GetType();    
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
     BinaryExecutor::Execute<string_t, interval_t, string_t>(
         span_vec, args.data[1], result, args.size(),
         [&](string_t blob, interval_t scale_interval) -> string_t {
@@ -1386,7 +1336,7 @@ static inline string_t Tstzspan_shift_scale_common(const string_t &blob, interva
 }
 
 static inline string_t Numspan_shift_scale_common(const string_t &blob, Datum shift_datum, Datum scale_datum,
-                                                 meosType validate_span_type, Vector &result) {
+                                                 MeosType validate_span_type, Vector &result) {
     const uint8_t *data = (const uint8_t *)blob.GetData();
     size_t size = blob.GetSize();
 
@@ -1423,7 +1373,7 @@ static inline string_t Numspan_shift_scale_common(const string_t &blob, Datum sh
 void SpanFunctions::Numspan_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
     auto out_type = result.GetType();
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
 
     switch (span_type) {
         case T_INTSPAN: {
@@ -1479,47 +1429,9 @@ void SpanFunctions::Tstzspan_shift_scale(DataChunk &args, ExpressionState &state
     }
 }
 
-void SpanFunctions::Floatspan_floor(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)blob.GetData();
-            size_t size = blob.GetSize();
-            Span *s = (Span *)malloc(size);
-            memcpy(s, data, size);
-            VALIDATE_FLOATSPAN(s, NULL);
-            Span *r = floatspan_floor(s);
-            free(s);
-            if (!r) {
-                throw InvalidInputException("floatspan_floor failed");
-            }
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-            free(r);
-            return out;
-        });
-}
-
-void SpanFunctions::Floatspan_ceil(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)blob.GetData();
-            size_t size = blob.GetSize();
-            Span *s = (Span *)malloc(size);
-            memcpy(s, data, size);
-            VALIDATE_FLOATSPAN(s, NULL);
-            Span *r = floatspan_ceil(s);
-            free(s);
-            if (!r) {
-                throw InvalidInputException("floatspan_ceil failed");
-            }
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-            free(r);
-            return out;
-        });
-}
+// floor/ceil/round/degrees/radians on floatspan are generated from the catalog
+// (generated_temporal_udfs.cpp); only round(DOUBLE) below, the scalar base helper
+// with no catalog signature, remains hand-written.
 
 void SpanFunctions::Float_round(DataChunk &args, ExpressionState &state, Vector &result) {
     D_ASSERT(args.ColumnCount() == 1 || args.ColumnCount() == 2);
@@ -1529,13 +1441,14 @@ void SpanFunctions::Float_round(DataChunk &args, ExpressionState &state, Vector 
         BinaryExecutor::Execute<double_t, int32_t, double_t>(
             args0, *args1, result, args.size(),
             [&](double_t float_value, int32_t precision) -> double_t {
-                return float_round(float_value, precision);
+                double factor = std::pow(10.0, (double)precision);
+                return std::round(float_value * factor) / factor;
             });
     } else {
         UnaryExecutor::Execute<double_t, double_t>(
             args0, result, args.size(),
             [&](double_t float_value) -> double_t {
-                return float_round(float_value, 0);
+                return std::round(float_value);
             });
     }
     if (args.size() == 1) {
@@ -1543,113 +1456,6 @@ void SpanFunctions::Float_round(DataChunk &args, ExpressionState &state, Vector 
     }
 }
 
-void SpanFunctions::Floatspan_round(DataChunk &args, ExpressionState &state, Vector &result) {
-    D_ASSERT(args.ColumnCount() == 1 || args.ColumnCount() == 2);
-    auto &args0 = args.data[0];
-    Vector *args1 = args.ColumnCount() == 2 ? &args.data[1] : 0;
-    if (args.ColumnCount() == 2) {
-        BinaryExecutor::Execute<string_t, int32_t, string_t>(
-            args0, *args1, result, args.size(),
-            [&](string_t blob, int32_t precision) -> string_t {
-                const uint8_t *data = (const uint8_t *)blob.GetData();
-                size_t size = blob.GetSize();
-                Span *s = (Span *)malloc(size);
-                memcpy(s, data, size);
-                VALIDATE_FLOATSPAN(s, NULL);
-                Span *r = floatspan_round(s, precision);
-                free(s);
-                if (!r) {
-                    throw InvalidInputException("floatspan_round failed");
-                }
-                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-                free(r);
-                return out;
-            });
-    } else {
-        UnaryExecutor::Execute<string_t, string_t>(
-            args0, result, args.size(),
-            [&](string_t blob) -> string_t {
-                const uint8_t *data = (const uint8_t *)blob.GetData();
-                size_t size = blob.GetSize();
-                Span *s = (Span *)malloc(size);
-                memcpy(s, data, size);
-                VALIDATE_FLOATSPAN(s, NULL);
-                Span *r = floatspan_round(s, 0); // default precision is 0
-                free(s);
-                if (!r) {
-                    throw InvalidInputException("floatspan_round failed");
-                }
-                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-                free(r);
-                return out;
-            });
-    }
-}
-
-void SpanFunctions::Floatspan_degrees(DataChunk &args, ExpressionState &state, Vector &result) {
-    D_ASSERT(args.ColumnCount() == 1|| args.ColumnCount() == 2);
-    auto &args0 = args.data[0];
-    Vector *args1 = args.ColumnCount() == 2 ? &args.data[1] : 0;
-    if (args.ColumnCount() == 2) {
-        BinaryExecutor::Execute<string_t, int32_t, string_t>(
-            args0, *args1, result, args.size(),
-            [&](string_t blob, int32_t precision) -> string_t {
-                const uint8_t *data = (const uint8_t *)blob.GetData();
-                size_t size = blob.GetSize();
-                Span *s = (Span *)malloc(size);
-                memcpy(s, data, size);
-                VALIDATE_FLOATSPAN(s, NULL);
-                Span *r = floatspan_degrees(s, precision);
-                free(s);
-                if (!r) {
-                    throw InvalidInputException("floatspan_degrees failed");
-                }
-                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-                free(r);
-                return out;
-            });
-    } else {
-        UnaryExecutor::Execute<string_t, string_t>(
-            args0, result, args.size(),
-            [&](string_t blob) -> string_t {
-                const uint8_t *data = (const uint8_t *)blob.GetData();
-                size_t size = blob.GetSize();
-                Span *s = (Span *)malloc(size);
-                memcpy(s, data, size);
-                VALIDATE_FLOATSPAN(s, NULL);
-                Span *r = floatspan_degrees(s, false); // default precision is false
-                free(s);
-                if (!r) {
-                    throw InvalidInputException("floatspan_degrees failed");
-                }
-                string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-                free(r);
-                return out;
-            });
-    }
-    
-}
-
-void SpanFunctions::Floatspan_radians(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &args0 = args.data[0];
-    UnaryExecutor::Execute<string_t, string_t>(
-        args0, result, args.size(),
-        [&](string_t blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)blob.GetData();
-            size_t size = blob.GetSize();
-            Span *s = (Span *)malloc(size);
-            memcpy(s, data, size);
-            VALIDATE_FLOATSPAN(s, NULL);
-            Span *r = floatspan_radians(s); 
-            if (!r) {
-                throw InvalidInputException("floatspan_radians failed");
-            }
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
-            free(r);
-            return out;
-        });
-    
-}
 // --- OPERATOR: span = span ---
 void SpanFunctions::Span_eq(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::Execute<string_t, string_t, bool>(
@@ -1863,7 +1669,7 @@ void SpanFunctions::Span_cmp(DataChunk &args, ExpressionState &state, Vector &re
 // --- OPERATOR: span @> value ---
 void SpanFunctions::Contains_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
     
     switch (span_type){
         case T_INTSPAN: { // intspan @> integer
@@ -1877,7 +1683,7 @@ void SpanFunctions::Contains_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = contains_span_value(span, Datum(value));
                     free(span_data_copy);
@@ -1897,7 +1703,7 @@ void SpanFunctions::Contains_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);       
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = contains_span_value(span, Datum(value));
                     free(span_data_copy);
@@ -1917,7 +1723,7 @@ void SpanFunctions::Contains_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = contains_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
@@ -1936,7 +1742,7 @@ void SpanFunctions::Contains_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = contains_span_value(span, Datum(value));
                     free(span_data_copy);
@@ -1956,7 +1762,7 @@ void SpanFunctions::Contains_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = contains_span_value(span, Datum(ts_meos.value));
                     free(span_data_copy);
@@ -2009,7 +1815,7 @@ void SpanFunctions::Contains_span_span(DataChunk &args, ExpressionState &state, 
 // --- OPERATOR: value <@ span ---
 void SpanFunctions::Contained_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[1];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
     
     switch (span_type){
         case T_INTSPAN: { // integer <@ intspan
@@ -2063,7 +1869,7 @@ void SpanFunctions::Contained_value_span(DataChunk &args, ExpressionState &state
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = contains_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
@@ -2082,7 +1888,7 @@ void SpanFunctions::Contained_value_span(DataChunk &args, ExpressionState &state
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = contains_span_value(span, Datum(value));
                     free(span_data_copy);
@@ -2102,7 +1908,7 @@ void SpanFunctions::Contained_value_span(DataChunk &args, ExpressionState &state
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = contains_span_value(span, Datum(ts_meos.value));
                     free(span_data_copy);
@@ -2194,7 +2000,7 @@ void SpanFunctions::Overlaps_span_span(DataChunk &args, ExpressionState &state, 
 // --- OPERATOR: value -|- span---
 void SpanFunctions::Adjacent_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[1];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
     
     switch (span_type){
         case T_INTSPAN: { // integer -|- intspan
@@ -2248,7 +2054,7 @@ void SpanFunctions::Adjacent_value_span(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = adjacent_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
@@ -2267,7 +2073,7 @@ void SpanFunctions::Adjacent_value_span(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = adjacent_span_value(span, Datum(value));
                     free(span_data_copy);
@@ -2287,7 +2093,7 @@ void SpanFunctions::Adjacent_value_span(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = adjacent_span_value(span, Datum(ts_meos.value));
                     free(span_data_copy);
@@ -2306,7 +2112,7 @@ void SpanFunctions::Adjacent_value_span(DataChunk &args, ExpressionState &state,
 // --- OPERATOR: span -|- value ---
 void SpanFunctions::Adjacent_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
     
     switch (span_type){
         case T_INTSPAN: { // intspan -|- integer
@@ -2360,7 +2166,7 @@ void SpanFunctions::Adjacent_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);   
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = adjacent_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
@@ -2379,7 +2185,7 @@ void SpanFunctions::Adjacent_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = adjacent_span_value(span, Datum(value));
                     free(span_data_copy);
@@ -2399,7 +2205,7 @@ void SpanFunctions::Adjacent_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = adjacent_span_value(span, Datum(ts_meos.value));
                     free(span_data_copy);
@@ -2454,7 +2260,7 @@ void SpanFunctions::Adjacent_span_span(DataChunk &args, ExpressionState &state, 
 // --- OPERATOR: value << span ---
 void SpanFunctions::Left_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[1];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
     
     switch (span_type){
         case T_INTSPAN: { // integer << intspan
@@ -2508,7 +2314,7 @@ void SpanFunctions::Left_value_span(DataChunk &args, ExpressionState &state, Vec
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = left_value_span(Float8GetDatum(value), span);
                     free(span_data_copy);
@@ -2527,7 +2333,7 @@ void SpanFunctions::Left_value_span(DataChunk &args, ExpressionState &state, Vec
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = left_value_span(Datum(value), span);
                     free(span_data_copy);
@@ -2547,7 +2353,7 @@ void SpanFunctions::Left_value_span(DataChunk &args, ExpressionState &state, Vec
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = left_value_span(Datum(ts_meos.value), span);
                     free(span_data_copy);
@@ -2565,7 +2371,7 @@ void SpanFunctions::Left_value_span(DataChunk &args, ExpressionState &state, Vec
 // --- OPERATOR: span << value ---
 void SpanFunctions::Left_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
     
     switch (span_type){
         case T_INTSPAN: { // intspan << integer
@@ -2619,7 +2425,7 @@ void SpanFunctions::Left_span_value(DataChunk &args, ExpressionState &state, Vec
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);       
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = left_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
@@ -2638,7 +2444,7 @@ void SpanFunctions::Left_span_value(DataChunk &args, ExpressionState &state, Vec
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = left_span_value(span, Datum(value));
                     free(span_data_copy);
@@ -2658,7 +2464,7 @@ void SpanFunctions::Left_span_value(DataChunk &args, ExpressionState &state, Vec
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = left_span_value(span, Datum(ts_meos.value));
                     free(span_data_copy);
@@ -2709,7 +2515,7 @@ void SpanFunctions::Left_span_span(DataChunk &args, ExpressionState &state, Vect
 // --- OPERATOR: value >> span ---
 void SpanFunctions::Right_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[1];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
     
     switch (span_type){
         case T_INTSPAN: { // integer >> intspan
@@ -2763,7 +2569,7 @@ void SpanFunctions::Right_value_span(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = right_value_span(Float8GetDatum(value), span);
                     free(span_data_copy);
@@ -2782,7 +2588,7 @@ void SpanFunctions::Right_value_span(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = right_value_span(Datum(value), span);
                     free(span_data_copy);
@@ -2802,7 +2608,7 @@ void SpanFunctions::Right_value_span(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = right_value_span(Datum(ts_meos.value), span);
                     free(span_data_copy);
@@ -2820,7 +2626,7 @@ void SpanFunctions::Right_value_span(DataChunk &args, ExpressionState &state, Ve
 // --- OPERATOR: span >> value ---
 void SpanFunctions::Right_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // intspan >> integer
             BinaryExecutor::Execute<string_t, int32_t, bool>(
@@ -2873,7 +2679,7 @@ void SpanFunctions::Right_span_value(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = right_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
@@ -2892,7 +2698,7 @@ void SpanFunctions::Right_span_value(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = right_span_value(span, Datum(value));
                     free(span_data_copy);
@@ -2912,7 +2718,7 @@ void SpanFunctions::Right_span_value(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = right_span_value(span, Datum(ts_meos.value));
                     free(span_data_copy);
@@ -2964,7 +2770,7 @@ void SpanFunctions::Right_span_span(DataChunk &args, ExpressionState &state, Vec
 // ---OPERATOR: value &< span ---
 void SpanFunctions::Overleft_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[1];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());    
     
     switch (span_type){
         case T_INTSPAN: { // integer &< intspan
@@ -3018,7 +2824,7 @@ void SpanFunctions::Overleft_value_span(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = overleft_value_span(Float8GetDatum(value), span);
                     free(span_data_copy);
@@ -3037,7 +2843,7 @@ void SpanFunctions::Overleft_value_span(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = overleft_value_span(Datum(value), span);
                     free(span_data_copy);
@@ -3057,7 +2863,7 @@ void SpanFunctions::Overleft_value_span(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = overleft_value_span(Datum(ts_meos.value), span);
                     free(span_data_copy);
@@ -3075,7 +2881,7 @@ void SpanFunctions::Overleft_value_span(DataChunk &args, ExpressionState &state,
 // ---OPERATOR: span &< value ---
 void SpanFunctions::Overleft_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // intspan &< integer
             BinaryExecutor::Execute<string_t, int32_t, bool>(
@@ -3128,7 +2934,7 @@ void SpanFunctions::Overleft_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {    
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = overleft_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
@@ -3147,7 +2953,7 @@ void SpanFunctions::Overleft_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = overleft_span_value(span, Datum(value)); 
                     free(span_data_copy);
@@ -3167,7 +2973,7 @@ void SpanFunctions::Overleft_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = overleft_span_value(span, Datum(ts_meos.value));
                     free(span_data_copy);
@@ -3220,7 +3026,7 @@ void SpanFunctions::Overleft_span_span(DataChunk &args, ExpressionState &state, 
 // --- OPERATOR: value &> span ---
 void SpanFunctions::Overright_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[1];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // integer &> intspan
             BinaryExecutor::Execute<int32_t, string_t, bool>(
@@ -3273,7 +3079,7 @@ void SpanFunctions::Overright_value_span(DataChunk &args, ExpressionState &state
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = overright_value_span(Float8GetDatum(value), span);
                     free(span_data_copy);
@@ -3292,7 +3098,7 @@ void SpanFunctions::Overright_value_span(DataChunk &args, ExpressionState &state
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = overright_value_span(Datum(value), span);
                     free(span_data_copy);
@@ -3312,7 +3118,7 @@ void SpanFunctions::Overright_value_span(DataChunk &args, ExpressionState &state
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = overright_value_span(Datum(ts_meos.value), span);
                     free(span_data_copy);
@@ -3331,7 +3137,7 @@ void SpanFunctions::Overright_value_span(DataChunk &args, ExpressionState &state
 // --- OPERATOR: span &> value ---
 void SpanFunctions::Overright_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // intspan &> integer
             BinaryExecutor::Execute<string_t, int32_t, bool>(
@@ -3384,7 +3190,7 @@ void SpanFunctions::Overright_span_value(DataChunk &args, ExpressionState &state
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     bool ret = overright_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
@@ -3403,7 +3209,7 @@ void SpanFunctions::Overright_span_value(DataChunk &args, ExpressionState &state
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid DATESPAN data: null pointer");
+                        throw InvalidInputException("Invalid datespan data: null pointer");
                     }
                     bool ret = overright_span_value(span, Datum(value));
                     free(span_data_copy);
@@ -3423,7 +3229,7 @@ void SpanFunctions::Overright_span_value(DataChunk &args, ExpressionState &state
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     bool ret = overright_span_value(span, Datum(ts_meos.value));
                     free(span_data_copy);
@@ -3476,7 +3282,7 @@ void SpanFunctions::Overright_span_span(DataChunk &args, ExpressionState &state,
 // --- SET OPERATOR ---
 void SpanFunctions::Union_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[1];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // integer + intspan
             BinaryExecutor::Execute<int32_t, string_t, string_t>(
@@ -3542,7 +3348,7 @@ void SpanFunctions::Union_value_span(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     SpanSet *ret = union_value_span(Float8GetDatum(value), span);
                     size_t span_size = sizeof(*ret);
@@ -3595,7 +3401,7 @@ void SpanFunctions::Union_value_span(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     SpanSet *ret = union_value_span(Datum(ts_meos.value), span);
                     size_t span_size = sizeof(*ret);
@@ -3621,7 +3427,7 @@ void SpanFunctions::Union_value_span(DataChunk &args, ExpressionState &state, Ve
 
 void SpanFunctions::Union_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // intspan + integer
             BinaryExecutor::Execute<string_t, int32_t, string_t>(
@@ -3687,7 +3493,7 @@ void SpanFunctions::Union_span_value(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     SpanSet *ret = union_span_value(span, Float8GetDatum(value));
                     size_t span_size = sizeof(*ret);
@@ -3740,7 +3546,7 @@ void SpanFunctions::Union_span_value(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     SpanSet *ret = union_span_value(span, Datum(ts_meos.value));
                     size_t span_size = sizeof(*ret);
@@ -3802,7 +3608,7 @@ void SpanFunctions::Union_span_span(DataChunk &args, ExpressionState &state, Vec
 // --- OPERATOR: INTERSECTION ---
 void SpanFunctions::Intersection_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[1];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // integer * intspan
             BinaryExecutor::Execute<int32_t, string_t, string_t>(
@@ -3877,7 +3683,7 @@ void SpanFunctions::Intersection_value_span(DataChunk &args, ExpressionState &st
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     Span *ret = intersection_value_span(Float8GetDatum(value), span);
                     if (!ret) {
@@ -3938,7 +3744,7 @@ void SpanFunctions::Intersection_value_span(DataChunk &args, ExpressionState &st
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     Span *ret = intersection_value_span(Datum(ts_meos.value), span);
                     if (!ret) {
@@ -3967,7 +3773,7 @@ void SpanFunctions::Intersection_value_span(DataChunk &args, ExpressionState &st
 
 void SpanFunctions::Intersection_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // intspan * integer
             BinaryExecutor::Execute<string_t, int32_t, string_t>(
@@ -4042,7 +3848,7 @@ void SpanFunctions::Intersection_span_value(DataChunk &args, ExpressionState &st
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     Span *ret = intersection_span_value(span, Float8GetDatum(value));
                     if (!ret) {
@@ -4103,7 +3909,7 @@ void SpanFunctions::Intersection_span_value(DataChunk &args, ExpressionState &st
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     Span *ret = intersection_span_value(span, Datum(ts_meos.value));
                     if (!ret) {
@@ -4141,7 +3947,7 @@ void SpanFunctions::Intersection_span_span(DataChunk &args, ExpressionState &sta
             Span *span1 = reinterpret_cast<Span*>(span1_data_copy);
             if (!span1) {
                 free(span1_data_copy);
-                throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                throw InvalidInputException("Invalid tstzspan data: null pointer");
             }
 
             const uint8_t *span2_data = reinterpret_cast<const uint8_t*>(span2_blob.GetData());
@@ -4151,7 +3957,7 @@ void SpanFunctions::Intersection_span_span(DataChunk &args, ExpressionState &sta
             Span *span2 = reinterpret_cast<Span*>(span2_data_copy);
             if (!span2) {
                 free(span2_data_copy);
-                throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                throw InvalidInputException("Invalid tstzspan data: null pointer");
             }
 
             Span *ret = intersection_span_span(span1, span2);
@@ -4182,7 +3988,7 @@ void SpanFunctions::Intersection_span_span(DataChunk &args, ExpressionState &sta
 // --- OPERATOR: MINUS ---
 void SpanFunctions::Minus_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[1];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // integer - intspan
             BinaryExecutor::Execute<int32_t, string_t, string_t>(
@@ -4257,7 +4063,7 @@ void SpanFunctions::Minus_value_span(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     SpanSet *ret = minus_value_span(Float8GetDatum(value), span);
                     if (!ret) {
@@ -4318,7 +4124,7 @@ void SpanFunctions::Minus_value_span(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     SpanSet *ret = minus_value_span(Datum(ts_meos.value), span);
                     if (!ret) {
@@ -4347,7 +4153,7 @@ void SpanFunctions::Minus_value_span(DataChunk &args, ExpressionState &state, Ve
 
 void SpanFunctions::Minus_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // intspan - integer
             BinaryExecutor::Execute<string_t, int32_t, string_t>(
@@ -4422,7 +4228,7 @@ void SpanFunctions::Minus_span_value(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");
+                        throw InvalidInputException("Invalid floatspan data: null pointer");
                     }
                     SpanSet *ret = minus_span_value(span, Float8GetDatum(value));
                     if (!ret) {
@@ -4483,7 +4289,7 @@ void SpanFunctions::Minus_span_value(DataChunk &args, ExpressionState &state, Ve
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer"); 
+                        throw InvalidInputException("Invalid tstzspan data: null pointer"); 
                     }
                     SpanSet *ret = minus_span_value(span, Datum(ts_meos.value));
                     if (!ret) {
@@ -4521,7 +4327,7 @@ void SpanFunctions::Minus_span_span(DataChunk &args, ExpressionState &state, Vec
             Span *span1 = reinterpret_cast<Span*>(span1_data_copy);
             if (!span1) {
                 free(span1_data_copy);
-                throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                throw InvalidInputException("Invalid tstzspan data: null pointer");
             }
 
             const uint8_t *span2_data = reinterpret_cast<const uint8_t*>(span2_blob.GetData());
@@ -4531,7 +4337,7 @@ void SpanFunctions::Minus_span_span(DataChunk &args, ExpressionState &state, Vec
             Span *span2 = reinterpret_cast<Span*>(span2_data_copy);
             if (!span2) {
                 free(span2_data_copy);
-                throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                throw InvalidInputException("Invalid tstzspan data: null pointer");
             }
 
             SpanSet *ret = minus_span_span(span1, span2);
@@ -4562,7 +4368,7 @@ void SpanFunctions::Minus_span_span(DataChunk &args, ExpressionState &state, Vec
 //--- DISTANCE FUNCTIONS ---
 void SpanFunctions::Distance_span_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // distance between intspan and integer
             BinaryExecutor::Execute<string_t, int32_t, double>(
@@ -4615,7 +4421,7 @@ void SpanFunctions::Distance_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");    
+                        throw InvalidInputException("Invalid floatspan data: null pointer");    
                     }
                     double distance = distance_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
@@ -4654,7 +4460,7 @@ void SpanFunctions::Distance_span_value(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     double secs = distance_span_timestamptz(span, (TimestampTz)ts_meos.value);
                     free(span_data_copy);
@@ -4673,7 +4479,7 @@ void SpanFunctions::Distance_span_value(DataChunk &args, ExpressionState &state,
 
 void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[1];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // distance between integer and intspan
             BinaryExecutor::Execute<int32_t, string_t, double>(
@@ -4726,7 +4532,7 @@ void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid FLOATSPAN data: null pointer");    
+                        throw InvalidInputException("Invalid floatspan data: null pointer");    
                     }
                     double distance = distance_span_value(span, Float8GetDatum(value));
                     free(span_data_copy);
@@ -4765,7 +4571,7 @@ void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state,
                     Span *span = reinterpret_cast<Span*>(span_data_copy);
                     if (!span) {
                         free(span_data_copy);
-                        throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                        throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
                     double secs = distance_span_timestamptz(span, (TimestampTz)ts_meos.value);
                     free(span_data_copy);
@@ -4783,7 +4589,7 @@ void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state,
 
 void SpanFunctions::Distance_span_span(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span1_vec = args.data[0];
-    meosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span1_vec.GetType().GetAlias());
+    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span1_vec.GetType().GetAlias());
 
     if (span_type == T_TSTZSPAN) {
         BinaryExecutor::ExecuteWithNulls<string_t, string_t, interval_t>(

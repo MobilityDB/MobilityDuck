@@ -1,0 +1,71 @@
+# name: test/sql/parity/061_tspatial_bbox_dimension.test
+# description: Regression — the bounding-box topological ops (operators ~=/@>/<@/&&/-|-
+#              and their canonical functions same/contains/…) must compare the FULL
+#              bounding box of each type, not only its time dimension. tspatial →
+#              space+time (stbox), tnumber incl. tbigint → value+time (tbox), tbool/ttext
+#              → time only (tstzspan). Guards against the generic *_temporal_temporal
+#              (time-only) op shadowing the type-specific *_tspatial_tspatial /
+#              *_tnumber_tnumber backing. Uses the canonical bare name `same` (the
+#              deployed MobilityDB SQL name), NOT the catalog-only `same_bbox` @sqlfn tag.
+# group: [sql]
+
+require mobilityduck
+
+# --- tspatial: the SPACE dimension must count (differing X, identical instant) ---
+
+query I
+SELECT tgeompoint 'POINT(0 0)@2000-01-01' ~= tgeompoint 'POINT(1 1)@2000-01-01';
+----
+false
+
+query I
+SELECT same(tgeompoint 'POINT(0 0)@2000-01-01', tgeompoint 'POINT(1 1)@2000-01-01');
+----
+false
+
+query I
+SELECT tgeompoint 'POINT(0 0)@2000-01-01' ~= tgeompoint 'POINT(0 0)@2000-01-01';
+----
+true
+
+# Different X, different instant: still not the same box
+query I
+SELECT tgeompoint '[POINT(0 0)@2000-01-01]' ~= tgeompoint '[POINT(9 9)@2000-01-09]';
+----
+false
+
+# Spatial containment via the box operators
+query I
+SELECT tgeompoint '[POINT(0 0)@2000-01-01, POINT(10 10)@2000-01-02]' @> stbox 'STBOX X((1, 1), (5, 5))';
+----
+true
+
+query I
+SELECT tgeompoint '[POINT(0 0)@2000-01-01, POINT(2 2)@2000-01-02]' @> stbox 'STBOX X((1, 1), (5, 5))';
+----
+false
+
+# --- tnumber: the VALUE dimension must count (differing value, identical instant) ---
+
+query I
+SELECT tint '1@2000-01-01' ~= tint '9@2000-01-01';
+----
+false
+
+# tbigint is a tnumber (tbox = value+time) — value must count, not only time
+query I
+SELECT tbigint '1@2000-01-01' ~= tbigint '9@2000-01-01';
+----
+false
+
+# --- tbool: bbox is purely temporal — value has no bbox dimension, only time counts ---
+
+query I
+SELECT tbool 'true@2000-01-01' ~= tbool 'false@2000-01-01';
+----
+true
+
+query I
+SELECT tbool 'true@2000-01-01' ~= tbool 'true@2000-01-02';
+----
+false

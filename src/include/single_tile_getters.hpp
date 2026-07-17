@@ -8,7 +8,7 @@ namespace duckdb {
 // grid configuration (size + origin), return the single tile/box that
 // contains the input.
 //
-// These complement the LIST<TBOX>/LIST<STBOX> emitters (`valueTiles`,
+// These complement the LIST<tbox>/LIST<stbox> emitters (`valueTiles`,
 // `timeTiles`, `valueTimeTiles`, `spaceTiles`, ...) by exposing the
 // per-input lookup form that MobilityDB ships at the SQL surface.
 struct SingleTileGetters {

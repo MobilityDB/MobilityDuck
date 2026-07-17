@@ -15,14 +15,14 @@ class ExtensionLoader;
 
 struct StboxFunctions {
     /* ***************************************************
-     * In/out functions: VARCHAR <-> STBOX
+     * In/out functions: VARCHAR <-> stbox
      ****************************************************/
     static bool Stbox_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static void Stbox_in(DataChunk &args, ExpressionState &state, Vector &result);
     static bool Stbox_out(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* ***************************************************
-     * In/out functions: WKB/HexWKB <-> STBOX
+     * In/out functions: WKB/HexWKB <-> stbox
      ****************************************************/
     static void Stbox_from_wkb(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_from_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
@@ -41,7 +41,7 @@ struct StboxFunctions {
     static void Geo_tstzspan_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
-     * Conversion functions + cast functions: [TYPE] -> STBOX
+     * Conversion functions + cast functions: [TYPE] -> stbox
      ****************************************************/
     static void Geo_to_stbox_common(Vector &source, Vector &result, idx_t count);
     static void Geo_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
@@ -56,7 +56,7 @@ struct StboxFunctions {
     static bool Tstzspanset_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* ***************************************************
-     * Conversion functions + cast functions: STBOX -> [TYPE]
+     * Conversion functions + cast functions: stbox -> [TYPE]
      ****************************************************/
     static void Stbox_to_geo(DataChunk &args, ExpressionState &state, Vector &result);
     // static void Stbox_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);

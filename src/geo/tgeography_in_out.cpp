@@ -26,12 +26,12 @@ inline void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &re
             size_t data_size = input_geom_str.GetSize();
 
             if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TGEOGRAPHY data: insufficient size");
+                throw InvalidInputException("Invalid tgeography data: insufficient size");
             }
 
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for TGEOGRAPHY deserialization");
+                throw InvalidInputException("Failed to allocate memory for tgeography deserialization");
             }
             memcpy(data_copy, data, data_size);
 
@@ -39,14 +39,14 @@ inline void Tspatial_as_text(DataChunk &args, ExpressionState &state, Vector &re
             
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOGRAPHY data: null pointer");
+                throw InvalidInputException("Invalid tgeography data: null pointer");
             }
 
             char *str = tspatial_as_text(temp, 0);
             
             if (!str) {
                 free(data_copy);
-                throw InvalidInputException("Failed to convert TGEOGRAPHY to text");
+                throw InvalidInputException("Failed to convert tgeography to text");
             }
             
             std::string result_str(str);
@@ -76,12 +76,12 @@ inline void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &re
             size_t data_size = input_geom_str.GetSize();
 
             if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TGEOGRAPHY data: insufficient size");
+                throw InvalidInputException("Invalid tgeography data: insufficient size");
             }
 
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for TGEOGRAPHY deserialization");
+                throw InvalidInputException("Failed to allocate memory for tgeography deserialization");
             }
             memcpy(data_copy, data, data_size);
 
@@ -89,14 +89,14 @@ inline void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &re
             
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOGRAPHY data: null pointer");
+                throw InvalidInputException("Invalid tgeography data: null pointer");
             }
 
             char *ewkt = tspatial_as_ewkt(temp, 0);
             
             if (!ewkt) {
                 free(data_copy);
-                throw InvalidInputException("Failed to convert TGEOGRAPHY to EWKT");
+                throw InvalidInputException("Failed to convert tgeography to EWKT");
             }
             
             std::string result_str(ewkt);
@@ -124,14 +124,14 @@ bool TgeographyFunctions::StringToTgeography(Vector &source, Vector &result, idx
 
             Temporal *temp = tgeography_in(input_str.c_str());
             if (!temp) {
-                throw InvalidInputException("Invalid TGEOGRAPHY input: " + input_str);
+                throw InvalidInputException("Invalid tgeography input: " + input_str);
             }
             
             size_t data_size = temporal_mem_size(temp);
             uint8_t *data_buffer = (uint8_t*)malloc(data_size);
             if (!data_buffer) {
                 free(temp);
-                throw InvalidInputException("Failed to allocate memory for TGEOGRAPHY data");
+                throw InvalidInputException("Failed to allocate memory for tgeography data");
             }
             
             memcpy(data_buffer, temp, data_size);
@@ -159,25 +159,25 @@ bool TgeographyFunctions::TgeographyToString(Vector &source, Vector &result, idx
             size_t data_size = input_blob.GetSize();
             
             if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TGEOGRAPHY data: insufficient size");
+                throw InvalidInputException("Invalid tgeography data: insufficient size");
             }
 
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for TGEOGRAPHY deserialization");
+                throw InvalidInputException("Failed to allocate memory for tgeography deserialization");
             }
             memcpy(data_copy, data, data_size);
             
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TGEOGRAPHY data: null pointer");
+                throw InvalidInputException("Invalid tgeography data: null pointer");
             }
             
             char *str = temporal_out(temp, 15);
             if (!str) {
                 free(data_copy);
-                throw InvalidInputException("Failed to convert TGEOGRAPHY to string");
+                throw InvalidInputException("Failed to convert tgeography to string");
             }
             
             std::string output(str);
@@ -250,7 +250,7 @@ inline void TgeographyFromStringExec(DataChunk &args, ExpressionState &, Vector 
 void TGeographyTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
     auto TgeographyAsText = ScalarFunction(
             "asText",
-            {TGeographyTypes::TGEOGRAPHY()},
+            {TGeographyTypes::tgeography()},
             LogicalType::VARCHAR,
             Tspatial_as_text
         );
@@ -258,7 +258,7 @@ void TGeographyTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
 
     auto TgeographyAsEWKT = ScalarFunction(
         "asEWKT",
-        {TGeographyTypes::TGEOGRAPHY()},
+        {TGeographyTypes::tgeography()},
         LogicalType::VARCHAR,
         Tspatial_as_ewkt
     );
@@ -266,7 +266,7 @@ void TGeographyTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
 
     const auto B = LogicalType::BLOB;
     const auto V = LogicalType::VARCHAR;
-    const auto T = TGeographyTypes::TGEOGRAPHY();
+    const auto T = TGeographyTypes::tgeography();
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction("tgeographyFromBinary",  {B}, T, TgeographyFromWkbExec));
     duckdb::RegisterSerializedScalarFunction(loader,
@@ -288,8 +288,8 @@ void TGeographyTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
 
 
 void TGeographyTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    loader.RegisterCastFunction( LogicalType::VARCHAR, TGeographyTypes::TGEOGRAPHY(), TgeographyFunctions::StringToTgeography);
-    loader.RegisterCastFunction( TGeographyTypes::TGEOGRAPHY(), LogicalType::VARCHAR, TgeographyFunctions::TgeographyToString);
+    RegisterMeosCastFunction(loader,  LogicalType::VARCHAR, TGeographyTypes::tgeography(), TgeographyFunctions::StringToTgeography);
+    RegisterMeosCastFunction(loader,  TGeographyTypes::tgeography(), LogicalType::VARCHAR, TgeographyFunctions::TgeographyToString);
 }
 
 }

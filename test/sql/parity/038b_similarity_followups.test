@@ -1,49 +1,44 @@
 # name: test/sql/parity/038b_similarity_followups.test
-# description: dynTimeWarpDistance alias + frechetDistancePath +
-#              dynTimeWarpPath (tnumber and tgeompoint).
+# description: dynTimeWarpDistance + frechetDistancePath / dynTimeWarpPath
+#              (tnumber and tgeompoint), canonical names + SETOF (table) form.
 # group: [sql]
 
 require mobilityduck
 
-# dynTimeWarpDistance: MobilityDB-canonical name, same handler as dynTimeWarp
+# dynTimeWarpDistance: the MobilityDB-canonical scalar distance
 
 query I
 SELECT dynTimeWarpDistance(tfloat '[1@2000-01-01, 2@2000-01-02, 3@2000-01-03]', tfloat '[1@2000-01-01, 3@2000-01-03]');
 ----
 0
 
-# Equivalence with the existing alias
+# frechetDistancePath: RETURNS SETOF warp(i, j) -> DuckDB table function
 
-query I
-SELECT dynTimeWarpDistance(tfloat '[1@2000-01-01, 5@2000-01-02]', tfloat '[2@2000-01-01, 3@2000-01-02]')
-     = dynTimeWarp(tfloat '[1@2000-01-01, 5@2000-01-02]', tfloat '[2@2000-01-01, 3@2000-01-02]');
+query II
+SELECT i, j FROM frechetDistancePath(tfloat '[1@2000-01-01, 2@2000-01-02, 3@2000-01-03]', tfloat '[1@2000-01-01, 3@2000-01-03]') ORDER BY i, j;
 ----
-true
-
-# frechetDistancePath returns LIST(STRUCT(i INTEGER, j INTEGER))
-
-query I
-SELECT frechetDistancePath(tfloat '[1@2000-01-01, 2@2000-01-02, 3@2000-01-03]', tfloat '[1@2000-01-01, 3@2000-01-03]');
-----
-[{'i': 1, 'j': 1}, {'i': 0, 'j': 0}]
+0	0
+1	1
 
 # dynTimeWarpPath same shape
 
-query I
-SELECT dynTimeWarpPath(tfloat '[1@2000-01-01, 2@2000-01-02, 3@2000-01-03]', tfloat '[1@2000-01-01, 3@2000-01-03]');
+query II
+SELECT i, j FROM dynTimeWarpPath(tfloat '[1@2000-01-01, 2@2000-01-02, 3@2000-01-03]', tfloat '[1@2000-01-01, 3@2000-01-03]') ORDER BY i, j;
 ----
-[{'i': 1, 'j': 1}, {'i': 0, 'j': 0}]
+0	0
+1	1
 
 # Path on tgeompoint trajectories
 
-query I
-SELECT frechetDistancePath(tgeompoint '[POINT(0 0)@2000-01-01, POINT(1 1)@2000-01-02]', tgeompoint '[POINT(0 0)@2000-01-01, POINT(2 2)@2000-01-02]');
+query II
+SELECT i, j FROM frechetDistancePath(tgeompoint '[POINT(0 0)@2000-01-01, POINT(1 1)@2000-01-02]', tgeompoint '[POINT(0 0)@2000-01-01, POINT(2 2)@2000-01-02]') ORDER BY i, j;
 ----
-[{'i': 1, 'j': 1}, {'i': 0, 'j': 0}]
+0	0
+1	1
 
 # Path length matches min(n1, n2) for already-aligned inputs
 
 query I
-SELECT len(dynTimeWarpPath(tfloat '[1@2000-01-01, 2@2000-01-02]', tfloat '[10@2000-01-01, 20@2000-01-02]'));
+SELECT count(*)::int FROM dynTimeWarpPath(tfloat '[1@2000-01-01, 2@2000-01-02]', tfloat '[10@2000-01-01, 20@2000-01-02]');
 ----
 2

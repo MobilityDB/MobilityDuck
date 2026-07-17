@@ -37,7 +37,7 @@ inline bool BlobLooksLikeTemporal(string_t blob) {
         return false;
     }
     uint8_t temptype = static_cast<uint8_t>(blob.GetData()[4]);
-    return tspatial_type(static_cast<meosType>(temptype));
+    return tspatial_type(static_cast<MeosType>(temptype));
 }
 
 inline GSERIALIZED* GeometryToGSerialized(string_t geometry_blob, int32_t srid) {

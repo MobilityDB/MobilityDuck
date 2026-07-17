@@ -1,5 +1,6 @@
 #define DUCKDB_EXTENSION_MAIN
 
+#include <cstdio>
 #include "mobilityduck_extension.hpp"
 #include "temporal/spanset.hpp"
 #include "temporal/set.hpp"
@@ -17,6 +18,9 @@
 #include "geo/tgeography_ops.hpp"
 #include "geo/tgeogpoint.hpp"
 #include "geo/tgeogpoint_ops.hpp"
+#include "quadbin/tquadbin.hpp"
+#include "h3/th3index.hpp"
+#include "cbuffer/tcbuffer.hpp"
 #include "temporal/span.hpp"
 #include "temporal/span_aggregates.hpp"
 #include "temporal/temporal_aggregates.hpp"
@@ -82,7 +86,7 @@ inline void MobilityduckOpenSSLVersionScalarFun(DataChunk &args, ExpressionState
 // MEOS does not expose a runtime version symbol, so the build-time pin
 // is the most precise version stamp the extension can report.
 #ifndef MOBILITYDUCK_MEOS_PIN
-#define MOBILITYDUCK_MEOS_PIN "f11b7443e"
+#define MOBILITYDUCK_MEOS_PIN "88e5d5b430"
 #endif
 
 inline std::string MobilityduckShortVersion() {
@@ -209,6 +213,9 @@ extern "C" void MobilityduckMeosErrorHandler(int errlevel, int errcode, const ch
 // 5. Extension load logic
 // =====================================================================
 
+// Defined in the catalog-generated src/generated/generated_temporal_udfs.cpp.
+void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader);
+
 static void LoadInternal(ExtensionLoader &loader) {
 	// Configure MEOS SRID CSV once (env / embedded)
 	ConfigureMeosSridCsvOnce();
@@ -228,12 +235,26 @@ static void LoadInternal(ExtensionLoader &loader) {
 
     // Single-timezone model: ensure DuckDB's session timezone matches the
     // MEOS timezone so bare TIMESTAMPTZ display agrees with MEOS composite
-    // type strings.  Auto-load ICU (without it, the test framework keeps
-    // session timezone at UTC) and set the TimeZone option to Brussels.
+    // type strings.  This needs ICU for the named "Europe/Brussels" zone.
+    //
+    // If ICU cannot be auto-loaded (no on-disk copy AND no network egress:
+    // CI docker images, edge/musl deployments, offline installs), degrade
+    // gracefully to the session default (UTC) instead of failing the whole
+    // extension load.  Tests that assert Brussels display stage ICU locally
+    // via the Makefile's stage_icu.
     auto &db = loader.GetDatabaseInstance();
-    ExtensionHelper::AutoLoadExtension(db, "icu");
-    auto &config = DBConfig::GetConfig(db);
-    config.SetOptionByName("TimeZone", Value("Europe/Brussels"));
+    try {
+        ExtensionHelper::AutoLoadExtension(db, "icu");
+        auto &config = DBConfig::GetConfig(db);
+        config.SetOptionByName("TimeZone", Value("Europe/Brussels"));
+    } catch (const std::exception &e) {
+        // ICU unavailable: leave the session timezone at its default.
+        // Temporal-type text I/O is unaffected; only bare TIMESTAMPTZ display
+        // falls back to UTC.
+        fprintf(stderr,
+                "mobilityduck: ICU not available (%s); session timezone left "
+                "at default instead of Europe/Brussels.\n", e.what());
+    }
 
 
 	// Register scalar function: mobilityduck_openssl_version
@@ -269,7 +290,6 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TemporalTypes::RegisterWkbFunctions(loader);
 	TemporalTypes::RegisterTemporalTileSplit(loader);
 	TemporalTypes::RegisterTnumberValueSplit(loader);
-	TemporalTypes::RegisterSimilarityPath(loader);
 
 	TboxType::RegisterType(loader);
 	TboxType::RegisterCastFunctions(loader);
@@ -285,7 +305,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 	SpanAggregates::RegisterAggregateFunctions(loader);
 	TemporalAggregates::RegisterAggregateFunctions(loader);
 
-	// Tile getters return SpanTypes blobs and consume TBOX, so all those
+	// Tile getters return SpanTypes blobs and consume tbox, so all those
 	// types must already be registered.
 	TemporalTypes::RegisterTileGetters(loader);
 
@@ -327,6 +347,18 @@ static void LoadInternal(ExtensionLoader &loader) {
 	SpatialSetType::RegisterCastFunctions(loader);
 	SpatialSetType::RegisterScalarFunctions(loader);
 
+	QuadbinTypes::RegisterTypes(loader);
+	QuadbinTypes::RegisterCastFunctions(loader);
+	QuadbinTypes::RegisterScalarFunctions(loader);
+
+	// H3 cell index types (h3index/th3index). Type registration + casts are the
+	// hand layer; the H3 function surface is generated (no RegisterScalarFunctions).
+	H3indexTypes::RegisterTypes(loader);
+	H3indexTypes::RegisterCastFunctions(loader);
+
+	CbufferTypes::RegisterTypes(loader);
+	CbufferTypes::RegisterCastFunctions(loader);
+
 	SpansetTypes::RegisterTypes(loader);
 	SpansetTypes::RegisterCastFunctions(loader);
 	SpansetTypes::RegisterScalarFunctions(loader);
@@ -335,10 +367,13 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TRTreeModule::RegisterIndexScan(loader);
 	TRTreeModule::RegisterScanOptimizer(loader);
 
-	// Single-tile getters depend on TBOX, STBOX, and the spatial GEOMETRY
+	// Single-tile getters depend on tbox, stbox, and the spatial GEOMETRY
 	// type being registered first.
 	SingleTileGetters::RegisterScalarFunctions(loader);
 
+	// Catalog-driven scalar UDFs generated from the MEOS-API catalog, organized by
+	// doxygen @ingroup group. Registered last, after every type accessor exists.
+	RegisterGeneratedTemporalUdfs(loader);
 	// TemporalParquet footer helper for COPY ... TO '*.parquet' KV_METADATA.
 	TemporalParquetFunctions::Register(loader);
 }

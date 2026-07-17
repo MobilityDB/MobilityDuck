@@ -378,13 +378,13 @@ static AggregateFunction MakeExtentBlobToSpanAggregate(const LogicalType &input_
 template <TBoxTransFn TRANSFN>
 static AggregateFunction MakeExtentTboxAggregate(const LogicalType &input_type) {
     return AggregateFunction::UnaryAggregate<TBoxExtentState, string_t, string_t, TBoxExtentFn<TRANSFN>>(
-        input_type, TboxType::TBOX());
+        input_type, TboxType::tbox());
 }
 
 template <STBoxTransFn TRANSFN>
 static AggregateFunction MakeExtentStboxAggregate(const LogicalType &input_type) {
     return AggregateFunction::UnaryAggregate<STBoxExtentState, string_t, string_t, STBoxExtentFn<TRANSFN>>(
-        input_type, StboxType::STBOX());
+        input_type, StboxType::stbox());
 }
 
 } // namespace
@@ -393,23 +393,23 @@ void SpanAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
     AggregateFunctionSet extent_set("extent");
 
     // ---- extent(span) for all 5 span types ----
-    for (const auto &span_type : {SpanTypes::INTSPAN(), SpanTypes::BIGINTSPAN(),
-                                  SpanTypes::FLOATSPAN(), SpanTypes::DATESPAN(),
-                                  SpanTypes::TSTZSPAN()}) {
+    for (const auto &span_type : {SpanTypes::intspan(), SpanTypes::bigintspan(),
+                                  SpanTypes::floatspan(), SpanTypes::datespan(),
+                                  SpanTypes::tstzspan()}) {
         extent_set.AddFunction(MakeExtentSpanAggregate(span_type));
     }
 
     // ---- extent(scalar) -> typed span ----
     extent_set.AddFunction(MakeExtentScalarAggregate<int32_t, Int32Extent>(
-        LogicalType::INTEGER, SpanTypes::INTSPAN()));
+        LogicalType::INTEGER, SpanTypes::intspan()));
     extent_set.AddFunction(MakeExtentScalarAggregate<int64_t, Int64Extent>(
-        LogicalType::BIGINT, SpanTypes::BIGINTSPAN()));
+        LogicalType::BIGINT, SpanTypes::bigintspan()));
     extent_set.AddFunction(MakeExtentScalarAggregate<double, DoubleExtent>(
-        LogicalType::DOUBLE, SpanTypes::FLOATSPAN()));
+        LogicalType::DOUBLE, SpanTypes::floatspan()));
     extent_set.AddFunction(MakeExtentScalarAggregate<date_t, DateExtentDuckDB>(
-        LogicalType::DATE, SpanTypes::DATESPAN()));
+        LogicalType::DATE, SpanTypes::datespan()));
     extent_set.AddFunction(MakeExtentScalarAggregate<timestamp_tz_t, TstzExtentDuckDB>(
-        LogicalType::TIMESTAMP_TZ, SpanTypes::TSTZSPAN()));
+        LogicalType::TIMESTAMP_TZ, SpanTypes::tstzspan()));
 
     // ---- extent(set) -> typed span ----
     struct SetSpanPair {
@@ -417,11 +417,11 @@ void SpanAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
         LogicalType out;
     };
     const std::vector<SetSpanPair> set_pairs = {
-        {SetTypes::intset(),     SpanTypes::INTSPAN()},
-        {SetTypes::bigintset(),  SpanTypes::BIGINTSPAN()},
-        {SetTypes::floatset(),   SpanTypes::FLOATSPAN()},
-        {SetTypes::dateset(),    SpanTypes::DATESPAN()},
-        {SetTypes::tstzset(),    SpanTypes::TSTZSPAN()},
+        {SetTypes::intset(),     SpanTypes::intspan()},
+        {SetTypes::bigintset(),  SpanTypes::bigintspan()},
+        {SetTypes::floatset(),   SpanTypes::floatspan()},
+        {SetTypes::dateset(),    SpanTypes::datespan()},
+        {SetTypes::tstzset(),    SpanTypes::tstzspan()},
     };
     for (const auto &p : set_pairs) {
         extent_set.AddFunction(MakeExtentBlobToSpanAggregate<SpanExtentFromSet>(p.in, p.out));
@@ -429,54 +429,54 @@ void SpanAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
 
     // ---- extent(spanset) -> typed span ----
     const std::vector<SetSpanPair> spanset_pairs = {
-        {SpansetTypes::intspanset(),    SpanTypes::INTSPAN()},
-        {SpansetTypes::bigintspanset(), SpanTypes::BIGINTSPAN()},
-        {SpansetTypes::floatspanset(),  SpanTypes::FLOATSPAN()},
-        {SpansetTypes::datespanset(),   SpanTypes::DATESPAN()},
-        {SpansetTypes::tstzspanset(),   SpanTypes::TSTZSPAN()},
+        {SpansetTypes::intspanset(),    SpanTypes::intspan()},
+        {SpansetTypes::bigintspanset(), SpanTypes::bigintspan()},
+        {SpansetTypes::floatspanset(),  SpanTypes::floatspan()},
+        {SpansetTypes::datespanset(),   SpanTypes::datespan()},
+        {SpansetTypes::tstzspanset(),   SpanTypes::tstzspan()},
     };
     for (const auto &p : spanset_pairs) {
         extent_set.AddFunction(MakeExtentBlobToSpanAggregate<SpanExtentFromSpanSet>(p.in, p.out));
     }
 
     // ---- extent(tbox) -> tbox; extent(tnumber) -> tbox ----
-    extent_set.AddFunction(MakeExtentTboxAggregate<TboxExtentFromTBox>(TboxType::TBOX()));
-    extent_set.AddFunction(MakeExtentTboxAggregate<TboxExtentFromTNumber>(TemporalTypes::TINT()));
-    extent_set.AddFunction(MakeExtentTboxAggregate<TboxExtentFromTNumber>(TemporalTypes::TFLOAT()));
+    extent_set.AddFunction(MakeExtentTboxAggregate<TboxExtentFromTBox>(TboxType::tbox()));
+    extent_set.AddFunction(MakeExtentTboxAggregate<TboxExtentFromTNumber>(TemporalTypes::tint()));
+    extent_set.AddFunction(MakeExtentTboxAggregate<TboxExtentFromTNumber>(TemporalTypes::tfloat()));
 
     // ---- extent(stbox | tgeompoint | tgeometry) -> stbox ----
-    extent_set.AddFunction(MakeExtentStboxAggregate<StboxExtentFromSTBox>(StboxType::STBOX()));
+    extent_set.AddFunction(MakeExtentStboxAggregate<StboxExtentFromSTBox>(StboxType::stbox()));
     {
         // tgeompoint / tgeometry are registered via their respective Type
         // helpers; we avoid pulling those headers here by using a
         // BLOB-aliased clone since the underlying MEOS extent transition
         // function (`tspatial_extent_transfn`) is subtype-agnostic.
         LogicalType tgeompoint_type(LogicalTypeId::BLOB);
-        tgeompoint_type.SetAlias("TGEOMPOINT");
+        tgeompoint_type.SetAlias("tgeompoint");
         extent_set.AddFunction(
             MakeExtentStboxAggregate<StboxExtentFromTSpatial>(tgeompoint_type));
 
         LogicalType tgeometry_type(LogicalTypeId::BLOB);
-        tgeometry_type.SetAlias("TGEOMETRY");
+        tgeometry_type.SetAlias("tgeometry");
         extent_set.AddFunction(
             MakeExtentStboxAggregate<StboxExtentFromTSpatial>(tgeometry_type));
 
         LogicalType tgeography_type(LogicalTypeId::BLOB);
-        tgeography_type.SetAlias("TGEOGRAPHY");
+        tgeography_type.SetAlias("tgeography");
         extent_set.AddFunction(
             MakeExtentStboxAggregate<StboxExtentFromTSpatial>(tgeography_type));
 
         LogicalType tgeogpoint_type(LogicalTypeId::BLOB);
-        tgeogpoint_type.SetAlias("TGEOGPOINT");
+        tgeogpoint_type.SetAlias("tgeogpoint");
         extent_set.AddFunction(
             MakeExtentStboxAggregate<StboxExtentFromTSpatial>(tgeogpoint_type));
     }
 
     // ---- extent(tbool/ttext) -> tstzspan ----
     extent_set.AddFunction(MakeExtentBlobToSpanAggregate<TstzSpanExtentFromTemporal>(
-        TemporalTypes::TBOOL(), SpanTypes::TSTZSPAN()));
+        TemporalTypes::tbool(), SpanTypes::tstzspan()));
     extent_set.AddFunction(MakeExtentBlobToSpanAggregate<TstzSpanExtentFromTemporal>(
-        TemporalTypes::TTEXT(), SpanTypes::TSTZSPAN()));
+        TemporalTypes::ttext(), SpanTypes::tstzspan()));
 
     loader.RegisterFunction(std::move(extent_set));
 }

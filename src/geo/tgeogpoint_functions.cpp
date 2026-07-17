@@ -24,14 +24,14 @@ bool TgeogpointFunctions::Tpoint_in(Vector &source, Vector &result, idx_t count,
 
             Temporal *temp = tgeogpoint_in(input_str.c_str());
             if (!temp) {
-                throw InvalidInputException("Invalid TGEOGPOINT input: " + input_str);
+                throw InvalidInputException("Invalid tgeogpoint input: " + input_str);
             }
 
             size_t data_size = temporal_mem_size(temp);
             uint8_t *data_buffer = (uint8_t*)malloc(data_size);
             if (!data_buffer) {
                 free(temp);
-                throw InvalidInputException("Failed to allocate memory for TGEOGPOINT");
+                throw InvalidInputException("Failed to allocate memory for tgeogpoint");
             }
 
             memcpy(data_buffer, temp, data_size);
@@ -69,7 +69,7 @@ void TgeogpointFunctions::Tpointinst_constructor(DataChunk &args, ExpressionStat
             Temporal *ret = (Temporal *) tpointinst_make(gs, static_cast<TimestampTz>(ts_meos.value));
             if (ret == NULL) {
                 free(gs);
-                throw InvalidInputException("Failed to create TGEOGPOINT from geometry and timestamp");
+                throw InvalidInputException("Failed to create tgeogpoint from geometry and timestamp");
             }
 
             size_t ret_size = temporal_mem_size(ret);
@@ -77,7 +77,7 @@ void TgeogpointFunctions::Tpointinst_constructor(DataChunk &args, ExpressionStat
             if (!ret_data) {
                 free(ret);
                 free(gs);
-                throw InvalidInputException("Failed to allocate memory for TGEOGPOINT");
+                throw InvalidInputException("Failed to allocate memory for tgeogpoint");
             }
             memcpy(ret_data, ret, ret_size);
 

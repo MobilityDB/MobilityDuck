@@ -835,7 +835,7 @@ struct SetUnionFromSetFn {
 };
 
 // SetUnionAgg(<scalar>) — input is a primitive value lifted to a Datum.
-template <class IN, Datum (*TO_DATUM)(IN), meosType BASETYPE>
+template <class IN, Datum (*TO_DATUM)(IN), MeosType BASETYPE>
 struct SetUnionFromScalarFn {
     template <class STATE>
     static void Initialize(STATE &state) { state.value = nullptr; }
@@ -893,7 +893,7 @@ static AggregateFunction MakeSetAggregate(const LogicalType &input_type, const L
         SetAggState, string_t, string_t, OP, AggregateDestructorType::LEGACY>(input_type, return_type);
 }
 
-template <class IN, Datum (*TO_DATUM)(IN), meosType BASETYPE>
+template <class IN, Datum (*TO_DATUM)(IN), MeosType BASETYPE>
 static AggregateFunction MakeSetUnionScalarAggregate(const LogicalType &input_type,
                                                      const LogicalType &return_type) {
     return AggregateFunction::UnaryAggregateDestructor<
@@ -917,35 +917,35 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
     // ---- TandAgg / TorAgg on tbool ----
     {
         AggregateFunctionSet set("TandAgg");
-        set.AddFunction(MakeTaggAggregate<TandFn>(TemporalTypes::TBOOL(), TemporalTypes::TBOOL()));
+        set.AddFunction(MakeTaggAggregate<TandFn>(TemporalTypes::tbool(), TemporalTypes::tbool()));
         loader.RegisterFunction(std::move(set));
     }
     {
         AggregateFunctionSet set("TorAgg");
-        set.AddFunction(MakeTaggAggregate<TorFn>(TemporalTypes::TBOOL(), TemporalTypes::TBOOL()));
+        set.AddFunction(MakeTaggAggregate<TorFn>(TemporalTypes::tbool(), TemporalTypes::tbool()));
         loader.RegisterFunction(std::move(set));
     }
 
     // ---- TcountAgg over each temporal type and over time-only inputs → tint ----
     {
         AggregateFunctionSet set("TcountAgg");
-        for (const auto &t : {TemporalTypes::TBOOL(), TemporalTypes::TINT(),
-                              TemporalTypes::TFLOAT(), TemporalTypes::TTEXT()}) {
-            set.AddFunction(MakeTaggAggregate<TcountTempFn>(t, TemporalTypes::TINT()));
+        for (const auto &t : {TemporalTypes::tbool(), TemporalTypes::tint(),
+                              TemporalTypes::tfloat(), TemporalTypes::ttext()}) {
+            set.AddFunction(MakeTaggAggregate<TcountTempFn>(t, TemporalTypes::tint()));
         }
-        set.AddFunction(MakeTaggAggregate<TcountTempFn>(TgeompointType::TGEOMPOINT(), TemporalTypes::TINT()));
-        set.AddFunction(MakeTaggAggregate<TcountTempFn>(TGeometryTypes::TGEOMETRY(), TemporalTypes::TINT()));
-        set.AddFunction(MakeTaggAggregate<TcountTempFn>(TGeographyTypes::TGEOGRAPHY(), TemporalTypes::TINT()));
-        set.AddFunction(MakeTaggAggregate<TcountTempFn>(TGeogpointType::TGEOGPOINT(), TemporalTypes::TINT()));
+        set.AddFunction(MakeTaggAggregate<TcountTempFn>(TgeompointType::tgeompoint(), TemporalTypes::tint()));
+        set.AddFunction(MakeTaggAggregate<TcountTempFn>(TGeometryTypes::tgeometry(), TemporalTypes::tint()));
+        set.AddFunction(MakeTaggAggregate<TcountTempFn>(TGeographyTypes::tgeography(), TemporalTypes::tint()));
+        set.AddFunction(MakeTaggAggregate<TcountTempFn>(TGeogpointType::tgeogpoint(), TemporalTypes::tint()));
 
         // Time-only inputs.
         set.AddFunction(AggregateFunction::UnaryAggregateDestructor<
             SkipListState, timestamp_tz_t, string_t, TcountTstzFn,
             AggregateDestructorType::LEGACY>(
-            LogicalType::TIMESTAMP_TZ, TemporalTypes::TINT()));
-        set.AddFunction(MakeTaggAggregate<TcountTstzsetFn>(    SetTypes::tstzset(),         TemporalTypes::TINT()));
-        set.AddFunction(MakeTaggAggregate<TcountTstzspanFn>(   SpanTypes::TSTZSPAN(),       TemporalTypes::TINT()));
-        set.AddFunction(MakeTaggAggregate<TcountTstzspansetFn>(SpansetTypes::tstzspanset(), TemporalTypes::TINT()));
+            LogicalType::TIMESTAMP_TZ, TemporalTypes::tint()));
+        set.AddFunction(MakeTaggAggregate<TcountTstzsetFn>(    SetTypes::tstzset(),         TemporalTypes::tint()));
+        set.AddFunction(MakeTaggAggregate<TcountTstzspanFn>(   SpanTypes::tstzspan(),       TemporalTypes::tint()));
+        set.AddFunction(MakeTaggAggregate<TcountTstzspansetFn>(SpansetTypes::tstzspanset(), TemporalTypes::tint()));
 
         loader.RegisterFunction(std::move(set));
     }
@@ -953,32 +953,32 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
     // ---- TminAgg / TmaxAgg on tint, tfloat, ttext ----
     {
         AggregateFunctionSet set("TminAgg");
-        set.AddFunction(MakeTaggAggregate<TminTintFn>(TemporalTypes::TINT(),    TemporalTypes::TINT()));
-        set.AddFunction(MakeTaggAggregate<TminTfloatFn>(TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()));
-        set.AddFunction(MakeTaggAggregate<TminTtextFn>(TemporalTypes::TTEXT(),   TemporalTypes::TTEXT()));
+        set.AddFunction(MakeTaggAggregate<TminTintFn>(TemporalTypes::tint(),    TemporalTypes::tint()));
+        set.AddFunction(MakeTaggAggregate<TminTfloatFn>(TemporalTypes::tfloat(), TemporalTypes::tfloat()));
+        set.AddFunction(MakeTaggAggregate<TminTtextFn>(TemporalTypes::ttext(),   TemporalTypes::ttext()));
         loader.RegisterFunction(std::move(set));
     }
     {
         AggregateFunctionSet set("TmaxAgg");
-        set.AddFunction(MakeTaggAggregate<TmaxTintFn>(TemporalTypes::TINT(),    TemporalTypes::TINT()));
-        set.AddFunction(MakeTaggAggregate<TmaxTfloatFn>(TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()));
-        set.AddFunction(MakeTaggAggregate<TmaxTtextFn>(TemporalTypes::TTEXT(),   TemporalTypes::TTEXT()));
+        set.AddFunction(MakeTaggAggregate<TmaxTintFn>(TemporalTypes::tint(),    TemporalTypes::tint()));
+        set.AddFunction(MakeTaggAggregate<TmaxTfloatFn>(TemporalTypes::tfloat(), TemporalTypes::tfloat()));
+        set.AddFunction(MakeTaggAggregate<TmaxTtextFn>(TemporalTypes::ttext(),   TemporalTypes::ttext()));
         loader.RegisterFunction(std::move(set));
     }
 
     // ---- TsumAgg on tint, tfloat ----
     {
         AggregateFunctionSet set("TsumAgg");
-        set.AddFunction(MakeTaggAggregate<TsumTintFn>(TemporalTypes::TINT(),    TemporalTypes::TINT()));
-        set.AddFunction(MakeTaggAggregate<TsumTfloatFn>(TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()));
+        set.AddFunction(MakeTaggAggregate<TsumTintFn>(TemporalTypes::tint(),    TemporalTypes::tint()));
+        set.AddFunction(MakeTaggAggregate<TsumTfloatFn>(TemporalTypes::tfloat(), TemporalTypes::tfloat()));
         loader.RegisterFunction(std::move(set));
     }
 
     // ---- TavgAgg on tint, tfloat → tfloat ----
     {
         AggregateFunctionSet set("TavgAgg");
-        set.AddFunction(MakeTaggAggregate<TavgFn>(TemporalTypes::TINT(),  TemporalTypes::TFLOAT()));
-        set.AddFunction(MakeTaggAggregate<TavgFn>(TemporalTypes::TFLOAT(), TemporalTypes::TFLOAT()));
+        set.AddFunction(MakeTaggAggregate<TavgFn>(TemporalTypes::tint(),  TemporalTypes::tfloat()));
+        set.AddFunction(MakeTaggAggregate<TavgFn>(TemporalTypes::tfloat(), TemporalTypes::tfloat()));
         loader.RegisterFunction(std::move(set));
     }
 
@@ -986,55 +986,55 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
     {
         AggregateFunctionSet set("TcentroidAgg");
         set.AddFunction(MakeTaggAggregate<TcentroidFn>(
-            TgeompointType::TGEOMPOINT(), TgeompointType::TGEOMPOINT()));
+            TgeompointType::tgeompoint(), TgeompointType::tgeompoint()));
         set.AddFunction(MakeTaggAggregate<TcentroidFn>(
-            TGeogpointType::TGEOGPOINT(), TGeogpointType::TGEOGPOINT()));
+            TGeogpointType::tgeogpoint(), TGeogpointType::tgeogpoint()));
         loader.RegisterFunction(std::move(set));
     }
 
     // ---- MergeAgg over each temporal type → same type ----
     {
         AggregateFunctionSet set("MergeAgg");
-        for (const auto &t : {TemporalTypes::TBOOL(), TemporalTypes::TINT(),
-                              TemporalTypes::TFLOAT(), TemporalTypes::TTEXT()}) {
+        for (const auto &t : {TemporalTypes::tbool(), TemporalTypes::tint(),
+                              TemporalTypes::tfloat(), TemporalTypes::ttext()}) {
             set.AddFunction(MakeTaggAggregate<MergeAggFn>(t, t));
         }
         set.AddFunction(MakeTaggAggregate<MergeAggFn>(
-            TgeompointType::TGEOMPOINT(), TgeompointType::TGEOMPOINT()));
+            TgeompointType::tgeompoint(), TgeompointType::tgeompoint()));
         set.AddFunction(MakeTaggAggregate<MergeAggFn>(
-            TGeometryTypes::TGEOMETRY(), TGeometryTypes::TGEOMETRY()));
+            TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()));
         set.AddFunction(MakeTaggAggregate<MergeAggFn>(
-            TGeographyTypes::TGEOGRAPHY(), TGeographyTypes::TGEOGRAPHY()));
+            TGeographyTypes::tgeography(), TGeographyTypes::tgeography()));
         set.AddFunction(MakeTaggAggregate<MergeAggFn>(
-            TGeogpointType::TGEOGPOINT(), TGeogpointType::TGEOGPOINT()));
+            TGeogpointType::tgeogpoint(), TGeogpointType::tgeogpoint()));
         loader.RegisterFunction(std::move(set));
     }
 
     // ---- AppendInstantAgg over each temporal type → same type ----
     {
         AggregateFunctionSet set("AppendInstantAgg");
-        for (const auto &t : {TemporalTypes::TBOOL(), TemporalTypes::TINT(),
-                              TemporalTypes::TFLOAT(), TemporalTypes::TTEXT()}) {
+        for (const auto &t : {TemporalTypes::tbool(), TemporalTypes::tint(),
+                              TemporalTypes::tfloat(), TemporalTypes::ttext()}) {
             set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(t));
         }
-        set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TgeompointType::TGEOMPOINT()));
-        set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TGeometryTypes::TGEOMETRY()));
-        set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TGeographyTypes::TGEOGRAPHY()));
-        set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TGeogpointType::TGEOGPOINT()));
+        set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TgeompointType::tgeompoint()));
+        set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TGeometryTypes::tgeometry()));
+        set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TGeographyTypes::tgeography()));
+        set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TGeogpointType::tgeogpoint()));
         loader.RegisterFunction(std::move(set));
     }
 
     // ---- AppendSequenceAgg over each temporal type → same type ----
     {
         AggregateFunctionSet set("AppendSequenceAgg");
-        for (const auto &t : {TemporalTypes::TBOOL(), TemporalTypes::TINT(),
-                              TemporalTypes::TFLOAT(), TemporalTypes::TTEXT()}) {
+        for (const auto &t : {TemporalTypes::tbool(), TemporalTypes::tint(),
+                              TemporalTypes::tfloat(), TemporalTypes::ttext()}) {
             set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(t));
         }
-        set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(TgeompointType::TGEOMPOINT()));
-        set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(TGeometryTypes::TGEOMETRY()));
-        set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(TGeographyTypes::TGEOGRAPHY()));
-        set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(TGeogpointType::TGEOGPOINT()));
+        set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(TgeompointType::tgeompoint()));
+        set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(TGeometryTypes::tgeometry()));
+        set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(TGeographyTypes::tgeography()));
+        set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(TGeogpointType::tgeogpoint()));
         loader.RegisterFunction(std::move(set));
     }
 
@@ -1046,11 +1046,11 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
     {
         AggregateFunctionSet set("SpanUnionAgg");
         const std::vector<SpanInputPair> span_pairs = {
-            {SpanTypes::INTSPAN(),     SpansetTypes::intspanset()},
-            {SpanTypes::BIGINTSPAN(),  SpansetTypes::bigintspanset()},
-            {SpanTypes::FLOATSPAN(),   SpansetTypes::floatspanset()},
-            {SpanTypes::DATESPAN(),    SpansetTypes::datespanset()},
-            {SpanTypes::TSTZSPAN(),    SpansetTypes::tstzspanset()},
+            {SpanTypes::intspan(),     SpansetTypes::intspanset()},
+            {SpanTypes::bigintspan(),  SpansetTypes::bigintspanset()},
+            {SpanTypes::floatspan(),   SpansetTypes::floatspanset()},
+            {SpanTypes::datespan(),    SpansetTypes::datespanset()},
+            {SpanTypes::tstzspan(),    SpansetTypes::tstzspanset()},
         };
         for (const auto &p : span_pairs) {
             set.AddFunction(MakeSpanSetAggregate<SpanUnionFromSpanFn>(p.in, p.out));
@@ -1071,32 +1071,32 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
     // ---- Window aggregates: WminAgg / WmaxAgg / WsumAgg / WcountAgg / WavgAgg ----
     {
         AggregateFunctionSet set("WminAgg");
-        set.AddFunction(MakeWindowAggregate<WminTintFn>(TemporalTypes::TINT(),     TemporalTypes::TINT()));
-        set.AddFunction(MakeWindowAggregate<WminTfloatFn>(TemporalTypes::TFLOAT(),  TemporalTypes::TFLOAT()));
+        set.AddFunction(MakeWindowAggregate<WminTintFn>(TemporalTypes::tint(),     TemporalTypes::tint()));
+        set.AddFunction(MakeWindowAggregate<WminTfloatFn>(TemporalTypes::tfloat(),  TemporalTypes::tfloat()));
         loader.RegisterFunction(std::move(set));
     }
     {
         AggregateFunctionSet set("WmaxAgg");
-        set.AddFunction(MakeWindowAggregate<WmaxTintFn>(TemporalTypes::TINT(),     TemporalTypes::TINT()));
-        set.AddFunction(MakeWindowAggregate<WmaxTfloatFn>(TemporalTypes::TFLOAT(),  TemporalTypes::TFLOAT()));
+        set.AddFunction(MakeWindowAggregate<WmaxTintFn>(TemporalTypes::tint(),     TemporalTypes::tint()));
+        set.AddFunction(MakeWindowAggregate<WmaxTfloatFn>(TemporalTypes::tfloat(),  TemporalTypes::tfloat()));
         loader.RegisterFunction(std::move(set));
     }
     {
         AggregateFunctionSet set("WsumAgg");
-        set.AddFunction(MakeWindowAggregate<WsumTintFn>(TemporalTypes::TINT(),     TemporalTypes::TINT()));
-        set.AddFunction(MakeWindowAggregate<WsumTfloatFn>(TemporalTypes::TFLOAT(),  TemporalTypes::TFLOAT()));
+        set.AddFunction(MakeWindowAggregate<WsumTintFn>(TemporalTypes::tint(),     TemporalTypes::tint()));
+        set.AddFunction(MakeWindowAggregate<WsumTfloatFn>(TemporalTypes::tfloat(),  TemporalTypes::tfloat()));
         loader.RegisterFunction(std::move(set));
     }
     {
         AggregateFunctionSet set("WcountAgg");
-        set.AddFunction(MakeWindowAggregate<WcountAggFn>(TemporalTypes::TINT(),    TemporalTypes::TINT()));
-        set.AddFunction(MakeWindowAggregate<WcountAggFn>(TemporalTypes::TFLOAT(),  TemporalTypes::TINT()));
+        set.AddFunction(MakeWindowAggregate<WcountAggFn>(TemporalTypes::tint(),    TemporalTypes::tint()));
+        set.AddFunction(MakeWindowAggregate<WcountAggFn>(TemporalTypes::tfloat(),  TemporalTypes::tint()));
         loader.RegisterFunction(std::move(set));
     }
     {
         AggregateFunctionSet set("WavgAgg");
-        set.AddFunction(MakeWindowAggregate<WavgFn>(TemporalTypes::TINT(),    TemporalTypes::TFLOAT()));
-        set.AddFunction(MakeWindowAggregate<WavgFn>(TemporalTypes::TFLOAT(),  TemporalTypes::TFLOAT()));
+        set.AddFunction(MakeWindowAggregate<WavgFn>(TemporalTypes::tint(),    TemporalTypes::tfloat()));
+        set.AddFunction(MakeWindowAggregate<WavgFn>(TemporalTypes::tfloat(),  TemporalTypes::tfloat()));
         loader.RegisterFunction(std::move(set));
     }
 

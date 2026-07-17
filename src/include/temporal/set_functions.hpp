@@ -45,18 +45,14 @@ struct SetFunctions {
     static void Set_start_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_end_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_value_n(DataChunk &args, ExpressionState &state, Vector &result_vec);
-    static void Set_values(DataChunk &args, ExpressionState &state, Vector &result);
+    // Set_values retired: getValues(<set>) is generated (set_values) in generated_temporal_udfs.cpp.
     static void Numset_shift(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tstzset_shift(DataChunk &args, ExpressionState &state, Vector &result);
     static void Numset_scale(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tstzset_scale(DataChunk &args, ExpressionState &state, Vector &result);
     static void Numset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tstzset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Floatset_floor(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Floatset_ceil(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Floatset_round(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Floatset_degrees(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Floatset_radians(DataChunk &args, ExpressionState &state, Vector &result);
+    // floor/ceil/round/degrees/radians on floatset are generated (generated_temporal_udfs.cpp).
     static void Textset_lower(DataChunk &args, ExpressionState &state, Vector &result);
     static void Textset_upper(DataChunk &args, ExpressionState &state, Vector &result);
     static void Textset_initcap(DataChunk &args, ExpressionState &state, Vector &result);

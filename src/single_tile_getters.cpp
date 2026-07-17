@@ -365,77 +365,77 @@ void SingleTileGetters::RegisterScalarFunctions(ExtensionLoader &loader) {
     loader.RegisterFunction(ScalarFunction(
         "getValueTile",
         {LogicalType::DOUBLE, LogicalType::DOUBLE},
-        TboxType::TBOX(), GetValueTileExec));
+        TboxType::tbox(), GetValueTileExec));
     loader.RegisterFunction(ScalarFunction(
         "getValueTile",
         {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
-        TboxType::TBOX(), GetValueTileExec));
+        TboxType::tbox(), GetValueTileExec));
 
     loader.RegisterFunction(ScalarFunction(
         "getTBoxTimeTile",
         {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL},
-        TboxType::TBOX(), GetTBoxTimeTileExec));
+        TboxType::tbox(), GetTBoxTimeTileExec));
     loader.RegisterFunction(ScalarFunction(
         "getTBoxTimeTile",
         {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ},
-        TboxType::TBOX(), GetTBoxTimeTileExec));
+        TboxType::tbox(), GetTBoxTimeTileExec));
 
     loader.RegisterFunction(ScalarFunction(
         "getValueTimeTile",
         {LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ,
          LogicalType::DOUBLE, LogicalType::INTERVAL},
-        TboxType::TBOX(), GetValueTimeTileExec));
+        TboxType::tbox(), GetValueTimeTileExec));
     loader.RegisterFunction(ScalarFunction(
         "getValueTimeTile",
         {LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ,
          LogicalType::DOUBLE, LogicalType::INTERVAL,
          LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ},
-        TboxType::TBOX(), GetValueTimeTileExec));
+        TboxType::tbox(), GetValueTimeTileExec));
 
     // ---- stbox getters ----
     // 4-arg: full xyz sizes, default sorigin
     loader.RegisterFunction(ScalarFunction(
         "getSpaceTile",
         {geometry, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
-        StboxType::STBOX(), GetSpaceTileExec));
+        StboxType::stbox(), GetSpaceTileExec));
     // 5-arg: full xyz sizes + explicit sorigin
     loader.RegisterFunction(ScalarFunction(
         "getSpaceTile",
         {geometry, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, geometry},
-        StboxType::STBOX(), GetSpaceTileExec));
+        StboxType::stbox(), GetSpaceTileExec));
     // 2-arg: uniform xyz, default sorigin
     loader.RegisterFunction(ScalarFunction(
         "getSpaceTile",
         {geometry, LogicalType::DOUBLE},
-        StboxType::STBOX(), GetSpaceTileUniformExec));
+        StboxType::stbox(), GetSpaceTileUniformExec));
 
     loader.RegisterFunction(ScalarFunction(
         "getStboxTimeTile",
         {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL},
-        StboxType::STBOX(), GetStboxTimeTileExec));
+        StboxType::stbox(), GetStboxTimeTileExec));
     loader.RegisterFunction(ScalarFunction(
         "getStboxTimeTile",
         {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ},
-        StboxType::STBOX(), GetStboxTimeTileExec));
+        StboxType::stbox(), GetStboxTimeTileExec));
 
     loader.RegisterFunction(ScalarFunction(
         "getSpaceTimeTile",
         {geometry, LogicalType::TIMESTAMP_TZ,
          LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE,
          LogicalType::INTERVAL},
-        StboxType::STBOX(), GetSpaceTimeTileExec));
+        StboxType::stbox(), GetSpaceTimeTileExec));
     loader.RegisterFunction(ScalarFunction(
         "getSpaceTimeTile",
         {geometry, LogicalType::TIMESTAMP_TZ,
          LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE,
          LogicalType::INTERVAL, geometry},
-        StboxType::STBOX(), GetSpaceTimeTileExec));
+        StboxType::stbox(), GetSpaceTimeTileExec));
     loader.RegisterFunction(ScalarFunction(
         "getSpaceTimeTile",
         {geometry, LogicalType::TIMESTAMP_TZ,
          LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE,
          LogicalType::INTERVAL, geometry, LogicalType::TIMESTAMP_TZ},
-        StboxType::STBOX(), GetSpaceTimeTileExec));
+        StboxType::stbox(), GetSpaceTimeTileExec));
 }
 
 } // namespace duckdb

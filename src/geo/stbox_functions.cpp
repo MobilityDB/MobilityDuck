@@ -59,7 +59,7 @@ inline void Stbox_normalize_geodetic_srid(STBox *box) {
 } // namespace
 
 /* ***************************************************
- * In/out functions: VARCHAR <-> STBOX
+ * In/out functions: VARCHAR <-> stbox
  ****************************************************/
 
 inline void Stbox_in_common(Vector &source, Vector &result, idx_t count) {
@@ -113,7 +113,7 @@ bool StboxFunctions::Stbox_out(Vector &source, Vector &result, idx_t count, Cast
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
             size_t data_size = input_blob.GetSize();
             if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -142,7 +142,7 @@ bool StboxFunctions::Stbox_out(Vector &source, Vector &result, idx_t count, Cast
 }
 
 /* ***************************************************
- * In/out functions: WKB/HexWKB <-> STBOX
+ * In/out functions: WKB/HexWKB <-> stbox
  ****************************************************/
 
 void StboxFunctions::Stbox_from_wkb(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -225,7 +225,7 @@ void StboxFunctions::Stbox_as_text(DataChunk &args, ExpressionState &state, Vect
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -259,7 +259,7 @@ void StboxFunctions::Stbox_as_wkb(DataChunk &args, ExpressionState &state, Vecto
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -294,7 +294,7 @@ void StboxFunctions::Stbox_as_hexwkb(DataChunk &args, ExpressionState &state, Ve
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -379,7 +379,7 @@ void StboxFunctions::Geo_tstzspan_to_stbox(DataChunk &args, ExpressionState &sta
             size_t span_data_size = span_blob.GetSize();
             if (span_data_size < sizeof(Span)) {
                 free(gs);
-                throw InvalidInputException("Invalid TSTZSPAN data: insufficient size");
+                throw InvalidInputException("Invalid tstzspan data: insufficient size");
             }
             uint8_t *span_data_copy = (uint8_t*)malloc(span_data_size);
             if (!span_data_copy) {
@@ -391,7 +391,7 @@ void StboxFunctions::Geo_tstzspan_to_stbox(DataChunk &args, ExpressionState &sta
             if (!span) {
                 free(gs);
                 free(span_data_copy);
-                throw InvalidInputException("Invalid TSTZSPAN data: null pointer");
+                throw InvalidInputException("Invalid tstzspan data: null pointer");
             }
 
             STBox *ret = geo_tstzspan_to_stbox(gs, span);
@@ -426,7 +426,7 @@ void StboxFunctions::Geo_tstzspan_to_stbox(DataChunk &args, ExpressionState &sta
 }
 
 /* ***************************************************
- * Conversion functions + cast functions: [TYPE] -> STBOX
+ * Conversion functions + cast functions: [TYPE] -> stbox
  ****************************************************/
 
 void StboxFunctions::Geo_to_stbox_common(Vector &source, Vector &result, idx_t count) {
@@ -477,7 +477,7 @@ bool StboxFunctions::Geo_to_stbox_cast(Vector &source, Vector &result, idx_t cou
 }
 
 /* ***************************************************
- * Conversion functions + cast functions: STBOX -> [TYPE]
+ * Conversion functions + cast functions: stbox -> [TYPE]
  ****************************************************/
 
  void StboxFunctions::Stbox_to_geo(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -487,7 +487,7 @@ bool StboxFunctions::Geo_to_stbox_cast(Vector &source, Vector &result, idx_t cou
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -615,7 +615,7 @@ static void Tstzspan_to_stbox_common(Vector &source, Vector &result, idx_t count
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(Span)) {
-                throw InvalidInputException("Invalid TSTZSPAN data: insufficient size");
+                throw InvalidInputException("Invalid tstzspan data: insufficient size");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -718,7 +718,7 @@ void StboxFunctions::Stbox_hasx(DataChunk &args, ExpressionState &state, Vector 
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -744,7 +744,7 @@ void StboxFunctions::Stbox_hasz(DataChunk &args, ExpressionState &state, Vector 
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -770,7 +770,7 @@ void StboxFunctions::Stbox_hast(DataChunk &args, ExpressionState &state, Vector 
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -793,7 +793,7 @@ void StboxFunctions::Stbox_isgeodetic(DataChunk &args, ExpressionState &state, V
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -819,7 +819,7 @@ void StboxFunctions::Stbox_xmin(DataChunk &args, ExpressionState &state, Vector 
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -850,7 +850,7 @@ void StboxFunctions::Stbox_xmax(DataChunk &args, ExpressionState &state, Vector 
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -882,7 +882,7 @@ void StboxFunctions::Stbox_ymin(DataChunk &args, ExpressionState &state, Vector 
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -913,7 +913,7 @@ void StboxFunctions::Stbox_ymax(DataChunk &args, ExpressionState &state, Vector 
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -944,7 +944,7 @@ void StboxFunctions::Stbox_zmin(DataChunk &args, ExpressionState &state, Vector 
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -975,7 +975,7 @@ void StboxFunctions::Stbox_zmax(DataChunk &args, ExpressionState &state, Vector 
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -1006,7 +1006,7 @@ void StboxFunctions::Stbox_tmin(DataChunk &args, ExpressionState &state, Vector 
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -1038,7 +1038,7 @@ void StboxFunctions::Stbox_tmax(DataChunk &args, ExpressionState &state, Vector 
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -1070,7 +1070,7 @@ void StboxFunctions::Stbox_tmin_inc(DataChunk &args, ExpressionState &state, Vec
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -1101,7 +1101,7 @@ void StboxFunctions::Stbox_tmax_inc(DataChunk &args, ExpressionState &state, Vec
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -1132,7 +1132,7 @@ void StboxFunctions::Stbox_area(DataChunk &args, ExpressionState &state, Vector 
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -1170,7 +1170,7 @@ void StboxFunctions::Stbox_volume(DataChunk &args, ExpressionState &state, Vecto
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -1204,7 +1204,7 @@ void StboxFunctions::Stbox_shift_time(DataChunk &args, ExpressionState &state, V
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -1240,7 +1240,7 @@ void StboxFunctions::Stbox_scale_time(DataChunk &args, ExpressionState &state, V
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -1276,7 +1276,7 @@ void StboxFunctions::Stbox_shift_scale_time(DataChunk &args, ExpressionState &st
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -1312,7 +1312,7 @@ void StboxFunctions::Stbox_get_space(DataChunk &args, ExpressionState &state, Ve
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -1346,7 +1346,7 @@ void StboxFunctions::Stbox_expand_time(DataChunk &args, ExpressionState &state, 
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size != sizeof(STBox)) {
-                throw InvalidInputException("Invalid STBOX value size (MEOS ABI mismatch or corrupt value)");
+                throw InvalidInputException("Invalid stbox value size (MEOS ABI mismatch or corrupt value)");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -1382,7 +1382,7 @@ void StboxFunctions::Stbox_expand_space(DataChunk &args, ExpressionState &state,
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
             if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             memcpy(data_copy, data, data_size);
@@ -1430,7 +1430,7 @@ void StboxFunctions::Overlaps_stbox_stbox(DataChunk &args, ExpressionState &stat
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -1447,7 +1447,7 @@ void StboxFunctions::Overlaps_stbox_stbox(DataChunk &args, ExpressionState &stat
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -1480,7 +1480,7 @@ void StboxFunctions::Contains_stbox_stbox(DataChunk &args, ExpressionState &stat
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -1497,7 +1497,7 @@ void StboxFunctions::Contains_stbox_stbox(DataChunk &args, ExpressionState &stat
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -1530,7 +1530,7 @@ void StboxFunctions::Contained_stbox_stbox(DataChunk &args, ExpressionState &sta
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -1547,7 +1547,7 @@ void StboxFunctions::Contained_stbox_stbox(DataChunk &args, ExpressionState &sta
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -1580,7 +1580,7 @@ void StboxFunctions::Same_stbox_stbox(DataChunk &args, ExpressionState &state, V
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -1597,7 +1597,7 @@ void StboxFunctions::Same_stbox_stbox(DataChunk &args, ExpressionState &state, V
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -1630,7 +1630,7 @@ void StboxFunctions::Adjacent_stbox_stbox(DataChunk &args, ExpressionState &stat
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -1647,7 +1647,7 @@ void StboxFunctions::Adjacent_stbox_stbox(DataChunk &args, ExpressionState &stat
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -1680,7 +1680,7 @@ void StboxFunctions::Left_stbox_stbox(DataChunk &args, ExpressionState &state, V
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -1697,7 +1697,7 @@ void StboxFunctions::Left_stbox_stbox(DataChunk &args, ExpressionState &state, V
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -1730,7 +1730,7 @@ void StboxFunctions::Overleft_stbox_stbox(DataChunk &args, ExpressionState &stat
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -1747,7 +1747,7 @@ void StboxFunctions::Overleft_stbox_stbox(DataChunk &args, ExpressionState &stat
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -1780,7 +1780,7 @@ void StboxFunctions::Right_stbox_stbox(DataChunk &args, ExpressionState &state, 
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -1797,7 +1797,7 @@ void StboxFunctions::Right_stbox_stbox(DataChunk &args, ExpressionState &state, 
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -1830,7 +1830,7 @@ void StboxFunctions::Overright_stbox_stbox(DataChunk &args, ExpressionState &sta
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -1847,7 +1847,7 @@ void StboxFunctions::Overright_stbox_stbox(DataChunk &args, ExpressionState &sta
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -1880,7 +1880,7 @@ void StboxFunctions::Below_stbox_stbox(DataChunk &args, ExpressionState &state, 
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -1897,7 +1897,7 @@ void StboxFunctions::Below_stbox_stbox(DataChunk &args, ExpressionState &state, 
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -1930,7 +1930,7 @@ void StboxFunctions::Overbelow_stbox_stbox(DataChunk &args, ExpressionState &sta
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -1947,7 +1947,7 @@ void StboxFunctions::Overbelow_stbox_stbox(DataChunk &args, ExpressionState &sta
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -1980,7 +1980,7 @@ void StboxFunctions::Above_stbox_stbox(DataChunk &args, ExpressionState &state, 
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -1997,7 +1997,7 @@ void StboxFunctions::Above_stbox_stbox(DataChunk &args, ExpressionState &state, 
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -2030,7 +2030,7 @@ void StboxFunctions::Overabove_stbox_stbox(DataChunk &args, ExpressionState &sta
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -2047,7 +2047,7 @@ void StboxFunctions::Overabove_stbox_stbox(DataChunk &args, ExpressionState &sta
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -2080,7 +2080,7 @@ void StboxFunctions::Before_stbox_stbox(DataChunk &args, ExpressionState &state,
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -2097,7 +2097,7 @@ void StboxFunctions::Before_stbox_stbox(DataChunk &args, ExpressionState &state,
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -2130,7 +2130,7 @@ void StboxFunctions::Overbefore_stbox_stbox(DataChunk &args, ExpressionState &st
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -2147,7 +2147,7 @@ void StboxFunctions::Overbefore_stbox_stbox(DataChunk &args, ExpressionState &st
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -2180,7 +2180,7 @@ void StboxFunctions::After_stbox_stbox(DataChunk &args, ExpressionState &state, 
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -2197,7 +2197,7 @@ void StboxFunctions::After_stbox_stbox(DataChunk &args, ExpressionState &state, 
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -2230,7 +2230,7 @@ void StboxFunctions::Overafter_stbox_stbox(DataChunk &args, ExpressionState &sta
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -2247,7 +2247,7 @@ void StboxFunctions::Overafter_stbox_stbox(DataChunk &args, ExpressionState &sta
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -2280,7 +2280,7 @@ void StboxFunctions::Front_stbox_stbox(DataChunk &args, ExpressionState &state, 
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -2297,7 +2297,7 @@ void StboxFunctions::Front_stbox_stbox(DataChunk &args, ExpressionState &state, 
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -2330,7 +2330,7 @@ void StboxFunctions::Overfront_stbox_stbox(DataChunk &args, ExpressionState &sta
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -2347,7 +2347,7 @@ void StboxFunctions::Overfront_stbox_stbox(DataChunk &args, ExpressionState &sta
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -2380,7 +2380,7 @@ void StboxFunctions::Back_stbox_stbox(DataChunk &args, ExpressionState &state, V
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -2397,7 +2397,7 @@ void StboxFunctions::Back_stbox_stbox(DataChunk &args, ExpressionState &state, V
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -2430,7 +2430,7 @@ void StboxFunctions::Overback_stbox_stbox(DataChunk &args, ExpressionState &stat
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -2447,7 +2447,7 @@ void StboxFunctions::Overback_stbox_stbox(DataChunk &args, ExpressionState &stat
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -2480,7 +2480,7 @@ void StboxFunctions::Union_stbox_stbox(DataChunk &args, ExpressionState &state, 
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -2497,7 +2497,7 @@ void StboxFunctions::Union_stbox_stbox(DataChunk &args, ExpressionState &state, 
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {
@@ -2548,7 +2548,7 @@ void StboxFunctions::Intersection_stbox_stbox(DataChunk &args, ExpressionState &
             const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
             size_t data_size1 = input_stbox1.GetSize();
             if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
             if (!data_copy1) {
@@ -2565,7 +2565,7 @@ void StboxFunctions::Intersection_stbox_stbox(DataChunk &args, ExpressionState &
             size_t data_size2 = input_stbox2.GetSize();
             if (data_size2 < sizeof(void*)) {
                 free(data_copy1);
-                throw InvalidInputException("Invalid STBOX data: insufficient size");
+                throw InvalidInputException("Invalid stbox data: insufficient size");
             }
             uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
             if (!data_copy2) {

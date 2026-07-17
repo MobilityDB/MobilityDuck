@@ -22,17 +22,19 @@ typedef struct {
 } basetype_struct;
 
 static const basetype_struct BASE_TYPES[] = {
-    {"TINT", LogicalType::BIGINT},
-    {"TBOOL", LogicalType::BOOLEAN},
-    {"TFLOAT", LogicalType::DOUBLE},
-    {"TTEXT", LogicalType::VARCHAR}
+    {"tint", LogicalType::BIGINT},
+    {"tbigint", LogicalType::BIGINT},
+    {"tbool", LogicalType::BOOLEAN},
+    {"tfloat", LogicalType::DOUBLE},
+    {"ttext", LogicalType::VARCHAR}
 };
 
 struct TemporalTypes {
-    static LogicalType TINT();
-    static LogicalType TBOOL();
-    static LogicalType TFLOAT();
-    static LogicalType TTEXT();
+    static LogicalType tint();
+    static LogicalType tbigint();
+    static LogicalType tbool();
+    static LogicalType tfloat();
+    static LogicalType ttext();
 
     static const std::vector<LogicalType> &AllTypes();
     static LogicalType GetBaseTypeFromAlias(const char *alias);
@@ -45,7 +47,6 @@ struct TemporalTypes {
     static void RegisterTemporalTileSplit(ExtensionLoader &loader);
     static void RegisterTileGetters(ExtensionLoader &loader);
     static void RegisterTnumberValueSplit(ExtensionLoader &loader);
-    static void RegisterSimilarityPath(ExtensionLoader &loader);
 };
 
 } // namespace duckdb

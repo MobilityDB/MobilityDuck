@@ -207,7 +207,7 @@ bool SetFunctions::Text_to_set(Vector &source, Vector &result, idx_t count, Cast
     result.SetVectorType(VectorType::FLAT_VECTOR);
 
     auto target_type = result.GetType();
-    meosType set_type = SetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
+    MeosType set_type = SetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
 
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
@@ -301,7 +301,7 @@ void SetFunctions::Set_constructor(DataChunk &args, ExpressionState &state, Vect
                 }
             }
 
-            meosType base_type = settype_basetype(meos_type);            
+            MeosType base_type = settype_basetype(meos_type);            
             Set *s = set_make_free(values, (int)length, base_type, true);
                         
             size_t size = set_mem_size(s);            
@@ -320,7 +320,7 @@ static inline void Write_set(Vector &result, idx_t row, Set *s) {
     free(s);
 }
 
-static inline void Value_to_set_core(Vector &source, Vector &result, idx_t count, meosType base_type) {
+static inline void Value_to_set_core(Vector &source, Vector &result, idx_t count, MeosType base_type) {
     source.Flatten(count);
     result.SetVectorType(VectorType::FLAT_VECTOR);
     
@@ -409,8 +409,8 @@ static inline void Value_to_set_core(Vector &source, Vector &result, idx_t count
 
 bool SetFunctions::Value_to_set_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     auto target_type = result.GetType();
-    meosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
-    meosType base_type = settype_basetype(set_type);
+    MeosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
+    MeosType base_type = settype_basetype(set_type);
 
     Value_to_set_core(source, result, count, base_type);
     return true;
@@ -420,8 +420,8 @@ bool SetFunctions::Value_to_set_cast(Vector &source, Vector &result, idx_t count
 void SetFunctions::Value_to_set(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &source = args.data[0];
     auto out_type = result.GetType();
-    meosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
-    meosType base_type = settype_basetype(set_type);
+    MeosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
+    MeosType base_type = settype_basetype(set_type);
 
     Value_to_set_core(source, result, args.size(), base_type);
 }
@@ -860,107 +860,12 @@ void SetFunctions::Set_value_n(DataChunk &args, ExpressionState &state, Vector &
 
 // --- getValues ---
 
-void SetFunctions::Set_values(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    idx_t row_count = args.size();
-    
-    auto set_type_alias = SetTypeMapping::GetMeosTypeFromAlias(input.GetType().ToString());
-    auto base_type = settype_basetype(set_type_alias); // MEOS base type enum
-    auto child_type = SetTypeMapping::GetChildType(input.GetType()); // DuckDB LogicalType
-    
-    auto &result_validity = FlatVector::Validity(result);
-    auto list_entries = FlatVector::GetData<list_entry_t>(result);
-    auto &child_vector = ListVector::GetEntry(result);
-    
-    child_vector.SetVectorType(VectorType::FLAT_VECTOR);
-    ListVector::Reserve(result, row_count); 
-    idx_t total_offset = 0;
-
-    for (idx_t i = 0; i < row_count; ++i) {
-        if (input.GetValue(i).IsNull()) {
-            result_validity.SetInvalid(i);
-            continue;
-        }
-
-        string_t blob = FlatVector::GetData<string_t>(input)[i];
-        const uint8_t *data = (const uint8_t *)(blob.GetData());
-        size_t size = blob.GetSize();
-        Set *s = (Set*)malloc(size);
-        memcpy(s, data, size);
-        if (!s) {
-            result_validity.SetInvalid(i);
-            continue;
-        }
-
-        uint64_t count = s->count;
-        Datum *values = set_vals(s);
-        
-        ListVector::SetListSize(result, total_offset + count);
-        list_entries[i] = list_entry_t{total_offset, count};
-        
-        switch (base_type) {
-            case T_INT4: {
-                auto data = FlatVector::GetData<int32_t>(child_vector);
-                for (int j = 0; j < count; ++j) {
-                    data[total_offset + j] = int32(values[j]);
-                }
-                break;
-            }
-            case T_INT8: {
-                auto data = FlatVector::GetData<int64_t>(child_vector);
-                for (int j = 0; j < count; ++j) {
-                    data[total_offset + j] = int64(values[j]);
-                }
-                break;
-            }
-            case T_FLOAT8: {
-                auto data = FlatVector::GetData<double>(child_vector);
-                for (int j = 0; j < count; ++j) {
-                    data[total_offset + j] = DatumGetFloat8(values[j]);
-                }
-                break;
-            }
-            case T_TEXT: {
-                auto data = FlatVector::GetData<string_t>(child_vector);
-                for (int j = 0; j < count; ++j) {
-                    text *txt = (text *)DatumGetPointer(values[j]);
-                    string str(VARDATA(txt), VARSIZE(txt) - VARHDRSZ);
-                    data[total_offset + j] = StringVector::AddString(child_vector, str);
-                }
-                break;
-            }
-            case T_DATE: {
-                auto data = FlatVector::GetData<date_t>(child_vector);
-                for (int j = 0; j < count; ++j) {
-                    data[total_offset + j] = date_t(FromMeosDate(int32(values[j])));
-                }
-                break;
-            }
-            case T_TIMESTAMPTZ: {
-                auto data = FlatVector::GetData<timestamp_t>(child_vector);
-                for (int j = 0; j < count; ++j) {
-                    data[total_offset + j] = timestamp_t(FromMeosTimestamp(int64(values[j])));
-                }
-                break;
-            }
-            default:
-                free(values);
-                free(s);
-                throw NotImplementedException("Unsupported base type in getValues");
-        }
-
-        total_offset += count;
-        result_validity.SetValid(i);
-        free(values);
-        free(s);
-    }
-}
 
 // --- shift ---
 void SetFunctions::Numset_shift(DataChunk &args, ExpressionState &state, Vector &result) {    
     auto &set_vec  = args.data[0];
     auto out_type  = result.GetType();    
-    meosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    MeosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
 
     switch (set_type) {
         case T_INTSET: { // shift(intset, integer) -> intset
@@ -1035,7 +940,7 @@ void SetFunctions::Tstzset_shift(DataChunk &args, ExpressionState &state, Vector
 void SetFunctions::Numset_scale(DataChunk &args, ExpressionState &state, Vector &result){
     auto &set_vec  = args.data[0];
     auto out_type  = result.GetType();    
-    meosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
+    MeosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
 
     switch (set_type) {
         case T_INTSET: { // scale(intset, integer) -> intset
@@ -1113,7 +1018,7 @@ void SetFunctions::Numset_shift_scale(DataChunk &args, ExpressionState &state, V
     auto &wd_vec  = args.data[2];
 
     auto out_type  = result.GetType();
-    meosType set_type = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
+    MeosType set_type = SetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
 
     switch (set_type) {
         case T_INTSET: { // shift_scale(intset, integer, integer) -> intset
@@ -1189,126 +1094,8 @@ void SetFunctions::Tstzset_shift_scale(DataChunk &args, ExpressionState &state, 
     );
 }
 
-// --- Floor (floatset) ---
-void SetFunctions::Floatset_floor(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t input_blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)input_blob.GetData();
-            size_t size = input_blob.GetSize();
-            Set *s = (Set*)malloc(size);
-            memcpy(s, data, size);
-            Set *r = floatset_floor(s);
-            free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-            free(r);
-            return out;            
-        });
-}
-
-// --- Ceil (floatset) ---
-void SetFunctions::Floatset_ceil(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t input_blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)input_blob.GetData();
-            size_t size = input_blob.GetSize();
-            Set *s = (Set*)malloc(size);
-            memcpy(s, data, size);
-            Set *r = floatset_ceil(s);
-            free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-            free(r);
-            return out;            
-        });
-}
-
-// --- Round (floatset) ---
-void SetFunctions::Floatset_round(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input_vec = args.data[0];
-    input_vec.Flatten(args.size());
-
-    bool has_digits = args.ColumnCount() > 1;
-    Vector *digits_vec_ptr = has_digits ? &args.data[1] : nullptr;
-    if (has_digits) digits_vec_ptr->Flatten(args.size());
-
-    for (idx_t i = 0; i < args.size(); i++) {
-        if (FlatVector::IsNull(input_vec, i) || (has_digits && FlatVector::IsNull(*digits_vec_ptr, i))) {
-            FlatVector::SetNull(result, i, true);
-            continue;
-        }
-
-        auto blob = FlatVector::GetData<string_t>(input_vec)[i];
-        int digits = has_digits ? FlatVector::GetData<int32_t>(*digits_vec_ptr)[i] : 0;
-
-        const uint8_t *data = (const uint8_t *)blob.GetData();
-        size_t size = blob.GetSize();
-
-        Set *s = (Set *)malloc(size);
-        memcpy(s, data, size);
-        Set *r = set_round(s, digits);
-        free(s);
-        string_t str = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-        FlatVector::GetData<string_t>(result)[i] = str;
-        free(r);
-    }
-}
-
-// --- Degrees (floatset) ---
-void SetFunctions::Floatset_degrees(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input_vec = args.data[0];
-    input_vec.Flatten(args.size());
-
-    bool has_bools = args.ColumnCount() > 1;
-    Vector *bools_vec_ptr = has_bools ? &args.data[1] : nullptr;
-    if (has_bools) bools_vec_ptr->Flatten(args.size());
-
-    for (idx_t i = 0; i < args.size(); i++) {
-        if (FlatVector::IsNull(input_vec, i) || (has_bools && FlatVector::IsNull(*bools_vec_ptr, i))) {
-            FlatVector::SetNull(result, i, true);
-            continue;
-        }
-
-        auto blob = FlatVector::GetData<string_t>(input_vec)[i];
-        // Registered in set.cpp as a BOOLEAN argument; DuckDB 1.4 asserts the
-        // Vector's template type matches the declared type, so reading this as
-        // `int32_t` triggered `Expected INT32, found BOOL` (set.test:227).
-        bool bools = has_bools ? FlatVector::GetData<bool>(*bools_vec_ptr)[i] : false;
-
-        const uint8_t *data = (const uint8_t *)blob.GetData();
-        size_t size = blob.GetSize();
-
-        Set *s = (Set *)malloc(size);
-        memcpy(s, data, size);
-        Set *r = floatset_degrees(s, bools);
-        free(s);
-        string_t str = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-        FlatVector::GetData<string_t>(result)[i] = str;
-        free(r);
-    }
-}
-
-// --- Radians (floatset) ---
-void SetFunctions::Floatset_radians(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input_vec = args.data[0];
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, args.size(),
-        [&](string_t input_blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)input_blob.GetData();
-            size_t size = input_blob.GetSize();
-            Set *s = (Set*)malloc(size);
-            memcpy(s, data, size);
-            Set *r = floatset_radians(s);
-            free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-            free(r);
-            return out;            
-        });
-    }
+// floor/ceil/round/degrees/radians on floatset are generated from the catalog
+// (generated_temporal_udfs.cpp); no hand bodies remain.
 
 // --- Textset lower ---
 void SetFunctions::Textset_lower(DataChunk &args, ExpressionState &state, Vector &result) {

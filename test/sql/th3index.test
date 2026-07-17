@@ -1,0 +1,80 @@
+require mobilityduck
+
+# ── th3index construction from a temporal point at an H3 resolution ──────────
+query I
+SELECT numInstants(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5));
+----
+1
+
+query I
+SELECT numTimestamps(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5));
+----
+1
+
+# ── H3-specific accessor: the cell resolution tracks the requested resolution ─
+query I
+SELECT startValue(th3GetResolution(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5)));
+----
+5
+
+query I
+SELECT startValue(th3GetResolution(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 8)));
+----
+8
+
+# ── traditional comparison operators ────────────────────────────────────────
+query I
+SELECT th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5)
+     = th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5);
+----
+true
+
+query I
+SELECT th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5)
+     = th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 8);
+----
+false
+
+# ── value accessors return the H3 cell id (h3index) ─────────────────────────
+query I
+SELECT typeof(startValue(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5)));
+----
+h3index
+
+# start and end of a single instant are the same cell
+query I
+SELECT startValue(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5))
+     = endValue(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5));
+----
+true
+
+# different resolutions yield different cells
+query I
+SELECT startValue(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5))
+     = startValue(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 8));
+----
+false
+
+# ── generated cell-id valueN (Temporal<T> out-param fold) → h3index ───────────
+query I
+SELECT typeof(valueN(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5), 1));
+----
+h3index
+
+query I
+SELECT valueN(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5), 1)
+     = startValue(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5));
+----
+true
+
+# ── generated cell-id getValues → LIST(h3index) ──────────────────────────────
+query I
+SELECT typeof(getValues(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5))[1]);
+----
+h3index
+
+query I
+SELECT getValues(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5))[1]
+     = startValue(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5));
+----
+true
