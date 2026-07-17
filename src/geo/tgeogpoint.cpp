@@ -1901,7 +1901,7 @@ inline void Temporal_to_tinstant(DataChunk &args, ExpressionState &state, Vector
                 throw InvalidInputException("Invalid tgeogpoint data: null pointer");
             }
 
-            TInstant *inst = temporal_to_tinstant(temp);
+            TInstant *inst = temporal_as_tinstant(temp);
             if (!inst) {
                 throw InvalidInputException("Failed to convert tgeogpoint to TInstant");
             }
@@ -2488,7 +2488,7 @@ inline void ExecuteTGeometrySeq(DataChunk &args, ExpressionState &state, Vector 
             }
             
             interpType interp = interptype_from_string(interp_string.c_str());
-            TSequence *seq = temporal_to_tsequence(temp, interp);
+            TSequence *seq = temporal_as_tsequence(temp, interp);
             
             if (!seq) {
                 free(data_copy);
