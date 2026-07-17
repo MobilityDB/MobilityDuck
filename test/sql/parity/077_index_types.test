@@ -1,0 +1,22 @@
+# name: test/sql/parity/077_index_types.test
+# description: TRTREE index coverage for tgeompoint
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+CREATE TABLE idx_tgeompoint(t tgeompoint);
+
+statement ok
+INSERT INTO idx_tgeompoint VALUES
+  ('Point(0 0)@2000-01-01'::tgeompoint),
+  ('Point(10 10)@2001-01-01'::tgeompoint);
+
+statement ok
+CREATE INDEX i_tgeompoint ON idx_tgeompoint USING TRTREE (t);
+
+query I
+SELECT count(*) FROM idx_tgeompoint
+  WHERE t && 'STBOX XT(((-1,-1),(1,1)),[2000-01-01, 2000-01-02])'::stbox;
+----
+1

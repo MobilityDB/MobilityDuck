@@ -27,6 +27,7 @@
 #include "duckdb/optimizer/matcher/expression_matcher.hpp"
 #include "index/rtree_module.hpp"
 #include "geo/stbox.hpp"
+#include "geo/tgeompoint.hpp"
 #include "index/rtree_index_create_physical.hpp"
 #include "time_util.hpp"
 
@@ -48,6 +49,9 @@ TRTreeIndex::TRTreeIndex(const string &name, IndexConstraintType constraint_type
     
     
     auto &type = unbound_expressions[0]->return_type;
+    column_type_ = type;
+
+    // R-tree's bbox type is determined by the type of the indexed column
     
     if (type == StboxType::stbox()) {
         bbox_type_ = T_STBOX;
@@ -57,8 +61,12 @@ TRTreeIndex::TRTreeIndex(const string &name, IndexConstraintType constraint_type
         bbox_type_ = T_TSTZSPAN;
         bbox_size_ = sizeof(Span);  
         rtree_ = rtree_create_tstzspan();
+    } else if (type == TgeompointType::TGEOMPOINT()) {
+        bbox_type_ = T_STBOX;
+        bbox_size_ = sizeof(STBox);
+        rtree_ = rtree_create_stbox();
     } else {
-        throw InternalException("RTree index only supports stbox and tstzspan types, got: " + type.ToString());
+        throw InternalException("RTree index only supports STBOX, TSTZSPAN, and TGEOMPOINT types, got: " + type.ToString());
     }
     
     if (!rtree_) {
@@ -103,23 +111,23 @@ PhysicalOperator &TRTreeIndex::CreatePlan(PlanIndexInput &input) {
         select_list.push_back(std::move(expression));
     }
     
-    // new_column_types.emplace_back(LogicalType::ROW_TYPE);
-    // select_list.push_back(
-    //     make_uniq<BoundReferenceExpression>(LogicalType::ROW_TYPE, create_index.info->scan_types.size() - 1));
+    LogicalType row_type = LogicalType::ROW_TYPE;
+    new_column_types.push_back(row_type);
+    select_list.push_back(
+        make_uniq<BoundReferenceExpression>(row_type, create_index.info->scan_types.size() - 1)
+    );
 
-    auto &projection = planner.Make<PhysicalProjection>(new_column_types, std::move(select_list), 
+    auto &projection = planner.Make<PhysicalProjection>(new_column_types, std::move(select_list),
                                                        create_index.estimated_cardinality);
     projection.children.push_back(input.table_scan);
 
-
     auto &physical_create_index = planner.Make<PhysicalCreateTRTreeIndex>(
-        create_index.types, create_index.table, create_index.info->column_ids, 
-        std::move(create_index.info), std::move(create_index.unbound_expressions), 
+        create_index.types, create_index.table, create_index.info->column_ids,
+        std::move(create_index.info), std::move(create_index.unbound_expressions),
         create_index.estimated_cardinality);
-    
+
     physical_create_index.children.push_back(projection);
     return physical_create_index;
-    return input.table_scan;
 }
 
 //------------------------------------------------------------------------------
@@ -224,58 +232,73 @@ void TRTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifier
     if (vector.GetVectorType() != VectorType::FLAT_VECTOR) {
         vector.Flatten(expression_result.size());
     }
-    
-    auto vector_type = vector.GetType();
-    
 
-    void* boxes = malloc(bbox_size_ * expression_result.size());
+    const bool indexes_temporal = column_type_ == TgeompointType::TGEOMPOINT();
+
+    void *boxes = indexes_temporal ? nullptr : malloc(bbox_size_ * expression_result.size());
     
     for (idx_t i = 0; i < expression_result.size(); i++) {
         if (FlatVector::IsNull(vector, i)) {
-            continue; 
+            continue;
         }
 
-        void *box = nullptr;
-        
-        if (vector_type.id() == LogicalTypeId::BLOB) {
-            auto blob_data = FlatVector::GetData<string_t>(vector)[i];
-            const uint8_t *data = reinterpret_cast<const uint8_t*>(blob_data.GetData());
-            size_t data_size = blob_data.GetSize();
-            
-           
-            if (data_size != bbox_size_) {
-                continue;
-            }
-                        
-            box = malloc(data_size);
-            memcpy(box, data, data_size);
+        if (vector.GetType().id() != LogicalTypeId::BLOB) {
+            continue;
+        }
 
+        auto blob_data = FlatVector::GetData<string_t>(vector)[i];
+        const uint8_t *data = reinterpret_cast<const uint8_t *>(blob_data.GetData());
+        size_t data_size = blob_data.GetSize();
+
+        if (indexes_temporal) {
+            const Temporal *temp = reinterpret_cast<const Temporal *>(data);
             if (bbox_type_ == T_STBOX) {
-                STBox *stbox = (STBox*)box;
-                int32_t box_srid = stbox_srid(stbox);
-                if (box_srid != 0) {
-                    STBox *normalized_box = stbox_set_srid(stbox, 0);
-                    if (normalized_box) {
+                STBox *box = tspatial_to_stbox(temp);
+                if (!box) {
+                    continue;
+                }
+
+                if (stbox_srid(box) != 0) {
+                    STBox *normalized = stbox_set_srid(box, 0);
+                    if (normalized) {
                         free(box);
-                        box = normalized_box;
+                        box = normalized;
                     }
                 }
+                rtree_insert(rtree_, box, static_cast<int>(row_data[i]));
+                free(box);
+            } else {
+                rtree_insert_temporal(rtree_, temp, static_cast<int>(row_data[i]));
             }
-        } else { 
             continue;
         }
 
-        if (box == nullptr) {
+        if (data_size != bbox_size_) {
             continue;
         }
-        
-        void* target = (char*)boxes + (i * bbox_size_);
+
+        void *box = malloc(data_size);
+        memcpy(box, data, data_size);
+
+        if (bbox_type_ == T_STBOX) {
+            STBox *stbox = (STBox *) box;
+            int32_t box_srid = stbox_srid(stbox);
+            if (box_srid != 0) {
+                STBox *normalized_box = stbox_set_srid(stbox, 0);
+                if (normalized_box) {
+                    free(box);
+                    box = normalized_box;
+                }
+            }
+        }
+
+        void *target = (char *) boxes + (i * bbox_size_);
         memcpy(target, box, bbox_size_);
-        rtree_insert(rtree_, target, static_cast<int64_t>(row_data[i]));
+        rtree_insert(rtree_, target, static_cast<int>(row_data[i]));
         free(box);
     }
-    
-    free(boxes);
+
+    if (boxes) free(boxes);
 }
 
 
@@ -473,18 +496,8 @@ unique_ptr<ExpressionMatcher> TRTreeIndex::MakeFunctionMatcher() const {
     matcher->expr_type = make_uniq<SpecificExpressionTypeMatcher>(ExpressionType::BOUND_FUNCTION);
     matcher->policy = SetMatcher::Policy::UNORDERED;
 
-    LogicalType index_type;
-    if (bbox_type_ == T_STBOX) {
-        index_type = StboxType::stbox();
-    } else if (bbox_type_ == T_TSTZSPAN) {
-        index_type = SpanTypes::tstzspan();
-    } else {
-        index_type = LogicalType::BLOB;
-    }
-
-    // Left operand
     auto lhs_matcher = make_uniq<ExpressionMatcher>();
-    lhs_matcher->type = make_uniq<SpecificTypeMatcher>(index_type); 
+    lhs_matcher->type = make_uniq<SpecificTypeMatcher>(column_type_);
     matcher->matchers.push_back(std::move(lhs_matcher));
 
     // Right operand
