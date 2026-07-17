@@ -4707,6 +4707,21 @@ static void Gen_th3index_values(DataChunk &args, ExpressionState &, Vector &resu
 }
 
 
+// ===== @ingroup meos_h3_comp =====
+static void Gen_ever_eq_h3indexset_th3index(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_s, string_t in_t, ValidityMask &mask, idx_t idx) {
+            Set *s = BlobToSet(in_s);
+            Temporal *t = BlobToTemporal(in_t);
+            int r = ever_eq_h3indexset_th3index(s, t);
+            free(s); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+
 // ===== @ingroup meos_h3_comp_ever =====
 static void Gen_ever_eq_th3index_th3index(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -4803,6 +4818,17 @@ static void Gen_th3index_to_tbigint(DataChunk &args, ExpressionState &, Vector &
             Temporal *r = th3index_to_tbigint(t);
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_geo_to_h3index_set(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_g, int32_t res) {
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, 4326);
+            Set *r = geo_to_h3index_set(gs, res);
+            free(gs);
+            return SetToBlob(result, r);
         });
 }
 
@@ -16249,6 +16275,11 @@ static void RegisterGenerated_meos_h3_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValues", {H3indexTypes::th3index()}, LogicalType::LIST(H3indexTypes::h3index()), Gen_th3index_values));
 }
 
+static void RegisterGenerated_meos_h3_comp(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eEq", {H3indexTypes::h3indexset(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_ever_eq_h3indexset_th3index));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?=", {H3indexTypes::h3indexset(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_ever_eq_h3indexset_th3index));
+}
+
 static void RegisterGenerated_meos_h3_comp_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("eEq", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_ever_eq_th3index_th3index));
     RegisterSerializedScalarFunction(loader, ScalarFunction("?=", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_ever_eq_th3index_th3index));
@@ -16270,6 +16301,7 @@ static void RegisterGenerated_meos_h3_conversion(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tbigint()}, H3indexTypes::th3index(), Gen_tbigint_to_th3index));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tbigint", {H3indexTypes::th3index()}, TemporalTypes::tbigint(), Gen_th3index_to_tbigint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("::", {H3indexTypes::th3index()}, TemporalTypes::tbigint(), Gen_th3index_to_tbigint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("geoToH3IndexSet", {GeoTypes::GEOMETRY(), LogicalType::INTEGER}, H3indexTypes::h3indexset(), Gen_geo_to_h3index_set));
 }
 
 static void RegisterGenerated_meos_h3_edges(ExtensionLoader &loader) {
@@ -19123,6 +19155,7 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_geo_restrict(loader);
     RegisterGenerated_meos_geo_srid(loader);
     RegisterGenerated_meos_h3_accessor(loader);
+    RegisterGenerated_meos_h3_comp(loader);
     RegisterGenerated_meos_h3_comp_ever(loader);
     RegisterGenerated_meos_h3_comp_temp(loader);
     RegisterGenerated_meos_h3_conversion(loader);

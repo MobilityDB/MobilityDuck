@@ -2376,6 +2376,65 @@ def emit_output_hexwkb(f, cls, blobto):
             "    }}\n"
             "}}\n").format(fn=fn, cls=cls, blobto=blobto)
 
+def shape_h3_prefilter(f):
+    """The two static H3 cell-set prefilter shapes the generic paths miss (both family=H3;
+    the Set operand/return is an h3indexset, registered as its own BLOB alias):
+      - geoToH3IndexSet  (GSERIALIZED*, int) -> Set*   : geometry->cells, marshalled @ 4326
+        (h3 is geographic). The generic arg_type has no GSERIALIZED marshaller, and the
+        Temporal-sibling geo path (shape_geo_temporal) sources the SRID from a temporal arg
+        this function lacks, so a dedicated fixed-SRID emit is needed.
+      - eEq(h3indexset,th3index)  (Set*, Temporal*) -> int  : the trip-in-cells prefilter,
+        an `int` tri-state (ret<0 -> SQL NULL) that shape_set does not match (it keys on
+        rb==bool and (Set,scalar)/(Set,Set), not (Set,Temporal)).
+    Keyed on SHAPE + H3 family, not the literal name, so any future such H3 fn generates."""
+    if (f.get("family") or "") != "H3":
+        return None
+    if not f.get("sqlfn"):
+        return None
+    # geoToH3IndexSet is rejected by supported() ONLY on its GSERIALIZED arg (marshalled here);
+    # eEq(h3indexset,th3index) passes supported(). Any OTHER unsupported reason -> skip.
+    sup = supported(f)
+    if sup is not None and "GSERIALIZED" not in sup:
+        return None
+    ins, out = classify(f)
+    if out is not None or len(ins) != 2:
+        return None
+    b0, b1 = base(ins[0]["canonical"]), base(ins[1]["canonical"])
+    rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
+    ptr = lambda p: norm(p["canonical"]).endswith("*")
+    if (b0 == "GSERIALIZED" and ptr(ins[0]) and b1 == "int"
+            and "*" not in norm(ins[1]["canonical"]) and rb == "Set" and rn.endswith("*")):
+        return "geo2set"
+    if (b0 == "Set" and ptr(ins[0]) and b1 == "Temporal" and ptr(ins[1])
+            and rb in ("int", "int32_t") and "*" not in rn):
+        return "settemp_ebool"
+    return None
+
+def emit_h3_prefilter(f, kind):
+    name = f["name"]
+    if kind == "geo2set":   # (geometry, int) -> h3indexset ; geometry marshalled @ 4326
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t in_g, int32_t res) {{\n"
+                f"            GSERIALIZED *gs = GeometryToGSerialized(in_g, 4326);\n"
+                f"            Set *r = {name}(gs, res);\n"
+                f"            free(gs);\n"
+                f"            return SetToBlob(result, r);\n"
+                f"        }});\n}}\n")
+    # settemp_ebool: (h3indexset, th3index) -> int tri-state -> nullable BOOLEAN
+    return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+            f"    EnsureMeosThreadInitialized();\n"
+            f"    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),\n"
+            f"        [&](string_t in_s, string_t in_t, ValidityMask &mask, idx_t idx) {{\n"
+            f"            Set *s = BlobToSet(in_s);\n"
+            f"            Temporal *t = BlobToTemporal(in_t);\n"
+            f"            int r = {name}(s, t);\n"
+            f"            free(s); free(t);\n"
+            f"            if (r < 0) {{ mask.SetInvalid(idx); return false; }}\n"
+            f"            return r != 0;\n"
+            f"        }});\n}}\n")
+
 def gen_cpp(fns, out_path, declared=None, aliases=None):
     bodies, generic_regs, specific_regs = GReg(), GReg(), GReg()
     set_bodies, set_generic_regs, set_specific_regs = GReg(), GReg(), GReg()
@@ -3057,6 +3116,25 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             for nm in names:
                 spec_sink.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                  f'"{reg_name(nm, f)}", {{{acc}}}, {ret}, Gen_{fn}));')
+
+    # ---- H3 cell-set prefilter: geoToH3IndexSet + eEq(h3indexset,th3index) ----
+    # Two static H3 shapes the generic paths miss (geometry-arg fixed-SRID; (Set,Temporal)
+    # tri-state); emitted with a dedicated shape like the geo-temporal spatial rels.
+    for f in fns:
+        hpk = shape_h3_prefilter(f)
+        if hpk is None:
+            continue
+        STATE["grp"] = f.get("group") or "meos_ungrouped"
+        set_bodies.append(emit_h3_prefilter(f, hpk)); n_set += 1
+        fn = f["name"]
+        names = reg_names(f, f["sqlfn"], aliases)
+        if hpk == "geo2set":
+            sig, rett = "{GeoTypes::GEOMETRY(), LogicalType::INTEGER}", "H3indexTypes::h3indexset()"
+        else:   # settemp_ebool
+            sig, rett = "{H3indexTypes::h3indexset(), H3indexTypes::th3index()}", "LogicalType::BOOLEAN"
+        for nm in names:
+            set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                     f'"{reg_name(nm, f)}", {sig}, {rett}, Gen_{fn}));')
 
     # ---- bodies, sectioned by @ingroup group (one section per group) ----
     body_by_grp = defaultdict(list)
