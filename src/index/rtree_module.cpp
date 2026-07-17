@@ -61,7 +61,7 @@ TRTreeIndex::TRTreeIndex(const string &name, IndexConstraintType constraint_type
         bbox_type_ = T_TSTZSPAN;
         bbox_size_ = sizeof(Span);  
         rtree_ = rtree_create_tstzspan();
-    } else if (type == TgeompointType::TGEOMPOINT()) {
+    } else if (type == TgeompointType::tgeompoint()) {
         bbox_type_ = T_STBOX;
         bbox_size_ = sizeof(STBox);
         rtree_ = rtree_create_stbox();
@@ -233,7 +233,7 @@ void TRTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifier
         vector.Flatten(expression_result.size());
     }
 
-    const bool indexes_temporal = column_type_ == TgeompointType::TGEOMPOINT();
+    const bool indexes_temporal = column_type_ == TgeompointType::tgeompoint();
 
     void *boxes = indexes_temporal ? nullptr : malloc(bbox_size_ * expression_result.size());
     
