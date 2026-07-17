@@ -2224,7 +2224,7 @@ void TemporalFunctions::Temporal_to_tinstant(DataChunk &args, ExpressionState &s
                 free(data_copy);
                 throw InternalException("Failure in Temporal_to_tinstant: unable to cast string to temporal");
             }
-            TInstant *ret = temporal_to_tinstant(temp);
+            TInstant *ret = temporal_as_tinstant(temp);
             if (!ret) {
                 free(data_copy);
                 throw InternalException("Failure in Temporal_to_tinstant: conversion failed");
@@ -2269,7 +2269,7 @@ void TemporalFunctions::Temporal_to_tsequence(DataChunk &args, ExpressionState &
                 free(data_copy);
                 throw InternalException("Failure in Temporal_to_tsequence: unable to cast string to temporal");
             }
-            TSequence *ret = temporal_to_tsequence(temp, interp);
+            TSequence *ret = temporal_as_tsequence(temp, interp);
             size_t temp_size = temporal_mem_size((Temporal*)ret);
             uint8_t *temp_data = (uint8_t*)malloc(temp_size);
             memcpy(temp_data, (Temporal*)ret, temp_size);
@@ -2311,7 +2311,7 @@ void TemporalFunctions::Temporal_to_tsequenceset(DataChunk &args, ExpressionStat
                 free(data_copy);
                 throw InternalException("Failure in Temporal_to_tsequenceset: unable to cast string to temporal");
             }
-            TSequenceSet *ret = temporal_to_tsequenceset(temp, interp);
+            TSequenceSet *ret = temporal_as_tsequenceset(temp, interp);
             size_t temp_size = temporal_mem_size((Temporal*)ret);
             uint8_t *temp_data = (uint8_t*)malloc(temp_size);
             memcpy(temp_data, (Temporal*)ret, temp_size);
