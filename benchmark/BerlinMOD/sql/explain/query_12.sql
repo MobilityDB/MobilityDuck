@@ -18,18 +18,34 @@ WHERE
 ORDER BY p.PointId, i.InstantId, v1.Licence, v2.Licence;
 */
 
+-- WITH Temp AS (
+--     SELECT DISTINCT p.PointId, p.Geom, i.InstantId, i.Instant, t.VehicleId
+--     FROM Trips t, Points1 p, Instants1 i
+--     WHERE t.Trip @> stbox(p.Geom::WKB_BLOB, i.Instant)
+--     AND valueAtTimestamp(t.Trip, i.Instant) = p.Geom )
+-- SELECT DISTINCT t1.PointId, t1.Geom, t1.InstantId, t1.Instant, 
+--     v1.Licence AS Licence1, v2.Licence AS Licence2
+-- FROM Temp t1
+--     JOIN Vehicles v1 ON t1.VehicleId = v1.VehicleId
+--     JOIN Temp t2 ON t1.VehicleId < t2.VehicleId
+--         AND t1.PointID = t2.PointID
+--         AND t1.InstantId = t2.InstantId
+--     JOIN Vehicles v2 ON t2.VehicleId = v2.VehicleId
+-- ORDER BY t1.PointId, t1.InstantId, v1.Licence, v2.Licence;
 EXPLAIN ANALYZE
 WITH Temp AS (
-    SELECT DISTINCT p.PointId, p.Geom, i.InstantId, i.Instant, t.VehicleId
-    FROM Trips t, Points1 p, Instants1 i
-    WHERE t.Trip @> stbox(p.Geom::WKB_BLOB, i.Instant)
-    AND valueAtTimestamp(t.Trip, i.Instant) = p.Geom )
-SELECT DISTINCT t1.PointId, t1.Geom, t1.InstantId, t1.Instant, 
-    v1.Licence AS Licence1, v2.Licence AS Licence2
-FROM Temp t1
-    JOIN Vehicles v1 ON t1.VehicleId = v1.VehicleId
-    JOIN Temp t2 ON t1.VehicleId < t2.VehicleId
-        AND t1.PointID = t2.PointID
-        AND t1.InstantId = t2.InstantId
-    JOIN Vehicles v2 ON t2.VehicleId = v2.VehicleId
-ORDER BY t1.PointId, t1.InstantId, v1.Licence, v2.Licence;
+  SELECT DISTINCT p.pointId, p.geom, p.geomWKT, i.instantId, i.instant, t.vehicleid
+  FROM   Trips t, Points p, Instants i
+  WHERE  t.trip && stbox(p.geom, i.instant)
+    AND  valueAtTimestamp(t.trip, i.instant) = p.geom
+)
+SELECT DISTINCT t1.pointId, t1.geomWKT AS geom,
+       t1.instantId, t1.instant,
+       v1.licence AS licence1, v2.licence AS licence2
+FROM   Temp t1
+JOIN   Vehicles v1 ON t1.vehicleid = v1.vehicleid
+JOIN   Temp     t2 ON t1.vehicleid < t2.vehicleid
+                  AND t1.pointId   = t2.pointId
+                  AND t1.instantId = t2.instantId
+JOIN   Vehicles v2 ON t2.vehicleid = v2.vehicleid
+ORDER  BY t1.pointId, t1.instantId, licence1, licence2;

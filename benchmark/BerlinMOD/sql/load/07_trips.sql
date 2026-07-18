@@ -17,20 +17,33 @@ CREATE OR REPLACE TABLE Trips (
     VehicleId integer NOT NULL REFERENCES Vehicles(VehicleId),
     Trip tgeompoint NOT NULL,
     Traj geometry,
+    Trip_h3 th3index,
     PRIMARY KEY (VehicleId, TripId));
 
 COPY TripsInput(TripId, VehicleId, PosX, PosY, t) FROM './data/tripsinput.csv';
+
+-- INSERT INTO TripsTmp(TripId, VehicleId, Tgeom)
+-- SELECT TripId, VehicleId,
+--     array_agg(
+--         tgeompoint(
+--         ST_Transform(
+--             ST_Point(PosX, PosY),
+--             'EPSG:4326',
+--             'EPSG:3857',
+--             always_xy := true
+--         ), t
+--         )
+--         ORDER BY t
+--     )
+-- FROM TripsInput
+-- GROUP BY VehicleId, TripId
+-- ORDER BY VehicleId, TripId;
 
 INSERT INTO TripsTmp(TripId, VehicleId, Tgeom)
 SELECT TripId, VehicleId,
     array_agg(
         tgeompoint(
-        ST_Transform(
-            ST_Point(PosX, PosY),
-            'EPSG:4326',
-            'EPSG:3857',
-            always_xy := true
-        )::WKB_BLOB, t
+            ST_Point(PosX, PosY), t
         )
         ORDER BY t
     )
@@ -44,6 +57,9 @@ ORDER BY VehicleId, TripId;
 
 UPDATE Trips
 SET Traj = trajectory(Trip);
+
+UPDATE Trips
+SET Trip_h3 = th3index(('SRID=4326;' || asEWKT(Trip))::tgeompoint, 7);
 
 CREATE OR REPLACE VIEW Trips1 AS
     SELECT * FROM Trips
