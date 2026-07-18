@@ -2385,12 +2385,15 @@ def emit_output_hexwkb(f, cls, blobto):
             "}}\n").format(fn=fn, cls=cls, blobto=blobto)
 
 def shape_h3_prefilter(f):
-    """The two static H3 cell-set prefilter shapes the generic paths miss (both family=H3;
-    the Set operand/return is an h3indexset, registered as its own BLOB alias):
+    """The three static H3 cell shapes the generic paths miss (all family=H3; the Set
+    operand/return is an h3indexset, registered as its own BLOB alias):
       - geoToH3IndexSet  (GSERIALIZED*, int) -> Set*   : geometry->cells, marshalled @ 4326
         (h3 is geographic). The generic arg_type has no GSERIALIZED marshaller, and the
         Temporal-sibling geo path (shape_geo_temporal) sources the SRID from a temporal arg
         this function lacks, so a dedicated fixed-SRID emit is needed.
+      - geoToH3Cell  (GSERIALIZED*, int) -> uint64_t   : geometry->single cell, same GSERIALIZED
+        marshalling as geoToH3IndexSet but a scalar h3index (BIGINT-backed) return instead of
+        a Set.
       - eEq(h3indexset,th3index)  (Set*, Temporal*) -> int  : the trip-in-cells prefilter,
         an `int` tri-state (ret<0 -> SQL NULL) that shape_set does not match (it keys on
         rb==bool and (Set,scalar)/(Set,Set), not (Set,Temporal)).
@@ -2400,9 +2403,11 @@ def shape_h3_prefilter(f):
     if not f.get("sqlfn"):
         return None
     # geoToH3IndexSet is rejected by supported() ONLY on its GSERIALIZED arg (marshalled here);
-    # eEq(h3indexset,th3index) passes supported(). Any OTHER unsupported reason -> skip.
+    # geoToH3Cell ONLY on its scalar uint64_t return (marshalled here, bit-preserving into
+    # h3index/BIGINT); eEq(h3indexset,th3index) passes supported(). Any OTHER unsupported
+    # reason -> skip.
     sup = supported(f)
-    if sup is not None and "GSERIALIZED" not in sup:
+    if sup is not None and "GSERIALIZED" not in sup and sup != "ret:uint64_t":
         return None
     ins, out = classify(f)
     if out is not None or len(ins) != 2:
@@ -2410,9 +2415,11 @@ def shape_h3_prefilter(f):
     b0, b1 = base(ins[0]["canonical"]), base(ins[1]["canonical"])
     rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
     ptr = lambda p: norm(p["canonical"]).endswith("*")
-    if (b0 == "GSERIALIZED" and ptr(ins[0]) and b1 == "int"
-            and "*" not in norm(ins[1]["canonical"]) and rb == "Set" and rn.endswith("*")):
-        return "geo2set"
+    if b0 == "GSERIALIZED" and ptr(ins[0]) and b1 == "int" and "*" not in norm(ins[1]["canonical"]):
+        if rb == "Set" and rn.endswith("*"):
+            return "geo2set"
+        if rb == "uint64_t" and "*" not in rn:
+            return "geo2scalar"
     if (b0 == "Set" and ptr(ins[0]) and b1 == "Temporal" and ptr(ins[1])
             and rb in ("int", "int32_t") and "*" not in rn):
         return "settemp_ebool"
@@ -2429,6 +2436,16 @@ def emit_h3_prefilter(f, kind):
                 f"            Set *r = {name}(gs, res);\n"
                 f"            free(gs);\n"
                 f"            return SetToBlob(result, r);\n"
+                f"        }});\n}}\n")
+    if kind == "geo2scalar":   # (geometry, int) -> h3index (BIGINT, bit-preserving) @ 4326
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::Execute<string_t, int32_t, int64_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t in_g, int32_t res) {{\n"
+                f"            GSERIALIZED *gs = GeometryToGSerialized(in_g, 4326);\n"
+                f"            uint64_t r = {name}(gs, res);\n"
+                f"            free(gs);\n"
+                f"            return (int64_t) r;\n"
                 f"        }});\n}}\n")
     # settemp_ebool: (h3indexset, th3index) -> int tri-state -> nullable BOOLEAN
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
@@ -3138,6 +3155,8 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         names = reg_names(f, f["sqlfn"], aliases)
         if hpk == "geo2set":
             sig, rett = "{GeoTypes::GEOMETRY(), LogicalType::INTEGER}", "H3indexTypes::h3indexset()"
+        elif hpk == "geo2scalar":
+            sig, rett = "{GeoTypes::GEOMETRY(), LogicalType::INTEGER}", "H3indexTypes::h3index()"
         else:   # settemp_ebool
             sig, rett = "{H3indexTypes::h3indexset(), H3indexTypes::th3index()}", "LogicalType::BOOLEAN"
         for nm in names:
