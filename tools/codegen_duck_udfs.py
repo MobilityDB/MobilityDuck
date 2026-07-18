@@ -1695,8 +1695,16 @@ def shape_temporal_span(f):
 CONT_BLOB = {"Span": "BlobToSpan", "Set": "BlobToSet", "SpanSet": "BlobToSpanSet"}
 def emit_temporal_span(f, kind):
     name = f["name"]; side, cont, _flav, retk = kind.split(":"); blob = CONT_BLOB[cont]
-    if retk == "T": ret_c, ret_s, rett = "Temporal *r = ", "return TemporalToBlob(result, r);", "string_t"
-    else:           ret_c, ret_s, rett = "bool r = ", "return r;", "bool"
+    # retk == "T": a restriction (atTime/minusTime etc.) that removes everything is a
+    # NULL-safe MEOS outcome -> must map to SQL NULL via ExecuteWithNulls/TemporalToBlobN
+    if retk == "T":
+        ret_c, ret_s, rett = "Temporal *r = ", "return TemporalToBlobN(result, r, mask, idx);", "string_t"
+        lam_args = "string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t"
+        executor = "ExecuteWithNulls"
+    else:
+        ret_c, ret_s, rett = "bool r = ", "return r;", "bool"
+        lam_args = "string_t a, string_t b)"
+        executor = "Execute"
     if side == "ts_r":   # (Temporal, Container)
         body = (f"            Temporal *t = BlobToTemporal(a);\n            {cont} *cc = {blob}(b);\n"
                 f"            {ret_c}{name}(t, cc);\n            free(t); free(cc);\n            {ret_s}")
@@ -1705,8 +1713,8 @@ def emit_temporal_span(f, kind):
                 f"            {ret_c}{name}(cc, t);\n            free(cc); free(t);\n            {ret_s}")
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
-            f"    BinaryExecutor::Execute<string_t, string_t, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
-            f"        [&](string_t a, string_t b) {{\n{body}\n        }});\n}}\n")
+            f"    BinaryExecutor::{executor}<string_t, string_t, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
+            f"        [&]({lam_args} {{\n{body}\n        }});\n}}\n")
 
 # ---- Temporal -> container conversion (timeSpan/valueSpan/tbox), sqlSignatures-DRIVEN ----
 # A unary `Temporal -> Span/SpanSet/TBox/STBox` cast (timeSpan=temporal_to_tstzspan,
