@@ -321,6 +321,8 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TgeogpointType::RegisterScalarFunctions(loader);
 	TgeogpointType::RegisterRoundtripIO(loader);
 
+	SpatialAggregates::RegisterMinDistance(loader);
+
 	TGeometryTypes::RegisterScalarFunctions(loader);
 	TGeometryTypes::RegisterTypes(loader);
 	TGeometryTypes::RegisterCastFunctions(loader);
