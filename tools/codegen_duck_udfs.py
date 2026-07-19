@@ -84,8 +84,11 @@ SCALAR = {
     "int":          ("LogicalType::INTEGER",  "int32_t"),
     "int32":        ("LogicalType::INTEGER",  "int32_t"),
     "int32_t":      ("LogicalType::INTEGER",  "int32_t"),
-    # uint32 (the PG hash width) registers as the unsigned UINTEGER — see the
-    # SCALAR_RET_CPP note below. The uint64 cell ids keep the CELL_UINT path.
+    # Unsigned ints use DuckDB's NATIVE unsigned types (UINTEGER/UBIGINT) — the
+    # faithful representation, see the SCALAR_RET_CPP note below. The 14l catalog
+    # renders the uint32 canonical as "unsigned int"; uint64 stays "uint64_t".
+    # (uint64 cell ids keep the CELL_UINT path, checked before scalar in ret_type.)
+    "unsigned int": ("LogicalType::UINTEGER", "uint32_t"),
     "uint32":       ("LogicalType::UINTEGER", "uint32_t"),
     "uint32_t":     ("LogicalType::UINTEGER", "uint32_t"),
     "int64":        ("LogicalType::BIGINT",   "int64_t"),
@@ -255,13 +258,17 @@ def family(f):
 SCALAR_RET_CPP = {"int": ("int32_t", "LogicalType::INTEGER"),
                   "int32_t": ("int32_t", "LogicalType::INTEGER"),
                   "int64_t": ("int64_t", "LogicalType::BIGINT"),
-                  # The MEOS *_hash functions return uint32 (PG hash width) and
-                  # must register as UINTEGER, not a signed INTEGER that flips
-                  # the sign of hashes >= 2**31. (uint64 returns — hash seeds and
-                  # the H3Index/Quadbin cell ids — are handled elsewhere: cell
-                  # ids via the CELL_UINT path; the *_hash_extended seed width is
-                  # left to a follow-up so it does not surface here yet.)
-                  "uint32_t": ("uint32_t", "LogicalType::UINTEGER"),
+                  # The MEOS *_hash functions return uint32. DuckDB has a NATIVE unsigned
+                  # type (UINTEGER) that holds the full uint32 range, so the faithful
+                  # representation is UINTEGER — NOT a signed INTEGER (a hash >= 2**31 is out
+                  # of range for INT32 and DuckDB RANGE-CHECKS the cast, it does NOT
+                  # bit-reinterpret the way PG/C does). PG only *declares* integer because it
+                  # lacks unsigned SQL types; DuckDB does not have that limit. The 14l catalog
+                  # renders the uint32 canonical as "unsigned int" (was "uint32_t" before the
+                  # meos-api update — both keyed here). (uint64 *_hash_extended returns UBIGINT
+                  # analogously but needs a (Temporal, seed)->scalar shape — a follow-up.)
+                  "unsigned int": ("uint32_t", "LogicalType::UINTEGER"),
+                  "uint32_t":     ("uint32_t", "LogicalType::UINTEGER"),
                   "double": ("double", "LogicalType::DOUBLE"),
                   "bool": ("bool", "LogicalType::BOOLEAN")}
 # By-value scalar returns the TEMPORAL detectors accept: the identity-marshalled ones
