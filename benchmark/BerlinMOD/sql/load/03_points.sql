@@ -20,8 +20,8 @@ SET geomWKT = ST_AsText(Geom);
 UPDATE Points
 SET geom_h3cell = geoToH3Cell(Geom, 7);
 
-CREATE OR REPLACE VIEW Points1(PointId, PosX, PosY, Geom) AS
-    SELECT PointId, PosX, PosY, Geom
+CREATE OR REPLACE VIEW Points1(PointId, PosX, PosY, Geom, geomWKT, geom_h3cell) AS
+    SELECT PointId, PosX, PosY, Geom, geomWKT, geom_h3cell
     FROM Points
     ORDER BY PointId
     LIMIT 10;

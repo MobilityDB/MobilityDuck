@@ -4,7 +4,8 @@
 WITH PointCount AS (
     SELECT p.PointId, COUNT(DISTINCT t.VehicleId) AS Hits
     FROM Trips t, Points p
-    WHERE ST_Intersects(trajectory(t.Trip), p.Geom)
+    WHERE COALESCE(eEq(p.geom_h3cell, t.Trip_h3), TRUE)
+    AND ST_Intersects(trajectory(t.Trip), p.Geom)
     GROUP BY p.PointId )
 SELECT PointId, Hits
 FROM PointCount AS p

@@ -4,9 +4,10 @@
 WITH Temp AS (
     SELECT DISTINCT pt.PointId, pt.Geom, pr.PeriodId, pr.Period, t.VehicleId
     FROM Trips t, Points1 pt, Periods1 pr
-    WHERE t.Trip && stbox(pt.Geom, pr.Period)
+    WHERE COALESCE(eEq(pt.geom_h3cell, t.Trip_h3), TRUE)
+    AND t.Trip && stbox(pt.Geom, pr.Period)
     AND ST_Intersects(trajectory(atTime(t.Trip, pr.Period)), pt.Geom) )
-SELECT DISTINCT t.PointId, t.Geom, t.PeriodId, t.Period, v.Licence  
+SELECT DISTINCT t.PointId, t.Geom, t.PeriodId, t.Period, v.Licence
 FROM Temp t, Vehicles v
-WHERE t.VehicleId = v.VehicleId 
+WHERE t.VehicleId = v.VehicleId
 ORDER BY t.PointId, t.PeriodId, v.Licence;

@@ -15,21 +15,6 @@ CREATE OR REPLACE TABLE Regions (
 
 COPY RegionsInput(RegionId, PointNo, XPos, YPos) FROM './data/regions.csv';
 
--- INSERT INTO Regions(RegionId, Geom)
--- SELECT RegionId, ST_MakePolygon(
---     ST_MakeLine(
---         array_agg(
---         ST_Transform(
---             ST_Point(XPos, YPos),
---             'EPSG:4326',
---             'EPSG:3857',
---             always_xy := true
---         )
---         ORDER BY PointNo
---         )
---     )
--- ) FROM RegionsInput GROUP BY RegionId;
-
 INSERT INTO Regions(RegionId, Geom)
 SELECT RegionId, ST_MakePolygon(
     ST_MakeLine(
@@ -43,8 +28,8 @@ SELECT RegionId, ST_MakePolygon(
 UPDATE Regions
 SET Geom_h3set = geoToH3IndexSet(Geom, 7);
 
-CREATE OR REPLACE VIEW Regions1(RegionId, Geom) AS
-    SELECT RegionId, Geom
+CREATE OR REPLACE VIEW Regions1(RegionId, Geom, Geom_h3set) AS
+    SELECT RegionId, Geom, Geom_h3set
     FROM Regions
     ORDER BY RegionId
     LIMIT 10;

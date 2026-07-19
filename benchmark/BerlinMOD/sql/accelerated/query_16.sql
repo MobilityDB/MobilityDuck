@@ -9,6 +9,8 @@ WHERE
     t1.VehicleId = l1.VehicleId
     AND t2.VehicleId = l2.VehicleId
     AND l1.Licence < l2.Licence
+    AND COALESCE(eEq(r.Geom_h3set, t1.Trip_h3), TRUE)
+    AND COALESCE(eEq(r.Geom_h3set, t2.Trip_h3), TRUE)
     AND ST_Intersects(trajectory(atTime(t1.Trip, p.Period)), r.Geom)
     AND ST_Intersects(trajectory(atTime(t2.Trip, p.Period)), r.Geom)
     AND aDisjoint(atTime(t1.Trip, p.Period), atTime(t2.Trip, p.Period))

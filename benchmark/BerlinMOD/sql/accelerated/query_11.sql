@@ -5,7 +5,8 @@ WITH Temp AS (
     SELECT p.PointId, p.Geom, i.InstantId, i.Instant, t.VehicleId
     FROM Trips t, Points1 p, Instants1 i
     WHERE
-        t.Trip @> stbox(p.Geom, i.Instant)
+        COALESCE(eEq(p.geom_h3cell, t.Trip_h3), TRUE)
+        AND t.Trip @> stbox(p.Geom, i.Instant)
         AND valueAtTimestamp(t.Trip, i.Instant) = p.Geom )
 SELECT t.PointId, t.Geom, t.InstantId, t.Instant, v.Licence
 FROM Temp t JOIN Vehicles v ON t.VehicleId = v.VehicleId

@@ -4,9 +4,10 @@
 WITH Temp AS (
     SELECT DISTINCT p.PointId, p.Geom, i.InstantId, i.Instant, t.VehicleId
     FROM Trips t, Points1 p, Instants1 i
-    WHERE t.Trip @> stbox(p.Geom, i.Instant)
+    WHERE COALESCE(eEq(p.geom_h3cell, t.Trip_h3), TRUE)
+    AND t.Trip @> stbox(p.Geom, i.Instant)
     AND valueAtTimestamp(t.Trip, i.Instant) = p.Geom )
-SELECT DISTINCT t1.PointId, t1.Geom, t1.InstantId, t1.Instant, 
+SELECT DISTINCT t1.PointId, t1.Geom, t1.InstantId, t1.Instant,
     v1.Licence AS Licence1, v2.Licence AS Licence2
 FROM Temp t1
     JOIN Vehicles v1 ON t1.VehicleId = v1.VehicleId

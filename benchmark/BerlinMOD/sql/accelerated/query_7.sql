@@ -9,6 +9,7 @@ WITH Temp AS (
     WHERE
         t.VehicleId = v.VehicleId
         AND v.VehicleType = 'passenger'
+        AND COALESCE(eEq(p.geom_h3cell, t.Trip_h3), TRUE)
         AND ST_Intersects(trajectory(t.Trip), p.Geom)
     GROUP BY v.Licence, p.PointId, p.Geom )
 SELECT t1.Licence, t1.PointId, t1.Geom, t1.Instant
