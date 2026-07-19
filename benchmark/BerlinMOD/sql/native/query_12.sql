@@ -16,10 +16,14 @@ WHERE
 ORDER BY p.PointId, i.InstantId, v1.Licence, v2.Licence;
 */
 
+-- Query 12: Which vehicles met at a point from Points1 at an instant 
+-- from Instants1?
+
+EXPLAIN ANALYZE
 WITH Temp AS (
     SELECT DISTINCT p.PointId, p.Geom, i.InstantId, i.Instant, t.VehicleId
     FROM Trips t, Points1 p, Instants1 i
-    WHERE t.Trip @> stbox(p.Geom::WKB_BLOB, i.Instant)
+    WHERE t.Trip @> stbox(p.Geom, i.Instant)
     AND valueAtTimestamp(t.Trip, i.Instant) = p.Geom )
 SELECT DISTINCT t1.PointId, t1.Geom, t1.InstantId, t1.Instant, 
     v1.Licence AS Licence1, v2.Licence AS Licence2

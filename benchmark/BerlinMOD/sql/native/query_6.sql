@@ -17,6 +17,10 @@ ORDER BY v1.Licence, v2.Licence;
 
 */
 
+-- Query 6: What are the pairs of licence plate numbers of “trucks”
+-- that have ever been as close as 10m or less to each other?
+
+EXPLAIN ANALYZE
 WITH Temp(Licence, VehicleId, Trip) AS (
     SELECT v.Licence, t.VehicleId, t.Trip
     FROM Trips t, Vehicles v
