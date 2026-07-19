@@ -14,6 +14,6 @@ SELECT DISTINCT v.licence
 FROM   Vehicles v
 JOIN   Trips t      ON t.vehicleid  = v.vehicleid
 JOIN   Points p ON
-   COALESCE(eEq(geoToH3Cell(p.geom, 7), t.trip_h3), TRUE)
+   COALESCE(eEq(p.geom_h3cell, t.trip_h3), TRUE)
    AND eIntersects(t.trip, p.geom)
 ORDER  BY v.licence;
