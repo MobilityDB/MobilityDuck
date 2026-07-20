@@ -11,7 +11,8 @@ import os
 import argparse
 from typing import Dict, Tuple
 
-QUERIES_NUM = 17
+QUERIES_NAT = [4, 7, 11, 12, 13, 14, 15, 16, 17]
+QUERIES_ACC = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
 
 class QueryRunner:
     def __init__(self, duckdb_path: str = "../../build/release/duckdb",
@@ -22,7 +23,8 @@ class QueryRunner:
         self.benchmark = benchmark
         self.queries_path = queries_path
         self.output_path = output_path
-        self.queries_num = QUERIES_NUM
+        self.queries_nat = QUERIES_NAT
+        self.queries_acc = QUERIES_ACC
 
     def run_sql(self, filename: str, run_type: str) -> Tuple[float, int]:
         success = False
@@ -44,7 +46,10 @@ SET memory_limit = '20GB';
 PRAGMA enable_profiling = 'json';
 PRAGMA profiling_output = 'results/output/{self.benchmark}/{run_type}/{filename.replace('.sql', '.profile.json')}';
 """
-        sql = prefix_text + sql
+        if filename != 'query_10.sql':
+            sql = prefix_text + sql
+        else:
+            sql = sql.replace('benchmark', self.benchmark)
 
         while not success:
             result = subprocess.run(
@@ -85,8 +90,12 @@ PRAGMA profiling_output = 'results/output/{self.benchmark}/{run_type}/{filename.
     def run_queries(self, run_type: str) -> Dict:
         print(f"Running queries for benchmark '{self.benchmark}' with run type '{run_type}'")
         results = dict()
+        if run_type == "native":
+            queries_list = self.queries_nat
+        else:
+            queries_list = self.queries_acc
 
-        for query_num in range(1, self.queries_num + 1):
+        for query_num in queries_list:
             filename = f"query_{query_num}.sql"
             elapsed, line_count = self.run_sql(filename, run_type)
             if elapsed != -1:
@@ -101,8 +110,10 @@ def main():
     parser = argparse.ArgumentParser(description="Data loader for BerlinMOD benchmark")
     parser.add_argument("--benchmark", type=str, required=True, help="Name of the benchmark run")
     parser.add_argument("--type", type=str, default="native", choices=["native", "accelerated"])
+    parser.add_argument("--save", type=bool, default=True, help="Whether to save the results to a JSON file")
     benchmark = parser.parse_args().benchmark
     run_type = parser.parse_args().type
+    save = parser.parse_args().save
 
     if not os.path.exists(f"./results/output/{benchmark}"):
         os.makedirs(f"./results/output/{benchmark}")
@@ -121,11 +132,12 @@ def main():
     if not os.path.exists(f"./results/stats/{benchmark}"):
         os.makedirs(f"./results/stats/{benchmark}")
     
-    stats_filename = f"run_{run_type}.json"
-    with open(f"./results/stats/{benchmark}/{stats_filename}", "w") as f:
-        json.dump(results, f, indent=4)
+    if save:
+        stats_filename = f"run_{run_type}.json"
+        with open(f"./results/stats/{benchmark}/{stats_filename}", "w") as f:
+            json.dump(results, f, indent=4)
     
-    print(f"\nResults saved to ./results/stats/{benchmark}/{stats_filename}")
+        print(f"\nResults saved to ./results/stats/{benchmark}/{stats_filename}")
 
 if __name__ == "__main__":
     main()
