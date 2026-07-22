@@ -1,9 +1,10 @@
 # name: test/sql/temporal_hash.test
-# description: Generated hash surface for the temporal types — temporal_hash (uint32)
-#             and temporal_hash_extended (uint64 + seed). Both use DuckDB's native
-#             unsigned types (UINTEGER / UBIGINT): a MEOS hash fills the full unsigned
-#             range, so a signed INTEGER/BIGINT would be out of range (DuckDB range-
-#             checks the cast, unlike PostgreSQL/C which bit-reinterpret).
+# description: Generated hash surface — temporal_hash (uint32) / temporal_hash_extended
+#             (uint64 + seed) for the temporal types, plus the value-type extended hashes
+#             (span / spanset / set). All use DuckDB's native unsigned types (UINTEGER /
+#             UBIGINT): a MEOS hash fills the full unsigned range, so a signed INTEGER/BIGINT
+#             would be out of range (DuckDB range-checks the cast, unlike PostgreSQL/C which
+#             bit-reinterpret).
 
 require mobilityduck
 
@@ -41,3 +42,33 @@ query I
 SELECT temporal_hash_extended(tfloat '1.5@2000-01-01', 42);
 ----
 17681145013286498633
+
+# ---------------------------------------------------------------------------
+# Value-type extended hashes — span / spanset / set (span & set share the bare
+# `hash_extended` SQL name; spanset uses `spanset_hash_extended`). All UBIGINT.
+# ---------------------------------------------------------------------------
+
+query I
+SELECT hash_extended(intspan '[1,5)', 42);
+----
+17081792371660567560
+
+query I
+SELECT typeof(hash_extended(intspan '[1,5)', 42));
+----
+UBIGINT
+
+query I
+SELECT hash_extended(intset '{1,2,3}', 42);
+----
+8820475475926064787
+
+query I
+SELECT hash_extended(floatset '{1.5,2.5}', 0);
+----
+8197047930258302178
+
+query I
+SELECT spanset_hash_extended(intspanset '{[1,5)}', 42);
+----
+17081792371660567591

@@ -5530,6 +5530,17 @@ static void Gen_set_hash(DataChunk &args, ExpressionState &, Vector &result) {
         });
 }
 
+static void Gen_set_hash_extended(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, uint64_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2) {
+            Set *s = BlobToSet(in);
+            uint64_t r = set_hash_extended(s, a2);
+            free(s);
+            return r;
+        });
+}
+
 static void Gen_set_num_values(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, int32_t>(args.data[0], result, args.size(),
@@ -5914,6 +5925,17 @@ static void Gen_span_hash(DataChunk &args, ExpressionState &, Vector &result) {
         });
 }
 
+static void Gen_span_hash_extended(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, uint64_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2) {
+            Span *s = BlobToSpan(in);
+            uint64_t r = span_hash_extended(s, a2);
+            free(s);
+            return r;
+        });
+}
+
 static void Gen_span_lower_inc(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, bool>(args.data[0], result, args.size(),
@@ -6107,6 +6129,17 @@ static void Gen_spanset_hash(DataChunk &args, ExpressionState &, Vector &result)
         [&](string_t in) {
             SpanSet *s = BlobToSpanSet(in);
             uint32_t r = spanset_hash(s);
+            free(s);
+            return r;
+        });
+}
+
+static void Gen_spanset_hash_extended(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, uint64_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2) {
+            SpanSet *s = BlobToSpanSet(in);
+            uint64_t r = spanset_hash_extended(s, a2);
             free(s);
             return r;
         });
@@ -16570,6 +16603,7 @@ static void RegisterGenerated_meos_quadbin_conversion(ExtensionLoader &loader) {
 static void RegisterGenerated_meos_setspan_accessor(ExtensionLoader &loader) {
     for (auto &type : SetTypes::AllTypes()) {
         RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {type}, LogicalType::UINTEGER, Gen_set_hash));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("hash_extended", {type, LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_set_hash_extended));
         RegisterSerializedScalarFunction(loader, ScalarFunction("numValues", {type}, LogicalType::INTEGER, Gen_set_num_values));
     }
     RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {SetTypes::bigintset()}, LogicalType::BIGINT, Gen_bigintset_end_value));
@@ -16592,6 +16626,7 @@ static void RegisterGenerated_meos_setspan_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValues", {SetTypes::tstzset()}, LogicalType::LIST(LogicalType::TIMESTAMP_TZ), Gen_tstzset_values));
     for (auto &type : SpanTypes::AllTypes()) {
         RegisterSerializedScalarFunction(loader, ScalarFunction("span_hash", {type}, LogicalType::UINTEGER, Gen_span_hash));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("hash_extended", {type, LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_span_hash_extended));
         RegisterSerializedScalarFunction(loader, ScalarFunction("lower_inc", {type}, LogicalType::BOOLEAN, Gen_span_lower_inc));
         RegisterSerializedScalarFunction(loader, ScalarFunction("lower_inc", {type}, LogicalType::BOOLEAN, Gen_span_upper_inc));
     }
@@ -16630,6 +16665,7 @@ static void RegisterGenerated_meos_setspan_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("upper", {SpansetTypes::tstzspanset()}, LogicalType::TIMESTAMP_TZ, Gen_tstzspanset_upper));
     for (auto &type : SpansetTypes::AllTypes()) {
         RegisterSerializedScalarFunction(loader, ScalarFunction("spanset_hash", {type}, LogicalType::UINTEGER, Gen_spanset_hash));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("spanset_hash_extended", {type, LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_spanset_hash_extended));
         RegisterSerializedScalarFunction(loader, ScalarFunction("lower_inc", {type}, LogicalType::BOOLEAN, Gen_spanset_lower_inc));
         RegisterSerializedScalarFunction(loader, ScalarFunction("numSpans", {type}, LogicalType::INTEGER, Gen_spanset_num_spans));
         RegisterSerializedScalarFunction(loader, ScalarFunction("lower_inc", {type}, LogicalType::BOOLEAN, Gen_spanset_upper_inc));

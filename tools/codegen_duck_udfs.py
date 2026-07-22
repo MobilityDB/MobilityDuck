@@ -667,6 +667,11 @@ def shape_set(f):
             and "*" not in norm(ins[1]["canonical"]) and set_reg_scope(f["name"])):
         return ("setcsc:" + base(ins[1]["canonical"]), "LogicalType::BLOB")
     if set_reg_scope(f["name"]) is None: return None
+    # (Set, by-value scalar) -> by-value scalar : the seeded extended hash
+    # set_hash_extended(set, uint64 seed) -> uint64. Mirrors the unary u_scalar.
+    if (len(ins) == 2 and setp(ins[0]) and base(ins[1]["canonical"]) in SCALAR_ARG
+            and "*" not in norm(ins[1]["canonical"]) and rb in BYVAL_RET and "*" not in rn):
+        return ("bsc:" + base(ins[1]["canonical"]) + ":" + rb, byval_ret_duck(rb))
     if len(ins) == 1 and setp(ins[0]):
         if rb == "Set" and rn.endswith("*"):       return ("u_set", "LogicalType::BLOB")
         if rb in BYVAL_RET and "*" not in rn: return ("u_scalar:" + rb, byval_ret_duck(rb))
@@ -749,6 +754,16 @@ def emit_set(f, kind):
                 f"    UnaryExecutor::Execute<string_t, {rett}>(args.data[0], result, args.size(),\n"
                 f"        [&](string_t in) {{\n"
                 f"            Set *s = BlobToSet(in);\n            {cct} r = {name}(s);\n            free(s);\n"
+                f"            return {rexpr};\n        }});\n}}\n")
+    if kind.startswith("bsc:"):     # (Set, by-value scalar) -> by-value scalar (seeded extended hash)
+        _bsc, ab, rb2 = kind.split(':')
+        _dt, cpp2, marsh = SCALAR_ARG[ab]
+        cct, rett, rexpr = byval_ret3(rb2)
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::Execute<string_t, {cpp2}, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t in, {cpp2} a2) {{\n"
+                f"            Set *s = BlobToSet(in);\n            {cct} r = {name}(s, {marsh});\n            free(s);\n"
                 f"            return {rexpr};\n        }});\n}}\n")
     if kind == "b_set":             # (Set,Set) -> Set (pointer return; MEOS NULL -> SQL NULL)
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
@@ -1944,6 +1959,13 @@ def shape_span(f, C=SPAN_C):
             and "*" not in norm(ins[1]["canonical"]) and rb == cb and rn.endswith("*")
             and C["scope"] is not None and C["scope"](f["name"]) is not None):
         return ("csc:" + base(ins[1]["canonical"]), "type")
+    # (X, by-value scalar) -> by-value scalar : the seeded extended hash,
+    # <cbase>_hash_extended(x, uint64 seed) -> uint64. Mirrors the unary u_scalar
+    # return with a SCALAR_ARG 2nd operand; name-scoped like the other span scalars.
+    if (contp(ins[0]) and base(ins[1]["canonical"]) in SCALAR_ARG
+            and "*" not in norm(ins[1]["canonical"]) and rb in BYVAL_RET and "*" not in rn
+            and C["scope"] is not None and C["scope"](f["name"]) is not None):
+        return ("bsc:" + base(ins[1]["canonical"]) + ":" + rb, byval_ret_duck(rb))
     # mixed container (Span, SpanSet) / (SpanSet, Span) -> bool : the span<->spanset
     # positional operators (left/right/overleft/overright span_spanset|spanset_span).
     # A 1-D span and its spanset order on the same axis, but the two operands are
@@ -2005,6 +2027,16 @@ def emit_span(f, kind, C=SPAN_C):
                 f"    UnaryExecutor::Execute<string_t, {rett}>(args.data[0], result, args.size(),\n"
                 f"        [&](string_t in) {{\n"
                 f"            {cb} *s = {bt}(in);\n            {cct} r = {name}(s);\n            free(s);\n"
+                f"            return {rexpr};\n        }});\n}}\n")
+    if kind.startswith("bsc:"):     # (X, by-value scalar) -> by-value scalar (seeded extended hash)
+        _bsc, ab, rb2 = kind.split(':')
+        _dt, cpp2, marsh = SCALAR_ARG[ab]
+        cct, rett, rexpr = byval_ret3(rb2)
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::Execute<string_t, {cpp2}, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t in, {cpp2} a2) {{\n"
+                f"            {cb} *s = {bt}(in);\n            {cct} r = {name}(s, {marsh});\n            free(s);\n"
                 f"            return {rexpr};\n        }});\n}}\n")
     if kind.startswith("u2iv:"):    # (X, by-value scalar) -> owned Interval (duration(spanset,bool))
         _dt, cpp2, marsh = SCALAR_ARG[kind.split(':')[1]]
@@ -2765,6 +2797,16 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {sig}, LogicalType::BOOLEAN, Gen_{fn}));')
             continue
+        if kind.startswith("bsc:"):   # (Set, by-value scalar)->scalar (seeded extended hash): {set, seed}
+            scd = SCALAR_ARG[kind.split(':')[1]][0]
+            scope, accs = set_reg_scope(fn)
+            acc_list = ["type"] if scope == "all" else accs
+            sink = set_generic_regs if scope == "all" else set_specific_regs
+            for a in acc_list:
+                for nm in names:
+                    sink.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                f'"{reg_name(nm, f)}", {{{a}, {scd}}}, {dret}, Gen_{fn}));')
+            continue
         sc = set_reg_scope(fn)
         scope, accs = sc if sc else ("all", None)   # b_set/b_bool (<op>_set_set) -> over AllTypes
         nargs = len(classify(f)[0])
@@ -2869,6 +2911,17 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                         if dflt is not None:
                             sink.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
                                         f'"{reg_name(nm, f)}", {{{a}}}, {a}, Gen_{fn}_d));')
+                continue
+            # (X, by-value scalar)->scalar (seeded extended hash): name-scoped 2-arg {X, seed}.
+            if kind.startswith("bsc:"):
+                argdt = SCALAR_ARG[kind.split(':')[1]][0]
+                scope, accs = C["scope"](fn)
+                acc_list = ["type"] if scope == "all" else accs
+                sink = gen if scope == "all" else span_specific_regs
+                for a in acc_list:
+                    for nm in names:
+                        sink.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                    f'"{reg_name(nm, f)}", {{{a}, {argdt}}}, {dret}, Gen_{fn}));')
                 continue
             # generic (X,X)->bool|X.
             if C.get("single"):   # box: single type, concrete accessor (no AllTypes loop)
