@@ -2391,10 +2391,11 @@ def shape_h3_prefilter(f):
         return None
     if not f.get("sqlfn"):
         return None
-    # geoToH3IndexSet is rejected by supported() ONLY on its GSERIALIZED arg (marshalled here);
-    # eEq(h3indexset,th3index) passes supported(). Any OTHER unsupported reason -> skip.
+    # geoToH3IndexSet/geoToH3Cell are rejected by supported() on their GSERIALIZED arg, and the
+    # scalar h3index (uint64_t) comparison operand is likewise unmarshalled by the generic path;
+    # both are handled here. eEq(h3indexset,th3index) passes supported(). Other reasons -> skip.
     sup = supported(f)
-    if sup is not None and "GSERIALIZED" not in sup:
+    if sup is not None and not any(k in sup for k in ("GSERIALIZED", "uint64")):
         return None
     ins, out = classify(f)
     if out is not None or len(ins) != 2:
@@ -2402,12 +2403,23 @@ def shape_h3_prefilter(f):
     b0, b1 = base(ins[0]["canonical"]), base(ins[1]["canonical"])
     rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
     ptr = lambda p: norm(p["canonical"]).endswith("*")
-    if (b0 == "GSERIALIZED" and ptr(ins[0]) and b1 == "int"
-            and "*" not in norm(ins[1]["canonical"]) and rb == "Set" and rn.endswith("*")):
-        return "geo2set"
-    if (b0 == "Set" and ptr(ins[0]) and b1 == "Temporal" and ptr(ins[1])
-            and rb in ("int", "int32_t") and "*" not in rn):
+    scal = lambda p: "*" not in norm(p["canonical"])
+    ebool = rb in ("int", "int32_t") and "*" not in rn   # int tri-state -> nullable BOOLEAN
+    # geoToH3IndexSet: (GSERIALIZED*, int) -> Set*  ;  geoToH3Cell: (GSERIALIZED*, int) -> uint64_t
+    if b0 == "GSERIALIZED" and ptr(ins[0]) and b1 == "int" and scal(ins[1]):
+        if rb == "Set" and rn.endswith("*"):
+            return "geo2set"
+        if rb == "uint64_t":
+            return "geo2cell"
+    # eEq/aEq(h3indexset, th3index): (Set*, Temporal*) -> int
+    if b0 == "Set" and ptr(ins[0]) and b1 == "Temporal" and ptr(ins[1]) and ebool:
         return "settemp_ebool"
+    # eEq/aEq(h3index, th3index): (uint64_t cell, Temporal*) -> int
+    if b0 == "uint64_t" and scal(ins[0]) and b1 == "Temporal" and ptr(ins[1]) and ebool:
+        return "celltemp_ebool"
+    # eEq/aEq(th3index, h3index): (Temporal*, uint64_t cell) -> int
+    if b0 == "Temporal" and ptr(ins[0]) and b1 == "uint64_t" and scal(ins[1]) and ebool:
+        return "tempcell_ebool"
     return None
 
 def emit_h3_prefilter(f, kind):
@@ -2421,6 +2433,38 @@ def emit_h3_prefilter(f, kind):
                 f"            Set *r = {name}(gs, res);\n"
                 f"            free(gs);\n"
                 f"            return SetToBlob(result, r);\n"
+                f"        }});\n}}\n")
+    if kind == "geo2cell":  # (geometry, int) -> h3index single cell ; geometry marshalled @ 4326
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::Execute<string_t, int32_t, int64_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t in_g, int32_t res) -> int64_t {{\n"
+                f"            GSERIALIZED *gs = GeometryToGSerialized(in_g, 4326);\n"
+                f"            int64_t cell = (int64_t) {name}(gs, res);\n"
+                f"            free(gs);\n"
+                f"            return cell;\n"
+                f"        }});\n}}\n")
+    if kind == "celltemp_ebool":  # (h3index cell, th3index) -> int tri-state -> nullable BOOLEAN
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::ExecuteWithNulls<int64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](int64_t cell, string_t in_t, ValidityMask &mask, idx_t idx) {{\n"
+                f"            Temporal *t = BlobToTemporal(in_t);\n"
+                f"            int r = {name}((uint64_t) cell, t);\n"
+                f"            free(t);\n"
+                f"            if (r < 0) {{ mask.SetInvalid(idx); return false; }}\n"
+                f"            return r != 0;\n"
+                f"        }});\n}}\n")
+    if kind == "tempcell_ebool":  # (th3index, h3index cell) -> int tri-state -> nullable BOOLEAN
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t in_t, int64_t cell, ValidityMask &mask, idx_t idx) {{\n"
+                f"            Temporal *t = BlobToTemporal(in_t);\n"
+                f"            int r = {name}(t, (uint64_t) cell);\n"
+                f"            free(t);\n"
+                f"            if (r < 0) {{ mask.SetInvalid(idx); return false; }}\n"
+                f"            return r != 0;\n"
                 f"        }});\n}}\n")
     # settemp_ebool: (h3indexset, th3index) -> int tri-state -> nullable BOOLEAN
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
@@ -3130,6 +3174,12 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         names = reg_names(f, f["sqlfn"], aliases)
         if hpk == "geo2set":
             sig, rett = "{GeoTypes::GEOMETRY(), LogicalType::INTEGER}", "H3indexTypes::h3indexset()"
+        elif hpk == "geo2cell":
+            sig, rett = "{GeoTypes::GEOMETRY(), LogicalType::INTEGER}", "H3indexTypes::h3index()"
+        elif hpk == "celltemp_ebool":
+            sig, rett = "{H3indexTypes::h3index(), H3indexTypes::th3index()}", "LogicalType::BOOLEAN"
+        elif hpk == "tempcell_ebool":
+            sig, rett = "{H3indexTypes::th3index(), H3indexTypes::h3index()}", "LogicalType::BOOLEAN"
         else:   # settemp_ebool
             sig, rett = "{H3indexTypes::h3indexset(), H3indexTypes::th3index()}", "LogicalType::BOOLEAN"
         for nm in names:

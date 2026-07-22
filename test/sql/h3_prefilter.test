@@ -1,8 +1,9 @@
 # name: test/sql/h3_prefilter.test
-# description: Static H3 cell-set prefilter — geoToH3IndexSet(geometry, res) + the
-#   eEq(h3indexset, th3index) trip-in-cells membership test (the canonical BerlinMOD
-#   q02/q04/q11-q17 prefilter). geoToH3IndexSet builds the query geometry's H3 cell set;
-#   eEq answers whether the trip's th3index path ever lies in any of those cells.
+# description: Static H3 prefilter surface for the canonical BerlinMOD queries —
+#   geoToH3IndexSet(geometry, res) + eEq(h3indexset, th3index) (the cell-SET form, q02/q11-q17),
+#   and geoToH3Cell(geometry, res) + eEq(h3index, th3index) (the single-CELL form, q04).
+#   The geo functions build the query geometry's H3 cell(s); eEq answers whether the trip's
+#   th3index path ever lies in them.
 
 require mobilityduck
 
@@ -19,3 +20,26 @@ SELECT eEq(geoToH3IndexSet(ST_Point(50, 50), 5),
            th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5));
 ----
 false
+
+# ---- single-cell form: geoToH3Cell + eEq(h3index, th3index) (BerlinMOD q04) ----
+
+# The query point's own H3 cell lies on the trip's th3index path -> true.
+query I
+SELECT eEq(geoToH3Cell(ST_Point(1, 1), 5),
+           th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5));
+----
+true
+
+# A far query point's cell is not on the trip's path -> false.
+query I
+SELECT eEq(geoToH3Cell(ST_Point(50, 50), 5),
+           th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5));
+----
+false
+
+# The commutated operand order (th3index, h3index) resolves and agrees.
+query I
+SELECT eEq(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5),
+           geoToH3Cell(ST_Point(1, 1), 5));
+----
+true
