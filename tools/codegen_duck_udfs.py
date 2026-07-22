@@ -91,6 +91,7 @@ SCALAR = {
     "unsigned int": ("LogicalType::UINTEGER", "uint32_t"),
     "uint32":       ("LogicalType::UINTEGER", "uint32_t"),
     "uint32_t":     ("LogicalType::UINTEGER", "uint32_t"),
+    "uint64_t":     ("LogicalType::UBIGINT",  "uint64_t"),
     "int64":        ("LogicalType::BIGINT",   "int64_t"),
     "int64_t":      ("LogicalType::BIGINT",   "int64_t"),
     "double":       ("LogicalType::DOUBLE",   "double"),
@@ -149,11 +150,12 @@ def ret_type(f, out_canon):
         return None
     rc = f["returnType"]["canonical"]; nc = norm(rc); b = base(rc)
     if b in PTR_RET and nc.endswith("*"):  return (PTR_RET[b][0], "ptr")
+    if b in CELL_UINT and "*" not in nc:   # Tcell<T> cell-id base value (startValue/endValue);
+        sc = reg_scope(f["name"])          # checked BEFORE the generic scalar path so a uint64 cell
+        if sc and sc[0] == "types" and len(sc[1]) == 1 and sc[1][0] in CELL_BASEVAL:  # id keeps its
+            return (CELL_BASEVAL[sc[1][0]], "scalar")   # cell type; a non-cell uint64 (hash_extended)
+        # falls through to the scalar path below (UBIGINT).
     if b in SCALAR and "*" not in nc:      return (SCALAR[b][0], "scalar")
-    if b in CELL_UINT and "*" not in nc:   # Tcell<T> cell-id base value (startValue/endValue)
-        sc = reg_scope(f["name"])
-        if sc and sc[0] == "types" and len(sc[1]) == 1 and sc[1][0] in CELL_BASEVAL:
-            return (CELL_BASEVAL[sc[1][0]], "scalar")
     if b == "GSERIALIZED" and nc.endswith("*"):  # owned geometry -> DuckDB GEOMETRY (geo marshaller)
         return ("GeoTypes::GEOMETRY()", "geo")
     if b == "Interval" and nc.endswith("*"):  # owned ptr -> by-value interval_t (TakeInterval)
@@ -265,10 +267,12 @@ SCALAR_RET_CPP = {"int": ("int32_t", "LogicalType::INTEGER"),
                   # bit-reinterpret the way PG/C does). PG only *declares* integer because it
                   # lacks unsigned SQL types; DuckDB does not have that limit. The 14l catalog
                   # renders the uint32 canonical as "unsigned int" (was "uint32_t" before the
-                  # meos-api update — both keyed here). (uint64 *_hash_extended returns UBIGINT
-                  # analogously but needs a (Temporal, seed)->scalar shape — a follow-up.)
+                  # meos-api update — both keyed here). uint64 *_hash_extended returns UBIGINT
+                  # analogously (native unsigned, holds the full uint64 hash; the seed arg is
+                  # UBIGINT too — see SCALAR_ARG).
                   "unsigned int": ("uint32_t", "LogicalType::UINTEGER"),
                   "uint32_t":     ("uint32_t", "LogicalType::UINTEGER"),
+                  "uint64_t":     ("uint64_t", "LogicalType::UBIGINT"),
                   "double": ("double", "LogicalType::DOUBLE"),
                   "bool": ("bool", "LogicalType::BOOLEAN")}
 # By-value scalar returns the TEMPORAL detectors accept: the identity-marshalled ones
@@ -800,14 +804,16 @@ def shape_emittable(f):
     # Take only the owned (non-const) return so the body's free(t)+TemporalToBlob stays correct.
     if rb in TEMPORAL_PTR_RET and rn.endswith("*") and "const" not in f["returnType"]["canonical"]:
         return ("temporal", "MD_TEMPORAL")   # ret type resolved per-accessor via ret_temporal_type
-    if rb in BYVAL_RET and "*" not in rn:
-        return ("scalar:" + rb, scalar_ret_duck(f))
     # Tcell<T> cell-id base value: a per-type cell accessor (reg_scope keys the single cell
-    # temporal type) returns the collapsed uint64 cell id -> the family's BIGINT-backed cell
-    # DuckDB type (startValue/endValue on th3index -> h3index()). See CELL_BASEVAL.
+    # temporal type) returns the collapsed uint64 cell id -> the family's cell DuckDB type
+    # (startValue/endValue on th3index -> h3index()). Checked BEFORE the generic by-value
+    # scalar branch so a uint64 cell id keeps its cell type (BYVAL_RET now includes uint64
+    # for *_hash_extended). See CELL_BASEVAL.
     if rb in CELL_UINT and "*" not in rn and sc[0] == "types" and len(sc[1]) == 1 \
             and sc[1][0] in CELL_BASEVAL:
         return ("cellscalar", CELL_BASEVAL[sc[1][0]])
+    if rb in BYVAL_RET and "*" not in rn:
+        return ("scalar:" + rb, scalar_ret_duck(f))
     if rb in ("Interval", "text", "char") and rn.endswith("*"):   # owned-pointer scalar return (duration / text / cstring)
         return ("scalar:" + rb, scalar_ret_duck(f))
     # base-value pointer return (Temporal<T> accessor: startValue/endValue -> the family base value,
@@ -898,6 +904,7 @@ SCALAR_ARG = {
     "int":         ("LogicalType::INTEGER", "int32_t", "a2"),
     "int32_t":     ("LogicalType::INTEGER", "int32_t", "a2"),
     "int64_t":     ("LogicalType::BIGINT",  "int64_t", "a2"),
+    "uint64_t":    ("LogicalType::UBIGINT", "uint64_t", "a2"),  # *_hash_extended seed (native unsigned)
     "double":      ("LogicalType::DOUBLE",  "double",  "a2"),
     "bool":        ("LogicalType::BOOLEAN", "bool",    "a2"),
     "TimestampTz": ("LogicalType::TIMESTAMP_TZ", "timestamp_tz_t", "DuckDBToMeosTimestamp(a2).value"),
