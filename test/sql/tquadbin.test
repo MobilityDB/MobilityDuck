@@ -12,7 +12,7 @@ SELECT quadbinGetResolution(quadbinTileToCell(2, 1, 2));
 2
 
 query I
-SELECT quadbinIsValidCell(quadbinTileToCell(5, 3, 3));
+SELECT isValidCell(quadbinTileToCell(5, 3, 3));
 ----
 true
 
@@ -58,6 +58,28 @@ query I
 SELECT endValue(tquadbin(quadbinTileToCell(2,1,2), TIMESTAMPTZ '2024-06-01'));
 ----
 5199124294822526975
+
+# ── generated static cell ops (shape_quadbin_scalar, @ingroup meos_quadbin) ────
+query I
+SELECT isValidIndex(quadbinTileToCell(1, 0, 1));
+----
+true
+
+# cellToParent drops to the requested resolution -> getResolution round-trips it
+query I
+SELECT quadbinGetResolution(quadbinCellToParent(quadbinTileToCell(3, 2, 3), 1));
+----
+1
+
+query I
+SELECT quadbinCellArea(quadbinTileToCell(2, 1, 2)) > 0;
+----
+true
+
+query I
+SELECT length(quadbinCellToQuadkey(quadbinTileToCell(2, 1, 2))) > 0;
+----
+true
 
 # ── generated cell-id valueN (Temporal<T> out-param fold) → quadbin ───────────
 query I

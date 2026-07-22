@@ -324,10 +324,11 @@ void QuadbinTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     const auto V   = LogicalType::VARCHAR;
     const auto TS  = LogicalType::TIMESTAMP_TZ;
 
-    /* Static cell helpers */
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "quadbinTileToCell", {I32, I32, I32}, QB,
-        QuadbinFunctions::Quadbin_tile_to_cell));
+    /* Static cell helpers. quadbinTileToCell / quadbinGetResolution / isValidCell /
+     * isValidIndex are now GENERATED (shape_quadbin_scalar, @ingroup meos_quadbin); their hand
+     * registrations are retired here. Only the per-axis quadbinCellToTileX/Y/Z stay hand — the
+     * canonical quadbinCellToTile(quadbin) -> integer[] is deferred pending a MEOS array/tuple
+     * export (RETIRE_UNCOVERED_OK / relay P4). */
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "quadbinCellToTileX", {QB}, I32,
         QuadbinFunctions::Quadbin_cell_to_tile_x));
@@ -337,12 +338,6 @@ void QuadbinTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "quadbinCellToTileZ", {QB}, I32,
         QuadbinFunctions::Quadbin_cell_to_tile_z));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "quadbinGetResolution", {QB}, I32,
-        QuadbinFunctions::Quadbin_get_resolution));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "quadbinIsValidCell", {QB}, B,
-        QuadbinFunctions::Quadbin_is_valid_cell));
 
     /* Constructor */
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
