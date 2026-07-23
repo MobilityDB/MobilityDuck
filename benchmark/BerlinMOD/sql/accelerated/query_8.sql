@@ -1,5 +1,5 @@
-.mode csv
-.output results/output/query_8.csv
+-- Query 8: What are the overall travelled distances of the vehicles with licence
+-- plate numbers from Licences1 during the periods from Periods1?
 
 SELECT l.Licence, p.PeriodId, p.Period,
     SUM(length(atTime(t.Trip, p.Period))) AS Dist

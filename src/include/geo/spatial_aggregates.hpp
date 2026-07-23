@@ -11,6 +11,9 @@ struct SpatialAggregates {
 
     // Register tCentroid(tgeompoint) -> tgeompoint.
     static void RegisterTcentroid(ExtensionLoader &loader);
+
+    // Register MinDistanceAgg(tgeompoint, tgeompoint) / (tgeogpoint, tgeogpoint) -> DOUBLE.
+    static void RegisterMinDistance(ExtensionLoader &loader);
 };
 
 } // namespace duckdb

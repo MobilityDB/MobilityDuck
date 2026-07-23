@@ -1,5 +1,5 @@
-.mode csv
-.output results/output/query_9.csv
+-- Query 9: What is the longest distance that was travelled by a vehicle during 
+-- each of the periods from Periods?
 
 WITH Distances AS (
     SELECT p.PeriodId, p.Period, t.VehicleId,

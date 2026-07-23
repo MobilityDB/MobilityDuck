@@ -1695,8 +1695,16 @@ def shape_temporal_span(f):
 CONT_BLOB = {"Span": "BlobToSpan", "Set": "BlobToSet", "SpanSet": "BlobToSpanSet"}
 def emit_temporal_span(f, kind):
     name = f["name"]; side, cont, _flav, retk = kind.split(":"); blob = CONT_BLOB[cont]
-    if retk == "T": ret_c, ret_s, rett = "Temporal *r = ", "return TemporalToBlob(result, r);", "string_t"
-    else:           ret_c, ret_s, rett = "bool r = ", "return r;", "bool"
+    # retk == "T": a restriction (atTime/minusTime etc.) that removes everything is a
+    # NULL-safe MEOS outcome -> must map to SQL NULL via ExecuteWithNulls/TemporalToBlobN
+    if retk == "T":
+        ret_c, ret_s, rett = "Temporal *r = ", "return TemporalToBlobN(result, r, mask, idx);", "string_t"
+        lam_args = "string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t"
+        executor = "ExecuteWithNulls"
+    else:
+        ret_c, ret_s, rett = "bool r = ", "return r;", "bool"
+        lam_args = "string_t a, string_t b)"
+        executor = "Execute"
     if side == "ts_r":   # (Temporal, Container)
         body = (f"            Temporal *t = BlobToTemporal(a);\n            {cont} *cc = {blob}(b);\n"
                 f"            {ret_c}{name}(t, cc);\n            free(t); free(cc);\n            {ret_s}")
@@ -1705,8 +1713,8 @@ def emit_temporal_span(f, kind):
                 f"            {ret_c}{name}(cc, t);\n            free(cc); free(t);\n            {ret_s}")
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
-            f"    BinaryExecutor::Execute<string_t, string_t, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
-            f"        [&](string_t a, string_t b) {{\n{body}\n        }});\n}}\n")
+            f"    BinaryExecutor::{executor}<string_t, string_t, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
+            f"        [&]({lam_args} {{\n{body}\n        }});\n}}\n")
 
 # ---- Temporal -> container conversion (timeSpan/valueSpan/tbox), sqlSignatures-DRIVEN ----
 # A unary `Temporal -> Span/SpanSet/TBox/STBox` cast (timeSpan=temporal_to_tstzspan,
@@ -2377,24 +2385,36 @@ def emit_output_hexwkb(f, cls, blobto):
             "}}\n").format(fn=fn, cls=cls, blobto=blobto)
 
 def shape_h3_prefilter(f):
-    """The two static H3 cell-set prefilter shapes the generic paths miss (both family=H3;
-    the Set operand/return is an h3indexset, registered as its own BLOB alias):
+    """The static H3 cell shapes the generic paths miss (all family=H3; the Set
+    operand/return is an h3indexset, registered as its own BLOB alias):
       - geoToH3IndexSet  (GSERIALIZED*, int) -> Set*   : geometry->cells, marshalled @ 4326
         (h3 is geographic). The generic arg_type has no GSERIALIZED marshaller, and the
         Temporal-sibling geo path (shape_geo_temporal) sources the SRID from a temporal arg
         this function lacks, so a dedicated fixed-SRID emit is needed.
+      - geoToH3Cell  (GSERIALIZED*, int) -> uint64_t   : geometry->single cell, same GSERIALIZED
+        marshalling as geoToH3IndexSet but a scalar h3index (BIGINT-backed) return instead of
+        a Set.
       - eEq(h3indexset,th3index)  (Set*, Temporal*) -> int  : the trip-in-cells prefilter,
         an `int` tri-state (ret<0 -> SQL NULL) that shape_set does not match (it keys on
         rb==bool and (Set,scalar)/(Set,Set), not (Set,Temporal)).
+      - eEq/eNe/aEq/aNe(h3index,th3index) and the (th3index,h3index) mirror  (uint64_t,
+        Temporal*) -> int tri-state : the bare-cell-vs-temporal-cell comparison family.
+        arg_type has no uint64_t scalar mapping (it is not a plain integer — it is the
+        family's BIGINT-backed cell id, same as the CELL_UINT/CELL_BASEVAL return-side
+        path for startValue/endValue), so this marshals it directly via the cell type
+        reg_scope(name) resolves to.
     Keyed on SHAPE + H3 family, not the literal name, so any future such H3 fn generates."""
     if (f.get("family") or "") != "H3":
         return None
     if not f.get("sqlfn"):
         return None
     # geoToH3IndexSet is rejected by supported() ONLY on its GSERIALIZED arg (marshalled here);
-    # eEq(h3indexset,th3index) passes supported(). Any OTHER unsupported reason -> skip.
+    # geoToH3Cell ONLY on its scalar uint64_t return (marshalled here, bit-preserving into
+    # h3index/BIGINT); the cell-vs-temporal comparisons ONLY on their uint64_t scalar arg
+    # (marshalled here, same bit-preserving convention); eEq(h3indexset,th3index) passes
+    # supported() outright. Any OTHER unsupported reason -> skip.
     sup = supported(f)
-    if sup is not None and "GSERIALIZED" not in sup:
+    if sup is not None and "GSERIALIZED" not in sup and sup not in ("ret:uint64_t", "arg:uint64_t"):
         return None
     ins, out = classify(f)
     if out is not None or len(ins) != 2:
@@ -2402,12 +2422,21 @@ def shape_h3_prefilter(f):
     b0, b1 = base(ins[0]["canonical"]), base(ins[1]["canonical"])
     rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
     ptr = lambda p: norm(p["canonical"]).endswith("*")
-    if (b0 == "GSERIALIZED" and ptr(ins[0]) and b1 == "int"
-            and "*" not in norm(ins[1]["canonical"]) and rb == "Set" and rn.endswith("*")):
-        return "geo2set"
+    if b0 == "GSERIALIZED" and ptr(ins[0]) and b1 == "int" and "*" not in norm(ins[1]["canonical"]):
+        if rb == "Set" and rn.endswith("*"):
+            return "geo2set"
+        if rb == "uint64_t" and "*" not in rn:
+            return "geo2scalar"
     if (b0 == "Set" and ptr(ins[0]) and b1 == "Temporal" and ptr(ins[1])
             and rb in ("int", "int32_t") and "*" not in rn):
         return "settemp_ebool"
+    if rb in ("int", "int32_t") and "*" not in rn:
+        sc = reg_scope(f["name"])
+        cell_ok = sc and sc[0] == "types" and len(sc[1]) == 1 and sc[1][0] in CELL_BASEVAL
+        if cell_ok and b0 == "uint64_t" and not ptr(ins[0]) and b1 == "Temporal" and ptr(ins[1]):
+            return "cell_l:" + sc[1][0]
+        if cell_ok and b0 == "Temporal" and ptr(ins[0]) and b1 == "uint64_t" and not ptr(ins[1]):
+            return "cell_r:" + sc[1][0]
     return None
 
 def emit_h3_prefilter(f, kind):
@@ -2421,6 +2450,38 @@ def emit_h3_prefilter(f, kind):
                 f"            Set *r = {name}(gs, res);\n"
                 f"            free(gs);\n"
                 f"            return SetToBlob(result, r);\n"
+                f"        }});\n}}\n")
+    if kind == "geo2scalar":   # (geometry, int) -> h3index (BIGINT, bit-preserving) @ 4326
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::Execute<string_t, int32_t, int64_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t in_g, int32_t res) {{\n"
+                f"            GSERIALIZED *gs = GeometryToGSerialized(in_g, 4326);\n"
+                f"            uint64_t r = {name}(gs, res);\n"
+                f"            free(gs);\n"
+                f"            return (int64_t) r;\n"
+                f"        }});\n}}\n")
+    if kind.startswith("cell_l:"):   # (h3index, th3index) -> int tri-state -> nullable BOOLEAN
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::ExecuteWithNulls<int64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](int64_t a1, string_t in_t, ValidityMask &mask, idx_t idx) {{\n"
+                f"            Temporal *t = BlobToTemporal(in_t);\n"
+                f"            int r = {name}((uint64_t) a1, t);\n"
+                f"            free(t);\n"
+                f"            if (r < 0) {{ mask.SetInvalid(idx); return false; }}\n"
+                f"            return r != 0;\n"
+                f"        }});\n}}\n")
+    if kind.startswith("cell_r:"):   # (th3index, h3index) -> int tri-state -> nullable BOOLEAN
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t in_t, int64_t a2, ValidityMask &mask, idx_t idx) {{\n"
+                f"            Temporal *t = BlobToTemporal(in_t);\n"
+                f"            int r = {name}(t, (uint64_t) a2);\n"
+                f"            free(t);\n"
+                f"            if (r < 0) {{ mask.SetInvalid(idx); return false; }}\n"
+                f"            return r != 0;\n"
                 f"        }});\n}}\n")
     # settemp_ebool: (h3indexset, th3index) -> int tri-state -> nullable BOOLEAN
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
@@ -3130,6 +3191,14 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         names = reg_names(f, f["sqlfn"], aliases)
         if hpk == "geo2set":
             sig, rett = "{GeoTypes::GEOMETRY(), LogicalType::INTEGER}", "H3indexTypes::h3indexset()"
+        elif hpk == "geo2scalar":
+            sig, rett = "{GeoTypes::GEOMETRY(), LogicalType::INTEGER}", "H3indexTypes::h3index()"
+        elif hpk.startswith("cell_l:"):
+            temp_acc = hpk.split(":", 1)[1]
+            sig, rett = "{%s, %s}" % (CELL_BASEVAL[temp_acc], temp_acc), "LogicalType::BOOLEAN"
+        elif hpk.startswith("cell_r:"):
+            temp_acc = hpk.split(":", 1)[1]
+            sig, rett = "{%s, %s}" % (temp_acc, CELL_BASEVAL[temp_acc]), "LogicalType::BOOLEAN"
         else:   # settemp_ebool
             sig, rett = "{H3indexTypes::h3indexset(), H3indexTypes::th3index()}", "LogicalType::BOOLEAN"
         for nm in names:

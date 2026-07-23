@@ -38,13 +38,21 @@ Once finished, some basic statistics (load times, numbers of rows) are recorded 
 ## 3. Run the queries
 Run the script to run the benchmark queries. The script has one required flag and one optional one:
 - The `--benchmark` flag should have the same name as the data directory.
-- The `--explain` flag can take value 0 or 1 (default: 0), signifying whether the normal queries should be run (0) or the `EXPLAIN ANALYZE` queries should be run (1)
-    - `--explain=0`: the output will be in the form of CSV files, located under `results/output/[benchmark]`
-    - `--explain=1`: the output will not be stored, rather, only the `explain analyze` stdout will be stored under `results/output/[benchmark]/explain`
+- The `--type` flag can take value `native` or `accelerated` (default: `native`), signifying whether the normal queries should be run or the accelerated queries should be run
 
 For example, for the `brussels` benchmark:
 ```bash
-python3 run_queries.py --benchmark brussels --explain 1
+python3 run_queries.py --benchmark brussels --type native
 ```
 
-Once finished, some basic statistics (query times, numbers of rows) are recorded in `results/stats/[benchmark]/load_[queries/explain].json`.
+Once finished, some basic statistics (query times, numbers of rows) are recorded in `results/stats/[benchmark]/load_[native/accelerated].json`.
+
+## 4. Profile the results
+Run the script to summarize the benchmark results in terms of number of rows returned and latency of each query. The script has the same two flags as the query runner.
+
+For example, for the `brussels` benchmark:
+```bash
+python3 profile_results.py --benchmark brussels --type native
+```
+
+Once finished, the results are saved in a .csv file at `results/stats/[benchmark]/run_[native/accelerated]_profile.csv`.

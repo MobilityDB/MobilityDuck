@@ -13,13 +13,23 @@ WHERE
 ORDER BY p.PointId, i.InstantId, v.Licence;
 */
 
+-- WITH Temp AS (
+--     SELECT p.PointId, p.Geom, i.InstantId, i.Instant, t.VehicleId
+--     FROM Trips t, Points1 p, Instants1 i
+--     WHERE
+--         t.Trip @> stbox(p.Geom::WKB_BLOB, i.Instant)
+--         AND valueAtTimestamp(t.Trip, i.Instant) = p.Geom )
+-- SELECT t.PointId, t.Geom, t.InstantId, t.Instant, v.Licence
+-- FROM Temp t JOIN Vehicles v ON t.VehicleId = v.VehicleId
+-- ORDER BY t.PointId, t.InstantId, v.Licence;
 EXPLAIN ANALYZE
 WITH Temp AS (
-    SELECT p.PointId, p.Geom, i.InstantId, i.Instant, t.VehicleId
-    FROM Trips t, Points1 p, Instants1 i
-    WHERE
-        t.Trip @> stbox(p.Geom::WKB_BLOB, i.Instant)
-        AND valueAtTimestamp(t.Trip, i.Instant) = p.Geom )
-SELECT t.PointId, t.Geom, t.InstantId, t.Instant, v.Licence
-FROM Temp t JOIN Vehicles v ON t.VehicleId = v.VehicleId
-ORDER BY t.PointId, t.InstantId, v.Licence;
+  SELECT p.pointId, p.geom, p.geomWKT, i.instantId, i.instant, t.vehicleid
+  FROM   Trips t, Points p, Instants i
+  WHERE  t.trip && stbox(p.geom, i.instant)
+    AND  valueAtTimestamp(t.trip, i.instant) = p.geom
+)
+SELECT t.pointId, t.geomWKT AS geom, t.instantId, t.instant, v.licence
+FROM   Temp t
+JOIN   Vehicles v ON t.vehicleid = v.vehicleid
+ORDER  BY t.pointId, t.instantId, v.licence;

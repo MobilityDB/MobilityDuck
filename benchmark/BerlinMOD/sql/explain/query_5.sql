@@ -17,16 +17,30 @@ ORDER BY l1.Licence, l2.Licence;
 */
 
 EXPLAIN ANALYZE
-WITH Temp1(Licence1, Trajs) AS (
-    SELECT l1.Licence, collect_gs(list(trajectory_gs(t1.Trip)))
-    FROM Trips t1, Licences1 l1
-    WHERE t1.VehicleId = l1.VehicleId
-    GROUP BY l1.Licence ),
-Temp2(Licence2, Trajs) AS (
-    SELECT l2.Licence, collect_gs(list(trajectory_gs(t2.Trip)))
-    FROM Trips t2, Licences2 l2
-    WHERE t2.VehicleId = l2.VehicleId
-    GROUP BY l2.Licence )
-SELECT Licence1, Licence2, distance_gs(t1.Trajs, t2.Trajs) AS MinDist
-FROM Temp1 t1, Temp2 t2  
-ORDER BY Licence1, Licence2;
+-- WITH Temp1(Licence1, Trajs) AS (
+--     SELECT l1.Licence, collect_gs(list(trajectory_gs(t1.Trip)))
+--     FROM Trips t1, Licences1 l1
+--     WHERE t1.VehicleId = l1.VehicleId
+--     GROUP BY l1.Licence ),
+-- Temp2(Licence2, Trajs) AS (
+--     SELECT l2.Licence, collect_gs(list(trajectory_gs(t2.Trip)))
+--     FROM Trips t2, Licences2 l2
+--     WHERE t2.VehicleId = l2.VehicleId
+--     GROUP BY l2.Licence )
+-- SELECT Licence1, Licence2, distance_gs(t1.Trajs, t2.Trajs) AS MinDist
+-- FROM Temp1 t1, Temp2 t2  
+-- ORDER BY Licence1, Licence2;
+WITH LicTrips AS (
+  SELECT l.licence,
+         l.licenceId,
+         array_agg(t.trip) AS trips
+  FROM   Licences l
+  JOIN   Vehicles      v ON v.licence = l.licence
+  JOIN   Trips         t ON t.vehicleid   = v.vehicleid
+  GROUP  BY l.licence, l.licenceId )
+SELECT a.licence AS licence1,
+       b.licence AS licence2,
+       minDistance(a.trips, b.trips) AS min_dist
+FROM   LicTrips a
+JOIN   LicTrips b ON a.licenceId < b.licenceId
+ORDER  BY a.licence, b.licence;

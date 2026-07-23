@@ -3,6 +3,10 @@
 #   eEq(h3indexset, th3index) trip-in-cells membership test (the canonical BerlinMOD
 #   q02/q04/q11-q17 prefilter). geoToH3IndexSet builds the query geometry's H3 cell set;
 #   eEq answers whether the trip's th3index path ever lies in any of those cells.
+#   geoToH3Cell(geometry, res) is the single-cell sibling (used by BerlinMOD q04),
+#   returning a scalar h3index instead of a Set. Also covers eEq/eNe/aEq/aNe(h3index,
+#   th3index) (and its (th3index, h3index) commute) — the bare-cell-vs-trajectory
+#   comparison BerlinMOD q04 also needs, distinct from the Set-vs-trajectory prefilter.
 
 require mobilityduck
 
@@ -19,3 +23,88 @@ SELECT eEq(geoToH3IndexSet(ST_Point(50, 50), 5),
            th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5));
 ----
 false
+
+# Brussels city center (lat 50.85, lng 4.35), resolution 7.
+query I
+SELECT CAST(geoToH3Cell(ST_GeomFromText('POINT(4.35 50.85)'), 7) AS VARCHAR);
+----
+871fa4418ffffff
+
+# Same point at resolution 0 (coarse) gives a base cell.
+query I
+SELECT CAST(geoToH3Cell(ST_GeomFromText('POINT(4.35 50.85)'), 0) AS VARCHAR);
+----
+801ffffffffffff
+
+# Non-POINT input: returns the first point's cell (use geoToH3IndexSet for the full set).
+query I
+SELECT CAST(geoToH3Cell(ST_GeomFromText('LINESTRING(4.35 50.85, 4.36 50.86)'), 7) AS VARCHAR);
+----
+871fa4418ffffff
+
+# eEq/eNe/aEq/aNe(h3index, th3index) — the bare-cell-vs-trajectory comparison (and its
+# (th3index, h3index) commute). Reused verbatim (cell ids + timestamps + expected results)
+# from MobilityDB's own test suite: mobilitydb/test/h3/queries/288_th3index_compops.test.sql
+# / expected/288_th3index_compops.test.out. Same libmeos eacomp_th3index_h3index underneath.
+# MobilityDB also exposes these as `?=`/`%=`/`?<>`/`%<>` operators; DuckDB's parser can't
+# reach arbitrary infix operators (see test/sql/parity/054_tspatial_compops.test), so only
+# the named functions are exercised here.
+
+# (h3index, th3index)
+query I
+SELECT eEq('590464338553208831'::h3index, '590464338553208831@2001-01-01'::th3index);
+----
+true
+
+# Cell not present in the trajectory -> false.
+query I
+SELECT eEq('612544986753269759'::h3index, '590464338553208831@2001-01-01'::th3index);
+----
+false
+
+# (th3index, h3index) — same as above, commuted.
+query I
+SELECT eEq('590464338553208831@2001-01-01'::th3index, '590464338553208831'::h3index);
+----
+true
+
+# A mid-trajectory match — eEq is ever-equal, returns true on any instant match.
+query I
+SELECT eEq('[590464338553208831@2001-01-01, 612544986753269759@2001-01-05]'::th3index,
+           '612544986753269759'::h3index);
+----
+true
+
+# aEq: every instant equals the probe.
+query I
+SELECT aEq('590464338553208831@2001-01-01'::th3index, '590464338553208831'::h3index);
+----
+true
+
+# Mixed trajectory — not always equal.
+query I
+SELECT aEq('{590464338553208831@2001-01-01, 612544986753269759@2001-01-02}'::th3index,
+           '590464338553208831'::h3index);
+----
+false
+
+# eNe and aNe.
+query I
+SELECT eNe('{590464338553208831@2001-01-01, 612544986753269759@2001-01-02}'::th3index,
+           '590464338553208831'::h3index);
+----
+true
+
+query I
+SELECT aNe('590464338553208831@2001-01-01'::th3index, '612544986753269759'::h3index);
+----
+true
+
+# A trajectory can't be both ever-equal AND always-not-equal.
+query I
+SELECT NOT (
+  eEq('590464338553208831@2001-01-01'::th3index, '590464338553208831'::h3index)
+  AND
+  aNe('590464338553208831@2001-01-01'::th3index, '590464338553208831'::h3index));
+----
+true

@@ -9,29 +9,28 @@ import json
 import sys
 import os
 import argparse
-import re
 from typing import Dict, Tuple
 
-QUERIES_NUM = 17
+QUERIES_NAT = [4, 7, 11, 12, 13, 14, 15, 16, 17]
+QUERIES_ACC = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
 
 class QueryRunner:
     def __init__(self, duckdb_path: str = "../../build/release/duckdb",
                        benchmark: str = "default",
-                       queries_path: str = "./sql/queries",
-                       explain_path: str = "./sql/explain",
+                       queries_path: str = "./sql",
                        output_path: str = "./results/output"):
         self.duckdb_path = duckdb_path
         self.benchmark = benchmark
         self.queries_path = queries_path
-        self.explain_path = explain_path
         self.output_path = output_path
-        self.queries_num = QUERIES_NUM
+        self.queries_nat = QUERIES_NAT
+        self.queries_acc = QUERIES_ACC
 
-    def run_sql(self, filename: str) -> Tuple[float, int]:
+    def run_sql(self, filename: str, run_type: str) -> Tuple[float, int]:
         success = False
-        print(f"\nRunning {filename}")
         start_time = time.time()
-        sql_path = os.path.join(self.queries_path, filename)
+        sql_path = os.path.join(self.queries_path, run_type, filename)
+        print(f"\nRunning {sql_path}")
         if not os.path.exists(sql_path):
             print(f"\tError: Query file not found: {sql_path}")
             return -1, -1
@@ -39,7 +38,18 @@ class QueryRunner:
         with open(sql_path, "r") as f:
             sql = f.read()
 
-        sql = sql.replace(".output results/output/query", f".output results/output/{self.benchmark}/query")
+        # sql = sql.replace(f".output results/output/{run_type}/query", f".output results/output/{self.benchmark}/{run_type}/query")
+        prefix_text = f"""
+.mode csv
+.output results/output/{self.benchmark}/{run_type}/{filename.replace('.sql', '.csv')}
+SET memory_limit = '20GB';
+PRAGMA enable_profiling = 'json';
+PRAGMA profiling_output = 'results/output/{self.benchmark}/{run_type}/{filename.replace('.sql', '.profile.json')}';
+"""
+        if filename != 'query_10.sql':
+            sql = prefix_text + sql
+        else:
+            sql = sql.replace('benchmark', self.benchmark)
 
         while not success:
             result = subprocess.run(
@@ -61,13 +71,13 @@ class QueryRunner:
 
         print(f"\tDone in {elapsed:.2f}ms")
 
-        line_count = self.run_validation(filename)
+        line_count = self.run_validation(filename, run_type)
         print(f"\tOutput row count: {line_count}")
         
         return elapsed, line_count
 
-    def run_validation(self, filename: str) -> int:
-        output_file = f"{self.output_path}/{self.benchmark}/{filename.replace('.sql', '.csv')}"
+    def run_validation(self, filename: str, run_type: str) -> int:
+        output_file = f"{self.output_path}/{self.benchmark}/{run_type}/{filename.replace('.sql', '.csv')}"
         if not os.path.exists(output_file):
             print(f"\tError: Output file not found: {output_file}")
             return -1
@@ -77,12 +87,17 @@ class QueryRunner:
             line_count -= 1
         return line_count
 
-    def run_queries(self) -> Dict:
+    def run_queries(self, run_type: str) -> Dict:
+        print(f"Running queries for benchmark '{self.benchmark}' with run type '{run_type}'")
         results = dict()
+        if run_type == "native":
+            queries_list = self.queries_nat
+        else:
+            queries_list = self.queries_acc
 
-        for query_num in range(1, self.queries_num + 1):
+        for query_num in queries_list:
             filename = f"query_{query_num}.sql"
-            elapsed, line_count = self.run_sql(filename)
+            elapsed, line_count = self.run_sql(filename, run_type)
             if elapsed != -1:
                 results[filename] = {
                     "elapsed": elapsed,
@@ -91,74 +106,19 @@ class QueryRunner:
         
         return results
 
-    def run_explain_sql(self, filename: str) -> Tuple[float, int]:
-        output_file = f"{self.output_path}/{self.benchmark}/explain/{filename.replace('.sql', '.txt')}"
-
-        success = False
-        print(f"\nRunning {filename}")
-        sql_path = os.path.join(self.explain_path, filename)
-        if not os.path.exists(sql_path):
-            print(f"\tError: Query file not found: {sql_path}")
-            return -1, -1
-        
-        with open(sql_path, "r") as f:
-            sql = f.read()
-        
-        sql = sql.replace(".output results/output/explain", f".output results/output/{self.benchmark}/explain")
-
-        while not success:
-            result = subprocess.run(
-                [self.duckdb_path, f"./databases/{self.benchmark}.db"],
-                input=sql,
-                capture_output=True,
-                text=True
-            )
-            if result.returncode == 0:
-                success = True
-            else:
-                print(f"\tError running query: {result.stderr}")
-                print("\tTrying again...")
-                time.sleep(1)
-                start_time = time.time()
-
-        with open(output_file, "r") as f:
-            output = f.readlines()
-
-        elapsed = -1.0
-        for line in output:
-            match = re.search(r"Total Time:\s*([0-9.]+)s", line)
-            if match:
-                try:
-                    elapsed = float(match.group(1)) * 1000  # convert to ms
-                except ValueError:
-                    elapsed = -1.0
-                break
-
-        print(f"\tDone in {elapsed:.2f}ms")
-
-        return elapsed
-
-    def run_explain(self) -> Dict:
-        if not os.path.exists(f"./results/output/{self.benchmark}/explain"):
-            os.makedirs(f"./results/output/{self.benchmark}/explain")
-
-        results = dict()
-        for query_num in range(1, self.queries_num + 1):
-            filename = f"query_{query_num}.sql"
-            elapsed = self.run_explain_sql(filename)
-            if elapsed != -1:
-                results[filename] = elapsed
-        return results
-
 def main():
     parser = argparse.ArgumentParser(description="Data loader for BerlinMOD benchmark")
     parser.add_argument("--benchmark", type=str, required=True, help="Name of the benchmark run")
-    parser.add_argument("--explain", type=int, default=0, choices=[0, 1], help="Run explain queries")
+    parser.add_argument("--type", type=str, default="native", choices=["native", "accelerated"])
+    parser.add_argument("--save", type=bool, default=True, help="Whether to save the results to a JSON file")
     benchmark = parser.parse_args().benchmark
-    explain = parser.parse_args().explain
+    run_type = parser.parse_args().type
+    save = parser.parse_args().save
 
     if not os.path.exists(f"./results/output/{benchmark}"):
         os.makedirs(f"./results/output/{benchmark}")
+    if not os.path.exists(f"./results/output/{benchmark}/{run_type}"):
+        os.makedirs(f"./results/output/{benchmark}/{run_type}")
 
     duckdb_path = "../../build/release/duckdb"
     if not os.path.exists(duckdb_path):
@@ -167,19 +127,17 @@ def main():
         sys.exit(1)
     
     runner = QueryRunner(duckdb_path, benchmark)
-    if explain:
-        results = runner.run_explain()
-    else:
-        results = runner.run_queries()
+    results = runner.run_queries(run_type)
     
     if not os.path.exists(f"./results/stats/{benchmark}"):
         os.makedirs(f"./results/stats/{benchmark}")
     
-    stats_filename = "run_queries.json" if not explain else "run_explain.json"
-    with open(f"./results/stats/{benchmark}/{stats_filename}", "w") as f:
-        json.dump(results, f, indent=4)
+    if save:
+        stats_filename = f"run_{run_type}.json"
+        with open(f"./results/stats/{benchmark}/{stats_filename}", "w") as f:
+            json.dump(results, f, indent=4)
     
-    print(f"\nResults saved to ./results/stats/{benchmark}/{stats_filename}")
+        print(f"\nResults saved to ./results/stats/{benchmark}/{stats_filename}")
 
 if __name__ == "__main__":
     main()
