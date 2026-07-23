@@ -1935,9 +1935,11 @@ def shape_span(f, C=SPAN_C):
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
     contp = lambda p: base(p["canonical"]) == cb and norm(p["canonical"]).endswith("*")
     sel = lambda p: base(p["canonical"]) if (base(p["canonical"]) in C["elem"] and "*" not in norm(p["canonical"])) else None
-    # unary (X)->X | scalar  (lower/upper/width, ceil/floor; name-scoped; boxes have no scope)
+    # unary (X)->X | scalar  (lower/upper/width, ceil/floor; name-scoped for spans;
+    # boxes have no scope -> the single concrete accessor emits every box unary
+    # (hasX/hasZ/hasT/isGeodetic, hash, SRID, volume, getSpace, ...)).
     if len(ins) == 1 and contp(ins[0]):
-        if C["scope"] is None or C["scope"](f["name"]) is None: return None
+        if C["scope"] is not None and C["scope"](f["name"]) is None: return None
         if rb == cb and rn.endswith("*"):           return ("u_span", "LogicalType::BLOB")
         if rb in BYVAL_RET and "*" not in rn:       return ("u_scalar:" + rb, byval_ret_duck(rb))
         if rb == "Interval" and rn.endswith("*"):   return ("u_scalar:Interval", "LogicalType::INTERVAL")
@@ -1964,7 +1966,7 @@ def shape_span(f, C=SPAN_C):
     # return with a SCALAR_ARG 2nd operand; name-scoped like the other span scalars.
     if (contp(ins[0]) and base(ins[1]["canonical"]) in SCALAR_ARG
             and "*" not in norm(ins[1]["canonical"]) and rb in BYVAL_RET and "*" not in rn
-            and C["scope"] is not None and C["scope"](f["name"]) is not None):
+            and (C["scope"] is None or C["scope"](f["name"]) is not None)):
         return ("bsc:" + base(ins[1]["canonical"]) + ":" + rb, byval_ret_duck(rb))
     # mixed container (Span, SpanSet) / (SpanSet, Span) -> bool : the span<->spanset
     # positional operators (left/right/overleft/overright span_spanset|spanset_span).
@@ -1981,6 +1983,19 @@ def shape_span(f, C=SPAN_C):
     if not (contp(ins[0]) and contp(ins[1])): return None
     if rb == cb and rn.endswith("*"):  return ("b_span", "type")
     if rb == "bool" and "*" not in rn:     return ("b_bool", "LogicalType::BOOLEAN")
+    # (Box,Box) -> by-value scalar : box comparison / metric accessors
+    # (tbox_cmp/stbox_cmp -> int, nad_stbox_stbox -> float). Boxes only (single
+    # concrete accessor, no AllTypes loop); spans/sets keep their scoped scalar
+    # paths above so span_cmp/set_cmp remain a separate follow-up.
+    if C.get("single") and rb in BYVAL_RET and "*" not in rn:
+        # Skip a base-type-collapsed family: several public C functions share one SQL
+        # (sqlfn, box-pair) surface because the generic implementation is meos_internal
+        # (e.g. nad_tboxfloat_tboxfloat / nad_tboxint_tboxint both back
+        # nearestApproachDistance(tbox,tbox), each asserting its own span basetype and
+        # erroring on the other, while the faithful generic nad_tbox_tbox is internal).
+        # No single public overload is complete -> leave the surface to a MEOS export fix.
+        if f["name"] in STATE.get("box_scalar_collapsed", ()): return None
+        return ("b_scalar:" + rb, byval_ret_duck(rb))
     return None
 
 def emit_span(f, kind, C=SPAN_C):
@@ -2055,6 +2070,15 @@ def emit_span(f, kind, C=SPAN_C):
                 f"            {cb} *s = {bt}(in);\n            {cb} *r = {name}(s, {marsh});\n            free(s);\n"
                 f"            if (!r) {{ mask.SetInvalid(idx); return string_t(); }}\n"
                 f"            return {tb}(result, r);\n        }});\n}}\n")
+    if kind.startswith("b_scalar:"):  # (X,X) -> by-value scalar (box cmp -> int, nad -> double)
+        cct, rett, rexpr = byval_ret3(kind.split(':')[1])
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::Execute<string_t, string_t, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t a, string_t b) {{\n"
+                f"            {cb} *s1 = {bt}(a);\n            {cb} *s2 = {bt}(b);\n"
+                f"            {cct} r = {name}(s1, s2);\n            free(s1); free(s2);\n"
+                f"            return {rexpr};\n        }});\n}}\n")
     if kind == "b_span":            # (X,X) -> X (pointer return; MEOS NULL = empty -> SQL NULL)
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
@@ -2488,6 +2512,31 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
     spanset_generic_regs = GReg(); box_regs = GReg()
     temporal_box_bodies, temporal_box_regs = GReg(), GReg()
     n_un = n_bin = n_ter = n_set = n_span = 0
+    # Detect base-type-collapsed box (Box,Box)->scalar families: >1 public C function
+    # sharing one (sqlfn, box-pair) SQL surface (the faithful generic impl is internal).
+    # Their (Box,Box)->scalar shape is skipped (see shape_span); log so the coverage gap
+    # is explicit rather than silent.
+    _box_pair_scalar = {}
+    for _f in fns:
+        if supported(_f) is not None:
+            continue
+        _ins, _out = classify(_f)
+        if _out is not None or len(_ins) != 2:
+            continue
+        _b0, _b1 = base(_ins[0]["canonical"]), base(_ins[1]["canonical"])
+        if _b0 != _b1 or _b0 not in ("TBox", "STBox"):
+            continue
+        if not (norm(_ins[0]["canonical"]).endswith("*") and norm(_ins[1]["canonical"]).endswith("*")):
+            continue
+        _rb = base(_f["returnType"]["canonical"])
+        if _rb not in BYVAL_RET or "*" in norm(_f["returnType"]["canonical"]):
+            continue
+        _box_pair_scalar.setdefault((_f.get("sqlfn"), _b0), []).append(_f["name"])
+    STATE["box_scalar_collapsed"] = {n for g in _box_pair_scalar.values() if len(g) > 1 for n in g}
+    if STATE["box_scalar_collapsed"]:
+        print("box scalar collapse: skipped %d base-type-collapsed (Box,Box)->scalar fn(s) "
+              "(internal generic backing): %s" % (len(STATE["box_scalar_collapsed"]),
+              ", ".join(sorted(STATE["box_scalar_collapsed"]))))
     for f in fns:
         if declared is not None and f["name"] not in declared:
             continue            # pin/ABI gate: skip catalog fns absent from the build headers
@@ -2866,6 +2915,12 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 continue
             # unary (X)->X|scalar: name-scoped (X_*→AllTypes, <elem>X_*→accessor).
             if kind == "u_span" or kind.startswith("u_scalar:"):
+                if C.get("single"):   # box: single concrete accessor, no scope loop
+                    acc = C["single"]; rett = acc if kind == "u_span" else dret
+                    for nm in names:
+                        box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                        f'"{reg_name(nm, f)}", {{{acc}}}, {rett}, Gen_{fn}));')
+                    continue
                 scope, accs = C["scope"](fn)
                 if scope == "all":
                     rett = C["ret"](fn, "type") if kind == "u_span" else dret
@@ -2915,6 +2970,12 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             # (X, by-value scalar)->scalar (seeded extended hash): name-scoped 2-arg {X, seed}.
             if kind.startswith("bsc:"):
                 argdt = SCALAR_ARG[kind.split(':')[1]][0]
+                if C.get("single"):   # box: single concrete accessor, 2-arg {box, seed/flag}
+                    acc = C["single"]
+                    for nm in names:
+                        box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                        f'"{reg_name(nm, f)}", {{{acc}, {argdt}}}, {dret}, Gen_{fn}));')
+                    continue
                 scope, accs = C["scope"](fn)
                 acc_list = ["type"] if scope == "all" else accs
                 sink = gen if scope == "all" else span_specific_regs

@@ -195,40 +195,10 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "hasX",
-            {stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Stbox_hasx
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "hasZ",
-            {stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Stbox_hasz
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "hasT",
-            {stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Stbox_hast
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "isGeodetic",
-            {stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Stbox_isgeodetic
-        )
-    );
+    // hasX/hasZ/hasT/isGeodetic are generated from the catalog (box unary scalar
+    // accessors) in src/generated/generated_temporal_udfs.cpp.
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "Xmin",
             {stbox()},
@@ -325,14 +295,7 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "volume",
-            {stbox()},
-            LogicalType::DOUBLE,
-            StboxFunctions::Stbox_volume
-        )
-    );
+    // volume is generated from the catalog (box unary scalar accessor).
 
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
@@ -359,14 +322,7 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "getSpace",
-            {stbox()},
-            stbox(),
-            StboxFunctions::Stbox_get_space
-        )
-    );
+    // getSpace is generated from the catalog (box unary accessor -> stbox).
 
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(

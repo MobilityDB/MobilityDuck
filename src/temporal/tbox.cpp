@@ -338,25 +338,9 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "hasX",
-            {tbox()},
-            LogicalType::BOOLEAN,
-            TboxFunctions::Tbox_hasx
-        )
-    );
+    // hasX/hasT are generated from the catalog (box unary scalar accessors).
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "hasT",
-            {tbox()},
-            LogicalType::BOOLEAN,
-            TboxFunctions::Tbox_hast
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "Xmin",
             {tbox()},
@@ -956,12 +940,9 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "tboxFromHexWKB", {LogicalType::VARCHAR}, tbox(),
         TboxFunctions::Tbox_from_hexwkb));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "tbox_hash", {tbox()}, LogicalType::INTEGER,
-        TboxFunctions::Tbox_hash));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "tbox_hash_extended", {tbox(), LogicalType::BIGINT}, LogicalType::BIGINT,
-        TboxFunctions::Tbox_hash_extended));
+    // tbox_hash / tbox_hash_extended are generated from the catalog (box unary
+    // scalar accessors); the generated surface uses the faithful native-unsigned
+    // UINTEGER / UBIGINT return, matching temporal/span/set hash generation.
 }
 
 } // namespace duckdb
