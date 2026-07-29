@@ -228,8 +228,17 @@ static void LoadInternal(ExtensionLoader &loader) {
         /* Set the MEOS timezone to Europe/Brussels so that all temporal-type
          * text I/O uses a consistent, named timezone on every platform.
          * Brussels is a non-UTC zone that surfaces bugs hidden by UTC (e.g.
-         * off-by-one-hour errors in timestamp handling). */
-        meos_initialize_timezone("Europe/Brussels");
+         * off-by-one-hour errors in timestamp handling).
+         *
+         * Skip the timezone init when no IANA timezone database is present on
+         * the system (Alpine/musl images, minimal containers, edge devices).
+         * Without /usr/share/zoneinfo, MEOS's pgtz code fails on opendir;
+         * skipping the timezone init lets the extension load against UTC
+         * instead of erroring at startup. */
+        struct stat tz_st {};
+        if (stat("/usr/share/zoneinfo", &tz_st) == 0 && (tz_st.st_mode & S_IFDIR)) {
+            meos_initialize_timezone("Europe/Brussels");
+        }
         meos_initialize_error_handler(&MobilityduckMeosErrorHandler);
     });
 
