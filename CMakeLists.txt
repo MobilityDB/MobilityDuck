@@ -112,6 +112,9 @@ set(EXTENSION_SOURCES
     src/geo/tgeogpoint_in_out.cpp
     src/geo/tgeogpoint_ops.cpp
     src/quadbin/tquadbin.cpp
+    src/temporal/temporal_blob.cpp
+    src/json/tjsonb.cpp
+    src/json/tjsonb_in_out.cpp
     src/h3/th3index.cpp
     src/cbuffer/tcbuffer.cpp
     src/index/rtree_module.cpp
