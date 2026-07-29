@@ -28,6 +28,12 @@
 #include "index/rtree_module.hpp"
 #include "geo/stbox.hpp"
 #include "geo/tgeompoint.hpp"
+#include "geo/tgeometry.hpp"
+#include "geo/tgeography.hpp"
+#include "geo/tgeogpoint.hpp"
+#include "temporal/span.hpp"
+#include "temporal/tbox.hpp"
+#include "temporal/temporal.hpp"
 #include "index/rtree_index_create_physical.hpp"
 #include "time_util.hpp"
 
@@ -61,12 +67,49 @@ TRTreeIndex::TRTreeIndex(const string &name, IndexConstraintType constraint_type
         bbox_type_ = T_TSTZSPAN;
         bbox_size_ = sizeof(Span);  
         rtree_ = rtree_create_tstzspan();
-    } else if (type == TgeompointType::tgeompoint()) {
+    } else if (type == TboxType::tbox()) {
+        bbox_type_ = T_TBOX;
+        bbox_size_ = sizeof(TBox);
+        rtree_ = rtree_create_tbox();
+    } else if (type == SpanTypes::intspan()) {
+        bbox_type_ = T_INTSPAN;
+        bbox_size_ = sizeof(Span);
+        rtree_ = rtree_create_intspan();
+    } else if (type == SpanTypes::bigintspan()) {
+        bbox_type_ = T_BIGINTSPAN;
+        bbox_size_ = sizeof(Span);
+        rtree_ = rtree_create_bigintspan();
+    } else if (type == SpanTypes::floatspan()) {
+        bbox_type_ = T_FLOATSPAN;
+        bbox_size_ = sizeof(Span);
+        rtree_ = rtree_create_floatspan();
+    } else if (type == SpanTypes::datespan()) {
+        bbox_type_ = T_DATESPAN;
+        bbox_size_ = sizeof(Span);
+        rtree_ = rtree_create_datespan();
+    } else if (type == TemporalTypes::tint() || type == TemporalTypes::tfloat()) {
+        // Temporal numbers: the bounding box is a tbox.
+        bbox_type_ = T_TBOX;
+        bbox_size_ = sizeof(TBox);
+        rtree_ = rtree_create_tbox();
+    } else if (type == TemporalTypes::tbool() || type == TemporalTypes::ttext()) {
+        // Non-numeric, non-spatial temporals: the bounding box is the time span.
+        bbox_type_ = T_TSTZSPAN;
+        bbox_size_ = sizeof(Span);
+        rtree_ = rtree_create_tstzspan();
+    } else if (type == TgeompointType::tgeompoint() ||
+               type == TGeometryTypes::tgeometry() ||
+               type == TGeographyTypes::tgeography() ||
+               type == TGeogpointType::tgeogpoint()) {
+        // Temporal spatial types: the bounding box is an stbox.
         bbox_type_ = T_STBOX;
         bbox_size_ = sizeof(STBox);
         rtree_ = rtree_create_stbox();
     } else {
-        throw InternalException("RTree index only supports STBOX, TSTZSPAN, and TGEOMPOINT types, got: " + type.ToString());
+        throw BinderException(
+            "TRTREE index supports stbox, tbox, the five span types, and the "
+            "temporal types (tint, tfloat, tbool, ttext, tgeompoint, tgeogpoint, "
+            "tgeometry, tgeography). Got: " + type.ToString());
     }
     
     if (!rtree_) {
@@ -233,7 +276,18 @@ void TRTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifier
         vector.Flatten(expression_result.size());
     }
 
-    const bool indexes_temporal = column_type_ == TgeompointType::tgeompoint();
+    // True when the indexed column holds a Temporal value (the bbox is derived
+    // per row at insert time). False when the column already holds a span / tbox
+    // / stbox blob whose bytes are the bbox itself.
+    const bool indexes_temporal =
+        column_type_ == TemporalTypes::tint() ||
+        column_type_ == TemporalTypes::tfloat() ||
+        column_type_ == TemporalTypes::tbool() ||
+        column_type_ == TemporalTypes::ttext() ||
+        column_type_ == TgeompointType::tgeompoint() ||
+        column_type_ == TGeometryTypes::tgeometry() ||
+        column_type_ == TGeographyTypes::tgeography() ||
+        column_type_ == TGeogpointType::tgeogpoint();
 
     void *boxes = indexes_temporal ? nullptr : malloc(bbox_size_ * expression_result.size());
     
