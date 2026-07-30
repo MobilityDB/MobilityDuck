@@ -45,6 +45,8 @@ PTR_IN  = {  # MEOS base type -> (DuckDB arg LogicalType, "C++ expr producing th
     "TBox":         ("LogicalType::BLOB", "BlobToTbox(%s)"),
     "Cbuffer":      ("CbufferTypes::cbuffer()", "BlobToCbuffer(%s)"),
     "Jsonb":        ("TJsonbTypes::jsonb()", "BlobToJsonb(%s)"),
+    "Pcpoint":      ("TPcpointTypes::pcpoint()", "BlobToPcpoint(%s)"),
+    "Pcpatch":      ("TPcpatchTypes::pcpatch()", "BlobToPcpatch(%s)"),
 }
 PTR_RET = {  # MEOS base type -> (DuckDB ret LogicalType, "C++ expr producing string_t from MEOS ptr `%s` in `result`")
     "Temporal":     ("MD_TEMPORAL", "TemporalToBlob(result, %s)"),
@@ -58,6 +60,8 @@ PTR_RET = {  # MEOS base type -> (DuckDB ret LogicalType, "C++ expr producing st
     "TBox":         ("LogicalType::BLOB", "TboxToBlob(result, %s)"),
     "Cbuffer":      ("CbufferTypes::cbuffer()", "CbufferToBlob(result, %s)"),
     "Jsonb":        ("TJsonbTypes::jsonb()", "JsonbToBlob(result, %s)"),
+    "Pcpoint":      ("TPcpointTypes::pcpoint()", "PcpointToBlob(result, %s)"),
+    "Pcpatch":      ("TPcpatchTypes::pcpatch()", "PcpatchToBlob(result, %s)"),
 }
 # The temporal-family pointer returns that marshal as one DuckDB temporal handle. A MEOS
 # accessor/cast can return a concrete subtype pointer (TInstant */TSequence */TSequenceSet *
@@ -178,6 +182,7 @@ REGISTERED_FAMILIES = {
     "tgeompoint", "tgeogpoint", "tgeometry", "tgeography", "tgeo", "tspatial", "tquadbin",
     "tcbuffer", "cbuffer", "th3index", "h3index",
     "tjsonb", "jsonb",
+    "tpcpoint", "pcpoint", "tpcpatch", "pcpatch",
 }
 # Every temporal family token the catalog function names use; those NOT in REGISTERED_FAMILIES
 # are the fast-follow families whose DuckDB type the binding does not register yet.
@@ -434,6 +439,14 @@ def reg_scope(name):
     # temporal, transforms) emits here.
     if name.startswith("tjsonb_") or re.search(r'_tjsonb(?=_|$)', name):
         return ("types", ["TJsonbTypes::tjsonb()"])
+    # the temporal pointcloud families (their own gated types): a tpcpoint_*/tpcpatch_*
+    # prefix, or a _tpcpoint/_tpcpatch token anywhere. The base pcpoint/pcpatch-value-coupled
+    # accessors marshal via the Pcpoint/Pcpatch varlena marshaller; geometry-coupled variants
+    # auto-exclude on their unmarshallable arg/return.
+    if name.startswith("tpcpoint_") or re.search(r'_tpcpoint(?=_|$)', name):
+        return ("types", ["TPcpointTypes::tpcpoint()"])
+    if name.startswith("tpcpatch_") or re.search(r'_tpcpatch(?=_|$)', name):
+        return ("types", ["TPcpatchTypes::tpcpatch()"])
     # temporal-type token ANYWHERE in the name (always_eq_tint_int, ever_lt_tfloat_tfloat,
     # tdistance_tfloat_tfloat, teq_temporal_temporal). Skip if >1 DISTINCT temporal type
     # appears (mixed/ambiguous) — geo tokens (tgeompoint/tgeo/th3index/tnpoint) aren't in
@@ -457,7 +470,8 @@ TO_TYPE = {"tint": "TemporalTypes::tint()", "tbigint": "TemporalTypes::tbigint()
            "tgeometry": "TGeometryTypes::tgeometry()", "tgeography": "TGeographyTypes::tgeography()",
            "tgeompoint": "TgeompointType::tgeompoint()", "tgeogpoint": "TgeogpointType::tgeogpoint()",
            "tcbuffer": "CbufferTypes::tcbuffer()", "th3index": "H3indexTypes::th3index()",
-           "tquadbin": "QuadbinTypes::tquadbin()", "tjsonb": "TJsonbTypes::tjsonb()"}
+           "tquadbin": "QuadbinTypes::tquadbin()", "tjsonb": "TJsonbTypes::tjsonb()",
+           "tpcpoint": "TPcpointTypes::tpcpoint()", "tpcpatch": "TPcpatchTypes::tpcpatch()"}
 def ret_temporal_type(name, arg_acc, group="", sql_ret=None):
     # A single, unambiguous SQL return subtype from the catalog names the output
     # temporal type directly (the catalog is the SoT). The name heuristics below are
@@ -495,6 +509,7 @@ SIG_TEMPORAL_ACC = {
     "tgeometry":  "TGeometryTypes::tgeometry()",  "tgeography": "TGeographyTypes::tgeography()",
     "tcbuffer":   "CbufferTypes::tcbuffer()",      "th3index":   "H3indexTypes::th3index()",
     "tquadbin":   "QuadbinTypes::tquadbin()",      "tjsonb":     "TJsonbTypes::tjsonb()",
+    "tpcpoint":   "TPcpointTypes::tpcpoint()",     "tpcpatch":   "TPcpatchTypes::tpcpatch()",
 }
 def sig_declared_accs(f):
     """The exact temporal-operand types this GENERIC (`Temporal *`) function is CREATE
@@ -3045,12 +3060,15 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            '#include "h3/th3index.hpp"\n'              # H3indexTypes::h3index()/th3index()
            '#include "quadbin/tquadbin.hpp"\n'         # QuadbinTypes::quadbin()/tquadbin()
            '#include "json/tjsonb.hpp"\n'              # TJsonbTypes::jsonb()/tjsonb()
+           '#include "pointcloud/tpcpoint.hpp"\n'      # TPcpointTypes::pcpoint()/tpcpoint()
+           '#include "pointcloud/tpcpatch.hpp"\n'      # TPcpatchTypes::pcpatch()/tpcpatch()
            '#include "spatial/spatial_types.hpp"\n'   # GeoTypes::GEOMETRY() (duckdb-spatial)
            '#include "geo_util.hpp"\n'                # GeometryToGSerialized(blob, srid)
            '#include "meos_internal.h"\n'
            '#include "meos_geo.h"\n'
            '#include "meos_internal_geo.h"\n'
            '#include "meos_json.h"\n'                  # Jsonb type (via pgtypes.h) + tjsonb_*/jsonb_* fns
+           '#include "meos_pointcloud.h"\n'            # Pcpoint/Pcpatch types + tpcpoint/tpcpatch fns
            '#include "time_util.hpp"\n'
            '#include "mobilityduck/meos_exec_serial.hpp"\n'
            '#include "duckdb/function/scalar_function.hpp"\n'
@@ -3138,6 +3156,28 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "    uint8_t *copy = (uint8_t *)malloc(sz);\n"
            "    memcpy(copy, blob.GetData(), sz);\n"
            "    return reinterpret_cast<Jsonb *>(copy);\n}\n"
+           "// Self-contained blob<->Pcpoint/Pcpatch marshalling. Both are varlena (vl_len_\n"
+           "// header) -> VARSIZE out; the stored BLOB is the raw bytes (mirror Cbuffer).\n"
+           "inline string_t PcpointToBlob(Vector &result, Pcpoint *pt) {\n"
+           "    string_t out = StringVector::AddStringOrBlob(result, (const char *)pt, VARSIZE(pt));\n"
+           "    free(pt);\n    return out;\n}\n"
+           "inline string_t PcpointToBlobN(Vector &result, Pcpoint *pt, ValidityMask &mask, idx_t idx) {\n"
+           "    if (!pt) { mask.SetInvalid(idx); return string_t(); }\n    return PcpointToBlob(result, pt);\n}\n"
+           "inline Pcpoint *BlobToPcpoint(string_t blob) {\n"
+           "    size_t sz = blob.GetSize();\n"
+           "    uint8_t *copy = (uint8_t *)malloc(sz);\n"
+           "    memcpy(copy, blob.GetData(), sz);\n"
+           "    return reinterpret_cast<Pcpoint *>(copy);\n}\n"
+           "inline string_t PcpatchToBlob(Vector &result, Pcpatch *pa) {\n"
+           "    string_t out = StringVector::AddStringOrBlob(result, (const char *)pa, VARSIZE(pa));\n"
+           "    free(pa);\n    return out;\n}\n"
+           "inline string_t PcpatchToBlobN(Vector &result, Pcpatch *pa, ValidityMask &mask, idx_t idx) {\n"
+           "    if (!pa) { mask.SetInvalid(idx); return string_t(); }\n    return PcpatchToBlob(result, pa);\n}\n"
+           "inline Pcpatch *BlobToPcpatch(string_t blob) {\n"
+           "    size_t sz = blob.GetSize();\n"
+           "    uint8_t *copy = (uint8_t *)malloc(sz);\n"
+           "    memcpy(copy, blob.GetData(), sz);\n"
+           "    return reinterpret_cast<Pcpatch *>(copy);\n}\n"
            "// Self-contained blob<->STBox/TBox marshalling (FIXED-size structs -> sizeof).\n"
            "inline string_t StboxToBlob(Vector &result, STBox *b) {\n"
            "    string_t out = StringVector::AddStringOrBlob(result, (const char *)b, sizeof(STBox));\n"

@@ -11,7 +11,8 @@ namespace duckdb {
 
 
 struct TPcpointTypes {
-    static LogicalType TPCPOINT();
+    static LogicalType pcpoint();
+    static LogicalType tpcpoint();
     static LogicalType GEOMETRY();
     static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterScalarFunctions(ExtensionLoader &loader);
@@ -22,6 +23,9 @@ struct TPcpointTypes {
 struct TpcpointFunctions {
     static bool StringToTpcpoint(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool TpcpointToString(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    // Base pcpoint value (BLOB-alias) -> VARCHAR render cast (pcpoint_hex_out), so the
+    // generated startValue/endValue base value renders as hex-WKB text (cbuffer sibling).
+    static bool Pcpoint_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool WkbBlobToGeometry(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 };
 

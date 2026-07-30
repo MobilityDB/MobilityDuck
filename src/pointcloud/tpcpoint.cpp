@@ -45,9 +45,15 @@ extern "C" {
 
 namespace duckdb {
 
-LogicalType TPcpointTypes::TPCPOINT() {
+LogicalType TPcpointTypes::pcpoint() {
     auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("TPCPOINT");
+    type.SetAlias("pcpoint");
+    return type;
+}
+
+LogicalType TPcpointTypes::tpcpoint() {
+    auto type = LogicalType(LogicalTypeId::BLOB);
+    type.SetAlias("tpcpoint");
     return type;
 }
 
@@ -69,7 +75,7 @@ static void Tpcpoint_constructor(DataChunk &args, ExpressionState &state, Vector
             // T_TPCPOINT).
             Temporal *tinst = temporal_in(input.c_str(), T_TPCPOINT);
             if (!tinst) {
-                throw InvalidInputException("Invalid TPCPOINT input: " + input);
+                throw InvalidInputException("Invalid tpcpoint input: " + input);
             }
 
             size_t data_size = temporal_mem_size(tinst);
@@ -77,7 +83,7 @@ static void Tpcpoint_constructor(DataChunk &args, ExpressionState &state, Vector
             uint8_t *data_buffer = (uint8_t*)malloc(data_size);
             if (!data_buffer) {
                 free(tinst);
-                throw InvalidInputException("Failed to allocate memory for TPCPOINT data");
+                throw InvalidInputException("Failed to allocate memory for tpcpoint data");
             }
 
             memcpy(data_buffer, tinst, data_size);
@@ -444,13 +450,13 @@ static void Temporal_to_tstzspan(DataChunk &args, ExpressionState &state, Vector
             Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
 
             if (!temp) {
-                throw InvalidInputException("Invalid TPCPOINT data: null pointer");
+                throw InvalidInputException("Invalid tpcpoint data: null pointer");
             }
 
             Span *timespan = temporal_to_tstzspan(temp);
 
             if (!timespan) {
-                throw InvalidInputException("Failed to extract timespan from TPCPOINT");
+                throw InvalidInputException("Failed to extract timespan from tpcpoint");
             }
 
             size_t span_size = sizeof(Span);
@@ -494,12 +500,12 @@ static void Temporal_to_tinstant(DataChunk &args, ExpressionState &state, Vector
             Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
 
             if (!temp) {
-                throw InvalidInputException("Invalid TPCPOINT data: null pointer");
+                throw InvalidInputException("Invalid tpcpoint data: null pointer");
             }
 
             TInstant *inst = temporal_as_tinstant(temp);
             if (!inst) {
-                throw InvalidInputException("Failed to convert TPCPOINT to TInstant");
+                throw InvalidInputException("Failed to convert tpcpoint to TInstant");
             }
 
             size_t inst_size = temporal_mem_size((Temporal*)inst);
@@ -544,7 +550,7 @@ static void Temporal_set_interp(DataChunk &args, ExpressionState &state, Vector 
 
             Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
             if (!temp) {
-                throw InvalidInputException("Invalid TPCPOINT data: null pointer");
+                throw InvalidInputException("Invalid tpcpoint data: null pointer");
             }
 
             std::string interp_str = interp_str_t.GetString();
@@ -594,14 +600,14 @@ static void Temporal_merge(DataChunk &args, ExpressionState &state, Vector &resu
 
             Temporal *temp1 = reinterpret_cast<Temporal*>(const_cast<char*>(tgeom1.c_str()));
             if (!temp1) {
-                throw InvalidInputException("Invalid TPCPOINT data: null pointer");
+                throw InvalidInputException("Invalid tpcpoint data: null pointer");
             }
 
             std::string tgeom2 = tgeom2_str_t.GetString();
 
             Temporal *temp2 = reinterpret_cast<Temporal*>(const_cast<char*>(tgeom2.c_str()));
             if (!temp2) {
-                throw InvalidInputException("Invalid TPCPOINT data: null pointer");
+                throw InvalidInputException("Invalid tpcpoint data: null pointer");
             }
 
             Temporal *result_temp = temporal_merge(temp1, temp2);
@@ -650,7 +656,7 @@ static void Temporal_subtype(DataChunk &args, ExpressionState &state, Vector &re
 
             Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
             if (!temp) {
-                throw InvalidInputException("Invalid TPCPOINT data: null pointer");
+                throw InvalidInputException("Invalid tpcpoint data: null pointer");
             }
 
             const char *subtype_str = temporal_subtype(temp);
@@ -686,7 +692,7 @@ static void Temporal_interp(DataChunk &args, ExpressionState &state, Vector &res
 
             Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
             if (!temp) {
-                throw InvalidInputException("Invalid TPCPOINT data: null pointer");
+                throw InvalidInputException("Invalid tpcpoint data: null pointer");
             }
 
 
@@ -719,7 +725,7 @@ static void Temporal_mem_size(DataChunk &args, ExpressionState &state, Vector &r
 
             Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
             if (!temp) {
-                throw InvalidInputException("Invalid TPCPOINT data: null pointer");
+                throw InvalidInputException("Invalid tpcpoint data: null pointer");
             }
 
             size_t mem_size = temporal_mem_size(temp);
@@ -784,75 +790,32 @@ static void Tinstant_value(DataChunk &args, ExpressionState &state, Vector &resu
 
 
 
-static void Temporal_start_value(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_vec = args.data[0];
+/* Temporal_start_value/Temporal_end_value retired: startValue/endValue are now
+ * generated (return the pcpoint base value, rendered via the pcpoint->VARCHAR cast). */
 
+/* Base pcpoint value (BLOB-alias) -> VARCHAR render cast, mirroring the cbuffer
+ * sibling's Cbuffer_out_cast. The generated startValue/endValue return the pcpoint
+ * base value; DuckDB renders it through this cast via the schema-free pcpoint_hex_out
+ * (hex-WKB text), the same form the retired hand accessors produced. */
+bool TpcpointFunctions::Pcpoint_out_cast(
+    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
+{
     UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, count,
-        [&](string_t input_str) -> string_t {
-            std::string input = input_str.GetString();
-
-            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
-
-            // temporal_start_value returns a freshly allocated copy of
-            // the pcpoint value (datum_copy), which the caller owns.
-            Datum start_datum = temporal_start_value(temp);
-
-            Pcpoint *pt = reinterpret_cast<Pcpoint*>(start_datum);
+        source, result, count,
+        [&](string_t blob) -> string_t {
+            size_t sz = blob.GetSize();
+            uint8_t *copy = (uint8_t *)malloc(sz);
+            memcpy(copy, blob.GetData(), sz);
+            Pcpoint *pt = reinterpret_cast<Pcpoint *>(copy);
             char *str = pcpoint_hex_out(pt, 15);
-            if (!str) {
-                free(pt);
-                throw InvalidInputException("Failed to convert pcpoint value to text");
-            }
-            std::string output(str);
-            string_t stored_result = StringVector::AddString(result, output);
-
-            free(str);
             free(pt);
-
-            return stored_result;
-        });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-
-static void Temporal_end_value(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_vec = args.data[0];
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, count,
-        [&](string_t input_str) -> string_t {
-            std::string input = input_str.GetString();
-
-            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
-
-            // temporal_end_value returns a freshly allocated copy of
-            // the pcpoint value (datum_copy), which the caller owns.
-            Datum end_datum = temporal_end_value(temp);
-
-            Pcpoint *pt = reinterpret_cast<Pcpoint*>(end_datum);
-            char *str = pcpoint_hex_out(pt, 15);
-            if (!str) {
-                free(pt);
+            if (!str)
                 throw InvalidInputException("Failed to convert pcpoint value to text");
-            }
-            std::string output(str);
-            string_t stored_result = StringVector::AddString(result, output);
-
+            std::string s(str);
             free(str);
-            free(pt);
-
-            return stored_result;
+            return StringVector::AddString(result, s);
         });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
+    return true;
 }
 
 static void Tpcpoint_pcid(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1071,12 +1034,12 @@ static void Tinstant_timestamptz(DataChunk &args, ExpressionState &state, Vector
             size_t data_size = input_geom_str.GetSize();
 
             if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TPCPOINT data: insufficient size");
+                throw InvalidInputException("Invalid tpcpoint data: insufficient size");
             }
 
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for TPCPOINT deserialization");
+                throw InvalidInputException("Failed to allocate memory for tpcpoint deserialization");
             }
             memcpy(data_copy, data, data_size);
 
@@ -1084,7 +1047,7 @@ static void Tinstant_timestamptz(DataChunk &args, ExpressionState &state, Vector
 
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TPCPOINT data: null pointer");
+                throw InvalidInputException("Invalid tpcpoint data: null pointer");
             }
 
             TimestampTz meos_t = temp->t;
@@ -1107,87 +1070,87 @@ static void Tinstant_timestamptz(DataChunk &args, ExpressionState &state, Vector
 void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     auto tpcpoint_function = ScalarFunction(
-        "TPCPOINT",
+        "tpcpoint",
         {LogicalType::VARCHAR},
-        TPcpointTypes::TPCPOINT(),
+        TPcpointTypes::tpcpoint(),
         Tpcpoint_constructor
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpoint_function);
 
     auto tpcpoint_from_timestamp_function = ScalarFunction(
-        "TPCPOINT",
+        "tpcpoint",
         {LogicalType::VARCHAR, LogicalType::TIMESTAMP_TZ},
-        TPcpointTypes::TPCPOINT(),
+        TPcpointTypes::tpcpoint(),
         Tpcpointinst_constructor);
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpoint_from_timestamp_function);
 
      auto tpcpoint_from_tstzspan_function = ScalarFunction(
-        "TPCPOINT",
+        "tpcpoint",
         {LogicalType::VARCHAR, SpanTypes::tstzspan(), LogicalType::VARCHAR},
-        TPcpointTypes::TPCPOINT(),
+        TPcpointTypes::tpcpoint(),
         Tpcpoint_sequence_from_tstzspan
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpoint_from_tstzspan_function);
 
     auto tpcpoint_from_tstzspan_default = ScalarFunction(
-        "TPCPOINT",
+        "tpcpoint",
         {LogicalType::VARCHAR, SpanTypes::tstzspan()},
-        TPcpointTypes::TPCPOINT(),
+        TPcpointTypes::tpcpoint(),
         Tpcpoint_sequence_from_tstzspan
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpoint_from_tstzspan_default);
 
      auto tpcpointseqarr_1param= ScalarFunction(
         "tpcpointSeq",
-        {LogicalType::LIST(TPcpointTypes::TPCPOINT())},
-        TPcpointTypes::TPCPOINT(),
+        {LogicalType::LIST(TPcpointTypes::tpcpoint())},
+        TPcpointTypes::tpcpoint(),
         Tpcpoint_sequence_constructor
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpointseqarr_1param);
 
     auto tpcpointseqarr_2params = ScalarFunction(
         "tpcpointSeq",
-        {LogicalType::LIST(TPcpointTypes::TPCPOINT()), LogicalType::VARCHAR},
-        TPcpointTypes::TPCPOINT(),
+        {LogicalType::LIST(TPcpointTypes::tpcpoint()), LogicalType::VARCHAR},
+        TPcpointTypes::tpcpoint(),
         Tpcpoint_sequence_constructor
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpointseqarr_2params);
 
     auto tpcpointseqarr_3params = ScalarFunction(
         "tpcpointSeq",
-        {LogicalType::LIST(TPcpointTypes::TPCPOINT()), LogicalType::VARCHAR, LogicalType::BOOLEAN},
-        TPcpointTypes::TPCPOINT(),
+        {LogicalType::LIST(TPcpointTypes::tpcpoint()), LogicalType::VARCHAR, LogicalType::BOOLEAN},
+        TPcpointTypes::tpcpoint(),
         Tpcpoint_sequence_constructor
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpointseqarr_3params);
 
     auto tpcpointseqarr_4params = ScalarFunction(
         "tpcpointSeq",
-        {LogicalType::LIST(TPcpointTypes::TPCPOINT()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN},
-        TPcpointTypes::TPCPOINT(),
+        {LogicalType::LIST(TPcpointTypes::tpcpoint()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN},
+        TPcpointTypes::tpcpoint(),
         Tpcpoint_sequence_constructor
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpointseqarr_4params);
 
     auto tpcpoint_to_timespan_function = ScalarFunction(
         "timeSpan",
-        {TPcpointTypes::TPCPOINT()},
+        {TPcpointTypes::tpcpoint()},
         SpanTypes::tstzspan(),
         Temporal_to_tstzspan);
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpoint_to_timespan_function);
 
     auto tpcpoint_to_tinstant_function = ScalarFunction(
         "tpcpointInst",
-        {TPcpointTypes::TPCPOINT()},
-        TPcpointTypes::TPCPOINT(),
+        {TPcpointTypes::tpcpoint()},
+        TPcpointTypes::tpcpoint(),
         Temporal_to_tinstant);
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpoint_to_tinstant_function);
 
 
     auto setInterp_function = ScalarFunction(
         "setInterp",
-        {TPcpointTypes::TPCPOINT(), LogicalType::VARCHAR},
-        TPcpointTypes::TPCPOINT(),
+        {TPcpointTypes::tpcpoint(), LogicalType::VARCHAR},
+        TPcpointTypes::tpcpoint(),
         Temporal_set_interp
     );
     duckdb::RegisterSerializedScalarFunction(loader,  setInterp_function);
@@ -1195,15 +1158,15 @@ void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     auto merge_function = ScalarFunction(
         "merge",
-        {TPcpointTypes::TPCPOINT(), TPcpointTypes::TPCPOINT()},
-        TPcpointTypes::TPCPOINT(),
+        {TPcpointTypes::tpcpoint(), TPcpointTypes::tpcpoint()},
+        TPcpointTypes::tpcpoint(),
         Temporal_merge
     );
     duckdb::RegisterSerializedScalarFunction(loader,  merge_function);
 
     auto tempSubtype_function = ScalarFunction(
         "tempSubtype",
-        {TPcpointTypes::TPCPOINT()},
+        {TPcpointTypes::tpcpoint()},
         LogicalType::VARCHAR,
         Temporal_subtype
     );
@@ -1211,7 +1174,7 @@ void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     auto interp_function = ScalarFunction(
         "interp",
-        {TPcpointTypes::TPCPOINT()},
+        {TPcpointTypes::tpcpoint()},
         LogicalType::VARCHAR,
         Temporal_interp
     );
@@ -1219,7 +1182,7 @@ void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     auto memSize_function = ScalarFunction(
         "memSize",
-        {TPcpointTypes::TPCPOINT()},
+        {TPcpointTypes::tpcpoint()},
         LogicalType::INTEGER,
         Temporal_mem_size
     );
@@ -1227,32 +1190,20 @@ void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     auto getValue_function = ScalarFunction(
         "getValue",
-        {TPcpointTypes::TPCPOINT()},
+        {TPcpointTypes::tpcpoint()},
         LogicalType::VARCHAR,
         Tinstant_value
     );
     duckdb::RegisterSerializedScalarFunction(loader,  getValue_function);
 
 
-    auto tpcpoint_start_value_function = ScalarFunction(
-        "startValue",
-        {TPcpointTypes::TPCPOINT()},
-        LogicalType::VARCHAR,
-        Temporal_start_value
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  tpcpoint_start_value_function);
-
-    auto tpcpoint_end_value_function = ScalarFunction(
-        "endValue",
-        {TPcpointTypes::TPCPOINT()},
-        LogicalType::VARCHAR,
-        Temporal_end_value
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  tpcpoint_end_value_function);
+    /* startValue/endValue are now GENERATED (they return the pcpoint base value,
+     * rendered as hex-WKB text via the pcpoint->VARCHAR cast), mirroring the cbuffer
+     * sibling; the hand VARCHAR registrations are retired to avoid an ambiguous overload. */
 
     auto tpcpoint_pcid_function = ScalarFunction(
         "pcid",
-        {TPcpointTypes::TPCPOINT()},
+        {TPcpointTypes::tpcpoint()},
         LogicalType::INTEGER,
         Tpcpoint_pcid
     );
@@ -1260,24 +1211,24 @@ void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     auto startInstant_function = ScalarFunction(
         "startInstant",
-        {TPcpointTypes::TPCPOINT()},
-        TPcpointTypes::TPCPOINT(),
+        {TPcpointTypes::tpcpoint()},
+        TPcpointTypes::tpcpoint(),
         Temporal_start_instant
     );
     duckdb::RegisterSerializedScalarFunction(loader,  startInstant_function);
 
     auto endInstant_function = ScalarFunction(
         "endInstant",
-        {TPcpointTypes::TPCPOINT()},
-        TPcpointTypes::TPCPOINT(),
+        {TPcpointTypes::tpcpoint()},
+        TPcpointTypes::tpcpoint(),
         Temporal_end_instant
     );
     duckdb::RegisterSerializedScalarFunction(loader,  endInstant_function);
 
     auto instantN_function = ScalarFunction(
         "instantN",
-        {TPcpointTypes::TPCPOINT(), LogicalType::INTEGER},
-        TPcpointTypes::TPCPOINT(),
+        {TPcpointTypes::tpcpoint(), LogicalType::INTEGER},
+        TPcpointTypes::tpcpoint(),
         Temporal_instant_n
     );
     duckdb::RegisterSerializedScalarFunction(loader,  instantN_function);
@@ -1285,7 +1236,7 @@ void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     auto tpcpoint_gettimestamptz_function = ScalarFunction(
         "getTimestamp",
-        {TPcpointTypes::TPCPOINT()},
+        {TPcpointTypes::tpcpoint()},
         LogicalType::TIMESTAMP_TZ,
         Tinstant_timestamptz);
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpoint_gettimestamptz_function);
@@ -1298,7 +1249,7 @@ void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // generic handlers wired for tgeompoint in temporal_functions.cpp.
     // ===================================================================
 
-    const LogicalType TGEOM = TPcpointTypes::TPCPOINT();
+    const LogicalType TGEOM = TPcpointTypes::tpcpoint();
     const LogicalType TSTZ  = LogicalType::TIMESTAMP_TZ;
     const LogicalType IVAL  = LogicalType::INTERVAL;
 
@@ -1475,7 +1426,8 @@ void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 }
 
 void TPcpointTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType( "TPCPOINT", TPcpointTypes::TPCPOINT());
+    loader.RegisterType( "pcpoint", TPcpointTypes::pcpoint());
+    loader.RegisterType( "tpcpoint", TPcpointTypes::tpcpoint());
 }
 
 
