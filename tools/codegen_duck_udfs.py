@@ -44,6 +44,7 @@ PTR_IN  = {  # MEOS base type -> (DuckDB arg LogicalType, "C++ expr producing th
     "STBox":        ("LogicalType::BLOB", "BlobToStbox(%s)"),
     "TBox":         ("LogicalType::BLOB", "BlobToTbox(%s)"),
     "Cbuffer":      ("CbufferTypes::cbuffer()", "BlobToCbuffer(%s)"),
+    "Jsonb":        ("TJsonbTypes::jsonb()", "BlobToJsonb(%s)"),
 }
 PTR_RET = {  # MEOS base type -> (DuckDB ret LogicalType, "C++ expr producing string_t from MEOS ptr `%s` in `result`")
     "Temporal":     ("MD_TEMPORAL", "TemporalToBlob(result, %s)"),
@@ -56,6 +57,7 @@ PTR_RET = {  # MEOS base type -> (DuckDB ret LogicalType, "C++ expr producing st
     "STBox":        ("LogicalType::BLOB", "StboxToBlob(result, %s)"),
     "TBox":         ("LogicalType::BLOB", "TboxToBlob(result, %s)"),
     "Cbuffer":      ("CbufferTypes::cbuffer()", "CbufferToBlob(result, %s)"),
+    "Jsonb":        ("TJsonbTypes::jsonb()", "JsonbToBlob(result, %s)"),
 }
 # The temporal-family pointer returns that marshal as one DuckDB temporal handle. A MEOS
 # accessor/cast can return a concrete subtype pointer (TInstant */TSequence */TSequenceSet *
@@ -175,6 +177,7 @@ REGISTERED_FAMILIES = {
     "temporal", "tnumber", "tint", "tbigint", "tfloat", "tbool", "ttext",
     "tgeompoint", "tgeogpoint", "tgeometry", "tgeography", "tgeo", "tspatial", "tquadbin",
     "tcbuffer", "cbuffer", "th3index", "h3index",
+    "tjsonb", "jsonb",
 }
 # Every temporal family token the catalog function names use; those NOT in REGISTERED_FAMILIES
 # are the fast-follow families whose DuckDB type the binding does not register yet.
@@ -424,6 +427,13 @@ def reg_scope(name):
     # variants auto-exclude on their unmarshallable arg/return.
     if name.startswith("tquadbin_") or re.search(r'_tquadbin(?=_|$)', name):
         return ("types", ["QuadbinTypes::tquadbin()"])
+    # the temporal JSONB family (its own gated non-spatial type): a tjsonb_* prefix, or a
+    # _tjsonb token anywhere. The base-jsonb-value-coupled variants (startValue/atValue with a
+    # Jsonb arg/return) auto-exclude on their unmarshallable Jsonb arg/return until the base
+    # value type + marshaller land; the temporal-only surface (comparisons, restrictions by
+    # temporal, transforms) emits here.
+    if name.startswith("tjsonb_") or re.search(r'_tjsonb(?=_|$)', name):
+        return ("types", ["TJsonbTypes::tjsonb()"])
     # temporal-type token ANYWHERE in the name (always_eq_tint_int, ever_lt_tfloat_tfloat,
     # tdistance_tfloat_tfloat, teq_temporal_temporal). Skip if >1 DISTINCT temporal type
     # appears (mixed/ambiguous) — geo tokens (tgeompoint/tgeo/th3index/tnpoint) aren't in
@@ -447,7 +457,7 @@ TO_TYPE = {"tint": "TemporalTypes::tint()", "tbigint": "TemporalTypes::tbigint()
            "tgeometry": "TGeometryTypes::tgeometry()", "tgeography": "TGeographyTypes::tgeography()",
            "tgeompoint": "TgeompointType::tgeompoint()", "tgeogpoint": "TgeogpointType::tgeogpoint()",
            "tcbuffer": "CbufferTypes::tcbuffer()", "th3index": "H3indexTypes::th3index()",
-           "tquadbin": "QuadbinTypes::tquadbin()"}
+           "tquadbin": "QuadbinTypes::tquadbin()", "tjsonb": "TJsonbTypes::tjsonb()"}
 def ret_temporal_type(name, arg_acc, group="", sql_ret=None):
     # A single, unambiguous SQL return subtype from the catalog names the output
     # temporal type directly (the catalog is the SoT). The name heuristics below are
@@ -484,7 +494,7 @@ SIG_TEMPORAL_ACC = {
     "tgeompoint": "TgeompointType::tgeompoint()", "tgeogpoint": "TgeogpointType::tgeogpoint()",
     "tgeometry":  "TGeometryTypes::tgeometry()",  "tgeography": "TGeographyTypes::tgeography()",
     "tcbuffer":   "CbufferTypes::tcbuffer()",      "th3index":   "H3indexTypes::th3index()",
-    "tquadbin":   "QuadbinTypes::tquadbin()",
+    "tquadbin":   "QuadbinTypes::tquadbin()",      "tjsonb":     "TJsonbTypes::tjsonb()",
 }
 def sig_declared_accs(f):
     """The exact temporal-operand types this GENERIC (`Temporal *`) function is CREATE
@@ -3034,11 +3044,13 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            '#include "cbuffer/tcbuffer.hpp"\n'         # CbufferTypes::cbuffer()/tcbuffer()
            '#include "h3/th3index.hpp"\n'              # H3indexTypes::h3index()/th3index()
            '#include "quadbin/tquadbin.hpp"\n'         # QuadbinTypes::quadbin()/tquadbin()
+           '#include "json/tjsonb.hpp"\n'              # TJsonbTypes::jsonb()/tjsonb()
            '#include "spatial/spatial_types.hpp"\n'   # GeoTypes::GEOMETRY() (duckdb-spatial)
            '#include "geo_util.hpp"\n'                # GeometryToGSerialized(blob, srid)
            '#include "meos_internal.h"\n'
            '#include "meos_geo.h"\n'
            '#include "meos_internal_geo.h"\n'
+           '#include "meos_json.h"\n'                  # Jsonb type (via pgtypes.h) + tjsonb_*/jsonb_* fns
            '#include "time_util.hpp"\n'
            '#include "mobilityduck/meos_exec_serial.hpp"\n'
            '#include "duckdb/function/scalar_function.hpp"\n'
@@ -3114,6 +3126,18 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "    uint8_t *copy = (uint8_t *)malloc(sz);\n"
            "    memcpy(copy, blob.GetData(), sz);\n"
            "    return reinterpret_cast<Cbuffer *>(copy);\n}\n"
+           "// Self-contained blob<->Jsonb marshalling. Jsonb is a varlena (vl_len_ header)\n"
+           "// -> VARSIZE out; the stored BLOB is the raw jsonb bytes (mirror Cbuffer).\n"
+           "inline string_t JsonbToBlob(Vector &result, Jsonb *jb) {\n"
+           "    string_t out = StringVector::AddStringOrBlob(result, (const char *)jb, VARSIZE(jb));\n"
+           "    free(jb);\n    return out;\n}\n"
+           "inline string_t JsonbToBlobN(Vector &result, Jsonb *jb, ValidityMask &mask, idx_t idx) {\n"
+           "    if (!jb) { mask.SetInvalid(idx); return string_t(); }\n    return JsonbToBlob(result, jb);\n}\n"
+           "inline Jsonb *BlobToJsonb(string_t blob) {\n"
+           "    size_t sz = blob.GetSize();\n"
+           "    uint8_t *copy = (uint8_t *)malloc(sz);\n"
+           "    memcpy(copy, blob.GetData(), sz);\n"
+           "    return reinterpret_cast<Jsonb *>(copy);\n}\n"
            "// Self-contained blob<->STBox/TBox marshalling (FIXED-size structs -> sizeof).\n"
            "inline string_t StboxToBlob(Vector &result, STBox *b) {\n"
            "    string_t out = StringVector::AddStringOrBlob(result, (const char *)b, sizeof(STBox));\n"

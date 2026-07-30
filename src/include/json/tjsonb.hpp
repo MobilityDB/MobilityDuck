@@ -9,7 +9,8 @@
 namespace duckdb {
 
 struct TJsonbTypes {
-    static LogicalType TJSONB();
+    static LogicalType jsonb();
+    static LogicalType tjsonb();
     static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterScalarFunctions(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
@@ -20,6 +21,12 @@ struct TjsonbFunctions {
     static bool StringToTjsonb(Vector &source, Vector &result, idx_t count,
                                 CastParameters &parameters);
     static bool TjsonbToString(Vector &source, Vector &result, idx_t count,
+                                CastParameters &parameters);
+    // Base jsonb value (BLOB-alias) -> VARCHAR render cast, mirroring the cbuffer
+    // sibling (CbufferFunctions::Cbuffer_out_cast): the generated startValue/endValue
+    // return the jsonb base value, which DuckDB renders through this cast (jsonb_out)
+    // as canonical JSON text.
+    static bool Jsonb_out_cast(Vector &source, Vector &result, idx_t count,
                                 CastParameters &parameters);
 };
 
