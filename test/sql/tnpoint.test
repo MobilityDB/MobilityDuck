@@ -1,0 +1,85 @@
+# name: test/sql/tnpoint.test
+# description: Network-point temporal type (npoint / tnpoint) — the cbuffer twin.
+#             npoint carries no SRID/geometry of its own: a route id is resolved
+#             against the embedded `ways` network (ConfigureMeosWaysCsvOnce), so
+#             SRID and interpolation come from the shipped network (route 1).
+
+require mobilityduck
+
+# ---------------------------------------------------------------------------
+# Type + text I/O (hand-registered boundary; npoint renders as NPoint(rid,pos)).
+# ---------------------------------------------------------------------------
+
+# Static npoint value round-trip
+query I
+SELECT npoint 'Npoint(1,0.5)';
+----
+NPoint(1,0.5)
+
+# tnpoint instant round-trip
+query I
+SELECT tnpoint 'Npoint(1,0.5)@2000-01-01';
+----
+NPoint(1,0.5)@2000-01-01 00:00:00+01
+
+# tnpoint sequence round-trip
+query I
+SELECT tnpoint '{Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)@2000-01-02}';
+----
+{NPoint(1,0.2)@2000-01-01 00:00:00+01, NPoint(1,0.8)@2000-01-02 00:00:00+01}
+
+# ---------------------------------------------------------------------------
+# Catalog-generated accessor surface.
+# ---------------------------------------------------------------------------
+
+# number of instants
+query I
+SELECT numInstants(tnpoint '{Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)@2000-01-02}');
+----
+2
+
+# start instant (returns a tnpoint)
+query I
+SELECT startInstant(tnpoint '{Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)@2000-01-02}');
+----
+NPoint(1,0.2)@2000-01-01 00:00:00+01
+
+# ---------------------------------------------------------------------------
+# Inherited TSpatial<T> + Temporal<T> surface.
+# ---------------------------------------------------------------------------
+
+# SRID inherited from the ways network (route 1 lives in the SRID 5676 network)
+query I
+SELECT SRID(tnpoint 'Npoint(1,0.5)@2000-01-01');
+----
+5676
+
+# asText round-trips the network-point text form
+query I
+SELECT asText(tnpoint 'Npoint(1,0.5)@2000-01-01');
+----
+NPoint(1,0.5)@2000-01-01 00:00:00+01
+
+# duration of a continuous sequence
+query I
+SELECT duration(tnpoint '[Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)@2000-01-03]');
+----
+2 days
+
+# atTime restricts to a period, interpolating the network position at the endpoint
+# (position 0.5 is the midpoint of [0.2, 0.8] at the [2000-01-01, 2000-01-02] cut)
+query I
+SELECT atTime(tnpoint '[Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)@2000-01-03]', tstzspan '[2000-01-01,2000-01-02]');
+----
+[NPoint(1,0.2)@2000-01-01 00:00:00+01, NPoint(1,0.5)@2000-01-02 00:00:00+01]
+
+# inherited bbox topological operators (same, overlaps)
+query I
+SELECT tnpoint 'Npoint(1,0.5)@2000-01-01' ~= tnpoint 'Npoint(1,0.5)@2000-01-01';
+----
+true
+
+query I
+SELECT tnpoint 'Npoint(1,0.5)@2000-01-01' && tnpoint 'Npoint(1,0.5)@2000-01-01';
+----
+true

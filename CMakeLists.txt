@@ -77,6 +77,7 @@ include_directories(SYSTEM duckdb-spatial/src/spatial)
 
 set(EXTENSION_SOURCES
     src/spatial_ref_sys_csv.inc
+    src/ways_csv.inc
     src/mobilityduck_extension.cpp
     src/generated/generated_temporal_udfs.cpp
     src/generated/generated_type_registration.cpp
@@ -121,6 +122,7 @@ set(EXTENSION_SOURCES
     src/json/tjsonb_in_out.cpp
     src/h3/th3index.cpp
     src/cbuffer/tcbuffer.cpp
+    src/npoint/tnpoint.cpp
     src/index/rtree_module.cpp
     src/single_tile_getters.cpp
     src/index/rtree_index_create_physical.cpp
