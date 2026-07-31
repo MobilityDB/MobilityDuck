@@ -2552,6 +2552,35 @@ def emit_h3_prefilter(f, kind):
             f"            return r != 0;\n"
             f"        }});\n}}\n")
 
+def shape_baseval_scalar(f):
+    """(BaseValue*)->by-value scalar: the base-value UNARY accessors — a cbuffer/npoint/
+    nsegment value in, a scalar out (radius/route/position/SRID/hash/pitch/...). The base
+    value is marshalled via BlobTo<Base> (PTR_IN) and freed; registered over the base
+    accessor type. Base values are not Temporal/geo, so no other shape catches them.
+    Returns (baseCName, retBase) or None."""
+    if supported(f) is not None:
+        return None
+    ins, out = classify(f)
+    if out is not None or len(ins) != 1:
+        return None
+    bb = base(ins[0]["canonical"])
+    if bb not in BASEVAL_PTR_IN or not norm(ins[0]["canonical"]).endswith("*"):
+        return None
+    rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
+    if rb in BYVAL_RET and "*" not in rn:
+        return (bb, rb)
+    return None
+
+def emit_baseval_scalar(f, bb, rb):
+    name = f["name"]; marshal = PTR_IN[bb][1] % "in"
+    cct, rett, rexpr = byval_ret3(rb)
+    return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+            f"    EnsureMeosThreadInitialized();\n"
+            f"    UnaryExecutor::Execute<string_t, {rett}>(args.data[0], result, args.size(),\n"
+            f"        [&](string_t in) {{\n"
+            f"            {bb} *v = {marshal};\n            {cct} r = {name}(v);\n            free(v);\n"
+            f"            return {rexpr};\n        }});\n}}\n")
+
 def gen_cpp(fns, out_path, declared=None, aliases=None):
     bodies, generic_regs, specific_regs = GReg(), GReg(), GReg()
     set_bodies, set_generic_regs, set_specific_regs = GReg(), GReg(), GReg()
@@ -2627,6 +2656,21 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 specific_regs.append(
                     f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                     f'"{reg_name(nm, f)}", {{{acc}, LogicalType::VARCHAR}}, LogicalType::VARCHAR, Gen_{fn}));')
+            continue
+        # Base-value UNARY scalar accessors (Cbuffer/Npoint/Nsegment radius/route/
+        # position/SRID/hash/...): a base value in, a scalar out. Self-contained (own
+        # body + regs + continue); base values aren't Temporal/geo so the shapes below
+        # never also emit them.
+        bvsc = shape_baseval_scalar(f)
+        if bvsc:
+            bb, rbb = bvsc
+            STATE["grp"] = f.get("group") or "meos_ungrouped"
+            fn = f["name"]
+            bodies.append(emit_baseval_scalar(f, bb, rbb))
+            argt = PTR_IN[bb][0]; dret_bv = byval_ret_duck(rbb)
+            for nm in reg_names(f, f["sqlfn"], aliases):
+                specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                     f'"{reg_name(nm, f)}", {{{argt}}}, {dret_bv}, Gen_{fn}));')
             continue
         u = shape_emittable(f); b = None if u else shape_binary(f); t = None if (u or b) else shape_ternary(f)
         tt = None if (u or b or t) else shape_binary_tt(f)
