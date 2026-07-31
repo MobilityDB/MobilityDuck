@@ -556,12 +556,12 @@ SELECT intspanset '{[1,1]}' >= intspanset '{[1,2),[2,3),[3,4)}';
 false
 
 query I
-SELECT spanset_hash(intspanset '{[1,2]}') = spanset_hash(intspanset '{[1,2]}');
+SELECT hash(intspanset '{[1,2]}') = hash(intspanset '{[1,2]}');
 ----
 true
 
 query I
-SELECT spanset_hash_extended(intspanset '{[1,2]}', 1) = spanset_hash_extended(intspanset '{[1,2]}', 1);
+SELECT hashExtended(intspanset '{[1,2]}', 1) = hashExtended(intspanset '{[1,2]}', 1);
 ----
 true
 

@@ -262,13 +262,8 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("splitEachNspans", {spanset_type, LogicalType::INTEGER}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_split_each_n_spans)
         );
 
-        // Hash
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("spanset_hash", {spanset_type}, LogicalType::UINTEGER, SpansetFunctions::Spanset_hash)
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("spanset_hash_extended", {spanset_type, LogicalType::BIGINT}, LogicalType::UBIGINT, SpansetFunctions::Spanset_hash_extended)
-        );
+        // hash(spanset_type) / hashExtended(spanset_type, UBIGINT) are generated from
+        // the catalog (meos_setspan_accessor) in generated_temporal_udfs.cpp.
 
         // comparison operators
         duckdb::RegisterSerializedScalarFunction(loader, 
