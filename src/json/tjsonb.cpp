@@ -28,14 +28,43 @@ extern "C" {
 
 namespace duckdb {
 
-LogicalType TJsonbTypes::TJSONB() {
+LogicalType TJsonbTypes::jsonb() {
     auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("TJSONB");
+    type.SetAlias("jsonb");
+    return type;
+}
+
+LogicalType TJsonbTypes::tjsonb() {
+    auto type = LogicalType(LogicalTypeId::BLOB);
+    type.SetAlias("tjsonb");
     return type;
 }
 
 void TJsonbTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType("TJSONB", TJsonbTypes::TJSONB());
+    loader.RegisterType("jsonb", TJsonbTypes::jsonb());
+    loader.RegisterType("tjsonb", TJsonbTypes::tjsonb());
+}
+
+/* Base jsonb value (BLOB-alias) -> VARCHAR render cast, mirroring the cbuffer
+ * sibling's Cbuffer_out_cast. The generated startValue/endValue return the jsonb
+ * base value as a BLOB; DuckDB renders it through this cast (jsonb_out). */
+bool TjsonbFunctions::Jsonb_out_cast(
+    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
+{
+    UnaryExecutor::Execute<string_t, string_t>(
+        source, result, count,
+        [&](string_t blob) -> string_t {
+            size_t sz = blob.GetSize();
+            uint8_t *copy = (uint8_t *)malloc(sz);
+            memcpy(copy, blob.GetData(), sz);
+            Jsonb *jb = reinterpret_cast<Jsonb *>(copy);
+            char *str = jsonb_out(jb);
+            free(jb);
+            std::string s(str);
+            free(str);
+            return StringVector::AddString(result, s);
+        });
+    return true;
 }
 
 /* ------------------------------------------------------------------
@@ -49,12 +78,12 @@ static void Tjsonb_constructor(DataChunk &args, ExpressionState &state, Vector &
             std::string s = input_str.GetString();
             Temporal *temp = tjsonb_in(s.c_str());
             if (!temp)
-                throw InvalidInputException("Invalid TJSONB input: " + s);
+                throw InvalidInputException("Invalid tjsonb input: " + s);
             return TemporalToBlob(result, temp);
         });
 }
 
-/* Two-argument instant constructor: TJSONB(json_text, timestamptz) */
+/* Two-argument instant constructor: tjsonb(json_text, timestamptz) */
 static void Tjsonbinst_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::Execute<string_t, timestamp_tz_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
@@ -67,7 +96,7 @@ static void Tjsonbinst_constructor(DataChunk &args, ExpressionState &state, Vect
             TInstant *inst = tjsonbinst_make(jb, static_cast<TimestampTz>(meos_ts.value));
             free(jb);
             if (!inst)
-                throw InvalidInputException("Failed to create TJSONB instant");
+                throw InvalidInputException("Failed to create tjsonb instant");
             return TemporalToBlob(result, reinterpret_cast<Temporal *>(inst));
         });
 }
@@ -90,12 +119,12 @@ static void Tjsonb_sequence_from_tstzspan(DataChunk &args, ExpressionState &stat
             free(jb);
             free(sp_copy);
             if (!seq)
-                throw InvalidInputException("Failed to create TJSONB sequence");
+                throw InvalidInputException("Failed to create tjsonb sequence");
             return TemporalToBlob(result, reinterpret_cast<Temporal *>(seq));
         });
 }
 
-/* Extract TInstant* array from a LIST(TJSONB) vector entry */
+/* Extract TInstant* array from a LIST(tjsonb) vector entry */
 static TInstant **temparr_extract_tjsonb(Vector &arr_vec, list_entry_t entry, int *count) {
     auto &child = ListVector::GetEntry(arr_vec);
     auto len    = entry.length;
@@ -118,7 +147,7 @@ static TInstant **temparr_extract_tjsonb(Vector &arr_vec, list_entry_t entry, in
     return insts;
 }
 
-/* Sequence constructor from LIST(TJSONB) instants */
+/* Sequence constructor from LIST(tjsonb) instants */
 static void Tjsonb_sequence_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
     const char *default_interp = "step";
     auto count = args.size();
@@ -155,43 +184,8 @@ static void Tjsonb_sequence_constructor(DataChunk &args, ExpressionState &state,
  * Value accessors
  * ------------------------------------------------------------------ */
 
-static void Tjsonb_start_value(DataChunk &args, ExpressionState &state, Vector &result) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        args.data[0], result, args.size(),
-        [&](string_t input_blob) -> string_t {
-            Temporal *temp = BlobToTemporal(input_blob);
-            Jsonb *jb = tjsonb_start_value(temp);
-            free(temp);
-            if (!jb)
-                throw InvalidInputException("tjsonb startValue: null result");
-            char *str = jsonb_out(jb);
-            free(jb);
-            if (!str)
-                throw InvalidInputException("tjsonb startValue: jsonb_out failed");
-            string_t out = StringVector::AddString(result, str);
-            free(str);
-            return out;
-        });
-}
-
-static void Tjsonb_end_value(DataChunk &args, ExpressionState &state, Vector &result) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        args.data[0], result, args.size(),
-        [&](string_t input_blob) -> string_t {
-            Temporal *temp = BlobToTemporal(input_blob);
-            Jsonb *jb = tjsonb_end_value(temp);
-            free(temp);
-            if (!jb)
-                throw InvalidInputException("tjsonb endValue: null result");
-            char *str = jsonb_out(jb);
-            free(jb);
-            if (!str)
-                throw InvalidInputException("tjsonb endValue: jsonb_out failed");
-            string_t out = StringVector::AddString(result, str);
-            free(str);
-            return out;
-        });
-}
+/* Tjsonb_start_value / Tjsonb_end_value retired: startValue/endValue are now
+ * generated (return the jsonb base value, rendered via the jsonb->VARCHAR cast). */
 
 static void Tjsonb_value_at_timestamp(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::Execute<string_t, timestamp_tz_t, string_t>(
@@ -220,45 +214,38 @@ static void Tjsonb_value_at_timestamp(DataChunk &args, ExpressionState &state, V
  * ------------------------------------------------------------------ */
 
 void TJsonbTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
-    const auto T = TJsonbTypes::TJSONB();
+    const auto T = TJsonbTypes::tjsonb();
     const auto V = LogicalType::VARCHAR;
     const auto TS = LogicalType::TIMESTAMP_TZ;
 
     /* Constructors */
     RegisterSerializedScalarFunction(loader,
-        ScalarFunction("TJSONB", {V}, T, Tjsonb_constructor));
+        ScalarFunction("tjsonb", {V}, T, Tjsonb_constructor));
     RegisterSerializedScalarFunction(loader,
-        ScalarFunction("TJSONB", {V, TS}, T, Tjsonbinst_constructor));
+        ScalarFunction("tjsonb", {V, TS}, T, Tjsonbinst_constructor));
     RegisterSerializedScalarFunction(loader,
-        ScalarFunction("TJSONB", {V, SpanTypes::tstzspan()}, T,
+        ScalarFunction("tjsonb", {V, SpanTypes::tstzspan()}, T,
                        Tjsonb_sequence_from_tstzspan));
 
     RegisterSerializedScalarFunction(loader,
         ScalarFunction("tjsonbSeq", {LogicalType::LIST(T)}, T,
                        Tjsonb_sequence_constructor));
 
-    /* Generic temporal functions applied to TJSONB */
-    RegisterSerializedScalarFunction(loader,
-        ScalarFunction("timeSpan", {T}, SpanTypes::tstzspan(),
-                       TemporalFunctions::Temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader,
-        ScalarFunction("tempSubtype", {T}, V, TemporalFunctions::Temporal_subtype));
-    RegisterSerializedScalarFunction(loader,
-        ScalarFunction("interp", {T}, V, TemporalFunctions::Temporal_interp));
+    /* Generic temporal functions applied to tjsonb. timeSpan/tempSubtype/interp/merge
+     * are now GENERATED with identical signatures (generate-then-retire), so the hand
+     * registrations are retired here. memSize/setInterp stay hand (not generated yet);
+     * tjsonbInst stays hand (subtype cast). */
     RegisterSerializedScalarFunction(loader,
         ScalarFunction("memSize", {T}, LogicalType::INTEGER, TemporalFunctions::Temporal_mem_size));
-    RegisterSerializedScalarFunction(loader,
-        ScalarFunction("merge", {T, T}, T, TemporalFunctions::Temporal_merge));
     RegisterSerializedScalarFunction(loader,
         ScalarFunction("setInterp", {T, V}, T, TemporalFunctions::Temporal_set_interp));
     RegisterSerializedScalarFunction(loader,
         ScalarFunction("tjsonbInst", {T}, T, TemporalFunctions::Temporal_to_tinstant));
 
-    /* Value accessors */
-    RegisterSerializedScalarFunction(loader,
-        ScalarFunction("startValue", {T}, V, Tjsonb_start_value));
-    RegisterSerializedScalarFunction(loader,
-        ScalarFunction("endValue",   {T}, V, Tjsonb_end_value));
+    /* Value accessors — startValue/endValue are now GENERATED (they return the
+     * jsonb base value, rendered as JSON text via the jsonb->VARCHAR cast),
+     * mirroring the cbuffer sibling; retired here to avoid an ambiguous overload.
+     * valueAtTimestamp stays hand (its out-param shape is not generated yet). */
     RegisterSerializedScalarFunction(loader,
         ScalarFunction("valueAtTimestamp", {T, TS}, V, Tjsonb_value_at_timestamp));
 }

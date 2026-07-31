@@ -27,7 +27,7 @@ bool TjsonbFunctions::StringToTjsonb(Vector &source, Vector &result, idx_t count
             std::string s = input_string.GetString();
             Temporal *temp = tjsonb_in(s.c_str());
             if (!temp)
-                throw InvalidInputException("Invalid TJSONB input: " + s);
+                throw InvalidInputException("Invalid tjsonb input: " + s);
             return TemporalToBlob(result, temp);
         });
     return true;
@@ -42,7 +42,7 @@ bool TjsonbFunctions::TjsonbToString(Vector &source, Vector &result, idx_t count
             char *str = tjsonb_out(temp);
             free(temp);
             if (!str)
-                throw InvalidInputException("Failed to serialize TJSONB to string");
+                throw InvalidInputException("Failed to serialize tjsonb to string");
             string_t stored = StringVector::AddString(result, str);
             free(str);
             return stored;
@@ -107,16 +107,20 @@ static void TjsonbAsHexWkbExec(DataChunk &args, ExpressionState &, Vector &resul
 }
 
 void TJsonbTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, TJsonbTypes::TJSONB(),
+    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, TJsonbTypes::tjsonb(),
                              TjsonbFunctions::StringToTjsonb);
-    RegisterMeosCastFunction(loader, TJsonbTypes::TJSONB(), LogicalType::VARCHAR,
+    RegisterMeosCastFunction(loader, TJsonbTypes::tjsonb(), LogicalType::VARCHAR,
                              TjsonbFunctions::TjsonbToString);
+    // Base jsonb value render cast (mirrors cbuffer()->VARCHAR): renders the
+    // generated startValue/endValue jsonb base value as canonical JSON text.
+    RegisterMeosCastFunction(loader, TJsonbTypes::jsonb(), LogicalType::VARCHAR,
+                             TjsonbFunctions::Jsonb_out_cast);
 }
 
 void TJsonbTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader) {
     const auto B = LogicalType::BLOB;
     const auto V = LogicalType::VARCHAR;
-    const auto T = TJsonbTypes::TJSONB();
+    const auto T = TJsonbTypes::tjsonb();
 
     RegisterSerializedScalarFunction(loader,
         ScalarFunction("tjsonbFromBinary",  {B}, T, TjsonbFromWkbExec));
