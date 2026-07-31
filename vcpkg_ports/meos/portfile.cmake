@@ -1,22 +1,13 @@
-# MobilityDuck tracks MobilityDB/MobilityDB master for its MEOS source — there is
-# no committed commit pin. The tip of master is resolved at configure time and
-# fetched with vcpkg_from_git, which content-addresses through git (so no tarball
-# SHA512 is needed). The catalog-derivation workflow (.github/workflows/generate.yml)
-# likewise derives from master, so the libmeos this port builds and the generated
-# UDF surface always come from the same upstream branch. vcpkg requires a concrete
-# commit SHA (a moving branch ref is rejected), so master's tip is resolved here
-# rather than passed as a branch name.
-execute_process(
-    COMMAND git ls-remote https://github.com/MobilityDB/MobilityDB.git refs/heads/master
-    OUTPUT_VARIABLE _MEOS_LSREMOTE
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    RESULT_VARIABLE _MEOS_LSREMOTE_RC
-)
-if(NOT _MEOS_LSREMOTE_RC EQUAL 0 OR _MEOS_LSREMOTE STREQUAL "")
-    message(FATAL_ERROR "MEOS port: could not resolve MobilityDB master tip via git ls-remote")
-endif()
-string(REGEX MATCH "^[0-9a-f]+" _MEOS_REF "${_MEOS_LSREMOTE}")
-message(STATUS "MEOS port: tracking MobilityDB master at ${_MEOS_REF}")
+# MobilityDuck builds its MEOS source from a committed MobilityDB commit pin.
+# A fixed ref keeps the libmeos source identical across CI runs, so the extension
+# pipeline's ccache reuses the libmeos compiler objects instead of recompiling the
+# whole library every build — a moving master tip changes the source on every push
+# and defeats that cache. The committed generated UDF surface comes from this SAME
+# pin, so the libmeos this port builds and the surface that links against it always
+# match one upstream commit. Advance the tracked version by bumping this SHA and
+# regenerating the surface from it.
+set(_MEOS_REF "a564736c59e579748e37662d2e0791a236cc9502")
+message(STATUS "MEOS port: building MobilityDB at pinned ${_MEOS_REF}")
 
 # FETCH_REF names the branch (always advertised) so the fetch works even when the
 # server does not allow fetching an arbitrary commit SHA directly; REF then checks
