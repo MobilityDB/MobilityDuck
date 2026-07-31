@@ -1,0 +1,67 @@
+# name: test/sql/parity/091_baseval_scalar_accessors.test
+# description: Generated base-value scalar accessors — cbuffer/npoint/nsegment.
+# group: [sql]
+
+require mobilityduck
+
+# cbuffer radius / SRID
+
+query I
+SELECT radius(cbuffer 'Cbuffer(Point(1 1),5.0)');
+----
+5.0
+
+query I
+SELECT SRID(cbuffer 'SRID=3812;Cbuffer(Point(1 1),5)');
+----
+3812
+
+# cbuffer hash is deterministic; distinct cbuffers hash differently
+
+query I
+SELECT hash(cbuffer 'Cbuffer(Point(1 1),5)')
+     = hash(cbuffer 'Cbuffer(Point(1 1),5)');
+----
+true
+
+query I
+SELECT hash(cbuffer 'Cbuffer(Point(1 1),5)')
+    <> hash(cbuffer 'Cbuffer(Point(2 2),9)');
+----
+true
+
+# npoint route / position ("position" is a DuckDB reserved word -> quoted)
+
+query I
+SELECT route(npoint 'NPoint(1,0.5)');
+----
+1
+
+query I
+SELECT "position"(npoint 'NPoint(1,0.5)');
+----
+0.5
+
+# nsegment route / start / end positions
+
+query I
+SELECT route(nsegment 'NSegment(2,0.1,0.7)');
+----
+2
+
+query I
+SELECT startPosition(nsegment 'NSegment(2,0.1,0.7)');
+----
+0.1
+
+query I
+SELECT endPosition(nsegment 'NSegment(2,0.1,0.7)');
+----
+0.7
+
+# npoint / nsegment SRID resolve against the ways network
+
+query I
+SELECT SRID(npoint 'NPoint(1,0.5)') = SRID(nsegment 'NSegment(1,0.1,0.7)');
+----
+true
