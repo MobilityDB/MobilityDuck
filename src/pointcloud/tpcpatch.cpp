@@ -48,9 +48,15 @@ extern "C" {
 
 namespace duckdb {
 
-LogicalType TPcpatchTypes::TPCPATCH() {
+LogicalType TPcpatchTypes::pcpatch() {
     auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("TPCPATCH");
+    type.SetAlias("pcpatch");
+    return type;
+}
+
+LogicalType TPcpatchTypes::tpcpatch() {
+    auto type = LogicalType(LogicalTypeId::BLOB);
+    type.SetAlias("tpcpatch");
     return type;
 }
 
@@ -72,7 +78,7 @@ static void Tpcpatch_constructor(DataChunk &args, ExpressionState &state, Vector
             // T_TPCPATCH).
             Temporal *tinst = temporal_in(input.c_str(), T_TPCPATCH);
             if (!tinst) {
-                throw InvalidInputException("Invalid TPCPATCH input: " + input);
+                throw InvalidInputException("Invalid tpcpatch input: " + input);
             }
 
             size_t data_size = temporal_mem_size(tinst);
@@ -80,7 +86,7 @@ static void Tpcpatch_constructor(DataChunk &args, ExpressionState &state, Vector
             uint8_t *data_buffer = (uint8_t*)malloc(data_size);
             if (!data_buffer) {
                 free(tinst);
-                throw InvalidInputException("Failed to allocate memory for TPCPATCH data");
+                throw InvalidInputException("Failed to allocate memory for tpcpatch data");
             }
 
             memcpy(data_buffer, tinst, data_size);
@@ -447,13 +453,13 @@ static void Temporal_to_tstzspan(DataChunk &args, ExpressionState &state, Vector
             Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
 
             if (!temp) {
-                throw InvalidInputException("Invalid TPCPATCH data: null pointer");
+                throw InvalidInputException("Invalid tpcpatch data: null pointer");
             }
 
             Span *timespan = temporal_to_tstzspan(temp);
 
             if (!timespan) {
-                throw InvalidInputException("Failed to extract timespan from TPCPATCH");
+                throw InvalidInputException("Failed to extract timespan from tpcpatch");
             }
 
             size_t span_size = sizeof(Span);
@@ -497,12 +503,12 @@ static void Temporal_to_tinstant(DataChunk &args, ExpressionState &state, Vector
             Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
 
             if (!temp) {
-                throw InvalidInputException("Invalid TPCPATCH data: null pointer");
+                throw InvalidInputException("Invalid tpcpatch data: null pointer");
             }
 
             TInstant *inst = temporal_as_tinstant(temp);
             if (!inst) {
-                throw InvalidInputException("Failed to convert TPCPATCH to TInstant");
+                throw InvalidInputException("Failed to convert tpcpatch to TInstant");
             }
 
             size_t inst_size = temporal_mem_size((Temporal*)inst);
@@ -547,7 +553,7 @@ static void Temporal_set_interp(DataChunk &args, ExpressionState &state, Vector 
 
             Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
             if (!temp) {
-                throw InvalidInputException("Invalid TPCPATCH data: null pointer");
+                throw InvalidInputException("Invalid tpcpatch data: null pointer");
             }
 
             std::string interp_str = interp_str_t.GetString();
@@ -597,14 +603,14 @@ static void Temporal_merge(DataChunk &args, ExpressionState &state, Vector &resu
 
             Temporal *temp1 = reinterpret_cast<Temporal*>(const_cast<char*>(tgeom1.c_str()));
             if (!temp1) {
-                throw InvalidInputException("Invalid TPCPATCH data: null pointer");
+                throw InvalidInputException("Invalid tpcpatch data: null pointer");
             }
 
             std::string tgeom2 = tgeom2_str_t.GetString();
 
             Temporal *temp2 = reinterpret_cast<Temporal*>(const_cast<char*>(tgeom2.c_str()));
             if (!temp2) {
-                throw InvalidInputException("Invalid TPCPATCH data: null pointer");
+                throw InvalidInputException("Invalid tpcpatch data: null pointer");
             }
 
             Temporal *result_temp = temporal_merge(temp1, temp2);
@@ -653,7 +659,7 @@ static void Temporal_subtype(DataChunk &args, ExpressionState &state, Vector &re
 
             Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
             if (!temp) {
-                throw InvalidInputException("Invalid TPCPATCH data: null pointer");
+                throw InvalidInputException("Invalid tpcpatch data: null pointer");
             }
 
             const char *subtype_str = temporal_subtype(temp);
@@ -689,7 +695,7 @@ static void Temporal_interp(DataChunk &args, ExpressionState &state, Vector &res
 
             Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
             if (!temp) {
-                throw InvalidInputException("Invalid TPCPATCH data: null pointer");
+                throw InvalidInputException("Invalid tpcpatch data: null pointer");
             }
 
 
@@ -722,7 +728,7 @@ static void Temporal_mem_size(DataChunk &args, ExpressionState &state, Vector &r
 
             Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
             if (!temp) {
-                throw InvalidInputException("Invalid TPCPATCH data: null pointer");
+                throw InvalidInputException("Invalid tpcpatch data: null pointer");
             }
 
             size_t mem_size = temporal_mem_size(temp);
@@ -789,75 +795,32 @@ static void Tinstant_value(DataChunk &args, ExpressionState &state, Vector &resu
 
 
 
-static void Temporal_start_value(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_vec = args.data[0];
+/* Temporal_start_value/Temporal_end_value retired: startValue/endValue are now
+ * generated (return the pcpatch base value, rendered via the pcpatch->VARCHAR cast). */
 
+/* Base pcpatch value (BLOB-alias) -> VARCHAR render cast, mirroring the cbuffer
+ * sibling's Cbuffer_out_cast. The generated startValue/endValue return the pcpatch
+ * base value; DuckDB renders it through this cast via the schema-free pcpatch_hex_out
+ * (hex-WKB text), the same form the retired hand accessors produced. */
+bool TpcpatchFunctions::Pcpatch_out_cast(
+    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
+{
     UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, count,
-        [&](string_t input_str) -> string_t {
-            std::string input = input_str.GetString();
-
-            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
-
-            // temporal_start_value returns a freshly allocated copy of
-            // the pcpatch value (datum_copy), which the caller owns.
-            Datum start_datum = temporal_start_value(temp);
-
-            Pcpatch *pt = reinterpret_cast<Pcpatch*>(start_datum);
+        source, result, count,
+        [&](string_t blob) -> string_t {
+            size_t sz = blob.GetSize();
+            uint8_t *copy = (uint8_t *)malloc(sz);
+            memcpy(copy, blob.GetData(), sz);
+            Pcpatch *pt = reinterpret_cast<Pcpatch *>(copy);
             char *str = pcpatch_hex_out(pt, 15);
-            if (!str) {
-                free(pt);
-                throw InvalidInputException("Failed to convert pcpatch value to text");
-            }
-            std::string output(str);
-            string_t stored_result = StringVector::AddString(result, output);
-
-            free(str);
             free(pt);
-
-            return stored_result;
-        });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-
-static void Temporal_end_value(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_vec = args.data[0];
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, count,
-        [&](string_t input_str) -> string_t {
-            std::string input = input_str.GetString();
-
-            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
-
-            // temporal_end_value returns a freshly allocated copy of
-            // the pcpatch value (datum_copy), which the caller owns.
-            Datum end_datum = temporal_end_value(temp);
-
-            Pcpatch *pt = reinterpret_cast<Pcpatch*>(end_datum);
-            char *str = pcpatch_hex_out(pt, 15);
-            if (!str) {
-                free(pt);
+            if (!str)
                 throw InvalidInputException("Failed to convert pcpatch value to text");
-            }
-            std::string output(str);
-            string_t stored_result = StringVector::AddString(result, output);
-
+            std::string s(str);
             free(str);
-            free(pt);
-
-            return stored_result;
+            return StringVector::AddString(result, s);
         });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
+    return true;
 }
 
 static void Tpcpatch_pcid(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1109,12 +1072,12 @@ static void Tinstant_timestamptz(DataChunk &args, ExpressionState &state, Vector
             size_t data_size = input_geom_str.GetSize();
 
             if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TPCPATCH data: insufficient size");
+                throw InvalidInputException("Invalid tpcpatch data: insufficient size");
             }
 
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for TPCPATCH deserialization");
+                throw InvalidInputException("Failed to allocate memory for tpcpatch deserialization");
             }
             memcpy(data_copy, data, data_size);
 
@@ -1122,7 +1085,7 @@ static void Tinstant_timestamptz(DataChunk &args, ExpressionState &state, Vector
 
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TPCPATCH data: null pointer");
+                throw InvalidInputException("Invalid tpcpatch data: null pointer");
             }
 
             TimestampTz meos_t = temp->t;
@@ -1145,87 +1108,87 @@ static void Tinstant_timestamptz(DataChunk &args, ExpressionState &state, Vector
 void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     auto tpcpatch_function = ScalarFunction(
-        "TPCPATCH",
+        "tpcpatch",
         {LogicalType::VARCHAR},
-        TPcpatchTypes::TPCPATCH(),
+        TPcpatchTypes::tpcpatch(),
         Tpcpatch_constructor
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpatch_function);
 
     auto tpcpatch_from_timestamp_function = ScalarFunction(
-        "TPCPATCH",
+        "tpcpatch",
         {LogicalType::VARCHAR, LogicalType::TIMESTAMP_TZ},
-        TPcpatchTypes::TPCPATCH(),
+        TPcpatchTypes::tpcpatch(),
         Tpcpatchinst_constructor);
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpatch_from_timestamp_function);
 
      auto tpcpatch_from_tstzspan_function = ScalarFunction(
-        "TPCPATCH",
+        "tpcpatch",
         {LogicalType::VARCHAR, SpanTypes::tstzspan(), LogicalType::VARCHAR},
-        TPcpatchTypes::TPCPATCH(),
+        TPcpatchTypes::tpcpatch(),
         Tpcpatch_sequence_from_tstzspan
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpatch_from_tstzspan_function);
 
     auto tpcpatch_from_tstzspan_default = ScalarFunction(
-        "TPCPATCH",
+        "tpcpatch",
         {LogicalType::VARCHAR, SpanTypes::tstzspan()},
-        TPcpatchTypes::TPCPATCH(),
+        TPcpatchTypes::tpcpatch(),
         Tpcpatch_sequence_from_tstzspan
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpatch_from_tstzspan_default);
 
      auto tpcpatchseqarr_1param= ScalarFunction(
         "tpcpatchSeq",
-        {LogicalType::LIST(TPcpatchTypes::TPCPATCH())},
-        TPcpatchTypes::TPCPATCH(),
+        {LogicalType::LIST(TPcpatchTypes::tpcpatch())},
+        TPcpatchTypes::tpcpatch(),
         Tpcpatch_sequence_constructor
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpatchseqarr_1param);
 
     auto tpcpatchseqarr_2params = ScalarFunction(
         "tpcpatchSeq",
-        {LogicalType::LIST(TPcpatchTypes::TPCPATCH()), LogicalType::VARCHAR},
-        TPcpatchTypes::TPCPATCH(),
+        {LogicalType::LIST(TPcpatchTypes::tpcpatch()), LogicalType::VARCHAR},
+        TPcpatchTypes::tpcpatch(),
         Tpcpatch_sequence_constructor
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpatchseqarr_2params);
 
     auto tpcpatchseqarr_3params = ScalarFunction(
         "tpcpatchSeq",
-        {LogicalType::LIST(TPcpatchTypes::TPCPATCH()), LogicalType::VARCHAR, LogicalType::BOOLEAN},
-        TPcpatchTypes::TPCPATCH(),
+        {LogicalType::LIST(TPcpatchTypes::tpcpatch()), LogicalType::VARCHAR, LogicalType::BOOLEAN},
+        TPcpatchTypes::tpcpatch(),
         Tpcpatch_sequence_constructor
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpatchseqarr_3params);
 
     auto tpcpatchseqarr_4params = ScalarFunction(
         "tpcpatchSeq",
-        {LogicalType::LIST(TPcpatchTypes::TPCPATCH()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN},
-        TPcpatchTypes::TPCPATCH(),
+        {LogicalType::LIST(TPcpatchTypes::tpcpatch()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN},
+        TPcpatchTypes::tpcpatch(),
         Tpcpatch_sequence_constructor
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpatchseqarr_4params);
 
     auto tpcpatch_to_timespan_function = ScalarFunction(
         "timeSpan",
-        {TPcpatchTypes::TPCPATCH()},
+        {TPcpatchTypes::tpcpatch()},
         SpanTypes::tstzspan(),
         Temporal_to_tstzspan);
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpatch_to_timespan_function);
 
     auto tpcpatch_to_tinstant_function = ScalarFunction(
         "tpcpatchInst",
-        {TPcpatchTypes::TPCPATCH()},
-        TPcpatchTypes::TPCPATCH(),
+        {TPcpatchTypes::tpcpatch()},
+        TPcpatchTypes::tpcpatch(),
         Temporal_to_tinstant);
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpatch_to_tinstant_function);
 
 
     auto setInterp_function = ScalarFunction(
         "setInterp",
-        {TPcpatchTypes::TPCPATCH(), LogicalType::VARCHAR},
-        TPcpatchTypes::TPCPATCH(),
+        {TPcpatchTypes::tpcpatch(), LogicalType::VARCHAR},
+        TPcpatchTypes::tpcpatch(),
         Temporal_set_interp
     );
     duckdb::RegisterSerializedScalarFunction(loader,  setInterp_function);
@@ -1233,15 +1196,15 @@ void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     auto merge_function = ScalarFunction(
         "merge",
-        {TPcpatchTypes::TPCPATCH(), TPcpatchTypes::TPCPATCH()},
-        TPcpatchTypes::TPCPATCH(),
+        {TPcpatchTypes::tpcpatch(), TPcpatchTypes::tpcpatch()},
+        TPcpatchTypes::tpcpatch(),
         Temporal_merge
     );
     duckdb::RegisterSerializedScalarFunction(loader,  merge_function);
 
     auto tempSubtype_function = ScalarFunction(
         "tempSubtype",
-        {TPcpatchTypes::TPCPATCH()},
+        {TPcpatchTypes::tpcpatch()},
         LogicalType::VARCHAR,
         Temporal_subtype
     );
@@ -1249,7 +1212,7 @@ void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     auto interp_function = ScalarFunction(
         "interp",
-        {TPcpatchTypes::TPCPATCH()},
+        {TPcpatchTypes::tpcpatch()},
         LogicalType::VARCHAR,
         Temporal_interp
     );
@@ -1257,7 +1220,7 @@ void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     auto memSize_function = ScalarFunction(
         "memSize",
-        {TPcpatchTypes::TPCPATCH()},
+        {TPcpatchTypes::tpcpatch()},
         LogicalType::INTEGER,
         Temporal_mem_size
     );
@@ -1265,32 +1228,20 @@ void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     auto getValue_function = ScalarFunction(
         "getValue",
-        {TPcpatchTypes::TPCPATCH()},
+        {TPcpatchTypes::tpcpatch()},
         LogicalType::VARCHAR,
         Tinstant_value
     );
     duckdb::RegisterSerializedScalarFunction(loader,  getValue_function);
 
 
-    auto tpcpatch_start_value_function = ScalarFunction(
-        "startValue",
-        {TPcpatchTypes::TPCPATCH()},
-        LogicalType::VARCHAR,
-        Temporal_start_value
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  tpcpatch_start_value_function);
-
-    auto tpcpatch_end_value_function = ScalarFunction(
-        "endValue",
-        {TPcpatchTypes::TPCPATCH()},
-        LogicalType::VARCHAR,
-        Temporal_end_value
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  tpcpatch_end_value_function);
+    /* startValue/endValue are now GENERATED (they return the pcpatch base value,
+     * rendered as hex-WKB text via the pcpatch->VARCHAR cast), mirroring the cbuffer
+     * sibling; the hand VARCHAR registrations are retired to avoid an ambiguous overload. */
 
     auto tpcpatch_pcid_function = ScalarFunction(
         "pcid",
-        {TPcpatchTypes::TPCPATCH()},
+        {TPcpatchTypes::tpcpatch()},
         LogicalType::INTEGER,
         Tpcpatch_pcid
     );
@@ -1298,7 +1249,7 @@ void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     auto tpcpatch_numpoints_function = ScalarFunction(
         "numPoints",
-        {TPcpatchTypes::TPCPATCH()},
+        {TPcpatchTypes::tpcpatch()},
         LogicalType::INTEGER,
         Tpcpatch_numpoints
     );
@@ -1306,24 +1257,24 @@ void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     auto startInstant_function = ScalarFunction(
         "startInstant",
-        {TPcpatchTypes::TPCPATCH()},
-        TPcpatchTypes::TPCPATCH(),
+        {TPcpatchTypes::tpcpatch()},
+        TPcpatchTypes::tpcpatch(),
         Temporal_start_instant
     );
     duckdb::RegisterSerializedScalarFunction(loader,  startInstant_function);
 
     auto endInstant_function = ScalarFunction(
         "endInstant",
-        {TPcpatchTypes::TPCPATCH()},
-        TPcpatchTypes::TPCPATCH(),
+        {TPcpatchTypes::tpcpatch()},
+        TPcpatchTypes::tpcpatch(),
         Temporal_end_instant
     );
     duckdb::RegisterSerializedScalarFunction(loader,  endInstant_function);
 
     auto instantN_function = ScalarFunction(
         "instantN",
-        {TPcpatchTypes::TPCPATCH(), LogicalType::INTEGER},
-        TPcpatchTypes::TPCPATCH(),
+        {TPcpatchTypes::tpcpatch(), LogicalType::INTEGER},
+        TPcpatchTypes::tpcpatch(),
         Temporal_instant_n
     );
     duckdb::RegisterSerializedScalarFunction(loader,  instantN_function);
@@ -1331,7 +1282,7 @@ void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     auto tpcpatch_gettimestamptz_function = ScalarFunction(
         "getTimestamp",
-        {TPcpatchTypes::TPCPATCH()},
+        {TPcpatchTypes::tpcpatch()},
         LogicalType::TIMESTAMP_TZ,
         Tinstant_timestamptz);
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpatch_gettimestamptz_function);
@@ -1344,7 +1295,7 @@ void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // generic handlers wired for tgeompoint in temporal_functions.cpp.
     // ===================================================================
 
-    const LogicalType TGEOM = TPcpatchTypes::TPCPATCH();
+    const LogicalType TGEOM = TPcpatchTypes::tpcpatch();
     const LogicalType TSTZ  = LogicalType::TIMESTAMP_TZ;
     const LogicalType IVAL  = LogicalType::INTERVAL;
 
@@ -1521,7 +1472,8 @@ void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 }
 
 void TPcpatchTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType( "TPCPATCH", TPcpatchTypes::TPCPATCH());
+    loader.RegisterType( "pcpatch", TPcpatchTypes::pcpatch());
+    loader.RegisterType( "tpcpatch", TPcpatchTypes::tpcpatch());
 }
 
 

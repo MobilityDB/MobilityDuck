@@ -11,7 +11,8 @@ namespace duckdb {
 
 
 struct TPcpatchTypes {
-    static LogicalType TPCPATCH();
+    static LogicalType pcpatch();
+    static LogicalType tpcpatch();
     static LogicalType GEOMETRY();
     static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterScalarFunctions(ExtensionLoader &loader);
@@ -22,6 +23,9 @@ struct TPcpatchTypes {
 struct TpcpatchFunctions {
     static bool StringToTpcpatch(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool TpcpatchToString(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
+    // Base pcpatch value (BLOB-alias) -> VARCHAR render cast (pcpatch_hex_out), so the
+    // generated startValue/endValue base value renders as hex-WKB text (cbuffer sibling).
+    static bool Pcpatch_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool WkbBlobToGeometry(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 };
 

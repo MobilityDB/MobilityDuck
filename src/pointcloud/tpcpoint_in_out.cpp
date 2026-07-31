@@ -25,7 +25,7 @@ namespace duckdb {
 // schema-dependent EWKT path is not meaningful for a pgpointcloud value
 // without a registered PCSCHEMA — so this port does not register an
 // asText / asEWKT overload (no unverified-parity over-emission).  Text
-// I/O is provided by the VARCHAR <-> TPCPOINT cast below.
+// I/O is provided by the VARCHAR <-> tpcpoint cast below.
 
 bool TpcpointFunctions::StringToTpcpoint(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     UnaryExecutor::Execute<string_t, string_t>(
@@ -38,14 +38,14 @@ bool TpcpointFunctions::StringToTpcpoint(Vector &source, Vector &result, idx_t c
             // MobilityDB SQL binds tpcpoint_in to.
             Temporal *temp = temporal_in(input_str.c_str(), T_TPCPOINT);
             if (!temp) {
-                throw InvalidInputException("Invalid TPCPOINT input: " + input_str);
+                throw InvalidInputException("Invalid tpcpoint input: " + input_str);
             }
 
             size_t data_size = temporal_mem_size(temp);
             uint8_t *data_buffer = (uint8_t*)malloc(data_size);
             if (!data_buffer) {
                 free(temp);
-                throw InvalidInputException("Failed to allocate memory for TPCPOINT data");
+                throw InvalidInputException("Failed to allocate memory for tpcpoint data");
             }
 
             memcpy(data_buffer, temp, data_size);
@@ -73,25 +73,25 @@ bool TpcpointFunctions::TpcpointToString(Vector &source, Vector &result, idx_t c
             size_t data_size = input_blob.GetSize();
 
             if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TPCPOINT data: insufficient size");
+                throw InvalidInputException("Invalid tpcpoint data: insufficient size");
             }
 
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for TPCPOINT deserialization");
+                throw InvalidInputException("Failed to allocate memory for tpcpoint deserialization");
             }
             memcpy(data_copy, data, data_size);
 
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TPCPOINT data: null pointer");
+                throw InvalidInputException("Invalid tpcpoint data: null pointer");
             }
 
             char *str = temporal_out(temp, 15);
             if (!str) {
                 free(data_copy);
-                throw InvalidInputException("Failed to convert TPCPOINT to string");
+                throw InvalidInputException("Failed to convert tpcpoint to string");
             }
 
             std::string output(str);
@@ -218,7 +218,7 @@ void TPcpointTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
     // ---- tpcpointFromBinary / FromHexWKB / FromMFJSON / FromText ----
     const auto B = LogicalType::BLOB;
     const auto V = LogicalType::VARCHAR;
-    const auto T = TPcpointTypes::TPCPOINT();
+    const auto T = TPcpointTypes::tpcpoint();
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction("tpcpointFromBinary", {B}, T, TspatialFromWkbExec));
     duckdb::RegisterSerializedScalarFunction(loader,
@@ -258,8 +258,11 @@ void TPcpointTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
 
 
 void TPcpointTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    loader.RegisterCastFunction( LogicalType::VARCHAR, TPcpointTypes::TPCPOINT(), TpcpointFunctions::StringToTpcpoint);
-    loader.RegisterCastFunction( TPcpointTypes::TPCPOINT(), LogicalType::VARCHAR, TpcpointFunctions::TpcpointToString);
+    loader.RegisterCastFunction( LogicalType::VARCHAR, TPcpointTypes::tpcpoint(), TpcpointFunctions::StringToTpcpoint);
+    loader.RegisterCastFunction( TPcpointTypes::tpcpoint(), LogicalType::VARCHAR, TpcpointFunctions::TpcpointToString);
+    // Base pcpoint value render cast: generated startValue/endValue return the pcpoint
+    // base value, rendered as hex-WKB text via pcpoint_hex_out (cbuffer sibling pattern).
+    loader.RegisterCastFunction( TPcpointTypes::pcpoint(), LogicalType::VARCHAR, TpcpointFunctions::Pcpoint_out_cast);
 }
 
 }

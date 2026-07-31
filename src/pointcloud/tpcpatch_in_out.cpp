@@ -25,7 +25,7 @@ namespace duckdb {
 // schema-dependent EWKT path is not meaningful for a pgpointcloud value
 // without a registered PCSCHEMA — so this port does not register an
 // asText / asEWKT overload (no unverified-parity over-emission).  Text
-// I/O is provided by the VARCHAR <-> TPCPATCH cast below.
+// I/O is provided by the VARCHAR <-> tpcpatch cast below.
 
 bool TpcpatchFunctions::StringToTpcpatch(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     UnaryExecutor::Execute<string_t, string_t>(
@@ -38,14 +38,14 @@ bool TpcpatchFunctions::StringToTpcpatch(Vector &source, Vector &result, idx_t c
             // MobilityDB SQL binds tpcpatch_in to.
             Temporal *temp = temporal_in(input_str.c_str(), T_TPCPATCH);
             if (!temp) {
-                throw InvalidInputException("Invalid TPCPATCH input: " + input_str);
+                throw InvalidInputException("Invalid tpcpatch input: " + input_str);
             }
 
             size_t data_size = temporal_mem_size(temp);
             uint8_t *data_buffer = (uint8_t*)malloc(data_size);
             if (!data_buffer) {
                 free(temp);
-                throw InvalidInputException("Failed to allocate memory for TPCPATCH data");
+                throw InvalidInputException("Failed to allocate memory for tpcpatch data");
             }
 
             memcpy(data_buffer, temp, data_size);
@@ -73,25 +73,25 @@ bool TpcpatchFunctions::TpcpatchToString(Vector &source, Vector &result, idx_t c
             size_t data_size = input_blob.GetSize();
 
             if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid TPCPATCH data: insufficient size");
+                throw InvalidInputException("Invalid tpcpatch data: insufficient size");
             }
 
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
             if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for TPCPATCH deserialization");
+                throw InvalidInputException("Failed to allocate memory for tpcpatch deserialization");
             }
             memcpy(data_copy, data, data_size);
 
             Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
             if (!temp) {
                 free(data_copy);
-                throw InvalidInputException("Invalid TPCPATCH data: null pointer");
+                throw InvalidInputException("Invalid tpcpatch data: null pointer");
             }
 
             char *str = temporal_out(temp, 15);
             if (!str) {
                 free(data_copy);
-                throw InvalidInputException("Failed to convert TPCPATCH to string");
+                throw InvalidInputException("Failed to convert tpcpatch to string");
             }
 
             std::string output(str);
@@ -216,7 +216,7 @@ void TPcpatchTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
     // ---- tpcpatchFromBinary / FromHexWKB / FromMFJSON / FromText ----
     const auto B = LogicalType::BLOB;
     const auto V = LogicalType::VARCHAR;
-    const auto T = TPcpatchTypes::TPCPATCH();
+    const auto T = TPcpatchTypes::tpcpatch();
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction("tpcpatchFromBinary", {B}, T, TspatialFromWkbExec));
     duckdb::RegisterSerializedScalarFunction(loader,
@@ -256,8 +256,11 @@ void TPcpatchTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
 
 
 void TPcpatchTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    loader.RegisterCastFunction( LogicalType::VARCHAR, TPcpatchTypes::TPCPATCH(), TpcpatchFunctions::StringToTpcpatch);
-    loader.RegisterCastFunction( TPcpatchTypes::TPCPATCH(), LogicalType::VARCHAR, TpcpatchFunctions::TpcpatchToString);
+    loader.RegisterCastFunction( LogicalType::VARCHAR, TPcpatchTypes::tpcpatch(), TpcpatchFunctions::StringToTpcpatch);
+    loader.RegisterCastFunction( TPcpatchTypes::tpcpatch(), LogicalType::VARCHAR, TpcpatchFunctions::TpcpatchToString);
+    // Base pcpatch value render cast: generated startValue/endValue return the pcpatch
+    // base value, rendered as hex-WKB text via pcpatch_hex_out (cbuffer sibling pattern).
+    loader.RegisterCastFunction( TPcpatchTypes::pcpatch(), LogicalType::VARCHAR, TpcpatchFunctions::Pcpatch_out_cast);
 }
 
 }
