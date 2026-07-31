@@ -39,8 +39,6 @@ struct SetFunctions {
     static void Dateset_to_tstzset(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tstzset_to_dateset(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_mem_size(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Set_hash(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Set_hash_extended(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_num_values(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_start_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_end_value(DataChunk &args, ExpressionState &state, Vector &result);

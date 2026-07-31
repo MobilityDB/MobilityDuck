@@ -239,8 +239,8 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("lowerInc",{span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_lower_inc));
         duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("upperInc",{span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_upper_inc));
 
-        duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_hash", {span_type}, LogicalType::UINTEGER, SpanFunctions::Span_hash));
-        duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_hash_extended", {span_type, LogicalType::BIGINT}, LogicalType::UBIGINT, SpanFunctions::Span_hash_extended));
+        // hash(span_type) / hashExtended(span_type, UBIGINT) are generated from the
+        // catalog (meos_setspan_accessor) in generated_temporal_udfs.cpp.
         }
     
     // expand(intspan/bigintspan/floatspan, <numeric>) is generated from the catalog

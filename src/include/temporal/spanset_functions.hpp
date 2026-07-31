@@ -49,8 +49,6 @@ struct SpansetFunctions{
     static void Spanset_mem_size(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spanset_lower(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spanset_upper(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Spanset_hash(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Spanset_hash_extended(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spanset_lower_inc(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spanset_upper_inc(DataChunk &args, ExpressionState &state, Vector &result);
     static void Numspanset_width(DataChunk &args, ExpressionState &state, Vector &result);

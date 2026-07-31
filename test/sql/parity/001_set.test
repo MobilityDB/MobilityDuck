@@ -483,48 +483,50 @@ SELECT tstzset '{2000-01-01}' >= tstzset '{2000-01-01, 2000-01-02, 2000-01-03}';
 ----
 false
 
+# hash / hashExtended over set types. hash (uint32 -> UINTEGER) and
+# hashExtended (uint64 + seed -> UBIGINT); the extended form is generated
+# from the catalog (meos_setspan_accessor) with the canonical bare name.
+query I
+SELECT hash(dateset '{2000-01-01,2000-01-02}') = hash(dateset '{2000-01-01,2000-01-02}');
+----
+true
+
+query I
+SELECT hash(dateset '{2000-01-01,2000-01-02}') <> hash(dateset '{2000-01-01,2000-01-02}');
+----
+false
+
+query I
+SELECT hash(tstzset '{2000-01-01,2000-01-02}') = hash(tstzset '{2000-01-01,2000-01-02}');
+----
+true
+
+query I
+SELECT hash(tstzset '{2000-01-01,2000-01-02}') <> hash(tstzset '{2000-01-01,2000-01-02}');
+----
+false
+
+query I
+SELECT hashExtended(dateset '{2000-01-01,2000-01-02}', 1) = hashExtended(dateset '{2000-01-01,2000-01-02}', 1);
+----
+true
+
+query I
+SELECT hashExtended(dateset '{2000-01-01,2000-01-02}', 1) <> hashExtended(dateset '{2000-01-01,2000-01-02}', 1);
+----
+false
+
+query I
+SELECT hashExtended(tstzset '{2000-01-01,2000-01-02}', 1) = hashExtended(tstzset '{2000-01-01,2000-01-02}', 1);
+----
+true
+
+query I
+SELECT hashExtended(tstzset '{2000-01-01,2000-01-02}', 1) <> hashExtended(tstzset '{2000-01-01,2000-01-02}', 1);
+----
+false
+
 mode skip
-# set_hash / set_hash_extended not registered. MEOS symbols:
-# set_hash, set_hash_extended.
-query I
-SELECT set_hash(dateset '{2000-01-01,2000-01-02}') = set_hash(dateset '{2000-01-01,2000-01-02}');
-----
-true
-
-query I
-SELECT set_hash(dateset '{2000-01-01,2000-01-02}') <> set_hash(dateset '{2000-01-01,2000-01-02}');
-----
-false
-
-query I
-SELECT set_hash(tstzset '{2000-01-01,2000-01-02}') = set_hash(tstzset '{2000-01-01,2000-01-02}');
-----
-true
-
-query I
-SELECT set_hash(tstzset '{2000-01-01,2000-01-02}') <> set_hash(tstzset '{2000-01-01,2000-01-02}');
-----
-false
-
-query I
-SELECT set_hash_extended(dateset '{2000-01-01,2000-01-02}', 1) = set_hash_extended(dateset '{2000-01-01,2000-01-02}', 1);
-----
-true
-
-query I
-SELECT set_hash_extended(dateset '{2000-01-01,2000-01-02}', 1) <> set_hash_extended(dateset '{2000-01-01,2000-01-02}', 1);
-----
-false
-
-query I
-SELECT set_hash_extended(tstzset '{2000-01-01,2000-01-02}', 1) = set_hash_extended(tstzset '{2000-01-01,2000-01-02}', 1);
-----
-true
-
-query I
-SELECT set_hash_extended(tstzset '{2000-01-01,2000-01-02}', 1) <> set_hash_extended(tstzset '{2000-01-01,2000-01-02}', 1);
-----
-false
 
 # =============================================================================
 # Transformations

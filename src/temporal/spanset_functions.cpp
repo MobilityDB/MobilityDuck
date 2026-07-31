@@ -742,39 +742,6 @@ void SpansetFunctions::Spanset_upper(DataChunk &args, ExpressionState &state, Ve
     }
 }    
 
-// --- spanset_hash / spanset_hash_extended ---
-
-void SpansetFunctions::Spanset_hash(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    UnaryExecutor::Execute<string_t, uint32_t>(
-        input, result, args.size(),
-        [&](string_t input_blob) -> uint32_t {
-            const uint8_t *data = (const uint8_t *)input_blob.GetData();
-            size_t size = input_blob.GetSize();
-            SpanSet *s = (SpanSet*)malloc(size);
-            memcpy(s, data, size);
-            uint32_t h = spanset_hash(s);
-            free(s);
-            return h;
-        });
-}
-
-void SpansetFunctions::Spanset_hash_extended(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    auto &seed_vec = args.data[1];
-    BinaryExecutor::Execute<string_t, int64_t, uint64_t>(
-        input, seed_vec, result, args.size(),
-        [&](string_t input_blob, int64_t seed) -> uint64_t {
-            const uint8_t *data = (const uint8_t *)input_blob.GetData();
-            size_t size = input_blob.GetSize();
-            SpanSet *s = (SpanSet*)malloc(size);
-            memcpy(s, data, size);
-            uint64_t h = spanset_hash_extended(s, (uint64_t)seed);
-            free(s);
-            return h;
-        });
-}
-
 // --- lower_inc ---
 
 void SpansetFunctions::Spanset_lower_inc(DataChunk &args, ExpressionState &state, Vector &result) {

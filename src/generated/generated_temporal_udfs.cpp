@@ -5723,6 +5723,41 @@ static void Gen_tjsonb_array_length(DataChunk &args, ExpressionState &, Vector &
         });
 }
 
+static void Gen_tjsonb_delete(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            text *a2t = MakeText(a2);
+            Temporal *r = tjsonb_delete(t, a2t);
+            free(a2t); free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tjsonb_delete_index(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tjsonb_delete_index(t, a2);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tjsonb_exists(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            text *a2t = MakeText(a2);
+            Temporal *r = tjsonb_exists(t, a2t);
+            free(a2t); free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
 static void Gen_tjsonb_pretty(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
@@ -5779,6 +5814,31 @@ static void Gen_tjsonb_minus_value(DataChunk &args, ExpressionState &, Vector &r
             Temporal *r = tjsonb_minus_value(t, a2p);
             free(a2p); free(t);
             return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+
+// ===== @ingroup meos_json_set_json =====
+static void Gen_jsonbset_delete_index(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, int32_t a2) {
+            Set *s = BlobToSet(a);
+            Set *r = jsonbset_delete_index(s, a2);
+            free(s);
+            return SetToBlob(result, r);
+        });
+}
+
+static void Gen_jsonbset_delete(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t a2) {
+            Set *s = BlobToSet(a);
+            text *t2 = MakeText(a2);
+            Set *r = jsonbset_delete(s, t2);
+            free(t2); free(s);
+            return SetToBlob(result, r);
         });
 }
 
@@ -6189,6 +6249,17 @@ static void Gen_set_hash(DataChunk &args, ExpressionState &, Vector &result) {
         });
 }
 
+static void Gen_set_hash_extended(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, uint64_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, uint64_t a2) {
+            Set *s = BlobToSet(a);
+            uint64_t r = set_hash_extended(s, a2);
+            free(s);
+            return r;
+        });
+}
+
 static void Gen_set_num_values(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, int32_t>(args.data[0], result, args.size(),
@@ -6573,6 +6644,17 @@ static void Gen_span_hash(DataChunk &args, ExpressionState &, Vector &result) {
         });
 }
 
+static void Gen_span_hash_extended(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, uint64_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2) {
+            Span *s = BlobToSpan(in);
+            uint64_t r = span_hash_extended(s, a2);
+            free(s);
+            return r;
+        });
+}
+
 static void Gen_span_lower_inc(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, bool>(args.data[0], result, args.size(),
@@ -6766,6 +6848,17 @@ static void Gen_spanset_hash(DataChunk &args, ExpressionState &, Vector &result)
         [&](string_t in) {
             SpanSet *s = BlobToSpanSet(in);
             uint32_t r = spanset_hash(s);
+            free(s);
+            return r;
+        });
+}
+
+static void Gen_spanset_hash_extended(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, uint64_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2) {
+            SpanSet *s = BlobToSpanSet(in);
+            uint64_t r = spanset_hash_extended(s, a2);
             free(s);
             return r;
         });
@@ -17380,12 +17473,18 @@ static void RegisterGenerated_meos_json_conversion(ExtensionLoader &loader) {
 }
 
 static void RegisterGenerated_meos_json_json(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("jsonb_concat", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, TJsonbTypes::tjsonb(), Gen_concat_tjsonb_tjsonb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonb_concat", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, TJsonbTypes::tjsonb(), Gen_concat_tjsonb_tjsonb));
     RegisterSerializedScalarFunction(loader, ScalarFunction("||", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, TJsonbTypes::tjsonb(), Gen_concat_tjsonb_tjsonb));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonb_contains", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, TemporalTypes::tbool(), Gen_contains_tjsonb_tjsonb));
     RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, TemporalTypes::tbool(), Gen_contains_tjsonb_tjsonb));
     RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, TemporalTypes::tbool(), Gen_contains_tjsonb_tjsonb));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonb_array_length", {TJsonbTypes::tjsonb()}, TemporalTypes::tint(), Gen_tjsonb_array_length));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonb_delete", {TJsonbTypes::tjsonb(), LogicalType::VARCHAR}, TJsonbTypes::tjsonb(), Gen_tjsonb_delete));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {TJsonbTypes::tjsonb(), LogicalType::VARCHAR}, TJsonbTypes::tjsonb(), Gen_tjsonb_delete));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonb_delete_index", {TJsonbTypes::tjsonb(), LogicalType::INTEGER}, TJsonbTypes::tjsonb(), Gen_tjsonb_delete_index));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {TJsonbTypes::tjsonb(), LogicalType::INTEGER}, TJsonbTypes::tjsonb(), Gen_tjsonb_delete_index));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonb_exists", {TJsonbTypes::tjsonb(), LogicalType::VARCHAR}, TemporalTypes::tbool(), Gen_tjsonb_exists));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?", {TJsonbTypes::tjsonb(), LogicalType::VARCHAR}, TemporalTypes::tbool(), Gen_tjsonb_exists));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonb_pretty", {TJsonbTypes::tjsonb()}, TemporalTypes::ttext(), Gen_tjsonb_pretty));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonb_strip_nulls", {TJsonbTypes::tjsonb(), LogicalType::BOOLEAN}, TJsonbTypes::tjsonb(), Gen_tjsonb_strip_nulls));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonb_strip_nulls", {TJsonbTypes::tjsonb()}, TJsonbTypes::tjsonb(), Gen_tjsonb_strip_nulls_d));
@@ -17394,6 +17493,13 @@ static void RegisterGenerated_meos_json_json(ExtensionLoader &loader) {
 static void RegisterGenerated_meos_json_restrict(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("atValue", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, TJsonbTypes::tjsonb(), Gen_tjsonb_at_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusValue", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, TJsonbTypes::tjsonb(), Gen_tjsonb_minus_value));
+}
+
+static void RegisterGenerated_meos_json_set_json(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("jsonbset_delete_index", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), Gen_jsonbset_delete_index));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), Gen_jsonbset_delete_index));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("jsonbset_delete", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), Gen_jsonbset_delete));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), Gen_jsonbset_delete));
 }
 
 static void RegisterGenerated_meos_npoint_base_accessor(ExtensionLoader &loader) {
@@ -17450,6 +17556,7 @@ static void RegisterGenerated_meos_quadbin_conversion(ExtensionLoader &loader) {
 static void RegisterGenerated_meos_setspan_accessor(ExtensionLoader &loader) {
     for (auto &type : SetTypes::AllTypes()) {
         RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {type}, LogicalType::UINTEGER, Gen_set_hash));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {type, LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_set_hash_extended));
         RegisterSerializedScalarFunction(loader, ScalarFunction("numValues", {type}, LogicalType::INTEGER, Gen_set_num_values));
     }
     RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {SetTypes::bigintset()}, LogicalType::BIGINT, Gen_bigintset_end_value));
@@ -17471,7 +17578,8 @@ static void RegisterGenerated_meos_setspan_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValues", {SetTypes::textset()}, LogicalType::LIST(LogicalType::VARCHAR), Gen_textset_values));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValues", {SetTypes::tstzset()}, LogicalType::LIST(LogicalType::TIMESTAMP_TZ), Gen_tstzset_values));
     for (auto &type : SpanTypes::AllTypes()) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("span_hash", {type}, LogicalType::UINTEGER, Gen_span_hash));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {type}, LogicalType::UINTEGER, Gen_span_hash));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {type, LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_span_hash_extended));
         RegisterSerializedScalarFunction(loader, ScalarFunction("lower_inc", {type}, LogicalType::BOOLEAN, Gen_span_lower_inc));
         RegisterSerializedScalarFunction(loader, ScalarFunction("lower_inc", {type}, LogicalType::BOOLEAN, Gen_span_upper_inc));
     }
@@ -17509,7 +17617,8 @@ static void RegisterGenerated_meos_setspan_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("startTimestamp", {SpansetTypes::tstzspanset()}, LogicalType::TIMESTAMP_TZ, Gen_tstzspanset_start_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("upper", {SpansetTypes::tstzspanset()}, LogicalType::TIMESTAMP_TZ, Gen_tstzspanset_upper));
     for (auto &type : SpansetTypes::AllTypes()) {
-        RegisterSerializedScalarFunction(loader, ScalarFunction("spanset_hash", {type}, LogicalType::UINTEGER, Gen_spanset_hash));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {type}, LogicalType::UINTEGER, Gen_spanset_hash));
+        RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {type, LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_spanset_hash_extended));
         RegisterSerializedScalarFunction(loader, ScalarFunction("lower_inc", {type}, LogicalType::BOOLEAN, Gen_spanset_lower_inc));
         RegisterSerializedScalarFunction(loader, ScalarFunction("numSpans", {type}, LogicalType::INTEGER, Gen_spanset_num_spans));
         RegisterSerializedScalarFunction(loader, ScalarFunction("lower_inc", {type}, LogicalType::BOOLEAN, Gen_spanset_upper_inc));
@@ -18285,38 +18394,38 @@ static void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {TPcpointTypes::tpcpoint()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {TPcpatchTypes::tpcpatch()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {NpointTypes::tnpoint()}, LogicalType::TIMESTAMP_TZ, Gen_temporal_end_timestamptz));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash", {TemporalTypes::tint()}, LogicalType::UINTEGER, Gen_temporal_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash", {TemporalTypes::tbigint()}, LogicalType::UINTEGER, Gen_temporal_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash", {TemporalTypes::tbool()}, LogicalType::UINTEGER, Gen_temporal_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash", {TemporalTypes::tfloat()}, LogicalType::UINTEGER, Gen_temporal_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash", {TemporalTypes::ttext()}, LogicalType::UINTEGER, Gen_temporal_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash", {TgeompointType::tgeompoint()}, LogicalType::UINTEGER, Gen_temporal_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash", {TgeogpointType::tgeogpoint()}, LogicalType::UINTEGER, Gen_temporal_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash", {TGeometryTypes::tgeometry()}, LogicalType::UINTEGER, Gen_temporal_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash", {TGeographyTypes::tgeography()}, LogicalType::UINTEGER, Gen_temporal_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash", {CbufferTypes::tcbuffer()}, LogicalType::UINTEGER, Gen_temporal_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash", {H3indexTypes::th3index()}, LogicalType::UINTEGER, Gen_temporal_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash", {QuadbinTypes::tquadbin()}, LogicalType::UINTEGER, Gen_temporal_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash", {TJsonbTypes::tjsonb()}, LogicalType::UINTEGER, Gen_temporal_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash", {TPcpointTypes::tpcpoint()}, LogicalType::UINTEGER, Gen_temporal_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash", {TPcpatchTypes::tpcpatch()}, LogicalType::UINTEGER, Gen_temporal_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash", {NpointTypes::tnpoint()}, LogicalType::UINTEGER, Gen_temporal_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash_extended", {TemporalTypes::tint(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash_extended", {TemporalTypes::tbigint(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash_extended", {TemporalTypes::tbool(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash_extended", {TemporalTypes::tfloat(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash_extended", {TemporalTypes::ttext(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash_extended", {TgeompointType::tgeompoint(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash_extended", {TgeogpointType::tgeogpoint(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash_extended", {TGeometryTypes::tgeometry(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash_extended", {TGeographyTypes::tgeography(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash_extended", {CbufferTypes::tcbuffer(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash_extended", {H3indexTypes::th3index(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash_extended", {QuadbinTypes::tquadbin(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash_extended", {TJsonbTypes::tjsonb(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash_extended", {TPcpointTypes::tpcpoint(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash_extended", {TPcpatchTypes::tpcpatch(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("temporal_hash_extended", {NpointTypes::tnpoint(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {TemporalTypes::tint()}, LogicalType::UINTEGER, Gen_temporal_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {TemporalTypes::tbigint()}, LogicalType::UINTEGER, Gen_temporal_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {TemporalTypes::tbool()}, LogicalType::UINTEGER, Gen_temporal_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {TemporalTypes::tfloat()}, LogicalType::UINTEGER, Gen_temporal_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {TemporalTypes::ttext()}, LogicalType::UINTEGER, Gen_temporal_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {TgeompointType::tgeompoint()}, LogicalType::UINTEGER, Gen_temporal_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {TgeogpointType::tgeogpoint()}, LogicalType::UINTEGER, Gen_temporal_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {TGeometryTypes::tgeometry()}, LogicalType::UINTEGER, Gen_temporal_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {TGeographyTypes::tgeography()}, LogicalType::UINTEGER, Gen_temporal_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {CbufferTypes::tcbuffer()}, LogicalType::UINTEGER, Gen_temporal_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {H3indexTypes::th3index()}, LogicalType::UINTEGER, Gen_temporal_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {QuadbinTypes::tquadbin()}, LogicalType::UINTEGER, Gen_temporal_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {TJsonbTypes::tjsonb()}, LogicalType::UINTEGER, Gen_temporal_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {TPcpointTypes::tpcpoint()}, LogicalType::UINTEGER, Gen_temporal_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {TPcpatchTypes::tpcpatch()}, LogicalType::UINTEGER, Gen_temporal_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {NpointTypes::tnpoint()}, LogicalType::UINTEGER, Gen_temporal_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {TemporalTypes::tint(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {TemporalTypes::tbigint(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {TemporalTypes::tbool(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {TemporalTypes::tfloat(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {TemporalTypes::ttext(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {TgeompointType::tgeompoint(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {TgeogpointType::tgeogpoint(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {TGeometryTypes::tgeometry(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {TGeographyTypes::tgeography(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {CbufferTypes::tcbuffer(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {H3indexTypes::th3index(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {QuadbinTypes::tquadbin(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {TJsonbTypes::tjsonb(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {TPcpointTypes::tpcpoint(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {TPcpatchTypes::tpcpatch(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {NpointTypes::tnpoint(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_temporal_hash_extended));
     RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tint(), Gen_temporal_instant_n));
     RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {TemporalTypes::tbigint(), LogicalType::INTEGER}, TemporalTypes::tbigint(), Gen_temporal_instant_n));
     RegisterSerializedScalarFunction(loader, ScalarFunction("instantN", {TemporalTypes::tbool(), LogicalType::INTEGER}, TemporalTypes::tbool(), Gen_temporal_instant_n));
@@ -20021,6 +20130,8 @@ static void RegisterGenerated_meos_temporal_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("asHexWKB", {TPcpointTypes::tpcpoint(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_temporal_as_hexwkb));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asHexWKB", {TPcpatchTypes::tpcpatch()}, LogicalType::VARCHAR, Gen_temporal_as_hexwkb));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asHexWKB", {TPcpatchTypes::tpcpatch(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_temporal_as_hexwkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexWKB", {QuadbinTypes::tquadbin()}, LogicalType::VARCHAR, Gen_temporal_as_hexwkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexWKB", {QuadbinTypes::tquadbin(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_temporal_as_hexwkb));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asHexWKB", {TemporalTypes::tbool()}, LogicalType::VARCHAR, Gen_temporal_as_hexwkb));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asHexWKB", {TemporalTypes::tbool(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_temporal_as_hexwkb));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asHexWKB", {TemporalTypes::tint()}, LogicalType::VARCHAR, Gen_temporal_as_hexwkb));
@@ -20130,6 +20241,8 @@ static void RegisterGenerated_meos_temporal_modif(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {H3indexTypes::th3index(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, H3indexTypes::th3index(), Gen_temporal_delete_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {QuadbinTypes::tquadbin(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, QuadbinTypes::tquadbin(), Gen_temporal_delete_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TJsonbTypes::tjsonb(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TJsonbTypes::tjsonb(), Gen_temporal_delete_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TPcpointTypes::tpcpoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TPcpointTypes::tpcpoint(), Gen_temporal_delete_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TPcpatchTypes::tpcpatch(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TPcpatchTypes::tpcpatch(), Gen_temporal_delete_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {NpointTypes::tnpoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, NpointTypes::tnpoint(), Gen_temporal_delete_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {TemporalTypes::tint(), TemporalTypes::tint(), LogicalType::BOOLEAN}, TemporalTypes::tint(), Gen_temporal_insert));
     RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {TemporalTypes::tbigint(), TemporalTypes::tbigint(), LogicalType::BOOLEAN}, TemporalTypes::tbigint(), Gen_temporal_insert));
@@ -20139,6 +20252,8 @@ static void RegisterGenerated_meos_temporal_modif(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {H3indexTypes::th3index(), H3indexTypes::th3index(), LogicalType::BOOLEAN}, H3indexTypes::th3index(), Gen_temporal_insert));
     RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin(), LogicalType::BOOLEAN}, QuadbinTypes::tquadbin(), Gen_temporal_insert));
     RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb(), LogicalType::BOOLEAN}, TJsonbTypes::tjsonb(), Gen_temporal_insert));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {TPcpointTypes::tpcpoint(), TPcpointTypes::tpcpoint(), LogicalType::BOOLEAN}, TPcpointTypes::tpcpoint(), Gen_temporal_insert));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("insert", {TPcpatchTypes::tpcpatch(), TPcpatchTypes::tpcpatch(), LogicalType::BOOLEAN}, TPcpatchTypes::tpcpatch(), Gen_temporal_insert));
     RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_merge));
     RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_merge));
     RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {TemporalTypes::tbool(), TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_temporal_merge));
@@ -20166,6 +20281,8 @@ static void RegisterGenerated_meos_temporal_modif(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("update", {H3indexTypes::th3index(), H3indexTypes::th3index(), LogicalType::BOOLEAN}, H3indexTypes::th3index(), Gen_temporal_update));
     RegisterSerializedScalarFunction(loader, ScalarFunction("update", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin(), LogicalType::BOOLEAN}, QuadbinTypes::tquadbin(), Gen_temporal_update));
     RegisterSerializedScalarFunction(loader, ScalarFunction("update", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb(), LogicalType::BOOLEAN}, TJsonbTypes::tjsonb(), Gen_temporal_update));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("update", {TPcpointTypes::tpcpoint(), TPcpointTypes::tpcpoint(), LogicalType::BOOLEAN}, TPcpointTypes::tpcpoint(), Gen_temporal_update));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("update", {TPcpatchTypes::tpcpatch(), TPcpatchTypes::tpcpatch(), LogicalType::BOOLEAN}, TPcpatchTypes::tpcpatch(), Gen_temporal_update));
     RegisterSerializedScalarFunction(loader, ScalarFunction("update", {NpointTypes::tnpoint(), NpointTypes::tnpoint(), LogicalType::BOOLEAN}, NpointTypes::tnpoint(), Gen_temporal_update));
 }
 
@@ -20185,6 +20302,8 @@ static void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {H3indexTypes::th3index(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, H3indexTypes::th3index(), Gen_temporal_after_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {QuadbinTypes::tquadbin(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, QuadbinTypes::tquadbin(), Gen_temporal_after_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TJsonbTypes::tjsonb(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TJsonbTypes::tjsonb(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TPcpointTypes::tpcpoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TPcpointTypes::tpcpoint(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TPcpatchTypes::tpcpatch(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TPcpatchTypes::tpcpatch(), Gen_temporal_after_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {NpointTypes::tnpoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, NpointTypes::tnpoint(), Gen_temporal_after_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atMax", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_at_max));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atMax", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_at_max));
@@ -20225,6 +20344,8 @@ static void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {H3indexTypes::th3index(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, H3indexTypes::th3index(), Gen_temporal_before_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {QuadbinTypes::tquadbin(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, QuadbinTypes::tquadbin(), Gen_temporal_before_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TJsonbTypes::tjsonb(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TJsonbTypes::tjsonb(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TPcpointTypes::tpcpoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TPcpointTypes::tpcpoint(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TPcpatchTypes::tpcpatch(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TPcpatchTypes::tpcpatch(), Gen_temporal_before_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {NpointTypes::tnpoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, NpointTypes::tnpoint(), Gen_temporal_before_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusMax", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_minus_max));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusMax", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_minus_max));
@@ -20484,6 +20605,7 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_json_conversion(loader);
     RegisterGenerated_meos_json_json(loader);
     RegisterGenerated_meos_json_restrict(loader);
+    RegisterGenerated_meos_json_set_json(loader);
     RegisterGenerated_meos_npoint_base_accessor(loader);
     RegisterGenerated_meos_npoint_base_srid(loader);
     RegisterGenerated_meos_npoint_conversion(loader);

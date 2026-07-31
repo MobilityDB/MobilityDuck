@@ -121,13 +121,8 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("memSize",{set_type}, LogicalType::INTEGER, SetFunctions::Set_mem_size)
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("set_hash", {set_type}, LogicalType::UINTEGER, SetFunctions::Set_hash)
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("set_hash_extended", {set_type, LogicalType::BIGINT}, LogicalType::UBIGINT, SetFunctions::Set_hash_extended)
-        );
+        // hash(set_type) / hashExtended(set_type, UBIGINT) are generated from the
+        // catalog (meos_setspan_accessor) in generated_temporal_udfs.cpp.
 
         // numValues / startValue / endValue on set types are generated from the
         // catalog (meos_setspan_accessor) in generated_temporal_udfs.cpp.
