@@ -47,6 +47,8 @@ PTR_IN  = {  # MEOS base type -> (DuckDB arg LogicalType, "C++ expr producing th
     "Jsonb":        ("TJsonbTypes::jsonb()", "BlobToJsonb(%s)"),
     "Pcpoint":      ("TPcpointTypes::pcpoint()", "BlobToPcpoint(%s)"),
     "Pcpatch":      ("TPcpatchTypes::pcpatch()", "BlobToPcpatch(%s)"),
+    "Npoint":       ("NpointTypes::npoint()", "BlobToNpoint(%s)"),
+    "Nsegment":     ("NpointTypes::nsegment()", "BlobToNsegment(%s)"),
 }
 PTR_RET = {  # MEOS base type -> (DuckDB ret LogicalType, "C++ expr producing string_t from MEOS ptr `%s` in `result`")
     "Temporal":     ("MD_TEMPORAL", "TemporalToBlob(result, %s)"),
@@ -62,6 +64,8 @@ PTR_RET = {  # MEOS base type -> (DuckDB ret LogicalType, "C++ expr producing st
     "Jsonb":        ("TJsonbTypes::jsonb()", "JsonbToBlob(result, %s)"),
     "Pcpoint":      ("TPcpointTypes::pcpoint()", "PcpointToBlob(result, %s)"),
     "Pcpatch":      ("TPcpatchTypes::pcpatch()", "PcpatchToBlob(result, %s)"),
+    "Npoint":       ("NpointTypes::npoint()", "NpointToBlob(result, %s)"),
+    "Nsegment":     ("NpointTypes::nsegment()", "NsegmentToBlob(result, %s)"),
 }
 # The temporal-family pointer returns that marshal as one DuckDB temporal handle. A MEOS
 # accessor/cast can return a concrete subtype pointer (TInstant */TSequence */TSequenceSet *
@@ -192,6 +196,7 @@ REGISTERED_FAMILIES = {
     "tcbuffer", "cbuffer", "th3index", "h3index",
     "tjsonb", "jsonb",
     "tpcpoint", "pcpoint", "tpcpatch", "pcpatch",
+    "tnpoint", "npoint", "nsegment",
 }
 # Every temporal family token the catalog function names use; those NOT in REGISTERED_FAMILIES
 # are the fast-follow families whose DuckDB type the binding does not register yet.
@@ -386,7 +391,7 @@ GEO_ALLTYPES = list(GEO_TYPES.values())
 # GEO_ALLTYPES, which stays geo-only for the `tgeo` supertype (geometry+geography) and the
 # geometry-argument spatial relationships. Add a new spatial family here to inherit the surface.
 SPATIAL_ALLTYPES = GEO_ALLTYPES + ["CbufferTypes::tcbuffer()", "H3indexTypes::th3index()",
-                                   "QuadbinTypes::tquadbin()"]
+                                   "QuadbinTypes::tquadbin()", "NpointTypes::tnpoint()"]
 def reg_scope(name):
     """('all', None) generic | ('types', [accessors]) specific | None = not core family.
     Resolves the temporal type from the MobilityDB naming convention: a PREFIX
@@ -492,7 +497,8 @@ TO_TYPE = {"tint": "TemporalTypes::tint()", "tbigint": "TemporalTypes::tbigint()
            "tgeompoint": "TgeompointType::tgeompoint()", "tgeogpoint": "TgeogpointType::tgeogpoint()",
            "tcbuffer": "CbufferTypes::tcbuffer()", "th3index": "H3indexTypes::th3index()",
            "tquadbin": "QuadbinTypes::tquadbin()", "tjsonb": "TJsonbTypes::tjsonb()",
-           "tpcpoint": "TPcpointTypes::tpcpoint()", "tpcpatch": "TPcpatchTypes::tpcpatch()"}
+           "tpcpoint": "TPcpointTypes::tpcpoint()", "tpcpatch": "TPcpatchTypes::tpcpatch()",
+           "tnpoint": "NpointTypes::tnpoint()"}
 def ret_temporal_type(name, arg_acc, group="", sql_ret=None):
     # A single, unambiguous SQL return subtype from the catalog names the output
     # temporal type directly (the catalog is the SoT). The name heuristics below are
@@ -531,6 +537,7 @@ SIG_TEMPORAL_ACC = {
     "tcbuffer":   "CbufferTypes::tcbuffer()",      "th3index":   "H3indexTypes::th3index()",
     "tquadbin":   "QuadbinTypes::tquadbin()",      "tjsonb":     "TJsonbTypes::tjsonb()",
     "tpcpoint":   "TPcpointTypes::tpcpoint()",     "tpcpatch":   "TPcpatchTypes::tpcpatch()",
+    "tnpoint":    "NpointTypes::tnpoint()",
 }
 def sig_declared_accs(f):
     """The exact temporal-operand types this GENERIC (`Temporal *`) function is CREATE
@@ -3086,6 +3093,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            '#include "json/tjsonb.hpp"\n'              # TJsonbTypes::jsonb()/tjsonb()
            '#include "pointcloud/tpcpoint.hpp"\n'      # TPcpointTypes::pcpoint()/tpcpoint()
            '#include "pointcloud/tpcpatch.hpp"\n'      # TPcpatchTypes::pcpatch()/tpcpatch()
+           '#include "npoint/tnpoint.hpp"\n'           # NpointTypes::npoint()/nsegment()/tnpoint()
            '#include "spatial/spatial_types.hpp"\n'   # GeoTypes::GEOMETRY() (duckdb-spatial)
            '#include "geo_util.hpp"\n'                # GeometryToGSerialized(blob, srid)
            '#include "meos_internal.h"\n'
@@ -3202,6 +3210,24 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "    uint8_t *copy = (uint8_t *)malloc(sz);\n"
            "    memcpy(copy, blob.GetData(), sz);\n"
            "    return reinterpret_cast<Pcpatch *>(copy);\n}\n"
+           "// Self-contained blob<->Npoint/Nsegment marshalling. Npoint {rid,pos} and Nsegment\n"
+           "// {rid,pos1,pos2} are FIXED-size structs (palloc(sizeof)) -> sizeof out.\n"
+           "inline string_t NpointToBlob(Vector &result, Npoint *np) {\n"
+           "    string_t out = StringVector::AddStringOrBlob(result, (const char *)np, sizeof(Npoint));\n"
+           "    free(np);\n    return out;\n}\n"
+           "inline string_t NpointToBlobN(Vector &result, Npoint *np, ValidityMask &mask, idx_t idx) {\n"
+           "    if (!np) { mask.SetInvalid(idx); return string_t(); }\n    return NpointToBlob(result, np);\n}\n"
+           "inline Npoint *BlobToNpoint(string_t blob) {\n"
+           "    Npoint *copy = (Npoint *)malloc(sizeof(Npoint));\n"
+           "    memcpy(copy, blob.GetData(), sizeof(Npoint));\n    return copy;\n}\n"
+           "inline string_t NsegmentToBlob(Vector &result, Nsegment *ns) {\n"
+           "    string_t out = StringVector::AddStringOrBlob(result, (const char *)ns, sizeof(Nsegment));\n"
+           "    free(ns);\n    return out;\n}\n"
+           "inline string_t NsegmentToBlobN(Vector &result, Nsegment *ns, ValidityMask &mask, idx_t idx) {\n"
+           "    if (!ns) { mask.SetInvalid(idx); return string_t(); }\n    return NsegmentToBlob(result, ns);\n}\n"
+           "inline Nsegment *BlobToNsegment(string_t blob) {\n"
+           "    Nsegment *copy = (Nsegment *)malloc(sizeof(Nsegment));\n"
+           "    memcpy(copy, blob.GetData(), sizeof(Nsegment));\n    return copy;\n}\n"
            "// Self-contained blob<->STBox/TBox marshalling (FIXED-size structs -> sizeof).\n"
            "inline string_t StboxToBlob(Vector &result, STBox *b) {\n"
            "    string_t out = StringVector::AddStringOrBlob(result, (const char *)b, sizeof(STBox));\n"

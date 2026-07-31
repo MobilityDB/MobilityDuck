@@ -24,6 +24,7 @@
 #include "h3/th3index.hpp"
 #include "cbuffer/tcbuffer.hpp"
 #include "json/tjsonb.hpp"
+#include "npoint/tnpoint.hpp"
 #include "temporal/span.hpp"
 #include "temporal/span_aggregates.hpp"
 #include "temporal/temporal_aggregates.hpp"
@@ -69,6 +70,7 @@ extern "C" {
 
 namespace duckdb {
 #include "spatial_ref_sys_csv.inc"
+#include "ways_csv.inc"
 
 // =====================================================================
 // 2. Utility: version scalar functions
@@ -136,6 +138,10 @@ inline void MobilityduckFullVersionScalarFun(DataChunk &args, ExpressionState &s
   #define MDUCK_SRID_ENV_NAME "SPATIAL_REF_SYS"
 #endif
 
+#ifndef MDUCK_WAYS_ENV_NAME
+  #define MDUCK_WAYS_ENV_NAME "WAYS_CSV"
+#endif
+
 static bool file_exists(const char *p) {
     struct stat st {};
     return p && *p && (stat(p, &st) == 0);
@@ -179,16 +185,59 @@ static void ConfigureMeosSridCsvOnce() {
     std::call_once(once, [] {
         const char *env_path = std::getenv(MDUCK_SRID_ENV_NAME);
         const char *chosen   = nullptr;
-        
+
         if (env_path && *env_path && file_exists(env_path)) {
             chosen = env_path;
-        } else {            
+        } else {
             static std::string embedded_path = EnsureEmbeddedSridCsvOnDisk();
             chosen = embedded_path.c_str();
         }
 
         if (chosen) {
-            meos_set_spatial_ref_sys_csv(chosen);            
+            meos_set_spatial_ref_sys_csv(chosen);
+        }
+    });
+}
+
+// The network-point (npoint) family carries no SRID/geometry of its own: a route
+// identifier is resolved against the `ways` network CSV (npoint_srid()=get_srid_ways(),
+// route_geom() reads the CSV). Ship the canonical example `ways` network embedded and
+// point MEOS at it, exactly as ConfigureMeosSridCsvOnce does for spatial_ref_sys.
+static std::string EnsureEmbeddedWaysCsvOnDisk() {
+    std::string dir  = GetTempDir();
+    std::string path = dir + "/mobilityduck_ways.csv";
+
+    if (!file_exists(path)) {
+        std::ofstream out(path, std::ios::binary);
+        if (!out) {
+            throw duckdb::IOException(
+                "mobilityduck: cannot write embedded ways.csv to " + path
+            );
+        }
+        out.write(
+            reinterpret_cast<const char *>(ways_csv),
+            static_cast<std::streamsize>(ways_csv_len)
+        );
+        out.close();
+    }
+    return path;
+}
+
+static void ConfigureMeosWaysCsvOnce() {
+    static std::once_flag once;
+    std::call_once(once, [] {
+        const char *env_path = std::getenv(MDUCK_WAYS_ENV_NAME);
+        const char *chosen   = nullptr;
+
+        if (env_path && *env_path && file_exists(env_path)) {
+            chosen = env_path;
+        } else {
+            static std::string embedded_path = EnsureEmbeddedWaysCsvOnDisk();
+            chosen = embedded_path.c_str();
+        }
+
+        if (chosen) {
+            meos_set_ways_csv(chosen);
         }
     });
 }
@@ -222,6 +271,10 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader);
 static void LoadInternal(ExtensionLoader &loader) {
 	// Configure MEOS SRID CSV once (env / embedded)
 	ConfigureMeosSridCsvOnce();
+
+	// Configure the MEOS `ways` network CSV once (env / embedded) so the npoint
+	// family resolves route SRID/geometry (npoint carries no SRID of its own).
+	ConfigureMeosWaysCsvOnce();
 
 	// Initialize MEOS once and install our error handler so MEOS errors
 	// become DuckDB exceptions instead of exit()ing the process.
@@ -384,6 +437,8 @@ static void LoadInternal(ExtensionLoader &loader) {
 
 	CbufferTypes::RegisterTypes(loader);
 	CbufferTypes::RegisterCastFunctions(loader);
+	NpointTypes::RegisterTypes(loader);
+	NpointTypes::RegisterCastFunctions(loader);
 
 	SpansetTypes::RegisterTypes(loader);
 	SpansetTypes::RegisterCastFunctions(loader);
