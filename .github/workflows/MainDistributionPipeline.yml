@@ -36,12 +36,21 @@ jobs:
       extension_name: mobilityduck
       ci_tools_version: v1.4.4
       vcpkg_commit: c27eeddba73f608f10605d80bc0144c1166f8fb7
-      # Windows is excluded because the MEOS vcpkg port does not currently
-      # build under MSVC or MinGW: it pulls in PostgreSQL-derived sources
-      # that depend on POSIX-only headers (e.g. <dirent.h>) and GCC-only
-      # attribute syntax (`__attribute__((unused))`). Re-enable once the
-      # MEOS port grows Windows support.
-      exclude_archs: windows_amd64;windows_amd64_mingw;linux_amd64_musl
+      # Windows is excluded because the MEOS vcpkg port does not build under
+      # MSVC or MinGW: it pulls in PostgreSQL-derived sources that depend on
+      # POSIX-only headers (e.g. <dirent.h>) and GCC-only attribute syntax
+      # (`__attribute__((unused))`). Re-enable once the MEOS port grows
+      # Windows support.
+      #
+      # On pull_request events the slow triplets (the 3 emscripten Wasm
+      # cross-compiles and the 2 macOS builds) are also excluded, so feature
+      # PRs build only the fast Linux amd64+arm64 targets. The full matrix
+      # (Wasm + macOS) runs on push to main and on workflow_dispatch, so every
+      # platform is validated ahead of a release/deploy. The MEOS port rebuilds
+      # libmeos and its heavy deps (GEOS/PROJ/GDAL) from source each run (it
+      # tracks master's tip, no pin), and cross-compiling those for Wasm
+      # dominates CI time.
+      exclude_archs: ${{ github.event_name == 'pull_request' && 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;osx_amd64;osx_arm64;wasm_mvp;wasm_eh;wasm_threads' || 'windows_amd64;windows_amd64_mingw;linux_amd64_musl' }}
 
   duckdb-latest-deploy:
     needs: duckdb-latest-build
@@ -52,9 +61,8 @@ jobs:
       ci_tools_version: v1.4.4
       extension_name: mobilityduck
       deploy_latest: ${{ startsWith(github.ref, 'refs/heads/v') || github.ref == 'refs/heads/main' }}
-      # Windows is excluded because the MEOS vcpkg port does not currently
-      # build under MSVC or MinGW: it pulls in PostgreSQL-derived sources
-      # that depend on POSIX-only headers (e.g. <dirent.h>) and GCC-only
-      # attribute syntax (`__attribute__((unused))`). Re-enable once the
-      # MEOS port grows Windows support.
-      exclude_archs: windows_amd64;windows_amd64_mingw;linux_amd64_musl
+      # Matches the build job's exclude_archs per event so the deploy step gathers
+      # exactly the artifacts that were built: the full matrix on push/dispatch,
+      # Linux-only on pull_request. (Windows/musl stay excluded everywhere — the
+      # MEOS vcpkg port does not build under MSVC/MinGW; see the build job above.)
+      exclude_archs: ${{ github.event_name == 'pull_request' && 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;osx_amd64;osx_arm64;wasm_mvp;wasm_eh;wasm_threads' || 'windows_amd64;windows_amd64_mingw;linux_amd64_musl' }}
