@@ -1,0 +1,43 @@
+# name: test/sql/temporal_hash.test
+# description: Generated hash surface for the temporal types — temporal_hash (uint32)
+#             and temporal_hash_extended (uint64 + seed). Both use DuckDB's native
+#             unsigned types (UINTEGER / UBIGINT): a MEOS hash fills the full unsigned
+#             range, so a signed INTEGER/BIGINT would be out of range (DuckDB range-
+#             checks the cast, unlike PostgreSQL/C which bit-reinterpret).
+
+require mobilityduck
+
+# temporal_hash returns the uint32 hash as the native UINTEGER
+query I
+SELECT temporal_hash(tint '1@2000-01-01');
+----
+157457912
+
+query I
+SELECT typeof(temporal_hash(tint '1@2000-01-01'));
+----
+UINTEGER
+
+# temporal_hash_extended returns the uint64 hash as the native UBIGINT. This value
+# (> 2**63) does NOT fit in a signed BIGINT — proof that UBIGINT is required.
+query I
+SELECT temporal_hash_extended(tint '1@2000-01-01', 0);
+----
+11445401048662056440
+
+query I
+SELECT typeof(temporal_hash_extended(tint '1@2000-01-01', 0));
+----
+UBIGINT
+
+# the seed changes the hash (0 vs 42)
+query I
+SELECT temporal_hash_extended(tint '1@2000-01-01', 42);
+----
+10824501823241357556
+
+# inherited over every temporal family via Temporal<T>
+query I
+SELECT temporal_hash_extended(tfloat '1.5@2000-01-01', 42);
+----
+17681145013286498633
