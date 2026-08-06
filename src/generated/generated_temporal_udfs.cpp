@@ -261,6 +261,30 @@ inline string_t TakeCString(Vector &result, char *s) {
 }
 
 
+// ===== @ingroup meos_box_accessor =====
+static void Gen_tbox_hash(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, uint32_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            TBox *s = BlobToTbox(in);
+            uint32_t r = tbox_hash(s);
+            free(s);
+            return r;
+        });
+}
+
+static void Gen_tbox_hash_extended(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, uint64_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2) {
+            TBox *s = BlobToTbox(in);
+            uint64_t r = tbox_hash_extended(s, a2);
+            free(s);
+            return r;
+        });
+}
+
+
 // ===== @ingroup meos_box_bbox_pos =====
 static void Gen_after_tbox_tbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -2525,6 +2549,30 @@ static void Gen_same_tspatial_stbox(DataChunk &args, ExpressionState &, Vector &
             STBox *bx = BlobToStbox(b);
             bool r = same_tspatial_stbox(t, bx);
             free(t); free(bx);
+            return r;
+        });
+}
+
+
+// ===== @ingroup meos_geo_box_accessor =====
+static void Gen_stbox_hash(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, uint32_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            STBox *s = BlobToStbox(in);
+            uint32_t r = stbox_hash(s);
+            free(s);
+            return r;
+        });
+}
+
+static void Gen_stbox_hash_extended(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, uint64_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2) {
+            STBox *s = BlobToStbox(in);
+            uint64_t r = stbox_hash_extended(s, a2);
+            free(s);
             return r;
         });
 }
@@ -15738,6 +15786,11 @@ static void Gen_tbigint_shift_value(DataChunk &args, ExpressionState &, Vector &
 
 } // anonymous
 
+static void RegisterGenerated_meos_box_accessor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {TboxType::tbox()}, LogicalType::UINTEGER, Gen_tbox_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {TboxType::tbox(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_tbox_hash_extended));
+}
+
 static void RegisterGenerated_meos_box_bbox_pos(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("after", {TboxType::tbox(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_after_tbox_tbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("before", {TboxType::tbox(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_before_tbox_tbox));
@@ -16849,6 +16902,11 @@ static void RegisterGenerated_meos_geo_bbox_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("same", {NpointTypes::tnpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {NpointTypes::tnpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
+}
+
+static void RegisterGenerated_meos_geo_box_accessor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {StboxType::stbox()}, LogicalType::UINTEGER, Gen_stbox_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {StboxType::stbox(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_stbox_hash_extended));
 }
 
 static void RegisterGenerated_meos_geo_box_comp(ExtensionLoader &loader) {
@@ -20555,6 +20613,7 @@ static void RegisterGenerated_meos_temporal_transf(ExtensionLoader &loader) {
 }
 
 void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
+    RegisterGenerated_meos_box_accessor(loader);
     RegisterGenerated_meos_box_bbox_pos(loader);
     RegisterGenerated_meos_box_bbox_topo(loader);
     RegisterGenerated_meos_box_comp(loader);
@@ -20574,6 +20633,7 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_geo_accessor(loader);
     RegisterGenerated_meos_geo_bbox_pos(loader);
     RegisterGenerated_meos_geo_bbox_topo(loader);
+    RegisterGenerated_meos_geo_box_accessor(loader);
     RegisterGenerated_meos_geo_box_comp(loader);
     RegisterGenerated_meos_geo_box_pos(loader);
     RegisterGenerated_meos_geo_box_set(loader);

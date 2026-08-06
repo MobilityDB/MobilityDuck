@@ -1985,7 +1985,17 @@ def shape_span(f, C=SPAN_C):
     sel = lambda p: base(p["canonical"]) if (base(p["canonical"]) in C["elem"] and "*" not in norm(p["canonical"])) else None
     # unary (X)->X | scalar  (lower/upper/width, ceil/floor; name-scoped; boxes have no scope)
     if len(ins) == 1 and contp(ins[0]):
-        if C["scope"] is None or C["scope"](f["name"]) is None: return None
+        if C["scope"] is None or C["scope"](f["name"]) is None:
+            # Boxes (STBOX_C/TBOX_C, scope=None) have no name-scoped accessor map, so a bare
+            # relax here would also pull in the whole box scalar-accessor group (hasX/hasT/
+            # volume/...), which is a SEPARATE hand-registered surface (own generate-then-retire
+            # wave). Carve out ONLY the bare unary `hash` -> uint32 accessor by sqlfn, gated on
+            # C.get("single") so this never fires for Span/SpanSet (which reach hash via their
+            # own scope above).
+            if (C.get("single") and f.get("sqlfn") == "hash"
+                    and rb in BYVAL_RET and "*" not in rn):
+                return ("u_scalar:" + rb, byval_ret_duck(rb))
+            return None
         if rb == cb and rn.endswith("*"):           return ("u_span", "LogicalType::BLOB")
         if rb in BYVAL_RET and "*" not in rn:       return ("u_scalar:" + rb, byval_ret_duck(rb))
         if rb == "Interval" and rn.endswith("*"):   return ("u_scalar:Interval", "LogicalType::INTERVAL")
@@ -2001,11 +2011,16 @@ def shape_span(f, C=SPAN_C):
             and C["scope"] is not None and C["scope"](f["name"]) is not None):
         return ("u2iv:" + base(ins[1]["canonical"]), "LogicalType::INTERVAL")
     # (X, by-value uint64 seed) -> uint64 hash (span_hash_extended/spanset_hash_extended);
-    # scope-gated like u2iv. Boxes (STBOX_C/TBOX_C, scope=None) are excluded — their
-    # hash_extended stays hand-registered until their own wave.
+    # scope-gated like u2iv. Boxes (STBOX_C/TBOX_C, scope=None) carve out ONLY hashExtended
+    # by sqlfn below (mirrors the unary hash carve-out above) so the rest of the box
+    # scalar-accessor group stays out of scope.
     if (contp(ins[0]) and base(ins[1]["canonical"]) in SCALAR_ARG
             and "*" not in norm(ins[1]["canonical"]) and rb == "uint64_t" and "*" not in rn
             and C["scope"] is not None and C["scope"](f["name"]) is not None):
+        return ("bsc:" + base(ins[1]["canonical"]), "LogicalType::UBIGINT")
+    if (contp(ins[0]) and base(ins[1]["canonical"]) in SCALAR_ARG
+            and "*" not in norm(ins[1]["canonical"]) and rb == "uint64_t" and "*" not in rn
+            and C.get("single") and f.get("sqlfn") == "hashExtended"):
         return ("bsc:" + base(ins[1]["canonical"]), "LogicalType::UBIGINT")
     # (X, scalar PARAM) -> X : a same-container return whose scalar is NOT an element
     # (floatspan_round/floatspanset_round's precision integer). Name-scoped (<elem>span_round
@@ -3012,6 +3027,12 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 continue
             # unary (X)->X|scalar: name-scoped (X_*→AllTypes, <elem>X_*→accessor).
             if kind == "u_span" or kind.startswith("u_scalar:"):
+                if C.get("single"):   # box hash carve-out: single type, concrete accessor
+                    acc = C["single"]; r = acc if kind == "u_span" else dret
+                    for nm in names:
+                        box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                        f'"{reg_name(nm, f)}", {{{acc}}}, {r}, Gen_{fn}));')
+                    continue
                 scope, accs = C["scope"](fn)
                 if scope == "all":
                     rett = C["ret"](fn, "type") if kind == "u_span" else dret
@@ -3042,6 +3063,12 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             # (X, by-value uint64 seed)->uint64 hash: name-scoped, 2-arg sig {acc, UBIGINT}.
             if kind.startswith("bsc:"):
                 argdt = SCALAR_ARG[kind.split(':')[1]][0]
+                if C.get("single"):   # box hashExtended carve-out: single type, concrete accessor
+                    acc = C["single"]
+                    for nm in names:
+                        box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                        f'"{reg_name(nm, f)}", {{{acc}, {argdt}}}, {dret}, Gen_{fn}));')
+                    continue
                 scope, accs = C["scope"](fn)
                 if scope == "all":
                     for nm in names:

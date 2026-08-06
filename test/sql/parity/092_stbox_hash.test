@@ -1,0 +1,33 @@
+# name: test/sql/parity/092_stbox_hash.test
+# description: STBox hash / hashExtended bindings (bare canonical names).
+# group: [sql]
+
+require mobilityduck
+
+# hash(stbox) is deterministic and a hash of two distinct values differs
+
+query I
+SELECT hash(stbox 'STBOX X((1, 1), (5, 5))')
+     = hash(stbox 'STBOX X((1, 1), (5, 5))');
+----
+true
+
+query I
+SELECT hash(stbox 'STBOX X((1, 1), (5, 5))')
+    <> hash(stbox 'STBOX X((0, 0), (10, 10))');
+----
+true
+
+# hashExtended(stbox, seed) changes with seed
+
+query I
+SELECT hashExtended(stbox 'STBOX X((1, 1), (5, 5))', 1)
+    <> hashExtended(stbox 'STBOX X((1, 1), (5, 5))', 2);
+----
+true
+
+query I
+SELECT hashExtended(stbox 'STBOX X((1, 1), (5, 5))', 1)
+     = hashExtended(stbox 'STBOX X((1, 1), (5, 5))', 1);
+----
+true

@@ -167,8 +167,6 @@ struct TboxFunctions {
     static void Tbox_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tbox_from_wkb(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tbox_from_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tbox_hash(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tbox_hash_extended(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb
