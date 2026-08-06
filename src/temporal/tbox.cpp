@@ -956,12 +956,8 @@ void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "tboxFromHexWKB", {LogicalType::VARCHAR}, tbox(),
         TboxFunctions::Tbox_from_hexwkb));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "tbox_hash", {tbox()}, LogicalType::INTEGER,
-        TboxFunctions::Tbox_hash));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "tbox_hash_extended", {tbox(), LogicalType::BIGINT}, LogicalType::BIGINT,
-        TboxFunctions::Tbox_hash_extended));
+    // hash(tbox) / hashExtended(tbox, UBIGINT) are generated from the catalog
+    // (bare canonical names) in generated_temporal_udfs.cpp.
 }
 
 } // namespace duckdb

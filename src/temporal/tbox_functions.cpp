@@ -1973,44 +1973,7 @@ void TboxFunctions::Tbox_from_hexwkb(DataChunk &args, ExpressionState &state, Ve
     }
 }
 
-void TboxFunctions::Tbox_hash(DataChunk &args, ExpressionState &state, Vector &result) {
-    UnaryExecutor::Execute<string_t, int32_t>(
-        args.data[0], result, args.size(),
-        [&](string_t input) -> int32_t {
-            if (input.GetSize() < sizeof(TBox)) {
-                throw InvalidInputException("tbox_hash: invalid TBox value");
-            }
-            uint8_t *copy = (uint8_t *)malloc(input.GetSize());
-            memcpy(copy, input.GetData(), input.GetSize());
-            TBox *tbox = reinterpret_cast<TBox *>(copy);
-            uint32_t h = tbox_hash(tbox);
-            free(copy);
-            return static_cast<int32_t>(h);
-        }
-    );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-void TboxFunctions::Tbox_hash_extended(DataChunk &args, ExpressionState &state, Vector &result) {
-    BinaryExecutor::Execute<string_t, int64_t, int64_t>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t input, int64_t seed) -> int64_t {
-            if (input.GetSize() < sizeof(TBox)) {
-                throw InvalidInputException("tbox_hash_extended: invalid TBox value");
-            }
-            uint8_t *copy = (uint8_t *)malloc(input.GetSize());
-            memcpy(copy, input.GetData(), input.GetSize());
-            TBox *tbox = reinterpret_cast<TBox *>(copy);
-            uint64_t h = tbox_hash_extended(tbox, static_cast<uint64_t>(seed));
-            free(copy);
-            return static_cast<int64_t>(h);
-        }
-    );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
+// hash(tbox) / hashExtended(tbox, UBIGINT) are generated from the catalog
+// (bare canonical names) in generated_temporal_udfs.cpp.
 
 } // namespace duckdb
