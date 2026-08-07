@@ -6,7 +6,7 @@
 # pin, so the libmeos this port builds and the surface that links against it always
 # match one upstream commit. Advance the tracked version by bumping this SHA and
 # regenerating the surface from it.
-set(_MEOS_REF "a564736c59e579748e37662d2e0791a236cc9502")
+set(_MEOS_REF "e9883a1e5134678b6ae01b0ebb9410f7f4ec1f20")
 message(STATUS "MEOS port: building MobilityDB at pinned ${_MEOS_REF}")
 
 # FETCH_REF names the branch (always advertised) so the fetch works even when the
