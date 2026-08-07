@@ -1,0 +1,81 @@
+# name: test/sql/parity/058c_tpoint_split_lateral.test
+# description: spaceSplit / spaceTimeSplit consumed via LATERAL join.
+#              Driven by `in_out_function` registration so the splitters
+#              accept both literal arguments and per-row column inputs.
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+CREATE TABLE trip(id INTEGER, traj TGEOMPOINT);
+
+statement ok
+INSERT INTO trip VALUES
+    (1, tgeompoint '[POINT(0 0)@2000-01-01 00:00:00+00, POINT(10 10)@2000-01-05 00:00:00+00]');
+
+# Same trajectory and parameters as query 1 of 058b_tpoint_split.test, but the
+# tgeompoint comes from a table column rather than a literal — the LATERAL
+# column-input path of the in_out_function plumbing.
+
+query I
+SELECT count(*)
+FROM trip, LATERAL spaceSplit(traj, 5.0, 5.0, 5.0);
+----
+3
+
+# Geometry and subtype of each bin via LATERAL — matches the literal-input case.
+
+query II
+SELECT ST_AsText(spaceBin), tempSubtype(tpoint)
+FROM trip, LATERAL spaceSplit(traj, 5.0, 5.0, 5.0)
+ORDER BY ST_AsText(spaceBin);
+----
+POINT (0 0)	SequenceSet
+POINT (10 10)	SequenceSet
+POINT (5 5)	SequenceSet
+
+# spaceTimeSplit via LATERAL.
+
+query I
+SELECT count(*)
+FROM trip, LATERAL spaceTimeSplit(traj, 5.0, 5.0, 5.0, INTERVAL '2 days');
+----
+3
+
+# Several input rows are split independently, each contributing its own bins.
+
+statement ok
+INSERT INTO trip VALUES
+    (2, tgeompoint '[POINT(0 0)@2000-01-01 00:00:00+00, POINT(4 4)@2000-01-02 00:00:00+00]');
+
+query II
+SELECT id, count(*)
+FROM trip, LATERAL spaceSplit(traj, 5.0, 5.0, 5.0)
+GROUP BY id
+ORDER BY id;
+----
+1	3
+2	1
+
+# Per-row sizing constants: the bin size is taken from a column, so each row is
+# split on its own grid.
+
+query II
+SELECT t.id, count(*)
+FROM (SELECT id, traj, id * 5.0 AS sz FROM trip) t, LATERAL spaceSplit(t.traj, t.sz, t.sz, t.sz)
+GROUP BY t.id
+ORDER BY t.id;
+----
+1	3
+2	1
+
+# A NULL trajectory contributes no rows.
+
+statement ok
+INSERT INTO trip VALUES (3, NULL);
+
+query I
+SELECT count(*)
+FROM trip, LATERAL spaceSplit(traj, 5.0, 5.0, 5.0);
+----
+4
