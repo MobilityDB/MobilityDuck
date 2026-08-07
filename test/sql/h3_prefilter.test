@@ -52,59 +52,59 @@ SELECT CAST(geoToH3Cell(ST_GeomFromText('LINESTRING(4.35 50.85, 4.36 50.86)'), 7
 
 # (h3index, th3index)
 query I
-SELECT eEq('590464338553208831'::h3index, '590464338553208831@2001-01-01'::th3index);
+SELECT eEq(590464338553208831::BIGINT::h3index, '831c02fffffffff@2001-01-01'::th3index);
 ----
 true
 
 # Cell not present in the trajectory -> false.
 query I
-SELECT eEq('612544986753269759'::h3index, '590464338553208831@2001-01-01'::th3index);
+SELECT eEq(612544986753269759::BIGINT::h3index, '831c02fffffffff@2001-01-01'::th3index);
 ----
 false
 
 # (th3index, h3index) — same as above, commuted.
 query I
-SELECT eEq('590464338553208831@2001-01-01'::th3index, '590464338553208831'::h3index);
+SELECT eEq('831c02fffffffff@2001-01-01'::th3index, 590464338553208831::BIGINT::h3index);
 ----
 true
 
 # A mid-trajectory match — eEq is ever-equal, returns true on any instant match.
 query I
-SELECT eEq('[590464338553208831@2001-01-01, 612544986753269759@2001-01-05]'::th3index,
-           '612544986753269759'::h3index);
+SELECT eEq('[831c02fffffffff@2001-01-01, 880326b885fffff@2001-01-05]'::th3index,
+           612544986753269759::BIGINT::h3index);
 ----
 true
 
 # aEq: every instant equals the probe.
 query I
-SELECT aEq('590464338553208831@2001-01-01'::th3index, '590464338553208831'::h3index);
+SELECT aEq('831c02fffffffff@2001-01-01'::th3index, 590464338553208831::BIGINT::h3index);
 ----
 true
 
 # Mixed trajectory — not always equal.
 query I
-SELECT aEq('{590464338553208831@2001-01-01, 612544986753269759@2001-01-02}'::th3index,
-           '590464338553208831'::h3index);
+SELECT aEq('{831c02fffffffff@2001-01-01, 880326b885fffff@2001-01-02}'::th3index,
+           590464338553208831::BIGINT::h3index);
 ----
 false
 
 # eNe and aNe.
 query I
-SELECT eNe('{590464338553208831@2001-01-01, 612544986753269759@2001-01-02}'::th3index,
-           '590464338553208831'::h3index);
+SELECT eNe('{831c02fffffffff@2001-01-01, 880326b885fffff@2001-01-02}'::th3index,
+           590464338553208831::BIGINT::h3index);
 ----
 true
 
 query I
-SELECT aNe('590464338553208831@2001-01-01'::th3index, '612544986753269759'::h3index);
+SELECT aNe('831c02fffffffff@2001-01-01'::th3index, 612544986753269759::BIGINT::h3index);
 ----
 true
 
 # A trajectory can't be both ever-equal AND always-not-equal.
 query I
 SELECT NOT (
-  eEq('590464338553208831@2001-01-01'::th3index, '590464338553208831'::h3index)
+  eEq('831c02fffffffff@2001-01-01'::th3index, 590464338553208831::BIGINT::h3index)
   AND
-  aNe('590464338553208831@2001-01-01'::th3index, '590464338553208831'::h3index));
+  aNe('831c02fffffffff@2001-01-01'::th3index, 590464338553208831::BIGINT::h3index));
 ----
 true
