@@ -12,6 +12,7 @@
 #include "geo/stbox.hpp"
 #include "geo/tgeompoint.hpp"
 #include "quadbin/tquadbin.hpp"
+#include "temporal/span.hpp"
 #include "temporal/temporal.hpp"
 #include "tydef.hpp"
 #include "duckdb/common/types/data_chunk.hpp"
@@ -404,6 +405,134 @@ void RaquetFunctions::Raquet_hash_extended(
 }
 
 /* =====================================================================
+ * Sampling a raster file along a trajectory, through GDAL
+ *
+ * The raster is named by a path in any GDAL-supported format; MEOS opens
+ * it, derives the bounding-box pre-filter from its geotransform and samples
+ * the band at the instants of the trajectory.  The band argument defaults
+ * to the first band, as in MobilityDB.
+ * ===================================================================== */
+
+namespace {
+
+/* Path, band and trajectory of one row of a raster-file sampling call, with
+ * `band_idx` naming the optional band column. */
+struct RasterCall {
+    std::string path;
+    int32_t band;
+    Temporal *traj;
+};
+
+bool ReadRasterCall(DataChunk &args, idx_t row, idx_t path_idx, idx_t traj_idx,
+                    idx_t band_idx, RasterCall *out) {
+    for (idx_t c = 0; c < args.ColumnCount(); c++) {
+        if (!FlatVector::Validity(args.data[c]).RowIsValid(row)) return false;
+    }
+    string_t p = FlatVector::GetData<string_t>(args.data[path_idx])[row];
+    out->path.assign(p.GetData(), p.GetSize());
+    out->band = args.ColumnCount() > band_idx
+        ? FlatVector::GetData<int32_t>(args.data[band_idx])[row] : 1;
+    out->traj = BlobToTemp(FlatVector::GetData<string_t>(args.data[traj_idx])[row]);
+    return true;
+}
+
+Span *BlobToSpan(string_t blob) {
+    uint8_t *copy = (uint8_t *) malloc(sizeof(Span));
+    memcpy(copy, blob.GetData(), sizeof(Span));
+    return reinterpret_cast<Span *>(copy);
+}
+
+} // namespace
+
+/* rasterValue(rasterfile, traj[, band]) */
+void RaquetFunctions::Raster_value(
+    DataChunk &args, ExpressionState &state, Vector &result)
+{
+    const idx_t row_count = args.size();
+    for (idx_t c = 0; c < args.ColumnCount(); c++) args.data[c].Flatten(row_count);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &out_validity = FlatVector::Validity(result);
+
+    for (idx_t row = 0; row < row_count; row++) {
+        RasterCall call;
+        if (!ReadRasterCall(args, row, 0, 1, 2, &call)) {
+            out_validity.SetInvalid(row);
+            continue;
+        }
+        Temporal *res = raster_value_gdal(call.path.c_str(), call.band, call.traj);
+        free(call.traj);
+        if (!res) { out_validity.SetInvalid(row); continue; }
+        out[row] = TempToBlob(result, res);
+    }
+    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+/* atRasterValue / minusRasterValue(traj, rasterfile, vspan[, band]) */
+#define RASTER_RESTRICTION(FnName, meos_fn)                                    \
+    void RaquetFunctions::FnName(                                              \
+        DataChunk &args, ExpressionState &state, Vector &result)               \
+    {                                                                          \
+        const idx_t row_count = args.size();                                   \
+        for (idx_t c = 0; c < args.ColumnCount(); c++)                         \
+            args.data[c].Flatten(row_count);                                   \
+        auto vspans = FlatVector::GetData<string_t>(args.data[2]);             \
+        auto out = FlatVector::GetData<string_t>(result);                      \
+        auto &out_validity = FlatVector::Validity(result);                     \
+        for (idx_t row = 0; row < row_count; row++) {                          \
+            RasterCall call;                                                   \
+            if (!ReadRasterCall(args, row, 1, 0, 3, &call)) {                  \
+                out_validity.SetInvalid(row);                                  \
+                continue;                                                      \
+            }                                                                  \
+            Span *vspan = BlobToSpan(vspans[row]);                             \
+            Temporal *res = meos_fn(call.path.c_str(), call.band, call.traj,   \
+                                    vspan);                                    \
+            free(call.traj); free(vspan);                                      \
+            if (!res) { out_validity.SetInvalid(row); continue; }              \
+            out[row] = TempToBlob(result, res);                                \
+        }                                                                      \
+        if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR); \
+    }
+
+RASTER_RESTRICTION(Raster_at_value, raster_at_value_gdal)
+RASTER_RESTRICTION(Raster_minus_value, raster_minus_value_gdal)
+
+#undef RASTER_RESTRICTION
+
+/* eRasterValue / aRasterValue(rasterfile, traj, vspan[, band]).  The MEOS
+ * predicates answer with three-valued logic: a negative answer means the
+ * question does not apply, which surfaces as NULL. */
+#define RASTER_PREDICATE(FnName, meos_fn)                                      \
+    void RaquetFunctions::FnName(                                              \
+        DataChunk &args, ExpressionState &state, Vector &result)               \
+    {                                                                          \
+        const idx_t row_count = args.size();                                   \
+        for (idx_t c = 0; c < args.ColumnCount(); c++)                         \
+            args.data[c].Flatten(row_count);                                   \
+        auto vspans = FlatVector::GetData<string_t>(args.data[2]);             \
+        auto out = FlatVector::GetData<bool>(result);                          \
+        auto &out_validity = FlatVector::Validity(result);                     \
+        for (idx_t row = 0; row < row_count; row++) {                          \
+            RasterCall call;                                                   \
+            if (!ReadRasterCall(args, row, 0, 1, 3, &call)) {                  \
+                out_validity.SetInvalid(row);                                  \
+                continue;                                                      \
+            }                                                                  \
+            Span *vspan = BlobToSpan(vspans[row]);                             \
+            int r = meos_fn(call.path.c_str(), call.band, call.traj, vspan);   \
+            free(call.traj); free(vspan);                                      \
+            if (r < 0) { out_validity.SetInvalid(row); continue; }             \
+            out[row] = (r != 0);                                               \
+        }                                                                      \
+        if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR); \
+    }
+
+RASTER_PREDICATE(Eraster_value, eraster_value_gdal)
+RASTER_PREDICATE(Araster_value, araster_value_gdal)
+
+#undef RASTER_PREDICATE
+
+/* =====================================================================
  * Sampling along a trajectory
  * ===================================================================== */
 
@@ -573,6 +702,7 @@ void RaquetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     const auto TG  = TgeompointType::tgeompoint();
     const auto TF  = TemporalTypes::tfloat();
     const auto BX  = StboxType::stbox();
+    const auto FS  = SpanTypes::floatspan();
     const auto BLB = LogicalType::BLOB;
     const auto I32 = LogicalType::INTEGER;
     const auto I64 = LogicalType::BIGINT;
@@ -625,6 +755,28 @@ void RaquetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         "hash", {RQ}, I32, RaquetFunctions::Raquet_hash));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "hashExtended", {RQ, I64}, I64, RaquetFunctions::Raquet_hash_extended));
+
+    /* Sampling a raster file through GDAL */
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "rasterValue", {V, TG}, TF, RaquetFunctions::Raster_value));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "rasterValue", {V, TG, I32}, TF, RaquetFunctions::Raster_value));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "atRasterValue", {TG, V, FS}, TG, RaquetFunctions::Raster_at_value));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "atRasterValue", {TG, V, FS, I32}, TG, RaquetFunctions::Raster_at_value));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "minusRasterValue", {TG, V, FS}, TG, RaquetFunctions::Raster_minus_value));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "minusRasterValue", {TG, V, FS, I32}, TG, RaquetFunctions::Raster_minus_value));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "eRasterValue", {V, TG, FS}, B, RaquetFunctions::Eraster_value));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "eRasterValue", {V, TG, FS, I32}, B, RaquetFunctions::Eraster_value));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "aRasterValue", {V, TG, FS}, B, RaquetFunctions::Araster_value));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "aRasterValue", {V, TG, FS, I32}, B, RaquetFunctions::Araster_value));
 
     /* Sampling */
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
