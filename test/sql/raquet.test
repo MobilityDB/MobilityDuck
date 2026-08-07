@@ -1,0 +1,116 @@
+# name: test/sql/raquet.test
+# description: Raster tiles addressed by a QUADBIN cell (raquet) and the
+#              sampling of a tile along a tgeompoint trajectory.
+# group: [sql]
+
+require mobilityduck
+
+# ── raquet constructor and accessors ────────────────────────────────────────
+
+# A 1x1 UINT8 tile covering the zoom-0 world cell, single pixel value 42.
+statement ok
+CREATE TABLE tile AS
+SELECT raquet(from_hex('2a'), 1, 1, quadbinTileToCell(0, 0, 0), 'UINT8') AS rq;
+
+query IIII
+SELECT quadbin(rq) = quadbinTileToCell(0, 0, 0), width(rq), height(rq), pixtype(rq)
+FROM tile;
+----
+true	1	1	UINT8
+
+# The tile round-trips through its text (hex-WKB) form.
+query I
+SELECT rq::VARCHAR::RAQUET = rq FROM tile;
+----
+true
+
+query I
+SELECT eq(rq, rq) AND NOT ne(rq, rq) AND cmp(rq, rq) = 0 FROM tile;
+----
+true
+
+# The tile extent is the zoom-0 world cell, covering the whole Web-Mercator
+# domain in longitude.
+query II
+SELECT round(Xmin(stbox(rq))::NUMERIC, 6), round(Xmax(stbox(rq))::NUMERIC, 6)
+FROM tile;
+----
+-180.000000	180.000000
+
+# ── rasterTileValue ─────────────────────────────────────────────────────────
+
+# POINT(0 0) falls in the single pixel of the tile.
+query I
+SELECT startValue(rasterTileValue(rq, tgeompoint 'POINT(0 0)@2024-01-01')) = 42.0
+FROM tile;
+----
+true
+
+# The array form samples a set of tiles, keeping the highest zoom where they
+# overlap; with a single tile it agrees with the scalar form.
+query I
+SELECT startValue(rasterTileValue([rq], tgeompoint 'POINT(0 0)@2024-01-01')) = 42.0
+FROM tile;
+----
+true
+
+# ── rasterTileValueQuadbin ──────────────────────────────────────────────────
+
+# The bare pixel-band form, as a Raquet Parquet row supplies it.
+query I
+SELECT startValue(
+  rasterTileValueQuadbin(
+    from_hex('2a'),            -- 1-byte pixel buffer, value 42
+    1, 1,                      -- tile width x height in pixels
+    quadbinTileToCell(0, 0, 0),
+    'UINT8', 0.0, false,
+    tgeompoint 'POINT(0 0)@2024-01-01'
+  )
+) = 42.0;
+----
+true
+
+# A trajectory outside the tile bounding box samples nothing.
+query I
+SELECT rasterTileValueQuadbin(
+  from_hex('2a'), 1, 1,
+  quadbinTileToCell(0, 0, 1),               -- NW quadrant of zoom 1: lon -180..0, lat 0..85
+  'UINT8', 0.0, false,
+  tgeompoint 'POINT(90 -45)@2024-01-01'     -- SE hemisphere
+) IS NULL;
+----
+true
+
+# An unknown pixel type is rejected.
+statement error
+SELECT rasterTileValueQuadbin(from_hex('2a'), 1, 1, quadbinTileToCell(0, 0, 0),
+  'UINT4', 0.0, false, tgeompoint 'POINT(0 0)@2024-01-01');
+----
+unknown pixel type
+
+# ── trajectoryQuadbins ──────────────────────────────────────────────────────
+
+# A single-instant trajectory at the origin covers exactly one zoom-0 cell.
+query I
+SELECT len(trajectoryQuadbins(tgeompoint 'POINT(0 0)@2024-01-01', 0));
+----
+1
+
+# The cell covering the origin at zoom 0 is the world tile.
+query III
+SELECT quadbinCellToTileX(c), quadbinCellToTileY(c), quadbinCellToTileZ(c)
+FROM (SELECT trajectoryQuadbins(tgeompoint 'POINT(0 0)@2024-01-01', 0)[1] AS c);
+----
+0	0	0
+
+# A trajectory crossing hemispheres covers one cell per hemisphere at zoom 1.
+query I
+SELECT len(trajectoryQuadbins(
+  tgeompoint '[POINT(-90 45)@2024-01-01, POINT(90 -45)@2024-01-02]', 1));
+----
+2
+
+query I
+SELECT trajectoryQuadbins(NULL::TGEOMPOINT, 0) IS NULL;
+----
+true

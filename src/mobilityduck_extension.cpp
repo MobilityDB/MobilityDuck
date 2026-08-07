@@ -21,6 +21,7 @@
 #include "geo/tgeogpoint.hpp"
 #include "geo/tgeogpoint_ops.hpp"
 #include "quadbin/tquadbin.hpp"
+#include "raster/raquet.hpp"
 #include "h3/th3index.hpp"
 #include "cbuffer/tcbuffer.hpp"
 #include "json/tjsonb.hpp"
@@ -429,6 +430,12 @@ static void LoadInternal(ExtensionLoader &loader) {
 	QuadbinTypes::RegisterTypes(loader);
 	QuadbinTypes::RegisterCastFunctions(loader);
 	QuadbinTypes::RegisterScalarFunctions(loader);
+
+	// Raster tiles addressed by a QUADBIN cell; registered after the quadbin,
+	// tgeompoint and stbox types its surface refers to.
+	RaquetTypes::RegisterTypes(loader);
+	RaquetTypes::RegisterCastFunctions(loader);
+	RaquetTypes::RegisterScalarFunctions(loader);
 
 	// H3 cell index types (h3index/th3index). Type registration + casts are the
 	// hand layer; the H3 function surface is generated (no RegisterScalarFunctions).
