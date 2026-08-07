@@ -51,6 +51,13 @@ struct RaquetFunctions {
     static void Raquet_hash(DataChunk &args, ExpressionState &state, Vector &result);
     static void Raquet_hash_extended(DataChunk &args, ExpressionState &state, Vector &result);
 
+    /* Sampling a raster file along a trajectory, through GDAL */
+    static void Raster_value(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Raster_at_value(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Raster_minus_value(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Eraster_value(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Araster_value(DataChunk &args, ExpressionState &state, Vector &result);
+
     /* Sampling along a trajectory */
     static void Raster_tile_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Raster_tile_value_array(DataChunk &args, ExpressionState &state, Vector &result);

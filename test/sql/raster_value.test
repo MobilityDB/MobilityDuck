@@ -1,0 +1,84 @@
+# name: test/sql/raster_value.test
+# description: Sampling a raster file along a trajectory through GDAL.
+# group: [sql]
+
+require mobilityduck
+
+# test/data/raster_4326.tif is a 2x2 UINT8 raster covering the world in WGS 84,
+# one pixel per quadrant:
+#   NW lon -180..0 lat 0..90  = 1     NE lon 0..180 lat 0..90  = 2
+#   SW lon -180..0 lat -90..0 = 3     SE lon 0..180 lat -90..0 = 4
+
+# ── rasterValue ─────────────────────────────────────────────────────────────
+
+# One instant per quadrant samples that quadrant's pixel.
+query I
+SELECT rasterValue('test/data/raster_4326.tif', tgeompoint
+  '{POINT(-90 45)@2024-01-01, POINT(90 45)@2024-01-02, POINT(-90 -45)@2024-01-03, POINT(90 -45)@2024-01-04}')::VARCHAR;
+----
+{1@2024-01-01 00:00:00+01, 2@2024-01-02 00:00:00+01, 3@2024-01-03 00:00:00+01, 4@2024-01-04 00:00:00+01}
+
+# Naming band 1 explicitly gives the same answer as the default.
+query I
+SELECT rasterValue('test/data/raster_4326.tif', tgeompoint 'POINT(-90 45)@2024-01-01', 1)
+     = rasterValue('test/data/raster_4326.tif', tgeompoint 'POINT(-90 45)@2024-01-01');
+----
+true
+
+# A band the raster does not have is rejected.
+statement error
+SELECT rasterValue('test/data/raster_4326.tif', tgeompoint 'POINT(-90 45)@2024-01-01', 7);
+----
+band
+
+# An unreadable path is rejected.
+statement error
+SELECT rasterValue('test/data/no_such_raster.tif', tgeompoint 'POINT(-90 45)@2024-01-01');
+----
+No such file or directory
+
+# ── atRasterValue / minusRasterValue ────────────────────────────────────────
+
+# Restricting to pixel values 1..2 keeps the two northern instants.
+query III
+SELECT numInstants(t), ST_AsText(startValue(t)), ST_AsText(endValue(t))
+FROM (SELECT atRasterValue(tgeompoint
+  '{POINT(-90 45)@2024-01-01, POINT(90 45)@2024-01-02, POINT(-90 -45)@2024-01-03, POINT(90 -45)@2024-01-04}',
+  'test/data/raster_4326.tif', floatspan '[1, 2]') AS t);
+----
+2	POINT (-90 45)	POINT (90 45)
+
+# minusRasterValue keeps the complement, the two southern instants.
+query III
+SELECT numInstants(t), ST_AsText(startValue(t)), ST_AsText(endValue(t))
+FROM (SELECT minusRasterValue(tgeompoint
+  '{POINT(-90 45)@2024-01-01, POINT(90 45)@2024-01-02, POINT(-90 -45)@2024-01-03, POINT(90 -45)@2024-01-04}',
+  'test/data/raster_4326.tif', floatspan '[1, 2]') AS t);
+----
+2	POINT (-90 -45)	POINT (90 -45)
+
+# ── eRasterValue / aRasterValue ─────────────────────────────────────────────
+
+# The trajectory ever samples a value in 1..2, but not always.
+query II
+SELECT eRasterValue('test/data/raster_4326.tif', tgeompoint
+         '{POINT(-90 45)@2024-01-01, POINT(90 -45)@2024-01-02}', floatspan '[1, 2]'),
+       aRasterValue('test/data/raster_4326.tif', tgeompoint
+         '{POINT(-90 45)@2024-01-01, POINT(90 -45)@2024-01-02}', floatspan '[1, 2]');
+----
+true	false
+
+# A trajectory confined to the north-west quadrant always samples 1.
+query II
+SELECT eRasterValue('test/data/raster_4326.tif', tgeompoint
+         '{POINT(-90 45)@2024-01-01, POINT(-30 30)@2024-01-02}', floatspan '[1, 1]'),
+       aRasterValue('test/data/raster_4326.tif', tgeompoint
+         '{POINT(-90 45)@2024-01-01, POINT(-30 30)@2024-01-02}', floatspan '[1, 1]');
+----
+true	true
+
+# NULL input propagates.
+query I
+SELECT rasterValue('test/data/raster_4326.tif', NULL::TGEOMPOINT) IS NULL;
+----
+true
