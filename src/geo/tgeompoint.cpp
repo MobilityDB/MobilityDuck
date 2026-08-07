@@ -1641,28 +1641,39 @@ void TgeoFromTextExec(DataChunk &args, ExpressionState &state, Vector &result) {
 
 namespace {
 
+/* spaceSplit / spaceTimeSplit accept both literal and LATERAL column
+ * inputs through DuckDB's in_out_function plumbing.  The bind callback
+ * only declares the return types; the per-row parameters are read at
+ * exec time from the input DataChunk.  The local state carries the
+ * iteration progress so that the output is produced lazily, bounded by
+ * STANDARD_VECTOR_SIZE.  The pattern mirrors
+ * duckdb/extension/icu/icu-table-range.cpp. */
+
 struct SpaceSplitBindData : public TableFunctionData {
-    string_t blob;
-    double xsize, ysize, zsize;
-    string_t sorigin_blob;   // empty -> default Point(0 0 0)
-    bool has_sorigin;
-    bool bitmatrix;
-    bool has_duration;
-    interval_t duration;
-    bool has_torigin;
-    timestamp_tz_t torigin;
+    bool with_time = false;
 };
 
-struct SpaceSplitGlobalState : public GlobalTableFunctionState {
-    idx_t idx = 0;
-    /* space_bins[i] is the raw EWKB serialisation of the i-th spatial bin
-     * (GSERIALIZED -> EWKB at Init time, decoded into the result vector's
-     * geometry format at Exec time using DuckDB-spatial's wkb_reader).
-     * tpoint blobs are pre-built tgeompoint-aliased BLOB values.
+struct SpaceSplitLocalState : public LocalTableFunctionState {
+    /* Row of the input chunk under split, and whether its bins have
+     * already been computed into the vectors below.
+     * space_ewkb[i] is the raw EWKB serialisation of the i-th spatial bin
+     * (GSERIALIZED -> EWKB when the row is loaded, decoded into the result
+     * vector's geometry format when emitted, using DuckDB-spatial's
+     * wkb_reader).  tpoint holds pre-built tgeompoint-aliased BLOB values.
      * time_bin is populated only by the spaceTimeSplit overload. */
+    idx_t current_input_row = 0;
+    bool initialized_row = false;
+    idx_t out_idx = 0;
     std::vector<std::vector<uint8_t>> space_ewkb;
     std::vector<Value> time_bin;
     std::vector<Value> tpoint;
+
+    void Reset() {
+        space_ewkb.clear();
+        time_bin.clear();
+        tpoint.clear();
+        out_idx = 0;
+    }
 };
 
 GSERIALIZED *DefaultOriginSplit() {
@@ -1674,43 +1685,8 @@ unique_ptr<FunctionData> SpaceSplitBindCommon(ClientContext &context,
                                               vector<LogicalType> &return_types,
                                               vector<string> &names,
                                               bool with_time) {
-    if (input.inputs.empty() || input.inputs[0].IsNull()) {
-        throw BinderException("spaceSplit: tgeompoint input must be non-null");
-    }
-
     auto bd = make_uniq<SpaceSplitBindData>();
-    bd->blob = StringValue::Get(input.inputs[0]);
-    bd->xsize = input.inputs[1].GetValue<double>();
-    bd->ysize = input.inputs[2].GetValue<double>();
-    bd->zsize = input.inputs[3].GetValue<double>();
-    bd->has_sorigin = false;
-    bd->bitmatrix = true;
-    bd->has_duration = with_time;
-    bd->has_torigin = false;
-
-    idx_t opt_idx = 4;
-    if (with_time) {
-        bd->duration = input.inputs[opt_idx++].GetValue<interval_t>();
-    }
-    if (input.inputs.size() > opt_idx) {
-        Value v = input.inputs[opt_idx++];
-        if (!v.IsNull()) {
-            bd->sorigin_blob = StringValue::Get(v);
-            bd->has_sorigin = true;
-        }
-    }
-    if (with_time && input.inputs.size() > opt_idx) {
-        Value v = input.inputs[opt_idx++];
-        if (!v.IsNull()) {
-            bd->torigin = v.GetValue<timestamp_tz_t>();
-            bd->has_torigin = true;
-        }
-    }
-    if (input.inputs.size() > opt_idx) {
-        Value v = input.inputs[opt_idx++];
-        if (!v.IsNull()) bd->bitmatrix = v.GetValue<bool>();
-    }
-
+    bd->with_time = with_time;
     if (with_time) {
         return_types = {GeoTypes::GEOMETRY(), LogicalType::TIMESTAMP_TZ, TgeompointType::tgeompoint()};
         names = {"spaceBin", "timeBin", "tpoint"};
@@ -1731,99 +1707,10 @@ unique_ptr<FunctionData> SpaceTimeSplitBind(ClientContext &context, TableFunctio
     return SpaceSplitBindCommon(context, input, return_types, names, /*with_time=*/true);
 }
 
-unique_ptr<GlobalTableFunctionState> SpaceSplitInitCommon(ClientContext &context,
-                                                          TableFunctionInitInput &input,
-                                                          bool with_time) {
-    auto &bind = input.bind_data->Cast<SpaceSplitBindData>();
-    auto state = make_uniq<SpaceSplitGlobalState>();
-
-    /* Materialise input temporal */
-    size_t in_size = bind.blob.GetSize();
-    Temporal *temp = (Temporal *)malloc(in_size);
-    memcpy(temp, bind.blob.GetData(), in_size);
-
-    /* Build origin geometry */
-    GSERIALIZED *origin = nullptr;
-    if (bind.has_sorigin) {
-        origin = GeometryToGSerialized(bind.sorigin_blob, 0);
-    }
-    if (!origin) origin = DefaultOriginSplit();
-
-    int count = 0;
-    Temporal **trajs = nullptr;
-    GSERIALIZED **bins = nullptr;
-    TimestampTz *tbins = nullptr;
-    if (with_time) {
-        MeosInterval mi = IntervaltToInterval(bind.duration);
-        TimestampTz torigin = 0;
-        if (bind.has_torigin) {
-            torigin = (TimestampTz) DuckDBToMeosTimestamp(bind.torigin).value;
-        }
-        SpaceTimeSplit sts = tgeo_space_time_split(temp, bind.xsize, bind.ysize, bind.zsize,
-                                                   &mi, origin, torigin, bind.bitmatrix, true);
-        trajs = sts.fragments;
-        bins  = sts.space_bins;
-        tbins = sts.time_bins;
-        count = sts.count;
-    } else {
-        SpaceSplit ss = tgeo_space_split(temp, bind.xsize, bind.ysize, bind.zsize,
-                                         origin, bind.bitmatrix, true);
-        trajs = ss.fragments;
-        bins  = ss.bins;
-        count = ss.count;
-    }
-    free(temp);
-    free(origin);
-
-    if (!trajs || count <= 0) {
-        if (trajs) free(trajs);
-        if (bins) free(bins);
-        if (tbins) free(tbins);
-        return std::move(state);
-    }
-
-    state->space_ewkb.reserve(count);
-    if (with_time) state->time_bin.reserve(count);
-    state->tpoint.reserve(count);
-
-    for (int i = 0; i < count; i++) {
-        /* Capture the spaceBin as EWKB; defer DuckDB-spatial encoding to Exec
-         * (where we have an arena allocator scoped to the result vector). */
-        size_t wkb_sz = 0;
-        uint8_t *wkb = geo_as_ewkb(bins[i], nullptr, &wkb_sz);
-        if (wkb) {
-            state->space_ewkb.emplace_back(wkb, wkb + wkb_sz);
-            free(wkb);
-        } else {
-            state->space_ewkb.emplace_back();
-        }
-        free(bins[i]);
-
-        if (with_time) {
-            timestamp_tz_t t = MeosToDuckDBTimestamp(timestamp_tz_t((int64_t) tbins[i]));
-            state->time_bin.emplace_back(Value::TIMESTAMPTZ(t));
-        }
-
-        size_t sz = temporal_mem_size(trajs[i]);
-        Value tblob = Value::BLOB(reinterpret_cast<const_data_ptr_t>(trajs[i]), sz);
-        tblob.Reinterpret(TgeompointType::tgeompoint());
-        state->tpoint.push_back(std::move(tblob));
-        free(trajs[i]);
-    }
-    free(trajs);
-    free(bins);
-    if (tbins) free(tbins);
-    return std::move(state);
-}
-
-unique_ptr<GlobalTableFunctionState> SpaceSplitInit(ClientContext &context,
-                                                    TableFunctionInitInput &input) {
-    return SpaceSplitInitCommon(context, input, false);
-}
-
-unique_ptr<GlobalTableFunctionState> SpaceTimeSplitInit(ClientContext &context,
-                                                        TableFunctionInitInput &input) {
-    return SpaceSplitInitCommon(context, input, true);
+unique_ptr<LocalTableFunctionState> SpaceSplitLocalInit(ExecutionContext &context,
+                                                        TableFunctionInitInput &input,
+                                                        GlobalTableFunctionState *) {
+    return make_uniq<SpaceSplitLocalState>();
 }
 
 void EmitSpaceBinAt(ClientContext &context, Vector &col, idx_t row,
@@ -1844,34 +1731,182 @@ void EmitSpaceBinAt(ClientContext &context, Vector &col, idx_t row,
     free(gs);
 }
 
-void SpaceSplitExec(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
-    auto &state = input.global_state->Cast<SpaceSplitGlobalState>();
-    idx_t remaining = state.tpoint.size() - state.idx;
-    idx_t emit = MinValue<idx_t>(STANDARD_VECTOR_SIZE, remaining);
-    auto &space_col = output.data[0];
-    auto &tpoint_col = output.data[1];
-    for (idx_t i = 0; i < emit; i++) {
-        EmitSpaceBinAt(context, space_col, i, state.space_ewkb[state.idx]);
-        tpoint_col.SetValue(i, state.tpoint[state.idx]);
-        state.idx++;
+/* Read one input row's parameters and pre-compute all of its split bins
+ * into the local state.  Called once per input row by the in_out_function
+ * below.
+ *
+ * Input column layout:
+ *   spaceSplit:     [0]=tgeompoint, [1]=xsize, [2]=ysize, [3]=zsize,
+ *                   [4]=sorigin (geometry, optional),
+ *                   [5]=bitmatrix (bool, optional)
+ *   spaceTimeSplit: [0]=tgeompoint, [1]=xsize, [2]=ysize, [3]=zsize,
+ *                   [4]=duration (interval),
+ *                   [5]=sorigin (geometry, optional),
+ *                   [6]=torigin (timestamptz, optional),
+ *                   [7]=bitmatrix (bool, optional)
+ */
+void LoadSpaceSplitRow(ClientContext &context, SpaceSplitLocalState &state,
+                       DataChunk &input, idx_t row_idx, bool with_time) {
+    state.Reset();
+    for (idx_t c = 0; c < input.ColumnCount(); c++) {
+        input.data[c].Flatten(input.size());
     }
-    output.SetCardinality(emit);
+    if (FlatVector::IsNull(input.data[0], row_idx)) {
+        return;
+    }
+    string_t blob = FlatVector::GetData<string_t>(input.data[0])[row_idx];
+    double xsize = FlatVector::GetData<double>(input.data[1])[row_idx];
+    double ysize = FlatVector::GetData<double>(input.data[2])[row_idx];
+    double zsize = FlatVector::GetData<double>(input.data[3])[row_idx];
+
+    idx_t col = 4;
+    MeosInterval mi{};
+    if (with_time) {
+        if (input.ColumnCount() <= col || FlatVector::IsNull(input.data[col], row_idx)) {
+            return;
+        }
+        mi = IntervaltToInterval(FlatVector::GetData<interval_t>(input.data[col])[row_idx]);
+        col++;
+    }
+    GSERIALIZED *origin = nullptr;
+    if (input.ColumnCount() > col && !FlatVector::IsNull(input.data[col], row_idx)) {
+        string_t origin_blob = FlatVector::GetData<string_t>(input.data[col])[row_idx];
+        origin = GeometryToGSerialized(origin_blob, 0);
+    }
+    col++;
+    TimestampTz torigin = 0;
+    if (with_time && input.ColumnCount() > col && !FlatVector::IsNull(input.data[col], row_idx)) {
+        timestamp_tz_t t = FlatVector::GetData<timestamp_tz_t>(input.data[col])[row_idx];
+        torigin = (TimestampTz) DuckDBToMeosTimestamp(t).value;
+        col++;
+    }
+    bool bitmatrix = true;
+    if (input.ColumnCount() > col && !FlatVector::IsNull(input.data[col], row_idx)) {
+        bitmatrix = FlatVector::GetData<bool>(input.data[col])[row_idx];
+    }
+    if (!origin) origin = DefaultOriginSplit();
+
+    Temporal *temp = (Temporal *) malloc(blob.GetSize());
+    memcpy(temp, blob.GetData(), blob.GetSize());
+
+    int count = 0;
+    Temporal **trajs = nullptr;
+    GSERIALIZED **bins = nullptr;
+    TimestampTz *tbins = nullptr;
+    if (with_time) {
+        SpaceTimeSplit sts = tgeo_space_time_split(temp, xsize, ysize, zsize, &mi, origin,
+                                                   torigin, bitmatrix, true);
+        trajs = sts.fragments;
+        bins  = sts.space_bins;
+        tbins = sts.time_bins;
+        count = sts.count;
+    } else {
+        SpaceSplit ss = tgeo_space_split(temp, xsize, ysize, zsize, origin, bitmatrix, true);
+        trajs = ss.fragments;
+        bins  = ss.bins;
+        count = ss.count;
+    }
+    free(temp);
+    free(origin);
+
+    if (!trajs || count <= 0) {
+        if (trajs) free(trajs);
+        if (bins) free(bins);
+        if (tbins) free(tbins);
+        return;
+    }
+
+    state.space_ewkb.reserve(count);
+    if (with_time) state.time_bin.reserve(count);
+    state.tpoint.reserve(count);
+
+    for (int i = 0; i < count; i++) {
+        /* Capture the spaceBin as EWKB; the DuckDB-spatial encoding happens
+         * when the row is emitted, where an arena allocator scoped to the
+         * result vector is available. */
+        size_t wkb_sz = 0;
+        uint8_t *wkb = geo_as_ewkb(bins[i], nullptr, &wkb_sz);
+        if (wkb) {
+            state.space_ewkb.emplace_back(wkb, wkb + wkb_sz);
+            free(wkb);
+        } else {
+            state.space_ewkb.emplace_back();
+        }
+        free(bins[i]);
+
+        if (with_time) {
+            timestamp_tz_t t = MeosToDuckDBTimestamp(timestamp_tz_t((int64_t) tbins[i]));
+            state.time_bin.emplace_back(Value::TIMESTAMPTZ(t));
+        }
+
+        size_t sz = temporal_mem_size(trajs[i]);
+        Value tblob = Value::BLOB(reinterpret_cast<const_data_ptr_t>(trajs[i]), sz);
+        tblob.Reinterpret(TgeompointType::tgeompoint());
+        state.tpoint.push_back(std::move(tblob));
+        free(trajs[i]);
+    }
+    free(trajs);
+    free(bins);
+    if (tbins) free(tbins);
 }
 
-void SpaceTimeSplitExec(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
-    auto &state = input.global_state->Cast<SpaceSplitGlobalState>();
-    idx_t remaining = state.tpoint.size() - state.idx;
-    idx_t emit = MinValue<idx_t>(STANDARD_VECTOR_SIZE, remaining);
-    auto &space_col = output.data[0];
-    auto &time_col = output.data[1];
-    auto &tpoint_col = output.data[2];
-    for (idx_t i = 0; i < emit; i++) {
-        EmitSpaceBinAt(context, space_col, i, state.space_ewkb[state.idx]);
-        time_col.SetValue(i, state.time_bin[state.idx]);
-        tpoint_col.SetValue(i, state.tpoint[state.idx]);
-        state.idx++;
+OperatorResultType SpaceSplitInOutCommon(ExecutionContext &context, TableFunctionInput &data_p,
+                                          DataChunk &input, DataChunk &output, bool with_time) {
+    auto &state = data_p.local_state->Cast<SpaceSplitLocalState>();
+    idx_t out_row = 0;
+
+    /* PhysicalTableScan resets `output` (chunk.size() = 0) before each call
+     * and treats output.size() == 0 as FINISHED regardless of the returned
+     * OperatorResultType, while PhysicalTableInOutFunction (the LATERAL
+     * path) honours the return value.  As in
+     * duckdb/extension/icu/icu-table-range.cpp, leaving the chunk untouched
+     * (size 0) and returning NEED_MORE_INPUT once the input chunk is drained
+     * stops the source-scan path and advances the LATERAL path to the next
+     * input chunk. */
+    while (out_row < STANDARD_VECTOR_SIZE) {
+        if (!state.initialized_row) {
+            if (state.current_input_row >= input.size()) {
+                /* Chunk drained.  Rows emitted in this call are returned as
+                 * HAVE_MORE_OUTPUT with state.current_input_row left at
+                 * input.size(), so the next invocation falls straight back
+                 * into this branch with out_row == 0. */
+                if (out_row > 0) {
+                    output.SetCardinality(out_row);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                state.current_input_row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            LoadSpaceSplitRow(context.client, state, input, state.current_input_row, with_time);
+            state.initialized_row = true;
+        }
+        if (state.out_idx >= state.tpoint.size()) {
+            state.current_input_row++;
+            state.initialized_row = false;
+            continue;
+        }
+        EmitSpaceBinAt(context.client, output.data[0], out_row, state.space_ewkb[state.out_idx]);
+        if (with_time) {
+            output.data[1].SetValue(out_row, state.time_bin[state.out_idx]);
+            output.data[2].SetValue(out_row, state.tpoint[state.out_idx]);
+        } else {
+            output.data[1].SetValue(out_row, state.tpoint[state.out_idx]);
+        }
+        state.out_idx++;
+        out_row++;
     }
-    output.SetCardinality(emit);
+    output.SetCardinality(out_row);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+
+OperatorResultType SpaceSplitInOut(ExecutionContext &context, TableFunctionInput &data_p,
+                                    DataChunk &input, DataChunk &output) {
+    return SpaceSplitInOutCommon(context, data_p, input, output, /*with_time=*/false);
+}
+
+OperatorResultType SpaceTimeSplitInOut(ExecutionContext &context, TableFunctionInput &data_p,
+                                        DataChunk &input, DataChunk &output) {
+    return SpaceSplitInOutCommon(context, data_p, input, output, /*with_time=*/true);
 }
 
 void TgeoGeoMeasureExec(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1968,7 +2003,9 @@ void TgeompointType::RegisterTpointSplit(ExtensionLoader &loader) {
             {T, D, D, D, G, B},
         };
         for (auto &args : arg_lists) {
-            TableFunction fn("spaceSplit", args, SpaceSplitExec, SpaceSplitBind, SpaceSplitInit);
+            TableFunction fn("spaceSplit", args, /*function=*/nullptr, SpaceSplitBind,
+                             /*init_global=*/nullptr, SpaceSplitLocalInit);
+            fn.in_out_function = SpaceSplitInOut;
             loader.RegisterFunction(fn);
         }
     }
@@ -1982,7 +2019,9 @@ void TgeompointType::RegisterTpointSplit(ExtensionLoader &loader) {
             {T, D, D, D, I, G, TS, B},
         };
         for (auto &args : arg_lists) {
-            TableFunction fn("spaceTimeSplit", args, SpaceTimeSplitExec, SpaceTimeSplitBind, SpaceTimeSplitInit);
+            TableFunction fn("spaceTimeSplit", args, /*function=*/nullptr, SpaceTimeSplitBind,
+                             /*init_global=*/nullptr, SpaceSplitLocalInit);
+            fn.in_out_function = SpaceTimeSplitInOut;
             loader.RegisterFunction(fn);
         }
     }
