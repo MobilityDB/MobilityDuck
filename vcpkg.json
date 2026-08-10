@@ -8,6 +8,8 @@
           "openssl",
           "zlib",
           "expat",
+          "h3",
+          "libxml2",
           {
             "name": "sqlite3",
             "features": [ "rtree" ],

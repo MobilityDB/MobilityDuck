@@ -86,7 +86,7 @@ statement error
 SELECT rasterTileValueQuadbin(from_hex('2a'), 1, 1, quadbinTileToCell(0, 0, 0),
   'UINT4', 0.0, false, tgeompoint 'POINT(0 0)@2024-01-01');
 ----
-unknown pixel type
+Unknown pixel type "UINT4"
 
 # ── trajectoryQuadbins ──────────────────────────────────────────────────────
 
