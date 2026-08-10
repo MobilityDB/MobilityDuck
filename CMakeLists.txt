@@ -152,9 +152,24 @@ target_include_directories(${EXTENSION_NAME} SYSTEM PRIVATE ${H3_INCLUDE_DIR})
 target_include_directories(${LOADABLE_EXTENSION_NAME} SYSTEM PRIVATE ${H3_INCLUDE_DIR})
 
 # -----------------------------
-# Link libraries 
+# MEOS's own external dependencies
 # -----------------------------
-target_link_libraries(${EXTENSION_NAME}
+# libmeos is a static archive (the meos port follows the triplet's static
+# linkage), so it carries only MEOS's objects: every library MEOS itself calls
+# into has to be resolved on this link line instead of inside a shared libmeos.
+# GEOS, PROJ, GSL and json-c already appear in the link list below; these four
+# are the ones the list was missing, one per optional family the meos port
+# enables with -DALL=ON — H3 for th3index, GDAL for the raster operators, and
+# libxml2 plus zlib for the pgPointCloud core.
+find_package(h3 CONFIG REQUIRED)
+find_package(GDAL CONFIG REQUIRED)
+find_package(LibXml2 REQUIRED)
+find_package(ZLIB REQUIRED)
+
+# -----------------------------
+# Link libraries
+# -----------------------------
+set(MOBILITYDUCK_LINK_LIBS
   MEOS::meos
   ${GEOS_TGT}
   PROJ::proj
@@ -163,18 +178,14 @@ target_link_libraries(${EXTENSION_NAME}
   ${JSONC_TGT}
   OpenSSL::SSL
   OpenSSL::Crypto
+  h3::h3
+  GDAL::GDAL
+  LibXml2::LibXml2
+  ZLIB::ZLIB
 )
 
-target_link_libraries(${LOADABLE_EXTENSION_NAME}
-  MEOS::meos
-  ${GEOS_TGT}
-  PROJ::proj
-  GSL::gsl
-  GSL::gslcblas
-  ${JSONC_TGT}
-  OpenSSL::SSL
-  OpenSSL::Crypto
-)
+target_link_libraries(${EXTENSION_NAME} ${MOBILITYDUCK_LINK_LIBS})
+target_link_libraries(${LOADABLE_EXTENSION_NAME} ${MOBILITYDUCK_LINK_LIBS})
 
 # -----------------------------
 # Install (static & loadable)
