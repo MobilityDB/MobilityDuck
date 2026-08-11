@@ -121,6 +121,78 @@ vcpkg_replace_string(
     [=[meos_error(ERROR, MEOS_ERR_INTERNAL_ERROR, "unsupported integer size %d", b);]=]
 )
 
+# Upstream gap: at this pin `meos/CMakeLists.txt` HARDCODES the linkage of the
+# standalone library — `if(MEOS) add_library(meos SHARED ...)`. `BUILD_SHARED_LIBS`
+# is read nowhere in the MobilityDB tree, so vcpkg's `-DBUILD_SHARED_LIBS=OFF`
+# (derived from the static triplet, and visibly present in the configure line) is
+# inert: `-DMEOS=ON` alone forces a .dylib/.so. The STATIC branch is the `else()`
+# — i.e. MobilityDB-the-PostgreSQL-extension — which does not run the standalone
+# install rules or emit the generated meos.h surface, so it is not a usable
+# substitute. An earlier pin (742c1fb) declared `add_library(meos ${OBJECTS})`
+# with no explicit type and carried an `option(BUILD_SHARED_LIBS)`, which is why
+# the same port produced a static libmeos.a before the pin advanced.
+#
+# Restore that behaviour: keep the SHARED branch for standalone consumers who ask
+# for it, and add a static branch for MEOS=ON + BUILD_SHARED_LIBS=OFF. The APPLE
+# `-Wl,-undefined,dynamic_lookup` / SUFFIX ".dylib" block must stay inside the
+# shared branch only — applied to an archive it would emit an ar file misnamed
+# libmeos.dylib and leave MEOS's own external symbols unresolved.
+vcpkg_replace_string(
+    "${SOURCE_PATH}/meos/CMakeLists.txt"
+    [=[if(MEOS)
+  # Build as SHARED library for standalone use
+  add_library(${MEOS_LIB_NAME} SHARED ${MEOS_OBJECTS})
+  message(STATUS "Building MEOS as SHARED library")
+
+  if(APPLE)
+    set_target_properties(${MEOS_LIB_NAME} PROPERTIES
+      SUFFIX ".dylib"
+      LINK_FLAGS "-Wl,-undefined,dynamic_lookup"
+    )
+  endif()
+else()]=]
+    [=[if(MEOS AND BUILD_SHARED_LIBS)
+  # Build as SHARED library for standalone use
+  add_library(${MEOS_LIB_NAME} SHARED ${MEOS_OBJECTS})
+  message(STATUS "Building MEOS as SHARED library")
+
+  if(APPLE)
+    set_target_properties(${MEOS_LIB_NAME} PROPERTIES
+      SUFFIX ".dylib"
+      LINK_FLAGS "-Wl,-undefined,dynamic_lookup"
+    )
+  endif()
+elseif(MEOS)
+  # Standalone MEOS with BUILD_SHARED_LIBS=OFF: same install surface as the
+  # shared branch, but an archive the consumer can absorb into its own binary.
+  #
+  # MEOS_OBJECTS covers only the OBJECT libraries. pgtypes and postgis are
+  # STATIC, and the `target_link_libraries(meos pgtypes postgis)` calls below
+  # merely record usage requirements on a STATIC target — unlike a SHARED
+  # libmeos, which absorbed their members at link time. Left alone, libmeos.a
+  # ships without ~300 symbols it references itself (bool_in, cstring_to_text,
+  # GEOS2LWGEOM, lwgeom_*, pc_*), and the consumer would have to discover
+  # libpgtypes.a/libpostgis.a/libpc.a and order them by hand — around a genuine
+  # cycle, since pgtypes calls back into meos_error. Fold the underlying object
+  # libraries in instead, so the archive carries exactly what the shared library
+  # did. Both subdirectories are added before meos/ in the top-level
+  # CMakeLists, so the targets already exist; the optional ones follow the same
+  # family switches that gate MEOS_OBJECTS above. libpgcommon is deliberately
+  # omitted, mirroring its commented-out entry in POSTGIS_OBJECTS.
+  set(MEOS_STATIC_OBJECTS "$<TARGET_OBJECTS:pgtypes>")
+  foreach(_meos_static_dep liblwgeom ryu librtcore pointcloud_libpc)
+    if(TARGET ${_meos_static_dep})
+      list(APPEND MEOS_STATIC_OBJECTS "$<TARGET_OBJECTS:${_meos_static_dep}>")
+    endif()
+  endforeach()
+
+  add_library(${MEOS_LIB_NAME} STATIC ${MEOS_OBJECTS} ${MEOS_STATIC_OBJECTS})
+  message(STATUS "Building MEOS as STATIC library (BUILD_SHARED_LIBS=OFF)")
+
+  set_target_properties(${MEOS_LIB_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+else()]=]
+)
+
 # USER-APPROVED-PIN-WRITE (2026-06-23): removed the binding's own stale
 # vcpkg_replace_string patches that INJECTED Datum accessors into pg_timestamp.h /
 # utils/timestamp.h and re-exported add_date_int/add_timestamptz_interval into
@@ -153,6 +225,15 @@ vcpkg_cmake_configure(
         # one .duckdb_extension file with nowhere to put a sidecar libmeos, so
         # forcing a shared build here produced a binary that referenced
         # @rpath/libmeos.dylib and failed to load anywhere but the CI runner.
+        # The flag only reaches the meos target because of the linkage patch
+        # above; upstream ignores it at this pin.
+        # The MEOS families are compiled as OBJECT libraries and folded into
+        # libmeos via $<TARGET_OBJECTS:...>. Those objects do not inherit the
+        # meos target's POSITION_INDEPENDENT_CODE, and a static libmeos is
+        # ultimately linked into a shared .duckdb_extension, so PIC has to be
+        # set tree-wide rather than per-target (a no-op on arm64 macOS, required
+        # on x64 Linux where non-PIC objects fail the final shared link).
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         # Build only the MEOS library, not the MEOS C test binaries: those link
         # the GEOS C++ API, which the arm64-linux vcpkg triplet does not carry.
         -DBUILD_TESTING=OFF

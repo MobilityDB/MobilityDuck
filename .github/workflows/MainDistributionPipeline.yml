@@ -52,8 +52,97 @@ jobs:
       # dominates CI time.
       exclude_archs: ${{ github.event_name == 'pull_request' && 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;osx_amd64;osx_arm64;wasm_mvp;wasm_eh;wasm_threads' || 'windows_amd64;windows_amd64_mingw;linux_amd64_musl' }}
 
-  duckdb-latest-deploy:
+  # The distribution pipeline's own test step runs on the machine that just built
+  # the extension, where MEOS is still sitting in build/release/vcpkg_installed.
+  # That makes a dynamically linked MEOS invisible to CI: the tests pass, the
+  # artifact is published, and it then fails to dlopen on every machine that is
+  # not the runner ("Library not loaded: @rpath/libmeos.dylib", because the only
+  # baked-in LC_RPATH is the runner's build tree). vcpkg_ports/meos now forces a
+  # static libmeos and fails the port build if it ever gets a shared one, but
+  # that guard sits at the wrong end of the pipeline to prove what a downloader
+  # actually gets.
+  #
+  # This job closes the loop from the other side: it re-downloads the published
+  # artifact onto a runner that never built it, and checks the two things that
+  # break for a downloader — that the binary names no shared library it does not
+  # ship, and that a stock DuckDB CLI can LOAD it and evaluate a MEOS-backed
+  # expression. It runs before deploy so a non-portable binary is never released.
+  verify-standalone:
+    name: Standalone load (${{ matrix.duckdb_arch }})
     needs: duckdb-latest-build
+    # Mirrors the build job's per-event matrix: Linux-only on pull_request, all
+    # native targets on push/dispatch. Wasm is skipped (no dynamic linking, and
+    # no CLI to LOAD it with); Windows/musl are not built at all.
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(github.event_name == 'pull_request' && '[{"duckdb_arch":"linux_amd64","runner":"ubuntu-latest"},{"duckdb_arch":"linux_arm64","runner":"ubuntu-24.04-arm"}]' || '[{"duckdb_arch":"linux_amd64","runner":"ubuntu-latest"},{"duckdb_arch":"linux_arm64","runner":"ubuntu-24.04-arm"},{"duckdb_arch":"osx_amd64","runner":"macos-13"},{"duckdb_arch":"osx_arm64","runner":"macos-14"}]') }}
+    runs-on: ${{ matrix.runner }}
+    steps:
+      # Artifact name is built from duckdb_version + extension_name; keep the
+      # version here in sync with the two jobs above.
+      - uses: actions/download-artifact@v4
+        with:
+          name: mobilityduck-v1.4.4-extension-${{ matrix.duckdb_arch }}
+          path: artifact
+
+      - name: Assert the artifact names no non-system shared library
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXT=artifact/mobilityduck.duckdb_extension
+          test -f "$EXT"
+
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            # Drop line 1 (otool echoes the file path) and keep the load-command
+            # paths. The extension's own LC_ID_DYLIB appears here too and is not
+            # a dependency, hence the explicit allowance for it.
+            otool -L "$EXT" | tail -n +2 | awk 'NF {print $1}' > deps.txt
+            ALLOW='^(/usr/lib/|/System/Library/Frameworks/|@rpath/mobilityduck\.duckdb_extension$)'
+          else
+            readelf -d "$EXT" | sed -n 's/.*NEEDED.*\[\(.*\)\]/\1/p' > deps.txt
+            # glibc's own set plus the C++ runtime. Anything vcpkg built (MEOS,
+            # GEOS, PROJ, GDAL, GSL, json-c, h3, libxml2) must be absorbed into
+            # the binary, so none of them may appear here.
+            ALLOW='^(libc\.so|libm\.so|libdl\.so|libpthread\.so|librt\.so|libresolv\.so|libstdc\+\+\.so|libgcc_s\.so|libz\.so|ld-linux)'
+          fi
+
+          echo "--- shared libraries named by the artifact:"
+          cat deps.txt
+
+          if grep -Ev "$ALLOW" deps.txt > offenders.txt; then
+            echo "::error::The published artifact depends on libraries it does not ship. A downloader cannot dlopen it."
+            cat offenders.txt
+            exit 1
+          fi
+          echo "OK: only system libraries are referenced."
+
+      - name: LOAD the artifact into a stock DuckDB CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ matrix.duckdb_arch }}" in
+            linux_amd64) CLI=duckdb_cli-linux-amd64.zip   ;;
+            linux_arm64) CLI=duckdb_cli-linux-arm64.zip   ;;
+            osx_*)       CLI=duckdb_cli-osx-universal.zip ;;
+          esac
+          curl -fsSL -o duckdb.zip "https://github.com/duckdb/duckdb/releases/download/v1.4.4/${CLI}"
+          unzip -q -o duckdb.zip
+          chmod +x duckdb
+
+          # tbool() round-trips through MEOS and depends on the Europe/Brussels
+          # session timezone the extension installs at load time, so a correct
+          # answer proves MEOS is both linked in and initialised — not merely
+          # that dlopen succeeded. Mirrors test/sql/tbool.test.
+          ./duckdb -unsigned -noheader -list -c \
+            "LOAD 'artifact/mobilityduck.duckdb_extension'; SELECT tbool(true, timestamptz '2012-01-01 08:00:00');" \
+            > out.txt
+
+          echo "--- output:"; cat out.txt
+          grep -qx 't@2012-01-01 08:00:00+01' out.txt
+
+  duckdb-latest-deploy:
+    needs: [duckdb-latest-build, verify-standalone]
     uses: duckdb/extension-ci-tools/.github/workflows/_extension_deploy.yml@v1.4.4
     secrets: inherit
     with:
