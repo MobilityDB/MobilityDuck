@@ -42,15 +42,20 @@ jobs:
       # (`__attribute__((unused))`). Re-enable once the MEOS port grows
       # Windows support.
       #
-      # On pull_request events the slow triplets (the 3 emscripten Wasm
-      # cross-compiles and the 2 macOS builds) are also excluded, so feature
-      # PRs build only the fast Linux amd64+arm64 targets. The full matrix
-      # (Wasm + macOS) runs on push to main and on workflow_dispatch, so every
-      # platform is validated ahead of a release/deploy. The MEOS port rebuilds
-      # libmeos and its heavy deps (GEOS/PROJ/GDAL) from source each run (it
-      # tracks master's tip, no pin), and cross-compiling those for Wasm
-      # dominates CI time.
-      exclude_archs: ${{ github.event_name == 'pull_request' && 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;osx_amd64;osx_arm64;wasm_mvp;wasm_eh;wasm_threads' || 'windows_amd64;windows_amd64_mingw;linux_amd64_musl' }}
+      # On pull_request events the 3 emscripten Wasm cross-compiles are also
+      # excluded: the MEOS port rebuilds libmeos and its heavy deps
+      # (GEOS/PROJ/GDAL) from source each run, and cross-compiling those for
+      # Wasm dominates CI time. They still run on push to main and on
+      # workflow_dispatch, so every platform is validated ahead of a
+      # release/deploy.
+      #
+      # macOS is NOT excluded on pull_request, despite being slow. Linkage bugs
+      # are the class of defect this pipeline is worst at catching, and they are
+      # the ones that differ most per platform — the Mach-O @rpath failure that
+      # motivated verify-standalone below could not be reproduced by any Linux
+      # target. Deferring both macOS builds to post-merge meant a PR could go
+      # green while the artifact users actually download was unloadable.
+      exclude_archs: ${{ github.event_name == 'pull_request' && 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;wasm_mvp;wasm_eh;wasm_threads' || 'windows_amd64;windows_amd64_mingw;linux_amd64_musl' }}
 
   # The distribution pipeline's own test step runs on the machine that just built
   # the extension, where MEOS is still sitting in build/release/vcpkg_installed.
@@ -70,13 +75,24 @@ jobs:
   verify-standalone:
     name: Standalone load (${{ matrix.duckdb_arch }})
     needs: duckdb-latest-build
-    # Mirrors the build job's per-event matrix: Linux-only on pull_request, all
-    # native targets on push/dispatch. Wasm is skipped (no dynamic linking, and
-    # no CLI to LOAD it with); Windows/musl are not built at all.
+    # Every native target the build job produces, on every event — the build
+    # matrix now differs per event only in Wasm, which is skipped here anyway
+    # (nothing is dynamically linked, and there is no CLI to LOAD it with).
+    # Windows/musl are never built. Each artifact is checked on a runner of its
+    # own architecture, so the load test exercises the real loader rather than
+    # only inspecting the binary.
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(github.event_name == 'pull_request' && '[{"duckdb_arch":"linux_amd64","runner":"ubuntu-latest"},{"duckdb_arch":"linux_arm64","runner":"ubuntu-24.04-arm"}]' || '[{"duckdb_arch":"linux_amd64","runner":"ubuntu-latest"},{"duckdb_arch":"linux_arm64","runner":"ubuntu-24.04-arm"},{"duckdb_arch":"osx_amd64","runner":"macos-13"},{"duckdb_arch":"osx_arm64","runner":"macos-14"}]') }}
+        include:
+          - duckdb_arch: linux_amd64
+            runner: ubuntu-latest
+          - duckdb_arch: linux_arm64
+            runner: ubuntu-24.04-arm
+          - duckdb_arch: osx_amd64
+            runner: macos-13
+          - duckdb_arch: osx_arm64
+            runner: macos-14
     runs-on: ${{ matrix.runner }}
     steps:
       # Artifact name is built from duckdb_version + extension_name; keep the
@@ -152,6 +168,7 @@ jobs:
       deploy_latest: ${{ startsWith(github.ref, 'refs/heads/v') || github.ref == 'refs/heads/main' }}
       # Matches the build job's exclude_archs per event so the deploy step gathers
       # exactly the artifacts that were built: the full matrix on push/dispatch,
-      # Linux-only on pull_request. (Windows/musl stay excluded everywhere — the
-      # MEOS vcpkg port does not build under MSVC/MinGW; see the build job above.)
-      exclude_archs: ${{ github.event_name == 'pull_request' && 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;osx_amd64;osx_arm64;wasm_mvp;wasm_eh;wasm_threads' || 'windows_amd64;windows_amd64_mingw;linux_amd64_musl' }}
+      # everything but Wasm on pull_request. (Windows/musl stay excluded
+      # everywhere — the MEOS vcpkg port does not build under MSVC/MinGW; see the
+      # build job above.) Keep this expression identical to the build job's.
+      exclude_archs: ${{ github.event_name == 'pull_request' && 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;wasm_mvp;wasm_eh;wasm_threads' || 'windows_amd64;windows_amd64_mingw;linux_amd64_musl' }}
