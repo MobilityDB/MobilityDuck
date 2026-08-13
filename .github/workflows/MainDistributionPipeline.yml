@@ -42,18 +42,121 @@ jobs:
       # (`__attribute__((unused))`). Re-enable once the MEOS port grows
       # Windows support.
       #
-      # On pull_request events the slow triplets (the 3 emscripten Wasm
-      # cross-compiles and the 2 macOS builds) are also excluded, so feature
-      # PRs build only the fast Linux amd64+arm64 targets. The full matrix
-      # (Wasm + macOS) runs on push to main and on workflow_dispatch, so every
-      # platform is validated ahead of a release/deploy. The MEOS port rebuilds
-      # libmeos and its heavy deps (GEOS/PROJ/GDAL) from source each run (it
-      # tracks master's tip, no pin), and cross-compiling those for Wasm
-      # dominates CI time.
-      exclude_archs: ${{ github.event_name == 'pull_request' && 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;osx_amd64;osx_arm64;wasm_mvp;wasm_eh;wasm_threads' || 'windows_amd64;windows_amd64_mingw;linux_amd64_musl' }}
+      # On pull_request events the 3 emscripten Wasm cross-compiles are excluded,
+      # so a feature PR builds the four native targets: Linux amd64+arm64 and
+      # macOS amd64+arm64. macOS is where a non-portable binary shows up first —
+      # the loader there rejects a missing @rpath dependency outright — so the
+      # verify-standalone job below has an artifact for every native platform on
+      # the event that gates review. Wasm links nothing dynamically and has no
+      # CLI to load it with, so it runs on push to main and workflow_dispatch,
+      # where the full matrix is validated ahead of a release. The MEOS port
+      # rebuilds libmeos and its heavy deps (GEOS/PROJ/GDAL) from source each
+      # run, and cross-compiling those for Wasm dominates CI time.
+      exclude_archs: ${{ github.event_name == 'pull_request' && 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;wasm_mvp;wasm_eh;wasm_threads' || 'windows_amd64;windows_amd64_mingw;linux_amd64_musl' }}
+
+  # The published artifact is a single file a user downloads and LOADs, so the
+  # guarantee it has to carry is that it names no shared library it does not
+  # ship, and that a stock DuckDB CLI can LOAD it and evaluate a MEOS-backed
+  # expression. It runs before deploy so a non-portable binary is never released.
+  verify-standalone:
+    name: Standalone load (${{ matrix.duckdb_arch }})
+    needs: duckdb-latest-build
+    # Every native target the build job produces. Reading an artifact's declared
+    # dependencies works from any host — `otool`/`readelf` parse headers and do
+    # not execute code — so that assertion covers all four. Running the loader
+    # needs a host of the artifact's own architecture, so `native` marks the
+    # targets where the LOAD step can run. Wasm is skipped: nothing is
+    # dynamically linked and there is no CLI to LOAD it with.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - duckdb_arch: linux_amd64
+            runner: ubuntu-latest
+            native: true
+          - duckdb_arch: linux_arm64
+            runner: ubuntu-24.04-arm
+            native: true
+          # GitHub has no Intel macOS runner: a job asking for `macos-13` is
+          # never assigned one and is cancelled at the 24h queue limit having
+          # run no step, which reads as a red check that no code change can
+          # turn green. The build job does not hit this because it produces
+          # osx_amd64 by cross-compiling on an arm64 host. So inspect this
+          # artifact on arm64 and leave its LOAD to the deployed binary's
+          # osx_arm64 sibling, which exercises the same linkage.
+          - duckdb_arch: osx_amd64
+            runner: macos-14
+            native: false
+          - duckdb_arch: osx_arm64
+            runner: macos-14
+            native: true
+    runs-on: ${{ matrix.runner }}
+    steps:
+      # Artifact name is built from duckdb_version + extension_name; keep the
+      # version here in sync with the two jobs above.
+      - uses: actions/download-artifact@v4
+        with:
+          name: mobilityduck-v1.4.4-extension-${{ matrix.duckdb_arch }}
+          path: artifact
+
+      - name: Assert the artifact names no non-system shared library
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXT=artifact/mobilityduck.duckdb_extension
+          test -f "$EXT"
+
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            # Drop line 1 (otool echoes the file path) and keep the load-command
+            # paths. The extension's own LC_ID_DYLIB appears here too and is not
+            # a dependency, hence the explicit allowance for it.
+            otool -L "$EXT" | tail -n +2 | awk 'NF {print $1}' > deps.txt
+            ALLOW='^(/usr/lib/|/System/Library/Frameworks/|@rpath/mobilityduck\.duckdb_extension$)'
+          else
+            readelf -d "$EXT" | sed -n 's/.*NEEDED.*\[\(.*\)\]/\1/p' > deps.txt
+            # glibc's own set plus the C++ runtime. Anything vcpkg built (MEOS,
+            # GEOS, PROJ, GDAL, GSL, json-c, h3, libxml2) must be absorbed into
+            # the binary, so none of them may appear here.
+            ALLOW='^(libc\.so|libm\.so|libdl\.so|libpthread\.so|librt\.so|libresolv\.so|libstdc\+\+\.so|libgcc_s\.so|libz\.so|ld-linux)'
+          fi
+
+          echo "--- shared libraries named by the artifact:"
+          cat deps.txt
+
+          if grep -Ev "$ALLOW" deps.txt > offenders.txt; then
+            echo "::error::The published artifact depends on libraries it does not ship. A downloader cannot dlopen it."
+            cat offenders.txt
+            exit 1
+          fi
+          echo "OK: only system libraries are referenced."
+
+      - name: LOAD the artifact into a stock DuckDB CLI
+        if: ${{ matrix.native }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ matrix.duckdb_arch }}" in
+            linux_amd64) CLI=duckdb_cli-linux-amd64.zip   ;;
+            linux_arm64) CLI=duckdb_cli-linux-arm64.zip   ;;
+            osx_*)       CLI=duckdb_cli-osx-universal.zip ;;
+          esac
+          curl -fsSL -o duckdb.zip "https://github.com/duckdb/duckdb/releases/download/v1.4.4/${CLI}"
+          unzip -q -o duckdb.zip
+          chmod +x duckdb
+
+          # tbool() round-trips through MEOS and depends on the Europe/Brussels
+          # session timezone the extension installs at load time, so a correct
+          # answer proves MEOS is both linked in and initialised — not merely
+          # that dlopen succeeded. Mirrors test/sql/tbool.test.
+          ./duckdb -unsigned -noheader -list -c \
+            "LOAD 'artifact/mobilityduck.duckdb_extension'; SELECT tbool(true, timestamptz '2012-01-01 08:00:00');" \
+            > out.txt
+
+          echo "--- output:"; cat out.txt
+          grep -qx 't@2012-01-01 08:00:00+01' out.txt
 
   duckdb-latest-deploy:
-    needs: duckdb-latest-build
+    needs: [duckdb-latest-build, verify-standalone]
     uses: duckdb/extension-ci-tools/.github/workflows/_extension_deploy.yml@v1.4.4
     secrets: inherit
     with:

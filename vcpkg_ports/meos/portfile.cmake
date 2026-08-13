@@ -6,7 +6,7 @@
 # pin, so the libmeos this port builds and the surface that links against it always
 # match one upstream commit. Advance the tracked version by bumping this SHA and
 # regenerating the surface from it.
-set(_MEOS_REF "e9883a1e5134678b6ae01b0ebb9410f7f4ec1f20")
+set(_MEOS_REF "edba762962366c7f50b1c6e4f37fb991ed9f09a1")
 message(STATUS "MEOS port: building MobilityDB at pinned ${_MEOS_REF}")
 
 # FETCH_REF names the branch (always advertised) so the fetch works even when the
@@ -147,7 +147,12 @@ vcpkg_cmake_configure(
         -DALL=ON
         "-DJSON-C_LIBRARIES=${_MEOS_JSONC_LIB}"
         "-DJSON-C_INCLUDE_DIRS=${_MEOS_JSONC_INC}"
-        -DBUILD_SHARED_LIBS=ON
+        # BUILD_SHARED_LIBS is deliberately NOT set here: vcpkg_cmake_configure
+        # derives it from the triplet's VCPKG_LIBRARY_LINKAGE, which is static on
+        # every triplet this extension is built for. A DuckDB extension ships as
+        # one .duckdb_extension file with nowhere to put a sidecar libmeos, so
+        # forcing a shared build here produced a binary that referenced
+        # @rpath/libmeos.dylib and failed to load anywhere but the CI runner.
         # Build only the MEOS library, not the MEOS C test binaries: those link
         # the GEOS C++ API, which the arm64-linux vcpkg triplet does not carry.
         -DBUILD_TESTING=OFF
@@ -156,6 +161,28 @@ vcpkg_cmake_configure(
 )
 
 vcpkg_cmake_install()
+
+# Guard the linkage the extension depends on. A DuckDB extension is distributed
+# as one .duckdb_extension file, so a shared libmeos here yields a binary that
+# references @rpath/libmeos.dylib (or libmeos.so) and loads only on the machine
+# that built it. Fail during the port build, where the cause is obvious, rather
+# than when a user downloads the artifact and dlopen reports a missing library.
+file(GLOB _meos_shared
+    "${CURRENT_PACKAGES_DIR}/lib/libmeos.so*"
+    "${CURRENT_PACKAGES_DIR}/lib/libmeos.dylib"
+    "${CURRENT_PACKAGES_DIR}/lib/meos.dll")
+if(_meos_shared)
+    message(FATAL_ERROR
+        "MEOS port: a SHARED libmeos was built (${_meos_shared}). The DuckDB "
+        "extension links MEOS statically; do not override BUILD_SHARED_LIBS.")
+endif()
+if(NOT EXISTS "${CURRENT_PACKAGES_DIR}/lib/libmeos.a"
+   AND NOT EXISTS "${CURRENT_PACKAGES_DIR}/lib/meos.lib")
+    message(FATAL_ERROR
+        "MEOS port: no static libmeos was installed under "
+        "${CURRENT_PACKAGES_DIR}/lib. The MobilityDB build must honour "
+        "BUILD_SHARED_LIBS=OFF.")
+endif()
 
 # meos_tls.h is not listed in the upstream install() rules at this pin.
 # It is included verbatim by the cmake-generated meos.h; copy it alongside

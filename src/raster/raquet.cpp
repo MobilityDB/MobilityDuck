@@ -85,46 +85,15 @@ inline string_t TempToBlob(Vector &result, Temporal *t) {
     return out;
 }
 
-/* Pixel type names, as in the MobilityDB raster SQL surface. */
+/* Pixel type names, as in the MobilityDB raster SQL surface. The name table is
+ * MEOS's (raquet_pixtype_from_string), so a new pixel type reaches every binding
+ * at once instead of being re-tabulated here. An unknown name raises a MEOS
+ * error, which MobilityduckMeosErrorHandler turns into an InvalidInputException.
+ * The band's own dimensions and length are validated by the MEOS entry points
+ * that receive them, so this file carries no copy of those checks. */
 MeosPixType NameToPixType(string_t name) {
-    std::string s(name.GetData(), name.GetSize());
-    if (s == "UINT8")   return MEOS_PT_UINT8;
-    if (s == "INT16")   return MEOS_PT_INT16;
-    if (s == "INT32")   return MEOS_PT_INT32;
-    if (s == "FLOAT32") return MEOS_PT_FLOAT32;
-    if (s == "FLOAT64") return MEOS_PT_FLOAT64;
-    throw InvalidInputException(
-        "unknown pixel type \"%s\": use UINT8, INT16, INT32, FLOAT32 or FLOAT64",
-        s.c_str());
-}
-
-size_t PixTypeSize(MeosPixType pixtype) {
-    switch (pixtype) {
-        case MEOS_PT_UINT8:   return 1;
-        case MEOS_PT_INT16:   return 2;
-        case MEOS_PT_INT32:   return 4;
-        case MEOS_PT_FLOAT32: return 4;
-        case MEOS_PT_FLOAT64: return 8;
-        default:              return 0;
-    }
-}
-
-/* MEOS reads the pixel band as `width * height` packed values and cannot know
- * how long the buffer handed to it is, so the dimensions and the buffer length
- * are checked here before the band is passed on. */
-void ValidatePixels(string_t pixels, int32_t width, int32_t height,
-                    MeosPixType pixtype) {
-    if (width <= 0 || height <= 0) {
-        throw InvalidInputException(
-            "The width and height of a raquet tile must be positive");
-    }
-    size_t need = (size_t) width * (size_t) height * PixTypeSize(pixtype);
-    if (pixels.GetSize() < need) {
-        throw InvalidInputException(
-            "The pixel array has %llu bytes but %llu are required for a %d x %d tile",
-            (unsigned long long) pixels.GetSize(), (unsigned long long) need,
-            width, height);
-    }
+    std::string s(name.GetData(), name.GetSize());   /* string_t is not NUL-terminated */
+    return raquet_pixtype_from_string(s.c_str());
 }
 
 } // namespace
@@ -203,13 +172,12 @@ void RaquetFunctions::Raquet_constructor(
             ? FlatVector::GetData<double>(args.data[5])[row] : 0.0;
 
         MeosPixType pt = NameToPixType(pixtype[row]);
-        ValidatePixels(pixels[row], width[row], height[row], pt);
 
         Raquet *rq = raquet_make(
-            static_cast<uint64_t>(cell[row]),
-            static_cast<uint16_t>(width[row]), static_cast<uint16_t>(height[row]),
+            static_cast<uint64_t>(cell[row]), width[row], height[row],
             pt, nodata, has_nodata,
-            reinterpret_cast<const uint8_t *>(pixels[row].GetData()));
+            reinterpret_cast<const uint8_t *>(pixels[row].GetData()),
+            static_cast<size_t>(pixels[row].GetSize()));
         if (!rq) { out_validity.SetInvalid(row); continue; }
         out[row] = RaquetToBlob(result, rq);
     }
@@ -625,11 +593,11 @@ void RaquetFunctions::Raster_tile_value_quadbin(
         if (any_null) { out_validity.SetInvalid(row); continue; }
 
         MeosPixType pt = NameToPixType(pixtype[row]);
-        ValidatePixels(pixels[row], width[row], height[row], pt);
 
         Temporal *t = BlobToTemp(traj[row]);
         Temporal *res = raster_tile_value_quadbin(
             reinterpret_cast<const uint8_t *>(pixels[row].GetData()),
+            static_cast<size_t>(pixels[row].GetSize()),
             static_cast<uint16_t>(width[row]), static_cast<uint16_t>(height[row]),
             static_cast<uint64_t>(cell[row]), pt,
             nodata[row], has_nodata[row], t);
