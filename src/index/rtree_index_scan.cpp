@@ -54,6 +54,28 @@ static unique_ptr<GlobalTableFunctionState> RTreeIndexScanInitGlobal(ClientConte
 		result->column_ids.emplace_back(col_id);
 	}
 
+	// The scan declares projection pushdown, so when the plan reads a column it
+	// does not return — the indexed column under `WHERE g && ...` while the query
+	// selects another — the fetch covers every scanned column and the output holds
+	// only the projected ones. Fetch into a chunk of the scanned types and let the
+	// output reference the projected subset, as the built-in table scan does; the
+	// execute path below already follows that shape once projection_ids is set.
+	if (input.CanRemoveFilterColumns()) {
+		result->projection_ids = input.projection_ids;
+		const auto &columns = bind_data.table.GetColumns();
+		vector<LogicalType> scanned_types;
+		for (const auto &col_idx : input.column_indexes) {
+			if (col_idx.IsRowIdColumn()) {
+				// Constructed by value: binding the constexpr member by reference
+				// pulls a second definition of it into the extension archive.
+				scanned_types.push_back(LogicalType(LogicalType::ROW_TYPE));
+			} else {
+				scanned_types.push_back(columns.GetColumn(col_idx.ToLogical()).Type());
+			}
+		}
+		result->all_columns.Initialize(context, scanned_types);
+	}
+
 	// Initialize the storage scan state
 	result->local_storage_state.Initialize(result->column_ids, context, input.filters);
 	local_storage.InitializeScan(bind_data.table.GetStorage(), result->local_storage_state.local_state, input.filters);
