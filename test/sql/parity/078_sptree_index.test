@@ -1,0 +1,85 @@
+# name: test/sql/parity/078_sptree_index.test
+# description: TSPTREE index coverage for tgeompoint, over both space-partitioning kinds
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+CREATE TABLE idx_sp AS
+  SELECT i AS id,
+         format('[POINT({} {})@2000-01-01, POINT({} {})@2000-01-02]', i, i, i+1, i+1)::tgeompoint AS g
+  FROM range(1, 200) tbl(i);
+
+statement ok
+CREATE TABLE idx_scan AS SELECT * FROM idx_sp;
+
+# The kind defaults to quadtree.
+
+statement ok
+CREATE INDEX i_sp_default ON idx_sp USING TSPTREE (g);
+
+query I
+SELECT count(*) FROM idx_sp
+  WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox;
+----
+32
+
+statement ok
+DROP INDEX i_sp_default;
+
+# Both kinds are spelled through the `kind` create option.
+
+statement ok
+CREATE INDEX i_sp_quad ON idx_sp USING TSPTREE (g) WITH (kind = 'quadtree');
+
+# The quadtree answers the bounding box with the rows a sequential scan returns.
+
+query I
+SELECT count(*) FROM (
+  SELECT id FROM idx_sp
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox
+  EXCEPT
+  SELECT id FROM idx_scan
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox);
+----
+0
+
+query I
+SELECT count(*) FROM (
+  SELECT id FROM idx_scan
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox
+  EXCEPT
+  SELECT id FROM idx_sp
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox);
+----
+0
+
+query I
+SELECT min(id) FROM idx_sp
+  WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox;
+----
+9
+
+statement ok
+DROP INDEX i_sp_quad;
+
+# The kdtree kind builds and takes queries. Its row-level agreement with a
+# sequential scan is NOT asserted here: MEOS returns false negatives from a k-d
+# search above two dimensions for any bounded query, so the rows an stbox
+# kdtree returns are wrong until MobilityDB PR #1835 lands and the recorded
+# _MEOS_REF advances past it. A bounded-window case belongs with that bump —
+# and must hold one dimension constant, since correlated dimensions pass
+# against the unfixed library.
+
+statement ok
+CREATE INDEX i_sp_kd ON idx_sp USING TSPTREE (g) WITH (kind = 'kdtree');
+
+statement ok
+DROP INDEX i_sp_kd;
+
+# Any other kind is rejected at create time.
+
+statement error
+CREATE INDEX i_sp_bad ON idx_sp USING TSPTREE (g) WITH (kind = 'rtree');
+----
+TSPTREE index kind must be quadtree or kdtree

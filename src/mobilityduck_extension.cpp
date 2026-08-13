@@ -38,6 +38,7 @@
 #include "duckdb/main/extension/extension_loader.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include "index/rtree_module.hpp"
+#include "index/sptree_module.hpp"
 #include "single_tile_getters.hpp"
 #include "temporal/temporal_parquet.hpp"
 
@@ -459,6 +460,10 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TRTreeModule::RegisterRTreeIndex(loader);
 	TRTreeModule::RegisterIndexScan(loader);
 	TRTreeModule::RegisterScanOptimizer(loader);
+
+	TSPTreeModule::RegisterSPTreeIndex(loader);
+	TSPTreeModule::RegisterIndexScan(loader);
+	TSPTreeModule::RegisterScanOptimizer(loader);
 
 	// Single-tile getters depend on tbox, stbox, and the spatial GEOMETRY
 	// type being registered first.
