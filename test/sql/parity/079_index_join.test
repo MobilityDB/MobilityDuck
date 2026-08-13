@@ -1,0 +1,140 @@
+# name: test/sql/parity/079_index_join.test
+# description: A bounding-box join between two columns is answered by probing a
+#              TRTREE index, and returns exactly the rows a nested-loop join does
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+CREATE TABLE trips AS
+  SELECT i AS id,
+         format('[POINT({} {})@2000-01-01, POINT({} {})@2000-01-02]', i, i, i+1, i+1)::tgeompoint AS g
+  FROM range(1, 400) tbl(i);
+
+statement ok
+CREATE TABLE regions AS
+  SELECT i AS rid,
+         format('STBOX XT((({} {}),({} {})),[2000-01-01, 2000-01-03])', i*10, i*10, i*10+25, i*10+25)::stbox AS rg
+  FROM range(1, 20) tbl(i);
+
+# The same rows, with no index, so the join over them keeps the nested loop.
+
+statement ok
+CREATE TABLE trips_scan AS SELECT * FROM trips;
+
+statement ok
+CREATE INDEX i_trips ON trips USING TRTREE (g);
+
+# The condition names a column of each side, so no query box exists until the
+# join runs; the index is probed once per row of the other side.
+
+query II
+EXPLAIN SELECT count(*) FROM trips t, regions r WHERE t.g && r.rg;
+----
+physical_plan	<REGEX>:.*MOBILITY RTREE INDEX JOIN.*
+
+# Only the probe side is scanned: the indexed side is reached through the index.
+
+query II
+EXPLAIN SELECT count(*) FROM trips t, regions r WHERE t.g && r.rg;
+----
+physical_plan	<!REGEX>:.*Table: trips.*
+
+query I
+SELECT count(*) FROM trips t, regions r WHERE t.g && r.rg;
+----
+513
+
+# The pairs are exactly the ones the nested-loop join produces, in both directions.
+
+query I
+SELECT count(*) FROM (
+  SELECT t.id, r.rid FROM trips t, regions r WHERE t.g && r.rg
+  EXCEPT
+  SELECT t.id, r.rid FROM trips_scan t, regions r WHERE t.g && r.rg);
+----
+0
+
+query I
+SELECT count(*) FROM (
+  SELECT t.id, r.rid FROM trips_scan t, regions r WHERE t.g && r.rg
+  EXCEPT
+  SELECT t.id, r.rid FROM trips t, regions r WHERE t.g && r.rg);
+----
+0
+
+# Columns of the indexed side are fetched by row id, so selecting them returns
+# the same values the scan does.
+
+query I
+SELECT count(*) FROM (
+  SELECT t.id, t.g, r.rid FROM trips t, regions r WHERE t.g && r.rg
+  EXCEPT
+  SELECT t.id, t.g, r.rid FROM trips_scan t, regions r WHERE t.g && r.rg);
+----
+0
+
+# An stbox probe column is used as the box directly, rather than deriving one.
+
+statement ok
+CREATE TABLE boxes AS SELECT id AS bid, g::stbox AS bb FROM trips_scan;
+
+query I
+SELECT count(*) FROM (
+  SELECT t.id, b.bid FROM trips t, boxes b WHERE t.g && b.bb
+  EXCEPT
+  SELECT t.id, b.bid FROM trips_scan t, boxes b WHERE t.g && b.bb);
+----
+0
+
+# Shapes the join declines, each falling back to the nested loop rather than
+# dropping the part it cannot answer.
+
+# A second conjunct: answering only the `&&` would silently widen the result.
+
+query I
+SELECT count(*) FROM trips t, regions r WHERE t.g && r.rg AND t.id > 200;
+----
+20
+
+query I
+SELECT count(*) FROM (
+  SELECT t.id, r.rid FROM trips t, regions r WHERE t.g && r.rg AND t.id > 200
+  EXCEPT
+  SELECT t.id, r.rid FROM trips_scan t, regions r WHERE t.g && r.rg AND t.id > 200);
+----
+0
+
+query II
+EXPLAIN SELECT count(*) FROM trips t, regions r WHERE t.g && r.rg AND t.id > 200;
+----
+physical_plan	<!REGEX>:.*MOBILITY RTREE INDEX JOIN.*
+
+# An outer join needs the unmatched rows the index cannot report.
+
+query I
+SELECT count(*) FROM regions r LEFT JOIN trips t ON t.g && r.rg WHERE t.id IS NULL;
+----
+0
+
+query II
+EXPLAIN SELECT count(*) FROM regions r LEFT JOIN trips t ON t.g && r.rg;
+----
+physical_plan	<!REGEX>:.*MOBILITY RTREE INDEX JOIN.*
+
+# Neither side indexed: nothing to probe.
+
+query II
+EXPLAIN SELECT count(*) FROM trips_scan t, regions r WHERE t.g && r.rg;
+----
+physical_plan	<!REGEX>:.*MOBILITY RTREE INDEX JOIN.*
+
+# A NULL probe value matches nothing, and does not end the scan early.
+
+statement ok
+INSERT INTO regions VALUES (999, NULL);
+
+query I
+SELECT count(*) FROM trips t, regions r WHERE t.g && r.rg;
+----
+513

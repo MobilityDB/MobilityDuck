@@ -129,6 +129,7 @@ set(EXTENSION_SOURCES
     src/index/rtree_index_create_physical.cpp
     src/index/rtree_index_scan.cpp
     src/index/rtree_optimize_scan.cpp
+    src/index/rtree_index_join.cpp
     src/index/sptree_module.cpp
     src/index/sptree_index_create_physical.cpp
     src/index/sptree_index_scan.cpp
