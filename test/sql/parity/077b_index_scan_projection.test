@@ -76,12 +76,24 @@ SELECT count(*) FROM (
 ----
 32
 
-# Not covered: query shapes that reach the index scan carrying a pushed-down
-# filter the scan then mis-binds, which fail with "table filter type mismatch" —
-# an expression over the indexed column beside another column
-# (`SELECT id, g IS NOT NULL ...`), and a top-N plan (`... ORDER BY id LIMIT 1`).
-# Both fail the same way with or without the projection wiring below, so they are
-# a separate defect in how the scan carries the filter, not addressed here.
+# A query carrying a predicate the index does not answer keeps the sequential
+# scan, which evaluates the whole predicate: the index scan answers the bounding
+# box alone, so it stands in for the sequential scan only when that box is the
+# entire predicate. These are the shapes that reach the planner that way.
+
+query I
+SELECT id FROM trips
+  WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox
+  ORDER BY id LIMIT 1;
+----
+9
+
+query II
+SELECT id, g IS NOT NULL FROM trips
+  WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox
+  ORDER BY id LIMIT 1;
+----
+9	true
 
 # A filter over another column is not consumed by the index and still applies.
 
