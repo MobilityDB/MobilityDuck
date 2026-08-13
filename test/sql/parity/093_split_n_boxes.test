@@ -84,3 +84,42 @@ query II
 SELECT splitNStboxes(NULL::tgeompoint, 2), splitNStboxes(tgeompoint '[POINT(1 1)@2000-01-01 00:00:00+00, POINT(5 2)@2000-01-02 00:00:00+00]', NULL);
 ----
 NULL	NULL
+
+# The type set comes from the catalog signatures, so the accessors cover every
+# type MobilityDB declares them for, not only the ones their MEOS name mentions.
+# tcbuffer is one of the six types `stboxes` is declared for: the boxes carry the
+# buffer radius, so each one is the segment's extent expanded by that radius.
+
+query III
+SELECT len(stboxes(c)), len(splitNStboxes(c, 2)), len(splitEachNStboxes(c, 3))
+FROM (SELECT tcbuffer '[Cbuffer(POINT(1 1),0.5)@2000-01-01 00:00:00+00, Cbuffer(POINT(5 2),1)@2000-01-02 00:00:00+00, Cbuffer(POINT(2 6),0.5)@2000-01-03 00:00:00+00, Cbuffer(POINT(9 3),2)@2000-01-04 00:00:00+00, Cbuffer(POINT(4 8),1)@2000-01-05 00:00:00+00]' AS c);
+----
+4	2	2
+
+query I
+SELECT splitNStboxes(tcbuffer '[Cbuffer(POINT(1 1),0.5)@2000-01-01 00:00:00+00, Cbuffer(POINT(5 2),1)@2000-01-02 00:00:00+00, Cbuffer(POINT(2 6),0.5)@2000-01-03 00:00:00+00, Cbuffer(POINT(9 3),2)@2000-01-04 00:00:00+00, Cbuffer(POINT(4 8),1)@2000-01-05 00:00:00+00]', 2)::text;
+----
+['STBOX XT(((0.5,0.5),(6,6.5)),[2000-01-01 01:00:00+01, 2000-01-03 01:00:00+01])', 'STBOX XT(((1.5,1),(11,9)),[2000-01-03 01:00:00+01, 2000-01-05 01:00:00+01])']
+
+query I
+SELECT splitEachNStboxes(tcbuffer '[Cbuffer(POINT(1 1),0.5)@2000-01-01 00:00:00+00, Cbuffer(POINT(5 2),1)@2000-01-02 00:00:00+00, Cbuffer(POINT(2 6),0.5)@2000-01-03 00:00:00+00, Cbuffer(POINT(9 3),2)@2000-01-04 00:00:00+00, Cbuffer(POINT(4 8),1)@2000-01-05 00:00:00+00]', 3)::text;
+----
+['STBOX XT(((0.5,0.5),(11,6.5)),[2000-01-01 01:00:00+01, 2000-01-04 01:00:00+01])', 'STBOX XT(((3,1),(11,9)),[2000-01-04 01:00:00+01, 2000-01-05 01:00:00+01])']
+
+# tbigint completes the tnumber box family the same way — declared alongside
+# tint and tfloat, and now registered with them.
+
+query I
+SELECT tboxes(tbigint '[1@2000-01-01 00:00:00+00, 3@2000-01-02 00:00:00+00, 2@2000-01-03 00:00:00+00]')::text;
+----
+['TBOXBIGINT XT([1, 4),[2000-01-01 01:00:00+01, 2000-01-02 01:00:00+01])', 'TBOXBIGINT XT([2, 4),[2000-01-02 01:00:00+01, 2000-01-03 01:00:00+01])']
+
+query I
+SELECT splitNTboxes(tbigint '[1@2000-01-01 00:00:00+00, 3@2000-01-02 00:00:00+00, 2@2000-01-03 00:00:00+00]', 2)::text;
+----
+['TBOXBIGINT XT([1, 4),[2000-01-01 01:00:00+01, 2000-01-02 01:00:00+01])', 'TBOXBIGINT XT([2, 4),[2000-01-02 01:00:00+01, 2000-01-03 01:00:00+01])']
+
+query I
+SELECT splitEachNTboxes(tbigint '[1@2000-01-01 00:00:00+00, 3@2000-01-02 00:00:00+00, 2@2000-01-03 00:00:00+00]', 2)::text;
+----
+['TBOXBIGINT XT([1, 4),[2000-01-01 01:00:00+01, 2000-01-03 01:00:00+01])']

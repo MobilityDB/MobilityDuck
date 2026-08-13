@@ -1672,10 +1672,13 @@ def shape_array(f):
     # (CELL_UINT); the <cell>set sig does not end in "[]", so it must bypass the array-sig filter.
     if ec in CELL_UINT and scope == "types" and len(accs) == 1 and accs[0] in CELL_BASEVAL:
         return ("array", ec, ib, accs, tail)
-    if scope == "all":
-        accs = array_declared_accs(f, tail)                 # generic C fn: sig-declared types (SoT)
-    else:
-        accs = [a for a in accs if (_sig_ret_for(f, _acc_sqlname(a), tail) or "").endswith("[]")]
+    # The catalog sqlSignatures are the SoT for the type set, for a family-scoped accessor as much
+    # as for a generic one: each signature is the CREATE FUNCTION MobilityDB actually declares, so a
+    # family whose MEOS accessor is named for a supertype (tgeo_stboxes, declared for tcbuffer and
+    # tpose besides the 4 geo types) registers exactly the types it serves. The name-derived scope
+    # above stays the family gate (None = not a core family) and still selects the cell branch; it
+    # does not narrow the type set, which would drop the declared types its prefix does not name.
+    accs = array_declared_accs(f, tail)
     if not accs:
         return None
     return ("array", ec, ib, accs, tail)
