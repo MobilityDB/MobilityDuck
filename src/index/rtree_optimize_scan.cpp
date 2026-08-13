@@ -58,6 +58,12 @@ private:
                 auto &rtree_index = index.Cast<TRTreeIndex>();
                 bindings.clear();
 
+                // Only an arbitrary-expression filter can carry the `&&` the index
+                // answers; `id > 20` arrives as CONSTANT_COMPARISON, `IS NOT NULL`
+                // as IS_NOT_NULL. Casting one of those to ExpressionFilter throws.
+                if (filter->filter_type != TableFilterType::EXPRESSION_FILTER) {
+                    return false;
+                }
                 auto &expr_filter = filter->Cast<ExpressionFilter>();
                 if (!rtree_index.TryMatchDistanceFunction(expr_filter.expr, bindings)) {
                     return false;
@@ -130,6 +136,17 @@ private:
         if (!bind_data) {
             return false;
         }
+
+        // The scan answers the matched filter from the index and evaluates nothing
+        // else — it declares filter_pushdown = false and its Fetch applies no
+        // filters. So it is only equivalent to the sequential scan when the matched
+        // filter is the whole predicate; with another filter present, replacing the
+        // scan would drop that predicate and return extra rows. Leave those queries
+        // on the sequential scan.
+        if (get.table_filters.filters.size() != 1) {
+            return false;
+        }
+
         auto cardinality = get.function.cardinality(context, bind_data.get());
         get.function = TRTreeIndexScanFunction::GetFunction();
         get.has_estimated_cardinality = cardinality->has_estimated_cardinality;

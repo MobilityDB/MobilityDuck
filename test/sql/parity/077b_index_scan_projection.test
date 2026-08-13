@@ -1,0 +1,94 @@
+# name: test/sql/parity/077b_index_scan_projection.test
+# description: A TRTREE index scan returns rows when the indexed column is
+#              filtered but not selected
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+CREATE TABLE trips AS
+  SELECT i AS id,
+         format('[POINT({} {})@2000-01-01, POINT({} {})@2000-01-02]', i, i, i+1, i+1)::tgeompoint AS g
+  FROM range(1, 200) tbl(i);
+
+statement ok
+CREATE TABLE trips_scan AS SELECT * FROM trips;
+
+statement ok
+CREATE INDEX i_trips ON trips USING TRTREE (g);
+
+# Selecting a column other than the indexed one: the index answers the overlap,
+# and the projection carries only `id`.
+
+query I
+SELECT count(*) FROM (
+  SELECT id FROM trips
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox);
+----
+32
+
+query I
+SELECT min(id) FROM trips
+  WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox;
+----
+9
+
+# The rows are the same ones a sequential scan returns.
+
+query I
+SELECT count(*) FROM (
+  SELECT id FROM trips
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox
+  EXCEPT
+  SELECT id FROM trips_scan
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox);
+----
+0
+
+query I
+SELECT count(*) FROM (
+  SELECT id FROM trips_scan
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox
+  EXCEPT
+  SELECT id FROM trips
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox);
+----
+0
+
+# The indexed column alone, and both columns together, keep working.
+
+query I
+SELECT count(g) FROM trips
+  WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox;
+----
+32
+
+query I
+SELECT max(id) FROM trips
+  WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox;
+----
+40
+
+query I
+SELECT count(*) FROM (
+  SELECT id, g FROM trips
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox);
+----
+32
+
+# Not covered: query shapes that reach the index scan carrying a pushed-down
+# filter the scan then mis-binds, which fail with "table filter type mismatch" —
+# an expression over the indexed column beside another column
+# (`SELECT id, g IS NOT NULL ...`), and a top-N plan (`... ORDER BY id LIMIT 1`).
+# Both fail the same way with or without the projection wiring below, so they are
+# a separate defect in how the scan carries the filter, not addressed here.
+
+# A filter over another column is not consumed by the index and still applies.
+
+query I
+SELECT count(*) FROM (
+  SELECT id FROM trips
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox
+      AND id > 20);
+----
+20
