@@ -1,13 +1,21 @@
-# MobilityDuck builds its MEOS source from a committed MobilityDB commit pin.
-# A fixed ref keeps the libmeos source identical across CI runs, so the extension
-# pipeline's ccache reuses the libmeos compiler objects instead of recompiling the
-# whole library every build — a moving master tip changes the source on every push
-# and defeats that cache. The committed generated UDF surface comes from this SAME
-# pin, so the libmeos this port builds and the surface that links against it always
-# match one upstream commit. Advance the tracked version by bumping this SHA and
-# regenerating the surface from it.
-set(_MEOS_REF "edba762962366c7f50b1c6e4f37fb991ed9f09a1")
-message(STATUS "MEOS port: building MobilityDB at pinned ${_MEOS_REF}")
+# MobilityDuck tracks MobilityDB/MobilityDB master, one recorded commit at a time.
+# _MEOS_REF is the commit libmeos is built from, and the SAME commit the committed
+# generated UDF surface is derived from, so the library and the surface that links
+# against it always match one upstream commit.
+#
+# The refresh workflow (.github/workflows/meos-surface-refresh.yml) advances this
+# SHA daily: it derives the catalog from master's tip, regenerates src/generated,
+# rewrites the SHA below to the commit it derived from, and opens one pull request
+# carrying both. Tracking happens in atomic, reviewable steps rather than
+# continuously.
+#
+# Resolving master's tip here at configure time instead would change the libmeos
+# source on every push, which defeats the extension pipeline's ccache (a full
+# libmeos recompile per build) and makes two runs of the same commit build different
+# sources. A recorded SHA keeps builds reproducible and the cache warm between
+# advances.
+set(_MEOS_REF "a5a5dcc6f90059f8272baed747b2619141e33f55")
+message(STATUS "MEOS port: building MobilityDB at recorded ${_MEOS_REF}")
 
 # FETCH_REF names the branch (always advertised) so the fetch works even when the
 # server does not allow fetching an arbitrary commit SHA directly; REF then checks

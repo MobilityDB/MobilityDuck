@@ -3,17 +3,21 @@
 # MobilityDB/MobilityDB master.
 #
 # MobilityDuck derives its catalog from master (via the shared provision-meos
-# action), and the vcpkg MEOS port builds libmeos from master's tip, so the
-# committed src/generated must always equal a fresh derivation from master. The
-# generated surface cannot be produced inside the cmake/vcpkg build (deriving the
-# catalog needs the provision-meos action — libclang + a MobilityDB checkout — not
-# runnable in cmake), so it is committed and refreshed by this workflow rather than
+# action) and records the commit it derived from in the vcpkg MEOS port, so libmeos
+# and the generated surface always come from one upstream commit. The generated
+# surface cannot be produced inside the cmake/vcpkg build (deriving the catalog
+# needs the provision-meos action — libclang + a MobilityDB checkout — not runnable
+# in cmake), so it is committed and refreshed by this workflow rather than
 # regenerated live during the build.
 #
-# On a schedule (and on demand) this re-derives the catalog from master and
-# regenerates src/generated; peter-evans/create-pull-request opens a PR only when
-# the surface actually drifted (it no-ops on a clean tree). The full distribution +
-# generate CI then gates the refresh like any other change.
+# On a schedule (and on demand) this re-derives the catalog from master, regenerates
+# src/generated, and advances the port's recorded SHA to the same commit;
+# peter-evans/create-pull-request opens a PR only when something actually drifted
+# (it no-ops on a clean tree). One PR therefore carries the surface and the library
+# it links against, and the distribution pipeline gates it like any other change.
+#
+# vcpkg re-keys its binary cache on the port's content, which embeds the recorded
+# SHA, so advancing the SHA is enough to stop a stale cached libmeos being served.
 #
 name: Refresh generated surface from MobilityDB master
 
@@ -53,6 +57,29 @@ jobs:
           python3 tools/codegen_duck_udfs.py \
             tools/catalog/meos-idl.json \
             src/generated/generated_temporal_udfs.cpp
+
+      # Advance the port's recorded SHA to the very commit the catalog was derived
+      # from, so libmeos and the regenerated surface move together in one PR. The
+      # catalog stamps that commit itself, which is what makes the two atomic —
+      # reading master's tip again here could pick up a newer commit than the one
+      # the surface was generated against.
+      - name: Advance the MEOS port to the derived commit
+        run: |
+          ref=$(python3 -c 'import json;print(json.load(open("tools/catalog/meos-idl.json"))["sourceCommit"])')
+          case "$ref" in
+            [0-9a-f]*) ;;
+            *) echo "catalog carries no usable sourceCommit: '$ref'" >&2; exit 1 ;;
+          esac
+          python3 - "$ref" <<'PY'
+          import re, sys
+          path = "vcpkg_ports/meos/portfile.cmake"
+          src = open(path).read()
+          new, n = re.subn(r'(set\(_MEOS_REF ")[0-9a-f]+(")', r'\g<1>%s\g<2>' % sys.argv[1], src, count=1)
+          if n != 1:
+              sys.exit("portfile.cmake: expected exactly one _MEOS_REF assignment, found %d" % n)
+          open(path, "w").write(new)
+          PY
+          git diff --stat vcpkg_ports/meos/portfile.cmake
 
       # Opens a PR only if src/generated drifted. The bump PR must run the full
       # distribution + generate CI. PRs opened with the default GITHUB_TOKEN do NOT
