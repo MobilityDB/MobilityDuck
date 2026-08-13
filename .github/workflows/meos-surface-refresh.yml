@@ -92,12 +92,19 @@ jobs:
           token: ${{ secrets.MEOS_AUTOBUMP_TOKEN || secrets.GITHUB_TOKEN }}
           branch: tooling/refresh-generated-surface
           base: main
-          add-paths: src/generated
-          commit-message: "Regenerate the UDF surface from MobilityDB master"
-          title: "Regenerate the UDF surface from MobilityDB master"
+          # BOTH paths: the surface and the commit it is derived from advance together.
+          # Staging only src/generated drops the _MEOS_REF rewrite, leaving a surface
+          # generated from a newer master than the libmeos it links against.
+          add-paths: |
+            src/generated
+            vcpkg_ports/meos/portfile.cmake
+          commit-message: "Advance the MEOS commit and regenerate the UDF surface"
+          title: "Advance the MEOS commit and regenerate the UDF surface"
           body: |
             The committed `src/generated/` drifted from a fresh derivation against
-            MobilityDB/MobilityDB master; this regenerates it.
+            MobilityDB/MobilityDB master; this regenerates it and moves
+            `_MEOS_REF` in `vcpkg_ports/meos/portfile.cmake` to the commit it is
+            derived from, so libmeos and the surface stay one commit.
 
             Opened by the `Refresh generated surface from MobilityDB master` workflow.
           delete-branch: true
