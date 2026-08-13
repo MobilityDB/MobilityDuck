@@ -427,7 +427,7 @@ void RaquetFunctions::Raster_value(
             out_validity.SetInvalid(row);
             continue;
         }
-        Temporal *res = raster_value_gdal(call.path.c_str(), call.band, call.traj);
+        Temporal *res = raster_value_gdal(call.traj, call.path.c_str(), call.band);
         free(call.traj);
         if (!res) { out_validity.SetInvalid(row); continue; }
         out[row] = TempToBlob(result, res);
@@ -453,7 +453,7 @@ void RaquetFunctions::Raster_value(
                 continue;                                                      \
             }                                                                  \
             Span *vspan = BlobToSpan(vspans[row]);                             \
-            Temporal *res = meos_fn(call.path.c_str(), call.band, call.traj,   \
+            Temporal *res = meos_fn(call.traj, call.path.c_str(), call.band,   \
                                     vspan);                                    \
             free(call.traj); free(vspan);                                      \
             if (!res) { out_validity.SetInvalid(row); continue; }              \
@@ -487,7 +487,7 @@ RASTER_RESTRICTION(Raster_minus_value, raster_minus_value_gdal)
                 continue;                                                      \
             }                                                                  \
             Span *vspan = BlobToSpan(vspans[row]);                             \
-            int r = meos_fn(call.path.c_str(), call.band, call.traj, vspan);   \
+            int r = meos_fn(call.traj, call.path.c_str(), call.band, vspan);   \
             free(call.traj); free(vspan);                                      \
             if (r < 0) { out_validity.SetInvalid(row); continue; }             \
             out[row] = (r != 0);                                               \
@@ -512,7 +512,7 @@ void RaquetFunctions::Raster_tile_value(
         [&](string_t tile, string_t traj, ValidityMask &mask, idx_t idx) -> string_t {
             Raquet *rq = BlobToRaquet(tile);
             Temporal *t = BlobToTemp(traj);
-            Temporal *res = raster_tile_value(rq, t);
+            Temporal *res = raster_tile_value(t, rq);
             free(rq); free(t);
             if (!res) { mask.SetInvalid(idx); return string_t(); }
             return TempToBlob(result, res);
@@ -556,7 +556,7 @@ void RaquetFunctions::Raster_tile_value_array(
 
         Temporal *t = BlobToTemp(traj_data[row]);
         Temporal *res = raster_tile_value_array(
-            const_cast<const Raquet **>(arr.data()), (int) arr.size(), t);
+            t, const_cast<const Raquet **>(arr.data()), (int) arr.size());
         free(t);
         for (Raquet *rq : arr) free(rq);
         if (!res) { out_validity.SetInvalid(row); continue; }
@@ -596,11 +596,11 @@ void RaquetFunctions::Raster_tile_value_quadbin(
 
         Temporal *t = BlobToTemp(traj[row]);
         Temporal *res = raster_tile_value_quadbin(
-            reinterpret_cast<const uint8_t *>(pixels[row].GetData()),
+            t, reinterpret_cast<const uint8_t *>(pixels[row].GetData()),
             static_cast<size_t>(pixels[row].GetSize()),
             static_cast<uint16_t>(width[row]), static_cast<uint16_t>(height[row]),
             static_cast<uint64_t>(cell[row]), pt,
-            nodata[row], has_nodata[row], t);
+            nodata[row], has_nodata[row]);
         free(t);
         if (!res) { out_validity.SetInvalid(row); continue; }
         out[row] = TempToBlob(result, res);
