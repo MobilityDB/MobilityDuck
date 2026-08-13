@@ -440,7 +440,9 @@ def reg_scope(name):
     if name.startswith("tspatial_") or re.search(r'_tspatial(?=_|$)', name):
         return ("types", SPATIAL_ALLTYPES)
     # the geo supertype tgeo covers ONLY geometry+geography (NOT cbuffer/other spatial types).
-    if re.search(r'_tgeo(?=_|$)', name):
+    # Both spellings, as for every other family here: a `tgeo_*` PREFIX (tgeo_stboxes,
+    # tgeo_split_n_stboxes) and a `_tgeo` token anywhere (ever_eq_tgeo_tgeo).
+    if name.startswith("tgeo_") or re.search(r'_tgeo(?=_|$)', name):
         return ("types", GEO_ALLTYPES)
     # the circular-buffer temporal family (its own gated spatial type, NOT one of the geo
     # types): a tcbuffer_* prefix, or a _tcbuffer token anywhere (ever_eq_tcbuffer_tcbuffer,
@@ -1548,24 +1550,33 @@ def _acc_sqlname(acc):
     m = re.search(r'::(\w+)\(\)', acc)
     return m.group(1) if m else acc
 
-def _sig_ret_for(f, sqlname):
-    """The catalog sqlSignature return for the single-arg overload on SQL type `sqlname`, else None."""
+def _sig_ret_for(f, sqlname, tail=()):
+    """The catalog sqlSignature return for the overload whose args are `sqlname` followed by `tail`,
+    else None. `tail` names the fixed scalar SQL types trailing the container argument: empty for a
+    plain array accessor (`spans(tgeompoint)`), ("integer",) for the split-into-N accessors
+    (`splitNStboxes(tgeompoint, integer)`)."""
+    want = [sqlname, *tail]
     for s in (f.get("sqlSignatures") or []):
-        if s.get("args") == [sqlname]:
+        if s.get("args") == want:
             return s.get("ret")
     return None
 
-def array_declared_accs(f):
+def array_declared_accs(f, tail=()):
     """The registered DuckDB accessors this array-return is CREATE FUNCTION'd for, from the catalog
     sqlSignatures whose SQL return is an array (`<base>[]`). Extended/unregistered arg types map to
     no accessor and drop out. This is the SoT for a generic (scope='all') array-return's type set,
-    excluding types whose canonical return is NOT an array (e.g. set_spans over textset: no sig)."""
+    excluding types whose canonical return is NOT an array (e.g. set_spans over textset: no sig).
+    `tail` matches the fixed scalar arguments after the container, as in _sig_ret_for."""
     m = {**SET_TYPES, **SPANSET_TYPES, **SIG_TEMPORAL_ACC}
     out = []
+    want_len = 1 + len(tail)
     for s in (f.get("sqlSignatures") or []):
-        if len(s.get("args", [])) != 1 or not (s.get("ret") or "").endswith("[]"):
+        args = s.get("args", [])
+        if len(args) != want_len or list(args[1:]) != list(tail):
             continue
-        a = m.get(s["args"][0])
+        if not (s.get("ret") or "").endswith("[]"):
+            continue
+        a = m.get(args[0])
         if a and a not in out:
             out.append(a)
     return out
@@ -1583,10 +1594,11 @@ SQL_BASE_TO_DUCK = {
     "tstzspan": "SpanTypes::tstzspan()", "tbox": "TboxType::tbox()", "stbox": "StboxType::stbox()",
 }
 
-def array_ret_duck(f, acc):
+def array_ret_duck(f, acc, tail=()):
     """The DuckDB LIST return type for this array-return on input accessor `acc`, from the catalog
     sqlSignature (e.g. spans(intset)->intspan[] -> LIST(SpanTypes::intspan())). None if not an
-    array sig or the element type is not mapped (deferred)."""
+    array sig or the element type is not mapped (deferred). `tail` selects the overload with the
+    fixed scalar arguments trailing the container, as in _sig_ret_for."""
     # Tcell<T> cell-id array: LIST of the cell alias (getValues(tquadbin)->LIST(quadbin)); the
     # canonical <cell>set SQL return maps to a DuckDB LIST here (see the cell branch in shape_array).
     # GATE on the ELEMENT being a cell uint64 — a cell temporal's timestamps()/other array accessors
@@ -1595,7 +1607,7 @@ def array_ret_duck(f, acc):
     ec = norm((ar.get("element") or {}).get("canonical") or (ar.get("element") or {}).get("c") or "")
     if ec in CELL_UINT and acc in CELL_BASEVAL:
         return "LogicalType::LIST(%s)" % CELL_BASEVAL[acc]
-    r = _sig_ret_for(f, _acc_sqlname(acc)) or ""
+    r = _sig_ret_for(f, _acc_sqlname(acc), tail) or ""
     if not r.endswith("[]"):
         return None
     d = SQL_BASE_TO_DUCK.get(r[:-2])
@@ -1603,10 +1615,12 @@ def array_ret_duck(f, acc):
 
 def shape_array(f):
     """Flat array-return -> DuckDB LIST(<elem>). Like shape_path, the trailing int* count arg
-    makes supported() reject it (arg:int *), so gate on user-facing eligibility + a single
-    marshallable container input, not the standard arg gate. Returns ('array', elem_canon,
-    in_base, scope, accs) or None. Geo/extended element types (GSERIALIZED*/Cbuffer*/... ) and
-    multi-arg array-returns (*Pairs/splitN, table-fn shapes) are not in ARRAY_ELEM -> deferred.
+    makes supported() reject it (arg:int *), so gate on user-facing eligibility + a marshallable
+    container input, not the standard arg gate. Returns ('array', elem_canon, in_base, accs, tail)
+    or None, where `tail` is the fixed scalar SQL args after the container — () for a plain
+    accessor, ("integer",) for the split-into-N family. Geo/extended element types
+    (GSERIALIZED*/Cbuffer*/...) are not in ARRAY_ELEM -> deferred, as are the array-returns whose
+    extra arguments are not a single by-value int (*Pairs, table-fn shapes).
 
     CANONICAL GATE (the catalog sqlSignatures are the SoT): a LIST overload is emitted for an input
     type ONLY where MobilityDB's SQL surface returns a SQL array (`<base>[]`) for it. Several MEOS
@@ -1634,8 +1648,17 @@ def shape_array(f):
     if ec not in ARRAY_ELEM:
         return None
     ins = [p for p in f["params"] if p.get("name") != lf["name"]]
-    if len(ins) != 1:
+    # The container, plus the fixed by-value scalars that follow it. One trailing `int` is the
+    # split-into-N family (splitNStboxes/splitNSpans/splitNTboxes and their splitEachN twins):
+    # the same array-return over the same container, parameterised by how many boxes to produce
+    # or how many elements to merge per box. Anything else after the container is a different
+    # shape and stays out (the *Pairs / table-fn forms).
+    if not ins:
         return None
+    tailp = ins[1:]
+    if len(tailp) > 1 or any(norm(p["canonical"]) != "int" for p in tailp):
+        return None
+    tail = ("integer",) * len(tailp)
     ib = base(ins[0]["canonical"])
     if ib not in ARRAY_IN or not norm(ins[0]["canonical"]).endswith("*"):
         return None
@@ -1648,38 +1671,47 @@ def shape_array(f):
     # getValues(set)->LIST(base) / getValues(tbool)->LIST(boolean) precedent. Element is uint64_t
     # (CELL_UINT); the <cell>set sig does not end in "[]", so it must bypass the array-sig filter.
     if ec in CELL_UINT and scope == "types" and len(accs) == 1 and accs[0] in CELL_BASEVAL:
-        return ("array", ec, ib, accs)
+        return ("array", ec, ib, accs, tail)
     if scope == "all":
-        accs = array_declared_accs(f)                       # generic C fn: sig-declared types (SoT)
+        accs = array_declared_accs(f, tail)                 # generic C fn: sig-declared types (SoT)
     else:
-        accs = [a for a in accs if (_sig_ret_for(f, _acc_sqlname(a)) or "").endswith("[]")]
+        accs = [a for a in accs if (_sig_ret_for(f, _acc_sqlname(a), tail) or "").endswith("[]")]
     if not accs:
         return None
-    return ("array", ec, ib, accs)
+    return ("array", ec, ib, accs, tail)
 
-def emit_array(f, ec, ib):
+def emit_array(f, ec, ib, tail=()):
     """The Gen_<name> body: marshal the container in, call the MEOS accessor with a local count,
     and build a DuckDB LIST from the returned <elem>* array (per-element marshal from ARRAY_ELEM).
-    Reserve grows the child capacity to the running total; GetEntry is re-fetched after Reserve."""
+    Reserve grows the child capacity to the running total; GetEntry is re-fetched after Reserve.
+    A non-empty `tail` adds the split-into-N argument: a second INTEGER vector read per row and
+    passed through to the accessor, NULL in either argument yielding a NULL list."""
     name = f["name"]
     cbase, blobto = ARRAY_IN[ib]
     _lt, ccpp, marsh = ARRAY_ELEM[ec]
     retc = norm(f["returnType"]["canonical"])          # e.g. "TimestampTz *", "text **", "Span *"
+    n_vec = ("    auto &n_vec = args.data[1];\n"
+             "    n_vec.Flatten(row_count);\n") if tail else ""
+    n_null = " || n_vec.GetValue(i).IsNull()" if tail else ""
+    n_read = "        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];\n" if tail else ""
+    call_args = "in, n_arg, &count" if tail else "in, &count"
     return (
 f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
 f"    EnsureMeosThreadInitialized();\n"
 f"    auto &in_vec = args.data[0];\n"
 f"    idx_t row_count = args.size();\n"
 f"    in_vec.Flatten(row_count);\n"
+f"{n_vec}"
 f"    auto &result_validity = FlatVector::Validity(result);\n"
 f"    auto list_entries = FlatVector::GetData<list_entry_t>(result);\n"
 f"    idx_t off = 0;\n"
 f"    for (idx_t i = 0; i < row_count; ++i) {{\n"
-f"        if (in_vec.GetValue(i).IsNull()) {{ result_validity.SetInvalid(i); continue; }}\n"
+f"        if (in_vec.GetValue(i).IsNull(){n_null}) {{ result_validity.SetInvalid(i); continue; }}\n"
 f"        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];\n"
+f"{n_read}"
 f"        {cbase} *in = {blobto}(blob);\n"
 f"        int count = 0;\n"
-f"        {retc} arr = {name}(in, &count);\n"
+f"        {retc} arr = {name}({call_args});\n"
 f"        free(in);\n"
 f"        int n = (arr && count > 0) ? count : 0;\n"
 f"        ListVector::Reserve(result, off + n);\n"
@@ -3399,24 +3431,27 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         a = shape_array(f)
         if a is None:
             continue
-        _tag, ec, ib, accs = a
+        _tag, ec, ib, accs, tail = a
         STATE["grp"] = f.get("group") or "meos_ungrouped"
         fn, sqlfn = f["name"], f["sqlfn"]
         names = reg_names(f, sqlfn, aliases)
         if ib == "Set":
-            set_bodies.append(emit_array(f, ec, ib)); n_set += 1; spec_sink = set_specific_regs
+            set_bodies.append(emit_array(f, ec, ib, tail)); n_set += 1; spec_sink = set_specific_regs
         else:
-            (span_bodies if ib == "SpanSet" else bodies).append(emit_array(f, ec, ib))
+            (span_bodies if ib == "SpanSet" else bodies).append(emit_array(f, ec, ib, tail))
             if ib == "SpanSet": n_span += 1
             else: n_un += 1
             spec_sink = specific_regs
+        # The registered signature carries the container plus one DuckDB type per `tail` entry
+        # (the split-into-N count), matching the catalog overload the return type is read from.
+        sig_tail = "".join(", " + SQL_BASE_TO_DUCK[t] for t in tail)
         for acc in accs:                                    # sig-declared canonical types; per-acc LIST type
-            ret = array_ret_duck(f, acc)
+            ret = array_ret_duck(f, acc, tail)
             if ret is None:
                 continue
             for nm in names:
                 spec_sink.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
-                                 f'"{reg_name(nm, f)}", {{{acc}}}, {ret}, Gen_{fn}));')
+                                 f'"{reg_name(nm, f)}", {{{acc}{sig_tail}}}, {ret}, Gen_{fn}));')
 
     # ---- H3 cell-set prefilter: geoToH3IndexSet + eEq(h3indexset,th3index) ----
     # Two static H3 shapes the generic paths miss (geometry-arg fixed-SRID; (Set,Temporal)
