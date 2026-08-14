@@ -1739,32 +1739,66 @@ f"}}\n")
 BOX_MARSH = {"STBox": ("BlobToStbox", "StboxType::stbox()"),
              "TBox":  ("BlobToTbox",  "TboxType::tbox()")}
 def shape_temporal_box(f):
+    """Temporal + box -> a scalar. The topological predicates answer bool and the
+    nearest approach answers a distance; both marshal the box the same way, so the
+    return the MEOS function declares is carried through the shape rather than
+    fixed to one of them. A tri-state ever/always int is NOT one of these — it is
+    a bool the comparison shapes own, so is_pred_int keeps it out."""
     if supported(f) is not None: return None
     ins, out = classify(f)
     if out is not None or len(ins) != 2: return None
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
-    if rb != "bool" or "*" in rn: return None
+    if "*" in rn: return None
+    if rb == "bool":
+        ret = "bool"
+    elif rb in SCALAR_RET_CPP and not is_pred_int(f):
+        ret = rb
+    else:
+        return None
+    # A distance answers the maximum of its own return type when there is no
+    # nearest approach, and the SQL surface reports that as NULL, as the
+    # PostgreSQL wrappers do. The guard is a pure function of the return type,
+    # so it needs no per-function knowledge. The index path is a different
+    # surface and keeps the maximum, which is what sorts an unreachable entry
+    # last under an ORDER BY. Distance groups are named `_dist`; `_distance` is
+    # the same family under the older spelling.
+    if re.search(r"_dist(ance)?$", f.get("group") or ""):
+        ret = "sentinel:" + ret
     b0 = base(ins[0]["canonical"]); n0 = norm(ins[0]["canonical"])
     b1 = base(ins[1]["canonical"]); n1 = norm(ins[1]["canonical"])
     if not (n0.endswith("*") and n1.endswith("*")): return None
     sc = reg_scope(f["name"])
     if sc is None or sc[0] != "types": return None
-    if b0 == "Temporal" and b1 in BOX_MARSH: return ("tb_r:" + b1, sc[1])  # (Temporal, Box)
-    if b1 == "Temporal" and b0 in BOX_MARSH: return ("tb_l:" + b0, sc[1])  # (Box, Temporal)
+    if b0 == "Temporal" and b1 in BOX_MARSH: return (f"tb_r:{b1}:{ret}", sc[1])  # (Temporal, Box)
+    if b1 == "Temporal" and b0 in BOX_MARSH: return (f"tb_l:{b0}:{ret}", sc[1])  # (Box, Temporal)
     return None
 
 def emit_temporal_box(f, kind):
-    name = f["name"]; side, box = kind.split(":"); blobto = BOX_MARSH[box][0]
-    if side == "tb_r":   # (Temporal, Box)
-        body = (f"            Temporal *t = BlobToTemporal(a);\n            {box} *bx = {blobto}(b);\n"
-                f"            bool r = {name}(t, bx);\n            free(t); free(bx);\n            return r;")
-    else:                # (Box, Temporal)
-        body = (f"            {box} *bx = {blobto}(a);\n            Temporal *t = BlobToTemporal(b);\n"
-                f"            bool r = {name}(bx, t);\n            free(bx); free(t);\n            return r;")
+    name = f["name"]; parts = kind.split(":")
+    side, box = parts[0], parts[1]
+    sentinel = parts[2] == "sentinel"
+    ret = parts[-1]
+    blobto = BOX_MARSH[box][0]
+    cpp = "bool" if ret == "bool" else SCALAR_RET_CPP[ret][0]
+    call = f"{name}(t, bx)" if side == "tb_r" else f"{name}(bx, t)"
+    marshal = (f"            Temporal *t = BlobToTemporal(a);\n            {box} *bx = {blobto}(b);\n"
+               if side == "tb_r" else
+               f"            {box} *bx = {blobto}(a);\n            Temporal *t = BlobToTemporal(b);\n")
+    frees = "free(t); free(bx);" if side == "tb_r" else "free(bx); free(t);"
+    if not sentinel:
+        body = f"{marshal}            {cpp} r = {call};\n            {frees}\n            return r;"
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::Execute<string_t, string_t, {cpp}>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t a, string_t b) {{\n{body}\n        }});\n}}\n")
+    # The maximum of the return type says there is no distance, which is NULL here.
+    body = (f"{marshal}            {cpp} r = {call};\n            {frees}\n"
+            f"            if (r == std::numeric_limits<{cpp}>::max()) {{ mask.SetInvalid(idx); return {cpp}(); }}\n"
+            f"            return r;")
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
-            f"    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),\n"
-            f"        [&](string_t a, string_t b) {{\n{body}\n        }});\n}}\n")
+            f"    BinaryExecutor::ExecuteWithNulls<string_t, string_t, {cpp}>(args.data[0], args.data[1], result, args.size(),\n"
+            f"        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> {cpp} {{\n{body}\n        }});\n}}\n")
 
 # Temporal + span -> bool: topological predicates across the value (numspan) or time
 # (tstzspan) dimension. numspan PAIRS to the tnumber's value type; tstzspan is fixed and
@@ -3158,12 +3192,15 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         temporal_box_bodies.append(emit_temporal_box(f, kind))
         fn, sqlfn = f["name"], f["sqlfn"]
         names = reg_names(f, sqlfn, aliases)
-        box_acc = BOX_MARSH[kind.split(":")[1]][1]
+        kparts = kind.split(":")
+        box_acc = BOX_MARSH[kparts[1]][1]
+        ret_key = kparts[-1]
+        dret = "LogicalType::BOOLEAN" if ret_key == "bool" else SCALAR_RET_CPP[ret_key][1]
         for a in accs:
             sig = "{%s, %s}" % (a, box_acc) if kind.startswith("tb_r:") else "{%s, %s}" % (box_acc, a)
             for nm in names:
                 temporal_box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
-                                         f'"{reg_name(nm, f)}", {sig}, LogicalType::BOOLEAN, Gen_{fn}));')
+                                         f'"{reg_name(nm, f)}", {sig}, {dret}, Gen_{fn}));')
     # Temporal x span -> bool: numspan PAIRS to the tnumber value type (tint↔intspan,
     # tfloat↔floatspan); tstzspan is fixed and registered over every temporal type.
     for f in fns:
@@ -3269,7 +3306,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            '#include "duckdb/common/vector_operations/unary_executor.hpp"\n'
            '#include "duckdb/common/vector_operations/binary_executor.hpp"\n'
            '#include "duckdb/common/vector_operations/ternary_executor.hpp"\n'
-           '#include <cstring>\n#include <cstdlib>\n\n'
+           '#include <cstring>\n#include <cstdlib>\n#include <limits>\n\n'
            "namespace duckdb {\nnamespace {\n"
            "// Self-contained blob<->Temporal marshalling (generated owns it; no hand-header dep).\n"
            "inline string_t TemporalToBlob(Vector &result, Temporal *t) {\n"

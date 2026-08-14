@@ -1,0 +1,151 @@
+# name: test/sql/parity/081_nearest_approach_box.test
+# description: The nearest approach between a temporal value and a box, under
+#              its own name and under the operator that orders by it
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+CREATE TABLE trips AS
+  SELECT i AS id,
+         format('[POINT({} {})@2000-01-01, POINT({} {})@2000-01-02]', i, i, i+1, i+1)::tgeompoint AS g
+  FROM range(1, 40) tbl(i);
+
+# ── the distance itself ────────────────────────────────────────────────────
+
+# A trip passing through the box is at distance zero from it.
+
+query I
+SELECT nearestApproachDistance(
+  '[POINT(20 20)@2000-01-01, POINT(21 21)@2000-01-02]'::tgeompoint,
+  'STBOX X((20,20),(21,21))'::stbox);
+----
+0.0
+
+# A trip one unit away on each axis is a diagonal away from the corner.
+
+query I
+SELECT round(nearestApproachDistance(
+  '[POINT(18 18)@2000-01-01, POINT(19 19)@2000-01-02]'::tgeompoint,
+  'STBOX X((20,20),(21,21))'::stbox)::NUMERIC, 6);
+----
+1.414214
+
+# ── no nearest approach ────────────────────────────────────────────────────
+
+# A box whose time cannot meet the trip has no nearest approach to it. MEOS
+# answers the maximum of the return type, which is what sorts such an entry
+# last inside an index; the value surface reports it as NULL.
+
+query I
+SELECT ('[POINT(20 20)@2030-01-01, POINT(21 21)@2030-01-02]'::tgeompoint
+        |=| 'STBOX XT(((20,20),(21,21)),[2000-01-01, 2000-01-03])'::stbox) IS NULL;
+----
+true
+
+query I
+SELECT nearestApproachDistance(
+         '[POINT(20 20)@2030-01-01, POINT(21 21)@2030-01-02]'::tgeompoint,
+         'STBOX XT(((20,20),(21,21)),[2000-01-01, 2000-01-03])'::stbox) IS NULL;
+----
+true
+
+# Overlapping time gives a distance, so the two cases are told apart by the
+# inputs and not by the shape of the query.
+
+query I
+SELECT nearestApproachDistance(
+         '[POINT(20 20)@2000-01-01, POINT(21 21)@2000-01-02]'::tgeompoint,
+         'STBOX XT(((20,20),(21,21)),[2000-01-01, 2000-01-03])'::stbox);
+----
+0.0
+
+# Ordering keeps a row with no nearest approach after every row that has one.
+
+statement ok
+CREATE TABLE reach AS
+  SELECT 1 AS id, '[POINT(30 30)@2000-01-01, POINT(31 31)@2000-01-02]'::tgeompoint AS g
+  UNION ALL SELECT 2, '[POINT(20 20)@2000-01-01, POINT(21 21)@2000-01-02]'::tgeompoint
+  UNION ALL SELECT 3, '[POINT(20 20)@2030-01-01, POINT(21 21)@2030-01-02]'::tgeompoint;
+
+query I
+SELECT id FROM reach
+ORDER BY g |=| 'STBOX XT(((20,20),(21,21)),[2000-01-01, 2000-01-03])'::stbox;
+----
+2
+1
+3
+
+# ── the operator ordering by it ────────────────────────────────────────────
+
+# `|=|` is the name the operator carries, so it answers the same number.
+
+query I
+SELECT ('[POINT(18 18)@2000-01-01, POINT(19 19)@2000-01-02]'::tgeompoint
+        |=| 'STBOX X((20,20),(21,21))'::stbox)
+     = nearestApproachDistance(
+         '[POINT(18 18)@2000-01-01, POINT(19 19)@2000-01-02]'::tgeompoint,
+         'STBOX X((20,20),(21,21))'::stbox);
+----
+true
+
+# Ordering by it takes the trips nearest the box first: the three that reach it
+# are at zero, and the next ones fall away by one diagonal step at a time.
+
+query II
+SELECT id, round((g |=| 'STBOX X((20,20),(21,21))'::stbox)::NUMERIC, 6)
+FROM trips ORDER BY g |=| 'STBOX X((20,20),(21,21))'::stbox, id LIMIT 5;
+----
+19	0.000000
+20	0.000000
+21	0.000000
+18	1.414214
+22	1.414214
+
+# The ordering is the one the distance itself gives. Each side is its own
+# subquery, so the ordering and the limit belong to it rather than to the
+# comparison between them.
+
+query I
+SELECT (SELECT list(id) FROM (
+          SELECT id FROM trips
+          ORDER BY g |=| 'STBOX X((20,20),(21,21))'::stbox, id LIMIT 5))
+     = (SELECT list(id) FROM (
+          SELECT id FROM trips
+          ORDER BY nearestApproachDistance(g, 'STBOX X((20,20),(21,21))'::stbox), id LIMIT 5));
+----
+true
+
+# ── the number families carry the same pair over their own box ─────────────
+
+query I
+SELECT nearestApproachDistance(
+  '[1@2000-01-01, 5@2000-01-02]'::tfloat, 'TBOX X([8,9])'::tbox);
+----
+3.0
+
+# A temporal integer carries its own span type, so it pairs with an integer box
+# and answers in integers. The value follows from the half-open form an integer
+# span normalises to, which is the span arithmetic's business rather than this
+# surface's, so what is asserted here is the type and the presence of an answer.
+
+query I
+SELECT typeof(nearestApproachDistance(
+  '[1@2000-01-01, 5@2000-01-02]'::tint, 'TBOXINT X([8,9])'::tbox));
+----
+INTEGER
+
+query I
+SELECT nearestApproachDistance(
+  '[1@2000-01-01, 5@2000-01-02]'::tint, 'TBOXINT X([8,9])'::tbox) IS NOT NULL;
+----
+true
+
+# Mixing a temporal integer with a float-spanned box is refused, as mixing any
+# two value domains is.
+
+statement error
+SELECT nearestApproachDistance(
+  '[1@2000-01-01, 5@2000-01-02]'::tint, 'TBOX X([8,9])'::tbox);
+----
+mixed temporal number and span types
