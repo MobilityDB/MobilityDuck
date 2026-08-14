@@ -24,6 +24,36 @@ SELECT rq::VARCHAR::RAQUET = rq FROM tile;
 ----
 true
 
+# The band is readable, so a tile can be taken apart into the arguments of its
+# own constructor and put back together.
+
+query I
+SELECT pixels(rq) = from_hex('2a') FROM tile;
+----
+true
+
+query I
+SELECT raquet(pixels(rq), width(rq), height(rq), quadbin(rq), pixtype(rq)) = rq
+FROM tile;
+----
+true
+
+# The hex-encoded WKB pair round-trips the tile. It carries the extended
+# variant, as every other asHexWKB does, while the text form carries the
+# little-endian one, so the two encodings of a tile differ and each round-trips
+# through its own reader.
+
+query I
+SELECT raquetFromHexWKB(asHexWKB(rq)) = rq FROM tile;
+----
+true
+
+query I
+SELECT raquetFromHexWKB(rq::VARCHAR) = rq FROM tile;
+----
+true
+
+
 query I
 SELECT eq(rq, rq) AND NOT ne(rq, rq) AND cmp(rq, rq) = 0 FROM tile;
 ----
