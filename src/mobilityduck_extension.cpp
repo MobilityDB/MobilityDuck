@@ -89,11 +89,11 @@ inline void MobilityduckOpenSSLVersionScalarFun(DataChunk &args, ExpressionState
 	});
 }
 
-// Keep this short pin in sync with vcpkg_ports/meos/portfile.cmake's REF.
-// MEOS does not expose a runtime version symbol, so the build-time pin
-// is the most precise version stamp the extension can report.
+// The commit libmeos is built from. CMake reads it from the port that builds
+// it, so the version reported is the one linked. The fallback names no commit:
+// a SHA held here is a second copy of the pin, and only the port's is authoritative.
 #ifndef MOBILITYDUCK_MEOS_PIN
-#define MOBILITYDUCK_MEOS_PIN "88e5d5b430"
+#define MOBILITYDUCK_MEOS_PIN "unknown"
 #endif
 
 inline std::string MobilityduckShortVersion() {
