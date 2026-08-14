@@ -1,0 +1,178 @@
+# name: test/sql/parity/077c_index_residual_predicate.test
+# description: An index answers the bounding-box filter while the predicates it
+#              cannot answer are evaluated above the scan
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+CREATE TABLE trips AS
+  SELECT i AS id,
+         format('[POINT({} {})@2000-01-01, POINT({} {})@2000-01-02]', i, i, i+1, i+1)::tgeompoint AS g
+  FROM range(1, 200) tbl(i);
+
+# The same rows, never indexed, so every answer below has a sequential-scan
+# oracle to be compared against.
+statement ok
+CREATE TABLE plain AS SELECT * FROM trips;
+
+statement ok
+CREATE INDEX i_trips ON trips USING TRTREE (g);
+
+# ── the indexed filter alongside one the index cannot answer ────────────────
+
+# The answers below are correct under a sequential scan too, so they cannot on
+# their own show that the index was used. The plan is what shows it: the scan
+# is the index, and the predicate it cannot answer sits in a filter above.
+
+query II
+EXPLAIN SELECT id FROM trips
+  WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox
+    AND id > 20;
+----
+physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*
+
+query II
+EXPLAIN SELECT id FROM trips
+  WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox
+    AND id > 20;
+----
+physical_plan	<REGEX>:.*FILTER.*
+
+# The index answers `&&`; `id > 20` is a comparison the index knows nothing
+# about, and it is evaluated above the scan rather than dropped.
+
+query I
+SELECT count(*) FROM trips
+  WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox
+    AND id > 20;
+----
+20
+
+query I
+SELECT count(*) FROM plain
+  WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox
+    AND id > 20;
+----
+20
+
+# Equal counts alone would also hold if both sides were wrong in the same way,
+# so compare the row sets themselves, in both directions.
+
+query I
+SELECT count(*) FROM (
+  SELECT id FROM trips
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox AND id > 20
+  EXCEPT
+  SELECT id FROM plain
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox AND id > 20);
+----
+0
+
+query I
+SELECT count(*) FROM (
+  SELECT id FROM plain
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox AND id > 20
+  EXCEPT
+  SELECT id FROM trips
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox AND id > 20);
+----
+0
+
+# The residual predicate reads a column the query does not select: it reaches
+# the filter through the projection, and leaves again before the parent sees it.
+
+query I
+SELECT count(*) FROM (
+  SELECT g FROM trips
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox AND id > 20);
+----
+20
+
+# Three predicates: two of them residual.
+
+query I
+SELECT count(*) FROM trips
+  WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox
+    AND id > 20 AND id < 30;
+----
+9
+
+query I
+SELECT count(*) FROM plain
+  WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox
+    AND id > 20 AND id < 30;
+----
+9
+
+# ── the same, over the SP-tree ─────────────────────────────────────────────
+
+statement ok
+CREATE TABLE trips_q AS SELECT * FROM plain;
+
+statement ok
+CREATE INDEX i_q ON trips_q USING TSPTREE (g) WITH (kind = 'quadtree');
+
+query II
+EXPLAIN SELECT id FROM trips_q
+  WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox
+    AND id > 20;
+----
+physical_plan	<REGEX>:.*MOBILITY SPTREE INDEX.*
+
+query I
+SELECT count(*) FROM trips_q
+  WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox
+    AND id > 20;
+----
+20
+
+query I
+SELECT count(*) FROM (
+  SELECT id FROM trips_q
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox AND id > 20
+  EXCEPT
+  SELECT id FROM plain
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox AND id > 20);
+----
+0
+
+statement ok
+CREATE TABLE trips_kd AS SELECT * FROM plain;
+
+statement ok
+CREATE INDEX i_kd ON trips_kd USING TSPTREE (g) WITH (kind = 'kdtree');
+
+query I
+SELECT count(*) FROM trips_kd
+  WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox
+    AND id > 20;
+----
+20
+
+query I
+SELECT count(*) FROM (
+  SELECT id FROM trips_kd
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox AND id > 20
+  EXCEPT
+  SELECT id FROM plain
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox AND id > 20);
+----
+0
+
+# ── the shapes that stay on the sequential scan ────────────────────────────
+
+# A predicate with no indexable operand keeps its own answer.
+
+query I
+SELECT count(*) FROM trips WHERE id > 20;
+----
+179
+
+# The bare indexed filter is unchanged by any of the above.
+
+query I
+SELECT count(*) FROM trips
+  WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox;
+----
+32

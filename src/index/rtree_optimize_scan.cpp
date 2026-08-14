@@ -2,6 +2,7 @@
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/catalog/catalog_entry/duck_table_entry.hpp"
 #include "duckdb/optimizer/optimizer_extension.hpp"
+#include "duckdb/planner/expression/bound_columnref_expression.hpp"
 #include "duckdb/planner/expression/bound_constant_expression.hpp"
 #include "duckdb/planner/operator/logical_get.hpp"
 #include "duckdb/planner/operator/logical_projection.hpp"
@@ -42,6 +43,9 @@ private:
         
         unique_ptr<TRTreeIndexScanBindData> bind_data = nullptr;
         vector<reference<Expression>> bindings;
+        // The column the matched filter tests, so the filters the index does NOT answer can be
+        // told apart from it below and evaluated above the scan.
+        optional_idx matched_column;
 
         // 1.4 replaced TableIndexList::BindAndScan with a two-step pattern:
         // BindIndexes promotes any unbound TRTreeIndex entries to bound, and
@@ -129,6 +133,7 @@ private:
             });
             
             if (bind_data) {
+                matched_column = filter_pair.first;
                 break;
             }
         }
@@ -137,14 +142,43 @@ private:
             return false;
         }
 
-        // The scan answers the matched filter from the index and evaluates nothing
-        // else — it declares filter_pushdown = false and its Fetch applies no
-        // filters. So it is only equivalent to the sequential scan when the matched
-        // filter is the whole predicate; with another filter present, replacing the
-        // scan would drop that predicate and return extra rows. Leave those queries
-        // on the sequential scan.
-        if (get.table_filters.filters.size() != 1) {
-            return false;
+        // The scan answers the matched filter from the index and evaluates nothing else — it
+        // declares filter_pushdown = false and its Fetch applies no filters. So every OTHER
+        // pushed-down filter has to be evaluated above it, or replacing the scan would drop
+        // that predicate and return extra rows. Build those expressions before touching the
+        // plan, so a column that cannot be referenced leaves the query on the sequential scan
+        // rather than half-rewritten.
+        vector<unique_ptr<Expression>> residual;
+        auto original_projection = get.projection_ids;
+        for (auto &filter_pair : get.table_filters.filters) {
+            if (filter_pair.first == matched_column.GetIndex()) {
+                continue;
+            }
+            // The filter keys a TABLE column; a binding addresses its POSITION among the
+            // columns the get reads (LogicalGet::GetColumnBindings numbers by that position,
+            // and by the projection_ids entry — itself such a position — when projecting).
+            optional_idx position;
+            for (idx_t i = 0; i < get.GetColumnIds().size(); i++) {
+                if (get.GetColumnIds()[i].GetPrimaryIndex() == filter_pair.first) {
+                    position = i;
+                    break;
+                }
+            }
+            if (!position.IsValid()) {
+                return false;
+            }
+            // A filtered column the query does not select is not in the projection, and the
+            // filter above has to read it. Add it, and record the original projection so the
+            // filter can drop it again — the extra column must not reach the parent.
+            if (!original_projection.empty() &&
+                std::find(get.projection_ids.begin(), get.projection_ids.end(),
+                          position.GetIndex()) == get.projection_ids.end()) {
+                get.projection_ids.push_back(position.GetIndex());
+            }
+            auto column_type = get.GetColumnType(ColumnIndex(filter_pair.first));
+            auto column_ref = make_uniq<BoundColumnRefExpression>(
+                std::move(column_type), ColumnBinding(get.table_index, position.GetIndex()));
+            residual.push_back(filter_pair.second->ToExpression(*column_ref));
         }
 
         auto cardinality = get.function.cardinality(context, bind_data.get());
@@ -155,6 +189,27 @@ private:
 
         if (!get.bind_data) {
             throw InternalException("bind_data is null after assignment");
+        }
+
+        if (!residual.empty()) {
+            // The index now answers the matched filter, so the scan must stop carrying the
+            // others: they move into a filter above it, which is where they are evaluated.
+            for (auto it = get.table_filters.filters.begin();
+                 it != get.table_filters.filters.end();) {
+                it = (it->first == matched_column.GetIndex()) ? std::next(it)
+                                                              : get.table_filters.filters.erase(it);
+            }
+            auto filter_op = make_uniq<LogicalFilter>();
+            filter_op->expressions = std::move(residual);
+            // Emit what the query asked for, not the columns a predicate needed to read.
+            if (!original_projection.empty()) {
+                for (idx_t i = 0; i < original_projection.size(); i++) {
+                    filter_op->projection_map.push_back(i);
+                }
+            }
+            filter_op->children.push_back(std::move(plan));
+            filter_op->ResolveOperatorTypes();
+            plan = std::move(filter_op);
         }
 
         return true;
