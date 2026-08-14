@@ -38,10 +38,7 @@ FROM tile;
 ----
 true
 
-# The hex-encoded WKB pair round-trips the tile. It carries the extended
-# variant, as every other asHexWKB does, while the text form carries the
-# little-endian one, so the two encodings of a tile differ and each round-trips
-# through its own reader.
+# The hex-encoded WKB pair round-trips the tile.
 
 query I
 SELECT raquetFromHexWKB(asHexWKB(rq)) = rq FROM tile;
@@ -50,6 +47,21 @@ true
 
 query I
 SELECT raquetFromHexWKB(rq::VARCHAR) = rq FROM tile;
+----
+true
+
+# A tile carries no SRID, so the extended variant adds nothing to its encoding
+# and the hex-WKB form is the text form. Comparing them also pins the string
+# down to its characters: the MEOS writer reports the size of a buffer that
+# holds a terminating null, one more than the length of the string in it.
+
+query I
+SELECT asHexWKB(rq) = rq::VARCHAR FROM tile;
+----
+true
+
+query I
+SELECT length(asHexWKB(rq)) = length(rq::VARCHAR) FROM tile;
 ----
 true
 
