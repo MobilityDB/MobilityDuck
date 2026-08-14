@@ -63,13 +63,108 @@ SELECT min(id) FROM idx_sp
 statement ok
 DROP INDEX i_sp_quad;
 
-# The kdtree kind builds and takes queries. Its row-level agreement with a
-# sequential scan is NOT asserted here: MEOS returns false negatives from a k-d
-# search above two dimensions for any bounded query, so the rows an stbox
-# kdtree returns are wrong until MobilityDB PR #1835 lands and the recorded
-# _MEOS_REF advances past it. A bounded-window case belongs with that bump —
-# and must hold one dimension constant, since correlated dimensions pass
-# against the unfixed library.
+# The kdtree kind answers a bounded window with the rows a sequential scan
+# returns. The points of `idx_sp` move along the diagonal, so its X and Y agree
+# on which rows a window selects and a search descending the wrong axis still
+# finds them. These points instead walk a grid, so the two coordinates select
+# different rows, and each window below constrains one coordinate while leaving
+# the other free.
+
+statement ok
+CREATE TABLE idx_kd AS
+  SELECT i AS id,
+         format('[POINT({} {})@2000-01-01, POINT({} {})@2000-01-02]',
+                i % 20, i // 20, i % 20 + 1, i // 20 + 1)::tgeompoint AS g
+  FROM range(0, 400) tbl(i);
+
+statement ok
+CREATE TABLE idx_kd_scan AS SELECT * FROM idx_kd;
+
+statement ok
+CREATE INDEX i_kd ON idx_kd USING TSPTREE (g) WITH (kind = 'kdtree');
+
+# A slab constraining X over the whole extent of Y.
+
+query I
+SELECT count(*) FROM (
+  SELECT id FROM idx_kd
+    WHERE g && 'STBOX XT(((5,0),(8,20)),[2000-01-01, 2000-01-03])'::stbox
+  EXCEPT
+  SELECT id FROM idx_kd_scan
+    WHERE g && 'STBOX XT(((5,0),(8,20)),[2000-01-01, 2000-01-03])'::stbox);
+----
+0
+
+query I
+SELECT count(*) FROM (
+  SELECT id FROM idx_kd_scan
+    WHERE g && 'STBOX XT(((5,0),(8,20)),[2000-01-01, 2000-01-03])'::stbox
+  EXCEPT
+  SELECT id FROM idx_kd
+    WHERE g && 'STBOX XT(((5,0),(8,20)),[2000-01-01, 2000-01-03])'::stbox);
+----
+0
+
+# The same slab turned onto the other axis.
+
+query I
+SELECT count(*) FROM (
+  SELECT id FROM idx_kd
+    WHERE g && 'STBOX XT(((0,5),(20,8)),[2000-01-01, 2000-01-03])'::stbox
+  EXCEPT
+  SELECT id FROM idx_kd_scan
+    WHERE g && 'STBOX XT(((0,5),(20,8)),[2000-01-01, 2000-01-03])'::stbox);
+----
+0
+
+query I
+SELECT count(*) FROM (
+  SELECT id FROM idx_kd_scan
+    WHERE g && 'STBOX XT(((0,5),(20,8)),[2000-01-01, 2000-01-03])'::stbox
+  EXCEPT
+  SELECT id FROM idx_kd
+    WHERE g && 'STBOX XT(((0,5),(20,8)),[2000-01-01, 2000-01-03])'::stbox);
+----
+0
+
+# A window bounded in both coordinates at once.
+
+query I
+SELECT count(*) FROM (
+  SELECT id FROM idx_kd
+    WHERE g && 'STBOX XT(((5,5),(9,9)),[2000-01-01, 2000-01-03])'::stbox
+  EXCEPT
+  SELECT id FROM idx_kd_scan
+    WHERE g && 'STBOX XT(((5,5),(9,9)),[2000-01-01, 2000-01-03])'::stbox);
+----
+0
+
+query I
+SELECT count(*) FROM (
+  SELECT id FROM idx_kd_scan
+    WHERE g && 'STBOX XT(((5,5),(9,9)),[2000-01-01, 2000-01-03])'::stbox
+  EXCEPT
+  SELECT id FROM idx_kd
+    WHERE g && 'STBOX XT(((5,5),(9,9)),[2000-01-01, 2000-01-03])'::stbox);
+----
+0
+
+# The windows select a part of the table, so the agreement above is not the
+# agreement of two empty answers.
+
+query III
+SELECT
+  (SELECT count(*) FROM idx_kd
+     WHERE g && 'STBOX XT(((5,0),(8,20)),[2000-01-01, 2000-01-03])'::stbox),
+  (SELECT count(*) FROM idx_kd
+     WHERE g && 'STBOX XT(((0,5),(20,8)),[2000-01-01, 2000-01-03])'::stbox),
+  (SELECT count(*) FROM idx_kd
+     WHERE g && 'STBOX XT(((5,5),(9,9)),[2000-01-01, 2000-01-03])'::stbox);
+----
+100	100	36
+
+statement ok
+DROP INDEX i_kd;
 
 statement ok
 CREATE INDEX i_sp_kd ON idx_sp USING TSPTREE (g) WITH (kind = 'kdtree');
