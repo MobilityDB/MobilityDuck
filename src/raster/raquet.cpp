@@ -647,7 +647,7 @@ void RaquetFunctions::Raster_tile_value_quadbin(
         Temporal *res = raster_tile_value_quadbin(
             t, reinterpret_cast<const uint8_t *>(pixels[row].GetData()),
             static_cast<size_t>(pixels[row].GetSize()),
-            static_cast<uint16_t>(width[row]), static_cast<uint16_t>(height[row]),
+            width[row], height[row],
             static_cast<uint64_t>(cell[row]), pt,
             nodata[row], has_nodata[row]);
         free(t);
