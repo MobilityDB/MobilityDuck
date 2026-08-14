@@ -103,6 +103,7 @@ struct TSPTreeModule {
 	static void RegisterSPTreeIndex(ExtensionLoader &loader);
     static void RegisterIndexScan(ExtensionLoader &loader);
     static void RegisterScanOptimizer(ExtensionLoader &loader);
+    static void RegisterJoinOptimizer(ExtensionLoader &loader);
 };
 
 } // namespace duckdb

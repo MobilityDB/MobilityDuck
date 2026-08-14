@@ -1,0 +1,197 @@
+# name: test/sql/parity/080_sptree_index_join.test
+# description: A bounding-box join between two columns is answered by probing a
+#              TSPTREE index, and returns exactly the rows a nested-loop join does
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+CREATE TABLE trips AS
+  SELECT i AS id,
+         format('[POINT({} {})@2000-01-01, POINT({} {})@2000-01-02]', i, i, i+1, i+1)::tgeompoint AS g
+  FROM range(1, 400) tbl(i);
+
+statement ok
+CREATE TABLE regions AS
+  SELECT i AS rid,
+         format('STBOX XT((({} {}),({} {})),[2000-01-01, 2000-01-03])', i*10, i*10, i*10+25, i*10+25)::stbox AS rg
+  FROM range(1, 20) tbl(i);
+
+# The same rows, with no index, so the join over them keeps the nested loop.
+
+statement ok
+CREATE TABLE trips_scan AS SELECT * FROM trips;
+
+statement ok
+CREATE INDEX i_sp_trips ON trips USING TSPTREE (g) WITH (kind = 'quadtree');
+
+# The condition names a column of each side, so no query box exists until the
+# join runs; the index is probed once per row of the other side.
+
+query II
+EXPLAIN SELECT count(*) FROM trips t, regions r WHERE t.g && r.rg;
+----
+physical_plan	<REGEX>:.*MOBILITY SPTREE INDEX JOIN.*
+
+# Only the probe side is scanned: the indexed side is reached through the index.
+
+query II
+EXPLAIN SELECT count(*) FROM trips t, regions r WHERE t.g && r.rg;
+----
+physical_plan	<!REGEX>:.*Table: trips.*
+
+query I
+SELECT count(*) FROM trips t, regions r WHERE t.g && r.rg;
+----
+513
+
+# The pairs are exactly the ones the nested-loop join produces, in both directions.
+
+query I
+SELECT count(*) FROM (
+  SELECT t.id, r.rid FROM trips t, regions r WHERE t.g && r.rg
+  EXCEPT
+  SELECT t.id, r.rid FROM trips_scan t, regions r WHERE t.g && r.rg);
+----
+0
+
+query I
+SELECT count(*) FROM (
+  SELECT t.id, r.rid FROM trips_scan t, regions r WHERE t.g && r.rg
+  EXCEPT
+  SELECT t.id, r.rid FROM trips t, regions r WHERE t.g && r.rg);
+----
+0
+
+# Columns of the indexed side are fetched by row id, so selecting them returns
+# the same values the scan does.
+
+query I
+SELECT count(*) FROM (
+  SELECT t.id, t.g, r.rid FROM trips t, regions r WHERE t.g && r.rg
+  EXCEPT
+  SELECT t.id, t.g, r.rid FROM trips_scan t, regions r WHERE t.g && r.rg);
+----
+0
+
+# An stbox probe column is used as the box directly, rather than deriving one.
+
+statement ok
+CREATE TABLE boxes AS SELECT id AS bid, g::stbox AS bb FROM trips_scan;
+
+query I
+SELECT count(*) FROM (
+  SELECT t.id, b.bid FROM trips t, boxes b WHERE t.g && b.bb
+  EXCEPT
+  SELECT t.id, b.bid FROM trips_scan t, boxes b WHERE t.g && b.bb);
+----
+0
+
+# Shapes the join declines, each falling back to the nested loop rather than
+# dropping the part it cannot answer.
+
+# A second conjunct: answering only the `&&` would silently widen the result.
+
+query I
+SELECT count(*) FROM trips t, regions r WHERE t.g && r.rg AND t.id > 200;
+----
+20
+
+query I
+SELECT count(*) FROM (
+  SELECT t.id, r.rid FROM trips t, regions r WHERE t.g && r.rg AND t.id > 200
+  EXCEPT
+  SELECT t.id, r.rid FROM trips_scan t, regions r WHERE t.g && r.rg AND t.id > 200);
+----
+0
+
+query II
+EXPLAIN SELECT count(*) FROM trips t, regions r WHERE t.g && r.rg AND t.id > 200;
+----
+physical_plan	<!REGEX>:.*MOBILITY SPTREE INDEX JOIN.*
+
+# An outer join needs the unmatched rows the index cannot report.
+
+query I
+SELECT count(*) FROM regions r LEFT JOIN trips t ON t.g && r.rg WHERE t.id IS NULL;
+----
+0
+
+query II
+EXPLAIN SELECT count(*) FROM regions r LEFT JOIN trips t ON t.g && r.rg;
+----
+physical_plan	<!REGEX>:.*MOBILITY SPTREE INDEX JOIN.*
+
+# Neither side indexed: nothing to probe.
+
+query II
+EXPLAIN SELECT count(*) FROM trips_scan t, regions r WHERE t.g && r.rg;
+----
+physical_plan	<!REGEX>:.*MOBILITY SPTREE INDEX JOIN.*
+
+# A NULL probe value matches nothing, and does not end the scan early.
+
+statement ok
+INSERT INTO regions VALUES (999, NULL);
+
+query I
+SELECT count(*) FROM trips t, regions r WHERE t.g && r.rg;
+----
+513
+
+# ── the k-d kind serves the join the same way ──────────────────────────────
+
+# The two kinds are alternative partitionings of one index type, so the join
+# operator reaches them through the same Search. The rows above move along the
+# diagonal, where X and Y agree on which rows a box selects and a descent down
+# the wrong axis still finds them; these walk a grid instead, so the two
+# coordinates select different rows, and the probe boxes are slabs constraining
+# one coordinate over the whole extent of the other.
+
+statement ok
+CREATE TABLE trips_kd AS
+  SELECT i AS id,
+         format('[POINT({} {})@2000-01-01, POINT({} {})@2000-01-02]',
+                i % 20, i // 20, i % 20 + 1, i // 20 + 1)::tgeompoint AS g
+  FROM range(0, 400) tbl(i);
+
+statement ok
+CREATE TABLE trips_kd_scan AS SELECT * FROM trips_kd;
+
+statement ok
+CREATE TABLE slabs AS
+  SELECT i AS sid,
+         format('STBOX XT((({} 0),({} 20)),[2000-01-01, 2000-01-03])',
+                i * 5, i * 5 + 3)::stbox AS sg
+  FROM range(0, 4) tbl(i);
+
+statement ok
+CREATE INDEX i_kd_trips ON trips_kd USING TSPTREE (g) WITH (kind = 'kdtree');
+
+query II
+EXPLAIN SELECT count(*) FROM trips_kd t, slabs s WHERE t.g && s.sg;
+----
+physical_plan	<REGEX>:.*MOBILITY SPTREE INDEX JOIN.*
+
+query I
+SELECT count(*) FROM (
+  SELECT t.id, s.sid FROM trips_kd t, slabs s WHERE t.g && s.sg
+  EXCEPT
+  SELECT t.id, s.sid FROM trips_kd_scan t, slabs s WHERE t.g && s.sg);
+----
+0
+
+query I
+SELECT count(*) FROM (
+  SELECT t.id, s.sid FROM trips_kd_scan t, slabs s WHERE t.g && s.sg
+  EXCEPT
+  SELECT t.id, s.sid FROM trips_kd t, slabs s WHERE t.g && s.sg);
+----
+0
+
+# A non-empty count, so neither side can agree by matching nothing.
+
+query I
+SELECT count(*) FROM trips_kd t, slabs s WHERE t.g && s.sg;
+----
+380
