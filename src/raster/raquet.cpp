@@ -305,6 +305,43 @@ void RaquetFunctions::Raquet_pixels(
         });
 }
 
+/* The binary half of the pair. A tile already travels as its WKB, so this
+ * hands back the same wire form under the name the other families use for it,
+ * which is what a consumer reading the tile out of the database asks for. */
+void RaquetFunctions::Raquet_as_binary(
+    DataChunk &args, ExpressionState &state, Vector &result)
+{
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t blob) -> string_t {
+            Raquet *rq = BlobToRaquet(blob);
+            size_t size = 0;
+            uint8_t *wkb = raquet_as_wkb(rq, WKB_EXTENDED, &size);
+            free(rq);
+            if (!wkb) throw InternalException("asBinary: raquet_as_wkb failed");
+            string_t out = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(wkb), size));
+            free(wkb);
+            return out;
+        });
+}
+
+void RaquetFunctions::Raquet_from_binary(
+    DataChunk &args, ExpressionState &state, Vector &result)
+{
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t wkb) -> string_t {
+            /* raquet_from_wkb takes the length, so the bytes go in as they
+             * are; nothing here relies on a terminator. */
+            Raquet *rq = raquet_from_wkb(
+                reinterpret_cast<const uint8_t *>(wkb.GetData()), wkb.GetSize());
+            if (!rq)
+                throw InvalidInputException("raquetFromBinary: invalid tile WKB");
+            return RaquetToBlob(result, rq);
+        });
+}
+
 void RaquetFunctions::Raquet_as_hexwkb(
     DataChunk &args, ExpressionState &state, Vector &result)
 {
@@ -740,7 +777,11 @@ void RaquetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "raquetRead", {BLB, QB}, RQ, RaquetFunctions::Raquet_read));
 
-    /* Hex-encoded WKB, the pair every serialized family exposes */
+    /* Well-Known Binary, the two pairs every serialized family exposes */
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "asBinary", {RQ}, BLB, RaquetFunctions::Raquet_as_binary));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "raquetFromBinary", {BLB}, RQ, RaquetFunctions::Raquet_from_binary));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "asHexWKB", {RQ}, V, RaquetFunctions::Raquet_as_hexwkb));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
