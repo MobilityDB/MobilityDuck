@@ -118,6 +118,35 @@ SELECT rasterTileValueQuadbin(from_hex('2a'), 1, 1, quadbinTileToCell(0, 0, 0),
 ----
 Unknown pixel type "UINT4"
 
+# The dimensions are INTEGER on the SQL surface but a tile records them in 16
+# bits, so a value outside that range is rejected rather than wrapped: 65537
+# would otherwise sample a 1-pixel-wide tile and silently return the value of a
+# tile nobody asked for.
+
+statement error
+SELECT rasterTileValueQuadbin(from_hex('2a'), 65537, 1, quadbinTileToCell(0, 0, 0),
+  'UINT8', 0.0, false, tgeompoint 'POINT(0 0)@2024-01-01');
+----
+must be at most 65535
+
+statement error
+SELECT rasterTileValueQuadbin(from_hex('2a'), 1, -1, quadbinTileToCell(0, 0, 0),
+  'UINT8', 0.0, false, tgeompoint 'POINT(0 0)@2024-01-01');
+----
+must be positive
+
+# The tile constructor takes the same dimensions and rejects them the same way.
+
+statement error
+SELECT raquet(from_hex('2a'), 65537, 1, quadbinTileToCell(0, 0, 0), 'UINT8');
+----
+must be at most 65535
+
+statement error
+SELECT raquet(from_hex('2a'), 0, 1, quadbinTileToCell(0, 0, 0), 'UINT8');
+----
+must be positive
+
 # ── trajectoryQuadbins ──────────────────────────────────────────────────────
 
 # A single-instant trajectory at the origin covers exactly one zoom-0 cell.
