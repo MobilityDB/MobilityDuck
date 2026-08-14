@@ -20,27 +20,6 @@ namespace duckdb {
 
 namespace {
 
-/* MEOS stbox_area() can SIGSEGV on geodetic boxes (3D / PolyhedralSurface path). For geodetic
- * footprints use spherical rectangle area (WGS84 sphere); avoids MEOS geog_in/geog_area faults. */
-/* Sphere zone area between two meridians and parallels (m^2). Matches MEOS/PostGIS sphere model
- * closely enough for tests; avoids MEOS geog_in/geog_area which can SIGSEGV in this extension. */
-inline double Spherical_lonlat_rect_area_m2(double xmin, double ymin, double xmax, double ymax,
-                                            bool use_spheroid) {
-    (void)use_spheroid;
-    constexpr double DEG_TO_RAD = M_PI / 180.0;
-    /* WGS84 semi-major axis (m); MEOS geog_area on sphere uses ~this for spheroid=false path. */
-    constexpr double R = 6378137.0;
-    const double lam1 = xmin * DEG_TO_RAD;
-    const double lam2 = xmax * DEG_TO_RAD;
-    const double phi1 = ymin * DEG_TO_RAD;
-    const double phi2 = ymax * DEG_TO_RAD;
-    return R * R * (lam2 - lam1) * (std::sin(phi2) - std::sin(phi1));
-}
-
-inline double Geodetic_stbox_footprint_area(const STBox *box, bool use_spheroid) {
-    return Spherical_lonlat_rect_area_m2(box->xmin, box->ymin, box->xmax, box->ymax, use_spheroid);
-}
-
 /* For stbox_to_geo: 2D geodetic box via MEOS constructor (no Z dimension in output geometry). */
 inline STBox *Stbox_geodetic_xy_copy(const STBox *box) {
     if (!stbox_isgeodetic(box) || !stbox_hasz(box)) {
@@ -1146,14 +1125,7 @@ void StboxFunctions::Stbox_area(DataChunk &args, ExpressionState &state, Vector 
                 throw InternalException("Failure in Stbox_area: unable to cast binary to stbox");
             }
             bool spheroid = true; // default value, TODO: handle argument
-            double ret;
-            /* MEOS stbox_area() can SIGSEGV on geodetic boxes; use spherical lon/lat footprint. */
-            const bool geodetic = stbox_isgeodetic(stbox) || MEOS_FLAGS_GET_GEODETIC(stbox->flags);
-            if (geodetic) {
-                ret = Geodetic_stbox_footprint_area(stbox, spheroid);
-            } else {
-                ret = stbox_area(stbox, spheroid);
-            }
+            double ret = stbox_area(stbox, spheroid);
             free(stbox);
             if (ret == DBL_MAX) {
                 mask.SetInvalid(idx);
