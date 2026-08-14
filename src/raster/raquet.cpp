@@ -287,6 +287,55 @@ void RaquetFunctions::Raquet_pixtype(
         });
 }
 
+void RaquetFunctions::Raquet_pixels(
+    DataChunk &args, ExpressionState &state, Vector &result)
+{
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t blob) -> string_t {
+            Raquet *rq = BlobToRaquet(blob);
+            size_t size = 0;
+            uint8_t *pixels = raquet_pixels(rq, &size);
+            free(rq);
+            if (!pixels) throw InternalException("pixels: raquet_pixels failed");
+            string_t out = StringVector::AddStringOrBlob(
+                result, string_t(reinterpret_cast<const char *>(pixels), size));
+            free(pixels);
+            return out;
+        });
+}
+
+void RaquetFunctions::Raquet_as_hexwkb(
+    DataChunk &args, ExpressionState &state, Vector &result)
+{
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t blob) -> string_t {
+            Raquet *rq = BlobToRaquet(blob);
+            size_t size = 0;
+            char *hex = raquet_as_hexwkb(rq, WKB_EXTENDED, &size);
+            free(rq);
+            if (!hex) throw InternalException("asHexWKB: raquet_as_hexwkb failed");
+            string_t out = StringVector::AddString(result, hex, size);
+            free(hex);
+            return out;
+        });
+}
+
+void RaquetFunctions::Raquet_from_hexwkb(
+    DataChunk &args, ExpressionState &state, Vector &result)
+{
+    UnaryExecutor::Execute<string_t, string_t>(
+        args.data[0], result, args.size(),
+        [&](string_t hex) -> string_t {
+            std::string str(hex.GetData(), hex.GetSize());   /* string_t is not NUL-terminated */
+            Raquet *rq = raquet_from_hexwkb(str.c_str());
+            if (!rq)
+                throw InvalidInputException("raquetFromHexWKB: invalid tile hex-encoded WKB");
+            return RaquetToBlob(result, rq);
+        });
+}
+
 void RaquetFunctions::Raquet_to_stbox(
     DataChunk &args, ExpressionState &state, Vector &result)
 {
@@ -690,6 +739,12 @@ void RaquetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "raquetRead", {BLB, QB}, RQ, RaquetFunctions::Raquet_read));
 
+    /* Hex-encoded WKB, the pair every serialized family exposes */
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "asHexWKB", {RQ}, V, RaquetFunctions::Raquet_as_hexwkb));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "raquetFromHexWKB", {V}, RQ, RaquetFunctions::Raquet_from_hexwkb));
+
     /* Accessors */
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "quadbin", {RQ}, QB, RaquetFunctions::Raquet_quadbin));
@@ -701,6 +756,8 @@ void RaquetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         "nodata", {RQ}, D, RaquetFunctions::Raquet_nodata));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "pixtype", {RQ}, V, RaquetFunctions::Raquet_pixtype));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "pixels", {RQ}, BLB, RaquetFunctions::Raquet_pixels));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "stbox", {RQ}, BX, RaquetFunctions::Raquet_to_stbox));
 
