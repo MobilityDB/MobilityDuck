@@ -37,6 +37,20 @@ endif()
 # MEOS from overlay port
 find_package(MEOS CONFIG REQUIRED)
 
+# The commit libmeos is built from, read from the port that builds it, so the
+# version the extension reports is the one it links. MEOS exposes no runtime
+# version symbol, so this build-time pin is the most precise stamp available —
+# and the refresh workflow rewrites `_MEOS_REF` alone, so a second copy of the
+# SHA kept by hand states the wrong commit from the first advance onward.
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg_ports/meos/portfile.cmake" _meos_portfile)
+string(REGEX MATCH "set\\(_MEOS_REF \"([0-9a-f]+)\"" _meos_ref_match "${_meos_portfile}")
+if(NOT CMAKE_MATCH_1)
+  message(FATAL_ERROR "vcpkg_ports/meos/portfile.cmake: no _MEOS_REF to report as the linked MEOS commit.")
+endif()
+string(SUBSTRING "${CMAKE_MATCH_1}" 0 10 MOBILITYDUCK_MEOS_PIN)
+message(STATUS "MobilityDuck reports linked MEOS ${MOBILITYDUCK_MEOS_PIN}")
+add_definitions(-DMOBILITYDUCK_MEOS_PIN="${MOBILITYDUCK_MEOS_PIN}")
+
 # H3 headers: the all-families libmeos exposes meos_h3.h, which includes
 # <h3api.h>. SIBLING-FROM MobilityDB CMakeLists.txt H3 block (find_path
 # H3_INCLUDE_DIR NAMES h3api.h PATH_SUFFIXES h3) so code compiling against
