@@ -65,6 +65,23 @@ SELECT length(asHexWKB(rq)) = length(rq::VARCHAR) FROM tile;
 ----
 true
 
+# The binary half of the pair round-trips the tile too, and its hex encoding is
+# the hex-WKB form, so the two pairs carry one wire form under two spellings.
+
+query I
+SELECT raquetFromBinary(asBinary(rq)) = rq FROM tile;
+----
+true
+
+query I
+SELECT hex(asBinary(rq)) = asHexWKB(rq) FROM tile;
+----
+true
+
+statement error
+SELECT raquetFromBinary(from_hex('00'));
+----
+
 
 query I
 SELECT eq(rq, rq) AND NOT ne(rq, rq) AND cmp(rq, rq) = 0 FROM tile;

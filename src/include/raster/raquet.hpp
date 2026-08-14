@@ -39,6 +39,8 @@ struct RaquetFunctions {
     static void Raquet_nodata(DataChunk &args, ExpressionState &state, Vector &result);
     static void Raquet_pixtype(DataChunk &args, ExpressionState &state, Vector &result);
     static void Raquet_pixels(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Raquet_as_binary(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Raquet_from_binary(DataChunk &args, ExpressionState &state, Vector &result);
     static void Raquet_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
     static void Raquet_from_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
     static void Raquet_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
