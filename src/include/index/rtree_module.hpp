@@ -99,6 +99,7 @@ struct TRTreeModule {
 	static void RegisterRTreeIndex(ExtensionLoader &loader);
     static void RegisterIndexScan(ExtensionLoader &loader);
     static void RegisterScanOptimizer(ExtensionLoader &loader);
+    static void RegisterJoinOptimizer(ExtensionLoader &loader);
 };
 
 } // namespace duckdb

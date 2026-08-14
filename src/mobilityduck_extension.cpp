@@ -460,6 +460,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TRTreeModule::RegisterRTreeIndex(loader);
 	TRTreeModule::RegisterIndexScan(loader);
 	TRTreeModule::RegisterScanOptimizer(loader);
+	TRTreeModule::RegisterJoinOptimizer(loader);
 
 	TSPTreeModule::RegisterSPTreeIndex(loader);
 	TSPTreeModule::RegisterIndexScan(loader);
