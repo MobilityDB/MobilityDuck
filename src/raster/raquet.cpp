@@ -315,8 +315,9 @@ void RaquetFunctions::Raquet_as_hexwkb(
             size_t size = 0;
             char *hex = raquet_as_hexwkb(rq, WKB_EXTENDED, &size);
             free(rq);
+            (void) size;   /* buffer size, one more than the string length */
             if (!hex) throw InternalException("asHexWKB: raquet_as_hexwkb failed");
-            string_t out = StringVector::AddString(result, hex, size);
+            string_t out = StringVector::AddString(result, hex);
             free(hex);
             return out;
         });
