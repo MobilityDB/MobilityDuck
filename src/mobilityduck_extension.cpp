@@ -465,6 +465,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TSPTreeModule::RegisterSPTreeIndex(loader);
 	TSPTreeModule::RegisterIndexScan(loader);
 	TSPTreeModule::RegisterScanOptimizer(loader);
+	TSPTreeModule::RegisterJoinOptimizer(loader);
 
 	// Single-tile getters depend on tbox, stbox, and the spatial GEOMETRY
 	// type being registered first.
