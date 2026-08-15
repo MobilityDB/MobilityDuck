@@ -121,12 +121,31 @@ TRTreeIndex::TRTreeIndex(const string &name, IndexConstraintType constraint_type
 
 class TRTreeIndexScanState final : public IndexScanState {
 public:
-    void* query_box = nullptr; 
+    void* query_box = nullptr;
     vector<row_t> search_results;
     idx_t current_position = 0;
     bool initialized = false;
-    
+
     ~TRTreeIndexScanState() {
+        if (query_box) {
+            free(query_box);
+            query_box = nullptr;
+        }
+    }
+};
+
+//! A nearest-neighbour scan holds the tree open: the cursor keeps the priority queue of the
+//! best-first traversal, so each call resumes where the last stopped instead of restarting.
+class TRTreeNNScanState final : public IndexScanState {
+public:
+    void *query_box = nullptr;
+    RTreeNNCursor *cursor = nullptr;
+
+    ~TRTreeNNScanState() {
+        if (cursor) {
+            rtree_nn_cursor_close(cursor);
+            cursor = nullptr;
+        }
         if (query_box) {
             free(query_box);
             query_box = nullptr;
@@ -463,7 +482,50 @@ idx_t TRTreeIndex::Scan(IndexScanState &state, Vector &result) const {
     return output_idx;
 }
 
-vector<row_t> TRTreeIndex::Search(const void *query_box, RTreeSearchOp op) const {  
+unique_ptr<IndexScanState> TRTreeIndex::InitializeNNScan(const void *query_blob, size_t blob_size) const {
+    auto state = make_uniq<TRTreeNNScanState>();
+
+    state->query_box = malloc(blob_size);
+    if (!state->query_box) {
+        throw InvalidInputException("Out of memory for the nearest-neighbour query box");
+    }
+    memcpy(state->query_box, query_blob, blob_size);
+
+    // The index stores its boxes with the SRID cleared, so a query box carrying one would be a
+    // mixed-SRID comparison in MEOS rather than a distance. Probe exactly as the insert stored.
+    if (bbox_type_ == T_STBOX) {
+        STBox *query = static_cast<STBox *>(state->query_box);
+        if (stbox_srid(query) != 0) {
+            STBox *normalized = stbox_set_srid(query, 0);
+            if (normalized) {
+                memcpy(state->query_box, normalized, blob_size);
+                free(normalized);
+            }
+        }
+    }
+
+    if (rtree_) {
+        state->cursor = rtree_nn_cursor_open(rtree_, state->query_box);
+    }
+    return std::move(state);
+}
+
+bool TRTreeIndex::NNScanNext(IndexScanState &state, row_t &row_id, double &lower_bound) const {
+    auto &nstate = state.Cast<TRTreeNNScanState>();
+    if (!nstate.cursor) {
+        return false;
+    }
+    int id = 0;
+    double distance = 0;
+    if (!rtree_nn_cursor_next(nstate.cursor, &id, &distance)) {
+        return false;
+    }
+    row_id = static_cast<row_t>(id);
+    lower_bound = distance;
+    return true;
+}
+
+vector<row_t> TRTreeIndex::Search(const void *query_box, RTreeSearchOp op) const {
     vector<row_t> results;
     
     if (!rtree_ || !query_box) {
