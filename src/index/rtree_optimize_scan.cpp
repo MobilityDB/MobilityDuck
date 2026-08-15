@@ -60,6 +60,14 @@ private:
                     return false;
                 }
                 auto &rtree_index = index.Cast<TRTreeIndex>();
+
+                // The index bounds the column it was built over and no other. A table can carry
+                // one index per column, every one of them the same type, so a filter matching the
+                // SHAPE this index answers is not enough — it has to read THIS index's column, or
+                // the rows come back from boxes describing a different column entirely.
+                if (rtree_index.GetColumnIds()[0] != filter_pair.first) {
+                    return false;
+                }
                 bindings.clear();
 
                 // Only an arbitrary-expression filter can carry the `&&` the index
@@ -292,15 +300,10 @@ private:
                 return false;
             }
 
-            // The index stores a box of its first column and of no other, so it bounds no
-            // distance to the rest. A query over a multi-column index keeps the sequential scan.
-            if (rtree_index.GetIndexedColumns().size() != 1) {
-                return false;
-            }
-
             // The distance has to be measured from the column THIS index was built over: a second
             // column of the same type would match the shape while the index says nothing about it.
-            const auto indexed_column = rtree_index.GetIndexedColumns()[0];
+            // The index covers exactly one column, which its own constructor enforces.
+            const auto indexed_column = rtree_index.GetColumnIds()[0];
             optional_idx indexed_position;
             for (idx_t i = 0; i < get.GetColumnIds().size(); i++) {
                 if (get.GetColumnIds()[i].GetPrimaryIndex() == indexed_column) {

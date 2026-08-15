@@ -74,7 +74,7 @@ static void GatherNearest(ClientContext &context, const TRTreeIndexScanBindData 
 
 	// The recheck reads the INDEXED column, which the query need not select, so it fetches on its
 	// own column list rather than through the plan's projection.
-	const auto indexed_column = rtree_index.GetIndexedColumns()[0];
+	const auto indexed_column = rtree_index.GetColumnIds()[0];
 	vector<StorageIndex> fetch_columns;
 	fetch_columns.emplace_back(
 	    bind_data.table.GetColumn(LogicalIndex(indexed_column)).StorageOid());

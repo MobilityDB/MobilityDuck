@@ -202,24 +202,5 @@ ORDER BY h |=| 'STBOX X((20.1,-0.5),(20.4,0.5))'::stbox LIMIT 5;
 ----
 physical_plan	<REGEX>:.*SEQ_SCAN.*
 
-# The index stores a box of its first column and of no other, so it bounds no distance to the
-# rest and a multi-column index answers no nearest-neighbour query.
-
-statement ok
-CREATE TABLE covered AS SELECT id, g, g AS h FROM trips;
-
-statement ok
-CREATE INDEX covered_gh ON covered USING TRTREE (g, h);
-
-query II
-EXPLAIN SELECT id FROM covered
-ORDER BY g |=| 'STBOX X((20.1,-0.5),(20.4,0.5))'::stbox LIMIT 5;
-----
-physical_plan	<REGEX>:.*SEQ_SCAN.*
-
-query I
-SELECT list(id) FROM (
-  SELECT id FROM covered
-  ORDER BY g |=| 'STBOX X((20.1,-0.5),(20.4,0.5))'::stbox LIMIT 5)
-----
-[20, 19, 21, 18, 22]
+# An index over more than one column cannot be built at all, so the nearest path never meets one;
+# the rejection itself is covered by test/sql/parity/083_index_single_column.test.
