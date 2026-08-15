@@ -60,6 +60,14 @@ private:
                     return false;
                 }
                 auto &sptree_index = index.Cast<TSPTreeIndex>();
+
+                // The index bounds the column it was built over and no other. A table can carry
+                // one index per column, every one of them the same type, so a filter matching the
+                // SHAPE this index answers is not enough — it has to read THIS index's column, or
+                // the rows come back from boxes describing a different column entirely.
+                if (sptree_index.GetColumnIds()[0] != filter_pair.first) {
+                    return false;
+                }
                 bindings.clear();
 
                 // Only an arbitrary-expression filter can carry the `&&` the index

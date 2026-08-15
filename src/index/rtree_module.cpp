@@ -55,6 +55,15 @@ TRTreeIndex::TRTreeIndex(const string &name, IndexConstraintType constraint_type
                 unbound_expressions, db), options_(options), rtree_(nullptr) {
     
     
+    // The tree holds ONE bounding box per row and takes it from the first indexed expression, so
+    // a second column would be accepted and then never stored: every query reading it would be
+    // answered from a box that says nothing about it, and the answer is wrong rather than slow.
+    if (unbound_expressions.size() != 1) {
+        throw BinderException(
+            "A TRTREE index covers a single column, and this one names " +
+            std::to_string(unbound_expressions.size()) + ". Create one index per column.");
+    }
+
     auto &type = unbound_expressions[0]->return_type;
     column_type_ = type;
 

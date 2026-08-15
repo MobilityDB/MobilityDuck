@@ -1,0 +1,100 @@
+# name: test/sql/parity/083_index_single_column.test
+# description: A spatial index covers one column, and says so when asked to cover more than one
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+CREATE TABLE trips AS
+  SELECT i AS id,
+         format('[POINT({} 0)@2000-01-01, POINT({} 0)@2000-01-02]', i, i+1)::tgeompoint AS g,
+         format('[POINT(0 {})@2000-01-01, POINT(0 {})@2000-01-02]', i, i+1)::tgeompoint AS h
+  FROM range(1, 50) tbl(i);
+
+# Each tree holds one bounding box per row and takes it from the first indexed column. A second
+# column would be accepted and then never stored, so every query reading it would be answered from
+# a box that says nothing about it — the wrong rows rather than a slow scan. The index says so
+# instead of building.
+
+statement error
+CREATE INDEX trips_gh ON trips USING TRTREE (g, h);
+----
+A TRTREE index covers a single column, and this one names 2. Create one index per column.
+
+statement error
+CREATE INDEX trips_gh ON trips USING TSPTREE (g, h);
+----
+A TSPTREE index covers a single column, and this one names 2. Create one index per column.
+
+# The rejection is of the extra column, not of the index: one per column is the way to cover both.
+
+statement ok
+CREATE INDEX trips_g ON trips USING TRTREE (g);
+
+statement ok
+CREATE INDEX trips_h ON trips USING TRTREE (h);
+
+# Two indexes over two columns of the same type both match the shape of a `&&` against a box, so
+# an index chosen by shape alone answers the second column from the first column's boxes. Each
+# query has to reach the index built over the column it names.
+
+statement ok
+CREATE TABLE trips_noindex AS SELECT * FROM trips;
+
+query II
+EXPLAIN SELECT count(*) FROM trips WHERE g && 'STBOX X((20.1,-0.5),(20.4,0.5))'::stbox;
+----
+physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*
+
+query I
+SELECT (SELECT count(*) FROM trips WHERE g && 'STBOX X((20.1,-0.5),(20.4,0.5))'::stbox)
+     = (SELECT count(*) FROM trips_noindex WHERE g && 'STBOX X((20.1,-0.5),(20.4,0.5))'::stbox)
+----
+true
+
+# The second column is the one an index chosen by shape gets wrong: `trips_g` is scanned first and
+# matches, so before this fix the query was answered from g's boxes and returned no rows at all.
+
+query II
+EXPLAIN SELECT count(*) FROM trips WHERE h && 'STBOX X((-0.5,20.1),(0.5,20.4))'::stbox;
+----
+physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*
+
+query I
+SELECT (SELECT count(*) FROM trips WHERE h && 'STBOX X((-0.5,20.1),(0.5,20.4))'::stbox)
+     = (SELECT count(*) FROM trips_noindex WHERE h && 'STBOX X((-0.5,20.1),(0.5,20.4))'::stbox)
+----
+true
+
+# A column with no index of its own is answered by the sequential scan, not by another column's.
+
+statement ok
+CREATE TABLE partly AS SELECT * FROM trips;
+
+statement ok
+CREATE INDEX partly_g ON partly USING TRTREE (g);
+
+query II
+EXPLAIN SELECT count(*) FROM partly WHERE h && 'STBOX X((-0.5,20.1),(0.5,20.4))'::stbox;
+----
+physical_plan	<REGEX>:.*SEQ_SCAN.*
+
+query I
+SELECT (SELECT count(*) FROM partly WHERE h && 'STBOX X((-0.5,20.1),(0.5,20.4))'::stbox)
+     = (SELECT count(*) FROM trips_noindex WHERE h && 'STBOX X((-0.5,20.1),(0.5,20.4))'::stbox)
+----
+true
+
+# The same holds for the space-partitioning tree.
+
+statement ok
+CREATE TABLE trips_sp AS SELECT * FROM trips;
+
+statement ok
+CREATE INDEX trips_sp_g ON trips_sp USING TSPTREE (g);
+
+query I
+SELECT (SELECT count(*) FROM trips_sp WHERE g && 'STBOX X((20.1,-0.5),(20.4,0.5))'::stbox)
+     = (SELECT count(*) FROM trips_noindex WHERE g && 'STBOX X((20.1,-0.5),(20.4,0.5))'::stbox)
+----
+true
