@@ -26,6 +26,7 @@
 #include "duckdb/common/case_insensitive_map.hpp"
 #include "duckdb/optimizer/matcher/expression_matcher.hpp"
 #include "index/rtree_module.hpp"
+#include "index/rtree_index_scan.hpp"
 #include "geo/stbox.hpp"
 #include "geo/tgeompoint.hpp"
 #include "geo/tgeometry.hpp"
@@ -117,6 +118,7 @@ TRTreeIndex::TRTreeIndex(const string &name, IndexConstraintType constraint_type
     }
     
     function_matcher = MakeFunctionMatcher();
+    nearest_matcher = MakeNearestMatcher();
 }
 
 class TRTreeIndexScanState final : public IndexScanState {
@@ -594,6 +596,43 @@ bool TRTreeIndex::TryMatchDistanceFunction(const unique_ptr<Expression> &expr,
     bool match_result = function_matcher->Match(*expr, bindings);
     
     return match_result;
+}
+
+bool TRTreeIndex::TryMatchNearestFunction(Expression &expr,
+                                          vector<reference<Expression>> &bindings) const {
+    return nearest_matcher && nearest_matcher->Match(expr, bindings);
+}
+
+unique_ptr<ExpressionMatcher> TRTreeIndex::MakeNearestMatcher() const {
+    // `|=|` measures a distance to a box, and only the two box kinds below are boxes it is
+    // defined against; an index over a span stores no box a distance can be taken from.
+    LogicalType box_type;
+    if (bbox_type_ == T_STBOX) {
+        box_type = StboxType::stbox();
+    } else if (bbox_type_ == T_TBOX) {
+        box_type = TboxType::tbox();
+    } else {
+        return nullptr;
+    }
+
+    auto matcher = make_uniq<FunctionExpressionMatcher>();
+    matcher->function = make_uniq<SpecificFunctionMatcher>(TRTreeIndexScanBindData::NN_OPERATION);
+    matcher->expr_type = make_uniq<SpecificExpressionTypeMatcher>(ExpressionType::BOUND_FUNCTION);
+    matcher->policy = SetMatcher::Policy::UNORDERED;
+
+    // The indexed column on one side, the box on the other. The box operand is matched on its
+    // TYPE, not merely on being a constant: `|=|` is defined between two temporal values as well,
+    // and those are blobs too, so an unconstrained operand would let the scan read a temporal
+    // value's bytes as a box.
+    auto column_matcher = make_uniq<ExpressionMatcher>();
+    column_matcher->type = make_uniq<SpecificTypeMatcher>(column_type_);
+    matcher->matchers.push_back(std::move(column_matcher));
+
+    auto box_matcher = make_uniq<ExpressionMatcher>();
+    box_matcher->type = make_uniq<SpecificTypeMatcher>(box_type);
+    matcher->matchers.push_back(std::move(box_matcher));
+
+    return std::move(matcher);
 }
 
 unique_ptr<ExpressionMatcher> TRTreeIndex::MakeFunctionMatcher() const {
