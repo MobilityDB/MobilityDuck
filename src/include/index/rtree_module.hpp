@@ -68,6 +68,18 @@ public:
 
     idx_t Scan(IndexScanState &state, Vector &result) const;
 
+    //! Open a nearest-neighbour scan of the index around `query_blob`. Unlike InitializeScan,
+    //! which materialises every hit up front, this reads the tree incrementally: the caller
+    //! stops when it has enough, and the rest of the tree is never visited.
+    unique_ptr<IndexScanState> InitializeNNScan(const void *query_blob, size_t blob_size) const;
+
+    //! The next row of a nearest-neighbour scan, in order of the distance to the STORED BOX.
+    //! That distance is a LOWER BOUND on the distance to the value the row holds, so it orders
+    //! the candidates but does not rank them: a caller that needs the true nearest must
+    //! recompute the distance and keep reading while `lower_bound` stays below the k-th exact
+    //! distance it holds. Returns false once the index is exhausted.
+    bool NNScanNext(IndexScanState &state, row_t &row_id, double &lower_bound) const;
+
     bool TryMatchDistanceFunction(const unique_ptr<Expression> &expr, vector<reference<Expression>> &bindings) const;
 
     MeosType GetBboxType() const { return bbox_type_; }

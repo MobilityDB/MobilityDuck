@@ -136,13 +136,32 @@ TSPTreeIndex::TSPTreeIndex(const string &name, IndexConstraintType constraint_ty
     function_matcher = MakeFunctionMatcher();
 }
 
+//! A nearest-neighbour scan holds the tree open: the cursor keeps the priority queue of the
+//! best-first traversal, so each call resumes where the last stopped instead of restarting.
+class TSPTreeNNScanState final : public IndexScanState {
+public:
+    void *query_box = nullptr;
+    SPNNCursor *cursor = nullptr;
+
+    ~TSPTreeNNScanState() {
+        if (cursor) {
+            sptree_nn_cursor_close(cursor);
+            cursor = nullptr;
+        }
+        if (query_box) {
+            free(query_box);
+            query_box = nullptr;
+        }
+    }
+};
+
 class TSPTreeIndexScanState final : public IndexScanState {
 public:
-    void* query_box = nullptr; 
+    void* query_box = nullptr;
     vector<row_t> search_results;
     idx_t current_position = 0;
     bool initialized = false;
-    
+
     ~TSPTreeIndexScanState() {
         if (query_box) {
             free(query_box);
@@ -480,7 +499,50 @@ idx_t TSPTreeIndex::Scan(IndexScanState &state, Vector &result) const {
     return output_idx;
 }
 
-vector<row_t> TSPTreeIndex::Search(const void *query_box, RTreeSearchOp op) const {  
+unique_ptr<IndexScanState> TSPTreeIndex::InitializeNNScan(const void *query_blob, size_t blob_size) const {
+    auto state = make_uniq<TSPTreeNNScanState>();
+
+    state->query_box = malloc(blob_size);
+    if (!state->query_box) {
+        throw InvalidInputException("Out of memory for the nearest-neighbour query box");
+    }
+    memcpy(state->query_box, query_blob, blob_size);
+
+    // The index stores its boxes with the SRID cleared, so a query box carrying one would be a
+    // mixed-SRID comparison in MEOS rather than a distance. Probe exactly as the insert stored.
+    if (bbox_type_ == T_STBOX) {
+        STBox *query = static_cast<STBox *>(state->query_box);
+        if (stbox_srid(query) != 0) {
+            STBox *normalized = stbox_set_srid(query, 0);
+            if (normalized) {
+                memcpy(state->query_box, normalized, blob_size);
+                free(normalized);
+            }
+        }
+    }
+
+    if (sptree_) {
+        state->cursor = sptree_nn_cursor_open(sptree_, state->query_box);
+    }
+    return std::move(state);
+}
+
+bool TSPTreeIndex::NNScanNext(IndexScanState &state, row_t &row_id, double &lower_bound) const {
+    auto &nstate = state.Cast<TSPTreeNNScanState>();
+    if (!nstate.cursor) {
+        return false;
+    }
+    int id = 0;
+    double distance = 0;
+    if (!sptree_nn_cursor_next(nstate.cursor, &id, &distance)) {
+        return false;
+    }
+    row_id = static_cast<row_t>(id);
+    lower_bound = distance;
+    return true;
+}
+
+vector<row_t> TSPTreeIndex::Search(const void *query_box, RTreeSearchOp op) const {
     vector<row_t> results;
     
     if (!sptree_ || !query_box) {
