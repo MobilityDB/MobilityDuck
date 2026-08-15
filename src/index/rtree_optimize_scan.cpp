@@ -215,6 +215,151 @@ private:
         return true;
     }
 
+
+    //! The get a TopN reads, and the expression it orders by, as the get itself expresses it.
+    //! An ordering expression the query does not select is computed by a projection of its own
+    //! rather than by the TopN — DuckDB pairs it with the row id there, so the rows are
+    //! materialised only once the k are known — so the get can sit one projection below.
+    static LogicalGet *ResolveOrderedGet(LogicalTopN &top_n, Expression *&order_expr) {
+        if (top_n.children.size() != 1) {
+            return nullptr;
+        }
+        order_expr = top_n.orders[0].expression.get();
+        auto *child = top_n.children[0].get();
+
+        if (child->type == LogicalOperatorType::LOGICAL_PROJECTION) {
+            auto &projection = child->Cast<LogicalProjection>();
+            if (projection.children.size() != 1 ||
+                order_expr->type != ExpressionType::BOUND_COLUMN_REF) {
+                return nullptr;
+            }
+            const auto &binding = order_expr->Cast<BoundColumnRefExpression>().binding;
+            if (binding.table_index != projection.table_index ||
+                binding.column_index >= projection.expressions.size()) {
+                return nullptr;
+            }
+            order_expr = projection.expressions[binding.column_index].get();
+            child = projection.children[0].get();
+        }
+
+        return child->type == LogicalOperatorType::LOGICAL_GET ? &child->Cast<LogicalGet>()
+                                                               : nullptr;
+    }
+
+    //! `ORDER BY <indexed column> |=| <constant> LIMIT k` reads the index nearest-first instead of
+    //! ranking the whole table. The TopN stays above the scan: the index answers with the k rows
+    //! it proved nearest, and the TopN puts them in order for the parent.
+    static bool TryOptimizeLogicalTopN(ClientContext &context, unique_ptr<LogicalOperator> &plan) {
+        auto &top_n = plan->Cast<LogicalTopN>();
+
+        // One ascending distance is what an index can answer. A second key is not a tie-break the
+        // index can honour either: it decides among rows the k-th distance ties with, and the k
+        // rows the index proves nearest need not be the k that key would have chosen.
+        if (top_n.orders.size() != 1 || top_n.orders[0].type == OrderType::DESCENDING ||
+            top_n.limit == 0) {
+            return false;
+        }
+
+        Expression *order_expr = nullptr;
+        auto *get_ptr = ResolveOrderedGet(top_n, order_expr);
+        if (!get_ptr) {
+            return false;
+        }
+        auto &get = *get_ptr;
+        if (get.function.name != "seq_scan" || !get.GetTable()->IsDuckTable()) {
+            return false;
+        }
+        // The index scan evaluates no filter, so a pushed-down predicate would be dropped and the
+        // query would answer over rows it should not see. Leave those on the sequential scan.
+        if (!get.table_filters.filters.empty()) {
+            return false;
+        }
+
+        auto &duck_table = get.GetTable()->Cast<DuckTableEntry>();
+        auto &table_info = *get.GetTable()->GetStorage().GetDataTableInfo();
+        table_info.BindIndexes(context, TRTreeIndex::TYPE_NAME);
+
+        unique_ptr<TRTreeIndexScanBindData> bind_data = nullptr;
+        vector<reference<Expression>> bindings;
+
+        table_info.GetIndexes().Scan([&](Index &index) -> bool {
+            if (!index.IsBound() || index.GetIndexType() != TRTreeIndex::TYPE_NAME) {
+                return false;
+            }
+            auto &rtree_index = index.Cast<TRTreeIndex>();
+            bindings.clear();
+            if (!rtree_index.TryMatchNearestFunction(*order_expr, bindings)) {
+                return false;
+            }
+
+            // The index stores a box of its first column and of no other, so it bounds no
+            // distance to the rest. A query over a multi-column index keeps the sequential scan.
+            if (rtree_index.GetIndexedColumns().size() != 1) {
+                return false;
+            }
+
+            // The distance has to be measured from the column THIS index was built over: a second
+            // column of the same type would match the shape while the index says nothing about it.
+            const auto indexed_column = rtree_index.GetIndexedColumns()[0];
+            optional_idx indexed_position;
+            for (idx_t i = 0; i < get.GetColumnIds().size(); i++) {
+                if (get.GetColumnIds()[i].GetPrimaryIndex() == indexed_column) {
+                    indexed_position = i;
+                    break;
+                }
+            }
+            if (!indexed_position.IsValid()) {
+                return false;
+            }
+
+            // The operand that is not the column has to be known before the scan opens.
+            Expression *const_expr = nullptr;
+            bool reads_indexed_column = false;
+            for (auto &binding : bindings) {
+                auto &operand = binding.get();
+                if (operand.type == ExpressionType::VALUE_CONSTANT) {
+                    const_expr = &operand;
+                } else if (operand.type == ExpressionType::BOUND_COLUMN_REF) {
+                    const auto &column = operand.Cast<BoundColumnRefExpression>().binding;
+                    reads_indexed_column |= column.table_index == get.table_index &&
+                                            column.column_index == indexed_position.GetIndex();
+                }
+            }
+            if (!const_expr || !reads_indexed_column) {
+                return false;
+            }
+
+            // The matcher already required the box operand's type, so the constant is a box of the
+            // kind the index stores rather than some other blob.
+            const auto &constant = const_expr->Cast<BoundConstantExpression>();
+            auto blob_data = constant.value.GetValueUnsafe<duckdb::string_t>();
+            const size_t box_size = blob_data.GetSize();
+            void *query_box = malloc(box_size);
+            if (!query_box) {
+                return false;
+            }
+            memcpy(query_box, blob_data.GetDataUnsafe(), box_size);
+
+            // The rows the parent skips still have to be found, so the scan answers offset + limit.
+            bind_data = make_uniq<TRTreeIndexScanBindData>(
+                duck_table, rtree_index, top_n.offset + top_n.limit, query_box, box_size,
+                TRTreeIndexScanBindData::NN_OPERATION);
+            return true;
+        });
+
+        if (!bind_data) {
+            return false;
+        }
+
+        // The scan returns the rows it proved nearest and no others, so what it answers is known
+        // exactly and there is no cardinality to estimate.
+        get.estimated_cardinality = bind_data->limit;
+        get.has_estimated_cardinality = true;
+        get.function = TRTreeIndexScanFunction::GetFunction();
+        get.bind_data = std::move(bind_data);
+        return true;
+    }
+
 public:
     static bool TryOptimize(ClientContext &context, unique_ptr<LogicalOperator> &plan) {
         
@@ -222,6 +367,9 @@ public:
                 
             case LogicalOperatorType::LOGICAL_GET:
                 return TryOptimizeLogicalGet(context, plan);
+
+            case LogicalOperatorType::LOGICAL_TOP_N:
+                return TryOptimizeLogicalTopN(context, plan);
                 
             default:
                 return false;
