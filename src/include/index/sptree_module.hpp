@@ -92,6 +92,13 @@ public:
 
     bool TryMatchDistanceFunction(const unique_ptr<Expression> &expr, vector<reference<Expression>> &bindings) const;
 
+    //! Whether the expression is the nearest-neighbour distance between this index's column and a
+    //! box of the kind the index stores. Kept apart from the matcher above: a distance an ORDER BY
+    //! ranks by and a predicate the index answers are different questions, and one matcher
+    //! answering both would admit `|=|` into the filter path, where the scan evaluates no filter
+    //! and would drop it. Returns false for an index whose boxes no `|=|` is defined against.
+    bool TryMatchNearestFunction(Expression &expr, vector<reference<Expression>> &bindings) const;
+
     MeosType GetBboxType() const { return bbox_type_; }
     size_t GetBboxSize() const { return bbox_size_; }
 
@@ -131,6 +138,9 @@ private:
 
     unique_ptr<ExpressionMatcher> function_matcher;
     unique_ptr<ExpressionMatcher> MakeFunctionMatcher() const;
+
+    unique_ptr<ExpressionMatcher> nearest_matcher;
+    unique_ptr<ExpressionMatcher> MakeNearestMatcher() const;
 
     SPTree *sptree_;
     //! Which space-partitioning structure the tree uses, from the `kind` create

@@ -8,6 +8,10 @@ namespace duckdb {
 class Index;
 
 struct TSPTreeIndexScanBindData : public TableFunctionData {
+    //! The operation of a nearest-neighbour scan, which reads the index incrementally and ranks
+    //! its candidates by recomputing the distance; every other operation materialises its hits.
+    static constexpr const char *NN_OPERATION = "|=|";
+
     DuckTableEntry &table;
     TSPTreeIndex &index;
     idx_t limit;

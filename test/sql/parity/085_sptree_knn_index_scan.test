@@ -1,0 +1,242 @@
+# name: test/sql/parity/085_sptree_knn_index_scan.test
+# description: The k nearest trips to a box, read from the space-partitioning index and ranked by
+#              the distance to the trip rather than to the box the index stored for it
+# group: [sql]
+
+require mobilityduck
+
+# The trips run along a line and the box sits off-centre between two of them, so no two trips are
+# the same distance from it. The k nearest are then one set of rows in one order, and an answer
+# that picks different rows cannot pass by tying with the right one.
+statement ok
+CREATE TABLE trips AS
+  SELECT i AS id,
+         format('[POINT({} 0)@2000-01-01, POINT({} 0)@2000-01-02]', i, i+1)::tgeompoint AS g
+  FROM range(1, 200) tbl(i);
+
+# The same rows without an index, so the indexed answer can be compared against the one the
+# sequential scan gives.
+statement ok
+CREATE TABLE trips_noindex AS SELECT * FROM trips;
+
+statement ok
+CREATE INDEX trips_g ON trips USING TSPTREE (g) WITH (kind = 'quadtree');
+
+# ── the index answers the query ────────────────────────────────────────────
+
+query II
+EXPLAIN SELECT id FROM trips
+ORDER BY g |=| 'STBOX X((20.1,-0.5),(20.4,0.5))'::stbox LIMIT 5;
+----
+physical_plan	<REGEX>:.*MOBILITY SPTREE INDEX.*
+
+query I
+SELECT list(id) FROM (
+  SELECT id FROM trips
+  ORDER BY g |=| 'STBOX X((20.1,-0.5),(20.4,0.5))'::stbox LIMIT 5)
+----
+[20, 19, 21, 18, 22]
+
+# It answers what the sequential scan answers.
+
+query I
+SELECT (SELECT list(id) FROM (
+          SELECT id FROM trips
+          ORDER BY g |=| 'STBOX X((20.1,-0.5),(20.4,0.5))'::stbox LIMIT 8))
+     = (SELECT list(id) FROM (
+          SELECT id FROM trips_noindex
+          ORDER BY g |=| 'STBOX X((20.1,-0.5),(20.4,0.5))'::stbox LIMIT 8))
+----
+true
+
+# An offset still has to find the rows it skips, so the scan answers offset + limit of them.
+
+query I
+SELECT list(id) FROM (
+  SELECT id FROM trips
+  ORDER BY g |=| 'STBOX X((20.1,-0.5),(20.4,0.5))'::stbox LIMIT 3 OFFSET 2)
+----
+[21, 18, 22]
+
+# ── the kd-tree answers it too ─────────────────────────────────────────────
+
+# The two kinds divide space differently — the quadtree on every dimension at once, the kd-tree on
+# one at a time — so each carries its own traversal and both are exercised.
+
+statement ok
+CREATE TABLE trips_kd AS SELECT * FROM trips_noindex;
+
+statement ok
+CREATE INDEX trips_kd_g ON trips_kd USING TSPTREE (g) WITH (kind = 'kdtree');
+
+query II
+EXPLAIN SELECT id FROM trips_kd
+ORDER BY g |=| 'STBOX X((20.1,-0.5),(20.4,0.5))'::stbox LIMIT 5;
+----
+physical_plan	<REGEX>:.*MOBILITY SPTREE INDEX.*
+
+query I
+SELECT list(id) FROM (
+  SELECT id FROM trips_kd
+  ORDER BY g |=| 'STBOX X((20.1,-0.5),(20.4,0.5))'::stbox LIMIT 5)
+----
+[20, 19, 21, 18, 22]
+
+# ── the distance is to the trip, not to the box the index stored for it ────
+
+# The index ranks candidates by the distance to the stored bounding box, which only LOWER-BOUNDS
+# the distance to the trip. Trip 1 doubles back, so its box ((2,2),(100,100)) reaches to within
+# 1.41 of the query box while the trip itself stays 70.71 away; trip 2 runs straight, so its box
+# and the trip are both 5.66 away, and trip 3 is 41.01 away either way.
+#
+#   trip   distance to the stored box   distance to the trip
+#   1      1.41  (nearest)              70.71 (farthest)
+#   2      5.66                          5.66 (nearest)
+#   3     41.01                         41.01
+#
+# Reading k candidates and stopping would answer trip 1 — the right shape, the wrong row, and no
+# ordering or cardinality check would catch it. The scan must recompute the distance to the trip
+# and keep reading while the bound stays below the k-th distance it holds.
+
+statement ok
+CREATE TABLE detours AS SELECT * FROM (VALUES
+  (1, '[POINT(2 100)@2000-01-01, POINT(100 2)@2000-01-02]'::tgeompoint),
+  (2, '[POINT(5 5)@2000-01-01, POINT(6 6)@2000-01-02]'::tgeompoint),
+  (3, '[POINT(30 30)@2000-01-01, POINT(31 31)@2000-01-02]'::tgeompoint)
+) t(id, g);
+
+statement ok
+CREATE INDEX detours_g ON detours USING TSPTREE (g);
+
+# The control is only a control if the index answers it.
+
+query II
+EXPLAIN SELECT id FROM detours ORDER BY g |=| 'STBOX X((0,0),(1,1))'::stbox LIMIT 1;
+----
+physical_plan	<REGEX>:.*MOBILITY SPTREE INDEX.*
+
+query I
+SELECT list(id) FROM (
+  SELECT id FROM detours ORDER BY g |=| 'STBOX X((0,0),(1,1))'::stbox LIMIT 1)
+----
+[2]
+
+query I
+SELECT list(id) FROM (
+  SELECT id FROM detours ORDER BY g |=| 'STBOX X((0,0),(1,1))'::stbox LIMIT 2)
+----
+[2, 3]
+
+# ── the distance is measured in the query's own SRID ───────────────────────
+
+# The index stores its boxes with the SRID cleared and probes them that way, but the recheck
+# measures the query's box against the trip as both were written. A fixture in SRID 0 cannot tell
+# the two apart, so this one carries a real SRID.
+
+statement ok
+CREATE TABLE geo AS
+  SELECT i AS id,
+         format('SRID=4326;[POINT({} 0)@2000-01-01, POINT({} 0)@2000-01-02]',
+                i*0.001, (i+1)*0.001)::tgeompoint AS g
+  FROM range(1, 200) tbl(i);
+
+statement ok
+CREATE TABLE geo_noindex AS SELECT * FROM geo;
+
+statement ok
+CREATE INDEX geo_g ON geo USING TSPTREE (g);
+
+query II
+EXPLAIN SELECT id FROM geo
+ORDER BY g |=| 'SRID=4326;STBOX X((0.0201,-0.0005),(0.0204,0.0005))'::stbox LIMIT 5;
+----
+physical_plan	<REGEX>:.*MOBILITY SPTREE INDEX.*
+
+query I
+SELECT (SELECT list(id) FROM (
+          SELECT id FROM geo
+          ORDER BY g |=| 'SRID=4326;STBOX X((0.0201,-0.0005),(0.0204,0.0005))'::stbox LIMIT 5))
+     = (SELECT list(id) FROM (
+          SELECT id FROM geo_noindex
+          ORDER BY g |=| 'SRID=4326;STBOX X((0.0201,-0.0005),(0.0204,0.0005))'::stbox LIMIT 5))
+----
+true
+
+# Two SRIDs are two units of measure, so the distance between them is an error rather than a
+# number the rows can be ranked by.
+
+statement error
+SELECT id FROM geo
+ORDER BY g |=| 'SRID=3857;STBOX X((0.0201,-0.0005),(0.0204,0.0005))'::stbox LIMIT 5;
+----
+Operation on mixed SRID
+
+# ── the shapes the index must decline ──────────────────────────────────────
+
+# A pushed-down filter is not evaluated by the index scan, so a query carrying one stays on the
+# sequential scan rather than answering over rows it should not see.
+
+query II
+EXPLAIN SELECT id FROM trips WHERE id > 100
+ORDER BY g |=| 'STBOX X((20.1,-0.5),(20.4,0.5))'::stbox LIMIT 5;
+----
+physical_plan	<REGEX>:.*SEQ_SCAN.*
+
+query I
+SELECT list(id) FROM (
+  SELECT id FROM trips WHERE id > 100
+  ORDER BY g |=| 'STBOX X((20.1,-0.5),(20.4,0.5))'::stbox LIMIT 3)
+----
+[101, 102, 103]
+
+# A second ordering key decides among the rows the k-th distance ties with, and the k rows the
+# index proves nearest need not be the k that key would have chosen.
+
+query II
+EXPLAIN SELECT id FROM trips
+ORDER BY g |=| 'STBOX X((20.1,-0.5),(20.4,0.5))'::stbox, id LIMIT 5;
+----
+physical_plan	<REGEX>:.*SEQ_SCAN.*
+
+# The farthest rows are not what a nearest-neighbour traversal of the index reaches first.
+
+query II
+EXPLAIN SELECT id FROM trips
+ORDER BY g |=| 'STBOX X((20.1,-0.5),(20.4,0.5))'::stbox DESC LIMIT 5;
+----
+physical_plan	<REGEX>:.*SEQ_SCAN.*
+
+# The distance has to be measured from the column the index was built over.
+
+statement ok
+CREATE TABLE pairs AS SELECT id, g, g AS h FROM trips_noindex;
+
+statement ok
+CREATE INDEX pairs_g ON pairs USING TSPTREE (g);
+
+query II
+EXPLAIN SELECT id FROM pairs
+ORDER BY h |=| 'STBOX X((20.1,-0.5),(20.4,0.5))'::stbox LIMIT 5;
+----
+physical_plan	<REGEX>:.*SEQ_SCAN.*
+
+# An index over a span stores no box a distance can be taken from, so a nearest-neighbour query
+# over one is left on the sequential scan, while the overlap the index does answer keeps working.
+
+statement ok
+CREATE TABLE spans AS
+  SELECT i AS id,
+         format('[2000-01-{} 00:00:00+00, 2000-01-{} 00:00:00+00]', i, i+1)::tstzspan AS t
+  FROM range(1, 20) tbl(i);
+
+statement ok
+CREATE INDEX spans_t ON spans USING TSPTREE (t);
+
+# The bounds are closed, so the two spans that meet the query window only at an endpoint --
+# [Jan 4, Jan 5] and [Jan 7, Jan 8] -- overlap it as well as the two that lie inside it.
+
+query I
+SELECT list(id) FROM (SELECT id FROM spans
+  WHERE t && '[2000-01-05 00:00:00+00, 2000-01-07 00:00:00+00]'::tstzspan ORDER BY id);
+----
+[4, 5, 6, 7]
