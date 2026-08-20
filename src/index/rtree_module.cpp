@@ -242,6 +242,10 @@ void TRTreeIndex::ReplayEntries() {
             const auto entry = segment + ENTRY_SEGMENT_HEADER_SIZE + i * entry_size_;
             row_t row_id;
             memcpy(&row_id, entry, sizeof(row_t));
+            if (row_id == TOMBSTONE_ROW_ID) {
+                // Deleted before this index was written; do not resurrect it.
+                continue;
+            }
             memcpy(box.data(), entry + sizeof(row_t), bbox_size_);
             rtree_insert(rtree_, box.data(), static_cast<int>(row_id));
         }
@@ -278,6 +282,10 @@ void TRTreeIndex::RecordEntry(const void *box, row_t row_id) {
     const auto entry = segment + ENTRY_SEGMENT_HEADER_SIZE + tail_count_ * entry_size_;
     memcpy(entry, &row_id, sizeof(row_t));
     memcpy(entry + sizeof(row_t), box, bbox_size_);
+
+    // DuckDB can hand out a row id again once the old row is vacuumed away, so
+    // an id being indexed now is live regardless of what happened to it before.
+    deleted_.erase(row_id);
 
     tail_count_++;
     memcpy(segment + sizeof(idx_t), &tail_count_, sizeof(idx_t));
@@ -479,10 +487,57 @@ ErrorData TRTreeIndex::BulkConstruct(STBox* boxes, const row_t* row_ids, idx_t c
 }
 
 void TRTreeIndex::Delete(IndexLock &lock, DataChunk &entries, Vector &row_identifiers) {
+    if (entries.size() == 0) {
+        return;
+    }
+    if (row_identifiers.GetVectorType() != VectorType::FLAT_VECTOR) {
+        row_identifiers.Flatten(entries.size());
+    }
+    const auto row_data = FlatVector::GetData<row_t>(row_identifiers);
 
-    throw NotImplementedException("RTree deletion not implemented - consider rebuilding index");
+    // The MEOS tree exposes no removal entry point, so a deleted row cannot be
+    // taken out of the tree we hold. Two things happen instead: the row id is
+    // remembered so that every later search filters it out, and its persisted
+    // entry is tombstoned so that reloading the index does not put it back.
+    unordered_set<row_t> removed;
+    for (idx_t i = 0; i < entries.size(); i++) {
+        if (FlatVector::IsNull(row_identifiers, i)) {
+            continue;
+        }
+        deleted_.insert(row_data[i]);
+        removed.insert(row_data[i]);
+    }
+    if (removed.empty()) {
+        return;
+    }
+    TombstoneEntries(removed);
 }
 
+void TRTreeIndex::TombstoneEntries(const unordered_set<row_t> &removed) {
+    // One pass over the chain per DELETE statement, rather than keeping a row
+    // id to slot map: deletes are far rarer than searches on this index, and
+    // the map would cost memory for every indexed row to speed up the rare one.
+    auto ptr = entry_head_;
+    while (ptr.HasMetadata()) {
+        const auto segment = entry_allocator_->Get(ptr);
+
+        idx_t next;
+        idx_t count;
+        memcpy(&next, segment, sizeof(idx_t));
+        memcpy(&count, segment + sizeof(idx_t), sizeof(idx_t));
+
+        for (idx_t i = 0; i < count; i++) {
+            const auto entry = segment + ENTRY_SEGMENT_HEADER_SIZE + i * entry_size_;
+            row_t row_id;
+            memcpy(&row_id, entry, sizeof(row_t));
+            if (removed.find(row_id) != removed.end()) {
+                const row_t tombstone = TOMBSTONE_ROW_ID;
+                memcpy(entry, &tombstone, sizeof(row_t));
+            }
+        }
+        ptr.Set(next);
+    }
+}
 //------------------------------------------------------------------------------
 // RTree Search Operations
 //------------------------------------------------------------------------------
@@ -632,7 +687,12 @@ vector<row_t> TRTreeIndex::Search(const void *query_box, RTreeSearchOp op) const
         if (count > 0) {
             results.reserve(count);
             for (int i = 0; i < count; i++) {
-                results.push_back(static_cast<row_t>(*(int *) meos_array_get(ids, i)));
+                const auto row_id = static_cast<row_t>(*(int *) meos_array_get(ids, i));
+                // Deleted rows are still in the tree; they are filtered here.
+                if (deleted_.find(row_id) != deleted_.end()) {
+                    continue;
+                }
+                results.push_back(row_id);
             }
         }
     } catch (...) {
@@ -655,6 +715,7 @@ void TRTreeIndex::CommitDrop(IndexLock &index_lock) {
     if (entry_allocator_) {
         entry_allocator_->Reset();
     }
+    deleted_.clear();
     entry_head_.Clear();
     entry_tail_.Clear();
     tail_count_ = 0;

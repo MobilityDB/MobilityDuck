@@ -127,6 +127,10 @@ private:
     void RecordEntry(const void *box, row_t row_id);
     //! Re-inserts all serialized entries into the MEOS tree.
     void ReplayEntries();
+    //! Tombstones the persisted entries of the given row ids.
+    void TombstoneEntries(const unordered_set<row_t> &removed);
+    //! Marks a persisted entry as deleted. Real row ids are never negative.
+    static constexpr row_t TOMBSTONE_ROW_ID = -1;
     //! The part of the serialization that the disk and the WAL path share.
     IndexStorageInfo PrepareSerialize(const case_insensitive_map_t<Value> &options);
 
@@ -144,6 +148,9 @@ private:
     size_t bbox_size_;
     LogicalType column_type_;
 
+    //! Row ids deleted since the tree was built. MEOS has no removal entry
+    //! point, so the row stays in the tree and every search filters it out.
+    unordered_set<row_t> deleted_;
     //! Serialized (bounding box, row id) entries backing the MEOS tree.
     unique_ptr<FixedSizeAllocator> entry_allocator_;
     //! First and last segment of the entry chain.

@@ -346,3 +346,105 @@ SELECT count(*) FROM idx_wal;
 2
 
 # =============================================================================
+# Deletion. MEOS exposes no removal entry point, so a deleted row stays inside
+# the tree: searches filter it out, and its persisted entry is tombstoned so a
+# reload does not resurrect it. Before this, DELETE on an indexed table threw a
+# FatalException that aborted the process.
+# =============================================================================
+
+statement ok
+CREATE TABLE idx_del(id INTEGER, b stbox);
+
+statement ok
+INSERT INTO idx_del VALUES
+  (1, 'STBOX X((0,0),(1,1))'::stbox),
+  (2, 'STBOX X((0,0),(2,2))'::stbox),
+  (3, 'STBOX X((10,10),(11,11))'::stbox);
+
+statement ok
+CREATE INDEX i_del ON idx_del USING TRTREE (b);
+
+statement ok
+CREATE TABLE idx_del_sp(id INTEGER, b stbox);
+
+statement ok
+INSERT INTO idx_del_sp VALUES
+  (1, 'STBOX X((0,0),(1,1))'::stbox),
+  (2, 'STBOX X((0,0),(2,2))'::stbox),
+  (3, 'STBOX X((10,10),(11,11))'::stbox);
+
+statement ok
+CREATE INDEX i_del_sp ON idx_del_sp USING TSPTREE (b);
+
+query I
+SELECT id FROM idx_del WHERE b && 'STBOX X((0,0),(1,1))'::stbox ORDER BY id;
+----
+1
+2
+
+statement ok
+DELETE FROM idx_del WHERE id = 1;
+
+statement ok
+DELETE FROM idx_del_sp WHERE id = 1;
+
+# The deleted row is gone from the index answer, not merely from the table.
+
+query I
+SELECT id FROM idx_del WHERE b && 'STBOX X((0,0),(1,1))'::stbox ORDER BY id;
+----
+2
+
+query I
+SELECT id FROM idx_del_sp WHERE b && 'STBOX X((0,0),(1,1))'::stbox ORDER BY id;
+----
+2
+
+restart
+
+# The tombstone survived: the reloaded tree was rebuilt without the deleted row.
+
+query I
+SELECT id FROM idx_del WHERE b && 'STBOX X((0,0),(1,1))'::stbox ORDER BY id;
+----
+2
+
+query I
+SELECT id FROM idx_del_sp WHERE b && 'STBOX X((0,0),(1,1))'::stbox ORDER BY id;
+----
+2
+
+# The index still agrees with a sequential scan over the surviving rows.
+
+query I
+SELECT count(*) FROM (
+  SELECT id FROM idx_del WHERE b && 'STBOX X((0,0),(2,2))'::stbox
+  EXCEPT
+  SELECT id FROM idx_del WHERE id IN (2, 3) AND id <> 3);
+----
+0
+
+# Deleting every indexed row leaves a queryable, empty index across a restart.
+
+statement ok
+DELETE FROM idx_del;
+
+query I
+SELECT count(*) FROM idx_del WHERE b && 'STBOX X((0,0),(2,2))'::stbox;
+----
+0
+
+restart
+
+query I
+SELECT count(*) FROM idx_del WHERE b && 'STBOX X((0,0),(2,2))'::stbox;
+----
+0
+
+statement ok
+INSERT INTO idx_del VALUES (4, 'STBOX X((0,0),(1,1))'::stbox);
+
+query I
+SELECT id FROM idx_del WHERE b && 'STBOX X((0,0),(1,1))'::stbox;
+----
+4
