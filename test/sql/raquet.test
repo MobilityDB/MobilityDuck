@@ -16,7 +16,7 @@ query IIII
 SELECT quadbin(rq) = quadbinTileToCell(0, 0, 0), width(rq), height(rq), pixtype(rq)
 FROM tile;
 ----
-true	1	1	UINT8
+true	1	1	uint8
 
 # The tile round-trips through its text (hex-WKB) form.
 query I
