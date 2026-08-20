@@ -58,6 +58,16 @@ public:
 
     void VerifyAllocations(IndexLock &lock) override;
 
+    void VerifyBuffers(IndexLock &lock) override;
+
+    //! Writes the index to the database file, and returns the information
+    //! required to read it back.
+    IndexStorageInfo SerializeToDisk(QueryContext context, const case_insensitive_map_t<Value> &options) override;
+
+    //! Returns the index buffers and the information required to read them back,
+    //! for serialization to the WAL.
+    IndexStorageInfo SerializeToWAL(const case_insensitive_map_t<Value> &options) override;
+
     string GetConstraintViolationMessage(VerifyExistenceType verify_type, idx_t failed_index,
                                        DataChunk &input) override;
 
@@ -95,6 +105,35 @@ public:
 
 
 private:
+    //! The MEOS R-tree is an opaque C structure without a (de)serialization
+    //! API, so the index cannot be persisted node by node the way the ART is.
+    //! Instead, we keep the (bounding box, row id) pairs that were fed to the tree
+    //! in a chain of fixed-size segments allocated through DuckDB's own
+    //! FixedSizeAllocator. Those segments are what is written to the database file
+    //! and to the WAL, and the MEOS tree is rebuilt from them on load.
+    //!
+    //! A segment starts with an 8-byte IndexPointer to the next segment (zero
+    //! metadata terminates the chain), followed by an 8-byte entry count, and then
+    //! the entries themselves. One entry is a row id followed by the raw bytes of
+    //! its bounding box.
+    static constexpr idx_t ENTRY_SEGMENT_HEADER_SIZE = 2 * sizeof(idx_t);
+    //! The size we aim for when packing entries into a segment.
+    static constexpr idx_t ENTRY_SEGMENT_TARGET_SIZE = 4096;
+
+    //! Sets up the entry allocator and, if info holds a previously serialized
+    //! chain, replays the entries into the (empty) MEOS tree.
+    void InitEntryStorage(const IndexStorageInfo &info);
+    //! Appends one (bounding box, row id) pair to the segment chain.
+    void RecordEntry(const void *box, row_t row_id);
+    //! Re-inserts all serialized entries into the MEOS tree.
+    void ReplayEntries();
+    //! Tombstones the persisted entries of the given row ids.
+    void TombstoneEntries(const unordered_set<row_t> &removed);
+    //! Marks a persisted entry as deleted. Real row ids are never negative.
+    static constexpr row_t TOMBSTONE_ROW_ID = -1;
+    //! The part of the serialization that the disk and the WAL path share.
+    IndexStorageInfo PrepareSerialize(const case_insensitive_map_t<Value> &options);
+
     case_insensitive_map_t<Value> options_;
 
     unique_ptr<ExpressionMatcher> function_matcher;
@@ -104,11 +143,26 @@ private:
     unique_ptr<ExpressionMatcher> MakeNearestMatcher() const;
 
     RTree *rtree_;
-    void *boxes;
 
     MeosType bbox_type_;
     size_t bbox_size_;
     LogicalType column_type_;
+
+    //! Row ids deleted since the tree was built. MEOS has no removal entry
+    //! point, so the row stays in the tree and every search filters it out.
+    unordered_set<row_t> deleted_;
+    //! Serialized (bounding box, row id) entries backing the MEOS tree.
+    unique_ptr<FixedSizeAllocator> entry_allocator_;
+    //! First and last segment of the entry chain.
+    IndexPointer entry_head_;
+    IndexPointer entry_tail_;
+    //! The size of one entry, of one segment, and the entries per segment.
+    idx_t entry_size_ = 0;
+    idx_t entries_per_segment_ = 0;
+    idx_t segment_size_ = 0;
+    //! The number of entries in the last segment, and in the whole chain.
+    idx_t tail_count_ = 0;
+    idx_t entry_count_ = 0;
 
     size_t current_size_ = 0;
     size_t current_capacity_ = 0;

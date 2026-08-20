@@ -9,6 +9,7 @@
 #include "duckdb/common/serializer/binary_serializer.hpp"
 #include "duckdb/execution/index/fixed_size_allocator.hpp"
 #include "duckdb/storage/table/scan_state.hpp"
+#include "duckdb/storage/table_io_manager.hpp"
 #include "duckdb/main/database.hpp"
 
 #include "duckdb/execution/index/bound_index.hpp"
@@ -125,7 +126,18 @@ TRTreeIndex::TRTreeIndex(const string &name, IndexConstraintType constraint_type
     if (!rtree_) {
         throw InternalException("Failed to create MEOS RTree");
     }
-    
+
+    // Set up the storage backing the tree, and rebuild the tree if this index
+    // is being bound from a persisted database or from the WAL. The destructor
+    // does not run when a constructor throws, so free the tree ourselves.
+    try {
+        InitEntryStorage(info);
+    } catch (...) {
+        rtree_free(rtree_);
+        rtree_ = nullptr;
+        throw;
+    }
+
     function_matcher = MakeFunctionMatcher();
     nearest_matcher = MakeNearestMatcher();
 }
@@ -172,6 +184,145 @@ TRTreeIndex::~TRTreeIndex() {
 
 }
 
+//------------------------------------------------------------------------------
+// Persistence of the indexed (bounding box, row id) entries
+//------------------------------------------------------------------------------
+
+void TRTreeIndex::InitEntryStorage(const IndexStorageInfo &info) {
+    entry_size_ = sizeof(row_t) + bbox_size_;
+    entries_per_segment_ =
+        MaxValue<idx_t>(1, (ENTRY_SEGMENT_TARGET_SIZE - ENTRY_SEGMENT_HEADER_SIZE) / entry_size_);
+    segment_size_ = ENTRY_SEGMENT_HEADER_SIZE + entries_per_segment_ * entry_size_;
+
+    auto &block_manager = table_io_manager.GetIndexBlockManager();
+    entry_allocator_ = make_uniq<FixedSizeAllocator>(segment_size_, block_manager);
+
+    if (!info.IsValid()) {
+        // Either a brand-new index, or one that was serialized while empty.
+        return;
+    }
+    if (info.allocator_infos.size() != 1) {
+        throw SerializationException("TRTREE index \"%s\" holds %llu allocators, expected exactly one", name,
+                                     info.allocator_infos.size());
+    }
+
+    // FixedSizeAllocator::Init adopts the stored segment size without recomputing
+    // the buffer layout, so a mismatch has to be rejected here rather than read
+    // back as garbage. It can only happen if the bounding box layout of the build
+    // that wrote the database differs from the one of this build.
+    if (info.allocator_infos[0].segment_size != segment_size_) {
+        throw SerializationException(
+            "TRTREE index \"%s\" was written with a segment size of %llu, but this build uses %llu", name,
+            info.allocator_infos[0].segment_size, segment_size_);
+    }
+
+    entry_allocator_->Init(info.allocator_infos[0]);
+    entry_head_.Set(info.root);
+    ReplayEntries();
+}
+
+void TRTreeIndex::ReplayEntries() {
+    vector<data_t> box(bbox_size_);
+
+    auto ptr = entry_head_;
+    while (ptr.HasMetadata()) {
+        const auto segment = entry_allocator_->Get(ptr, false);
+
+        idx_t next;
+        idx_t count;
+        memcpy(&next, segment, sizeof(idx_t));
+        memcpy(&count, segment + sizeof(idx_t), sizeof(idx_t));
+
+        if (count > entries_per_segment_) {
+            throw SerializationException("TRTREE index \"%s\" holds a segment with %llu entries, at most %llu fit",
+                                         name, count, entries_per_segment_);
+        }
+
+        for (idx_t i = 0; i < count; i++) {
+            const auto entry = segment + ENTRY_SEGMENT_HEADER_SIZE + i * entry_size_;
+            row_t row_id;
+            memcpy(&row_id, entry, sizeof(row_t));
+            if (row_id == TOMBSTONE_ROW_ID) {
+                // Deleted before this index was written; do not resurrect it.
+                continue;
+            }
+            memcpy(box.data(), entry + sizeof(row_t), bbox_size_);
+            rtree_insert(rtree_, box.data(), static_cast<int>(row_id));
+        }
+
+        entry_count_ += count;
+        entry_tail_ = ptr;
+        tail_count_ = count;
+        ptr.Set(next);
+    }
+}
+
+void TRTreeIndex::RecordEntry(const void *box, row_t row_id) {
+    if (!entry_tail_.HasMetadata() || tail_count_ == entries_per_segment_) {
+        auto ptr = entry_allocator_->New();
+        // The metadata byte is what distinguishes a segment pointer from the
+        // zeroed pointer that terminates the chain.
+        ptr.SetMetadata(1);
+
+        if (entry_tail_.HasMetadata()) {
+            const idx_t next = ptr.Get();
+            memcpy(entry_allocator_->Get(entry_tail_), &next, sizeof(idx_t));
+        } else {
+            entry_head_ = ptr;
+        }
+
+        const idx_t header[2] = {0, 0};
+        memcpy(entry_allocator_->Get(ptr), header, sizeof(header));
+
+        entry_tail_ = ptr;
+        tail_count_ = 0;
+    }
+
+    const auto segment = entry_allocator_->Get(entry_tail_);
+    const auto entry = segment + ENTRY_SEGMENT_HEADER_SIZE + tail_count_ * entry_size_;
+    memcpy(entry, &row_id, sizeof(row_t));
+    memcpy(entry + sizeof(row_t), box, bbox_size_);
+
+    // DuckDB can hand out a row id again once the old row is vacuumed away, so
+    // an id being indexed now is live regardless of what happened to it before.
+    deleted_.erase(row_id);
+
+    tail_count_++;
+    memcpy(segment + sizeof(idx_t), &tail_count_, sizeof(idx_t));
+    entry_count_++;
+}
+
+IndexStorageInfo TRTreeIndex::PrepareSerialize(const case_insensitive_map_t<Value> &options) {
+    IndexStorageInfo info(name);
+    info.root = entry_head_.Get();
+    info.options = options;
+
+    entry_allocator_->RemoveEmptyBuffers();
+    return info;
+}
+
+IndexStorageInfo TRTreeIndex::SerializeToDisk(QueryContext context, const case_insensitive_map_t<Value> &options) {
+    auto info = PrepareSerialize(options);
+
+    // Write the segments to the database file as partial blocks.
+    auto &block_manager = table_io_manager.GetIndexBlockManager();
+    PartialBlockManager partial_block_manager(context, block_manager, PartialBlockType::FULL_CHECKPOINT);
+    entry_allocator_->SerializeBuffers(partial_block_manager);
+    partial_block_manager.FlushPartialBlocks();
+
+    info.allocator_infos.push_back(entry_allocator_->GetInfo());
+    return info;
+}
+
+IndexStorageInfo TRTreeIndex::SerializeToWAL(const case_insensitive_map_t<Value> &options) {
+    auto info = PrepareSerialize(options);
+
+    // Hand the raw buffers over to the WAL.
+    info.buffers.push_back(entry_allocator_->InitSerializationToWAL());
+    info.allocator_infos.push_back(entry_allocator_->GetInfo());
+    return info;
+}
+
 PhysicalOperator &TRTreeIndex::CreatePlan(PlanIndexInput &input) {
     auto &create_index = input.op;
     auto &planner = input.planner;
@@ -207,75 +358,9 @@ PhysicalOperator &TRTreeIndex::CreatePlan(PlanIndexInput &input) {
 // Core RTree Operations using MEOS
 //------------------------------------------------------------------------------
 ErrorData TRTreeIndex::Insert(IndexLock &lock, DataChunk &data, Vector &row_ids) {
-    if (!rtree_) {
-        return ErrorData("RTree not initialized");
-    }
-    
-    if (data.size() == 0 || data.ColumnCount() == 0) {
-        return ErrorData(); 
-    }
-    DataChunk expression_result;
-    expression_result.Initialize(Allocator::DefaultAllocator(), logical_types);
-    
-    ExecuteExpressions(data, expression_result);
-    
-    auto &stbox_vector = expression_result.data[0]; 
-    auto row_data = FlatVector::GetData<row_t>(row_ids);
-
-    if (stbox_vector.GetVectorType() != VectorType::FLAT_VECTOR) {
-        stbox_vector.Flatten(expression_result.size());
-    }
-    
-    auto vector_type = stbox_vector.GetType();
-    
-    boxes = (STBox*)malloc(sizeof(STBox) * expression_result.size());
-    
-    for (idx_t i = 0; i < expression_result.size(); i++) {
-        if (FlatVector::IsNull(stbox_vector, i)) {
-            continue; 
-        }
-        
-        STBox *box = nullptr;
-        
-        if (vector_type.id() == LogicalTypeId::BLOB ) {
-            auto blob_data = FlatVector::GetData<string_t>(stbox_vector)[i];
-
-            std::string s = blob_data.GetString();
-            const uint8_t *stbox_data = reinterpret_cast<const uint8_t*>(blob_data.GetData());
-            size_t stbox_size = blob_data.GetSize();
-                        
-            box = (STBox*)malloc(stbox_size);
-            
-            memcpy(box, stbox_data, stbox_size);
-            
-            int32_t box_srid = stbox_srid(box);
-            if (box_srid != 0) {
-                STBox *normalized_box = stbox_set_srid(box, 0);
-                if (normalized_box) {
-                    free(box);
-                    box = normalized_box;
-                }
-            }
-        } 
-        else { 
-            continue;
-        }
-        
-        if (box == nullptr) {
-            continue;
-        }
-        
-        void* target = (char*)boxes + (i * bbox_size_);
-        memcpy(target, box, bbox_size_);
-        
-        rtree_insert(rtree_, target, static_cast<int64_t>(row_data[i]));
-        
-        free(box);
-    }
-
-    free(boxes);
-    
-    return ErrorData();
+    // Inserting and appending are the same operation for this index: both add
+    // the bounding boxes of the chunk to the tree.
+    return Append(lock, data, row_ids);
 }
 
 ErrorData TRTreeIndex::Append(IndexLock &lock, DataChunk &appended_data, Vector &row_identifiers) {
@@ -294,16 +379,16 @@ void TRTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifier
     if (!rtree_) {
         throw InternalException("RTree not initialized");
     }
-    
+
     if (expression_result.size() == 0 || expression_result.ColumnCount() == 0) {
-        return; 
+        return;
     }
-    
-    auto &vector = expression_result.data[0];
+
+    auto &data_vector = expression_result.data[0];
     auto row_data = FlatVector::GetData<row_t>(row_identifiers);
 
-    if (vector.GetVectorType() != VectorType::FLAT_VECTOR) {
-        vector.Flatten(expression_result.size());
+    if (data_vector.GetVectorType() != VectorType::FLAT_VECTOR) {
+        data_vector.Flatten(expression_result.size());
     }
 
     // True when the indexed column holds a Temporal value (the bbox is derived
@@ -319,70 +404,72 @@ void TRTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifier
         column_type_ == TGeographyTypes::tgeography() ||
         column_type_ == TGeogpointType::tgeogpoint();
 
-    void *boxes = indexes_temporal ? nullptr : malloc(bbox_size_ * expression_result.size());
-    
+    // The bounding box of the row currently being indexed. It is both handed to
+    // the MEOS tree and recorded for persistence, so that reloading the index
+    // rebuilds exactly the tree we have here.
+    //
+    // Sized for the LARGEST bounding box rather than for bbox_size_: MEOS writes
+    // through temporal_set_bbox into a bboxunion big enough for any type, and
+    // sizing to the column's own box would turn a type/tree mismatch into a heap
+    // overflow instead of a wrong answer. Only bbox_size_ bytes are ever handed
+    // to the tree or recorded.
+    vector<data_t> box(MaxValue<idx_t>(sizeof(STBox), MaxValue<idx_t>(sizeof(TBox), sizeof(Span))));
+
     for (idx_t i = 0; i < expression_result.size(); i++) {
-        if (FlatVector::IsNull(vector, i)) {
+        if (FlatVector::IsNull(data_vector, i)) {
             continue;
         }
 
-        if (vector.GetType().id() != LogicalTypeId::BLOB) {
+        if (data_vector.GetType().id() != LogicalTypeId::BLOB) {
             continue;
         }
 
-        auto blob_data = FlatVector::GetData<string_t>(vector)[i];
+        auto blob_data = FlatVector::GetData<string_t>(data_vector)[i];
         const uint8_t *data = reinterpret_cast<const uint8_t *>(blob_data.GetData());
         size_t data_size = blob_data.GetSize();
 
         if (indexes_temporal) {
             const Temporal *temp = reinterpret_cast<const Temporal *>(data);
             if (bbox_type_ == T_STBOX) {
-                STBox *box = tspatial_to_stbox(temp);
-                if (!box) {
+                STBox *stbox = tspatial_to_stbox(temp);
+                if (!stbox) {
                     continue;
                 }
-
-                if (stbox_srid(box) != 0) {
-                    STBox *normalized = stbox_set_srid(box, 0);
+                if (stbox_srid(stbox) != 0) {
+                    STBox *normalized = stbox_set_srid(stbox, 0);
                     if (normalized) {
-                        free(box);
-                        box = normalized;
+                        free(stbox);
+                        stbox = normalized;
                     }
                 }
-                rtree_insert(rtree_, box, static_cast<int>(row_data[i]));
-                free(box);
+                memcpy(box.data(), stbox, bbox_size_);
+                free(stbox);
             } else {
-                rtree_insert_temporal(rtree_, temp, static_cast<int>(row_data[i]));
+                // The bounding box rtree_insert_temporal would have computed.
+                memset(box.data(), 0, bbox_size_);
+                temporal_set_bbox(temp, box.data());
             }
-            continue;
-        }
+        } else {
+            if (data_size != bbox_size_) {
+                continue;
+            }
+            memcpy(box.data(), data, bbox_size_);
 
-        if (data_size != bbox_size_) {
-            continue;
-        }
-
-        void *box = malloc(data_size);
-        memcpy(box, data, data_size);
-
-        if (bbox_type_ == T_STBOX) {
-            STBox *stbox = (STBox *) box;
-            int32_t box_srid = stbox_srid(stbox);
-            if (box_srid != 0) {
-                STBox *normalized_box = stbox_set_srid(stbox, 0);
-                if (normalized_box) {
-                    free(box);
-                    box = normalized_box;
+            if (bbox_type_ == T_STBOX) {
+                STBox *stbox = (STBox *) box.data();
+                if (stbox_srid(stbox) != 0) {
+                    STBox *normalized = stbox_set_srid(stbox, 0);
+                    if (normalized) {
+                        memcpy(box.data(), normalized, bbox_size_);
+                        free(normalized);
+                    }
                 }
             }
         }
 
-        void *target = (char *) boxes + (i * bbox_size_);
-        memcpy(target, box, bbox_size_);
-        rtree_insert(rtree_, target, static_cast<int>(row_data[i]));
-        free(box);
+        rtree_insert(rtree_, box.data(), static_cast<int>(row_data[i]));
+        RecordEntry(box.data(), row_data[i]);
     }
-
-    if (boxes) free(boxes);
 }
 
 
@@ -392,15 +479,64 @@ ErrorData TRTreeIndex::BulkConstruct(STBox* boxes, const row_t* row_ids, idx_t c
     }
 
     for (idx_t i = 0; i < count; i++) {
-        rtree_insert(rtree_, &boxes[i], static_cast<int64_t>(row_ids[i]));
+        rtree_insert(rtree_, &boxes[i], static_cast<int>(row_ids[i]));
+        RecordEntry(&boxes[i], row_ids[i]);
     }
 
     return ErrorData();
 }
 
 void TRTreeIndex::Delete(IndexLock &lock, DataChunk &entries, Vector &row_identifiers) {
+    if (entries.size() == 0) {
+        return;
+    }
+    if (row_identifiers.GetVectorType() != VectorType::FLAT_VECTOR) {
+        row_identifiers.Flatten(entries.size());
+    }
+    const auto row_data = FlatVector::GetData<row_t>(row_identifiers);
 
-    throw NotImplementedException("RTree deletion not implemented - consider rebuilding index");
+    // The MEOS tree exposes no removal entry point, so a deleted row cannot be
+    // taken out of the tree we hold. Two things happen instead: the row id is
+    // remembered so that every later search filters it out, and its persisted
+    // entry is tombstoned so that reloading the index does not put it back.
+    unordered_set<row_t> removed;
+    for (idx_t i = 0; i < entries.size(); i++) {
+        if (FlatVector::IsNull(row_identifiers, i)) {
+            continue;
+        }
+        deleted_.insert(row_data[i]);
+        removed.insert(row_data[i]);
+    }
+    if (removed.empty()) {
+        return;
+    }
+    TombstoneEntries(removed);
+}
+
+void TRTreeIndex::TombstoneEntries(const unordered_set<row_t> &removed) {
+    // One pass over the chain per DELETE statement, rather than keeping a row
+    // id to slot map: deletes are far rarer than searches on this index, and
+    // the map would cost memory for every indexed row to speed up the rare one.
+    auto ptr = entry_head_;
+    while (ptr.HasMetadata()) {
+        const auto segment = entry_allocator_->Get(ptr);
+
+        idx_t next;
+        idx_t count;
+        memcpy(&next, segment, sizeof(idx_t));
+        memcpy(&count, segment + sizeof(idx_t), sizeof(idx_t));
+
+        for (idx_t i = 0; i < count; i++) {
+            const auto entry = segment + ENTRY_SEGMENT_HEADER_SIZE + i * entry_size_;
+            row_t row_id;
+            memcpy(&row_id, entry, sizeof(row_t));
+            if (removed.find(row_id) != removed.end()) {
+                const row_t tombstone = TOMBSTONE_ROW_ID;
+                memcpy(entry, &tombstone, sizeof(row_t));
+            }
+        }
+        ptr.Set(next);
+    }
 }
 //------------------------------------------------------------------------------
 // RTree Search Operations
@@ -551,7 +687,12 @@ vector<row_t> TRTreeIndex::Search(const void *query_box, RTreeSearchOp op) const
         if (count > 0) {
             results.reserve(count);
             for (int i = 0; i < count; i++) {
-                results.push_back(static_cast<row_t>(*(int *) meos_array_get(ids, i)));
+                const auto row_id = static_cast<row_t>(*(int *) meos_array_get(ids, i));
+                // Deleted rows are still in the tree; they are filtered here.
+                if (deleted_.find(row_id) != deleted_.end()) {
+                    continue;
+                }
+                results.push_back(row_id);
             }
         }
     } catch (...) {
@@ -571,6 +712,14 @@ void TRTreeIndex::CommitDrop(IndexLock &index_lock) {
         rtree_free(rtree_);
         rtree_ = nullptr;
     }
+    if (entry_allocator_) {
+        entry_allocator_->Reset();
+    }
+    deleted_.clear();
+    entry_head_.Clear();
+    entry_tail_.Clear();
+    tail_count_ = 0;
+    entry_count_ = 0;
 }
 
 bool TRTreeIndex::MergeIndexes(IndexLock &state, BoundIndex &other_index) {
@@ -593,6 +742,10 @@ string TRTreeIndex::VerifyAndToString(IndexLock &state, const bool only_verify) 
 }
 
 void TRTreeIndex::VerifyAllocations(IndexLock &lock) {}
+
+void TRTreeIndex::VerifyBuffers(IndexLock &lock) {
+    entry_allocator_->VerifyBuffers();
+}
 
 string TRTreeIndex::GetConstraintViolationMessage(VerifyExistenceType verify_type, idx_t failed_index,
                                                DataChunk &input) {

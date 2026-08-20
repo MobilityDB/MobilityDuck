@@ -1,0 +1,450 @@
+# name: test/sql/parity/084_index_persistence.test
+# description: TRTREE and TSPTREE index persistence — a disk-backed database must
+#              be able to create either index (both used to fail at commit time
+#              with "The implementation of this index WAL serialization does not
+#              exist"), and must reopen with an index that still answers queries.
+#
+#              The MEOS trees are opaque, so what is serialized is the list of
+#              (bounding box, row id) entries fed to the tree; the tree is rebuilt
+#              from them when the index is bound after a restart. Both persistence
+#              paths are covered: the checkpoint that runs on a clean shutdown, and
+#              the WAL replay that happens when the shutdown did not checkpoint.
+#
+#              The rest of the index suite runs in memory, where a missing
+#              serialization is never exercised, which is why this went unnoticed.
+# group: [sql]
+
+require mobilityduck
+
+load __TEST_DIR__/index_persistence.db
+
+# =============================================================================
+# Build indexes over a representative column of each bbox flavour: a box, a span,
+# a temporal spatial value (bbox derived per row) and a temporal number.
+# =============================================================================
+
+statement ok
+CREATE TABLE idx_stbox(id INTEGER, b stbox);
+
+statement ok
+INSERT INTO idx_stbox VALUES
+  (1, 'STBOX XT(((0,0),(3,3)),[2000-01-01, 2000-01-03])'::stbox),
+  (2, 'STBOX XT(((10,10),(13,13)),[2001-01-01, 2001-01-03])'::stbox);
+
+statement ok
+CREATE INDEX i_stbox ON idx_stbox USING TRTREE (b);
+
+statement ok
+CREATE TABLE idx_tstzspan(id INTEGER, s tstzspan);
+
+statement ok
+INSERT INTO idx_tstzspan VALUES
+  (1, '[2000-01-01, 2000-01-05]'::tstzspan),
+  (2, '[2001-01-01, 2001-01-05]'::tstzspan);
+
+statement ok
+CREATE INDEX i_tstzspan ON idx_tstzspan USING TRTREE (s);
+
+statement ok
+CREATE TABLE idx_tgeompoint(id INTEGER, t tgeompoint);
+
+statement ok
+INSERT INTO idx_tgeompoint VALUES
+  (1, 'Point(0 0)@2000-01-01'::tgeompoint),
+  (2, 'Point(10 10)@2001-01-01'::tgeompoint);
+
+statement ok
+CREATE INDEX i_tgeompoint ON idx_tgeompoint USING TRTREE (t);
+
+statement ok
+CREATE TABLE idx_tint(id INTEGER, t tint);
+
+statement ok
+INSERT INTO idx_tint VALUES (1, '1@2000-01-01'::tint), (2, '5@2001-01-01'::tint);
+
+statement ok
+CREATE INDEX i_tint ON idx_tint USING TRTREE (t);
+
+# The two space-partitioning kinds are separate structures over the same boxes,
+# and the `kind` create option has to survive the reload along with the entries.
+
+statement ok
+CREATE TABLE idx_quad(id INTEGER, t tgeompoint);
+
+statement ok
+INSERT INTO idx_quad VALUES
+  (1, 'Point(0 0)@2000-01-01'::tgeompoint),
+  (2, 'Point(10 10)@2001-01-01'::tgeompoint);
+
+statement ok
+CREATE INDEX i_quad ON idx_quad USING TSPTREE (t) WITH (kind = 'quadtree');
+
+statement ok
+CREATE TABLE idx_kd(id INTEGER, t tgeompoint);
+
+statement ok
+INSERT INTO idx_kd VALUES
+  (1, 'Point(0 0)@2000-01-01'::tgeompoint),
+  (2, 'Point(10 10)@2001-01-01'::tgeompoint);
+
+statement ok
+CREATE INDEX i_kd ON idx_kd USING TSPTREE (t) WITH (kind = 'kdtree');
+
+query I
+SELECT id FROM idx_stbox WHERE b && 'STBOX XT(((1,1),(2,2)),[2000-01-02, 2000-01-02])'::stbox;
+----
+1
+
+query I
+SELECT id FROM idx_tstzspan WHERE s && '[2000-01-02, 2000-01-03]'::tstzspan;
+----
+1
+
+query I
+SELECT id FROM idx_tgeompoint
+  WHERE t && 'STBOX XT(((-1,-1),(1,1)),[2000-01-01, 2000-01-02])'::stbox;
+----
+1
+
+query I
+SELECT id FROM idx_tint WHERE t && 'TBOXINT XT([0,2], [2000-01-01, 2000-01-02])'::tbox;
+----
+1
+
+query I
+SELECT id FROM idx_quad
+  WHERE t && 'STBOX XT(((-1,-1),(1,1)),[2000-01-01, 2000-01-02])'::stbox;
+----
+1
+
+query I
+SELECT id FROM idx_kd
+  WHERE t && 'STBOX XT(((-1,-1),(1,1)),[2000-01-01, 2000-01-02])'::stbox;
+----
+1
+
+# =============================================================================
+# Reopen the database. The clean shutdown checkpoints the indexes into the
+# database file; binding them again replays the serialized entries.
+# =============================================================================
+
+restart
+
+query II
+SELECT index_name, table_name FROM duckdb_indexes() ORDER BY index_name;
+----
+i_kd	idx_kd
+i_quad	idx_quad
+i_stbox	idx_stbox
+i_tgeompoint	idx_tgeompoint
+i_tint	idx_tint
+i_tstzspan	idx_tstzspan
+
+query I
+SELECT id FROM idx_stbox WHERE b && 'STBOX XT(((1,1),(2,2)),[2000-01-02, 2000-01-02])'::stbox;
+----
+1
+
+query I
+SELECT id FROM idx_tstzspan WHERE s && '[2000-01-02, 2000-01-03]'::tstzspan;
+----
+1
+
+query I
+SELECT id FROM idx_tgeompoint
+  WHERE t && 'STBOX XT(((-1,-1),(1,1)),[2000-01-01, 2000-01-02])'::stbox;
+----
+1
+
+query I
+SELECT id FROM idx_tint WHERE t && 'TBOXINT XT([0,2], [2000-01-01, 2000-01-02])'::tbox;
+----
+1
+
+query I
+SELECT id FROM idx_quad
+  WHERE t && 'STBOX XT(((-1,-1),(1,1)),[2000-01-01, 2000-01-02])'::stbox;
+----
+1
+
+query I
+SELECT id FROM idx_kd
+  WHERE t && 'STBOX XT(((-1,-1),(1,1)),[2000-01-01, 2000-01-02])'::stbox;
+----
+1
+
+# The reloaded indexes are what answer the queries, not a sequential scan.
+
+query II
+EXPLAIN SELECT id FROM idx_stbox
+  WHERE b && 'STBOX XT(((1,1),(2,2)),[2000-01-02, 2000-01-02])'::stbox;
+----
+physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*
+
+query II
+EXPLAIN SELECT id FROM idx_quad
+  WHERE t && 'STBOX XT(((-1,-1),(1,1)),[2000-01-01, 2000-01-02])'::stbox;
+----
+physical_plan	<REGEX>:.*MOBILITY SPTREE INDEX.*
+
+# =============================================================================
+# Rows appended after the restart land in the reloaded index, and survive the
+# next restart together with the entries that were already there.
+# =============================================================================
+
+statement ok
+INSERT INTO idx_stbox VALUES
+  (3, 'STBOX XT(((1,1),(2,2)),[2000-01-02, 2000-01-02])'::stbox);
+
+statement ok
+INSERT INTO idx_quad VALUES (3, 'Point(0.5 0.5)@2000-01-01'::tgeompoint);
+
+query I
+SELECT id FROM idx_stbox WHERE b && 'STBOX XT(((1,1),(2,2)),[2000-01-02, 2000-01-02])'::stbox
+  ORDER BY id;
+----
+1
+3
+
+restart
+
+query I
+SELECT id FROM idx_stbox WHERE b && 'STBOX XT(((1,1),(2,2)),[2000-01-02, 2000-01-02])'::stbox
+  ORDER BY id;
+----
+1
+3
+
+query I
+SELECT id FROM idx_quad
+  WHERE t && 'STBOX XT(((-1,-1),(1,1)),[2000-01-01, 2000-01-02])'::stbox ORDER BY id;
+----
+1
+3
+
+# =============================================================================
+# WAL path: skip the shutdown checkpoint, so the indexes have to be written to
+# and replayed from the write-ahead log instead of the database file.
+# =============================================================================
+
+statement ok
+PRAGMA disable_checkpoint_on_shutdown;
+
+statement ok
+CREATE TABLE idx_wal(id INTEGER, b stbox);
+
+statement ok
+INSERT INTO idx_wal VALUES
+  (1, 'STBOX XT(((0,0),(3,3)),[2000-01-01, 2000-01-03])'::stbox),
+  (2, 'STBOX XT(((10,10),(13,13)),[2001-01-01, 2001-01-03])'::stbox);
+
+statement ok
+CREATE INDEX i_wal ON idx_wal USING TRTREE (b);
+
+statement ok
+CREATE TABLE idx_wal_sp(id INTEGER, b stbox);
+
+statement ok
+INSERT INTO idx_wal_sp VALUES
+  (1, 'STBOX XT(((0,0),(3,3)),[2000-01-01, 2000-01-03])'::stbox),
+  (2, 'STBOX XT(((10,10),(13,13)),[2001-01-01, 2001-01-03])'::stbox);
+
+statement ok
+CREATE INDEX i_wal_sp ON idx_wal_sp USING TSPTREE (b);
+
+restart
+
+query I
+SELECT id FROM idx_wal WHERE b && 'STBOX XT(((1,1),(2,2)),[2000-01-02, 2000-01-02])'::stbox;
+----
+1
+
+query I
+SELECT id FROM idx_wal WHERE b && 'STBOX XT(((11,11),(12,12)),[2001-01-02, 2001-01-02])'::stbox;
+----
+2
+
+query I
+SELECT id FROM idx_wal_sp WHERE b && 'STBOX XT(((1,1),(2,2)),[2000-01-02, 2000-01-02])'::stbox;
+----
+1
+
+query I
+SELECT id FROM idx_wal_sp WHERE b && 'STBOX XT(((11,11),(12,12)),[2001-01-02, 2001-01-02])'::stbox;
+----
+2
+
+# =============================================================================
+# A persisted index spanning more than one segment of the entry chain, so that
+# the chain is actually walked on reload rather than read as a single segment.
+# =============================================================================
+
+statement ok
+CREATE TABLE idx_many AS
+  SELECT i AS id,
+         format('[POINT({} {})@2000-01-01, POINT({} {})@2000-01-02]', i, i, i+1, i+1)::tgeompoint AS g
+  FROM range(1, 2000) tbl(i);
+
+# An unindexed twin, so the index can be held against a sequential scan.
+
+statement ok
+CREATE TABLE idx_many_scan AS SELECT * FROM idx_many;
+
+statement ok
+CREATE INDEX i_many ON idx_many USING TRTREE (g);
+
+restart
+
+# The reloaded index returns exactly the rows the sequential scan returns.
+
+query I
+SELECT count(*) FROM (
+  SELECT id FROM idx_many
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox
+  EXCEPT
+  SELECT id FROM idx_many_scan
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox);
+----
+0
+
+query I
+SELECT count(*) FROM (
+  SELECT id FROM idx_many_scan
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox
+  EXCEPT
+  SELECT id FROM idx_many
+    WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox);
+----
+0
+
+query II
+SELECT count(*), min(id) FROM idx_many
+  WHERE g && 'STBOX XT(((10,10),(40,40)),[2000-01-01, 2000-01-03])'::stbox;
+----
+32	9
+
+# =============================================================================
+# Dropping a persisted index releases its storage and leaves the table usable.
+# =============================================================================
+
+statement ok
+DROP INDEX i_wal;
+
+statement ok
+DROP INDEX i_wal_sp;
+
+restart
+
+query I
+SELECT count(*) FROM duckdb_indexes() WHERE index_name IN ('i_wal', 'i_wal_sp');
+----
+0
+
+query I
+SELECT count(*) FROM idx_wal;
+----
+2
+
+# =============================================================================
+# Deletion. MEOS exposes no removal entry point, so a deleted row stays inside
+# the tree: searches filter it out, and its persisted entry is tombstoned so a
+# reload does not resurrect it. Before this, DELETE on an indexed table threw a
+# FatalException that aborted the process.
+# =============================================================================
+
+statement ok
+CREATE TABLE idx_del(id INTEGER, b stbox);
+
+statement ok
+INSERT INTO idx_del VALUES
+  (1, 'STBOX X((0,0),(1,1))'::stbox),
+  (2, 'STBOX X((0,0),(2,2))'::stbox),
+  (3, 'STBOX X((10,10),(11,11))'::stbox);
+
+statement ok
+CREATE INDEX i_del ON idx_del USING TRTREE (b);
+
+statement ok
+CREATE TABLE idx_del_sp(id INTEGER, b stbox);
+
+statement ok
+INSERT INTO idx_del_sp VALUES
+  (1, 'STBOX X((0,0),(1,1))'::stbox),
+  (2, 'STBOX X((0,0),(2,2))'::stbox),
+  (3, 'STBOX X((10,10),(11,11))'::stbox);
+
+statement ok
+CREATE INDEX i_del_sp ON idx_del_sp USING TSPTREE (b);
+
+query I
+SELECT id FROM idx_del WHERE b && 'STBOX X((0,0),(1,1))'::stbox ORDER BY id;
+----
+1
+2
+
+statement ok
+DELETE FROM idx_del WHERE id = 1;
+
+statement ok
+DELETE FROM idx_del_sp WHERE id = 1;
+
+# The deleted row is gone from the index answer, not merely from the table.
+
+query I
+SELECT id FROM idx_del WHERE b && 'STBOX X((0,0),(1,1))'::stbox ORDER BY id;
+----
+2
+
+query I
+SELECT id FROM idx_del_sp WHERE b && 'STBOX X((0,0),(1,1))'::stbox ORDER BY id;
+----
+2
+
+restart
+
+# The tombstone survived: the reloaded tree was rebuilt without the deleted row.
+
+query I
+SELECT id FROM idx_del WHERE b && 'STBOX X((0,0),(1,1))'::stbox ORDER BY id;
+----
+2
+
+query I
+SELECT id FROM idx_del_sp WHERE b && 'STBOX X((0,0),(1,1))'::stbox ORDER BY id;
+----
+2
+
+# The index still agrees with a sequential scan over the surviving rows.
+
+query I
+SELECT count(*) FROM (
+  SELECT id FROM idx_del WHERE b && 'STBOX X((0,0),(2,2))'::stbox
+  EXCEPT
+  SELECT id FROM idx_del WHERE id IN (2, 3) AND id <> 3);
+----
+0
+
+# Deleting every indexed row leaves a queryable, empty index across a restart.
+
+statement ok
+DELETE FROM idx_del;
+
+query I
+SELECT count(*) FROM idx_del WHERE b && 'STBOX X((0,0),(2,2))'::stbox;
+----
+0
+
+restart
+
+query I
+SELECT count(*) FROM idx_del WHERE b && 'STBOX X((0,0),(2,2))'::stbox;
+----
+0
+
+statement ok
+INSERT INTO idx_del VALUES (4, 'STBOX X((0,0),(1,1))'::stbox);
+
+query I
+SELECT id FROM idx_del WHERE b && 'STBOX X((0,0),(1,1))'::stbox;
+----
+4
