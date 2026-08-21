@@ -247,7 +247,7 @@ void TRTreeIndex::ReplayEntries() {
                 continue;
             }
             memcpy(box.data(), entry + sizeof(row_t), bbox_size_);
-            rtree_insert(rtree_, box.data(), static_cast<int>(row_id));
+            rtree_insert(rtree_, box.data(), row_id);
         }
 
         entry_count_ += count;
@@ -467,7 +467,7 @@ void TRTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifier
             }
         }
 
-        rtree_insert(rtree_, box.data(), static_cast<int>(row_data[i]));
+        rtree_insert(rtree_, box.data(), row_data[i]);
         RecordEntry(box.data(), row_data[i]);
     }
 }
@@ -479,7 +479,7 @@ ErrorData TRTreeIndex::BulkConstruct(STBox* boxes, const row_t* row_ids, idx_t c
     }
 
     for (idx_t i = 0; i < count; i++) {
-        rtree_insert(rtree_, &boxes[i], static_cast<int>(row_ids[i]));
+        rtree_insert(rtree_, &boxes[i], row_ids[i]);
         RecordEntry(&boxes[i], row_ids[i]);
     }
 
@@ -662,7 +662,7 @@ bool TRTreeIndex::NNScanNext(IndexScanState &state, row_t &row_id, double &lower
     if (!nstate.cursor) {
         return false;
     }
-    int id = 0;
+    int64 id = 0;
     double distance = 0;
     if (!rtree_nn_cursor_next(nstate.cursor, &id, &distance)) {
         return false;
@@ -679,7 +679,7 @@ vector<row_t> TRTreeIndex::Search(const void *query_box, RTreeSearchOp op) const
         return results;
     }
 
-    MeosArray *ids = meos_array_create(sizeof(int));
+    MeosArray *ids = meos_array_create(sizeof(int64));
 
     try {
         int count = rtree_search(rtree_, op, query_box, ids);
@@ -687,7 +687,7 @@ vector<row_t> TRTreeIndex::Search(const void *query_box, RTreeSearchOp op) const
         if (count > 0) {
             results.reserve(count);
             for (int i = 0; i < count; i++) {
-                const auto row_id = static_cast<row_t>(*(int *) meos_array_get(ids, i));
+                const auto row_id = static_cast<row_t>(*(int64 *) meos_array_get(ids, i));
                 // Deleted rows are still in the tree; they are filtered here.
                 if (deleted_.find(row_id) != deleted_.end()) {
                     continue;
