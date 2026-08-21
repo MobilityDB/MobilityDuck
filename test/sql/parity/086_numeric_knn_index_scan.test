@@ -1,0 +1,127 @@
+# name: test/sql/parity/086_numeric_knn_index_scan.test
+# description: The k nearest temporal numbers to a temporal box, read from the index and ranked by
+#              the distance to the value rather than to the box the index stored for it
+# group: [sql]
+
+require mobilityduck
+
+# The spatial fixtures cover an index whose boxes are STBoxes. An index over a temporal number
+# stores TBoxes instead, and `|=|` against one reaches a different arm of both the matcher and the
+# exact-distance dispatch, so it carries its own fixture.
+
+# ── a temporal float, whose span type matches a TBOX literal ───────────────
+
+statement ok
+CREATE TABLE f AS
+  SELECT i AS id,
+         format('[{}.5@2000-01-01, {}.5@2000-01-02]', i, i+1)::tfloat AS v
+  FROM range(1, 50) tbl(i);
+
+statement ok
+CREATE TABLE f_noindex AS SELECT * FROM f;
+
+statement ok
+CREATE INDEX f_v ON f USING TRTREE (v);
+
+query II
+EXPLAIN SELECT id FROM f
+ORDER BY v |=| 'TBOX XT([30.0,30.2],[2000-01-01,2000-01-02])'::tbox LIMIT 5;
+----
+physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*
+
+# The index answers what the sequential scan answers.
+
+query I
+SELECT (SELECT list(id) FROM (
+          SELECT id FROM f
+          ORDER BY v |=| 'TBOX XT([30.0,30.2],[2000-01-01,2000-01-02])'::tbox LIMIT 5))
+     = (SELECT list(id) FROM (
+          SELECT id FROM f_noindex
+          ORDER BY v |=| 'TBOX XT([30.0,30.2],[2000-01-01,2000-01-02])'::tbox LIMIT 5))
+----
+true
+
+# ── a temporal integer, whose span type is the integer one ─────────────────
+
+# A bare TBOX literal carries a float span whatever its bounds are written as, so a temporal
+# integer needs the TBOXINT form; the two span types are two different value domains and comparing
+# across them is an error rather than a number, exactly as mixing SRIDs is.
+
+statement ok
+CREATE TABLE n AS
+  SELECT i AS id,
+         format('[{}@2000-01-01, {}@2000-01-02]', i, i+1)::tint AS v
+  FROM range(1, 50) tbl(i);
+
+statement ok
+CREATE TABLE n_noindex AS SELECT * FROM n;
+
+statement ok
+CREATE INDEX n_v ON n USING TRTREE (v);
+
+query II
+EXPLAIN SELECT id FROM n
+ORDER BY v |=| 'TBOXINT XT([30,31],[2000-01-01,2000-01-02])'::tbox LIMIT 5;
+----
+physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*
+
+query I
+SELECT (SELECT list(id) FROM (
+          SELECT id FROM n
+          ORDER BY v |=| 'TBOXINT XT([30,31],[2000-01-01,2000-01-02])'::tbox LIMIT 5))
+     = (SELECT list(id) FROM (
+          SELECT id FROM n_noindex
+          ORDER BY v |=| 'TBOXINT XT([30,31],[2000-01-01,2000-01-02])'::tbox LIMIT 5))
+----
+true
+
+# A temporal integer against a float-spanned box is two value domains, so it is an error.
+
+statement error
+SELECT id FROM n
+ORDER BY v |=| 'TBOX XT([30.0,31.0],[2000-01-01,2000-01-02])'::tbox LIMIT 5;
+----
+Operation on mixed span types
+
+# ── the space-partitioning index answers it too ────────────────────────────
+
+statement ok
+CREATE TABLE fsp AS SELECT * FROM f_noindex;
+
+statement ok
+CREATE INDEX fsp_v ON fsp USING TSPTREE (v);
+
+query II
+EXPLAIN SELECT id FROM fsp
+ORDER BY v |=| 'TBOX XT([30.0,30.2],[2000-01-01,2000-01-02])'::tbox LIMIT 5;
+----
+physical_plan	<REGEX>:.*MOBILITY SPTREE INDEX.*
+
+query I
+SELECT (SELECT list(id) FROM (
+          SELECT id FROM fsp
+          ORDER BY v |=| 'TBOX XT([30.0,30.2],[2000-01-01,2000-01-02])'::tbox LIMIT 5))
+     = (SELECT list(id) FROM (
+          SELECT id FROM f_noindex
+          ORDER BY v |=| 'TBOX XT([30.0,30.2],[2000-01-01,2000-01-02])'::tbox LIMIT 5))
+----
+true
+
+# ── the shapes the index must decline, on this arm too ─────────────────────
+
+# A pushed-down filter is not evaluated by the index scan, so a query carrying one stays on the
+# sequential scan rather than answering over rows it should not see.
+
+query II
+EXPLAIN SELECT id FROM f WHERE id > 25
+ORDER BY v |=| 'TBOX XT([30.0,30.2],[2000-01-01,2000-01-02])'::tbox LIMIT 5;
+----
+physical_plan	<REGEX>:.*SEQ_SCAN.*
+
+# The farthest rows are not what a nearest-neighbour traversal reaches first.
+
+query II
+EXPLAIN SELECT id FROM f
+ORDER BY v |=| 'TBOX XT([30.0,30.2],[2000-01-01,2000-01-02])'::tbox DESC LIMIT 5;
+----
+physical_plan	<REGEX>:.*SEQ_SCAN.*
