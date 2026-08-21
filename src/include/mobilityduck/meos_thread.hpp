@@ -1,31 +1,40 @@
 #pragma once
 
+#include <sys/stat.h>
+
 extern "C" {
 #include <meos.h>
 }
 
-// Defined in mobilityduck_extension.cpp. Converts MEOS errors into DuckDB
-// exceptions instead of the process-exiting default handler.
-extern "C" void MobilityduckMeosErrorHandler(int errlevel, int errcode, const char *errmsg);
-
 namespace duckdb {
 
-// MEOS keeps the session timezone, errno, PROJ context and the RNGs in
-// thread-local storage; each thread that calls MEOS must initialise it
-// before its first call (see meos.h, "Multithreading"). DuckDB runs
-// scalar, cast and aggregate bodies on TaskScheduler worker threads, so a
-// one-shot init on the load thread leaves workers with a NULL
-// session_timezone and pg_next_dst_boundary segfaults on the first
-// timestamp parse. This runs the per-thread init exactly once per thread.
+// MEOS keeps the session timezone, the collation cache, errno, the PROJ and
+// GEOS contexts and the RNGs in thread-local storage, so a thread that calls
+// MEOS initialises its own caches before its first call (see meos.h,
+// "Multithreading"). DuckDB runs scalar, cast and aggregate bodies on
+// TaskScheduler worker threads, so a one-shot init on the load thread leaves
+// workers with a NULL session_timezone and pg_next_dst_boundary segfaults on
+// the first timestamp parse.
 //
-// meos_initialize() resets the process-global error handler to the
-// exit-on-error default, so MobilityduckMeosErrorHandler is re-installed
-// here; the store is an idempotent atomic write of the same pointer.
+// Only the thread-local caches belong here. meos_initialize() is process-wide
+// setup — the allocator and the error handler — and LoadInternal runs it once
+// under a std::call_once. Repeating it per thread would reset the
+// process-global error handler to the exit-on-error default, so an error
+// raised on any other thread during that window would print a bare message and
+// end the process rather than reach the handler that turns it into a DuckDB
+// exception. The PROJ, GEOS and GSL contexts are thread-local statics inside
+// MEOS that it creates lazily on first use, so a caller neither can nor needs
+// to initialise them.
 inline void EnsureMeosThreadInitialized() {
 	static thread_local const bool meos_thread_ready = []() {
-		meos_initialize();
-		meos_initialize_error_handler(&MobilityduckMeosErrorHandler);
-		meos_initialize_timezone("Europe/Brussels");
+		// The timezone init reads the IANA database, which minimal images
+		// (Alpine/musl, edge devices) do not ship; without it MEOS's pgtz code
+		// fails on opendir, so the thread keeps the default zone instead.
+		struct stat tz_st {};
+		if (stat("/usr/share/zoneinfo", &tz_st) == 0 && (tz_st.st_mode & S_IFDIR)) {
+			meos_initialize_timezone("Europe/Brussels");
+		}
+		meos_initialize_collation();
 		return true;
 	}();
 	(void) meos_thread_ready;
