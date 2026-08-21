@@ -12,7 +12,12 @@
 #include "duckdb/catalog/catalog_entry/duck_index_entry.hpp"
 #include "duckdb/storage/data_table.hpp"
 
+#include <limits>
+#include <queue>
+#include <utility>
+
 #include "index/sptree_module.hpp"
+#include "temporal/temporal_blob.hpp"
 #include "index/sptree_index_scan.hpp"
 
 namespace duckdb {
@@ -34,7 +39,81 @@ struct SPTreeIndexScanGlobalState : public GlobalTableFunctionState {
 
 	unique_ptr<IndexScanState> index_state;
 	Vector row_ids = Vector(LogicalType::ROW_TYPE);
+
+	//! A nearest-neighbour scan ranks its candidates before it can emit any of them, so the rows
+	//! are gathered once and then handed out in chunks.
+	vector<row_t> nearest;
+	idx_t nearest_position = 0;
+	bool nearest_gathered = false;
 };
+
+//! The distance the query orders by, measured against the value a row holds rather than the box
+//! the index stored for it. The index knows which of the two it built, and every `|=|` overload
+//! over a box funnels into one of them — the temporal value carries its own type.
+static double ExactDistance(MeosType bbox_type, const string_t &value, const void *query_box) {
+	Temporal *temp = BlobToTemporal(value);
+	if (!temp) {
+		return std::numeric_limits<double>::max();
+	}
+	const double distance =
+	    bbox_type == T_TBOX
+	        ? nad_tnumber_tbox(temp, static_cast<const TBox *>(query_box))
+	        : nad_tgeo_stbox(temp, static_cast<const STBox *>(query_box));
+	free(temp);
+	return distance;
+}
+
+//! The k nearest rows, in order. The cursor yields candidates by a bound on the distance, so a
+//! candidate is ranked by recomputing the distance to the value the row holds, and reading stops
+//! once the bound passes the k-th distance held — every unread candidate is at least that far.
+static void GatherNearest(ClientContext &context, const TSPTreeIndexScanBindData &bind_data,
+                          SPTreeIndexScanGlobalState &state) {
+	auto &sptree_index = bind_data.index.Cast<TSPTreeIndex>();
+	auto &transaction = DuckTransaction::Get(context, bind_data.table.catalog);
+	const idx_t k = bind_data.limit;
+
+	// The recheck reads the INDEXED column, which the query need not select, so it fetches on its
+	// own column list rather than through the plan's projection.
+	const auto indexed_column = sptree_index.GetColumnIds()[0];
+	vector<StorageIndex> fetch_columns;
+	fetch_columns.emplace_back(
+	    bind_data.table.GetColumn(LogicalIndex(indexed_column)).StorageOid());
+	DataChunk value_chunk;
+	value_chunk.Initialize(Allocator::Get(context),
+	                       {bind_data.table.GetColumn(LogicalIndex(indexed_column)).Type()});
+	Vector candidate_ids(LogicalType::ROW_TYPE);
+	ColumnFetchState fetch_state;
+
+	// Ordered worst-first, so the k-th distance held is always at the front.
+	std::priority_queue<std::pair<double, row_t>> best;
+	row_t row_id = 0;
+	double bound = 0;
+	while (k > 0 && sptree_index.NNScanNext(*state.index_state, row_id, bound)) {
+		if (best.size() >= k && bound >= best.top().first) {
+			break;
+		}
+		FlatVector::GetData<row_t>(candidate_ids)[0] = row_id;
+		value_chunk.Reset();
+		bind_data.table.GetStorage().Fetch(transaction, value_chunk, fetch_columns, candidate_ids, 1,
+		                                   fetch_state);
+		if (value_chunk.size() == 0 || FlatVector::IsNull(value_chunk.data[0], 0)) {
+			continue;
+		}
+		const auto value = FlatVector::GetData<string_t>(value_chunk.data[0])[0];
+		best.emplace(ExactDistance(sptree_index.GetBboxType(), value, bind_data.query_box.get()),
+		             row_id);
+		if (best.size() > k) {
+			best.pop();
+		}
+	}
+
+	state.nearest.resize(best.size());
+	for (idx_t i = best.size(); i > 0; i--) {
+		state.nearest[i - 1] = best.top().second;
+		best.pop();
+	}
+	state.nearest_gathered = true;
+}
 
 static unique_ptr<GlobalTableFunctionState> SPTreeIndexScanInitGlobal(ClientContext &context,
                                                                     TableFunctionInitInput &input) {												
@@ -82,11 +161,13 @@ static unique_ptr<GlobalTableFunctionState> SPTreeIndexScanInitGlobal(ClientCont
 
 	// Initialize index scan - works for both stbox and tstzspan
 	if (bind_data.query_box) {
-        result->index_state = bind_data.index.Cast<TSPTreeIndex>().InitializeScan(
-            bind_data.query_box.get(), 
-            bind_data.query_box_size,
-			bind_data.operation
-        );
+        auto &sptree_index = bind_data.index.Cast<TSPTreeIndex>();
+        // A nearest-neighbour query reads the tree incrementally; every other operation
+        // materialises its hits up front.
+        result->index_state = bind_data.operation == TSPTreeIndexScanBindData::NN_OPERATION
+            ? sptree_index.InitializeNNScan(bind_data.query_box.get(), bind_data.query_box_size)
+            : sptree_index.InitializeScan(bind_data.query_box.get(), bind_data.query_box_size,
+                                          bind_data.operation);
     }
     
 	return std::move(result);
@@ -103,7 +184,18 @@ static void SPTreeIndexScanExecute(ClientContext &context, TableFunctionInput &d
 
 	auto &transaction = DuckTransaction::Get(context, bind_data.table.catalog);
 
-	auto row_count = bind_data.index.Cast<TSPTreeIndex>().Scan(*state.index_state, state.row_ids);
+	idx_t row_count = 0;
+	if (bind_data.operation == TSPTreeIndexScanBindData::NN_OPERATION) {
+		if (!state.nearest_gathered) {
+			GatherNearest(context, bind_data, state);
+		}
+		const auto row_ids = FlatVector::GetData<row_t>(state.row_ids);
+		while (state.nearest_position < state.nearest.size() && row_count < STANDARD_VECTOR_SIZE) {
+			row_ids[row_count++] = state.nearest[state.nearest_position++];
+		}
+	} else {
+		row_count = bind_data.index.Cast<TSPTreeIndex>().Scan(*state.index_state, state.row_ids);
+	}
 
 	if (row_count == 0) {
 		output.SetCardinality(0);
