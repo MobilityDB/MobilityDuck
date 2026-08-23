@@ -223,7 +223,11 @@ void TRTreeIndex::InitEntryStorage(const IndexStorageInfo &info) {
 }
 
 void TRTreeIndex::ReplayEntries() {
-    vector<data_t> box(bbox_size_);
+    // The persisted entries reach the tree in one call. A bulk load packs the nodes
+    // fuller than repeated insertion does, so the first query after a reopen answers
+    // from tighter boxes as well as arriving sooner.
+    vector<data_t> boxes;
+    vector<int64_t> ids;
 
     auto ptr = entry_head_;
     while (ptr.HasMetadata()) {
@@ -247,14 +251,28 @@ void TRTreeIndex::ReplayEntries() {
                 // Deleted before this index was written; do not resurrect it.
                 continue;
             }
-            memcpy(box.data(), entry + sizeof(row_t), bbox_size_);
-            rtree_insert(rtree_, box.data(), row_id);
+            const auto offset = boxes.size();
+            boxes.resize(offset + bbox_size_);
+            memcpy(boxes.data() + offset, entry + sizeof(row_t), bbox_size_);
+            ids.push_back(row_id);
         }
 
         entry_count_ += count;
         entry_tail_ = ptr;
         tail_count_ = count;
         ptr.Set(next);
+    }
+
+    if (ids.empty()) {
+        return;
+    }
+    if (ids.size() > static_cast<idx_t>(NumericLimits<int32_t>::Maximum())) {
+        throw SerializationException("TRTREE index \"%s\" holds %llu entries, at most %d load at once",
+                                     name, ids.size(), NumericLimits<int32_t>::Maximum());
+    }
+    if (!rtree_load(rtree_, boxes.data(), ids.data(), static_cast<int>(ids.size()))) {
+        throw SerializationException("TRTREE index \"%s\" did not load its %llu persisted entries", name,
+                                     ids.size());
     }
 }
 
