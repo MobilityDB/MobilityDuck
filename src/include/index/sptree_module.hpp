@@ -73,7 +73,7 @@ public:
 
     unique_ptr<IndexScanState> InitializeScan(const void* query_blob, size_t blob_size, const string &operation) const;
 
-    vector<row_t> Search(const void *query_box, RTreeSearchOp op) const;
+    vector<row_t> Search(const void *query_box, IndexSearchOp op) const;
 
     //! Open a nearest-neighbour scan of the index around `query_blob`. Unlike InitializeScan,
     //! which materialises every hit up front, this reads the tree incrementally: the caller

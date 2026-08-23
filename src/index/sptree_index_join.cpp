@@ -146,7 +146,7 @@ OperatorResultType PhysicalSPTreeIndexJoin::Execute(ExecutionContext &context, D
 						box = normalized;
 					}
 				}
-				state.matches = index.Search(box, RTREE_OVERLAPS);
+				state.matches = index.Search(box, INDEX_OVERLAPS);
 				free(box);
 			} else {
 				/* An stbox column already holds the box, but the index stores its
@@ -160,10 +160,10 @@ OperatorResultType PhysicalSPTreeIndexJoin::Execute(ExecutionContext &context, D
 						state.probe_row++;
 						continue;
 					}
-					state.matches = index.Search(normalized, RTREE_OVERLAPS);
+					state.matches = index.Search(normalized, INDEX_OVERLAPS);
 					free(normalized);
 				} else {
-					state.matches = index.Search(probe_box, RTREE_OVERLAPS);
+					state.matches = index.Search(probe_box, INDEX_OVERLAPS);
 				}
 			}
 			if (state.matches.empty()) {
