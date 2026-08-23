@@ -1,0 +1,137 @@
+# name: test/sql/parity/094_index_containment.test
+# description: A spatial index answers containment, and reads it in the operand order it is written
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+CREATE TABLE boxes(id INTEGER, t tgeompoint);
+
+statement ok
+INSERT INTO boxes VALUES
+  (1, '[POINT(0 0)@2000-01-01, POINT(1 1)@2000-01-02]'::tgeompoint),
+  (2, '[POINT(5 5)@2000-01-03, POINT(6 6)@2000-01-04]'::tgeompoint),
+  (3, '[POINT(0 0)@2000-01-01, POINT(10 10)@2000-01-10]'::tgeompoint);
+
+statement ok
+CREATE TABLE boxes_noindex AS SELECT * FROM boxes;
+
+statement ok
+CREATE INDEX i_boxes ON boxes USING TRTREE (t);
+
+# The index compares whole extents, so it answers containment as exactly as it answers overlap.
+# Both directions of the operator are asked for here against a query box that CONTAINS two rows
+# and is contained by none: an index that read the operand order the other way round would answer
+# the one count where the other belongs.
+
+query II
+EXPLAIN SELECT count(*) FROM boxes
+  WHERE t <@ 'STBOX XT(((-1,-1),(7,7)),[1999-12-31, 2000-01-05])'::stbox;
+----
+physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*
+
+query I
+SELECT count(*) FROM boxes
+  WHERE t <@ 'STBOX XT(((-1,-1),(7,7)),[1999-12-31, 2000-01-05])'::stbox;
+----
+2
+
+query I
+SELECT count(*) FROM boxes
+  WHERE t @> 'STBOX XT(((-1,-1),(7,7)),[1999-12-31, 2000-01-05])'::stbox;
+----
+0
+
+# The same two predicates with the query on the left. `@>` and `<@` exchange places there, which
+# is what the index has to read off the operand order rather than off the operator name alone.
+
+query II
+EXPLAIN SELECT count(*) FROM boxes
+  WHERE 'STBOX XT(((-1,-1),(7,7)),[1999-12-31, 2000-01-05])'::stbox @> t;
+----
+physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*
+
+query I
+SELECT count(*) FROM boxes
+  WHERE 'STBOX XT(((-1,-1),(7,7)),[1999-12-31, 2000-01-05])'::stbox @> t;
+----
+2
+
+query I
+SELECT count(*) FROM boxes
+  WHERE 'STBOX XT(((-1,-1),(7,7)),[1999-12-31, 2000-01-05])'::stbox <@ t;
+----
+0
+
+# A query box small enough to sit inside two of the rows, so that the counts of the two directions
+# are exchanged and neither predicate can be answered by accident.
+
+query I
+SELECT count(*) FROM boxes
+  WHERE t @> 'STBOX XT(((0.2,0.2),(0.5,0.5)),[2000-01-01 06:00, 2000-01-01 12:00])'::stbox;
+----
+2
+
+query I
+SELECT count(*) FROM boxes
+  WHERE t <@ 'STBOX XT(((0.2,0.2),(0.5,0.5)),[2000-01-01 06:00, 2000-01-01 12:00])'::stbox;
+----
+0
+
+# Every one of them answers what a scan of the same rows answers.
+
+query I
+SELECT (SELECT count(*) FROM boxes
+          WHERE t <@ 'STBOX XT(((-1,-1),(7,7)),[1999-12-31, 2000-01-05])'::stbox)
+     = (SELECT count(*) FROM boxes_noindex
+          WHERE t <@ 'STBOX XT(((-1,-1),(7,7)),[1999-12-31, 2000-01-05])'::stbox)
+   AND (SELECT count(*) FROM boxes
+          WHERE 'STBOX XT(((-1,-1),(7,7)),[1999-12-31, 2000-01-05])'::stbox @> t)
+     = (SELECT count(*) FROM boxes_noindex
+          WHERE 'STBOX XT(((-1,-1),(7,7)),[1999-12-31, 2000-01-05])'::stbox @> t)
+   AND (SELECT count(*) FROM boxes
+          WHERE t @> 'STBOX XT(((0.2,0.2),(0.5,0.5)),[2000-01-01 06:00, 2000-01-01 12:00])'::stbox)
+     = (SELECT count(*) FROM boxes_noindex
+          WHERE t @> 'STBOX XT(((0.2,0.2),(0.5,0.5)),[2000-01-01 06:00, 2000-01-01 12:00])'::stbox);
+----
+true
+
+# The rows themselves, so that a count agreeing for the wrong reason is visible.
+
+query I
+SELECT id FROM boxes
+  WHERE t <@ 'STBOX XT(((-1,-1),(7,7)),[1999-12-31, 2000-01-05])'::stbox ORDER BY id;
+----
+1
+2
+
+query I
+SELECT id FROM boxes
+  WHERE t @> 'STBOX XT(((0.2,0.2),(0.5,0.5)),[2000-01-01 06:00, 2000-01-01 12:00])'::stbox
+  ORDER BY id;
+----
+1
+3
+
+# The space-partitioning index answers the same operators from the same table of operations.
+
+statement ok
+CREATE TABLE sboxes(id INTEGER, t tgeompoint);
+
+statement ok
+INSERT INTO sboxes SELECT * FROM boxes_noindex;
+
+statement ok
+CREATE INDEX i_sboxes ON sboxes USING TSPTREE (t);
+
+query I
+SELECT count(*) FROM sboxes
+  WHERE t <@ 'STBOX XT(((-1,-1),(7,7)),[1999-12-31, 2000-01-05])'::stbox;
+----
+2
+
+query I
+SELECT count(*) FROM sboxes
+  WHERE 'STBOX XT(((0.2,0.2),(0.5,0.5)),[2000-01-01 06:00, 2000-01-01 12:00])'::stbox <@ t;
+----
+2

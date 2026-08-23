@@ -167,7 +167,7 @@ static unique_ptr<GlobalTableFunctionState> SPTreeIndexScanInitGlobal(ClientCont
         result->index_state = bind_data.operation == TSPTreeIndexScanBindData::NN_OPERATION
             ? sptree_index.InitializeNNScan(bind_data.query_box.get(), bind_data.query_box_size)
             : sptree_index.InitializeScan(bind_data.query_box.get(), bind_data.query_box_size,
-                                          bind_data.operation);
+                                          bind_data.operation, bind_data.query_on_left);
     }
     
 	return std::move(result);

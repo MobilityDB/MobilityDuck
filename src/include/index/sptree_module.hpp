@@ -71,7 +71,11 @@ public:
     string GetConstraintViolationMessage(VerifyExistenceType verify_type, idx_t failed_index,
                                        DataChunk &input) override;
 
-    unique_ptr<IndexScanState> InitializeScan(const void* query_blob, size_t blob_size, const string &operation) const;
+    //! Open a scan of the index for `operation` against `query_blob`. `query_on_left` names the
+    //! operand order of the predicate the scan answers, which decides the operation an operator
+    //! whose two sides play different roles asks the index for (see index_search_ops.hpp).
+    unique_ptr<IndexScanState> InitializeScan(const void* query_blob, size_t blob_size,
+                                              const string &operation, bool query_on_left) const;
 
     vector<row_t> Search(const void *query_box, IndexSearchOp op) const;
 

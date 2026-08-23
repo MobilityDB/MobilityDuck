@@ -18,11 +18,16 @@ struct TSPTreeIndexScanBindData : public TableFunctionData {
     unique_ptr<void, void(*)(void*)> query_box;  
     size_t query_box_size;  
     string operation;
+    //! True when the query is the LEFT argument of the predicate. An operator whose two
+    //! sides play different roles asks the index for its commuted operation then.
+    bool query_on_left;
     
     TSPTreeIndexScanBindData(DuckTableEntry &table, TSPTreeIndex &index, idx_t limit, 
-                           void* query_box_ptr, size_t box_size, const string &operation)
+                           void* query_box_ptr, size_t box_size, const string &operation,
+                           bool query_on_left)
         : table(table), index(index), limit(limit), 
-          query_box(query_box_ptr, free), query_box_size(box_size), operation(operation) {}
+          query_box(query_box_ptr, free), query_box_size(box_size), operation(operation),
+          query_on_left(query_on_left) {}
 
 };
 

@@ -82,9 +82,15 @@ private:
                 }
 
                 string function_name;
+                // The operand order the predicate is written in. The matcher accepts either, and
+                // an operator whose two sides play different roles -- @> against <@ -- asks the
+                // index for a different operation depending on which side the query sits on.
+                bool query_on_left = false;
                 if (expr_filter.expr->type == ExpressionType::BOUND_FUNCTION) {
                     auto &func_expr = expr_filter.expr->Cast<BoundFunctionExpression>();
                     function_name = func_expr.function.name;
+                    query_on_left = func_expr.children.size() == 2 &&
+                                    func_expr.children[0]->type == ExpressionType::VALUE_CONSTANT;
                 } else {
                     return false;
                 }
@@ -136,7 +142,7 @@ private:
                 }
 
                 bind_data = make_uniq<TSPTreeIndexScanBindData>(
-                    duck_table, sptree_index, 1000, query_box, box_size, function_name);
+                    duck_table, sptree_index, 1000, query_box, box_size, function_name, query_on_left);
                 return true;
             });
             
@@ -341,7 +347,7 @@ private:
             // The rows the parent skips still have to be found, so the scan answers offset + limit.
             bind_data = make_uniq<TSPTreeIndexScanBindData>(
                 duck_table, sptree_index, top_n.offset + top_n.limit, query_box, box_size,
-                TSPTreeIndexScanBindData::NN_OPERATION);
+                TSPTreeIndexScanBindData::NN_OPERATION, false);
             return true;
         });
 

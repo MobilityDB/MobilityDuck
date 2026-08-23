@@ -27,6 +27,7 @@
 #include "duckdb/common/case_insensitive_map.hpp"
 #include "duckdb/optimizer/matcher/expression_matcher.hpp"
 #include "index/rtree_module.hpp"
+#include "index/index_search_ops.hpp"
 #include "index/rtree_index_scan.hpp"
 #include "geo/stbox.hpp"
 #include "geo/tgeompoint.hpp"
@@ -541,37 +542,44 @@ void TRTreeIndex::TombstoneEntries(const unordered_set<row_t> &removed) {
 //------------------------------------------------------------------------------
 // RTree Search Operations
 //------------------------------------------------------------------------------
-unique_ptr<IndexScanState> TRTreeIndex::InitializeScan(const void* query_blob, size_t blob_size, const string &operation) const {
+unique_ptr<IndexScanState> TRTreeIndex::InitializeScan(const void* query_blob, size_t blob_size,
+                                                 const string &operation, bool query_on_left) const {
     const uint8_t *data = reinterpret_cast<const uint8_t*>(query_blob);
-    
+
     auto state = make_uniq<TRTreeIndexScanState>();
-    
-    if (operation == "@>" && bbox_type_ == T_TSTZSPAN) {
+
+    IndexSearchOp search_op;
+    if (!IndexSearchOpFromName(operation, query_on_left, search_op)) {
+        throw InvalidInputException("Unsupported R-Tree operation: " + operation +
+                                    " for bbox_type: " + std::to_string(bbox_type_));
+    }
+
+    // A time box compared against a TIMESTAMPTZ receives the timestamp itself rather than a box.
+    // The index compares extents, so the query reads as the instantaneous span at that timestamp.
+    if (bbox_type_ == T_TSTZSPAN && blob_size != sizeof(Span)) {
         if (blob_size != sizeof(timestamp_tz_t)) {
-            throw InvalidInputException("Invalid query box size for @> operation. Expected " + 
-                                      std::to_string(sizeof(timestamp_tz_t)) + 
+            throw InvalidInputException("Invalid query box size for " + operation +
+                                      " operation. Expected " +
+                                      std::to_string(sizeof(timestamp_tz_t)) +
                                       ", got " + std::to_string(blob_size));
         }
-        
+
         timestamp_tz_t timestamp;
         memcpy(&timestamp, data, sizeof(timestamp_tz_t));
         TimestampTz meos_timestamp = static_cast<TimestampTz>(timestamp.value);
         Datum timestamp_datum = (Datum)meos_timestamp;
-        
+
         state->query_box = malloc(sizeof(Span));
         memset(state->query_box, 0, sizeof(Span));
-        
+
         Span *point_span = static_cast<Span*>(state->query_box);
         point_span->lower = timestamp_datum;
         point_span->upper = timestamp_datum;
         point_span->lower_inc = true;
         point_span->upper_inc = true;
         point_span->spantype = T_TSTZSPAN;
-        point_span->basetype = T_TIMESTAMPTZ;  
-        
-        
-    } else if (operation == "&&") {
-        
+        point_span->basetype = T_TIMESTAMPTZ;
+    } else {
         state->query_box = malloc(blob_size);
         memcpy(state->query_box, data, blob_size);
 
@@ -588,21 +596,15 @@ unique_ptr<IndexScanState> TRTreeIndex::InitializeScan(const void* query_blob, s
                 }
             }
         }
-        
-    } else {
-        throw InvalidInputException("Unsupported R-Tree operation: " + operation + 
-                                  " for bbox_type: " + std::to_string(bbox_type_));
     }
-    
+
     if (rtree_) {
-        /* MEOS rtree_search: @> uses containment, && uses overlap (see IndexSearchOp in meos.h). */
-        const IndexSearchOp search_op = (operation == "@>") ? INDEX_CONTAINS : INDEX_OVERLAPS;
         state->search_results = Search(state->query_box, search_op);
         state->initialized = true;
-    } 
-    
+    }
+
     state->current_position = 0;
-    
+
     return std::move(state);
 }
 
@@ -798,15 +800,7 @@ unique_ptr<ExpressionMatcher> TRTreeIndex::MakeNearestMatcher() const {
 }
 
 unique_ptr<ExpressionMatcher> TRTreeIndex::MakeFunctionMatcher() const {
-    unordered_set<string> supported_functions;
-
-    if (bbox_type_ == T_STBOX) {
-        supported_functions = {"&&"};
-    } else if (bbox_type_ == T_TSTZSPAN) {
-        supported_functions = {"&&", "@>"};
-    } else {
-        supported_functions = {"&&"};
-    }
+    unordered_set<string> supported_functions = IndexOperatorNames(bbox_type_);
 
     auto matcher = make_uniq<FunctionExpressionMatcher>();
     matcher->function = make_uniq<ManyFunctionMatcher>(supported_functions);
