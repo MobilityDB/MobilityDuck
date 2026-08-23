@@ -154,7 +154,6 @@ The total cost is bounded because every line of geodetic semantics already exist
 
 ## See also
 
-- [`doc/multi-duckdb-version.md`](multi-duckdb-version.md) — version-target story; the geography boundary registers identically on DuckDB v1.4.4 and v1.5.x.
 - [Discussion #913 — Temporal Data Lake RFC](https://github.com/MobilityDB/MobilityDB/discussions/913) — places `tgeogpoint` (and by extension `GEOGRAPHY`) at the centre of the cross-platform query dialect.
 - [`docs/DuckDB-Parity-Gaps.md`](../docs/DuckDB-Parity-Gaps.md) — catalogues the few MobilityDB SQL surfaces that have no DuckDB equivalent.
 - MobilityDB MEOS C-library headers `meos_geo.h` — the closed-algebra function declarations that this boundary layer dispatches to.
