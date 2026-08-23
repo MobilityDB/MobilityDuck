@@ -48,12 +48,23 @@ define stage_icu
 	fi
 endef
 
-test_release_internal:
+# The staging is attached to the three test targets as a prerequisite rather
+# than as a second recipe for them. extension-ci-tools defines those targets,
+# and a competing recipe makes GNU make discard the included one, printing two
+# warnings for each: "overriding recipe for target" against this file and
+# "ignoring old recipe for target" against that one. A prerequisite-only line
+# adds the dependency and leaves the included recipe in force, whatever form it
+# takes at the recorded commit, so the suite is invoked the way the tools that
+# ship it invoke it.
+.PHONY: stage_icu_release stage_icu_debug stage_icu_reldebug
+
+stage_icu_release:
 	$(call stage_icu,release)
-	./build/release/$(TEST_PATH) "$(PROJ_DIR)test/*"
-test_debug_internal:
+stage_icu_debug:
 	$(call stage_icu,debug)
-	./build/debug/$(TEST_PATH) "$(PROJ_DIR)test/*"
-test_reldebug_internal:
+stage_icu_reldebug:
 	$(call stage_icu,reldebug)
-	./build/reldebug/$(TEST_PATH) "$(PROJ_DIR)test/*"
+
+test_release_internal: stage_icu_release
+test_debug_internal: stage_icu_debug
+test_reldebug_internal: stage_icu_reldebug
