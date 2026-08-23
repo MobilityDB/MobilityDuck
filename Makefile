@@ -25,7 +25,7 @@ include extension-ci-tools/makefiles/duckdb_extension.Makefile
 # so the staging path must NOT hardcode the version or platform. We derive both
 # from the freshly-built duckdb binary (authoritative for whatever is being
 # tested); DUCKDB_VERSION_TAG and the uname map are fallbacks only.
-DUCKDB_VERSION_TAG := v1.4.4
+DUCKDB_VERSION_TAG := v1.4.5
 
 define stage_icu
 	@if [ -f ./build/$(1)/extension/icu/icu.duckdb_extension ]; then \

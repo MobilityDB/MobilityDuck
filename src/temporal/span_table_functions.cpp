@@ -45,7 +45,7 @@ struct BinsBindData : public FunctionData {
         r->blob = blob;
         r->vsize = vsize;
         r->vorigin = vorigin;
-        // DuckDB 1.4.4 disallows implicit derived->base unique_ptr conversion;
+        // DuckDB 1.4 disallows implicit derived->base unique_ptr conversion;
         // explicit base-type construction from the moved-from derived pointer.
         return unique_ptr_cast<BinsBindData, FunctionData>(std::move(r));
     }
