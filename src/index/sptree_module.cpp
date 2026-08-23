@@ -612,8 +612,8 @@ unique_ptr<IndexScanState> TSPTreeIndex::InitializeScan(const void* query_blob, 
     }
     
     if (sptree_) {
-        /* MEOS sptree_search: @> uses containment, && uses overlap (see RTreeSearchOp in meos.h). */
-        const RTreeSearchOp search_op = (operation == "@>") ? RTREE_CONTAINS : RTREE_OVERLAPS;
+        /* MEOS sptree_search: @> uses containment, && uses overlap (see IndexSearchOp in meos.h). */
+        const IndexSearchOp search_op = (operation == "@>") ? INDEX_CONTAINS : INDEX_OVERLAPS;
         state->search_results = Search(state->query_box, search_op);
         state->initialized = true;
     } 
@@ -689,7 +689,7 @@ bool TSPTreeIndex::NNScanNext(IndexScanState &state, row_t &row_id, double &lowe
     return true;
 }
 
-vector<row_t> TSPTreeIndex::Search(const void *query_box, RTreeSearchOp op) const {
+vector<row_t> TSPTreeIndex::Search(const void *query_box, IndexSearchOp op) const {
     vector<row_t> results;
     
     if (!sptree_ || !query_box) {
