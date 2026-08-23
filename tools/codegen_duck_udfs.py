@@ -2289,6 +2289,14 @@ def reg_names(f, sqlfn, aliases):
 # of every appended line WITHOUT touching the 20 per-shape append call-sites — STATE["grp"]
 # is set once per emitted function at the top of each emission loop.
 STATE = {"grp": "meos_ungrouped"}
+
+# How many translation units the UDF surface is emitted as. Fixed rather than derived so the
+# file list in CMakeLists.txt is stable across regenerations; raising it costs nothing but a
+# CMake line, and past the core count of the build machine it buys nothing.
+GENERATED_CHUNKS = 8
+# The whole emitted surface, for the post-generation invariants -- which read what was WRITTEN
+# rather than what was intended, and so have to see every unit.
+GENERATED_TEXT = []
 class GReg:
     """A list whose .append() also records the current @ingroup group (STATE['grp'])."""
     def __init__(self): self.items = []          # list of (group, line)
@@ -3552,10 +3560,10 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 + "\n    }\n")
     def _flat(lines):
         return "".join("    " + l.strip() + "\n" for l in lines)
-    fn_section, aggregator = "", []
+    grp_fn, grp_call = {}, {}
     for g in reg_groups:
         fname = "RegisterGenerated_" + re.sub(r"[^A-Za-z0-9_]", "_", g)
-        b = "static void %s(ExtensionLoader &loader) {\n" % fname
+        b = "void %s(ExtensionLoader &loader) {\n" % fname
         if tgen.get(g):
             b += _loop("for (auto &type : TemporalTypes::AllTypes()) {", tgen[g])
             # the generic Temporal<T> surface registers over the spatial subtypes too (geo +
@@ -3571,14 +3579,63 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         b += _flat(boxg.get(g, []))
         b += _flat(tboxg.get(g, []))
         b += "}\n"
-        fn_section += "\n" + b
-        aggregator.append("    %s(loader);" % fname)
-    reg_section = (fn_section
-                   + "\nvoid RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {\n"
-                   + "\n".join(aggregator) + "\n}\n")
+        grp_fn[g] = "\n" + b
+        grp_call[g] = "    %s(loader);" % fname
 
-    src += body_section + "} // anonymous\n" + reg_section + "\n} // namespace duckdb\n"
-    open(out_path, "w").write(src)
+    # ---- one translation unit per chunk of groups ----
+    # A single unit of every group is a 21797-line, 3.5-minute, 2.8 GB compile that the build
+    # waits on with one core busy, and it is compiled twice -- once into the static library and
+    # once into the loadable extension. A group is self-contained: its registrations name only
+    # the bodies emitted under the same @ingroup, so a chunk carries its groups' bodies and their
+    # RegisterGenerated_<group> functions and needs nothing from a sibling unit. The chunk count
+    # is fixed rather than derived so that the file list CMake compiles is stable across
+    # regenerations.
+    chunk_dir = os.path.dirname(out_path) or "."
+    stem = os.path.splitext(os.path.basename(out_path))[0]
+    units = []
+    for g in sorted(set(body_by_grp) | set(reg_groups)):
+        text = ""
+        if body_by_grp.get(g):
+            text += "\n// ===== @ingroup %s =====\n" % g + "\n".join(body_by_grp[g]) + "\n"
+        units.append((g, text, grp_fn.get(g, ""), grp_call.get(g)))
+    # Greedy longest-first packing, which keeps the largest group off the critical path and is a
+    # pure function of the catalog, so the same catalog writes the same files.
+    bins = [[] for _ in range(GENERATED_CHUNKS)]
+    sizes = [0] * GENERATED_CHUNKS
+    for u in sorted(units, key=lambda u: -(len(u[1]) + len(u[2]))):
+        k = sizes.index(min(sizes))
+        bins[k].append(u)
+        sizes[k] += len(u[1]) + len(u[2])
+
+    written, chunk_texts = [], []
+    for k, unit_list in enumerate(bins):
+        chunk = src
+        chunk += "".join(u[1] for u in unit_list)
+        chunk += "} // anonymous\n"
+        chunk += "".join(u[2] for u in unit_list)
+        chunk += "\n} // namespace duckdb\n"
+        path = os.path.join(chunk_dir, "%s_%d.cpp" % (stem, k))
+        open(path, "w").write(chunk)
+        written.append(path)
+        chunk_texts.append(chunk)
+
+    # The entry point every caller already knows, which now only calls the chunks.
+    # ⛔ THE ORDER THESE ARE CALLED IN IS THE ORDER THE OVERLOADS RESOLVE IN. DuckDB picks among
+    # the candidates of an operator by the order they were registered, so `intset - 2` binds to
+    # set-minus-value only while the set group registers before its rivals. The groups are named
+    # here one by one, in the order a single unit registers them, so which unit each one is
+    # emitted into cannot move a binding.
+    decls = "".join("void %s(ExtensionLoader &loader);\n"
+                    % ("RegisterGenerated_" + re.sub(r"[^A-Za-z0-9_]", "_", g))
+                    for g in reg_groups)
+    master = (src.split("namespace duckdb {")[0]
+              + "namespace duckdb {\n\n" + decls
+              + "\nvoid RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {\n"
+              + "\n".join("    RegisterGenerated_%s(loader);" % re.sub(r"[^A-Za-z0-9_]", "_", g)
+                           for g in reg_groups)
+              + "\n}\n\n} // namespace duckdb\n")
+    open(out_path, "w").write(master)
+    GENERATED_TEXT.append(master + "".join(chunk_texts))
     n_reg = (len(generic_regs) + len(specific_regs) + len(set_generic_regs)
              + len(set_specific_regs) + len(span_generic_regs) + len(span_specific_regs)
              + len(spanset_generic_regs) + len(box_regs) + len(temporal_box_regs))
@@ -3762,7 +3819,9 @@ def main():
         # timezone, PROJ context and RNGs in thread-local storage, so every UDF body
         # must run EnsureMeosThreadInitialized() before any MEOS call. Verify it for
         # every emitted body so a future emit path cannot silently drop the guard.
-        body_section = open(out).read().split("} // anonymous")[0]
+        generated_text = GENERATED_TEXT[0]
+        body_section = "".join(part.split("} // anonymous")[0]
+                               for part in generated_text.split("// GENERATED by"))
         unguarded = [b.split("(")[0] for b in body_section.split("\nstatic void Gen_")[1:]
                      if "EnsureMeosThreadInitialized" not in b]
         if unguarded:
@@ -3774,7 +3833,7 @@ def main():
         print(f"per-thread MEOS-init guard: all {nu + nb + nt + ns + nsp} generated bodies verified")
         # Retire-safety guards (build-failing) — the two retire traps, read off the actual
         # generated output so they cannot be reasoned-away by hand.
-        gentext = open(out).read()
+        gentext = generated_text
         emitted = Counter(re.findall(r'(?:Scalar|Table)Function\("([^"]+)"', gentext))
         # TRAP 1 (split name): a name emitted BOTH bare and g_-prefixed means a RETIRED group and
         # a NON-retired group share it (bare here, g_ there) -> a query finds only one. The shared
