@@ -116,19 +116,6 @@ vcpkg_replace_string(
   }]=]
 )
 
-# Upstream gap: `pgtypes/libpq/pqformat.h` contains a deprecated
-# static-inline helper `pq_sendint` that calls `elog()`.  In the
-# standalone MEOS build the pgtypes shim does not declare `elog`, and
-# GCC 14 (Ubuntu 24.04 runners) treats implicit-function-declaration
-# as a hard error.  Replace the call with `meos_error` — both symbols
-# are in scope via the postgres.h → meos_error.h chain that pqformat.c
-# already includes before pulling in pqformat.h.
-vcpkg_replace_string(
-    "${SOURCE_PATH}/pgtypes/libpq/pqformat.h"
-    [=[elog(ERROR, "unsupported integer size %d", b);]=]
-    [=[meos_error(ERROR, MEOS_ERR_INTERNAL_ERROR, "unsupported integer size %d", b);]=]
-)
-
 # USER-APPROVED-PIN-WRITE (2026-06-23): removed the binding's own stale
 # vcpkg_replace_string patches that INJECTED Datum accessors into pg_timestamp.h /
 # utils/timestamp.h and re-exported add_date_int/add_timestamptz_interval into
