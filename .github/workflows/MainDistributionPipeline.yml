@@ -30,11 +30,11 @@ concurrency:
 
 jobs:
   duckdb-latest-build:
-    uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.4.4
+    uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.4.5
     with:
-      duckdb_version: v1.4.4
+      duckdb_version: v1.4.5
       extension_name: mobilityduck
-      ci_tools_version: v1.4.4
+      ci_tools_version: v1.4.5
       vcpkg_commit: c27eeddba73f608f10605d80bc0144c1166f8fb7
       # Windows is excluded because the MEOS vcpkg port does not build under
       # MSVC or MinGW: it pulls in PostgreSQL-derived sources that depend on
@@ -100,7 +100,7 @@ jobs:
       # version here in sync with the two jobs above.
       - uses: actions/download-artifact@v4
         with:
-          name: mobilityduck-v1.4.4-extension-${{ matrix.duckdb_arch }}
+          name: mobilityduck-v1.4.5-extension-${{ matrix.duckdb_arch }}
           path: artifact
 
       - name: Assert the artifact names no non-system shared library
@@ -144,7 +144,7 @@ jobs:
             linux_arm64) CLI=duckdb_cli-linux-arm64.zip   ;;
             osx_*)       CLI=duckdb_cli-osx-universal.zip ;;
           esac
-          curl -fsSL -o duckdb.zip "https://github.com/duckdb/duckdb/releases/download/v1.4.4/${CLI}"
+          curl -fsSL -o duckdb.zip "https://github.com/duckdb/duckdb/releases/download/v1.4.5/${CLI}"
           unzip -q -o duckdb.zip
           chmod +x duckdb
 
@@ -161,11 +161,11 @@ jobs:
 
   duckdb-latest-deploy:
     needs: [duckdb-latest-build, verify-standalone]
-    uses: duckdb/extension-ci-tools/.github/workflows/_extension_deploy.yml@v1.4.4
+    uses: duckdb/extension-ci-tools/.github/workflows/_extension_deploy.yml@v1.4.5
     secrets: inherit
     with:
-      duckdb_version: v1.4.4
-      ci_tools_version: v1.4.4
+      duckdb_version: v1.4.5
+      ci_tools_version: v1.4.5
       extension_name: mobilityduck
       deploy_latest: ${{ startsWith(github.ref, 'refs/heads/v') || github.ref == 'refs/heads/main' }}
       # Gathers exactly the artifacts the build job produces, per event: the full
