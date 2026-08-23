@@ -486,11 +486,50 @@ void TRTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifier
             }
         }
 
-        rtree_insert(rtree_, box.data(), row_data[i]);
+        if (bulk_construct_) {
+            const auto offset = bulk_boxes_.size();
+            bulk_boxes_.resize(offset + bbox_size_);
+            memcpy(bulk_boxes_.data() + offset, box.data(), bbox_size_);
+            bulk_ids_.push_back(row_data[i]);
+        } else {
+            rtree_insert(rtree_, box.data(), row_data[i]);
+        }
         RecordEntry(box.data(), row_data[i]);
     }
 }
 
+
+void TRTreeIndex::BeginBulkConstruct() {
+    bulk_construct_ = true;
+    bulk_boxes_.clear();
+    bulk_ids_.clear();
+}
+
+ErrorData TRTreeIndex::FinishBulkConstruct() {
+    if (! bulk_construct_) {
+        return ErrorData();
+    }
+    bulk_construct_ = false;
+    if (bulk_ids_.empty()) {
+        return ErrorData();
+    }
+    if (bulk_ids_.size() > static_cast<idx_t>(NumericLimits<int32_t>::Maximum())) {
+        return ErrorData(StringUtil::Format(
+            "TRTREE index \"%s\" holds %llu entries, at most %d build at once", name,
+            bulk_ids_.size(), NumericLimits<int32_t>::Maximum()));
+    }
+    const auto built = rtree_load(rtree_, bulk_boxes_.data(), bulk_ids_.data(),
+                          static_cast<int>(bulk_ids_.size()));
+    bulk_boxes_.clear();
+    bulk_boxes_.shrink_to_fit();
+    bulk_ids_.clear();
+    bulk_ids_.shrink_to_fit();
+    if (! built) {
+        return ErrorData(StringUtil::Format(
+            "TRTREE index \"%s\" did not build from its entries", name));
+    }
+    return ErrorData();
+}
 
 ErrorData TRTreeIndex::BulkConstruct(STBox* boxes, const row_t* row_ids, idx_t count) {
     if (!rtree_) {
