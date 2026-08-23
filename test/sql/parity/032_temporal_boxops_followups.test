@@ -26,10 +26,16 @@ SELECT overlaps(tint '[1@2000-01-01]', tint '[1@2000-01-01]');
 ----
 true
 
+# Two boxes are adjacent when their extents meet in every dimension they share and touch at a
+# single value in at least one, so a dimension in which they are apart separates them whatever the
+# others do (doc/contributing/adjacency_design_notes.md). These two meet in value -- the intspans
+# canonicalise to [1,3) and [3,5), sharing the bound 3 -- and are apart in time, so they are not
+# adjacent.
+
 query I
 SELECT adjacent(tint '[1@2000-01-01, 2@2000-01-02]', tint '[3@2000-01-03, 4@2000-01-04]');
 ----
-true
+false
 
 # Aliases also work for (temporal × tstzspan)
 
