@@ -170,6 +170,20 @@ vcpkg_cmake_configure(
 
 vcpkg_cmake_install()
 
+# The installed meos.pc records the absolute package directory of the machine
+# that built it, which makes the package non-relocatable and is what vcpkg's
+# post-build check reports. Rewrite its paths relative to the .pc file's own
+# location, for the release and the debug variant alike.
+vcpkg_fixup_pkgconfig()
+
+# vcpkg keeps one copy of the headers and of share/, taken from the release
+# tree; a debug duplicate of either is a post-build check problem. Triplets
+# that build only the release configuration never create these, so the removal
+# is a no-op there and clears the two problems on the ones that do.
+file(REMOVE_RECURSE
+    "${CURRENT_PACKAGES_DIR}/debug/include"
+    "${CURRENT_PACKAGES_DIR}/debug/share")
+
 # Guard the linkage the extension depends on. A DuckDB extension is distributed
 # as one .duckdb_extension file, so a shared libmeos here yields a binary that
 # references @rpath/libmeos.dylib (or libmeos.so) and loads only on the machine
@@ -233,3 +247,8 @@ CMake:
   find_package(MEOS CONFIG REQUIRED)
   target_link_libraries(your_target PRIVATE MEOS::meos)
 ]=])
+
+# MobilityDB is distributed under The PostgreSQL License. Install it where
+# every consumer of a vcpkg package reads a licence from, so that a binary
+# built against this port can carry the notice the licence requires.
+vcpkg_install_copyright(FILE_LIST "${SOURCE_PATH}/LICENSE.txt")
