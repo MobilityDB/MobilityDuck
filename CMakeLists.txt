@@ -93,7 +93,17 @@ set(EXTENSION_SOURCES
     src/spatial_ref_sys_csv.inc
     src/ways_csv.inc
     src/mobilityduck_extension.cpp
+    # The UDF surface is emitted as several translation units so that it compiles in
+    # parallel; tools/codegen_duck_udfs.py writes exactly GENERATED_CHUNKS of them.
     src/generated/generated_temporal_udfs.cpp
+    src/generated/generated_temporal_udfs_0.cpp
+    src/generated/generated_temporal_udfs_1.cpp
+    src/generated/generated_temporal_udfs_2.cpp
+    src/generated/generated_temporal_udfs_3.cpp
+    src/generated/generated_temporal_udfs_4.cpp
+    src/generated/generated_temporal_udfs_5.cpp
+    src/generated/generated_temporal_udfs_6.cpp
+    src/generated/generated_temporal_udfs_7.cpp
     src/generated/generated_type_registration.cpp
     src/temporal/temporal.cpp
     src/temporal/temporal_functions.cpp
