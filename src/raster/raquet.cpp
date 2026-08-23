@@ -491,7 +491,13 @@ bool ReadRasterCall(DataChunk &args, idx_t row, idx_t path_idx, idx_t traj_idx,
     return true;
 }
 
+/* A span is a fixed-size struct, so the stored BLOB holds exactly sizeof(Span) bytes. The size
+ * is read rather than assumed, for the reason BlobToFixed states in src/npoint/tnpoint.cpp. */
 Span *BlobToSpan(string_t blob) {
+    if (blob.GetSize() != sizeof(Span)) {
+        throw InvalidInputException("A span value is %llu bytes, and this one holds %llu",
+                                    (uint64_t) sizeof(Span), (uint64_t) blob.GetSize());
+    }
     uint8_t *copy = (uint8_t *) malloc(sizeof(Span));
     memcpy(copy, blob.GetData(), sizeof(Span));
     return reinterpret_cast<Span *>(copy);

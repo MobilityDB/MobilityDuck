@@ -63,11 +63,25 @@ void NpointTypes::RegisterTypes(ExtensionLoader &loader) {
 namespace {
 
 /* Npoint / Nsegment are FIXED-size structs (palloc(sizeof(...))), so the stored
- * BLOB holds exactly sizeof bytes — copy-in/out by sizeof (like Span/STBox). */
-inline Npoint *BlobToNpoint(string_t blob) {
-    Npoint *copy = (Npoint *) malloc(sizeof(Npoint));
-    memcpy(copy, blob.GetData(), sizeof(Npoint));
+ * BLOB holds exactly sizeof bytes — copy-in/out by sizeof (like Span/STBox).
+ * The size is CHECKED rather than assumed: the type is BLOB-backed, so what the
+ * copy reads is a length the value carries rather than one the type guarantees,
+ * and a shorter one would read past the end of a string_t whose 12 bytes sit
+ * inline. Reading the length also gives the compiler the bound it otherwise
+ * cannot prove, which is what keeps the copy free of a -Wstringop-overread. */
+template <class T>
+inline T *BlobToFixed(string_t blob, const char *type_name) {
+    if (blob.GetSize() != sizeof(T)) {
+        throw InvalidInputException("A %s value is %llu bytes, and this one holds %llu",
+                                    type_name, (uint64_t) sizeof(T), (uint64_t) blob.GetSize());
+    }
+    T *copy = (T *) malloc(sizeof(T));
+    memcpy(copy, blob.GetData(), sizeof(T));
     return copy;
+}
+
+inline Npoint *BlobToNpoint(string_t blob) {
+    return BlobToFixed<Npoint>(blob, "npoint");
 }
 
 inline string_t NpointToBlob(Vector &result, Npoint *np) {
@@ -79,9 +93,7 @@ inline string_t NpointToBlob(Vector &result, Npoint *np) {
 }
 
 inline Nsegment *BlobToNsegment(string_t blob) {
-    Nsegment *copy = (Nsegment *) malloc(sizeof(Nsegment));
-    memcpy(copy, blob.GetData(), sizeof(Nsegment));
-    return copy;
+    return BlobToFixed<Nsegment>(blob, "nsegment");
 }
 
 inline string_t NsegmentToBlob(Vector &result, Nsegment *ns) {

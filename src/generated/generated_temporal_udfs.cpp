@@ -191,6 +191,11 @@ inline string_t NpointToBlobN(Vector &result, Npoint *np, ValidityMask &mask, id
     return NpointToBlob(result, np);
 }
 inline Npoint *BlobToNpoint(string_t blob) {
+    if (blob.GetSize() != sizeof(Npoint)) {
+        throw InvalidInputException("An npoint value is " +
+            std::to_string(sizeof(Npoint)) + " bytes, and this one holds " +
+            std::to_string(blob.GetSize()));
+    }
     Npoint *copy = (Npoint *)malloc(sizeof(Npoint));
     memcpy(copy, blob.GetData(), sizeof(Npoint));
     return copy;
@@ -205,6 +210,11 @@ inline string_t NsegmentToBlobN(Vector &result, Nsegment *ns, ValidityMask &mask
     return NsegmentToBlob(result, ns);
 }
 inline Nsegment *BlobToNsegment(string_t blob) {
+    if (blob.GetSize() != sizeof(Nsegment)) {
+        throw InvalidInputException("An nsegment value is " +
+            std::to_string(sizeof(Nsegment)) + " bytes, and this one holds " +
+            std::to_string(blob.GetSize()));
+    }
     Nsegment *copy = (Nsegment *)malloc(sizeof(Nsegment));
     memcpy(copy, blob.GetData(), sizeof(Nsegment));
     return copy;
