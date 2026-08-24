@@ -1,0 +1,60 @@
+# name: test/sql/parity/087_index_extent_operators.test
+# description: the equality and adjacency of two extents agree with a scan of the same rows
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+CREATE TABLE ext_idx(t tgeompoint);
+
+statement ok
+CREATE TABLE ext_scan(t tgeompoint);
+
+statement ok
+INSERT INTO ext_idx SELECT ('Point(' || i || ' ' || i || ')@' || strftime(DATE '2000-01-01' + INTERVAL (i) DAY, '%Y-%m-%d'))::tgeompoint FROM range(1,3000) tbl(i);
+
+statement ok
+INSERT INTO ext_scan SELECT * FROM ext_idx;
+
+# only one of the two tables is indexed, so each answer below is the index's against a scan's
+statement ok
+CREATE INDEX i_ext ON ext_idx USING TRTREE (t);
+
+# equality, written as a symbol and as a word
+query II
+SELECT (SELECT count(*) FROM ext_idx WHERE t ~= 'STBOX XT(((1,1),(1,1)),[2000-01-02,2000-01-02])'::stbox), (SELECT count(*) FROM ext_scan WHERE t ~= 'STBOX XT(((1,1),(1,1)),[2000-01-02,2000-01-02])'::stbox);
+----
+1	1
+
+query II
+SELECT (SELECT count(*) FROM ext_idx WHERE same(t, 'STBOX XT(((1,1),(1,1)),[2000-01-02,2000-01-02])'::stbox)), (SELECT count(*) FROM ext_scan WHERE same(t, 'STBOX XT(((1,1),(1,1)),[2000-01-02,2000-01-02])'::stbox));
+----
+1	1
+
+# adjacency, against a box the entries meet in every dimension it carries: a box is adjacent to
+# another when their extents meet in each shared dimension and touch at a single value in at least
+# one, so a point entry qualifies only where it abuts the box on every axis at once
+query II
+SELECT (SELECT count(*) FROM ext_idx WHERE t -|- 'STBOX XT(((10,10),(20,20)),[2000-01-01,2010-01-01])'::stbox), (SELECT count(*) FROM ext_scan WHERE t -|- 'STBOX XT(((10,10),(20,20)),[2000-01-01,2010-01-01])'::stbox);
+----
+2	2
+
+query II
+SELECT (SELECT count(*) FROM ext_idx WHERE adjacent(t, 'STBOX XT(((10,10),(20,20)),[2000-01-01,2010-01-01])'::stbox)), (SELECT count(*) FROM ext_scan WHERE adjacent(t, 'STBOX XT(((10,10),(20,20)),[2000-01-01,2010-01-01])'::stbox));
+----
+2	2
+
+# The counts above are only evidence if the index is what answered the left column: an operator the
+# index declines is answered by a scan, and a scan agrees with a scan for free. Adjacency is also
+# not a weaker overlap -- two boxes meeting at an excluded bound share a boundary and no point --
+# so a descent pruning on overlap alone would answer these short rather than wrong.
+
+query II
+EXPLAIN SELECT count(*) FROM ext_idx WHERE t ~= 'STBOX XT(((1,1),(1,1)),[2000-01-02,2000-01-02])'::stbox;
+----
+physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*
+
+query II
+EXPLAIN SELECT count(*) FROM ext_idx WHERE adjacent(t, 'STBOX XT(((10,10),(20,20)),[2000-01-01,2010-01-01])'::stbox);
+----
+physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*
