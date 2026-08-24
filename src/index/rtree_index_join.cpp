@@ -154,7 +154,7 @@ OperatorResultType PhysicalRTreeIndexJoin::Execute(ExecutionContext &context, Da
 				 * boxes whose SRIDs differ — so the probe box is normalized too,
 				 * as the scan path does for its query box. */
 				auto probe_box = reinterpret_cast<const STBox *>(blob.GetData());
-				if (stbox_srid(probe_box) != 0) {
+				if (MEOS_FLAGS_GET_X(probe_box->flags) && stbox_srid(probe_box) != 0) {
 					STBox *normalized = stbox_set_srid(probe_box, 0);
 					if (! normalized) {
 						state.probe_row++;

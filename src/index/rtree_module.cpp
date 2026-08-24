@@ -640,7 +640,12 @@ unique_ptr<IndexScanState> TRTreeIndex::InitializeScan(const void* query_blob, s
         state->query_box = malloc(blob_size);
         memcpy(state->query_box, data, blob_size);
 
-        if (bbox_type_ == T_STBOX) {
+        // A box with no spatial dimension carries no SRID to normalise, and reading one is not
+        // merely redundant: stbox_srid demands the X dimension, so a time-only query box
+        // raises rather than answering. The scan path answers such a query, so the index
+        // must too.
+        if (bbox_type_ == T_STBOX &&
+            MEOS_FLAGS_GET_X(static_cast<const STBox *>(state->query_box)->flags)) {
             STBox *stbox = (STBox*)state->query_box;
             int32_t query_srid = stbox_srid(stbox);
             if (query_srid != 0) {
@@ -699,7 +704,8 @@ unique_ptr<IndexScanState> TRTreeIndex::InitializeNNScan(const void *query_blob,
 
     // The index stores its boxes with the SRID cleared, so a query box carrying one would be a
     // mixed-SRID comparison in MEOS rather than a distance. Probe exactly as the insert stored.
-    if (bbox_type_ == T_STBOX) {
+    if (bbox_type_ == T_STBOX &&
+        MEOS_FLAGS_GET_X(static_cast<const STBox *>(state->query_box)->flags)) {
         STBox *query = static_cast<STBox *>(state->query_box);
         if (stbox_srid(query) != 0) {
             STBox *normalized = stbox_set_srid(query, 0);
