@@ -45,6 +45,14 @@ public:
 
     void Construct(DataChunk &expression_result, Vector &row_identifiers);
 
+    //! Gather what Construct derives instead of inserting it, so that the whole
+    //! entry set reaches the tree in one bulk build. Index creation scans the
+    //! table in chunks; a tree grown chunk by chunk takes the depth its entries
+    //! arrived in, which for an ordered column is one level per entry.
+    void BeginBulkConstruct();
+    //! Build the tree from everything gathered since BeginBulkConstruct.
+    ErrorData FinishBulkConstruct();
+
     //! Commit a drop operation
     void CommitDrop(IndexLock &index_lock) override;
 
@@ -165,6 +173,9 @@ private:
     IndexPointer entry_head_;
     IndexPointer entry_tail_;
     //! The size of one entry, of one segment, and the entries per segment.
+    bool bulk_construct_ = false;
+    vector<data_t> bulk_boxes_;
+    vector<int64_t> bulk_ids_;
     idx_t entry_size_ = 0;
     idx_t entries_per_segment_ = 0;
     idx_t segment_size_ = 0;

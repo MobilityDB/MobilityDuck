@@ -208,6 +208,10 @@ public:
 public:
 	//Run Schedule
 	void Schedule() override {
+		// The scan hands the index its entries chunk by chunk. Gathering them and
+		// building the tree once packs the nodes fuller than growing the tree per
+		// chunk does, and costs the same whatever order the column arrives in.
+		gstate.global_index->BeginBulkConstruct();
 		auto &context = pipeline->GetClientContext();
 
 		auto &ts = TaskScheduler::GetScheduler(context);
@@ -221,6 +225,11 @@ public:
 	}
 
 	void FinishEvent() override {
+
+		auto bulk_error = gstate.global_index->FinishBulkConstruct();
+		if (bulk_error.HasError()) {
+			bulk_error.Throw();
+		}
 
 		auto &storage = table.GetStorage();
 
