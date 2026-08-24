@@ -606,7 +606,7 @@ unique_ptr<IndexScanState> TRTreeIndex::InitializeScan(const void* query_blob, s
     auto state = make_uniq<TRTreeIndexScanState>();
 
     IndexSearchOp search_op;
-    if (!IndexSearchOpFromName(operation, query_on_left, search_op)) {
+    if (!IndexSearchOpFromName(operation, bbox_type_, query_on_left, search_op)) {
         throw InvalidInputException("Unsupported R-Tree operation: " + operation +
                                     " for bbox_type: " + std::to_string(bbox_type_));
     }

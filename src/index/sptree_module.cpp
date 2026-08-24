@@ -605,7 +605,7 @@ unique_ptr<IndexScanState> TSPTreeIndex::InitializeScan(const void* query_blob, 
     auto state = make_uniq<TSPTreeIndexScanState>();
 
     IndexSearchOp search_op;
-    if (!IndexSearchOpFromName(operation, query_on_left, search_op)) {
+    if (!IndexSearchOpFromName(operation, bbox_type_, query_on_left, search_op)) {
         throw InvalidInputException("Unsupported SP-Tree operation: " + operation +
                                     " for bbox_type: " + std::to_string(bbox_type_));
     }
