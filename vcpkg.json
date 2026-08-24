@@ -1,6 +1,6 @@
 {
         "dependencies": [
-          "geos",
+          { "name": "geos", "version>=": "3.14.0" },
           "gsl",
           { "name": "meos", "version>=": "0" },
 
