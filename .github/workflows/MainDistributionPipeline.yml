@@ -30,7 +30,16 @@ concurrency:
 
 jobs:
   duckdb-latest-build:
-    uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.4.5
+    # The v1.4.5 workflow with one addition: every job keeps a vcpkg binary
+    # cache of its own, so the dependency set the manifest names — GDAL, GEOS,
+    # PROJ, OpenSSL, libmeos and the twenty ports beneath them — is restored
+    # rather than compiled. The public cache the workflow reads holds an archive
+    # only for the dependency sets DuckDB itself builds, and this extension
+    # carries a port of its own, so twenty-seven of its twenty-eight packages
+    # are compiled from source on every job: 12.7 minutes of a 27.7-minute
+    # Linux job, and the larger share of a macOS one. The addition is offered
+    # upstream; the fork is where it runs until it is taken.
+    uses: estebanzimanyi/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.4.5-vcpkg-cache
     with:
       duckdb_version: v1.4.5
       extension_name: mobilityduck
