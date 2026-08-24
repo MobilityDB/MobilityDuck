@@ -32,9 +32,9 @@ extern "C" {
 // declared locally below (the same local-extern technique the sibling
 // ports use).  Pcpoint is an opaque varlena (pgpointcloud
 // SERIALIZED_POINT); the schema-aware coordinate accessors
-// (pcpoint_get_x/y/z, getDim) require a registered PCSCHEMA from the
-// pgpointcloud catalog, which is not available in a standalone DuckDB
-// context, so they are deliberately not bound.
+// (pcpoint_get_x/y/z, getDim) read a value through the PCSCHEMA its pcid
+// names, which a database states as rows and registers through
+// pointCloudSchemaRegister (src/pointcloud/pcschema.cpp).
 extern "C" {
     typedef struct Pcpoint Pcpoint;
     extern Pcpoint *pcpoint_hex_in(const char *str);

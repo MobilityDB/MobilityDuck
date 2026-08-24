@@ -1,0 +1,76 @@
+# name: test/sql/pointcloud_schema.test
+# description: a point cloud schema stated as rows reaches the engine, after
+#              which a value of that pcid answers about its coordinates. A
+#              pcpoint carries a pcid and its coordinates and nothing about its
+#              own layout, so which dimensions it holds and what a stored
+#              number means are stated by the schema that pcid resolves to. The
+#              two tables below carry the columns MobilityDB's own
+#              pointcloud_schemas and pointcloud_dimensions carry, so one
+#              statement of a schema serves both engines.
+# group: [sql]
+#
+# The engine holds a registered schema for the life of the process and the
+# suite runs every file in one, so this file states a pcid no other file names:
+# a sibling asserting that ITS pcid resolves to nothing stays true.
+
+require mobilityduck
+
+statement ok
+CREATE TABLE pointcloud_schemas (
+  pcid         integer PRIMARY KEY,
+  srid         integer NOT NULL,
+  compression  text    NOT NULL DEFAULT 'none',
+  description  text
+);
+
+statement ok
+CREATE TABLE pointcloud_dimensions (
+  pcid            integer NOT NULL,
+  position        integer NOT NULL,
+  name            text    NOT NULL,
+  interpretation  text    NOT NULL,
+  scale           double  NOT NULL DEFAULT 1,
+  "offset"        double  NOT NULL DEFAULT 0,
+  active          boolean NOT NULL DEFAULT true,
+  description     text,
+  PRIMARY KEY (pcid, position)
+);
+
+statement ok
+INSERT INTO pointcloud_schemas VALUES (7, 4326, 'none', 'Three dimensions of type double');
+
+statement ok
+INSERT INTO pointcloud_dimensions VALUES
+  (7, 1, 'X', 'double', 1, 0, true, NULL),
+  (7, 2, 'Y', 'double', 1, 0, true, NULL),
+  (7, 3, 'Z', 'double', 1, 0, true, NULL);
+
+# The rows state the schema; one call per pcid hands them to the engine.
+query I
+SELECT pointCloudSchemaRegister(s.pcid, s.srid, s.compression,
+         list({'position': d.position, 'name': d.name,
+               'interpretation': d.interpretation, 'scale': d.scale,
+               'offset': d."offset", 'active': d.active,
+               'description': d.description} ORDER BY d.position))
+FROM pointcloud_schemas s JOIN pointcloud_dimensions d USING (pcid)
+GROUP BY s.pcid, s.srid, s.compression;
+----
+true
+
+# The text form of a value is its serialized bytes, so it reads the same under
+# a right schema and a wrong one. The MF-JSON form decodes the coordinates
+# through the schema, so it is what proves the registration took.
+query I
+SELECT asMFJSON(tpcpoint '2300000007000000000000000000F03F00000000000000400000000000000840000000@2024-01-01');
+----
+{"type":"MovingPCPoint","coordinates":[[1,2,3]],"datetimes":["2024-01-01T00:00:00+01"],"interpolation":"None"}
+
+# The contrast that gives the answer above its meaning: a pcid no row states
+# resolves to nothing, so the engine reads a coordinate through a schema it was
+# given rather than through one it invented. It is stated of a pcid this file
+# never registers, because the engine holds a registration for the life of the
+# process and a suite may run a file more than once.
+statement error
+SELECT asMFJSON(tpcpoint '2300000063000000000000000000F03F00000000000000400000000000000840000000@2024-01-01');
+----
+PCSCHEMA for pcid 99 not registered

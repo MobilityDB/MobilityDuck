@@ -135,9 +135,10 @@ SELECT numInstants(tpcpoint '2300000001000000000000000000F03F0000000000000040000
 # Test asMFJSON is registered (parity with canonical MobilityDB
 # asMFJSON(tpcpoint, options, flags, maxdecimaldigits)). The MF-JSON form
 # renders the point coordinates, which requires decoding the pcpoint against
-# its pgPointCloud PCSCHEMA. A PG backend registers schemas in mobilitydb_init;
-# the standalone engine has no catalog, so the call reports the missing schema
-# deterministically rather than emitting a malformed value.
+# its pgPointCloud PCSCHEMA. This file registers none, so the call reports the
+# missing schema deterministically rather than emitting a malformed value; a
+# database that states one registers it through pointCloudSchemaRegister and
+# reads the coordinates, which test/sql/pointcloud_schema.test exercises.
 statement error
 SELECT asMFJSON(tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01');
 ----

@@ -16,6 +16,7 @@
 #include "geo/tgeometry_ops.hpp"
 #include "geo/tgeography.hpp"
 #include "geo/tgeography_ops.hpp"
+#include "pointcloud/pcschema.hpp"
 #include "pointcloud/tpcpoint.hpp"
 #include "pointcloud/tpcpatch.hpp"
 #include "geo/tgeogpoint.hpp"
@@ -406,6 +407,11 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TGeogpointType::RegisterCastFunctions(loader);
 	TGeogpointType::RegisterScalarInOutFunctions(loader);
 	TGeogpointOps::RegisterScalarFunctions(loader);
+
+	// What a point cloud value's pcid names, stated as rows of two tables a
+	// database holds, reaches the engine here (requires the MEOS POINTCLOUD
+	// module), so a coordinate of such a value is answerable.
+	PcschemaFunctions::RegisterScalarFunctions(loader);
 
 	// Extended temporal type tpcpoint (requires the MEOS POINTCLOUD module).
 	TPcpointTypes::RegisterTypes(loader);
