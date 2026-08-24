@@ -1,0 +1,54 @@
+# name: test/sql/parity/088_index_time_only_query_box.test
+# description: a query box carrying only a time dimension is answered by the index as by a scan
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+CREATE TABLE tob_idx(t tgeompoint);
+
+statement ok
+CREATE TABLE tob_scan(t tgeompoint);
+
+statement ok
+INSERT INTO tob_idx SELECT ('Point(' || i || ' ' || i || ')@' || strftime(DATE '2000-01-01' + INTERVAL (i) DAY, '%Y-%m-%d'))::tgeompoint FROM range(1,3000) tbl(i);
+
+statement ok
+INSERT INTO tob_scan SELECT * FROM tob_idx;
+
+statement ok
+CREATE INDEX i_tob ON tob_idx USING TRTREE (t);
+
+# The index normalises the SRID of a query box so that it compares against rows stored with the
+# SRID cleared. A box with no spatial dimension carries no SRID to normalise, and reading one is
+# not merely redundant: it demands the X dimension, so such a query raised where a scan answered.
+
+query II
+SELECT (SELECT count(*) FROM tob_idx WHERE t && 'STBOX T([2000-01-05,2000-01-10])'::stbox), (SELECT count(*) FROM tob_scan WHERE t && 'STBOX T([2000-01-05,2000-01-10])'::stbox);
+----
+6	6
+
+query II
+SELECT (SELECT count(*) FROM tob_idx WHERE t @> 'STBOX T([2000-01-05,2000-01-10])'::stbox), (SELECT count(*) FROM tob_scan WHERE t @> 'STBOX T([2000-01-05,2000-01-10])'::stbox);
+----
+0	0
+
+# the join probes with the box an stbox column holds, which carries the same dimension
+
+statement ok
+CREATE TABLE tob_probe(b stbox);
+
+statement ok
+INSERT INTO tob_probe VALUES ('STBOX T([2000-01-05,2000-01-10])'::stbox);
+
+query I
+SELECT count(*) FROM tob_idx, tob_probe WHERE tob_idx.t && tob_probe.b;
+----
+6
+
+# the counts above are the index's only where the plan reads one
+
+query II
+EXPLAIN SELECT count(*) FROM tob_idx WHERE t && 'STBOX T([2000-01-05,2000-01-10])'::stbox;
+----
+physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*
