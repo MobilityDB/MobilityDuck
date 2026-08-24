@@ -215,6 +215,15 @@ set(MOBILITYDUCK_LINK_LIBS
   ZLIB::ZLIB
 )
 
+# The GEOMETRY type and its WKB conversion live in the spatial extension on the
+# v1.4 line and in DuckDB core from v1.5.0, so src/include/duckdb_version_compat.hpp
+# selects between them. DuckDB's own build sets these two variables.
+foreach(_md_target ${EXTENSION_NAME} ${LOADABLE_EXTENSION_NAME})
+  target_compile_definitions(${_md_target} PRIVATE
+    MOBILITYDUCK_DUCKDB_MAJOR=${DUCKDB_MAJOR_VERSION}
+    MOBILITYDUCK_DUCKDB_MINOR=${DUCKDB_MINOR_VERSION})
+endforeach()
+
 target_link_libraries(${EXTENSION_NAME} ${MOBILITYDUCK_LINK_LIBS})
 target_link_libraries(${LOADABLE_EXTENSION_NAME} ${MOBILITYDUCK_LINK_LIBS})
 

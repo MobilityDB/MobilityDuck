@@ -7,7 +7,7 @@
 #include "duckdb/execution/expression_executor_state.hpp"
 #include "spatial/geometry/geometry_serialization.hpp"
 #include "spatial/geometry/sgl.hpp"
-#include "spatial/geometry/wkb_writer.hpp"
+#include "duckdb_version_compat.hpp"
 
 namespace duckdb {
 
@@ -42,7 +42,7 @@ inline bool BlobLooksLikeTemporal(string_t blob) {
 
 inline GSERIALIZED* GeometryToGSerialized(string_t geometry_blob, int32_t srid) {
     vector<data_t> wkb_buffer;
-    WKBWriter::Write(geometry_blob, wkb_buffer);
+    MobilityDuckGeometryToWKB(geometry_blob, wkb_buffer);
     if (wkb_buffer.empty()) {
         throw InvalidInputException("Failed to convert GEOMETRY to WKB: buffer is empty");
     }

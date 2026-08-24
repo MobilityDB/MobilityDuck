@@ -797,6 +797,17 @@ idx_t TSPTreeIndex::GetInMemorySize(IndexLock &state) {
     return sptree_ ? 1024 : 0;
 }
 
+#if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
+void TSPTreeIndex::Verify(IndexLock &state) {}
+
+string TSPTreeIndex::ToString(IndexLock &state, bool display_ascii) {
+    if (!sptree_) {
+        return "Stbox space-partitioning tree Index (not initialized)";
+    }
+
+    return "Stbox space-partitioning tree Index (MEOS-based)";
+}
+#else
 string TSPTreeIndex::VerifyAndToString(IndexLock &state, const bool only_verify) {
     if (!sptree_) {
         return "Stbox space-partitioning tree Index (not initialized)";
@@ -804,6 +815,7 @@ string TSPTreeIndex::VerifyAndToString(IndexLock &state, const bool only_verify)
     
     return "Stbox space-partitioning tree Index (MEOS-based)";
 }
+#endif
 
 void TSPTreeIndex::VerifyAllocations(IndexLock &lock) {}
 

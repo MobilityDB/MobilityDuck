@@ -3,6 +3,7 @@
 #include "temporal/temporal_functions.hpp"
 #include "temporal/spanset.hpp"
 #include "geo_util.hpp"
+#include "duckdb_version_compat.hpp"
 
 #include "duckdb/common/types/blob.hpp"
 #include "duckdb/common/exception.hpp"
@@ -450,7 +451,7 @@ void TemporalFunctions::Tsequence_from_base_tstzset(DataChunk &args, ExpressionS
                 text *txt = cstring_to_text(value.GetString().c_str());
                 return Tsequence_from_base_tstzset_impl(PointerGetDatum(txt), set_blob, temptype, result);
             });
-    } else if (arg_type.id() == LogicalTypeId::BLOB) {
+    } else if (MobilityDuckIsGeometryType(arg_type)) {
         BinaryExecutor::Execute<string_t, string_t, string_t>(
             args.data[0], args.data[1], result, count,
             [&](string_t value, string_t set_blob) {
@@ -532,7 +533,7 @@ void TemporalFunctions::Tsequence_from_base_tstzspan(DataChunk &args, Expression
                 text *txt = cstring_to_text(value.GetString().c_str());
                 return Tsequence_from_base_tstzspan_impl(PointerGetDatum(txt), span_blob, temptype, interp, result);
             });
-    } else if (arg_type.id() == LogicalTypeId::BLOB) {
+    } else if (MobilityDuckIsGeometryType(arg_type)) {
         BinaryExecutor::Execute<string_t, string_t, string_t>(
             args.data[0], args.data[1], result, count,
             [&](string_t value, string_t span_blob) {
@@ -615,7 +616,7 @@ void TemporalFunctions::Tsequenceset_from_base_tstzspanset(DataChunk &args, Expr
                 text *txt = cstring_to_text(value.GetString().c_str());
                 return Tsequenceset_from_base_tstzspanset_impl(PointerGetDatum(txt), spanset_blob, temptype, interp, result);
             });
-    } else if (arg_type.id() == LogicalTypeId::BLOB) {
+    } else if (MobilityDuckIsGeometryType(arg_type)) {
         BinaryExecutor::Execute<string_t, string_t, string_t>(
             args.data[0], args.data[1], result, count,
             [&](string_t value, string_t spanset_blob) {
@@ -1246,7 +1247,7 @@ void TemporalFunctions::Temporal_value_n(DataChunk &args, ExpressionState &state
     auto count = args.size();
     auto &res_type = result.GetType();
 
-    if (res_type.id() == LogicalTypeId::BLOB) {
+    if (MobilityDuckIsGeometryType(res_type)) {
         BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(
             args.data[0], args.data[1], result, count,
             [&](string_t input, int64_t n, ValidityMask &mask, idx_t idx) -> string_t {
@@ -3293,7 +3294,7 @@ void TemporalFunctions::Temporal_minus_timestamptz(DataChunk &args, ExpressionSt
 void TemporalFunctions::Temporal_value_at_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
     auto &res_type = result.GetType();
-    if (res_type.id() == LogicalTypeId::BLOB) {
+    if (MobilityDuckIsGeometryType(res_type)) {
         BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(
             args.data[0], args.data[1], result, count,
             [&](string_t temp_str, timestamp_tz_t ts, ValidityMask &mask, idx_t idx) -> string_t {

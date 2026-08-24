@@ -14,7 +14,6 @@
 #include <string>
 
 #include "spatial/spatial_types.hpp"
-#include "spatial/geometry/wkb_writer.hpp"
 
 namespace duckdb {
 

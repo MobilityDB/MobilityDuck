@@ -1,4 +1,5 @@
 #include "meos_wrapper_simple.hpp"
+#include "duckdb_version_compat.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/catalog/catalog_entry/duck_table_entry.hpp"
 #include "duckdb/optimizer/optimizer_extension.hpp"
@@ -55,7 +56,7 @@ private:
         for (auto &filter_pair : get.table_filters.filters) {
             auto &filter = filter_pair.second;
 
-            table_info.GetIndexes().Scan([&](Index &index) -> bool {
+            MobilityDuckScanIndexes(table_info.GetIndexes(), [&](Index &index) -> bool {
                 if (!index.IsBound() || index.GetIndexType() != TRTreeIndex::TYPE_NAME) {
                     return false;
                 }
@@ -296,7 +297,7 @@ private:
         unique_ptr<TRTreeIndexScanBindData> bind_data = nullptr;
         vector<reference<Expression>> bindings;
 
-        table_info.GetIndexes().Scan([&](Index &index) -> bool {
+        MobilityDuckScanIndexes(table_info.GetIndexes(), [&](Index &index) -> bool {
             if (!index.IsBound() || index.GetIndexType() != TRTreeIndex::TYPE_NAME) {
                 return false;
             }
@@ -401,7 +402,7 @@ public:
 };
 
 void TRTreeModule::RegisterScanOptimizer(ExtensionLoader &loader) {
-    loader.GetDatabaseInstance().config.optimizer_extensions.push_back(TRTreeIndexScanOptimizer());
+    MobilityDuckRegisterOptimizer(loader.GetDatabaseInstance().config, TRTreeIndexScanOptimizer());
 }
 
 } // namespace duckdb

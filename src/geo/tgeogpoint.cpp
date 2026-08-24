@@ -1,4 +1,5 @@
 #include "meos_wrapper_simple.hpp"
+#include "duckdb_version_compat.hpp"
 
 #include "common.hpp"
 #include "geo/tgeogpoint.hpp"
@@ -134,7 +135,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tgeogpoint",
-            {GeoTypes::GEOMETRY(), LogicalType::TIMESTAMP_TZ},
+            {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ},
             tgeogpoint(),
             TgeogpointFunctions::Tpointinst_constructor
         )
@@ -143,7 +144,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tgeogpoint",
-            {GeoTypes::GEOMETRY(), LogicalType::TIMESTAMP_TZ, LogicalType::INTEGER},
+            {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::INTEGER},
             tgeogpoint(),
             TgeogpointFunctions::Tpointinst_constructor
         )
@@ -152,7 +153,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tgeogpoint",
-            {GeoTypes::GEOMETRY(), SetTypes::tstzset()},
+            {MobilityDuckGeometryType(), SetTypes::tstzset()},
             tgeogpoint(),
             TemporalFunctions::Tsequence_from_base_tstzset
         )
@@ -161,7 +162,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tgeogpoint",
-            {GeoTypes::GEOMETRY(), SpanTypes::tstzspan()},
+            {MobilityDuckGeometryType(), SpanTypes::tstzspan()},
             tgeogpoint(),
             TemporalFunctions::Tsequence_from_base_tstzspan
         )
@@ -170,7 +171,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tgeogpoint",
-            {GeoTypes::GEOMETRY(), SpanTypes::tstzspan(), LogicalType::VARCHAR},
+            {MobilityDuckGeometryType(), SpanTypes::tstzspan(), LogicalType::VARCHAR},
             tgeogpoint(),
             TemporalFunctions::Tsequence_from_base_tstzspan
         )
@@ -179,7 +180,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tgeogpoint",
-            {GeoTypes::GEOMETRY(), SpansetTypes::tstzspanset()},
+            {MobilityDuckGeometryType(), SpansetTypes::tstzspanset()},
             tgeogpoint(),
             TemporalFunctions::Tsequenceset_from_base_tstzspanset
         )
@@ -188,7 +189,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "tgeogpoint",
-            {GeoTypes::GEOMETRY(), SpansetTypes::tstzspanset(), LogicalType::VARCHAR},
+            {MobilityDuckGeometryType(), SpansetTypes::tstzspanset(), LogicalType::VARCHAR},
             tgeogpoint(),
             TemporalFunctions::Tsequenceset_from_base_tstzspanset
         )
@@ -346,7 +347,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         ScalarFunction(
             "getValue",
             {tgeogpoint()},
-            GeoTypes::GEOMETRY(),
+            MobilityDuckGeometryType(),
             TgeompointFunctions::Tgeompoint_value
         )
     );
@@ -373,7 +374,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         ScalarFunction(
             "valueN",
             {tgeogpoint(), LogicalType::BIGINT},
-            GeoTypes::GEOMETRY(),
+            MobilityDuckGeometryType(),
             TemporalFunctions::Temporal_value_n
         )
     );
@@ -391,7 +392,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         ScalarFunction(
             "startValue",
             {tgeogpoint()},
-            GeoTypes::GEOMETRY(),
+            MobilityDuckGeometryType(),
             TgeompointFunctions::Tgeompoint_start_value
         )
     );
@@ -400,7 +401,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         ScalarFunction(
             "endValue",
             {tgeogpoint()},
-            GeoTypes::GEOMETRY(),
+            MobilityDuckGeometryType(),
             TgeompointFunctions::Tgeompoint_end_value
         )
     );
@@ -624,7 +625,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "atValues",
-            {tgeogpoint(), GeoTypes::GEOMETRY()},
+            {tgeogpoint(), MobilityDuckGeometryType()},
             tgeogpoint(),
             TgeompointFunctions::Tgeompoint_at_value
         )
@@ -633,7 +634,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "minusValues",
-            {tgeogpoint(), GeoTypes::GEOMETRY()},
+            {tgeogpoint(), MobilityDuckGeometryType()},
             tgeogpoint(),
             TemporalFunctions::Temporal_minus_value
         )
@@ -679,7 +680,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         ScalarFunction(
             "valueAtTimestamp",
             {tgeogpoint(), LogicalType::TIMESTAMP_TZ},
-            GeoTypes::GEOMETRY(),
+            MobilityDuckGeometryType(),
             TemporalFunctions::Temporal_value_at_timestamptz
         )
     );
@@ -1061,7 +1062,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         ScalarFunction(
             "twCentroid",
             {tgeogpoint()},
-            GeoTypes::GEOMETRY(),
+            MobilityDuckGeometryType(),
             TgeompointFunctions::Tpoint_twcentroid
         )
     );
@@ -1088,7 +1089,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         ScalarFunction(
             "angularDifference",
             {tgeogpoint()},
-            GeoTypes::GEOMETRY(),
+            MobilityDuckGeometryType(),
             TgeompointFunctions::Tpoint_angular_difference
         )
     );
@@ -1115,7 +1116,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         ScalarFunction(
             "trajectory",
             {tgeogpoint()},
-            GeoTypes::GEOMETRY(),
+            MobilityDuckGeometryType(),
             TgeompointFunctions::Tpoint_trajectory
         )
     );
@@ -1132,7 +1133,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "atGeometry",
-            {tgeogpoint(), GeoTypes::GEOMETRY()},
+            {tgeogpoint(), MobilityDuckGeometryType()},
             tgeogpoint(),
             TgeompointFunctions::Tgeo_at_geom
         )
@@ -1141,7 +1142,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "minusGeometry",
-            {tgeogpoint(), GeoTypes::GEOMETRY()},
+            {tgeogpoint(), MobilityDuckGeometryType()},
             tgeogpoint(),
             TgeompointFunctions::Tgeo_minus_geom
         )
@@ -1150,7 +1151,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
             "minusGeometry",
-            {tgeogpoint(), GeoTypes::GEOMETRY(), SpanTypes::floatspan()},
+            {tgeogpoint(), MobilityDuckGeometryType(), SpanTypes::floatspan()},
             tgeogpoint(),
             TgeompointFunctions::Tgeo_minus_geom
         )
@@ -1253,7 +1254,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         ScalarFunction(
             "shortestLine",
             {tgeogpoint(), tgeogpoint()},
-            GeoTypes::GEOMETRY(),
+            MobilityDuckGeometryType(),
             TgeompointFunctions::ShortestLine_tgeo_tgeo
         )
     );
@@ -2642,7 +2643,7 @@ void TGeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     auto getValue_function = ScalarFunction(
         "getValue",
         {TGeogpointType::tgeogpoint()},
-        GeoTypes::GEOMETRY(),
+        MobilityDuckGeometryType(),
         Tinstant_value
     );
     loader.RegisterFunction( getValue_function);
@@ -2651,7 +2652,7 @@ void TGeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     auto tgeogpoint_start_value_function = ScalarFunction(
         "startValue", 
         {TGeogpointType::tgeogpoint()},
-        GeoTypes::GEOMETRY(),
+        MobilityDuckGeometryType(),
         Temporal_start_value
     );
     loader.RegisterFunction( tgeogpoint_start_value_function);
@@ -2659,7 +2660,7 @@ void TGeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     auto tgeogpoint_end_value_function = ScalarFunction(
         "endValue", 
         {TGeogpointType::tgeogpoint()},
-        GeoTypes::GEOMETRY(),
+        MobilityDuckGeometryType(),
         Temporal_end_value
     );
     loader.RegisterFunction( tgeogpoint_end_value_function);
@@ -2704,7 +2705,7 @@ void TGeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     // ===================================================================
 
     const LogicalType TGEOM = TGeogpointType::tgeogpoint();
-    const LogicalType GEOM  = GeoTypes::GEOMETRY();
+    const LogicalType GEOM  = MobilityDuckGeometryType();
     const LogicalType TSTZ  = LogicalType::TIMESTAMP_TZ;
     const LogicalType IVAL  = LogicalType::INTERVAL;
     const LogicalType BIGI  = LogicalType::BIGINT;
