@@ -2110,13 +2110,13 @@ static void Gen_stbox_hash_extended(DataChunk &args, ExpressionState &, Vector &
 }
 
 
-// ===== @ingroup meos_cellindex =====
-static void Gen_tquadbin_cell_to_quadkey(DataChunk &args, ExpressionState &, Vector &result) {
+// ===== @ingroup meos_pointcloud_conversion =====
+static void Gen_tpcpatch_to_tgeometry(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
         [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tquadbin_cell_to_quadkey(t);
+            Temporal *r = tpcpatch_to_tgeometry(t);
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -2649,7 +2649,7 @@ void RegisterGenerated_meos_setspan_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("radians", {SetTypes::floatset()}, SetTypes::floatset(), Gen_floatset_radians));
     RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::floatset(), LogicalType::INTEGER}, SetTypes::floatset(), Gen_set_round));
     RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::floatset()}, SetTypes::floatset(), Gen_set_round_d));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("textset_cat", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), Gen_textcat_textset_text));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("setConcat", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), Gen_textcat_textset_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("||", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), Gen_textcat_textset_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("initcap", {SetTypes::textset()}, SetTypes::textset(), Gen_textset_initcap));
     RegisterSerializedScalarFunction(loader, ScalarFunction("lower", {SetTypes::textset()}, SetTypes::textset(), Gen_textset_lower));
@@ -2774,8 +2774,8 @@ void RegisterGenerated_meos_geo_box_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {StboxType::stbox(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_stbox_hash_extended));
 }
 
-void RegisterGenerated_meos_cellindex(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbinCellToQuadkey", {QuadbinTypes::tquadbin()}, TemporalTypes::ttext(), Gen_tquadbin_cell_to_quadkey));
+void RegisterGenerated_meos_pointcloud_conversion(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometry", {TPcpatchTypes::tpcpatch()}, TGeometryTypes::tgeometry(), Gen_tpcpatch_to_tgeometry));
 }
 
 } // namespace duckdb
