@@ -3,6 +3,7 @@
 // purely registration-and-glue; the heavy lifting stays in libmeos.
 
 #include "meos_wrapper_simple.hpp"
+#include "duckdb_version_compat.hpp"
 
 #include "common.hpp"
 #include "geo/tgeometry.hpp"
@@ -531,7 +532,7 @@ void TgeoTraversedAreaExec(DataChunk &args, ExpressionState &, Vector &result) {
 
 void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     const LogicalType TGEOM = TGeometryTypes::tgeometry();
-    const LogicalType GEOM  = GeoTypes::GEOMETRY();
+    const LogicalType GEOM  = MobilityDuckGeometryType();
     const LogicalType stbox = StboxType::stbox();
     const LogicalType tstzspan = SpanTypes::tstzspan();
     const LogicalType BOOL = LogicalType::BOOLEAN;

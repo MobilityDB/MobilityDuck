@@ -1,4 +1,5 @@
 #include "meos_wrapper_simple.hpp"
+#include "duckdb_version_compat.hpp"
 
 #include "common.hpp"
 #include "geo/stbox.hpp"
@@ -40,7 +41,7 @@ void StboxType::RegisterCastFunctions(ExtensionLoader &loader) {
     );
 
     RegisterMeosCastFunction(loader, 
-        GeoTypes::GEOMETRY(),
+        MobilityDuckGeometryType(),
         stbox(),
         StboxFunctions::Geo_to_stbox_cast
     );
@@ -125,7 +126,7 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "stbox",
-            {GeoTypes::GEOMETRY(), LogicalType::TIMESTAMP_TZ},
+            {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ},
             StboxType::stbox(),
             StboxFunctions::Geo_timestamptz_to_stbox
         )
@@ -134,7 +135,7 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "stbox",
-            {GeoTypes::GEOMETRY(), SpanTypes::tstzspan()},
+            {MobilityDuckGeometryType(), SpanTypes::tstzspan()},
             StboxType::stbox(),
             StboxFunctions::Geo_tstzspan_to_stbox
         )
@@ -180,7 +181,7 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "stbox",
-            {GeoTypes::GEOMETRY()},
+            {MobilityDuckGeometryType()},
             StboxType::stbox(),
             StboxFunctions::Geo_to_stbox
         )
@@ -190,7 +191,7 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         ScalarFunction(
             "geometry",
             {stbox()},
-            GeoTypes::GEOMETRY(),
+            MobilityDuckGeometryType(),
             StboxFunctions::Stbox_to_geo
         )
     );
@@ -905,7 +906,7 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
     {
         const auto B  = stbox();
         const auto P  = TgeompointType::tgeompoint();
-        const auto G  = GeoTypes::GEOMETRY();
+        const auto G  = MobilityDuckGeometryType();
         const auto D  = LogicalType::DOUBLE;
         const auto I  = LogicalType::INTERVAL;
         const auto TS = LogicalType::TIMESTAMP_TZ;

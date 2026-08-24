@@ -12,7 +12,6 @@
 #include "duckdb/common/typedefs.hpp"
 
 #include "spatial/spatial_types.hpp"
-#include "spatial/geometry/wkb_writer.hpp"
 
 #include "duckdb/common/types.hpp"
 

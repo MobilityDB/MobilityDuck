@@ -1,4 +1,5 @@
 #include "geo/geoset.hpp"
+#include "duckdb_version_compat.hpp"
 #include "tydef.hpp"
 #include "geo_util.hpp"
 #include "duckdb/common/types/data_chunk.hpp"
@@ -116,13 +117,13 @@ void SpatialSetType::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
 		"startValue", {SpatialSetType::geomset()},  
-		GeoTypes::GEOMETRY(),
+		MobilityDuckGeometryType(),
 		SpatialSetFunctions::Set_start_value
 	));    
 
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
         "endValue", 
-        {SpatialSetType::geomset()}, GeoTypes::GEOMETRY(), SpatialSetFunctions::Set_end_value));
+        {SpatialSetType::geomset()}, MobilityDuckGeometryType(), SpatialSetFunctions::Set_end_value));
 
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
         "numValues",
@@ -134,12 +135,12 @@ void SpatialSetType::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
         "valueN", {SpatialSetType::geomset(), LogicalType::INTEGER},
-        GeoTypes::GEOMETRY(),
+        MobilityDuckGeometryType(),
         SpatialSetFunctions::Set_value_n
     ));
 
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction(
-        "set", {LogicalType::LIST(GeoTypes::GEOMETRY())},
+        "set", {LogicalType::LIST(MobilityDuckGeometryType())},
         SpatialSetType::geomset(),
         SpatialSetFunctions::Geomset_constructor
     ));

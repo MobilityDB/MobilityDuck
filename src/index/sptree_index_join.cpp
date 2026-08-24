@@ -11,6 +11,7 @@
  * child scan, so this operator carries a single child: the probe side.
  */
 #include "index/sptree_index_join.hpp"
+#include "duckdb_version_compat.hpp"
 
 #include "duckdb/execution/physical_plan_generator.hpp"
 #include "duckdb/optimizer/optimizer_extension.hpp"
@@ -301,7 +302,7 @@ private:
 
 		table_info.BindIndexes(context, TSPTreeIndex::TYPE_NAME);
 		optional_ptr<TSPTreeIndex> found;
-		table_info.GetIndexes().Scan([&](Index &index) -> bool {
+		MobilityDuckScanIndexes(table_info.GetIndexes(), [&](Index &index) -> bool {
 			if (! index.IsBound() || index.GetIndexType() != TSPTreeIndex::TYPE_NAME) {
 				return false;
 			}
@@ -409,7 +410,7 @@ public:
 };
 
 void TSPTreeModule::RegisterJoinOptimizer(ExtensionLoader &loader) {
-	loader.GetDatabaseInstance().config.optimizer_extensions.push_back(TSPTreeIndexJoinOptimizer());
+	MobilityDuckRegisterOptimizer(loader.GetDatabaseInstance().config, TSPTreeIndexJoinOptimizer());
 }
 
 } // namespace duckdb

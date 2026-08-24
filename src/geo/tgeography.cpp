@@ -1,4 +1,5 @@
 #include "geo/tgeography.hpp"
+#include "duckdb_version_compat.hpp"
 #include "geo/tgeompoint_functions.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/common/extension_type_info.hpp"
@@ -1206,7 +1207,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     auto getValue_function = ScalarFunction(
         "getValue",
         {TGeographyTypes::tgeography()},
-        GeoTypes::GEOMETRY(),
+        MobilityDuckGeometryType(),
         Tinstant_value
     );
     loader.RegisterFunction( getValue_function);
@@ -1215,7 +1216,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     auto tgeography_start_value_function = ScalarFunction(
         "startValue", 
         {TGeographyTypes::tgeography()},
-        GeoTypes::GEOMETRY(),
+        MobilityDuckGeometryType(),
         Temporal_start_value
     );
     loader.RegisterFunction( tgeography_start_value_function);
@@ -1223,7 +1224,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     auto tgeography_end_value_function = ScalarFunction(
         "endValue", 
         {TGeographyTypes::tgeography()},
-        GeoTypes::GEOMETRY(),
+        MobilityDuckGeometryType(),
         Temporal_end_value
     );
     loader.RegisterFunction( tgeography_end_value_function);
@@ -1268,7 +1269,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // ===================================================================
 
     const LogicalType TGEOM = TGeographyTypes::tgeography();
-    const LogicalType GEOM  = GeoTypes::GEOMETRY();
+    const LogicalType GEOM  = MobilityDuckGeometryType();
     const LogicalType TSTZ  = LogicalType::TIMESTAMP_TZ;
     const LogicalType IVAL  = LogicalType::INTERVAL;
     const LogicalType BIGI  = LogicalType::BIGINT;

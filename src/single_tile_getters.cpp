@@ -5,6 +5,7 @@
 // / `getSpaceTimeTile` (stbox-shaped).
 
 #include "meos_wrapper_simple.hpp"
+#include "duckdb_version_compat.hpp"
 
 #include "common.hpp"
 #include "single_tile_getters.hpp"
@@ -359,7 +360,7 @@ void GetSpaceTileUniformExec(DataChunk &args, ExpressionState &state, Vector &re
 } // namespace
 
 void SingleTileGetters::RegisterScalarFunctions(ExtensionLoader &loader) {
-    LogicalType geometry = GeoTypes::GEOMETRY();
+    LogicalType geometry = MobilityDuckGeometryType();
 
     // ---- tbox getters ----
     loader.RegisterFunction(ScalarFunction(
