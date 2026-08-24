@@ -133,6 +133,7 @@ set(EXTENSION_SOURCES
     src/geo/tgeography.cpp
     src/geo/tgeography_in_out.cpp
     src/geo/tgeography_ops.cpp
+    src/pointcloud/pcschema.cpp
     src/pointcloud/tpcpoint.cpp
     src/pointcloud/tpcpoint_in_out.cpp
     src/pointcloud/tpcpatch.cpp
