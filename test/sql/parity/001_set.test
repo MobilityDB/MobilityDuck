@@ -108,12 +108,13 @@ SELECT asText(set(ARRAY[geometry 'Point(1 1)', 'Linestring(1 1,2 2)']));
 ----
 {"POINT(1 1)", "LINESTRING(1 1,2 2)"}
 
-# DuckDB rejects 'Point(1 1 1)' at the WKT parser before MEOS sees it,
-# so the error message is DuckDB-side rather than MEOS's "mixed 2D/3D".
+# A set holds values of one dimension, and the constructor is what says so.
+# The three-dimensional member is spelled the way the WKT reader accepts, so
+# the value reaches the constructor and the rejection is the one being asserted.
 statement error
-SELECT set(ARRAY[geometry 'Point(1 1)', 'Point(1 1 1)']);
+SELECT set(ARRAY[geometry 'POINT(1 1)', geometry 'POINT Z (1 1 1)']);
 ----
-Conversion
+Operation on mixed 2D/3D dimensions
 
 statement error
 SELECT set(ARRAY[geometry 'Point(1 1)', 'Point empty']);
