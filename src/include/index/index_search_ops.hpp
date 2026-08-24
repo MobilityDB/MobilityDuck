@@ -41,6 +41,10 @@ struct IndexOperatorEntry {
 //! mirrors the operators the PostgreSQL operator classes of the same box types index, so a
 //! predicate that reaches an index here reaches one there.
 //!
+//! Equality and adjacency are their own opposites -- a box equals, or meets, another exactly when
+//! that other equals, or meets, it -- so each names one operation in both columns, and both compare
+//! whole extents, so every box type answers them.
+//!
 //! A bounding-box predicate is registered under two spellings, a symbol and a word, and both are
 //! named here so that a query reaches the index however it is written. The temporal orderings are
 //! the exception: they carry no symbol, `<<#` and its siblings not being operators DuckDB lexes,
@@ -52,6 +56,10 @@ static constexpr IndexOperatorEntry INDEX_OPERATORS[] = {
     {"contains", INDEX_CONTAINS, INDEX_CONTAINED_BY, INDEX_AXIS_EXTENT},
     {"<@", INDEX_CONTAINED_BY, INDEX_CONTAINS, INDEX_AXIS_EXTENT},
     {"contained", INDEX_CONTAINED_BY, INDEX_CONTAINS, INDEX_AXIS_EXTENT},
+    {"~=", INDEX_SAME, INDEX_SAME, INDEX_AXIS_EXTENT},
+    {"same", INDEX_SAME, INDEX_SAME, INDEX_AXIS_EXTENT},
+    {"-|-", INDEX_ADJACENT, INDEX_ADJACENT, INDEX_AXIS_EXTENT},
+    {"adjacent", INDEX_ADJACENT, INDEX_ADJACENT, INDEX_AXIS_EXTENT},
 
     {"<<", INDEX_LEFT, INDEX_RIGHT, INDEX_AXIS_HORIZONTAL},
     {"left", INDEX_LEFT, INDEX_RIGHT, INDEX_AXIS_HORIZONTAL},
