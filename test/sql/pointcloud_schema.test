@@ -26,14 +26,14 @@ CREATE TABLE pointcloud_schemas (
 statement ok
 CREATE TABLE pointcloud_dimensions (
   pcid            integer NOT NULL,
-  position        integer NOT NULL,
-  name            text    NOT NULL,
+  dim_no          integer NOT NULL,
+  dim_name        text    NOT NULL,
   interpretation  text    NOT NULL,
-  scale           double  NOT NULL DEFAULT 1,
-  "offset"        double  NOT NULL DEFAULT 0,
+  dim_scale       double  NOT NULL DEFAULT 1,
+  dim_offset      double  NOT NULL DEFAULT 0,
   active          boolean NOT NULL DEFAULT true,
   description     text,
-  PRIMARY KEY (pcid, position)
+  PRIMARY KEY (pcid, dim_no)
 );
 
 statement ok
@@ -48,10 +48,10 @@ INSERT INTO pointcloud_dimensions VALUES
 # The rows state the schema; one call per pcid hands them to the engine.
 query I
 SELECT pointCloudSchemaRegister(s.pcid, s.srid, s.compression,
-         list({'position': d.position, 'name': d.name,
-               'interpretation': d.interpretation, 'scale': d.scale,
-               'offset': d."offset", 'active': d.active,
-               'description': d.description} ORDER BY d.position))
+         list({'dim_no': d.dim_no, 'dim_name': d.dim_name,
+               'interpretation': d.interpretation, 'dim_scale': d.dim_scale,
+               'dim_offset': d.dim_offset, 'active': d.active,
+               'description': d.description} ORDER BY d.dim_no))
 FROM pointcloud_schemas s JOIN pointcloud_dimensions d USING (pcid)
 GROUP BY s.pcid, s.srid, s.compression;
 ----
