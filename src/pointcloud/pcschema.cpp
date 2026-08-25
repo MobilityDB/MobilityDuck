@@ -142,11 +142,11 @@ void PcschemaFunctions::RegisterScalarFunctions(ExtensionLoader &loader) {
     // resolve from the names — a row stating any of them could only contradict
     // the engine.
     const auto DIM = LogicalType::STRUCT({
-        {"position", I},
-        {"name", V},
+        {"dim_no", I},
+        {"dim_name", V},
         {"interpretation", V},
-        {"scale", D},
-        {"offset", D},
+        {"dim_scale", D},
+        {"dim_offset", D},
         {"active", BL},
         {"description", V},
     });
