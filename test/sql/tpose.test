@@ -1,0 +1,96 @@
+# name: test/sql/tpose.test
+# description: Rigid-body pose temporal type (pose / tpose) — type + text I/O and
+#             the catalog-generated operation surface.
+
+require mobilityduck
+
+# ---------------------------------------------------------------------------
+# Type + text I/O (hand-registered boundary; the point renders as HEXEWKB, the
+# canonical #Pose_out() form — asText produces the WKT POINT(..) form).
+# ---------------------------------------------------------------------------
+
+# Static pose value round-trip
+query I
+SELECT pose 'Pose(Point(1 1),0.5)';
+----
+POSE (0101000000000000000000F03F000000000000F03F, 0.5)
+
+# tpose instant round-trip
+query I
+SELECT tpose 'Pose(Point(1 1),0.5)@2000-01-01';
+----
+POSE (0101000000000000000000F03F000000000000F03F, 0.5)@2000-01-01 00:00:00+01
+
+# tpose discrete sequence round-trip
+query I
+SELECT tpose '{Pose(Point(1 1), 0.3)@2000-01-01, Pose(Point(1 1), 0.5)@2000-01-02}';
+----
+{POSE (0101000000000000000000F03F000000000000F03F, 0.3)@2000-01-01 00:00:00+01, POSE (0101000000000000000000F03F000000000000F03F, 0.5)@2000-01-02 00:00:00+01}
+
+# ---------------------------------------------------------------------------
+# Catalog-generated operation surface (accessors, conversions, restrictions,
+# distance, spatial relationships) — one thin marshalling shell per MEOS
+# function.  The expected values mirror MobilityDB's own regression outputs
+# under mobilitydb/test/pose/expected/, so the two answer alike.
+# ---------------------------------------------------------------------------
+
+# Accessor: number of instants
+query I
+SELECT numInstants(tpose '{Pose(Point(1 1), 0.3)@2000-01-01, Pose(Point(1 1), 0.5)@2000-01-02, Pose(Point(1 1), 0.5)@2000-01-03}');
+----
+3
+
+# Text form of a temporal pose — the WKT point, not the HEXEWKB one the cast prints
+query I
+SELECT asText(tpose 'Pose(Point(1 1), 0.5)@2000-01-01');
+----
+Pose(POINT(1 1),0.5)@2000-01-01 00:00:00+01
+
+# Accessor: the first instant of a linear sequence
+query I
+SELECT asText(startInstant(tpose '[Pose(Point(1 1),0.1)@2000-01-01, Pose(Point(2 2),0.2)@2000-01-02]'));
+----
+Pose(POINT(1 1),0.1)@2000-01-01 00:00:00+01
+
+# SRID: absent in the literal, then declared by it
+query I
+SELECT SRID(tpose 'Pose(Point(1 2),0.5)@2000-01-01');
+----
+0
+
+query I
+SELECT SRID(tpose 'SRID=5676;Pose(Point(1 2),0.5)@2000-01-01');
+----
+5676
+
+# Conversion: a temporal pose reduces to the temporal point of its positions
+query I
+SELECT asText(tgeompoint(tpose '[Pose(Point(1 1),0.1)@2000-01-01, Pose(Point(2 2),0.2)@2000-01-02]'));
+----
+[POINT(1 1)@2000-01-01 00:00:00+01, POINT(2 2)@2000-01-02 00:00:00+01]
+
+# Restriction to a timestamp
+query I
+SELECT asText(atTime(tpose '[Pose(Point(1 1),0.1)@2000-01-01, Pose(Point(2 2),0.2)@2000-01-02]', timestamptz '2000-01-01'));
+----
+Pose(POINT(1 1),0.1)@2000-01-01 00:00:00+01
+
+# Ever-equal comparison
+query I
+SELECT eEq(tpose 'Pose(Point(1 1),0.5)@2000-01-01', tpose 'Pose(Point(1 1),0.5)@2000-01-01');
+----
+true
+
+# Bounding-box overlap operator
+query I
+SELECT tpose '[Pose(Point(1 1),0.1)@2000-01-01, Pose(Point(2 2),0.2)@2000-01-02]' && tpose 'Pose(Point(1 1),0.1)@2000-01-01';
+----
+true
+
+# Nearest approach distance between two parallel tracks offset by (3,3): the
+# separation shrinks from |(3,3)| = 3*sqrt(2) at the start to |(2,2)| = 2*sqrt(2)
+# at the end, so the minimum over time is 2*sqrt(2).
+query I
+SELECT nearestApproachDistance(tpose '[Pose(Point(0 0),0.1)@2000-01-01, Pose(Point(2 2),0.2)@2000-01-02]', tpose '[Pose(Point(3 3),0.1)@2000-01-01, Pose(Point(4 4),0.2)@2000-01-02]');
+----
+2.8284271247461903

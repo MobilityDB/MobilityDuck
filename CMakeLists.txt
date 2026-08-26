@@ -149,6 +149,7 @@ set(EXTENSION_SOURCES
     src/h3/th3index.cpp
     src/cbuffer/tcbuffer.cpp
     src/npoint/tnpoint.cpp
+    src/pose/tpose.cpp
     src/index/rtree_module.cpp
     src/single_tile_getters.cpp
     src/index/rtree_index_create_physical.cpp
