@@ -199,7 +199,7 @@ REGISTERED_FAMILIES = {
     "tjsonb", "jsonb",
     "tpcpoint", "pcpoint", "tpcpatch", "pcpatch",
     "tnpoint", "npoint", "nsegment",
-    "tpose", "pose",
+    "tpose", "pose", "trgeometry", "trgeo",
 }
 # Every temporal family token the catalog function names use; those NOT in REGISTERED_FAMILIES
 # are the fast-follow families whose DuckDB type the binding does not register yet.
@@ -401,7 +401,7 @@ GEO_ALLTYPES = list(GEO_TYPES.values())
 # geometry-argument spatial relationships. Add a new spatial family here to inherit the surface.
 SPATIAL_ALLTYPES = GEO_ALLTYPES + ["CbufferTypes::tcbuffer()", "H3indexTypes::th3index()",
                                    "QuadbinTypes::tquadbin()", "NpointTypes::tnpoint()",
-                                   "PoseTypes::tpose()"]
+                                   "PoseTypes::tpose()", "TrgeometryTypes::trgeometry()"]
 def reg_scope(name):
     """('all', None) generic | ('types', [accessors]) specific | None = not core family.
     Resolves the temporal type from the MobilityDB naming convention: a PREFIX
@@ -431,6 +431,14 @@ def reg_scope(name):
             return ("types", CORE_TYPES["tint"] + CORE_TYPES["tfloat"] + CORE_TYPES["tbigint"])
     if name.startswith("temporal_"):
         return ("all", None)
+    # A `<src>_to_<dst>` CONVERSION names its OPERAND with the PREFIX and its RESULT with the
+    # suffix, so the `_<type>` token searches below must not read the target as the operand
+    # family: `trgeometry_to_tpose` takes a trgeometry, and `_tpose(?=_|$)` matches its tail.
+    # Resolve a conversion on its source alone; ret_temporal_type() already maps the target.
+    if "_to_" in name:
+        src = name.split("_to_")[0]
+        if src in TO_TYPE:
+            return ("types", [TO_TYPE[src]])
     for pre, accs in CORE_TYPES.items():
         if name.startswith(pre + "_"):
             return ("types", accs)
@@ -491,6 +499,13 @@ def reg_scope(name):
     # their unmarshallable arg/return.
     if name.startswith("tpose_") or re.search(r'_tpose(?=_|$)', name):
         return ("types", ["PoseTypes::tpose()"])
+    # the temporal rigid geometry (its own gated spatial type, base value `pose`): a
+    # trgeometry_*/trgeo_* prefix, or a _trgeometry/_trgeo token anywhere. rgeo has ONE leaf, so
+    # `trgeo` is the file/helper abbreviation of the same family, not a superclass over others.
+    # GSERIALIZED-coupled variants auto-exclude on their unmarshallable arg/return.
+    if (name.startswith("trgeometry_") or name.startswith("trgeo_")
+            or re.search(r'_trgeometry(?=_|$)', name) or re.search(r'_trgeo(?=_|$)', name)):
+        return ("types", ["TrgeometryTypes::trgeometry()"])
     # temporal-type token ANYWHERE in the name (always_eq_tint_int, ever_lt_tfloat_tfloat,
     # tdistance_tfloat_tfloat, teq_temporal_temporal). Skip if >1 DISTINCT temporal type
     # appears (mixed/ambiguous) — geo tokens (tgeompoint/tgeo/th3index/tnpoint) aren't in
@@ -516,7 +531,8 @@ TO_TYPE = {"tint": "TemporalTypes::tint()", "tbigint": "TemporalTypes::tbigint()
            "tcbuffer": "CbufferTypes::tcbuffer()", "th3index": "H3indexTypes::th3index()",
            "tquadbin": "QuadbinTypes::tquadbin()", "tjsonb": "TJsonbTypes::tjsonb()",
            "tpcpoint": "TPcpointTypes::tpcpoint()", "tpcpatch": "TPcpatchTypes::tpcpatch()",
-           "tnpoint": "NpointTypes::tnpoint()", "tpose": "PoseTypes::tpose()"}
+           "tnpoint": "NpointTypes::tnpoint()", "tpose": "PoseTypes::tpose()",
+           "trgeometry": "TrgeometryTypes::trgeometry()"}
 def ret_temporal_type(name, arg_acc, group="", sql_ret=None):
     # A single, unambiguous SQL return subtype from the catalog names the output
     # temporal type directly (the catalog is the SoT). The name heuristics below are
@@ -539,7 +555,7 @@ def ret_temporal_type(name, arg_acc, group="", sql_ret=None):
         return "TemporalTypes::tfloat()"
     # `<x>_to_<y>` conversions CHANGE type to the target -> the `_to_` suffix names it
     # (geo targets tgeometry/tgeography/tgeompoint/tgeogpoint added alongside the base ones).
-    m = re.search(r'_to_(tint|tbigint|tfloat|tbool|ttext|tgeometry|tgeography|tgeompoint|tgeogpoint|tcbuffer|tpose)$', name)
+    m = re.search(r'_to_(tint|tbigint|tfloat|tbool|ttext|tgeometry|tgeography|tgeompoint|tgeogpoint|tcbuffer|tpose|trgeometry)$', name)
     return TO_TYPE[m.group(1)] if m else arg_acc
 
 # The concrete DuckDB accessors the generic temporal track can emit, keyed by the catalog
@@ -556,6 +572,7 @@ SIG_TEMPORAL_ACC = {
     "tquadbin":   "QuadbinTypes::tquadbin()",      "tjsonb":     "TJsonbTypes::tjsonb()",
     "tpcpoint":   "TPcpointTypes::tpcpoint()",     "tpcpatch":   "TPcpatchTypes::tpcpatch()",
     "tnpoint":    "NpointTypes::tnpoint()",      "tpose":      "PoseTypes::tpose()",
+    "trgeometry": "TrgeometryTypes::trgeometry()",
 }
 def sig_declared_accs(f):
     """The exact temporal-operand types this GENERIC (`Temporal *`) function is CREATE
@@ -1825,6 +1842,16 @@ NUMSPAN_PAIR = {"TemporalTypes::tint()": "SpanTypes::intspan()",
                 "TemporalTypes::tfloat()": "SpanTypes::floatspan()"}
 ALL_TEMPORAL_ACCS = (["TemporalTypes::tint()", "TemporalTypes::tbigint()", "TemporalTypes::tbool()",
                       "TemporalTypes::tfloat()", "TemporalTypes::ttext()"] + SPATIAL_ALLTYPES)
+# A family whose VALUE LAYOUT makes the generic walker wrong owns its own temporal surface and
+# must NOT take the blanket: trgeometry appends its reference geometry to the varlena, so a
+# generic `temporal_*` op would drop it — which is why MEOS publishes a `trgeometry_*` counterpart
+# for each. Such a family stays in SPATIAL_ALLTYPES (it IS spatial, so the `tspatial_*` surface —
+# SRID/transform/setSRID and the box operators — reaches it) but is excluded from the generic
+# Temporal<T> blanket loop, where it would ALSO collide with its own counterpart: DuckDB refuses
+# the extension at load with "Failed to add new function overloads to function <name>".
+OWNS_TEMPORAL_SURFACE = {"TrgeometryTypes::trgeometry()"}
+GENERIC_BLANKET_SPATIAL = [t for t in SPATIAL_ALLTYPES if t not in OWNS_TEMPORAL_SURFACE]
+
 def shape_temporal_span(f):
     if supported(f) is not None: return None
     ins, out = classify(f)
@@ -2926,10 +2953,25 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             # via the {type, type} placeholder the writer wraps in its AllTypes/geo loops.
             n_bin += 1
             bodies.append(emit_path_table(f))
+            # The NAME scope, not the sqlSignatures-narrowed one: the generic `temporal_*`
+            # path function keeps its blanket registration exactly as before.
+            _psc = reg_scope(fn) or ("all", None)
             for nm in reg_names(f, sqlfn, aliases):
-                generic_regs.append(
-                    f'        loader.RegisterFunction(TableFunction("{reg_name(nm, f)}", {{type, type}}, '
-                    f'PathExec_{fn}, PathBindFn_{fn}, PathInit_{fn}));')
+                if _psc[0] == "all":
+                    generic_regs.append(
+                        f'        loader.RegisterFunction(TableFunction("{reg_name(nm, f)}", {{type, type}}, '
+                        f'PathExec_{fn}, PathBindFn_{fn}, PathInit_{fn}));')
+                else:
+                    # A family that owns its own path table function registers over ITS OWN
+                    # type, like the scalar branch below. The {type, type} placeholder rides
+                    # the AllTypes + spatial loops, so emitting a family function there
+                    # registers it for every temporal type and COLLIDES with the generic one
+                    # on each: DuckDB refuses the extension at load with "Failed to add new
+                    # function overloads to function <name>: function already exists".
+                    for acc in _psc[1] or []:
+                        specific_regs.append(
+                            f'    loader.RegisterFunction(TableFunction("{reg_name(nm, f)}", {{{acc}, {acc}}}, '
+                            f'PathExec_{fn}, PathBindFn_{fn}, PathInit_{fn}));')
             continue
         # Names to register: the native sqlfn + any portable bare-name alias the pin
         # assigns to this fn's operator (catalog portableAliases is the SoT — invent
@@ -3243,8 +3285,17 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                      "SpanSet": "SpansetTypes::tstzspanset()"}
         if flav == "num":                       # tnumber value span, paired (Span only)
             pairs = [(NUMSPAN_PAIR[a], a) for a in reg_scope(fn)[1] if a in NUMSPAN_PAIR]
-        else:                                   # tstz time container, fixed, over all temporal types
-            pairs = [(TSTZ_CONT[cont], a) for a in ALL_TEMPORAL_ACCS]
+        else:
+            # tstz time container, fixed. The BLANKET set is right only for the GENERIC
+            # `temporal_*` function; a family that owns its own time restriction — trgeometry
+            # does, because its varlena appends the reference geometry and the generic walker
+            # would drop it — must register over ITS OWN type alone. Registering the family
+            # function over every temporal type points e.g. `minusTime(tint, tstzset)` at
+            # `trgeometry_minus_tstzset`, which reads a tint blob as a pose skeleton plus a
+            # trailing geometry. The `num` branch above already scopes by name this way.
+            sc = reg_scope(fn)
+            accs = sc[1] if (sc and sc[0] == "types" and sc[1]) else ALL_TEMPORAL_ACCS
+            pairs = [(TSTZ_CONT[cont], a) for a in accs]
         for spacc, tacc in pairs:
             sig = "{%s, %s}" % (tacc, spacc) if not span_first else "{%s, %s}" % (spacc, tacc)
             rett = tacc if retk == "T" else "LogicalType::BOOLEAN"   # at/minus span preserves type
@@ -3318,6 +3369,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            '#include "pointcloud/tpcpatch.hpp"\n'      # TPcpatchTypes::pcpatch()/tpcpatch()
            '#include "npoint/tnpoint.hpp"\n'           # NpointTypes::npoint()/nsegment()/tnpoint()
            '#include "pose/tpose.hpp"\n'               # PoseTypes::pose()/tpose()
+           '#include "rgeo/trgeometry.hpp"\n'          # TrgeometryTypes::trgeometry()
            '#include "spatial/spatial_types.hpp"\n'   # MobilityDuckGeometryType() (duckdb-spatial)
            '#include "geo_util.hpp"\n'                # GeometryToGSerialized(blob, srid)
            '#include "meos_internal.h"\n'
@@ -3600,7 +3652,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             # the generic Temporal<T> surface registers over the spatial subtypes too (geo +
             # tcbuffer + future) — a spatial family inherits every generic temporal op by being
             # in SPATIAL_ALLTYPES, not via incidental BLOB-alias coercion.
-            b += _loop("for (auto &type : std::vector<LogicalType>{" + ", ".join(SPATIAL_ALLTYPES) + "}) {", tgen[g])
+            b += _loop("for (auto &type : std::vector<LogicalType>{" + ", ".join(GENERIC_BLANKET_SPATIAL) + "}) {", tgen[g])
         b += _flat(tspec.get(g, []))
         if sgen.get(g): b += _loop("for (auto &type : SetTypes::AllTypes()) {", sgen[g])
         b += _flat(sspec.get(g, []))

@@ -28,6 +28,7 @@
 #include "json/tjsonb.hpp"
 #include "npoint/tnpoint.hpp"
 #include "pose/tpose.hpp"
+#include "rgeo/trgeometry.hpp"
 #include "temporal/span.hpp"
 #include "temporal/span_aggregates.hpp"
 #include "temporal/temporal_aggregates.hpp"
@@ -456,6 +457,9 @@ static void LoadInternal(ExtensionLoader &loader) {
 	NpointTypes::RegisterCastFunctions(loader);
 	PoseTypes::RegisterTypes(loader);
 	PoseTypes::RegisterCastFunctions(loader);
+	// The temporal rigid geometry, after the pose type its base value is.
+	TrgeometryTypes::RegisterTypes(loader);
+	TrgeometryTypes::RegisterCastFunctions(loader);
 
 	SpansetTypes::RegisterTypes(loader);
 	SpansetTypes::RegisterCastFunctions(loader);
