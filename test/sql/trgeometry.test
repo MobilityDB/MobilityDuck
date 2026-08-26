@@ -1,0 +1,103 @@
+# name: test/sql/trgeometry.test
+# description: Temporal rigid geometry (trgeometry) — type + text I/O, and the
+#             catalog-generated operation surface, which is the family's OWN
+#             trgeometry_* set rather than the generic temporal_* one.
+
+require mobilityduck
+
+# ---------------------------------------------------------------------------
+# Type + text I/O (hand-registered boundary).  The cast prints the reference
+# geometry as HEXEWKB and the pose as the canonical #Pose_out() form; asText
+# prints both in WKT.
+# ---------------------------------------------------------------------------
+
+# trgeometry instant round-trip
+query I
+SELECT trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01';
+----
+01030000000100000004000000000000000000F03F000000000000F03F000000000000004000000000000000400000000000000840000000000000F03F000000000000F03F000000000000F03F;POSE (0101000000000000000000F03F000000000000F03F, 0.5)@2000-01-01 00:00:00+01
+
+# ---------------------------------------------------------------------------
+# Catalog-generated operation surface.  The expected values mirror MobilityDB's
+# own regression outputs under mobilitydb/test/rgeo/expected/, so the two
+# answer alike.
+# ---------------------------------------------------------------------------
+
+# Text form — the reference geometry travels with the value
+query I
+SELECT asText(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01');
+----
+POLYGON((1 1,2 2,3 1,1 1));Pose(POINT(1 1),0.5)@2000-01-01 00:00:00+01
+
+# Accessor: number of instants
+query I
+SELECT numInstants(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01');
+----
+1
+
+query I
+SELECT numInstants(trgeometry 'Polygon((1 1,2 2,3 1,1 1));{Pose(Point(1 1),0.3)@2000-01-01, Pose(Point(2 2),0.5)@2000-01-02}');
+----
+2
+
+# Accessor: the first instant keeps the reference geometry
+query I
+SELECT asText(startInstant(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01'));
+----
+POLYGON((1 1,2 2,3 1,1 1));Pose(POINT(1 1),0.5)@2000-01-01 00:00:00+01
+
+# SRID
+query I
+SELECT SRID(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01');
+----
+0
+
+# Conversion: the temporal pose that places the reference geometry
+query I
+SELECT asText(tpose(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01'));
+----
+Pose(POINT(1 1),0.5)@2000-01-01 00:00:00+01
+
+# Conversion: the temporal point of the pose positions
+query I
+SELECT asText(tgeompoint(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01'));
+----
+POINT(1 1)@2000-01-01 00:00:00+01
+
+# ---------------------------------------------------------------------------
+# The reference geometry is appended to the varlena, so a restriction has to
+# run on the pose part and carry the geometry through.  These assert it does —
+# the generic temporal_* op would answer without the POLYGON prefix.
+# ---------------------------------------------------------------------------
+
+query I
+SELECT asText(atTime(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01', tstzspan '[2000-01-01,2000-01-02]'));
+----
+POLYGON((1 1,2 2,3 1,1 1));Pose(POINT(1 1),0.5)@2000-01-01 00:00:00+01
+
+query I
+SELECT asText(minusTime(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01', tstzset '{2000-01-02}'));
+----
+POLYGON((1 1,2 2,3 1,1 1));Pose(POINT(1 1),0.5)@2000-01-01 00:00:00+01
+
+# The family owning minusTime must not capture the generic one: this stays on
+# the temporal_* implementation, and answering at all proves it.
+query I
+SELECT minusTime(tint '1@2000-01-01', tstzset '{2000-01-02}');
+----
+1@2000-01-01 00:00:00+01
+
+# ---------------------------------------------------------------------------
+# tgeompoint(tnpoint): MobilityDB declares this cast (302_tnpoint.in.sql), and
+# scoping a `<src>_to_<dst>` conversion on its source is what reaches it.
+#
+# Bounded to 6 decimals: the position is interpolated along the route, and the
+# unrounded double differs in its last digit between architectures — x86_64
+# answers …282778 where arm64 answers …282779, which is drift at the 16th
+# significant digit, far below what this assertion is about.
+# ---------------------------------------------------------------------------
+
+query I
+SELECT asText(round(tgeompoint(tnpoint 'NPoint(1, 0.5)@2000-01-01'), 6));
+----
+POINT(48.718663 77.764071)@2000-01-01 00:00:00+01

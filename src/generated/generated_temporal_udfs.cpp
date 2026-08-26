@@ -21,6 +21,7 @@
 #include "pointcloud/tpcpatch.hpp"
 #include "npoint/tnpoint.hpp"
 #include "pose/tpose.hpp"
+#include "rgeo/trgeometry.hpp"
 #include "spatial/spatial_types.hpp"
 #include "geo_util.hpp"
 #include "meos_internal.h"
@@ -119,6 +120,19 @@ void RegisterGenerated_meos_quadbin_accessor(ExtensionLoader &loader);
 void RegisterGenerated_meos_quadbin_comp_ever(ExtensionLoader &loader);
 void RegisterGenerated_meos_quadbin_comp_temp(ExtensionLoader &loader);
 void RegisterGenerated_meos_quadbin_conversion(ExtensionLoader &loader);
+void RegisterGenerated_meos_rgeo_accessor(ExtensionLoader &loader);
+void RegisterGenerated_meos_rgeo_analytics_similarity(ExtensionLoader &loader);
+void RegisterGenerated_meos_rgeo_bbox_split(ExtensionLoader &loader);
+void RegisterGenerated_meos_rgeo_comp_ever(ExtensionLoader &loader);
+void RegisterGenerated_meos_rgeo_comp_temp(ExtensionLoader &loader);
+void RegisterGenerated_meos_rgeo_conversion(ExtensionLoader &loader);
+void RegisterGenerated_meos_rgeo_dist(ExtensionLoader &loader);
+void RegisterGenerated_meos_rgeo_inout(ExtensionLoader &loader);
+void RegisterGenerated_meos_rgeo_modif(ExtensionLoader &loader);
+void RegisterGenerated_meos_rgeo_rel_ever(ExtensionLoader &loader);
+void RegisterGenerated_meos_rgeo_restrict(ExtensionLoader &loader);
+void RegisterGenerated_meos_rgeo_spatialfuncs(ExtensionLoader &loader);
+void RegisterGenerated_meos_rgeo_transf(ExtensionLoader &loader);
 void RegisterGenerated_meos_setspan_accessor(ExtensionLoader &loader);
 void RegisterGenerated_meos_setspan_bbox_split(ExtensionLoader &loader);
 void RegisterGenerated_meos_setspan_comp(ExtensionLoader &loader);
@@ -228,6 +242,19 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_quadbin_comp_ever(loader);
     RegisterGenerated_meos_quadbin_comp_temp(loader);
     RegisterGenerated_meos_quadbin_conversion(loader);
+    RegisterGenerated_meos_rgeo_accessor(loader);
+    RegisterGenerated_meos_rgeo_analytics_similarity(loader);
+    RegisterGenerated_meos_rgeo_bbox_split(loader);
+    RegisterGenerated_meos_rgeo_comp_ever(loader);
+    RegisterGenerated_meos_rgeo_comp_temp(loader);
+    RegisterGenerated_meos_rgeo_conversion(loader);
+    RegisterGenerated_meos_rgeo_dist(loader);
+    RegisterGenerated_meos_rgeo_inout(loader);
+    RegisterGenerated_meos_rgeo_modif(loader);
+    RegisterGenerated_meos_rgeo_rel_ever(loader);
+    RegisterGenerated_meos_rgeo_restrict(loader);
+    RegisterGenerated_meos_rgeo_spatialfuncs(loader);
+    RegisterGenerated_meos_rgeo_transf(loader);
     RegisterGenerated_meos_setspan_accessor(loader);
     RegisterGenerated_meos_setspan_bbox_split(loader);
     RegisterGenerated_meos_setspan_comp(loader);
