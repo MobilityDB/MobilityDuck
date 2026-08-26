@@ -27,6 +27,7 @@
 #include "cbuffer/tcbuffer.hpp"
 #include "json/tjsonb.hpp"
 #include "npoint/tnpoint.hpp"
+#include "pose/tpose.hpp"
 #include "temporal/span.hpp"
 #include "temporal/span_aggregates.hpp"
 #include "temporal/temporal_aggregates.hpp"
@@ -453,6 +454,8 @@ static void LoadInternal(ExtensionLoader &loader) {
 	CbufferTypes::RegisterCastFunctions(loader);
 	NpointTypes::RegisterTypes(loader);
 	NpointTypes::RegisterCastFunctions(loader);
+	PoseTypes::RegisterTypes(loader);
+	PoseTypes::RegisterCastFunctions(loader);
 
 	SpansetTypes::RegisterTypes(loader);
 	SpansetTypes::RegisterCastFunctions(loader);

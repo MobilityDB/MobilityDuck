@@ -48,6 +48,7 @@ PTR_IN  = {  # MEOS base type -> (DuckDB arg LogicalType, "C++ expr producing th
     "Pcpoint":      ("TPcpointTypes::pcpoint()", "BlobToPcpoint(%s)"),
     "Pcpatch":      ("TPcpatchTypes::pcpatch()", "BlobToPcpatch(%s)"),
     "Npoint":       ("NpointTypes::npoint()", "BlobToNpoint(%s)"),
+    "Pose":         ("PoseTypes::pose()", "BlobToPose(%s)"),
     "Nsegment":     ("NpointTypes::nsegment()", "BlobToNsegment(%s)"),
 }
 PTR_RET = {  # MEOS base type -> (DuckDB ret LogicalType, "C++ expr producing string_t from MEOS ptr `%s` in `result`")
@@ -65,6 +66,7 @@ PTR_RET = {  # MEOS base type -> (DuckDB ret LogicalType, "C++ expr producing st
     "Pcpoint":      ("TPcpointTypes::pcpoint()", "PcpointToBlob(result, %s)"),
     "Pcpatch":      ("TPcpatchTypes::pcpatch()", "PcpatchToBlob(result, %s)"),
     "Npoint":       ("NpointTypes::npoint()", "NpointToBlob(result, %s)"),
+    "Pose":         ("PoseTypes::pose()", "PoseToBlob(result, %s)"),
     "Nsegment":     ("NpointTypes::nsegment()", "NsegmentToBlob(result, %s)"),
 }
 # The temporal-family pointer returns that marshal as one DuckDB temporal handle. A MEOS
@@ -197,12 +199,19 @@ REGISTERED_FAMILIES = {
     "tjsonb", "jsonb",
     "tpcpoint", "pcpoint", "tpcpatch", "pcpatch",
     "tnpoint", "npoint", "nsegment",
+    "tpose", "pose",
 }
 # Every temporal family token the catalog function names use; those NOT in REGISTERED_FAMILIES
 # are the fast-follow families whose DuckDB type the binding does not register yet.
 KNOWN_FAMILIES = REGISTERED_FAMILIES | {
     "th3index", "tnpoint", "tpose", "trgeometry", "trgeo", "tpcpoint", "tpcpatch",
     "tjsonb", "npoint", "nsegment", "pose", "pcpoint", "pcpatch", "jsonb", "h3index",
+    # A token missing here makes the gate blind, not strict: it can only reject a
+    # name whose family token it knows, so an unlisted family rides in on a name
+    # whose OTHER token happens to be unregistered, and emits the moment that one
+    # registers. tposechain_to_tpose was rejected only for naming the then-
+    # unregistered tpose, and reached the compiler as soon as tpose registered.
+    "posechain", "posechainset", "tposechain",
 }
 def unregistered_family_ref(name):
     """The first unregistered family token the name references, else None (in scope)."""
@@ -391,7 +400,8 @@ GEO_ALLTYPES = list(GEO_TYPES.values())
 # GEO_ALLTYPES, which stays geo-only for the `tgeo` supertype (geometry+geography) and the
 # geometry-argument spatial relationships. Add a new spatial family here to inherit the surface.
 SPATIAL_ALLTYPES = GEO_ALLTYPES + ["CbufferTypes::tcbuffer()", "H3indexTypes::th3index()",
-                                   "QuadbinTypes::tquadbin()", "NpointTypes::tnpoint()"]
+                                   "QuadbinTypes::tquadbin()", "NpointTypes::tnpoint()",
+                                   "PoseTypes::tpose()"]
 def reg_scope(name):
     """('all', None) generic | ('types', [accessors]) specific | None = not core family.
     Resolves the temporal type from the MobilityDB naming convention: a PREFIX
@@ -475,6 +485,12 @@ def reg_scope(name):
         return ("types", ["TPcpointTypes::tpcpoint()"])
     if name.startswith("tpcpatch_") or re.search(r'_tpcpatch(?=_|$)', name):
         return ("types", ["TPcpatchTypes::tpcpatch()"])
+    # the temporal rigid-body pose family (its own gated spatial type): a tpose_* prefix, or a
+    # _tpose token anywhere (ever_eq_tpose_tpose, teq_tpose_tpose). The base pose value marshals
+    # via the Pose varlena marshaller; geometry- and geopose-coupled variants auto-exclude on
+    # their unmarshallable arg/return.
+    if name.startswith("tpose_") or re.search(r'_tpose(?=_|$)', name):
+        return ("types", ["PoseTypes::tpose()"])
     # temporal-type token ANYWHERE in the name (always_eq_tint_int, ever_lt_tfloat_tfloat,
     # tdistance_tfloat_tfloat, teq_temporal_temporal). Skip if >1 DISTINCT temporal type
     # appears (mixed/ambiguous) — geo tokens (tgeompoint/tgeo/th3index/tnpoint) aren't in
@@ -500,7 +516,7 @@ TO_TYPE = {"tint": "TemporalTypes::tint()", "tbigint": "TemporalTypes::tbigint()
            "tcbuffer": "CbufferTypes::tcbuffer()", "th3index": "H3indexTypes::th3index()",
            "tquadbin": "QuadbinTypes::tquadbin()", "tjsonb": "TJsonbTypes::tjsonb()",
            "tpcpoint": "TPcpointTypes::tpcpoint()", "tpcpatch": "TPcpatchTypes::tpcpatch()",
-           "tnpoint": "NpointTypes::tnpoint()"}
+           "tnpoint": "NpointTypes::tnpoint()", "tpose": "PoseTypes::tpose()"}
 def ret_temporal_type(name, arg_acc, group="", sql_ret=None):
     # A single, unambiguous SQL return subtype from the catalog names the output
     # temporal type directly (the catalog is the SoT). The name heuristics below are
@@ -523,7 +539,7 @@ def ret_temporal_type(name, arg_acc, group="", sql_ret=None):
         return "TemporalTypes::tfloat()"
     # `<x>_to_<y>` conversions CHANGE type to the target -> the `_to_` suffix names it
     # (geo targets tgeometry/tgeography/tgeompoint/tgeogpoint added alongside the base ones).
-    m = re.search(r'_to_(tint|tbigint|tfloat|tbool|ttext|tgeometry|tgeography|tgeompoint|tgeogpoint|tcbuffer)$', name)
+    m = re.search(r'_to_(tint|tbigint|tfloat|tbool|ttext|tgeometry|tgeography|tgeompoint|tgeogpoint|tcbuffer|tpose)$', name)
     return TO_TYPE[m.group(1)] if m else arg_acc
 
 # The concrete DuckDB accessors the generic temporal track can emit, keyed by the catalog
@@ -539,7 +555,7 @@ SIG_TEMPORAL_ACC = {
     "tcbuffer":   "CbufferTypes::tcbuffer()",      "th3index":   "H3indexTypes::th3index()",
     "tquadbin":   "QuadbinTypes::tquadbin()",      "tjsonb":     "TJsonbTypes::tjsonb()",
     "tpcpoint":   "TPcpointTypes::tpcpoint()",     "tpcpatch":   "TPcpatchTypes::tpcpatch()",
-    "tnpoint":    "NpointTypes::tnpoint()",
+    "tnpoint":    "NpointTypes::tnpoint()",      "tpose":      "PoseTypes::tpose()",
 }
 def sig_declared_accs(f):
     """The exact temporal-operand types this GENERIC (`Temporal *`) function is CREATE
@@ -3301,6 +3317,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            '#include "pointcloud/tpcpoint.hpp"\n'      # TPcpointTypes::pcpoint()/tpcpoint()
            '#include "pointcloud/tpcpatch.hpp"\n'      # TPcpatchTypes::pcpatch()/tpcpatch()
            '#include "npoint/tnpoint.hpp"\n'           # NpointTypes::npoint()/nsegment()/tnpoint()
+           '#include "pose/tpose.hpp"\n'               # PoseTypes::pose()/tpose()
            '#include "spatial/spatial_types.hpp"\n'   # MobilityDuckGeometryType() (duckdb-spatial)
            '#include "geo_util.hpp"\n'                # GeometryToGSerialized(blob, srid)
            '#include "meos_internal.h"\n'
@@ -3395,6 +3412,19 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "    uint8_t *copy = (uint8_t *)malloc(sz);\n"
            "    memcpy(copy, blob.GetData(), sz);\n"
            "    return reinterpret_cast<Jsonb *>(copy);\n}\n"
+           "// Self-contained blob<->Pose marshalling. Pose is a 4-byte-header varlena\n"
+           "// (int32 vl_len_ + flags + srid + position/orientation doubles) -> VARSIZE out;\n"
+           "// the stored BLOB is the raw bytes (mirror Cbuffer).\n"
+           "inline string_t PoseToBlob(Vector &result, Pose *p) {\n"
+           "    string_t out = StringVector::AddStringOrBlob(result, (const char *)p, VARSIZE(p));\n"
+           "    free(p);\n    return out;\n}\n"
+           "inline string_t PoseToBlobN(Vector &result, Pose *p, ValidityMask &mask, idx_t idx) {\n"
+           "    if (!p) { mask.SetInvalid(idx); return string_t(); }\n    return PoseToBlob(result, p);\n}\n"
+           "inline Pose *BlobToPose(string_t blob) {\n"
+           "    size_t sz = blob.GetSize();\n"
+           "    uint8_t *copy = (uint8_t *)malloc(sz);\n"
+           "    memcpy(copy, blob.GetData(), sz);\n"
+           "    return reinterpret_cast<Pose *>(copy);\n}\n"
            "// Self-contained blob<->Pcpoint/Pcpatch marshalling. Both are varlena (vl_len_\n"
            "// header) -> VARSIZE out; the stored BLOB is the raw bytes (mirror Cbuffer).\n"
            "inline string_t PcpointToBlob(Vector &result, Pcpoint *pt) {\n"
