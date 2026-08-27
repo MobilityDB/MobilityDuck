@@ -95,3 +95,22 @@ statement error
 SELECT tint(TJSONB('{"a":1}@2000-01-01'), 'a', 'not_a_mode');
 ----
 Unknown null handling type
+
+# A key of a temporal JSONB value, with the null-handling mode as the third argument.
+# `astext` is bound by the wrapper, so it is not part of the SQL surface.
+query I
+SELECT tjsonbObjectField(TJSONB('{"a":1}@2000-01-01'), 'a', 'use_json_null')::VARCHAR;
+----
+"1"@2000-01-01 00:00:00+01
+
+# The mode reaches MEOS: an absent key becomes a JSON null under one mode.
+query I
+SELECT tjsonbObjectField(TJSONB('{"a":1}@2000-01-01'), 'zz', 'use_json_null')::VARCHAR;
+----
+"null"@2000-01-01 00:00:00+01
+
+# An element of a temporal JSONB array, indexed from zero.
+query I
+SELECT tjsonbArrayElement(TJSONB('[[10,20,30]@2000-01-01]'), 1, 'use_json_null')::VARCHAR;
+----
+{["20"@2000-01-01 00:00:00+01]}
