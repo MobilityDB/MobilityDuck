@@ -15,11 +15,7 @@ extern "C" {
 namespace duckdb {
 
 struct SpansetTypes {
-    static LogicalType intspanset();
-    static LogicalType bigintspanset();
-    static LogicalType floatspanset();
-    static LogicalType datespanset();
-    static LogicalType tstzspanset();
+#include "generated/spanset_accessors.hpp"
 
     static const std::vector<LogicalType> &AllTypes();
 
