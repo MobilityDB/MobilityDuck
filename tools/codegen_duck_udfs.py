@@ -1239,6 +1239,60 @@ def _const_ptr(p):
             return (dt, b, expr)
     return None
 
+# ── the tail a shape carries after its leading operands ────────────────────────────────
+# A MEOS parameter past the leading operands is one of three things, and both shapes below
+# read them the same way: a literal the PG wrapper binds (`shape.boundArgs`), a by-value
+# per-call setting, or a pointer-valued one. Keeping the reading in one place is what lets a
+# new argument kind reach every shape at once.
+def _build_tail(params, bound):
+    """[(kind, payload)] for the parameters after the leading operands, or None if one of
+    them is a kind no shape can carry."""
+    tail = []
+    for p in params:
+        nm = p.get("name")
+        if nm in bound:
+            tail.append(("lit", bound[nm])); continue
+        st = SETTING_ARG.get(base(p["canonical"])) if "*" not in norm(p["canonical"]) else None
+        if st is not None:
+            tail.append(("col", st)); continue
+        pt = _const_ptr(p)
+        if pt is None: return None
+        tail.append(("ptr", pt))
+    return tail
+
+def _tail_sig(tail):
+    """The DuckDB types the tail exposes — a bound literal is emitted, never exposed."""
+    return [st[0] for k, st in tail if k in ("col", "ptr")]
+
+def _emit_tail_consts(L, tail, col=2):
+    """Append the per-call reads for `tail` to `L`; answer (call arguments, pointers to free).
+    A setting is read ONCE outside the executor, which is what lets a BinaryExecutor run over
+    the operands that vary — DuckDB has no wider executor."""
+    call, frees = [], []
+    for kindi, payload in tail:
+        if kindi == "lit":
+            call.append(payload); continue
+        if kindi == "ptr":
+            _d, cbase_, marshal = payload
+            L.append(f"    {cbase_} *c{col} = NULL;")
+            L.append(f"    {{ auto &cv = args.data[{col}]; cv.Flatten(rc); Value v = cv.GetValue(0);"
+                     " if (!v.IsNull()) c%d = %s; }" % (col, marshal % "string_t(StringValue::Get(v))"))
+            frees.append(f"c{col}")
+        else:
+            _d, ctype, cexpr = payload
+            L.append(f"    {ctype} c{col} = ({ctype}) 0;")
+            L.append(f"    {{ auto &cv = args.data[{col}]; cv.Flatten(rc); Value v = cv.GetValue(0);"
+                     f" if (!v.IsNull()) c{col} = {cexpr}; }}")
+        call.append(f"c{col}")
+        col += 1
+    return call, frees
+
+def _close_body(L, frees):
+    """Release the pointer settings, then close the function."""
+    L += ["    free(%s);" % fr for fr in frees]
+    L += ["}", ""]
+    return "\n".join(L)
+
 def shape_bound_tail(f):
     """(Temporal *, varying, <bound literals and per-call settings...>) -> Temporal *.
 
@@ -1254,24 +1308,14 @@ def shape_bound_tail(f):
     if not bound: return None            # without the literal the tail cannot be emitted
     v = _vary(ins[1])
     if v is None: return None
-    tail = []                            # (kind, payload) per C parameter after the second
-    for p in ins[2:]:
-        nm = p.get("name")
-        if nm in bound:
-            tail.append(("lit", bound[nm]))
-            continue
-        st = SETTING_ARG.get(base(p["canonical"])) if "*" not in norm(p["canonical"]) else None
-        if st is not None:
-            tail.append(("col", st)); continue
-        pt = _const_ptr(p)
-        if pt is None: return None
-        tail.append(("ptr", pt))
+    tail = _build_tail(ins[2:], bound)
+    if tail is None: return None
     if not any(k == "col" for k, _ in tail): return None
     if reg_scope(f["name"]) is None: return None
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
     if not (rb == "Temporal" and rn.endswith("*")): return None
     # the registered signature is the type, the varying arg, then each exposed setting
-    sig = [v[0]] + [st[0] for k, st in tail if k in ("col", "ptr")]
+    sig = [v[0]] + _tail_sig(tail)
     return ("temporal", "MD_TEMPORAL", v, tail, sig)
 
 def emit_body_bound_tail(f, kind, vary, tail, sig):
@@ -1280,24 +1324,7 @@ def emit_body_bound_tail(f, kind, vary, tail, sig):
     L = [f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{",
          "    EnsureMeosThreadInitialized();",
          "    auto rc = args.size();"]
-    call, col, frees = [], 2, []
-    for kindi, payload in tail:
-        if kindi == "lit":
-            call.append(payload)
-            continue
-        if kindi == "ptr":
-            _d, cbase_, marshal = payload
-            L.append(f"    {cbase_} *c{col} = NULL;")
-            L.append(f"    {{ auto &cv = args.data[{col}]; cv.Flatten(rc); Value v = cv.GetValue(0);"
-                     " if (!v.IsNull()) c%d = %s; }" % (col, marshal % "string_t(StringValue::Get(v))"))
-            frees.append(f"c{col}"); call.append(f"c{col}"); col += 1
-            continue
-        _d, ctype, cexpr = payload
-        L.append(f"    {ctype} c{col} = ({ctype}) 0;")
-        L.append(f"    {{ auto &cv = args.data[{col}]; cv.Flatten(rc); Value v = cv.GetValue(0);"
-                 f" if (!v.IsNull()) c{col} = {cexpr}; }}")
-        call.append(f"c{col}")
-        col += 1
+    call, frees = _emit_tail_consts(L, tail)
     tailargs = "".join(", " + a for a in call)
     lead = expr2 % "a2"
     L += [f"    BinaryExecutor::ExecuteWithNulls<string_t, {cpp2}, string_t>("
@@ -1313,9 +1340,7 @@ def emit_body_bound_tail(f, kind, vary, tail, sig):
               "            free(t);"]
     L += ["            return TemporalToBlobN(result, r, mask, idx);",
           "        });"]
-    L += ["    free(%s);" % fr for fr in frees]
-    L += ["}", ""]
-    return "\n".join(L)
+    return _close_body(L, frees)
 
 def shape_text_array(f):
     """(Temporal *, text **elems, int count, <bound literals and settings...>) -> Temporal *.
@@ -1344,21 +1369,12 @@ def shape_text_array(f):
     if len({sg.get("sqlName") for sg in sigs if sg.get("sqlName")}) > 1:
         return None
     bound = ((f.get("shape") or {}).get("boundArgs") or {})
-    tail = []
-    for p in ins[3:]:
-        nm = p.get("name")
-        if nm in bound:
-            tail.append(("lit", bound[nm])); continue
-        st = SETTING_ARG.get(base(p["canonical"])) if "*" not in norm(p["canonical"]) else None
-        if st is not None:
-            tail.append(("col", st)); continue
-        pt = _const_ptr(p)
-        if pt is None: return None
-        tail.append(("ptr", pt))
+    tail = _build_tail(ins[3:], bound)
+    if tail is None: return None
     if reg_scope(f["name"]) is None: return None
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
     if not (rb == "Temporal" and rn.endswith("*")): return None
-    sig = ["LogicalType::LIST(LogicalType::VARCHAR)"] + [st[0] for k, st in tail if k in ("col", "ptr")]
+    sig = ["LogicalType::LIST(LogicalType::VARCHAR)"] + _tail_sig(tail)
     return ("temporal", "MD_TEMPORAL", tail, sig)
 
 def emit_body_text_array(f, kind, tail, sig):
@@ -1369,23 +1385,7 @@ def emit_body_text_array(f, kind, tail, sig):
          "    auto &lst = args.data[1]; lst.Flatten(rc);",
          "    auto &child = ListVector::GetEntry(lst);",
          "    child.Flatten(ListVector::GetListSize(lst));"]
-    call, col, frees = [], 2, []
-    for kindi, payload in tail:
-        if kindi == "lit":
-            call.append(payload); continue
-        if kindi == "ptr":
-            _d, cbase_, marshal = payload
-            L.append(f"    {cbase_} *c{col} = NULL;")
-            L.append(f"    {{ auto &cv = args.data[{col}]; cv.Flatten(rc); Value v = cv.GetValue(0);"
-                     " if (!v.IsNull()) c%d = %s; }" % (col, marshal % "string_t(StringValue::Get(v))"))
-            frees.append(f"c{col}"); call.append(f"c{col}"); col += 1
-            continue
-        _d, ctype, cexpr = payload
-        L.append(f"    {ctype} c{col} = ({ctype}) 0;")
-        L.append(f"    {{ auto &cv = args.data[{col}]; cv.Flatten(rc); Value v = cv.GetValue(0);"
-                 f" if (!v.IsNull()) c{col} = {cexpr}; }}")
-        call.append(f"c{col}")
-        col += 1
+    call, frees = _emit_tail_consts(L, tail)
     tailargs = "".join(", " + a for a in call)
     L += ["    BinaryExecutor::ExecuteWithNulls<string_t, list_entry_t, string_t>("
           "args.data[0], lst, result, rc,",
@@ -1397,9 +1397,7 @@ def emit_body_text_array(f, kind, tail, sig):
           "            free(t); FreeTextArr(elems, n);",
           "            return TemporalToBlobN(result, r, mask, idx);",
           "        });"]
-    L += ["    free(%s);" % fr for fr in frees]
-    L += ["}", ""]
-    return "\n".join(L)
+    return _close_body(L, frees)
 
 def shape_binary_tt(f):
     """Binary Temporal + Temporal (both via BlobToTemporal) — the big 2-arg shape
