@@ -619,11 +619,15 @@ def sig_declared_accs(f):
 # ---------------- SET family (additive; the temporal path is left untouched) ----------------
 # Self-contained Blob<->Set marshalling reuses the hand binding's exact method
 # (malloc+memcpy in; set_mem_size out). Per-element accessors mirror CORE_TYPES.
-SET_TYPES = {
-    "intset":   "SetTypes::intset()",   "bigintset": "SetTypes::bigintset()",
-    "floatset": "SetTypes::floatset()", "textset":   "SetTypes::textset()",
-    "dateset":  "SetTypes::dateset()",  "tstzset":   "SetTypes::tstzset()",
-}
+# The base values whose collection types the binding registers, in canonical order. ONE list
+# serves both the type registration below (SetTypes/SpanTypes/SpansetTypes, filtered per family by
+# T_<BASE><SUFFIX> membership in the catalog MeosType enum) and the name-scoping maps here, so a
+# base can never be registered as a type while its family functions stay unscoped. geom, geog and
+# h3index are absent on purpose: their set types carry a hand-written function surface of their own.
+BASE_ORDER = ["int", "bigint", "float", "text", "date", "tstz",
+              "jsonb", "cbuffer", "npoint", "quadbin", "pose", "posechain",
+              "pcpoint", "pcpatch"]
+SET_TYPES = {b + "set": "SetTypes::%sset()" % b for b in BASE_ORDER}
 def set_reg_scope(name):
     """('all',None) for generic set_* | ('types',[acc]) for <elem>set_* | None."""
     if name.startswith("set_"):
@@ -4148,9 +4152,6 @@ BASE_HEADER = {
     "pose": "pose/tpose.hpp", "posechain": "posechain/tposechain.hpp",
     "pcpoint": "pointcloud/tpcpoint.hpp", "pcpatch": "pointcloud/tpcpatch.hpp",
 }
-BASE_ORDER = ["int", "bigint", "float", "text", "date", "tstz",
-              "jsonb", "cbuffer", "npoint", "quadbin", "pose", "posechain",
-              "pcpoint", "pcpatch"]
 # suffix (longest first so spanset wins over span), class, mapping struct, DEFINE
 # macro, and whether the family carries the spanset-only Set/Base child mappings.
 TYPEREG_FAMILIES = [
@@ -4275,6 +4276,15 @@ def gen_type_registration(catalog, out_path):
             "// The %s accessors the catalog MeosType enum declares, included inside %s.\n"
             % (fam["suffix"], fam["cls"])
             + "".join("static LogicalType %s();\n" % n for n in names))
+    # The set types the enum admits and the set names the UDF surface scopes by must be the same
+    # list: a type registered without its name scope leaves its whole family unbound, and a scope
+    # without a type names an accessor that does not compile. Both read BASE_ORDER, so this states
+    # the invariant rather than checking two independent lists.
+    reg_sets = {b + "set" for b in typereg_members(enum_names, "set")}
+    if reg_sets != set(SET_TYPES):
+        raise SystemExit("set type registration and SET_TYPES disagree: "
+                         "registered-only %s, scoped-only %s"
+                         % (sorted(reg_sets - set(SET_TYPES)), sorted(set(SET_TYPES) - reg_sets)))
     counts = {f["cls"]: len(typereg_members(enum_names, f["suffix"])) for f in TYPEREG_FAMILIES}
     return counts
 

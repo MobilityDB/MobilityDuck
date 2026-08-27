@@ -61,3 +61,73 @@ query I
 SELECT asText(set([startValue(TJSONB('{"k":1}@2000-01-01'))]));
 ----
 {"{\"k\": 1}"}
+
+# The set types above are name-scoped as well as registered, so the catalog families whose
+# accessor is named for one of them reach the surface. jsonbset carries the JSON accessors.
+query I
+SELECT jsonbsetArrayLength(set([jsonb '[1,2,3]', jsonb '[4,5]']));
+----
+{2, 3}
+
+query I
+SELECT asText(jsonbsetStripNulls(set([jsonb '{"a":null,"b":1}'])));
+----
+{"{\"b\": 1}"}
+
+query I
+SELECT replace(asText(jsonbsetPretty(set([jsonb '{"a":1}']))), chr(10), '|');
+----
+{"{|    \"a\": 1|}"}
+
+# The spatial value sets carry the spatial transformations of their element.
+query I
+SELECT asText(round(set([pose 'Pose(Point(1.23456 2.34567),0.5)']), 2));
+----
+{"POSE (0101000000AE47E17A14AEF33FCDCCCCCCCCCC0240, 0.5)"}
+
+query I
+SELECT asText(round(set([cbuffer 'Cbuffer(Point(1.23456 2.34567),3.14159)']), 2));
+----
+{"Cbuffer(0101000000AE47E17A14AEF33FCDCCCCCCCCCC0240,3.14)"}
+
+query I
+SELECT asText(setSRID(set([pose 'Pose(Point(1 2),0.5)']), 4326));
+----
+{"POSE (0101000020E6100000000000000000F03F0000000000000040, 0.5)"}
+
+query I
+SELECT asText(transform(setSRID(set([pose 'Pose(Point(1 2),0.5)']), 4326), 3857));
+----
+{"POSE (0101000020110F0000310C4ADA772DFB4066F404ABE12E0B41, 0.5)"}
+
+query I
+SELECT routes(set([npoint 'NPoint(1, 0.5)', npoint 'NPoint(2, 0.25)']));
+----
+{1, 2}
+
+# A temporal value restricts to the values one of these sets holds.
+query I
+SELECT startValue(atValues(tjsonb '{"a":1}@2000-01-01', set([jsonb '{"a":1}'])))::VARCHAR;
+----
+{"a": 1}
+
+query I
+SELECT minusValues(tjsonb '{"a":1}@2000-01-01', set([jsonb '{"a":1}'])) IS NULL;
+----
+true
+
+query I
+SELECT startValue(minusValues(tjsonb '{"a":1}@2000-01-01', set([jsonb '{"a":2}'])))::VARCHAR;
+----
+{"a": 1}
+
+# Each carries its own named hex WKB reader, round-tripping the set it wrote.
+query I
+SELECT asText(posesetFromHexWKB(asHexWKB(set([pose 'Pose(Point(1 2),0.5)']))));
+----
+{"POSE (0101000000000000000000F03F0000000000000040, 0.5)"}
+
+query I
+SELECT asText(jsonbsetFromHexWKB(asHexWKB(set([jsonb '{"a":1}']))));
+----
+{"{\"a\": 1}"}
