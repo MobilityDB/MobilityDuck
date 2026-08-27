@@ -228,12 +228,6 @@ NULL
 # =============================================================================
 # Distance: <->
 # =============================================================================
-mode skip
-# `<->` between a span and a value answers the IEEE-754 bit pattern of the distance rather than
-# the distance: distance_span_value returns a Datum and span_functions.cpp assigns it straight to
-# a double, so 1 arrives as 4607182418800017408 (0x3FF0000000000000). The intspan arm assigns the
-# same Datum to an int32_t and trips a DuckDB assertion. Unwrapping it with DatumGetFloat8 /
-# DatumGetInt32 is the fix; the expected values below are what MobilityDB answers.
 
 query I
 SELECT 1.0 <-> 1.0;
@@ -294,6 +288,3 @@ query I
 SELECT floatspan '[1, 3]' <-> floatspan '(3, 5]';
 ----
 0
-
-
-mode unskip
