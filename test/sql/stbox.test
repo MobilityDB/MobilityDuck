@@ -163,6 +163,24 @@ SELECT stbox(tstzspanset '{[2000-01-01,2000-01-01]}');
 ----
 STBOX T([2000-01-01 00:00:00+01, 2000-01-01 00:00:00+01])
 
+# A set and a span set hold their elements after the header, so a value carrying more than one of
+# them is longer than the header alone: the box must read every element, not just a single one.
+
+query I
+SELECT stbox(tstzspanset '{[2000-01-01,2000-01-02],[2000-01-05,2000-01-06]}');
+----
+STBOX T([2000-01-01 00:00:00+01, 2000-01-06 00:00:00+01])
+
+query I
+SELECT stbox(set([timestamptz '2000-01-01']));
+----
+STBOX T([2000-01-01 00:00:00+01, 2000-01-01 00:00:00+01])
+
+query I
+SELECT stbox(set([timestamptz '2000-01-01', timestamptz '2000-01-05']));
+----
+STBOX T([2000-01-01 00:00:00+01, 2000-01-05 00:00:00+01])
+
 query I
 select timestamptz '2001-01-03'::stbox;
 ----
