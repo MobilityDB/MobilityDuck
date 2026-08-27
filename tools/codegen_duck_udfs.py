@@ -1287,6 +1287,78 @@ def emit_body_bound_tail(f, kind, vary, tail, sig):
           "        });", "}", ""]
     return "\n".join(L)
 
+def shape_text_array(f):
+    """(Temporal *, text **elems, int count, <bound literals and settings...>) -> Temporal *.
+
+    A `text **` and the `int` that follows it are ONE SQL argument — MobilityDB declares
+    `text[]` (`sqlSignatures.args`), so DuckDB registers LIST(VARCHAR) and the count is
+    supplied by the list's own length rather than exposed."""
+    ins, out = classify(f)
+    if out is not None or len(ins) < 3: return None
+    if base(ins[0]["canonical"]) != "Temporal" or not norm(ins[0]["canonical"]).endswith("*"):
+        return None
+    # `base()` answers the sentinel for a double pointer, so the test reads the normalised
+    # spelling: a `text **` is the path/keys array MobilityDB declares as `text[]`.
+    if norm(ins[1]["canonical"]).replace(" ", "") != "text**":
+        return None
+    if not (base(ins[2]["canonical"]) == "int" and "*" not in norm(ins[2]["canonical"])):
+        return None
+    sigs = f.get("sqlSignatures") or []
+    if not any("text[]" in (sg.get("args") or []) for sg in sigs):
+        return None                      # the SQL surface is the SoT for the pairing
+    # A kernel whose signatures name MORE THAN ONE SQL function is the shared generic behind a
+    # family (`tjsonb_exists_array` carries both tjsonbExistsAny and tjsonbExistsAll, selected by
+    # the `any` flag it binds). Each of those names has its own dedicated kernel, so registering
+    # the generic too would register one DuckDB signature twice — which the extension refuses at
+    # LOAD, on a green build.
+    if len({sg.get("sqlName") for sg in sigs if sg.get("sqlName")}) > 1:
+        return None
+    bound = ((f.get("shape") or {}).get("boundArgs") or {})
+    tail = []
+    for p in ins[3:]:
+        nm = p.get("name")
+        if nm in bound:
+            tail.append(("lit", bound[nm])); continue
+        st = SETTING_ARG.get(base(p["canonical"])) if "*" not in norm(p["canonical"]) else None
+        if st is None: return None
+        tail.append(("col", st))
+    if reg_scope(f["name"]) is None: return None
+    rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
+    if not (rb == "Temporal" and rn.endswith("*")): return None
+    sig = ["LogicalType::LIST(LogicalType::VARCHAR)"] + [st[0] for k, st in tail if k == "col"]
+    return ("temporal", "MD_TEMPORAL", tail, sig)
+
+def emit_body_text_array(f, kind, tail, sig):
+    name = f["name"]
+    L = [f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{",
+         "    EnsureMeosThreadInitialized();",
+         "    auto rc = args.size();",
+         "    auto &lst = args.data[1]; lst.Flatten(rc);",
+         "    auto &child = ListVector::GetEntry(lst);",
+         "    child.Flatten(ListVector::GetListSize(lst));"]
+    call, col = [], 2
+    for kindi, payload in tail:
+        if kindi == "lit":
+            call.append(payload); continue
+        _d, ctype, cexpr = payload
+        L.append(f"    {ctype} c{col} = ({ctype}) 0;")
+        L.append(f"    {{ auto &cv = args.data[{col}]; cv.Flatten(rc); Value v = cv.GetValue(0);"
+                 f" if (!v.IsNull()) c{col} = {cexpr}; }}")
+        call.append(f"c{col}")
+        col += 1
+    tailargs = "".join(", " + a for a in call)
+    L += ["    BinaryExecutor::ExecuteWithNulls<string_t, list_entry_t, string_t>("
+          "args.data[0], lst, result, rc,",
+          "        [&](string_t in, list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {",
+          "            Temporal *t = BlobToTemporal(in);",
+          "            int n = 0;",
+          "            text **elems = ListToTextArr(child, le, &n);",
+          f"            Temporal *r = {name}(t, elems, n{tailargs});",
+          "            free(t); FreeTextArr(elems, n);",
+          "            return TemporalToBlobN(result, r, mask, idx);",
+          "        });", "}", ""]
+    return "\n".join(L)
+
 def shape_binary_tt(f):
     """Binary Temporal + Temporal (both via BlobToTemporal) — the big 2-arg shape
     (comparisons, boolean ops, distance, etc.). Both args same temporal type."""
@@ -2977,7 +3049,8 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         ga = None if (u or b or t or tt or tts or sf or gt) else shape_tgeoarr(f)
         pp = None if (u or b or t or tt or tts or sf or gt or ga) else shape_path(f)
         bt = None if (u or b or t or tt or tts or sf or gt or ga or pp) else shape_bound_tail(f)
-        if not u and not b and not t and not tt and not tts and not sf and not gt and not ga and not pp and not bt:
+        ta = None if (u or b or t or tt or tts or sf or gt or ga or pp or bt) else shape_text_array(f)
+        if not u and not b and not t and not tt and not tts and not sf and not gt and not ga and not pp and not bt and not ta:
             continue
         STATE["grp"] = f.get("group") or "meos_ungrouped"
         sqlfn, fn = f["sqlfn"], f["name"]
@@ -3024,6 +3097,12 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         elif bt:
             kind, dret, vary, tail, sig = bt; n_ter += 1
             bodies.append(emit_body_bound_tail(f, kind, vary, tail, sig))
+            _rest = "".join(", %s" % x for x in sig[1:])
+            argsig = "{type, %s%s}" % (sig[0], _rest)
+            spec_sig = "{%%s, %s%s}" % (sig[0], _rest)
+        elif ta:
+            kind, dret, tail, sig = ta; n_ter += 1
+            bodies.append(emit_body_text_array(f, kind, tail, sig))
             _rest = "".join(", %s" % x for x in sig[1:])
             argsig = "{type, %s%s}" % (sig[0], _rest)
             spec_sig = "{%%s, %s%s}" % (sig[0], _rest)
@@ -3706,6 +3785,15 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "    text *t = (text *)malloc(VARHDRSZ + len);\n"
            "    SET_VARSIZE(t, VARHDRSZ + len);\n"
            "    memcpy(VARDATA(t), s.GetData(), len);\n    return t;\n}\n"
+           "// text** from a DuckDB LIST(VARCHAR); the caller frees via FreeTextArr.\n"
+           "inline text **ListToTextArr(Vector &child, list_entry_t le, int *count) {\n"
+           "    auto data = FlatVector::GetData<string_t>(child);\n"
+           "    int n = (int) le.length;\n"
+           "    text **arr = (text **) malloc(sizeof(text *) * (n > 0 ? n : 1));\n"
+           "    for (idx_t i = 0; i < le.length; i++) arr[i] = MakeText(data[le.offset + i]);\n"
+           "    *count = n;\n    return arr;\n}\n"
+           "inline void FreeTextArr(text **arr, int n) {\n"
+           "    for (int i = 0; i < n; i++) free(arr[i]);\n    free(arr);\n}\n"
            "// Convert an owned MEOS Interval* to a DuckDB interval_t and free it.\n"
            "inline interval_t TakeInterval(MeosInterval *iv) {\n"
            "    interval_t out = IntervalToIntervalt(iv);\n    free(iv);\n    return out;\n}\n"
