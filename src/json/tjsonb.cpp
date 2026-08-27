@@ -252,28 +252,6 @@ static void Tjsonb_sequence_constructor(DataChunk &args, ExpressionState &state,
 /* Tjsonb_start_value / Tjsonb_end_value retired: startValue/endValue are now
  * generated (return the jsonb base value, rendered via the jsonb->VARCHAR cast). */
 
-static void Tjsonb_value_at_timestamp(DataChunk &args, ExpressionState &state, Vector &result) {
-    BinaryExecutor::Execute<string_t, timestamp_tz_t, string_t>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t input_blob, timestamp_tz_t t) -> string_t {
-            Temporal *temp = BlobToTemporal(input_blob);
-            timestamp_tz_t meos_ts = DuckDBToMeosTimestamp(t);
-            Jsonb *jb = nullptr;
-            bool found = tjsonb_value_at_timestamptz(
-                temp, static_cast<TimestampTz>(meos_ts.value), true, &jb);
-            free(temp);
-            if (!found || !jb)
-                throw InvalidInputException("tjsonb valueAtTimestamp: no value at given timestamp");
-            char *str = jsonb_out(jb);
-            free(jb);
-            if (!str)
-                throw InvalidInputException("tjsonb valueAtTimestamp: jsonb_out failed");
-            string_t out = StringVector::AddString(result, str);
-            free(str);
-            return out;
-        });
-}
-
 /* ------------------------------------------------------------------
  * Registration
  * ------------------------------------------------------------------ */
@@ -307,12 +285,9 @@ void TJsonbTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader,
         ScalarFunction("tjsonbInst", {T}, T, TemporalFunctions::Temporal_to_tinstant));
 
-    /* Value accessors — startValue/endValue are now GENERATED (they return the
-     * jsonb base value, rendered as JSON text via the jsonb->VARCHAR cast),
-     * mirroring the cbuffer sibling; retired here to avoid an ambiguous overload.
-     * valueAtTimestamp stays hand (its out-param shape is not generated yet). */
-    RegisterSerializedScalarFunction(loader,
-        ScalarFunction("valueAtTimestamp", {T, TS}, V, Tjsonb_value_at_timestamp));
+    /* Value accessors — startValue/endValue, valueAtTimestamp and valueN are all
+     * GENERATED (the out-parameter shape reaches the last two), so the whole
+     * meos_json_accessor group is retired here and no name registers twice. */
 }
 
 } // namespace duckdb

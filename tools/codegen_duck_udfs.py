@@ -128,6 +128,17 @@ OUTPARAM_LOCAL = {"int *": ("int", "int32_t"), "int64_t *": ("int64_t", "int64_t
                   "uint64_t *": ("uint64_t", "int64_t"), "double *": ("double", "double"),
                   "bool *": ("bool", "bool")}
 
+# `base()` answers the sentinel for a DOUBLE pointer, so an out-param written `T **out` — the
+# shape MEOS uses to hand back an owned value beside a bool "was there one" — never resolves
+# through it. Strip the out-star and read the pointed-to type.
+def outptr_base(canon):
+    """The PTR_RET base a `T **` out-param hands back, else None."""
+    n = norm(canon)
+    if not n.endswith("**"):
+        return None
+    b = base(n[:-1].strip())
+    return b if b in PTR_RET else None
+
 def classify(f):
     """Mirror of the Spark generator: split params into (in_params, out_canon|None).
     Drops a trailing size_t* buffer-length out-param; on bool/void return with a
@@ -141,8 +152,10 @@ def classify(f):
         writable = "const" not in lastc and lastn.endswith("*")
         others = [p for p in params[:-1] if "const" not in p["canonical"]
                   and norm(p["canonical"]).endswith("*")
-                  and (norm(p["canonical"]) in OUTPRIM or base(p["canonical"]) in PTR_RET)]
-        if writable and not others and (lastn in OUTPRIM or base(lastc) in PTR_RET):
+                  and (norm(p["canonical"]) in OUTPRIM or base(p["canonical"]) in PTR_RET
+                       or outptr_base(p["canonical"]))]
+        if writable and not others and (lastn in OUTPRIM or base(lastc) in PTR_RET
+                                        or outptr_base(lastc)):
             return params[:-1], lastc
     return params, None
 
@@ -168,6 +181,8 @@ def ret_type(f, out_canon):
         n = norm(out_canon)
         if n in OUTPRIM:           return (OUTPRIM[n], "outprim")
         if base(out_canon) in PTR_RET:  return (PTR_RET[base(out_canon)][0], "outptr")
+        ob = outptr_base(out_canon)
+        if ob:                          return (PTR_RET[ob][0], "outptr")
         return None
     rc = f["returnType"]["canonical"]; nc = norm(rc); b = base(rc)
     if b in PTR_RET and nc.endswith("*"):  return (PTR_RET[b][0], "ptr")
@@ -1226,6 +1241,11 @@ def _vary(p):
         dt, expr = PTR_IN[b]
         if dt != "MD_TEMPORAL":
             return (dt, "string_t", expr, "free")
+    # Any other by-value scalar the shapes already marshal — a timestamp and a date carry a
+    # conversion, which is why they are read from SCALAR_ARG rather than assumed to pass through.
+    if b in SCALAR_ARG and "*" not in n:
+        dt, cpp, expr = SCALAR_ARG[b]
+        return (dt, cpp, expr.replace("a2", "%s"), "")
     return None
 
 # A per-call setting that is a POINTER: read once outside the executor and freed after it. The
@@ -1397,6 +1417,73 @@ def emit_body_text_array(f, kind, tail, sig):
           "            free(t); FreeTextArr(elems, n);",
           "            return TemporalToBlobN(result, r, mask, idx);",
           "        });"]
+    return _close_body(L, frees)
+
+def shape_outparam(f):
+    """(Temporal *, [varying], <settings...>) with a trailing out-parameter -> that value.
+
+    MEOS hands an owned result back through a trailing pointer beside a bool saying whether
+    there is one, so the SQL surface is the value and the false answer is SQL NULL.
+
+    Gated on retired(f): the hand layer registers these accessors today, so the generated form
+    appears exactly where the hand one is deleted and the two never both register a name."""
+    if not retired(f): return None
+    if supported(f) is not None: return None
+    ins, out = classify(f)
+    if out is None or not ins: return None
+    rt = ret_type(f, out)
+    if rt is None: return None
+    dret, kind = rt
+    if kind not in ("outprim", "outptr"): return None
+    if base(ins[0]["canonical"]) != "Temporal" or not norm(ins[0]["canonical"]).endswith("*"):
+        return None
+    bound = ((f.get("shape") or {}).get("boundArgs") or {})
+    rest, v = ins[1:], None
+    if rest and rest[0].get("name") not in bound:
+        v = _vary(rest[0])
+        if v is not None: rest = rest[1:]
+    tail = _build_tail(rest, bound)
+    if tail is None: return None
+    if reg_scope(f["name"]) is None: return None
+    sig = ([v[0]] if v else []) + _tail_sig(tail)
+    return ("outparam", dret, kind, v, tail, sig, out)
+
+def emit_body_outparam(f, dret, kind, vary, tail, sig, out_canon):
+    name = f["name"]
+    L = [f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{",
+         "    EnsureMeosThreadInitialized();",
+         "    auto rc = args.size();"]
+    call, frees = _emit_tail_consts(L, tail, col=(2 if vary else 1))
+    tailargs = "".join(", " + a for a in call)
+    if kind == "outptr":
+        ob = base(out_canon) if base(out_canon) in PTR_RET else outptr_base(out_canon)
+        decl, rett = f"{ob} *o = NULL;", "string_t"
+        give, empty = "return %s;" % (PTR_RET[ob][1] % "o"), "return string_t();"
+    else:
+        cloc, cpp = OUTPARAM_LOCAL[norm(out_canon)]
+        decl, rett = f"{cloc} o = ({cloc}) 0;", cpp
+        give, empty = f"return ({cpp}) o;", f"return ({cpp}) 0;"
+    if vary:
+        _dt, cpp2, expr2, cleanup = vary
+        lead = expr2 % "a2"
+        L += [f"    BinaryExecutor::ExecuteWithNulls<string_t, {cpp2}, {rett}>("
+              "args.data[0], args.data[1], result, rc,",
+              f"        [&](string_t in, {cpp2} a2, ValidityMask &mask, idx_t idx) -> {rett} {{"]
+    else:
+        lead, cleanup = None, ""
+        L += [f"    UnaryExecutor::ExecuteWithNulls<string_t, {rett}>(args.data[0], result, rc,",
+              f"        [&](string_t in, ValidityMask &mask, idx_t idx) -> {rett} {{"]
+    L += ["            Temporal *t = BlobToTemporal(in);", f"            {decl}"]
+    if vary and cleanup:
+        L += [f"            auto p2 = {lead};",
+              f"            bool ok = {name}(t, p2{tailargs}, &o);",
+              f"            free(t); {cleanup}(p2);"]
+    elif vary:
+        L += [f"            bool ok = {name}(t, {lead}{tailargs}, &o);", "            free(t);"]
+    else:
+        L += [f"            bool ok = {name}(t{tailargs}, &o);", "            free(t);"]
+    L += [f"            if (! ok) {{ mask.SetInvalid(idx); {empty} }}",
+          f"            {give}", "        });"]
     return _close_body(L, frees)
 
 def shape_binary_tt(f):
@@ -2494,7 +2581,10 @@ def emit_span(f, kind, C=SPAN_C):
 # the retire-safety check below verifies the generator covers every @sqlfn of each
 # (dropping none). It gates SAFETY (per-family, suite-verified), not naming; naming is
 # always the canonical @sqlfn.
-RETIRED_GROUPS = {"meos_temporal_analytics_similarity", "meos_temporal_comp_temp",
+RETIRED_GROUPS = {# The JSON value accessors: valueAtTimestamp reaches the out-parameter shape,
+                  # and its SQL surface answers jsonb the way MobilityDB declares it.
+                  "meos_json_accessor",
+                  "meos_temporal_analytics_similarity", "meos_temporal_comp_temp",
                   "meos_geo_rel_ever", "meos_geo_rel_temp",
                   "meos_geo_bbox_topo",
                   "meos_temporal_math", "meos_temporal_comp_ever",
@@ -3088,9 +3178,10 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         gt = None if (u or b or t or tt or tts or sf) else shape_geo_temporal(f)
         ga = None if (u or b or t or tt or tts or sf or gt) else shape_tgeoarr(f)
         pp = None if (u or b or t or tt or tts or sf or gt or ga) else shape_path(f)
-        bt = None if (u or b or t or tt or tts or sf or gt or ga or pp) else shape_bound_tail(f)
+        op = None if (u or b or t or tt or tts or sf or gt or ga or pp) else shape_outparam(f)
+        bt = None if (u or b or t or tt or tts or sf or gt or ga or pp or op) else shape_bound_tail(f)
         ta = None if (u or b or t or tt or tts or sf or gt or ga or pp or bt) else shape_text_array(f)
-        if not u and not b and not t and not tt and not tts and not sf and not gt and not ga and not pp and not bt and not ta:
+        if not u and not b and not t and not tt and not tts and not sf and not gt and not ga and not pp and not op and not bt and not ta:
             continue
         STATE["grp"] = f.get("group") or "meos_ungrouped"
         sqlfn, fn = f["sqlfn"], f["name"]
@@ -3134,6 +3225,12 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             bodies.append(emit_body_ternary(f, kind, arg2, arg3))
             argsig = "{type, %s, %s}" % (arg2[0], arg3[0])
             spec_sig = "{%%s, %s, %s}" % (arg2[0], arg3[0])
+        elif op:
+            _k, dret, okind, vary, tail, sig, ocanon = op; n_un += 1
+            bodies.append(emit_body_outparam(f, dret, okind, vary, tail, sig, ocanon))
+            _rest = "".join(", %s" % x for x in sig)
+            argsig = "{type%s}" % _rest
+            spec_sig = "{%%s%s}" % _rest
         elif bt:
             kind, dret, vary, tail, sig = bt; n_ter += 1
             bodies.append(emit_body_bound_tail(f, kind, vary, tail, sig))
