@@ -6,6 +6,14 @@
 #include "temporal/set.hpp"
 #include "temporal/span.hpp"
 #include "temporal/spanset.hpp"
+#include "json/tjsonb.hpp"
+#include "cbuffer/tcbuffer.hpp"
+#include "npoint/tnpoint.hpp"
+#include "quadbin/tquadbin.hpp"
+#include "pose/tpose.hpp"
+#include "posechain/tposechain.hpp"
+#include "pointcloud/tpcpoint.hpp"
+#include "pointcloud/tpcpatch.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include <unordered_map>
 
@@ -130,7 +138,7 @@ LogicalType SpanTypeMapping::GetChildType(const LogicalType &type) {
     throw NotImplementedException("GetChildType: unsupported alias: " + alias);
 }
 
-// --- SetTypes: 6 type(s) from the catalog MeosType enum ---
+// --- SetTypes: 14 type(s) from the catalog MeosType enum ---
 #define DEFINE_SET_TYPE(NAME)                                          \
     LogicalType SetTypes::NAME() {                               \
         auto type = LogicalType(LogicalTypeId::BLOB);          \
@@ -143,6 +151,14 @@ DEFINE_SET_TYPE(floatset)
 DEFINE_SET_TYPE(textset)
 DEFINE_SET_TYPE(dateset)
 DEFINE_SET_TYPE(tstzset)
+DEFINE_SET_TYPE(jsonbset)
+DEFINE_SET_TYPE(cbufferset)
+DEFINE_SET_TYPE(npointset)
+DEFINE_SET_TYPE(quadbinset)
+DEFINE_SET_TYPE(poseset)
+DEFINE_SET_TYPE(posechainset)
+DEFINE_SET_TYPE(pcpointset)
+DEFINE_SET_TYPE(pcpatchset)
 #undef DEFINE_SET_TYPE
 
 void SetTypes::RegisterTypes(ExtensionLoader &loader) {
@@ -152,18 +168,26 @@ void SetTypes::RegisterTypes(ExtensionLoader &loader) {
     loader.RegisterType("textset", textset());
     loader.RegisterType("dateset", dateset());
     loader.RegisterType("tstzset", tstzset());
+    loader.RegisterType("jsonbset", jsonbset());
+    loader.RegisterType("cbufferset", cbufferset());
+    loader.RegisterType("npointset", npointset());
+    loader.RegisterType("quadbinset", quadbinset());
+    loader.RegisterType("poseset", poseset());
+    loader.RegisterType("posechainset", posechainset());
+    loader.RegisterType("pcpointset", pcpointset());
+    loader.RegisterType("pcpatchset", pcpatchset());
 }
 
 const std::vector<LogicalType> &SetTypes::AllTypes() {
     static std::vector<LogicalType> types = {
-        intset(), bigintset(), floatset(), textset(), dateset(), tstzset()
+        intset(), bigintset(), floatset(), textset(), dateset(), tstzset(), jsonbset(), cbufferset(), npointset(), quadbinset(), poseset(), posechainset(), pcpointset(), pcpatchset()
     };
     return types;
 }
 
 MeosType SetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
     static const std::unordered_map<std::string, MeosType> alias_to_type = {
-        {"intset", T_INTSET}, {"bigintset", T_BIGINTSET}, {"floatset", T_FLOATSET}, {"textset", T_TEXTSET}, {"dateset", T_DATESET}, {"tstzset", T_TSTZSET}
+        {"intset", T_INTSET}, {"bigintset", T_BIGINTSET}, {"floatset", T_FLOATSET}, {"textset", T_TEXTSET}, {"dateset", T_DATESET}, {"tstzset", T_TSTZSET}, {"jsonbset", T_JSONBSET}, {"cbufferset", T_CBUFFERSET}, {"npointset", T_NPOINTSET}, {"quadbinset", T_QUADBINSET}, {"poseset", T_POSESET}, {"posechainset", T_POSECHAINSET}, {"pcpointset", T_PCPOINTSET}, {"pcpatchset", T_PCPATCHSET}
     };
     auto it = alias_to_type.find(alias);
     return it != alias_to_type.end() ? it->second : T_UNKNOWN;
@@ -177,6 +201,14 @@ LogicalType SetTypeMapping::GetChildType(const LogicalType &type) {
     if (alias == "textset") return LogicalType::VARCHAR;
     if (alias == "dateset") return LogicalType::DATE;
     if (alias == "tstzset") return LogicalType::TIMESTAMP_TZ;
+    if (alias == "jsonbset") return TJsonbTypes::jsonb();
+    if (alias == "cbufferset") return CbufferTypes::cbuffer();
+    if (alias == "npointset") return NpointTypes::npoint();
+    if (alias == "quadbinset") return QuadbinTypes::quadbin();
+    if (alias == "poseset") return PoseTypes::pose();
+    if (alias == "posechainset") return PosechainTypes::posechain();
+    if (alias == "pcpointset") return TPcpointTypes::pcpoint();
+    if (alias == "pcpatchset") return TPcpatchTypes::pcpatch();
     throw NotImplementedException("GetChildType: unsupported alias: " + alias);
 }
 

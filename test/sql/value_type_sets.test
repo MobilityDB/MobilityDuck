@@ -1,0 +1,63 @@
+# name: test/sql/value_type_sets.test
+# description: Set types over the value types the binding registers itself
+# group: [sql]
+
+require mobilityduck
+
+# Every set type the catalog MeosType enum declares is registered.
+query I
+SELECT count(*) FROM duckdb_types()
+WHERE type_name IN ('cbufferset', 'jsonbset', 'npointset', 'pcpatchset',
+                    'pcpointset', 'posechainset', 'poseset', 'quadbinset');
+----
+8
+
+# A pointer-carried element: the constructor keeps each value and asText reads it back.
+query I
+SELECT asText(set([CAST('Cbuffer(Point(1 1),0.5)' AS cbuffer),
+                   CAST('Cbuffer(Point(3 3),2)' AS cbuffer)]));
+----
+{"Cbuffer(0101000000000000000000F03F000000000000F03F,0.5)", "Cbuffer(010100000000000000000008400000000000000840,2)"}
+
+query I
+SELECT asText(set([CAST('POSE(Point(1 1),0.5)' AS pose)]));
+----
+{"POSE (0101000000000000000000F03F000000000000F03F, 0.5)"}
+
+query I
+SELECT asText(set([CAST('NPoint(1,0.5)' AS npoint)]));
+----
+{"NPoint(1,0.5)"}
+
+# A by-value element: the eight bytes of the Datum, not a pointer.
+query I
+SELECT asText(set([CAST(5209574053332910079 AS quadbin)]));
+----
+{"484c1fffffffffff"}
+
+# A single value converts to a one-element set.
+query I
+SELECT asText(set(CAST('Cbuffer(Point(1 1),0.5)' AS cbuffer)));
+----
+{"Cbuffer(0101000000000000000000F03F000000000000F03F,0.5)"}
+
+# Unnest answers the registered element type, not a bare BLOB.
+query II
+SELECT typeof(unnest), unnest::VARCHAR
+FROM SetUnnest(set([CAST('Cbuffer(Point(1 1),0.5)' AS cbuffer),
+                    CAST('Cbuffer(Point(3 3),2)' AS cbuffer)]));
+----
+cbuffer	Cbuffer(0101000000000000000000F03F000000000000F03F,0.5)
+cbuffer	Cbuffer(010100000000000000000008400000000000000840,2)
+
+query II
+SELECT typeof(unnest), unnest::VARCHAR
+FROM SetUnnest(set([CAST(5209574053332910079 AS quadbin)]));
+----
+quadbin	5209574053332910079
+
+# A jsonb element reaches its set through the value the temporal type carries.
+query I
+SELECT asText(set([startValue(TJSONB('{"k":1}@2000-01-01'))]));
+----
+{"{\"k\": 1}"}
