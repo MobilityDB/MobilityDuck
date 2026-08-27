@@ -545,7 +545,9 @@ static void Tstzset_to_stbox_common(Vector &source, Vector &result, idx_t count)
         [&](string_t input_stbox) -> string_t {
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
-            if (data_size != sizeof(Set)) {
+            // A set carries its elements after the header, so its blob is at least the header
+            // and longer for every element past the first: the guard is a minimum, not a match.
+            if (data_size < sizeof(Set)) {
                 throw InvalidInputException("Invalid TSTZSET data: insufficient size");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
@@ -647,7 +649,8 @@ static void Tstzspanset_to_stbox_common(Vector &source, Vector &result, idx_t co
         [&](string_t input_stbox) -> string_t {
             const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
             size_t data_size = input_stbox.GetSize();
-            if (data_size != sizeof(SpanSet)) {
+            // Likewise a span set: sizeof covers the header and one span, never a longer one.
+            if (data_size < sizeof(SpanSet)) {
                 throw InvalidInputException("Invalid TSTZSPANSET data: insufficient size");
             }
             uint8_t *data_copy = (uint8_t*)malloc(data_size);
