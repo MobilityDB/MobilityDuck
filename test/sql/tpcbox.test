@@ -1,0 +1,51 @@
+# name: test/sql/tpcbox.test
+# description: The temporal point cloud bounding box type (tpcbox)
+# group: [sql]
+
+require mobilityduck
+
+# The type is registered under its canonical MEOS name.
+query I
+SELECT count(*) FROM duckdb_types() WHERE type_name = 'tpcbox';
+----
+1
+
+# Text round trip: the value carries its extent and its pcid.
+query I
+SELECT tpcbox 'TPCBOX(X((0,0),(10,10)), 1)'::VARCHAR;
+----
+TPCBOX(X((0,0),(10,10)), 1)
+
+query I
+SELECT tpcbox 'TPCBOX(Z((0,0,0),(10,10,10)), 1)'::VARCHAR;
+----
+TPCBOX(Z((0,0,0),(10,10,10)), 1)
+
+# Dimension flags and the schema identifier.
+query III
+SELECT hasX(tpcbox 'TPCBOX(Z((0,0,0),(10,10,10)), 1)'),
+       hasZ(tpcbox 'TPCBOX(Z((0,0,0),(10,10,10)), 1)'),
+       pcid(tpcbox 'TPCBOX(X((0,0),(10,10)), 7)');
+----
+true	true	7
+
+# Topological predicates over two boxes of one schema.
+query III
+SELECT contains(tpcbox 'TPCBOX(X((0,0),(10,10)), 1)', tpcbox 'TPCBOX(X((3,3),(5,5)), 1)'),
+       overlaps(tpcbox 'TPCBOX(X((0,0),(10,10)), 1)', tpcbox 'TPCBOX(X((3,3),(5,5)), 1)'),
+       tpcbox 'TPCBOX(X((0,0),(10,10)), 1)' = tpcbox 'TPCBOX(X((0,0),(10,10)), 1)';
+----
+true	true	true
+
+# A position predicate.
+query I
+SELECT left(tpcbox 'TPCBOX(X((0,0),(1,1)), 1)', tpcbox 'TPCBOX(X((5,5),(6,6)), 1)');
+----
+true
+
+# Two boxes written in different schemas describe different coordinate spaces,
+# so comparing them is an error rather than a silent answer.
+statement error
+SELECT overlaps(tpcbox 'TPCBOX(X((0,0),(10,10)), 1)', tpcbox 'TPCBOX(X((3,3),(5,5)), 2)');
+----
+different schemas

@@ -17,6 +17,7 @@
 #include "geo/tgeography.hpp"
 #include "geo/tgeography_ops.hpp"
 #include "pointcloud/pcschema.hpp"
+#include "pointcloud/tpcbox.hpp"
 #include "pointcloud/tpcpoint.hpp"
 #include "pointcloud/tpcpatch.hpp"
 #include "geo/tgeogpoint.hpp"
@@ -415,6 +416,10 @@ static void LoadInternal(ExtensionLoader &loader) {
 	// database holds, reaches the engine here (requires the MEOS POINTCLOUD
 	// module), so a coordinate of such a value is answerable.
 	PcschemaFunctions::RegisterScalarFunctions(loader);
+
+	// Bounding box of a temporal point cloud (requires the MEOS POINTCLOUD module).
+	TpcboxType::RegisterType(loader);
+	TpcboxType::RegisterCastFunctions(loader);
 
 	// Extended temporal type tpcpoint (requires the MEOS POINTCLOUD module).
 	TPcpointTypes::RegisterTypes(loader);

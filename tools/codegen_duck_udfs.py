@@ -42,6 +42,7 @@ PTR_IN  = {  # MEOS base type -> (DuckDB arg LogicalType, "C++ expr producing th
     "Span":         ("LogicalType::BLOB", "BlobToSpan(%s)"),
     "SpanSet":      ("LogicalType::BLOB", "BlobToSpanSet(%s)"),
     "STBox":        ("LogicalType::BLOB", "BlobToStbox(%s)"),
+    "TPCBox":       ("TpcboxType::tpcbox()", "BlobToTpcbox(%s)"),
     "TBox":         ("LogicalType::BLOB", "BlobToTbox(%s)"),
     "Cbuffer":      ("CbufferTypes::cbuffer()", "BlobToCbuffer(%s)"),
     "Jsonb":        ("TJsonbTypes::jsonb()", "BlobToJsonb(%s)"),
@@ -1634,6 +1635,7 @@ SQL_BASE_TO_DUCK = {
     "intspan": "SpanTypes::intspan()", "bigintspan": "SpanTypes::bigintspan()",
     "floatspan": "SpanTypes::floatspan()", "datespan": "SpanTypes::datespan()",
     "tstzspan": "SpanTypes::tstzspan()", "tbox": "TboxType::tbox()", "stbox": "StboxType::stbox()",
+    "tpcbox": "TpcboxType::tpcbox()",
 }
 
 def array_ret_duck(f, acc, tail=()):
@@ -1778,8 +1780,9 @@ f"}}\n")
 # (contains/overlaps/contained/adjacent/same/left/right/... between a temporal and a box).
 # Mixed-arg shape (one Temporal blob + one box blob); temporal scope from reg_scope
 # (tspatial->geo for STBox, tnumber->{tint,tfloat} for TBox).
-BOX_MARSH = {"STBox": ("BlobToStbox", "StboxType::stbox()"),
-             "TBox":  ("BlobToTbox",  "TboxType::tbox()")}
+BOX_MARSH = {"STBox":  ("BlobToStbox",  "StboxType::stbox()"),
+             "TBox":   ("BlobToTbox",   "TboxType::tbox()"),
+             "TPCBox": ("BlobToTpcbox", "TpcboxType::tpcbox()")}
 def shape_temporal_box(f):
     """Temporal + box -> a scalar. The topological predicates answer bool and the
     nearest approach answers a distance; both marshal the box the same way, so the
@@ -1920,6 +1923,7 @@ SQL_CONTAINER_ACC = {
     "bigintspanset": "SpansetTypes::bigintspanset()", "floatspanset": "SpansetTypes::floatspanset()",
     "datespanset": "SpansetTypes::datespanset()",
     "tbox": "TboxType::tbox()", "stbox": "StboxType::stbox()",
+    "tpcbox": "TpcboxType::tpcbox()",
 }
 def shape_temporal_to_container(f):
     """(Temporal) -> Span/SpanSet/TBox/STBox conversion, registered per catalog sqlSignature.
@@ -1964,7 +1968,8 @@ def emit_temporal_to_container(f, rb):
 # restrictions (atTime) and the numspan value restrictions via the name heuristic; this handles what
 # it does not. The 3-operand box restrictions (atStbox with a border bool) are a separate shape.
 # Marshalling map extends CONT_BLOB with the box types (BlobToTbox/BlobToStbox already emitted).
-RESTRICT_CONT_BLOB = {**CONT_BLOB, "TBox": "BlobToTbox", "STBox": "BlobToStbox"}
+RESTRICT_CONT_BLOB = {**CONT_BLOB, "TBox": "BlobToTbox", "STBox": "BlobToStbox",
+                      "TPCBox": "BlobToTpcbox"}
 FINITE_SUBSET_ACC = {**SET_TYPES, **SQL_CONTAINER_ACC}
 def shape_temporal_restrict_sig(f):
     if supported(f) is not None: return None
@@ -2095,6 +2100,8 @@ STBOX_C = dict(cbase="STBox", blobto="BlobToStbox", toblob="StboxToBlob",
                elem={}, scope=None, ret=lambda n, a: a, single="StboxType::stbox()")
 TBOX_C  = dict(cbase="TBox",  blobto="BlobToTbox",  toblob="TboxToBlob",
                elem={}, scope=None, ret=lambda n, a: a, single="TboxType::tbox()")
+TPCBOX_C = dict(cbase="TPCBox", blobto="BlobToTpcbox", toblob="TpcboxToBlob",
+                elem={}, scope=None, ret=lambda n, a: a, single="TpcboxType::tpcbox()")
 def shape_span(f, C=SPAN_C):
     if supported(f) is not None: return None
     if re.search(r'_(transfn|finalfn|combinefn)$', f["name"]): return None
@@ -3131,7 +3138,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                                              f'"{reg_name(nm, f)}", {sig}, {r2}, Gen_{fn}));')
     # COLLECTION families (Span + SpanSet) — ONE machinery via descriptor (shape_span/emit_span
     # take C). Per-container generic list (its own AllTypes loop); specific list shared.
-    for C in (SPAN_C, SPANSET_C, STBOX_C, TBOX_C):
+    for C in (SPAN_C, SPANSET_C, STBOX_C, TBOX_C, TPCBOX_C):
         gen = {"Span": span_generic_regs, "SpanSet": spanset_generic_regs}.get(C["cbase"])
         for f in fns:
             if declared is not None and f["name"] not in declared:
@@ -3366,6 +3373,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            '#include "temporal/spanset.hpp"\n'
            '#include "temporal/tbox.hpp"\n'
            '#include "geo/stbox.hpp"\n'
+           '#include "pointcloud/tpcbox.hpp"\n'
            '#include "geo/tgeompoint.hpp"\n'
            '#include "geo/tgeogpoint.hpp"\n'
            '#include "geo/tgeometry.hpp"\n'
@@ -3561,6 +3569,12 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "inline TBox *BlobToTbox(string_t blob) {\n"
            "    uint8_t *copy = (uint8_t *)malloc(blob.GetSize());\n    memcpy(copy, blob.GetData(), blob.GetSize());\n"
            "    return reinterpret_cast<TBox *>(copy);\n}\n"
+           "inline string_t TpcboxToBlob(Vector &result, TPCBox *b) {\n"
+           "    string_t out = StringVector::AddStringOrBlob(result, (const char *)b, sizeof(TPCBox));\n"
+           "    free(b);\n    return out;\n}\n"
+           "inline TPCBox *BlobToTpcbox(string_t blob) {\n"
+           "    uint8_t *copy = (uint8_t *)malloc(blob.GetSize());\n    memcpy(copy, blob.GetData(), blob.GetSize());\n"
+           "    return reinterpret_cast<TPCBox *>(copy);\n}\n"
            "// Build a MEOS text* varlena from a DuckDB VARCHAR (hand binding's exact method); caller frees.\n"
            "inline text *MakeText(string_t s) {\n"
            "    size_t len = s.GetSize();\n"
