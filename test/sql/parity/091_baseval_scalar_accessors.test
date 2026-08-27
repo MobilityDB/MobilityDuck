@@ -65,3 +65,62 @@ query I
 SELECT SRID(npoint 'NPoint(1,0.5)') = SRID(nsegment 'NSegment(1,0.1,0.7)');
 ----
 true
+
+# A base value is a container in its own right, so the comparison group its catalog family
+# declares reaches the surface as both the operator and its named function.
+
+query III
+SELECT pose 'Pose(Point(1 2),0.5)' = pose 'Pose(Point(1 2),0.5)',
+       pose 'Pose(Point(1 2),0.5)' <> pose 'Pose(Point(3 4),0.5)',
+       eq(pose 'Pose(Point(1 2),0.5)', pose 'Pose(Point(1 2),0.5)');
+----
+true	true	true
+
+# The order is total and antisymmetric: exactly one of lt / gt / eq holds for a distinct pair,
+# and reversing the operands reverses the answer.
+
+query III
+SELECT pose 'Pose(Point(1 2),0.5)' < pose 'Pose(Point(3 4),0.5)',
+       pose 'Pose(Point(1 2),0.5)' > pose 'Pose(Point(3 4),0.5)',
+       pose 'Pose(Point(1 2),0.5)' = pose 'Pose(Point(3 4),0.5)';
+----
+false	true	false
+
+query II
+SELECT pose 'Pose(Point(3 4),0.5)' < pose 'Pose(Point(1 2),0.5)',
+       pose 'Pose(Point(3 4),0.5)' >= pose 'Pose(Point(1 2),0.5)';
+----
+true	false
+
+query II
+SELECT cbuffer 'Cbuffer(Point(1 1),1)' <> cbuffer 'Cbuffer(Point(2 2),2)',
+       npoint 'NPoint(1,0.5)' >= npoint 'NPoint(1,0.5)';
+----
+true	true
+
+query I
+SELECT posechain 'PoseChain(Pose(Point(0 0),0),Pose(Point(1 1),0))'
+     = posechain 'PoseChain(Pose(Point(0 0),0),Pose(Point(1 1),0))';
+----
+true
+
+# A seeded hash joins the bare one the unary pass already carries.
+
+query I
+SELECT hashExtended(pose 'Pose(Point(1 2),0.5)', 42::UBIGINT)
+     = hashExtended(pose 'Pose(Point(1 2),0.5)', 42::UBIGINT);
+----
+true
+
+query I
+SELECT hashExtended(pose 'Pose(Point(1 2),0.5)', 42::UBIGINT)
+    <> hashExtended(pose 'Pose(Point(3 4),0.5)', 42::UBIGINT);
+----
+true
+
+# A pose places another pose's point, translating it by the frame origin.
+
+query I
+SELECT applyPose(pose 'Pose(Point(1 0),0)', pose 'Pose(Point(10 20),0)')::VARCHAR;
+----
+POSE (010100000000000000000026400000000000003440, 0)
