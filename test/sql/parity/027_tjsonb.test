@@ -169,3 +169,18 @@ SELECT tjsonbInsert(TJSONB('{"a":{}}@2000-01-01'), ['a','b'], '9'::jsonb, false)
        tjsonbInsert(TJSONB('{"a":{}}@2000-01-01'), ['a','b'], '9'::jsonb, true)::VARCHAR;
 ----
 "{\"a\": {}}"@2000-01-01 00:00:00+01	"{\"a\": {\"b\": 9}}"@2000-01-01 00:00:00+01
+
+# The value accessors are generated from the out-parameter shape, so they answer the
+# jsonb the catalog declares and a miss is SQL NULL rather than an error.
+query III
+SELECT valueAtTimestamp(TJSONB('{"a":1}@2000-01-01'), TIMESTAMPTZ '2000-01-01')::VARCHAR,
+       typeof(valueAtTimestamp(TJSONB('{"a":1}@2000-01-01'), TIMESTAMPTZ '2000-01-01')),
+       valueAtTimestamp(TJSONB('{"a":1}@2000-01-01'), TIMESTAMPTZ '2010-01-01') IS NULL;
+----
+{"a": 1}	jsonb	true
+
+query II
+SELECT valueN(TJSONB('{"a":1}@2000-01-01'), 1)::VARCHAR,
+       valueN(TJSONB('{"a":1}@2000-01-01'), 9) IS NULL;
+----
+{"a": 1}	true
