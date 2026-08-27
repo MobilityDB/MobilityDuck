@@ -2419,6 +2419,18 @@ def ret_spanset_type(name, arg_acc):
     return SPANSET_TYPES[m.group(1)] if m else arg_acc
 
 # Collection-family descriptors (Span + SpanSet share ALL shape logic).
+# A set operation may answer a container OTHER than its operand's (a span minus a value is a span
+# SET), so the result is marshalled and typed by the RETURN base, never by the operand descriptor.
+# MEOS names a per-value set-operation entry after the VALUE'S TYPE — intersection_span_int,
+# minus_timestamptz_spanset — so the element is a token of the function name. That is what separates
+# a set operation on a value from a container function whose trailing int means something else:
+# spanset_span_n takes an INDEX and spanset_make a COUNT, and neither names a type. Without this the
+# element map alone reads any trailing int as an element and registers `spanN(intspanset, INTEGER)`,
+# which is wrong for every other span set.
+ELEM_NAME_TOKEN = {"int": "int", "int32_t": "int", "int64_t": "bigint", "double": "float",
+                   "DateADT": "date", "TimestampTz": "timestamptz"}
+RET_CONT_TOBLOB = {"Span": "SpanToBlob", "SpanSet": "SpanSetToBlob"}
+RET_CONT_ACC = {"Span": ELEM_TO_SPAN, "SpanSet": ELEM_TO_SPANSET}
 SPAN_C    = dict(cbase="Span",    blobto="BlobToSpan",    toblob="SpanToBlob",
                  elem=ELEM_TO_SPAN,    scope=span_reg_scope,    ret=ret_span_type,
                  alltypes="SpanTypes::AllTypes()")
@@ -2510,6 +2522,19 @@ def shape_span(f, C=SPAN_C):
             and "*" not in norm(ins[1]["canonical"]) and rb == cb and rn.endswith("*")
             and C["scope"] is not None and C["scope"](f["name"]) is not None):
         return ("csc:" + base(ins[1]["canonical"]), "type")
+    # (X, base value) / (base value, X) -> a container: the set operations between a container and
+    # one value (spanIntersection/spanMinus/spanUnion and their span-set twins). The RESULT container
+    # is named by the return type and typed by the SAME base value as the operand, so a datespan
+    # minus a date answers a datespanset. MEOS publishes each operand order as its own entry, so both
+    # are emitted. This sits AFTER the same-container arm above on purpose: that one is name-scoped
+    # (`floatspan_round` carries a precision int, not an element) and these carry no name scope, so
+    # the two are disjoint by construction rather than by ordering luck.
+    if rb in RET_CONT_TOBLOB and rn.endswith("*"):
+        _tok = lambda b: ELEM_NAME_TOKEN.get(b) in f["name"].split("_")
+        if contp(ins[0]) and sel(ins[1]) and _tok(sel(ins[1])):
+            return ("cval:%s:%s" % (sel(ins[1]), rb), "type")
+        if contp(ins[1]) and sel(ins[0]) and _tok(sel(ins[0])):
+            return ("valc:%s:%s" % (sel(ins[0]), rb), "type")
     # mixed container (Span, SpanSet) / (SpanSet, Span) -> bool : the span<->spanset
     # positional operators (left/right/overleft/overright span_spanset|spanset_span).
     # A 1-D span and its spanset order on the same axis, but the two operands are
@@ -2572,6 +2597,27 @@ def emit_span(f, kind, C=SPAN_C):
                 f"        [&](string_t in) {{\n"
                 f"            {cb} *s = {bt}(in);\n            {cct} r = {name}(s);\n            free(s);\n"
                 f"            return {rexpr};\n        }});\n}}\n")
+    if kind.startswith("cval:") or kind.startswith("valc:"):
+        # (X, base value) / (base value, X) -> a container. MEOS answers NULL where the operation
+        # leaves nothing (a span minus a value it does not hold), which is SQL NULL, so this reads
+        # the result through ExecuteWithNulls rather than dereferencing it.
+        _k, eb, rbase = kind.split(':', 2)
+        _dt, cpp2, marsh = SCALAR_ARG[eb]
+        rtb = RET_CONT_TOBLOB[rbase]
+        first_is_cont = _k == "cval"
+        t0, t1 = ("string_t", cpp2) if first_is_cont else (cpp2, "string_t")
+        a0, a1 = ("a", "a2") if first_is_cont else ("a1", "b")
+        cont_arg, val_marsh = (("a", marsh) if first_is_cont
+                               else ("b", marsh.replace("a2", "a1")))
+        call = f"{name}(s, {val_marsh})" if first_is_cont else f"{name}({val_marsh}, s)"
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::ExecuteWithNulls<{t0}, {t1}, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&]({t0} {a0}, {t1} {a1}, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                f"            {cb} *s = {bt}({cont_arg});\n"
+                f"            {rbase} *r = {call};\n            free(s);\n"
+                f"            if (!r) {{ mask.SetInvalid(idx); return string_t(); }}\n"
+                f"            return {rtb}(result, r);\n        }});\n}}\n")
     if kind.startswith("u2text:"):  # (X, by-value scalar) -> owned C string (asText/asEWKT)
         _dt, cpp2, marsh = SCALAR_ARG[kind.split(':', 1)[1]]
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
@@ -3584,6 +3630,19 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     for nm in names:
                         span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                                   f'"{reg_name(nm, f)}", {sig}, LogicalType::BOOLEAN, Gen_{fn}));')
+                continue
+            # container-and-value set operation: the operand is the container this element names,
+            # and the result is the container the RETURN type names for that same element.
+            if kind.startswith("cval:") or kind.startswith("valc:"):
+                _k, eb, rbase = kind.split(':', 2)
+                acc = C["elem"][eb]; scd = SCALAR_ARG[eb][0]
+                racc = RET_CONT_ACC[rbase].get(eb)
+                if racc is None:
+                    continue
+                sig = "{%s, %s}" % (acc, scd) if _k == "cval" else "{%s, %s}" % (scd, acc)
+                for nm in names:
+                    span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                              f'"{reg_name(nm, f)}", {sig}, {racc}, Gen_{fn}));')
                 continue
             # text rendering: the (X, int) form the MEOS entry declares, plus the shorter arity
             # the canonical SQL reaches through that argument's DEFAULT.

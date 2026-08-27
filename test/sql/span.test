@@ -264,3 +264,53 @@ query I
 SELECT floatspanFromHexWKB('010D0003000000000000F83F0000000000000C40') = floatspan '[1.5, 3.5]';
 ----
 true
+
+# A set operation between a span and one value. The result container is the one the operation
+# needs rather than the operand's: an intersection stays a span, a difference becomes a span set.
+
+query II
+SELECT spanIntersection(intspan '[1,10)', 5)::VARCHAR,
+       spanIntersection(intspan '[1,10)', 50) IS NULL;
+----
+[5, 6)	true
+
+query I
+SELECT spanMinus(intspan '[1,10)', 5)::VARCHAR;
+----
+{[1, 5), [6, 10)}
+
+query I
+SELECT spanUnion(intspan '[1,5)', 7)::VARCHAR;
+----
+{[1, 5), [7, 8)}
+
+# Each operand order is its own MEOS entry, and a value lying inside the span it is asked to
+# stand outside of leaves nothing at all.
+
+query II
+SELECT spanMinus(5, intspan '[1,10)') IS NULL,
+       spanMinus(50, intspan '[1,10)')::VARCHAR;
+----
+true	{[50, 51)}
+
+# The element type carries through: a date span answers in dates.
+
+query I
+SELECT spanMinus(datespan '[2000-01-01,2000-01-10)', DATE '2000-01-05')::VARCHAR;
+----
+{[2000-01-01, 2000-01-05), [2000-01-06, 2000-01-10)}
+
+# The span set twins answer the same way over a set of spans.
+
+query I
+SELECT spansetMinus(intspanset '{[1,5),[10,15)}', 3)::VARCHAR;
+----
+{[1, 3), [4, 5), [10, 15)}
+
+# The operators MobilityDB declares for these agree with the named functions.
+
+query II
+SELECT (intspan '[1,5)' + 7)::VARCHAR = spanUnion(intspan '[1,5)', 7)::VARCHAR,
+       (intspan '[1,10)' * 5)::VARCHAR = spanIntersection(intspan '[1,10)', 5)::VARCHAR;
+----
+true	true
