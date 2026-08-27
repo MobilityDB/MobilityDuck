@@ -46,6 +46,7 @@ PTR_IN  = {  # MEOS base type -> (DuckDB arg LogicalType, "C++ expr producing th
     "TBox":         ("LogicalType::BLOB", "BlobToTbox(%s)"),
     "Cbuffer":      ("CbufferTypes::cbuffer()", "BlobToCbuffer(%s)"),
     "Jsonb":        ("TJsonbTypes::jsonb()", "BlobToJsonb(%s)"),
+    "JsonPath":     ("TJsonbTypes::jsonpath()", "BlobToJsonpath(%s)"),
     "Pcpoint":      ("TPcpointTypes::pcpoint()", "BlobToPcpoint(%s)"),
     "Pcpatch":      ("TPcpatchTypes::pcpatch()", "BlobToPcpatch(%s)"),
     "Npoint":       ("NpointTypes::npoint()", "BlobToNpoint(%s)"),
@@ -1219,6 +1220,23 @@ def _vary(p):
     b = base(p["canonical"]); n = norm(p["canonical"])
     if b == "text" and n.endswith("*"): return VARY_ARG["text"]
     if b in VARY_ARG and b != "text" and "*" not in n: return VARY_ARG[b]
+    # A value the binding registers as its own BLOB type (jsonpath, cbuffer, …) arrives as a
+    # string_t and marshals through the same helper every other shape uses for it.
+    if b in PTR_IN and n.endswith("*") and n.count("*") == 1:
+        dt, expr = PTR_IN[b]
+        if dt != "MD_TEMPORAL":
+            return (dt, "string_t", expr, "free")
+    return None
+
+# A per-call setting that is a POINTER: read once outside the executor and freed after it. The
+# catalog marks the nullable ones (`shape.nullable`) and MobilityDB gives them a SQL default, so
+# an omitted or NULL argument reaches MEOS as NULL rather than a fabricated value.
+def _const_ptr(p):
+    b = base(p["canonical"]); n = norm(p["canonical"])
+    if b in PTR_IN and n.endswith("*") and n.count("*") == 1:
+        dt, expr = PTR_IN[b]
+        if dt != "MD_TEMPORAL":
+            return (dt, b, expr)
     return None
 
 def shape_bound_tail(f):
@@ -1243,14 +1261,17 @@ def shape_bound_tail(f):
             tail.append(("lit", bound[nm]))
             continue
         st = SETTING_ARG.get(base(p["canonical"])) if "*" not in norm(p["canonical"]) else None
-        if st is None: return None
-        tail.append(("col", st))
+        if st is not None:
+            tail.append(("col", st)); continue
+        pt = _const_ptr(p)
+        if pt is None: return None
+        tail.append(("ptr", pt))
     if not any(k == "col" for k, _ in tail): return None
     if reg_scope(f["name"]) is None: return None
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
     if not (rb == "Temporal" and rn.endswith("*")): return None
     # the registered signature is the type, the varying arg, then each exposed setting
-    sig = [v[0]] + [st[0] for k, st in tail if k == "col"]
+    sig = [v[0]] + [st[0] for k, st in tail if k in ("col", "ptr")]
     return ("temporal", "MD_TEMPORAL", v, tail, sig)
 
 def emit_body_bound_tail(f, kind, vary, tail, sig):
@@ -1259,10 +1280,17 @@ def emit_body_bound_tail(f, kind, vary, tail, sig):
     L = [f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{",
          "    EnsureMeosThreadInitialized();",
          "    auto rc = args.size();"]
-    call, col = [], 2
+    call, col, frees = [], 2, []
     for kindi, payload in tail:
         if kindi == "lit":
             call.append(payload)
+            continue
+        if kindi == "ptr":
+            _d, cbase_, marshal = payload
+            L.append(f"    {cbase_} *c{col} = NULL;")
+            L.append(f"    {{ auto &cv = args.data[{col}]; cv.Flatten(rc); Value v = cv.GetValue(0);"
+                     " if (!v.IsNull()) c%d = %s; }" % (col, marshal % "string_t(StringValue::Get(v))"))
+            frees.append(f"c{col}"); call.append(f"c{col}"); col += 1
             continue
         _d, ctype, cexpr = payload
         L.append(f"    {ctype} c{col} = ({ctype}) 0;")
@@ -1284,7 +1312,9 @@ def emit_body_bound_tail(f, kind, vary, tail, sig):
         L += [f"            Temporal *r = {name}(t, {lead}{tailargs});",
               "            free(t);"]
     L += ["            return TemporalToBlobN(result, r, mask, idx);",
-          "        });", "}", ""]
+          "        });"]
+    L += ["    free(%s);" % fr for fr in frees]
+    L += ["}", ""]
     return "\n".join(L)
 
 def shape_text_array(f):
@@ -1320,12 +1350,15 @@ def shape_text_array(f):
         if nm in bound:
             tail.append(("lit", bound[nm])); continue
         st = SETTING_ARG.get(base(p["canonical"])) if "*" not in norm(p["canonical"]) else None
-        if st is None: return None
-        tail.append(("col", st))
+        if st is not None:
+            tail.append(("col", st)); continue
+        pt = _const_ptr(p)
+        if pt is None: return None
+        tail.append(("ptr", pt))
     if reg_scope(f["name"]) is None: return None
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
     if not (rb == "Temporal" and rn.endswith("*")): return None
-    sig = ["LogicalType::LIST(LogicalType::VARCHAR)"] + [st[0] for k, st in tail if k == "col"]
+    sig = ["LogicalType::LIST(LogicalType::VARCHAR)"] + [st[0] for k, st in tail if k in ("col", "ptr")]
     return ("temporal", "MD_TEMPORAL", tail, sig)
 
 def emit_body_text_array(f, kind, tail, sig):
@@ -1336,10 +1369,17 @@ def emit_body_text_array(f, kind, tail, sig):
          "    auto &lst = args.data[1]; lst.Flatten(rc);",
          "    auto &child = ListVector::GetEntry(lst);",
          "    child.Flatten(ListVector::GetListSize(lst));"]
-    call, col = [], 2
+    call, col, frees = [], 2, []
     for kindi, payload in tail:
         if kindi == "lit":
             call.append(payload); continue
+        if kindi == "ptr":
+            _d, cbase_, marshal = payload
+            L.append(f"    {cbase_} *c{col} = NULL;")
+            L.append(f"    {{ auto &cv = args.data[{col}]; cv.Flatten(rc); Value v = cv.GetValue(0);"
+                     " if (!v.IsNull()) c%d = %s; }" % (col, marshal % "string_t(StringValue::Get(v))"))
+            frees.append(f"c{col}"); call.append(f"c{col}"); col += 1
+            continue
         _d, ctype, cexpr = payload
         L.append(f"    {ctype} c{col} = ({ctype}) 0;")
         L.append(f"    {{ auto &cv = args.data[{col}]; cv.Flatten(rc); Value v = cv.GetValue(0);"
@@ -1356,7 +1396,9 @@ def emit_body_text_array(f, kind, tail, sig):
           f"            Temporal *r = {name}(t, elems, n{tailargs});",
           "            free(t); FreeTextArr(elems, n);",
           "            return TemporalToBlobN(result, r, mask, idx);",
-          "        });", "}", ""]
+          "        });"]
+    L += ["    free(%s);" % fr for fr in frees]
+    L += ["}", ""]
     return "\n".join(L)
 
 def shape_binary_tt(f):
@@ -3681,6 +3723,12 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "    free(jb);\n    return out;\n}\n"
            "inline string_t JsonbToBlobN(Vector &result, Jsonb *jb, ValidityMask &mask, idx_t idx) {\n"
            "    if (!jb) { mask.SetInvalid(idx); return string_t(); }\n    return JsonbToBlob(result, jb);\n}\n"
+           "// JsonPath is a varlena, so the blob carries the value whole.\n"
+           "inline JsonPath *BlobToJsonpath(string_t blob) {\n"
+           "    size_t sz = blob.GetSize();\n"
+           "    uint8_t *copy = (uint8_t *)malloc(sz);\n"
+           "    memcpy(copy, blob.GetData(), sz);\n"
+           "    return reinterpret_cast<JsonPath *>(copy);\n}\n"
            "inline Jsonb *BlobToJsonb(string_t blob) {\n"
            "    size_t sz = blob.GetSize();\n"
            "    uint8_t *copy = (uint8_t *)malloc(sz);\n"

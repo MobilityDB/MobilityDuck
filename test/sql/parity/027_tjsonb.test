@@ -147,3 +147,25 @@ statement error
 SELECT CAST('not a path' AS jsonpath)::VARCHAR;
 ----
 jsonpath input
+
+# The JSON path predicates take the path as a jsonpath value, the variables as jsonb and
+# the silent flag; `tz` is bound by the wrapper and is not part of the SQL surface.
+query II
+SELECT tjsonbPathExists(TJSONB('{"a":{"b":1}}@2000-01-01'), '$.a.b'::jsonpath, '{}'::jsonb, false)::VARCHAR,
+       tjsonbPathExists(TJSONB('{"a":{"b":1}}@2000-01-01'), '$.zz'::jsonpath, '{}'::jsonb, false)::VARCHAR;
+----
+t@2000-01-01 00:00:00+01	f@2000-01-01 00:00:00+01
+
+query II
+SELECT tjsonbPathQueryFirst(TJSONB('{"a":{"b":7}}@2000-01-01'), '$.a.b'::jsonpath, '{}'::jsonb, false)::VARCHAR,
+       tjsonbPathQueryArray(TJSONB('{"a":{"b":7}}@2000-01-01'), '$.a.b'::jsonpath, '{}'::jsonb, false)::VARCHAR;
+----
+"7"@2000-01-01 00:00:00+01	"[7]"@2000-01-01 00:00:00+01
+
+# Insert takes the path as a list and the new value as jsonb. The last argument is
+# create-if-missing, so a missing key appears only when it is true.
+query II
+SELECT tjsonbInsert(TJSONB('{"a":{}}@2000-01-01'), ['a','b'], '9'::jsonb, false)::VARCHAR,
+       tjsonbInsert(TJSONB('{"a":{}}@2000-01-01'), ['a','b'], '9'::jsonb, true)::VARCHAR;
+----
+"{\"a\": {}}"@2000-01-01 00:00:00+01	"{\"a\": {\"b\": 9}}"@2000-01-01 00:00:00+01
