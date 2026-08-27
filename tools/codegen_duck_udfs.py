@@ -3757,12 +3757,30 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
 # has no span (text) simply produces no accessor, so a phantom textspan() can
 # never be fabricated. The base LogicalType per base value is the same fixed
 # map the hand code used.
+# The element LogicalType per base value. A core base names a DuckDB built-in; a base the binding
+# registers itself names that type's accessor, and BASE_HEADER states the header declaring it so the
+# generated file includes exactly the ones the admitted bases need. A base absent from this map has
+# no element type the binding can name, so the derivation below does not admit it — which is how
+# geom, geog and h3index, whose set types carry a hand-written function surface of their own, stay
+# out of the generated registration and register exactly once.
 BASE_LOGICAL = {
     "int": "LogicalType::INTEGER", "bigint": "LogicalType::BIGINT",
     "float": "LogicalType::DOUBLE", "text": "LogicalType::VARCHAR",
     "date": "LogicalType::DATE", "tstz": "LogicalType::TIMESTAMP_TZ",
+    "jsonb": "TJsonbTypes::jsonb()", "cbuffer": "CbufferTypes::cbuffer()",
+    "npoint": "NpointTypes::npoint()", "quadbin": "QuadbinTypes::quadbin()",
+    "pose": "PoseTypes::pose()", "posechain": "PosechainTypes::posechain()",
+    "pcpoint": "TPcpointTypes::pcpoint()", "pcpatch": "TPcpatchTypes::pcpatch()",
 }
-BASE_ORDER = ["int", "bigint", "float", "text", "date", "tstz"]
+BASE_HEADER = {
+    "jsonb": "json/tjsonb.hpp", "cbuffer": "cbuffer/tcbuffer.hpp",
+    "npoint": "npoint/tnpoint.hpp", "quadbin": "quadbin/tquadbin.hpp",
+    "pose": "pose/tpose.hpp", "posechain": "posechain/tposechain.hpp",
+    "pcpoint": "pointcloud/tpcpoint.hpp", "pcpatch": "pointcloud/tpcpatch.hpp",
+}
+BASE_ORDER = ["int", "bigint", "float", "text", "date", "tstz",
+              "jsonb", "cbuffer", "npoint", "quadbin", "pose", "posechain",
+              "pcpoint", "pcpatch"]
 # suffix (longest first so spanset wins over span), class, mapping struct, DEFINE
 # macro, and whether the family carries the spanset-only Set/Base child mappings.
 TYPEREG_FAMILIES = [
@@ -3852,6 +3870,13 @@ def gen_type_registration(catalog, out_path):
         '#include "temporal/set.hpp"',
         '#include "temporal/span.hpp"',
         '#include "temporal/spanset.hpp"',
+    ] + [
+        # The headers stating the element accessors the admitted bases name.
+        '#include "%s"' % BASE_HEADER[b]
+        for b in BASE_ORDER
+        if b in BASE_HEADER and any(("T_" + (b + f["suffix"]).upper()) in enum_names
+                                    for f in TYPEREG_FAMILIES)
+    ] + [
         '#include "duckdb/main/extension/extension_loader.hpp"',
         "#include <unordered_map>",
         "",

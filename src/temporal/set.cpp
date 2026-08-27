@@ -567,9 +567,21 @@ static unique_ptr<GlobalTableFunctionState> SetUnnestInit(ClientContext &context
             case T_TIMESTAMPTZ:
                 state->values.emplace_back(Value::TIMESTAMPTZ(timestamp_tz_t(FromMeosTimestamp((int64_t)d))));
                 break;
-            default:
-                free(s);
-                throw NotImplementedException("SetUnnest: unsupported base type");
+            default: {
+                // A BLOB-backed base value: hand back the varlena itself, typed as the
+                // element type the bind resolved, so unnest answers the registered type
+                // rather than a bare BLOB.
+                MeosType elem_type = settype_basetype(bind.set_type);
+                Value v = basetype_byvalue(elem_type)
+                    ? Value::BIGINT((int64_t) d)
+                    : Value::BLOB((const_data_ptr_t) DatumGetPointer(d),
+                                  meostype_length(elem_type) == -1
+                                      ? VARSIZE(DatumGetPointer(d))
+                                      : (idx_t) meostype_length(elem_type));
+                v.GetTypeMutable() = bind.return_type;
+                state->values.emplace_back(std::move(v));
+                break;
+            }
         }
     }
 

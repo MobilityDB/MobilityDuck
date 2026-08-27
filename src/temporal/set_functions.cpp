@@ -253,6 +253,7 @@ void SetFunctions::Set_constructor(DataChunk &args, ExpressionState &state, Vect
             }
 
             Datum *values = (Datum *)malloc(sizeof(Datum) * length);
+            MeosType elem_type = settype_basetype(meos_type);
 
             for (idx_t i = 0; i < length; ++i) {
                 idx_t idx = offset + i;
@@ -295,9 +296,21 @@ void SetFunctions::Set_constructor(DataChunk &args, ExpressionState &state, Vect
                         values[i] = Datum(ToMeosTimestamp(ts));
                         break;
                     }
-                    default:
-                        free(values);
-                        throw InvalidInputException("Unsupported type in Set Constructor");
+                    default: {
+                        // The remaining base values are the ones the binding registers as
+                        // types of its own, and the catalog states how MEOS carries each:
+                        // a by-value base arrives in the eight bytes of its Datum, and every
+                        // other one is a pointer to the value. set_make_exp copies each value
+                        // into the set and set_make_free releases the array alone, so a
+                        // pointer may address the child vector directly.
+                        if (basetype_byvalue(elem_type)) {
+                            values[i] = Datum(FlatVector::GetData<int64_t>(child)[idx]);
+                        } else {
+                            values[i] = PointerGetDatum(
+                                FlatVector::GetData<string_t>(child)[idx].GetDataUnsafe());
+                        }
+                        break;
+                    }
                 }
             }
 
@@ -327,6 +340,18 @@ static inline void Value_to_set_core(Vector &source, Vector &result, idx_t count
     auto handle_null = [&](idx_t row) {
         FlatVector::SetNull(result, row, true);
     };
+
+    // The base types the binding registers itself, carried as the catalog states: a pointer to
+    // the value, or the eight bytes of the Datum for a by-value base. value_set copies what it
+    // is given, so a pointer may address the source vector directly.
+    if (! basetype_byvalue(base_type) && base_type != T_TEXT) {
+        auto in = FlatVector::GetData<string_t>(source);
+        for (idx_t i = 0; i < count; ++i) {
+            if (FlatVector::IsNull(source, i)) { handle_null(i); continue; }
+            Write_set(result, i, value_set(PointerGetDatum(in[i].GetDataUnsafe()), base_type));
+        }
+        return;
+    }
 
     switch (base_type) {
         case T_INT4: {
