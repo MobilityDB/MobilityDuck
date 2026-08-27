@@ -10,6 +10,10 @@ namespace duckdb {
 
 struct TJsonbTypes {
     static LogicalType jsonb();
+    // The JSON path a temporal JSONB query is written in. PostgreSQL declares `jsonpath`
+    // as a built-in, MobilityDB names it in the SQL of the path predicates, and MEOS
+    // publishes its text I/O, so the binding carries it as its own value type.
+    static LogicalType jsonpath();
     static LogicalType tjsonb();
     static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterScalarFunctions(ExtensionLoader &loader);
@@ -32,6 +36,10 @@ struct TjsonbFunctions {
     // jsonb alias inherits DuckDB's VARCHAR -> BLOB conversion, which stores the
     // JSON TEXT where the binary jsonb container belongs.
     static bool Jsonb_in_cast(Vector &source, Vector &result, idx_t count,
+                                CastParameters &parameters);
+    static bool Jsonpath_in_cast(Vector &source, Vector &result, idx_t count,
+                                CastParameters &parameters);
+    static bool Jsonpath_out_cast(Vector &source, Vector &result, idx_t count,
                                 CastParameters &parameters);
 };
 

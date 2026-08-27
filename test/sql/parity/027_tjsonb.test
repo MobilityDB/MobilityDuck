@@ -133,3 +133,17 @@ SELECT tjsonbDeletePath(TJSONB('{"a":{"b":7},"c":1}@2000-01-01'), ['a','b'])::VA
        tjsonbDeleteArray(TJSONB('{"a":1,"b":2}@2000-01-01'), ['a'])::VARCHAR;
 ----
 "{\"a\": {}, \"c\": 1}"@2000-01-01 00:00:00+01	"{\"b\": 2}"@2000-01-01 00:00:00+01
+
+# The JSON path type: MEOS parses and renders it, so the value round-trips through
+# PostgreSQL's canonical spelling rather than the text it was written in.
+query II
+SELECT (SELECT count(*) FROM duckdb_types() WHERE type_name = 'jsonpath'),
+       CAST('$.a.b' AS jsonpath)::VARCHAR;
+----
+1	$."a"."b"
+
+# An unparseable path is MEOS's error rather than a silently accepted value.
+statement error
+SELECT CAST('not a path' AS jsonpath)::VARCHAR;
+----
+jsonpath input
