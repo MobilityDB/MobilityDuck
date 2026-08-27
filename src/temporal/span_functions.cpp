@@ -4343,9 +4343,9 @@ void SpanFunctions::Distance_span_value(DataChunk &args, ExpressionState &state,
     MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // distance between intspan and integer
-            BinaryExecutor::Execute<string_t, int32_t, double>(
+            BinaryExecutor::Execute<string_t, int32_t, int32_t>(
                 span_vec, args.data[1], result, args.size(),
-                [&](string_t span_blob, int32_t value) -> double {
+                [&](string_t span_blob, int32_t value) -> int32_t {
                     const uint8_t *span_data = reinterpret_cast<const uint8_t*>(span_blob.GetData());
                     size_t span_data_size = span_blob.GetSize();
                     uint8_t *span_data_copy = (uint8_t*)malloc(span_data_size);
@@ -4355,7 +4355,7 @@ void SpanFunctions::Distance_span_value(DataChunk &args, ExpressionState &state,
                         free(span_data_copy);
                         throw InvalidInputException("Invalid SPAN data: null pointer");
                     }
-                    int32_t distance = distance_span_value(span, Datum(value));
+                    int32_t distance = distance_span_int(span, value);
                     free(span_data_copy);
                     return distance;
             }
@@ -4363,9 +4363,9 @@ void SpanFunctions::Distance_span_value(DataChunk &args, ExpressionState &state,
             break;
         }
         case T_BIGINTSPAN: { // distance between bigintspan and bigint
-            BinaryExecutor::Execute<string_t, int64_t, double>(
+            BinaryExecutor::Execute<string_t, int64_t, int64_t>(
                 span_vec, args.data[1], result, args.size(),
-                [&](string_t span_blob, int64_t value) -> double {
+                [&](string_t span_blob, int64_t value) -> int64_t {
                     const uint8_t *span_data = reinterpret_cast<const uint8_t*>(span_blob.GetData());
                     size_t span_data_size = span_blob.GetSize();
                     uint8_t *span_data_copy = (uint8_t*)malloc(span_data_size);
@@ -4375,7 +4375,7 @@ void SpanFunctions::Distance_span_value(DataChunk &args, ExpressionState &state,
                         free(span_data_copy);       
                         throw InvalidInputException("Invalid SPAN data: null pointer");
                     }       
-                    int64_t distance = distance_span_value(span, Datum(value));
+                    int64_t distance = distance_span_bigint(span, value);
                     free(span_data_copy);
                     return distance;
                 }
@@ -4395,16 +4395,21 @@ void SpanFunctions::Distance_span_value(DataChunk &args, ExpressionState &state,
                         free(span_data_copy);
                         throw InvalidInputException("Invalid floatspan data: null pointer");    
                     }
-                    double distance = distance_span_value(span, Float8GetDatum(value));
+                    // distance_span_float and distance_span_timestamptz return the Datum
+                    // distance_span_value hands them without unwrapping it, so they answer the
+                    // IEEE-754 bit pattern of the distance. Their spanset twins and the
+                    // span-and-span family unwrap; these four read the Datum themselves until
+                    // the typed entries do.
+                    double distance = DatumGetFloat8(distance_span_value(span, Float8GetDatum(value)));
                     free(span_data_copy);
                     return distance;
                 });
             break;  
         }
         case T_DATESPAN: { // distance between datespan and date
-            BinaryExecutor::Execute<string_t, int32_t, double>(
+            BinaryExecutor::Execute<string_t, int32_t, int32_t>(
                 span_vec, args.data[1], result, args.size(),
-                [&](string_t span_blob, int32_t value) -> double {
+                [&](string_t span_blob, int32_t value) -> int32_t {
                     const uint8_t *span_data = reinterpret_cast<const uint8_t*>(span_blob.GetData());
                     size_t span_data_size = span_blob.GetSize();
                     uint8_t *span_data_copy = (uint8_t*)malloc(span_data_size);
@@ -4414,7 +4419,7 @@ void SpanFunctions::Distance_span_value(DataChunk &args, ExpressionState &state,
                         free(span_data_copy);
                         throw InvalidInputException("Invalid SPAN data: null pointer");
                     }
-                    int32_t distance = distance_span_value(span, Datum(value));
+                    int32_t distance = distance_span_date(span, ToMeosDate(date_t(value)));
                     free(span_data_copy);
                     return distance;
                 });
@@ -4434,7 +4439,7 @@ void SpanFunctions::Distance_span_value(DataChunk &args, ExpressionState &state,
                         free(span_data_copy);
                         throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
-                    double secs = distance_span_timestamptz(span, (TimestampTz)ts_meos.value);
+                    double secs = DatumGetFloat8(distance_span_value(span, Datum((int64_t) ts_meos.value)));
                     free(span_data_copy);
                     return SecondsToInterval(secs);
                 });
@@ -4454,9 +4459,9 @@ void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state,
     MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(span_vec.GetType().GetAlias());
     switch (span_type){
         case T_INTSPAN: { // distance between integer and intspan
-            BinaryExecutor::Execute<int32_t, string_t, double>(
+            BinaryExecutor::Execute<int32_t, string_t, int32_t>(
                 args.data[0], span_vec, result, args.size(),
-                [&](int32_t value, string_t span_blob) -> double {
+                [&](int32_t value, string_t span_blob) -> int32_t {
                     const uint8_t *span_data = reinterpret_cast<const uint8_t*>(span_blob.GetData());
                     size_t span_data_size = span_blob.GetSize();
                     uint8_t *span_data_copy = (uint8_t*)malloc(span_data_size);
@@ -4466,7 +4471,7 @@ void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state,
                         free(span_data_copy);
                         throw InvalidInputException("Invalid SPAN data: null pointer");
                     }
-                    int32_t distance = distance_span_value(span, Datum(value));
+                    int32_t distance = distance_span_int(span, value);
                     free(span_data_copy);
                     return distance;
             }
@@ -4474,9 +4479,9 @@ void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state,
             break;
         }
         case T_BIGINTSPAN: { // distance between bigint and bigintspan
-            BinaryExecutor::Execute<int64_t, string_t, double>(
+            BinaryExecutor::Execute<int64_t, string_t, int64_t>(
                 args.data[0], span_vec, result, args.size(),
-                [&](int64_t value, string_t span_blob) -> double {
+                [&](int64_t value, string_t span_blob) -> int64_t {
                     const uint8_t *span_data = reinterpret_cast<const uint8_t*>(span_blob.GetData());
                     size_t span_data_size = span_blob.GetSize();
                     uint8_t *span_data_copy = (uint8_t*)malloc(span_data_size);
@@ -4486,7 +4491,7 @@ void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state,
                         free(span_data_copy);       
                         throw InvalidInputException("Invalid SPAN data: null pointer"); 
                     }
-                    int64_t distance = distance_span_value(span, Datum(value));
+                    int64_t distance = distance_span_bigint(span, value);
                     free(span_data_copy);
                     return distance;
                 }
@@ -4506,16 +4511,16 @@ void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state,
                         free(span_data_copy);
                         throw InvalidInputException("Invalid floatspan data: null pointer");    
                     }
-                    double distance = distance_span_value(span, Float8GetDatum(value));
+                    double distance = DatumGetFloat8(distance_span_value(span, Float8GetDatum(value)));
                     free(span_data_copy);
                     return distance;
                 });
             break;
         }
         case T_DATESPAN: { // distance between date and datespan
-            BinaryExecutor::Execute<int32_t, string_t, double>(
+            BinaryExecutor::Execute<int32_t, string_t, int32_t>(
                 args.data[0], span_vec, result, args.size(),
-                [&](int32_t value, string_t span_blob) -> double {
+                [&](int32_t value, string_t span_blob) -> int32_t {
                     const uint8_t *span_data = reinterpret_cast<const uint8_t*>(span_blob.GetData());
                     size_t span_data_size = span_blob.GetSize();
                     uint8_t *span_data_copy = (uint8_t*)malloc(span_data_size);
@@ -4525,7 +4530,7 @@ void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state,
                         free(span_data_copy);
                         throw InvalidInputException("Invalid SPAN data: null pointer");
                     }
-                    int32_t distance = distance_span_value(span, Datum(value));
+                    int32_t distance = distance_span_date(span, ToMeosDate(date_t(value)));
                     free(span_data_copy);
                     return distance;
                 });
@@ -4545,7 +4550,7 @@ void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state,
                         free(span_data_copy);
                         throw InvalidInputException("Invalid tstzspan data: null pointer");
                     }
-                    double secs = distance_span_timestamptz(span, (TimestampTz)ts_meos.value);
+                    double secs = DatumGetFloat8(distance_span_value(span, Datum((int64_t) ts_meos.value)));
                     free(span_data_copy);
                     return SecondsToInterval(secs);
                 });
@@ -4557,6 +4562,24 @@ void SpanFunctions::Distance_value_span(DataChunk &args, ExpressionState &state,
     if (args.size() == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
+}
+
+// A span-and-span distance answers in the span's own type. MEOS publishes a typed entry per type
+// (distance_intspan_intspan, distance_floatspan_floatspan, ...) which unwraps the internal Datum
+// itself, so each one is called through a result type matching what the operator registers.
+template <typename R, typename FN>
+static void SpanSpanDistanceExec(DataChunk &args, Vector &result, FN meos_fn) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, R>(
+        args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> R {
+            Span *s1 = (Span *) malloc(a.GetSize());
+            memcpy(s1, a.GetData(), a.GetSize());
+            Span *s2 = (Span *) malloc(b.GetSize());
+            memcpy(s2, b.GetData(), b.GetSize());
+            R r = (R) meos_fn(s1, s2);
+            free(s1); free(s2);
+            return r;
+        });
 }
 
 void SpanFunctions::Distance_span_span(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -4578,6 +4601,21 @@ void SpanFunctions::Distance_span_span(DataChunk &args, ExpressionState &state, 
             }
         );
     } else {
+        // Each span type answers its distance in its OWN type -- an int span in integers, a float
+        // span in doubles -- and the registration above declares exactly that, so the executor is
+        // templated per type rather than on one double for all of them.
+        switch (span_type) {
+            case T_INTSPAN:
+                SpanSpanDistanceExec<int32_t>(args, result, distance_intspan_intspan);
+                return;
+            case T_BIGINTSPAN:
+                SpanSpanDistanceExec<int64_t>(args, result, distance_bigintspan_bigintspan);
+                return;
+            case T_DATESPAN:
+                SpanSpanDistanceExec<int32_t>(args, result, distance_datespan_datespan);
+                return;
+            default: break;
+        }
         BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(
             args.data[0], args.data[1], result, args.size(),
             [&](string_t span1_blob, string_t span2_blob, ValidityMask &mask, idx_t idx) -> double {
@@ -4601,7 +4639,7 @@ void SpanFunctions::Distance_span_span(DataChunk &args, ExpressionState &state, 
                     throw InvalidInputException("Invalid SPAN data: null pointer");
                 }
 
-                double distance = distance_span_span(span1, span2);
+                double distance = distance_floatspan_floatspan(span1, span2);
                 free(span1);
                 free(span2);
                 return distance;
