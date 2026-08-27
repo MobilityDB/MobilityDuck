@@ -29,15 +29,17 @@ ORDER BY v |=| 'TBOX XT([30.0,30.2],[2000-01-01,2000-01-02])'::tbox LIMIT 5;
 ----
 physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*
 
-# The index answers what the sequential scan answers.
+# The index answers what the sequential scan answers. Rows 26 and 31 both sit 2.5 away, which is
+# exactly where LIMIT 5 would cut, so this reads the first four -- the 1.5 tie falls wholly inside
+# them -- and orders the ids, leaving nothing for a tie to decide.
 
 query I
-SELECT (SELECT list(id) FROM (
+SELECT (SELECT list(id ORDER BY id) FROM (
           SELECT id FROM f
-          ORDER BY v |=| 'TBOX XT([30.0,30.2],[2000-01-01,2000-01-02])'::tbox LIMIT 5))
-     = (SELECT list(id) FROM (
+          ORDER BY v |=| 'TBOX XT([30.0,30.2],[2000-01-01,2000-01-02])'::tbox LIMIT 4))
+     = (SELECT list(id ORDER BY id) FROM (
           SELECT id FROM f_noindex
-          ORDER BY v |=| 'TBOX XT([30.0,30.2],[2000-01-01,2000-01-02])'::tbox LIMIT 5))
+          ORDER BY v |=| 'TBOX XT([30.0,30.2],[2000-01-01,2000-01-02])'::tbox LIMIT 4))
 ----
 true
 
@@ -98,12 +100,12 @@ ORDER BY v |=| 'TBOX XT([30.0,30.2],[2000-01-01,2000-01-02])'::tbox LIMIT 5;
 physical_plan	<REGEX>:.*MOBILITY SPTREE INDEX.*
 
 query I
-SELECT (SELECT list(id) FROM (
+SELECT (SELECT list(id ORDER BY id) FROM (
           SELECT id FROM fsp
-          ORDER BY v |=| 'TBOX XT([30.0,30.2],[2000-01-01,2000-01-02])'::tbox LIMIT 5))
-     = (SELECT list(id) FROM (
+          ORDER BY v |=| 'TBOX XT([30.0,30.2],[2000-01-01,2000-01-02])'::tbox LIMIT 4))
+     = (SELECT list(id ORDER BY id) FROM (
           SELECT id FROM f_noindex
-          ORDER BY v |=| 'TBOX XT([30.0,30.2],[2000-01-01,2000-01-02])'::tbox LIMIT 5))
+          ORDER BY v |=| 'TBOX XT([30.0,30.2],[2000-01-01,2000-01-02])'::tbox LIMIT 4))
 ----
 true
 
