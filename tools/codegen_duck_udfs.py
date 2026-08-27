@@ -157,6 +157,8 @@ def arg_type(canon):
         return ("LogicalType::VARCHAR", None)
     if b == "text" and nc.endswith("*"):
         return ("LogicalType::VARCHAR", None)
+    if b == "nullHandleType" and "*" not in nc:
+        return ("LogicalType::VARCHAR", None)
     return None
 
 def ret_type(f, out_canon):
@@ -1010,6 +1012,26 @@ SCALAR_ARG = {
     "TimestampTz": ("LogicalType::TIMESTAMP_TZ", "timestamp_tz_t", "DuckDBToMeosTimestamp(a2).value"),
     "DateADT":     ("LogicalType::DATE", "date_t", "ToMeosDate(a2)"),  # single-expr, no lifecycle
 }
+# The VARCHAR half of a shape argument, beside SCALAR_ARG's by-value half: a C string, and the
+# null-handling enum MEOS itself parses from one. MobilityDB spells the latter `null_handle text`
+# (mobilitydb/sql/json/454_tjsonb_jsonfuncs.in.sql), and null_handle_type_from_string is the public
+# MEOS parser, so the binding delegates the mapping instead of carrying its own name table.
+VARCHAR_ARG = {
+    "char":           ("LogicalType::VARCHAR", "string_t", "a2.GetString().c_str()"),
+    "nullHandleType": ("LogicalType::VARCHAR", "string_t",
+                       "null_handle_type_from_string(a2.GetString().c_str())"),
+}
+def shape_arg(p):
+    """The (duck_type, cpp_local, marshal_expr) triple for a by-value or VARCHAR argument."""
+    bb = base(p["canonical"]); nn = norm(p["canonical"])
+    if bb in SCALAR_ARG and "*" not in nn:
+        return SCALAR_ARG[bb]
+    if bb == "nullHandleType" and "*" not in nn:
+        return VARCHAR_ARG[bb]
+    if bb == "char" and nn.count("*") == 1:
+        return VARCHAR_ARG[bb]
+    return None
+
 def shape_binary(f):
     """Binary Temporal + by-value-scalar shape (BinaryExecutor). Same correctness
     rules as shape_emittable: scalar return OR generic same-type temporal return."""
@@ -1141,15 +1163,14 @@ def shape_ternary(f):
     ins, out = classify(f)
     if out is not None or len(ins) != 3: return None
     if base(ins[0]["canonical"]) != "Temporal" or not norm(ins[0]["canonical"]).endswith("*"): return None
-    b2 = base(ins[1]["canonical"]); b3 = base(ins[2]["canonical"])
-    if b2 not in SCALAR_ARG or "*" in norm(ins[1]["canonical"]): return None
-    if b3 not in SCALAR_ARG or "*" in norm(ins[2]["canonical"]): return None
+    a2 = shape_arg(ins[1]); a3 = shape_arg(ins[2])
+    if a2 is None or a3 is None: return None
     if reg_scope(f["name"]) is None: return None
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
     if rb == "Temporal" and rn.endswith("*"):
-        return ("temporal", "MD_TEMPORAL", SCALAR_ARG[b2], SCALAR_ARG[b3])
+        return ("temporal", "MD_TEMPORAL", a2, a3)
     if rb in BYVAL_RET and "*" not in rn:
-        return ("scalar:" + rb, scalar_ret_duck(f), SCALAR_ARG[b2], SCALAR_ARG[b3])
+        return ("scalar:" + rb, scalar_ret_duck(f), a2, a3)
     return None
 
 def emit_body_ternary(f, kind, arg2, arg3):

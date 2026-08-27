@@ -80,3 +80,18 @@ query I
 SELECT asText(set([CAST('{"k":1}' AS jsonb)]));
 ----
 {"{\"k\": 1}"}
+
+# A key of a temporal JSON value reaches a temporal of the key's own type. The third
+# argument is the null-handling mode, spelled the way MobilityDB spells it.
+query III
+SELECT tint(TJSONB('{"a":1}@2000-01-01'), 'a', 'use_json_null')::VARCHAR,
+       tbool(TJSONB('{"b":true}@2000-01-01'), 'b', 'use_json_null')::VARCHAR,
+       ttext(TJSONB('{"c":"x"}@2000-01-01'), 'c', 'use_json_null')::VARCHAR;
+----
+1@2000-01-01 00:00:00+01	t@2000-01-01 00:00:00+01	"x"@2000-01-01 00:00:00+01
+
+# The mode is parsed by MEOS, so an unknown one is its error rather than a silent default.
+statement error
+SELECT tint(TJSONB('{"a":1}@2000-01-01'), 'a', 'not_a_mode');
+----
+Unknown null handling type
