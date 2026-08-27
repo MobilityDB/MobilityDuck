@@ -2496,6 +2496,13 @@ def shape_span(f, C=SPAN_C):
             and "*" not in norm(ins[1]["canonical"]) and rb == "uint64_t" and "*" not in rn
             and C.get("single") and f.get("sqlfn") == "hashExtended"):
         return ("bsc:" + base(ins[1]["canonical"]), "LogicalType::UBIGINT")
+    # (X, scalar PARAM) -> owned C string: the text renderings a value publishes (asText/asEWKT).
+    # The MEOS entry always takes the maxdd int while the canonical SQL gives that argument a
+    # DEFAULT, so the shorter arity is emitted beside it from the catalog's own default rather than
+    # from a constant here. No scope gate: the arm is bounded by the shape itself.
+    if (contp(ins[0]) and base(ins[1]["canonical"]) in SCALAR_ARG
+            and "*" not in norm(ins[1]["canonical"]) and rb == "char" and rn.endswith("*")):
+        return ("u2text:" + base(ins[1]["canonical"]), "LogicalType::VARCHAR")
     # (X, scalar PARAM) -> X : a same-container return whose scalar is NOT an element
     # (floatspan_round/floatspanset_round's precision integer). Name-scoped (<elem>span_round
     # -> that container type), so the round=float-only base-value scoping falls out.
@@ -2565,6 +2572,22 @@ def emit_span(f, kind, C=SPAN_C):
                 f"        [&](string_t in) {{\n"
                 f"            {cb} *s = {bt}(in);\n            {cct} r = {name}(s);\n            free(s);\n"
                 f"            return {rexpr};\n        }});\n}}\n")
+    if kind.startswith("u2text:"):  # (X, by-value scalar) -> owned C string (asText/asEWKT)
+        _dt, cpp2, marsh = SCALAR_ARG[kind.split(':', 1)[1]]
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::Execute<string_t, {cpp2}, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t a, {cpp2} a2) {{\n"
+                f"            {cb} *s = {bt}(a);\n            char *r = {name}(s, {marsh});\n            free(s);\n"
+                f"            return TakeCString(result, r);\n        }});\n}}\n")
+    if kind.startswith("u2text_d:"):  # the same, with the scalar bound to its SQL DEFAULT
+        dflt = kind.split(':', 1)[1]
+        return (f"static void Gen_{name}_d(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),\n"
+                f"        [&](string_t a) {{\n"
+                f"            {cb} *s = {bt}(a);\n            char *r = {name}(s, {dflt});\n            free(s);\n"
+                f"            return TakeCString(result, r);\n        }});\n}}\n")
     if kind.startswith("u2iv:"):    # (X, by-value scalar) -> owned Interval (duration(spanset,bool))
         _dt, cpp2, marsh = SCALAR_ARG[kind.split(':')[1]]
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
@@ -3561,6 +3584,24 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     for nm in names:
                         span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                                   f'"{reg_name(nm, f)}", {sig}, LogicalType::BOOLEAN, Gen_{fn}));')
+                continue
+            # text rendering: the (X, int) form the MEOS entry declares, plus the shorter arity
+            # the canonical SQL reaches through that argument's DEFAULT.
+            if kind.startswith("u2text:"):
+                acc = C["single"] or (C["scope"](fn) or (None, []))[1]
+                accs_here = [acc] if isinstance(acc, str) else list(acc)
+                scd = SCALAR_ARG[kind.split(':', 1)[1]][0]
+                for a in accs_here:
+                    for nm in names:
+                        span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                                  f'"{reg_name(nm, f)}", {{{a}, {scd}}}, {dret}, Gen_{fn}));')
+                dflt = trailing_arg_default(f)
+                if dflt is not None:
+                    span_bodies.append(emit_span(f, "u2text_d:" + str(sql_default_to_cpp(dflt)), C))
+                    for a in accs_here:
+                        for nm in names:
+                            span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                                      f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
                 continue
             # unary (X)->X|scalar: name-scoped (X_*→AllTypes, <elem>X_*→accessor).
             if kind == "u_span" or kind.startswith("u_scalar:"):

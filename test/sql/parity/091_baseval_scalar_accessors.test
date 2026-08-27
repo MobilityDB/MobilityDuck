@@ -124,3 +124,51 @@ query I
 SELECT applyPose(pose 'Pose(Point(1 0),0)', pose 'Pose(Point(10 20),0)')::VARCHAR;
 ----
 POSE (010100000000000000000026400000000000003440, 0)
+
+# A base value renders as text through asText / asEWKT. The MEOS entry always takes the maximum
+# decimal digits; the canonical SQL gives that argument a default, so both arities are declared.
+
+query I
+SELECT asText(pose 'Pose(Point(1 2),0.5)');
+----
+Pose(POINT(1 2),0.5)
+
+query I
+SELECT asText(pose 'Pose(Point(1.23456789 2.3456789),0.5)', 3);
+----
+Pose(POINT(1.235 2.346),0.5)
+
+query I
+SELECT asText(pose 'Pose(Point(1.234567890123 2),0.5)')
+     = asText(pose 'Pose(Point(1.234567890123 2),0.5)', 15);
+----
+true
+
+query I
+SELECT asText(cbuffer 'Cbuffer(Point(1 2),3)');
+----
+Cbuffer(POINT(1 2),3)
+
+query I
+SELECT asText(npoint 'NPoint(1,0.5)');
+----
+NPoint(1,0.5)
+
+query I
+SELECT asText(posechain 'PoseChain(Pose(Point(0 0),0),Pose(Point(1 1),0))');
+----
+PoseChain(Pose(POINT(0 0),0),Pose(POINT(1 1),0))
+
+query I
+SELECT asEWKT(pose 'Pose(Point(1.23456 2),0.5)', 2);
+----
+Pose(POINT(1.23 2),0.5)
+
+# The extended form carries the SRID the value resolves to; a network point takes its own from
+# the ways table, which is what distinguishes asEWKT from asText for it.
+
+query I
+SELECT asEWKT(npoint 'NPoint(1,0.5)') = 'SRID=' || SRID(npoint 'NPoint(1,0.5)')::VARCHAR
+     || ';' || asText(npoint 'NPoint(1,0.5)');
+----
+true
