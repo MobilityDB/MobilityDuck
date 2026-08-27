@@ -17,12 +17,7 @@ extern "C" {
 namespace duckdb {
 
 struct SetTypes {
-    static LogicalType intset();
-    static LogicalType bigintset();
-    static LogicalType floatset();
-    static LogicalType textset();
-    static LogicalType dateset();
-    static LogicalType tstzset();
+#include "generated/set_accessors.hpp"
 
     static const std::vector<LogicalType> &AllTypes();
 

@@ -17,11 +17,7 @@ namespace duckdb {
 struct SpanTypes {
     static const std::vector<LogicalType> &AllTypes();
 
-    static LogicalType intspan();
-    static LogicalType bigintspan();
-    static LogicalType floatspan();
-    static LogicalType datespan();
-    static LogicalType tstzspan();
+#include "generated/span_accessors.hpp"
     static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterScalarFunctions(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
