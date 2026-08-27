@@ -115,6 +115,8 @@ void TJsonbTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     // generated startValue/endValue jsonb base value as canonical JSON text.
     RegisterMeosCastFunction(loader, TJsonbTypes::jsonb(), LogicalType::VARCHAR,
                              TjsonbFunctions::Jsonb_out_cast);
+    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, TJsonbTypes::jsonb(),
+                             TjsonbFunctions::Jsonb_in_cast);
 }
 
 void TJsonbTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader) {

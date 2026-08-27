@@ -62,3 +62,21 @@ query I
 SELECT tjsonbFromHexWKB(asHexWKB(TJSONB('{"k":1}@2000-01-01')))::VARCHAR;
 ----
 "{\"k\": 1}"@2000-01-01 00:00:00+01
+
+# A jsonb value read from text is the binary container, not the text: it renders as
+# canonical JSON and equals the same value taken from a temporal instant.
+query I
+SELECT CAST('{"a":1}' AS jsonb)::VARCHAR;
+----
+{"a": 1}
+
+query I
+SELECT CAST('{"k":1}' AS jsonb) = startValue(TJSONB('{"k":1}@2000-01-01'));
+----
+true
+
+# A set over the text-read value carries it whole.
+query I
+SELECT asText(set([CAST('{"k":1}' AS jsonb)]));
+----
+{"{\"k\": 1}"}
