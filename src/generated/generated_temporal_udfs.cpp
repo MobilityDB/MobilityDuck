@@ -22,6 +22,7 @@
 #include "npoint/tnpoint.hpp"
 #include "pose/tpose.hpp"
 #include "rgeo/trgeometry.hpp"
+#include "posechain/tposechain.hpp"
 #include "spatial/spatial_types.hpp"
 #include "geo_util.hpp"
 #include "meos_internal.h"
@@ -116,6 +117,13 @@ void RegisterGenerated_meos_pose_dist(ExtensionLoader &loader);
 void RegisterGenerated_meos_pose_geopose_accessor(ExtensionLoader &loader);
 void RegisterGenerated_meos_pose_restrict(ExtensionLoader &loader);
 void RegisterGenerated_meos_pose_transf(ExtensionLoader &loader);
+void RegisterGenerated_meos_posechain_accessor(ExtensionLoader &loader);
+void RegisterGenerated_meos_posechain_base_accessor(ExtensionLoader &loader);
+void RegisterGenerated_meos_posechain_base_srid(ExtensionLoader &loader);
+void RegisterGenerated_meos_posechain_comp_ever(ExtensionLoader &loader);
+void RegisterGenerated_meos_posechain_comp_temp(ExtensionLoader &loader);
+void RegisterGenerated_meos_posechain_conversion(ExtensionLoader &loader);
+void RegisterGenerated_meos_posechain_inout(ExtensionLoader &loader);
 void RegisterGenerated_meos_quadbin_accessor(ExtensionLoader &loader);
 void RegisterGenerated_meos_quadbin_comp_ever(ExtensionLoader &loader);
 void RegisterGenerated_meos_quadbin_comp_temp(ExtensionLoader &loader);
@@ -238,6 +246,13 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_pose_geopose_accessor(loader);
     RegisterGenerated_meos_pose_restrict(loader);
     RegisterGenerated_meos_pose_transf(loader);
+    RegisterGenerated_meos_posechain_accessor(loader);
+    RegisterGenerated_meos_posechain_base_accessor(loader);
+    RegisterGenerated_meos_posechain_base_srid(loader);
+    RegisterGenerated_meos_posechain_comp_ever(loader);
+    RegisterGenerated_meos_posechain_comp_temp(loader);
+    RegisterGenerated_meos_posechain_conversion(loader);
+    RegisterGenerated_meos_posechain_inout(loader);
     RegisterGenerated_meos_quadbin_accessor(loader);
     RegisterGenerated_meos_quadbin_comp_ever(loader);
     RegisterGenerated_meos_quadbin_comp_temp(loader);

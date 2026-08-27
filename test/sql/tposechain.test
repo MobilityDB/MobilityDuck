@@ -1,0 +1,68 @@
+# name: test/sql/tposechain.test
+# description: Pose chain types (posechain / tposechain) — type + text I/O and
+#             the catalog-generated operation surface.
+
+require mobilityduck
+
+# ---------------------------------------------------------------------------
+# Type + text I/O (hand-registered boundary).  The cast prints each link's point
+# as HEXEWKB, the canonical #Posechain_out() form; asText prints WKT.
+# ---------------------------------------------------------------------------
+
+# Static posechain value round-trip, two links
+query I
+SELECT posechain 'PoseChain(Pose(Point(0 0), 0), Pose(Point(10 0), 0))';
+----
+POSECHAIN(POSE (010100000000000000000000000000000000000000, 0), POSE (010100000000000000000024400000000000000000, 0))
+
+# tposechain instant round-trip
+query I
+SELECT tposechain 'PoseChain(Pose(Point(0 0), 0), Pose(Point(10 0), 0))@2000-01-01';
+----
+POSECHAIN(POSE (010100000000000000000000000000000000000000, 0), POSE (010100000000000000000024400000000000000000, 0))@2000-01-01 00:00:00+01
+
+# ---------------------------------------------------------------------------
+# Catalog-generated operation surface.  The expected values mirror MobilityDB's
+# own regression outputs under mobilitydb/test/posechain/expected/, so the two
+# answer alike.
+# ---------------------------------------------------------------------------
+
+# Text form
+query I
+SELECT asText(tposechain 'PoseChain(Pose(Point(0 0), 0), Pose(Point(10 0), 0))@2000-01-01');
+----
+PoseChain(Pose(POINT(0 0),0),Pose(POINT(10 0),0))@2000-01-01 00:00:00+01
+
+# The family's own accessor: how many links the chain carries
+query I
+SELECT numPoses(tposechain 'PoseChain(Pose(Point(0 0), 0), Pose(Point(10 0), 0))@2000-01-01');
+----
+2
+
+# SRID: the outer link carries the frame, so the chain has one
+query I
+SELECT SRID(tposechain 'SRID=3812;PoseChain(Pose(Point(1 2), 0))@2000-01-01');
+----
+3812
+
+# ---------------------------------------------------------------------------
+# The value is a fixed-size varlena, so unlike trgeometry it INHERITS the
+# generic Temporal<T> surface rather than owning a counterpart for each op.
+# These assert that inheritance actually reaches it.
+# ---------------------------------------------------------------------------
+
+query I
+SELECT numInstants(tposechain 'PoseChain(Pose(Point(0 0), 0), Pose(Point(10 0), 0))@2000-01-01');
+----
+1
+
+query I
+SELECT asText(startInstant(tposechain 'PoseChain(Pose(Point(0 0), 0), Pose(Point(10 0), 0))@2000-01-01'));
+----
+PoseChain(Pose(POINT(0 0),0),Pose(POINT(10 0),0))@2000-01-01 00:00:00+01
+
+# Ever-equal against a chain of the same length
+query I
+SELECT eEq(tposechain 'PoseChain(Pose(Point(1 1), 0))@2000-01-01', tposechain 'PoseChain(Pose(Point(1 1), 0))@2000-01-01');
+----
+true
