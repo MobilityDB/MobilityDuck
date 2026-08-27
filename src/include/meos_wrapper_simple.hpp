@@ -22,6 +22,7 @@ extern "C" {
     #include <meos_npoint.h>
     #include <meos_pointcloud.h>
     #include <meos_pose.h>
+    #include <meos_posechain.h>
     #include <meos_quadbin.h>
     #include <meos_rgeo.h>
     // PG-compat date/timestamp arithmetic (add_date_int, add_timestamptz_interval)

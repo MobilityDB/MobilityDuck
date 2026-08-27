@@ -151,6 +151,7 @@ set(EXTENSION_SOURCES
     src/npoint/tnpoint.cpp
     src/pose/tpose.cpp
     src/rgeo/trgeometry.cpp
+    src/posechain/tposechain.cpp
     src/index/rtree_module.cpp
     src/single_tile_getters.cpp
     src/index/rtree_index_create_physical.cpp

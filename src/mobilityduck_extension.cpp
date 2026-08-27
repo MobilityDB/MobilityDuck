@@ -29,6 +29,7 @@
 #include "npoint/tnpoint.hpp"
 #include "pose/tpose.hpp"
 #include "rgeo/trgeometry.hpp"
+#include "posechain/tposechain.hpp"
 #include "temporal/span.hpp"
 #include "temporal/span_aggregates.hpp"
 #include "temporal/temporal_aggregates.hpp"
@@ -460,6 +461,9 @@ static void LoadInternal(ExtensionLoader &loader) {
 	// The temporal rigid geometry, after the pose type its base value is.
 	TrgeometryTypes::RegisterTypes(loader);
 	TrgeometryTypes::RegisterCastFunctions(loader);
+	// The pose chain, after the pose type its links are.
+	PosechainTypes::RegisterTypes(loader);
+	PosechainTypes::RegisterCastFunctions(loader);
 
 	SpansetTypes::RegisterTypes(loader);
 	SpansetTypes::RegisterCastFunctions(loader);

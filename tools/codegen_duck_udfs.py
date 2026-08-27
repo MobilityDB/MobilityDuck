@@ -49,6 +49,7 @@ PTR_IN  = {  # MEOS base type -> (DuckDB arg LogicalType, "C++ expr producing th
     "Pcpatch":      ("TPcpatchTypes::pcpatch()", "BlobToPcpatch(%s)"),
     "Npoint":       ("NpointTypes::npoint()", "BlobToNpoint(%s)"),
     "Pose":         ("PoseTypes::pose()", "BlobToPose(%s)"),
+    "PoseChain":    ("PosechainTypes::posechain()", "BlobToPosechain(%s)"),
     "Nsegment":     ("NpointTypes::nsegment()", "BlobToNsegment(%s)"),
 }
 PTR_RET = {  # MEOS base type -> (DuckDB ret LogicalType, "C++ expr producing string_t from MEOS ptr `%s` in `result`")
@@ -67,6 +68,7 @@ PTR_RET = {  # MEOS base type -> (DuckDB ret LogicalType, "C++ expr producing st
     "Pcpatch":      ("TPcpatchTypes::pcpatch()", "PcpatchToBlob(result, %s)"),
     "Npoint":       ("NpointTypes::npoint()", "NpointToBlob(result, %s)"),
     "Pose":         ("PoseTypes::pose()", "PoseToBlob(result, %s)"),
+    "PoseChain":    ("PosechainTypes::posechain()", "PosechainToBlob(result, %s)"),
     "Nsegment":     ("NpointTypes::nsegment()", "NsegmentToBlob(result, %s)"),
 }
 # The temporal-family pointer returns that marshal as one DuckDB temporal handle. A MEOS
@@ -199,7 +201,7 @@ REGISTERED_FAMILIES = {
     "tjsonb", "jsonb",
     "tpcpoint", "pcpoint", "tpcpatch", "pcpatch",
     "tnpoint", "npoint", "nsegment",
-    "tpose", "pose", "trgeometry", "trgeo",
+    "tpose", "pose", "trgeometry", "trgeo", "tposechain", "posechain",
 }
 # Every temporal family token the catalog function names use; those NOT in REGISTERED_FAMILIES
 # are the fast-follow families whose DuckDB type the binding does not register yet.
@@ -211,7 +213,6 @@ KNOWN_FAMILIES = REGISTERED_FAMILIES | {
     # whose OTHER token happens to be unregistered, and emits the moment that one
     # registers. tposechain_to_tpose was rejected only for naming the then-
     # unregistered tpose, and reached the compiler as soon as tpose registered.
-    "posechain", "posechainset", "tposechain",
 }
 def unregistered_family_ref(name):
     """The first unregistered family token the name references, else None (in scope)."""
@@ -401,7 +402,8 @@ GEO_ALLTYPES = list(GEO_TYPES.values())
 # geometry-argument spatial relationships. Add a new spatial family here to inherit the surface.
 SPATIAL_ALLTYPES = GEO_ALLTYPES + ["CbufferTypes::tcbuffer()", "H3indexTypes::th3index()",
                                    "QuadbinTypes::tquadbin()", "NpointTypes::tnpoint()",
-                                   "PoseTypes::tpose()", "TrgeometryTypes::trgeometry()"]
+                                   "PoseTypes::tpose()", "TrgeometryTypes::trgeometry()",
+                                   "PosechainTypes::tposechain()"]
 def reg_scope(name):
     """('all', None) generic | ('types', [accessors]) specific | None = not core family.
     Resolves the temporal type from the MobilityDB naming convention: a PREFIX
@@ -506,6 +508,11 @@ def reg_scope(name):
     if (name.startswith("trgeometry_") or name.startswith("trgeo_")
             or re.search(r'_trgeometry(?=_|$)', name) or re.search(r'_trgeo(?=_|$)', name)):
         return ("types", ["TrgeometryTypes::trgeometry()"])
+    # the temporal pose chain (its own gated spatial type, base value `posechain`): a
+    # tposechain_* prefix, or a _tposechain token anywhere. Its value is a fixed-size varlena,
+    # so unlike trgeometry it rides the generic Temporal<T> surface rather than owning one.
+    if name.startswith("tposechain_") or re.search(r'_tposechain(?=_|$)', name):
+        return ("types", ["PosechainTypes::tposechain()"])
     # temporal-type token ANYWHERE in the name (always_eq_tint_int, ever_lt_tfloat_tfloat,
     # tdistance_tfloat_tfloat, teq_temporal_temporal). Skip if >1 DISTINCT temporal type
     # appears (mixed/ambiguous) — geo tokens (tgeompoint/tgeo/th3index/tnpoint) aren't in
@@ -532,7 +539,8 @@ TO_TYPE = {"tint": "TemporalTypes::tint()", "tbigint": "TemporalTypes::tbigint()
            "tquadbin": "QuadbinTypes::tquadbin()", "tjsonb": "TJsonbTypes::tjsonb()",
            "tpcpoint": "TPcpointTypes::tpcpoint()", "tpcpatch": "TPcpatchTypes::tpcpatch()",
            "tnpoint": "NpointTypes::tnpoint()", "tpose": "PoseTypes::tpose()",
-           "trgeometry": "TrgeometryTypes::trgeometry()"}
+           "trgeometry": "TrgeometryTypes::trgeometry()",
+           "tposechain": "PosechainTypes::tposechain()"}
 def ret_temporal_type(name, arg_acc, group="", sql_ret=None):
     # A single, unambiguous SQL return subtype from the catalog names the output
     # temporal type directly (the catalog is the SoT). The name heuristics below are
@@ -555,7 +563,7 @@ def ret_temporal_type(name, arg_acc, group="", sql_ret=None):
         return "TemporalTypes::tfloat()"
     # `<x>_to_<y>` conversions CHANGE type to the target -> the `_to_` suffix names it
     # (geo targets tgeometry/tgeography/tgeompoint/tgeogpoint added alongside the base ones).
-    m = re.search(r'_to_(tint|tbigint|tfloat|tbool|ttext|tgeometry|tgeography|tgeompoint|tgeogpoint|tcbuffer|tpose|trgeometry)$', name)
+    m = re.search(r'_to_(tint|tbigint|tfloat|tbool|ttext|tgeometry|tgeography|tgeompoint|tgeogpoint|tcbuffer|tpose|trgeometry|tposechain)$', name)
     return TO_TYPE[m.group(1)] if m else arg_acc
 
 # The concrete DuckDB accessors the generic temporal track can emit, keyed by the catalog
@@ -573,6 +581,7 @@ SIG_TEMPORAL_ACC = {
     "tpcpoint":   "TPcpointTypes::tpcpoint()",     "tpcpatch":   "TPcpatchTypes::tpcpatch()",
     "tnpoint":    "NpointTypes::tnpoint()",      "tpose":      "PoseTypes::tpose()",
     "trgeometry": "TrgeometryTypes::trgeometry()",
+    "tposechain": "PosechainTypes::tposechain()",
 }
 def sig_declared_accs(f):
     """The exact temporal-operand types this GENERIC (`Temporal *`) function is CREATE
@@ -3370,6 +3379,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            '#include "npoint/tnpoint.hpp"\n'           # NpointTypes::npoint()/nsegment()/tnpoint()
            '#include "pose/tpose.hpp"\n'               # PoseTypes::pose()/tpose()
            '#include "rgeo/trgeometry.hpp"\n'          # TrgeometryTypes::trgeometry()
+           '#include "posechain/tposechain.hpp"\n'     # PosechainTypes::posechain()/tposechain()
            '#include "spatial/spatial_types.hpp"\n'   # MobilityDuckGeometryType() (duckdb-spatial)
            '#include "geo_util.hpp"\n'                # GeometryToGSerialized(blob, srid)
            '#include "meos_internal.h"\n'
@@ -3477,6 +3487,19 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "    uint8_t *copy = (uint8_t *)malloc(sz);\n"
            "    memcpy(copy, blob.GetData(), sz);\n"
            "    return reinterpret_cast<Pose *>(copy);\n}\n"
+           "// Self-contained blob<->PoseChain marshalling. A 4-byte-header varlena\n"
+           "// (int32 vl_len_ + flags + srid + link count + the links' doubles) -> VARSIZE out;\n"
+           "// the stored BLOB is the raw bytes (mirror Pose).\n"
+           "inline string_t PosechainToBlob(Vector &result, PoseChain *pc) {\n"
+           "    string_t out = StringVector::AddStringOrBlob(result, (const char *)pc, VARSIZE(pc));\n"
+           "    free(pc);\n    return out;\n}\n"
+           "inline string_t PosechainToBlobN(Vector &result, PoseChain *pc, ValidityMask &mask, idx_t idx) {\n"
+           "    if (!pc) { mask.SetInvalid(idx); return string_t(); }\n    return PosechainToBlob(result, pc);\n}\n"
+           "inline PoseChain *BlobToPosechain(string_t blob) {\n"
+           "    size_t sz = blob.GetSize();\n"
+           "    uint8_t *copy = (uint8_t *)malloc(sz);\n"
+           "    memcpy(copy, blob.GetData(), sz);\n"
+           "    return reinterpret_cast<PoseChain *>(copy);\n}\n"
            "// Self-contained blob<->Pcpoint/Pcpatch marshalling. Both are varlena (vl_len_\n"
            "// header) -> VARSIZE out; the stored BLOB is the raw bytes (mirror Cbuffer).\n"
            "inline string_t PcpointToBlob(Vector &result, Pcpoint *pt) {\n"
