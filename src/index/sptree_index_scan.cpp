@@ -55,10 +55,30 @@ static double ExactDistance(MeosType bbox_type, const string_t &value, const voi
 	if (!temp) {
 		return std::numeric_limits<double>::max();
 	}
-	const double distance =
-	    bbox_type == T_TBOX
-	        ? nad_tnumber_tbox(temp, static_cast<const TBox *>(query_box))
-	        : nad_tgeo_stbox(temp, static_cast<const STBox *>(query_box));
+	// A temporal number answers its nearest approach in its OWN base type, and nad_tnumber_tbox
+	// hands back a Datum carrying it. Assigning that Datum to a double converts its bit pattern,
+	// so the typed MEOS entry for the temporal's type is what reads it -- each one unwraps the
+	// same Datum with the DatumGet for its type. nad_tgeo_stbox already answers a double.
+	double distance;
+	if (bbox_type == T_TBOX) {
+		const auto *box = static_cast<const TBox *>(query_box);
+		switch (static_cast<MeosType>(temp->temptype)) {
+		case T_TINT:
+			distance = static_cast<double>(nad_tint_tbox(temp, box));
+			break;
+		case T_TBIGINT:
+			distance = static_cast<double>(nad_tbigint_tbox(temp, box));
+			break;
+		case T_TFLOAT:
+			distance = nad_tfloat_tbox(temp, box);
+			break;
+		default:
+			distance = std::numeric_limits<double>::max();
+			break;
+		}
+	} else {
+		distance = nad_tgeo_stbox(temp, static_cast<const STBox *>(query_box));
+	}
 	free(temp);
 	return distance;
 }
