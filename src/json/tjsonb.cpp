@@ -67,6 +67,24 @@ bool TjsonbFunctions::Jsonb_out_cast(
     return true;
 }
 
+bool TjsonbFunctions::Jsonb_in_cast(
+    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
+{
+    UnaryExecutor::Execute<string_t, string_t>(
+        source, result, count,
+        [&](string_t input) -> string_t {
+            std::string s = input.GetString();
+            Jsonb *jb = jsonb_in(s.c_str());
+            if (!jb)
+                throw InvalidInputException("Invalid JSON input: " + s);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, reinterpret_cast<const char *>(jb), VARSIZE(jb));
+            free(jb);
+            return stored;
+        });
+    return true;
+}
+
 /* ------------------------------------------------------------------
  * Constructors
  * ------------------------------------------------------------------ */

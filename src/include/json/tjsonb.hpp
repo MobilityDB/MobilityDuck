@@ -28,6 +28,11 @@ struct TjsonbFunctions {
     // as canonical JSON text.
     static bool Jsonb_out_cast(Vector &source, Vector &result, idx_t count,
                                 CastParameters &parameters);
+    // VARCHAR -> base jsonb value, the inverse of Jsonb_out_cast. Without it the
+    // jsonb alias inherits DuckDB's VARCHAR -> BLOB conversion, which stores the
+    // JSON TEXT where the binary jsonb container belongs.
+    static bool Jsonb_in_cast(Vector &source, Vector &result, idx_t count,
+                                CastParameters &parameters);
 };
 
 } // namespace duckdb
