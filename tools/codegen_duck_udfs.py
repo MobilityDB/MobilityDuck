@@ -14,6 +14,7 @@ polymorphism expansion are the documented next increments.
 
 Usage: python3 tools/codegen_duck_udfs.py <path-to-meos-idl.json> [out.cpp]
 """
+import collections
 import json, sys, re, os
 from collections import defaultdict, Counter
 
@@ -628,6 +629,22 @@ BASE_ORDER = ["int", "bigint", "float", "text", "date", "tstz",
               "jsonb", "cbuffer", "npoint", "quadbin", "pose", "posechain",
               "pcpoint", "pcpatch"]
 SET_TYPES = {b + "set": "SetTypes::%sset()" % b for b in BASE_ORDER}
+
+# The element LogicalType per base value. A core base names a DuckDB built-in; a base the binding
+# registers itself names that type's accessor, and BASE_HEADER states the header declaring it so the
+# generated file includes exactly the ones the admitted bases need. A base absent from this map has
+# no element type the binding can name, so the derivation below does not admit it — which is how
+# geom, geog and h3index, whose set types carry a hand-written function surface of their own, stay
+# out of the generated registration and register exactly once.
+BASE_LOGICAL = {
+    "int": "LogicalType::INTEGER", "bigint": "LogicalType::BIGINT",
+    "float": "LogicalType::DOUBLE", "text": "LogicalType::VARCHAR",
+    "date": "LogicalType::DATE", "tstz": "LogicalType::TIMESTAMP_TZ",
+    "jsonb": "TJsonbTypes::jsonb()", "cbuffer": "CbufferTypes::cbuffer()",
+    "npoint": "NpointTypes::npoint()", "quadbin": "QuadbinTypes::quadbin()",
+    "pose": "PoseTypes::pose()", "posechain": "PosechainTypes::posechain()",
+    "pcpoint": "TPcpointTypes::pcpoint()", "pcpatch": "TPcpatchTypes::pcpatch()",
+}
 def set_reg_scope(name):
     """('all',None) for generic set_* | ('types',[acc]) for <elem>set_* | None."""
     if name.startswith("set_"):
@@ -2417,6 +2434,20 @@ TBOX_C  = dict(cbase="TBox",  blobto="BlobToTbox",  toblob="TboxToBlob",
                elem={}, scope=None, ret=lambda n, a: a, single="TboxType::tbox()")
 TPCBOX_C = dict(cbase="TPCBox", blobto="BlobToTpcbox", toblob="TpcboxToBlob",
                 elem={}, scope=None, ret=lambda n, a: a, single="TpcboxType::tpcbox()")
+
+# BASE VALUE containers: the base types the binding registers itself, each a single DuckDB type
+# carrying one MEOS value behind a BLOB alias — the same shape as a box, so they reach the surface
+# through the same descriptor machinery. The C struct name is the one datum a lowercase base does
+# not spell (PoseChain against posechain), so it is stated here and checked against the catalog in
+# main(); the marshallers and the DuckDB accessor follow from the base name and BASE_LOGICAL.
+# Bases carrying their value BY VALUE rather than behind a pointer have no blob to marshal and are
+# absent: quadbin and h3index are the eight bytes of the Datum, so they take no descriptor here.
+BASE_CBASE = {"jsonb": "Jsonb", "cbuffer": "Cbuffer", "npoint": "Npoint", "pose": "Pose",
+              "posechain": "PoseChain", "pcpoint": "Pcpoint", "pcpatch": "Pcpatch"}
+BASEVAL_C = [dict(cbase=BASE_CBASE[b], blobto="BlobTo" + b.capitalize(),
+                  toblob=b.capitalize() + "ToBlob", elem={}, scope=None,
+                  ret=(lambda n, a: a), single=BASE_LOGICAL[b])
+             for b in BASE_ORDER if b in BASE_CBASE]
 def shape_span(f, C=SPAN_C):
     if supported(f) is not None: return None
     if re.search(r'_(transfn|finalfn|combinefn)$', f["name"]): return None
@@ -3483,10 +3514,20 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                                              f'"{reg_name(nm, f)}", {sig}, {r2}, Gen_{fn}));')
     # COLLECTION families (Span + SpanSet) — ONE machinery via descriptor (shape_span/emit_span
     # take C). Per-container generic list (its own AllTypes loop); specific list shared.
-    for C in (SPAN_C, SPANSET_C, STBOX_C, TBOX_C, TPCBOX_C):
+    # A base VALUE container reaches functions an earlier pass already emits — `pose_hash` is
+    # emitted by the unary pass, while `stbox_hash` reaches the surface only through the bare-hash
+    # carve-out below. Whether a container owns a function is therefore not a property of the
+    # container: it is whether anything emitted it yet. Read that from the bodies already written
+    # rather than restating it as a per-descriptor flag, so a future container inherits the rule.
+    _already = {m for acc in (bodies, set_bodies, span_bodies)
+                for _g, _line in acc.items
+                for m in re.findall(r'\bstatic void Gen_([A-Za-z0-9_]+)\(', _line)}
+    for C in [SPAN_C, SPANSET_C, STBOX_C, TBOX_C, TPCBOX_C] + BASEVAL_C:
         gen = {"Span": span_generic_regs, "SpanSet": spanset_generic_regs}.get(C["cbase"])
         for f in fns:
             if declared is not None and f["name"] not in declared:
+                continue
+            if f["name"] in _already:
                 continue
             s = shape_span(f, C)
             if s is None:
@@ -4131,21 +4172,6 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
 # has no span (text) simply produces no accessor, so a phantom textspan() can
 # never be fabricated. The base LogicalType per base value is the same fixed
 # map the hand code used.
-# The element LogicalType per base value. A core base names a DuckDB built-in; a base the binding
-# registers itself names that type's accessor, and BASE_HEADER states the header declaring it so the
-# generated file includes exactly the ones the admitted bases need. A base absent from this map has
-# no element type the binding can name, so the derivation below does not admit it — which is how
-# geom, geog and h3index, whose set types carry a hand-written function surface of their own, stay
-# out of the generated registration and register exactly once.
-BASE_LOGICAL = {
-    "int": "LogicalType::INTEGER", "bigint": "LogicalType::BIGINT",
-    "float": "LogicalType::DOUBLE", "text": "LogicalType::VARCHAR",
-    "date": "LogicalType::DATE", "tstz": "LogicalType::TIMESTAMP_TZ",
-    "jsonb": "TJsonbTypes::jsonb()", "cbuffer": "CbufferTypes::cbuffer()",
-    "npoint": "NpointTypes::npoint()", "quadbin": "QuadbinTypes::quadbin()",
-    "pose": "PoseTypes::pose()", "posechain": "PosechainTypes::posechain()",
-    "pcpoint": "TPcpointTypes::pcpoint()", "pcpatch": "TPcpatchTypes::pcpatch()",
-}
 BASE_HEADER = {
     "jsonb": "json/tjsonb.hpp", "cbuffer": "cbuffer/tcbuffer.hpp",
     "npoint": "npoint/tnpoint.hpp", "quadbin": "quadbin/tquadbin.hpp",
@@ -4304,6 +4330,18 @@ def main():
     out = pos[1] if len(pos) > 1 else None
     d = json.load(open(cat))
     fns = d["functions"]
+    # BASE_CBASE names each base value type's C struct, the one datum the lowercase base does not
+    # spell. Read it back from the catalog rather than trusting the spelling: the struct a base's
+    # own functions take as their first pointer argument IS that base's C type, so a rename
+    # upstream reports here instead of silently emitting a container that matches nothing.
+    for _b, _cb in BASE_CBASE.items():
+        _seen = collections.Counter(
+            base(f["params"][0]["canonical"]) for f in fns
+            if f["name"].startswith(_b + "_") and f.get("params")
+            and norm(f["params"][0]["canonical"]).endswith("*"))
+        if not _seen or _seen.most_common(1)[0][0] != _cb:
+            raise SystemExit("BASE_CBASE[%r] = %r does not match the catalog: %s"
+                             % (_b, _cb, _seen.most_common(3) or "no pointer-carried function"))
     # struct layouts (e.g. Match {i,j}) for the array-return LIST(STRUCT) shape — from the catalog.
     STRUCTS.update({s["name"]: s for s in d.get("structs", [])})
     # portable bare-name renderings: operator (@sqlop) -> bareName, straight from the
