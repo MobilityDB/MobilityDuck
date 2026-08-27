@@ -114,3 +114,22 @@ query I
 SELECT tjsonbArrayElement(TJSONB('[[10,20,30]@2000-01-01]'), 1, 'use_json_null')::VARCHAR;
 ----
 {["20"@2000-01-01 00:00:00+01]}
+
+# A path is one SQL argument: MobilityDB declares `text[]`, so DuckDB takes a list and
+# supplies the element count from the list's own length.
+query I
+SELECT tjsonbExtractPath(TJSONB('{"a":{"b":7}}@2000-01-01'), ['a','b'], 'use_json_null')::VARCHAR;
+----
+"7"@2000-01-01 00:00:00+01
+
+query II
+SELECT tjsonbExistsAny(TJSONB('{"a":1,"b":2}@2000-01-01'), ['a','zz'])::VARCHAR,
+       tjsonbExistsAll(TJSONB('{"a":1,"b":2}@2000-01-01'), ['a','zz'])::VARCHAR;
+----
+t@2000-01-01 00:00:00+01	f@2000-01-01 00:00:00+01
+
+query II
+SELECT tjsonbDeletePath(TJSONB('{"a":{"b":7},"c":1}@2000-01-01'), ['a','b'])::VARCHAR,
+       tjsonbDeleteArray(TJSONB('{"a":1,"b":2}@2000-01-01'), ['a'])::VARCHAR;
+----
+"{\"a\": {}, \"c\": 1}"@2000-01-01 00:00:00+01	"{\"b\": 2}"@2000-01-01 00:00:00+01
