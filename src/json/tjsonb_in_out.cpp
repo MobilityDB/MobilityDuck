@@ -117,6 +117,10 @@ void TJsonbTypes::RegisterCastFunctions(ExtensionLoader &loader) {
                              TjsonbFunctions::Jsonb_out_cast);
     RegisterMeosCastFunction(loader, LogicalType::VARCHAR, TJsonbTypes::jsonb(),
                              TjsonbFunctions::Jsonb_in_cast);
+    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, TJsonbTypes::jsonpath(),
+                             TjsonbFunctions::Jsonpath_in_cast);
+    RegisterMeosCastFunction(loader, TJsonbTypes::jsonpath(), LogicalType::VARCHAR,
+                             TjsonbFunctions::Jsonpath_out_cast);
 }
 
 void TJsonbTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader) {

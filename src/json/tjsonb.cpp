@@ -34,6 +34,52 @@ LogicalType TJsonbTypes::jsonb() {
     return type;
 }
 
+/* JsonPath is a varlena (`int32 vl_len_; uint32 header; char data[]`), so the blob holds
+ * the value whole and VARSIZE reads its length — the same marshalling jsonb uses. */
+LogicalType TJsonbTypes::jsonpath() {
+    auto type = LogicalType(LogicalTypeId::BLOB);
+    type.SetAlias("jsonpath");
+    return type;
+}
+
+bool TjsonbFunctions::Jsonpath_in_cast(
+    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
+{
+    UnaryExecutor::Execute<string_t, string_t>(
+        source, result, count,
+        [&](string_t input) -> string_t {
+            std::string s = input.GetString();
+            JsonPath *jp = jsonpath_in(s.c_str());
+            if (!jp)
+                throw InvalidInputException("Invalid jsonpath input: " + s);
+            string_t stored = StringVector::AddStringOrBlob(
+                result, reinterpret_cast<const char *>(jp), VARSIZE(jp));
+            free(jp);
+            return stored;
+        });
+    return true;
+}
+
+bool TjsonbFunctions::Jsonpath_out_cast(
+    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
+{
+    UnaryExecutor::Execute<string_t, string_t>(
+        source, result, count,
+        [&](string_t blob) -> string_t {
+            size_t sz = blob.GetSize();
+            uint8_t *copy = (uint8_t *)malloc(sz);
+            memcpy(copy, blob.GetData(), sz);
+            char *str = jsonpath_out(reinterpret_cast<JsonPath *>(copy));
+            free(copy);
+            if (!str)
+                throw InternalException("Failure in Jsonpath_out: jsonpath_out returned null");
+            std::string out(str);
+            free(str);
+            return StringVector::AddString(result, out);
+        });
+    return true;
+}
+
 LogicalType TJsonbTypes::tjsonb() {
     auto type = LogicalType(LogicalTypeId::BLOB);
     type.SetAlias("tjsonb");
@@ -42,6 +88,7 @@ LogicalType TJsonbTypes::tjsonb() {
 
 void TJsonbTypes::RegisterTypes(ExtensionLoader &loader) {
     loader.RegisterType("jsonb", TJsonbTypes::jsonb());
+    loader.RegisterType("jsonpath", TJsonbTypes::jsonpath());
     loader.RegisterType("tjsonb", TJsonbTypes::tjsonb());
 }
 
