@@ -1196,6 +1196,97 @@ def emit_body_ternary(f, kind, arg2, arg3):
             f"            {inner}\n"
             f"        }});\n}}\n")
 
+# A MEOS function whose C signature is WIDER than the SQL surface: the PG wrapper binds some
+# parameters to literals (`shape.boundArgs`, e.g. `tjsonbObjectField` binds `astext` to false and
+# `tjsonbObjectFieldText` binds it to true over the same kernel), and any parameter the SQL surface
+# DOES expose past the first two is a per-call setting. DuckDB has no quaternary executor, so a
+# setting is read once outside the executor — the `tsequence_make` idiom — and a BinaryExecutor runs
+# over the two arguments that vary per row.
+VARY_ARG = {   # second column: (duck_type, cpp_local, "expr from the local", "cleanup or ''")
+    "text":   ("LogicalType::VARCHAR", "string_t", "MakeText(%s)", "free"),
+    "int":    ("LogicalType::INTEGER", "int32_t",  "%s", ""),
+    "double": ("LogicalType::DOUBLE",  "double",   "%s", ""),
+    "bool":   ("LogicalType::BOOLEAN", "bool",     "%s", ""),
+}
+SETTING_ARG = {  # trailing column: (duck_type, cpp_type, "expr from a duckdb::Value named v")
+    "bool":           ("LogicalType::BOOLEAN", "bool",     "v.GetValue<bool>()"),
+    "int":            ("LogicalType::INTEGER", "int32_t",  "v.GetValue<int32_t>()"),
+    "double":         ("LogicalType::DOUBLE",  "double",   "v.GetValue<double>()"),
+    "nullHandleType": ("LogicalType::VARCHAR", "nullHandleType",
+                       "null_handle_type_from_string(v.ToString().c_str())"),
+}
+def _vary(p):
+    b = base(p["canonical"]); n = norm(p["canonical"])
+    if b == "text" and n.endswith("*"): return VARY_ARG["text"]
+    if b in VARY_ARG and b != "text" and "*" not in n: return VARY_ARG[b]
+    return None
+
+def shape_bound_tail(f):
+    """(Temporal *, varying, <bound literals and per-call settings...>) -> Temporal *.
+
+    The SQL surface is `sqlSignatures.args`; every C parameter the wrapper binds is emitted as
+    its literal rather than exposed. Exposing a bound parameter would publish a signature
+    MobilityDB does not declare."""
+    if supported(f) is not None: return None
+    ins, out = classify(f)
+    if out is not None or len(ins) < 4: return None
+    if base(ins[0]["canonical"]) != "Temporal" or not norm(ins[0]["canonical"]).endswith("*"):
+        return None
+    bound = ((f.get("shape") or {}).get("boundArgs") or {})
+    if not bound: return None            # without the literal the tail cannot be emitted
+    v = _vary(ins[1])
+    if v is None: return None
+    tail = []                            # (kind, payload) per C parameter after the second
+    for p in ins[2:]:
+        nm = p.get("name")
+        if nm in bound:
+            tail.append(("lit", bound[nm]))
+            continue
+        st = SETTING_ARG.get(base(p["canonical"])) if "*" not in norm(p["canonical"]) else None
+        if st is None: return None
+        tail.append(("col", st))
+    if not any(k == "col" for k, _ in tail): return None
+    if reg_scope(f["name"]) is None: return None
+    rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
+    if not (rb == "Temporal" and rn.endswith("*")): return None
+    # the registered signature is the type, the varying arg, then each exposed setting
+    sig = [v[0]] + [st[0] for k, st in tail if k == "col"]
+    return ("temporal", "MD_TEMPORAL", v, tail, sig)
+
+def emit_body_bound_tail(f, kind, vary, tail, sig):
+    name = f["name"]
+    _dt, cpp2, expr2, cleanup = vary
+    L = [f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{",
+         "    EnsureMeosThreadInitialized();",
+         "    auto rc = args.size();"]
+    call, col = [], 2
+    for kindi, payload in tail:
+        if kindi == "lit":
+            call.append(payload)
+            continue
+        _d, ctype, cexpr = payload
+        L.append(f"    {ctype} c{col} = ({ctype}) 0;")
+        L.append(f"    {{ auto &cv = args.data[{col}]; cv.Flatten(rc); Value v = cv.GetValue(0);"
+                 f" if (!v.IsNull()) c{col} = {cexpr}; }}")
+        call.append(f"c{col}")
+        col += 1
+    tailargs = "".join(", " + a for a in call)
+    lead = expr2 % "a2"
+    L += [f"    BinaryExecutor::ExecuteWithNulls<string_t, {cpp2}, string_t>("
+          "args.data[0], args.data[1], result, rc,",
+          f"        [&](string_t in, {cpp2} a2, ValidityMask &mask, idx_t idx) -> string_t {{",
+          "            Temporal *t = BlobToTemporal(in);"]
+    if cleanup:
+        L += [f"            auto p2 = {lead};",
+              f"            Temporal *r = {name}(t, p2{tailargs});",
+              f"            free(t); {cleanup}(p2);"]
+    else:
+        L += [f"            Temporal *r = {name}(t, {lead}{tailargs});",
+              "            free(t);"]
+    L += ["            return TemporalToBlobN(result, r, mask, idx);",
+          "        });", "}", ""]
+    return "\n".join(L)
+
 def shape_binary_tt(f):
     """Binary Temporal + Temporal (both via BlobToTemporal) — the big 2-arg shape
     (comparisons, boolean ops, distance, etc.). Both args same temporal type."""
@@ -2341,7 +2432,7 @@ def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
 def reg_name(nm, f):
     return nm            # canonical always; the g_ coexistence prefix is removed for good
-def reg_names(f, sqlfn, aliases):
+def reg_names(f, sqlfn, aliases, argsig=None):
     """The SQL names a function registers under: its sqlfn, the portable bare
     alias for its operator (the cross-engine RFC dialect), and the operator symbol
     itself so DuckDB exposes the operator like MobilityDB. The doxygen `@`-escape on
@@ -2355,10 +2446,16 @@ def reg_names(f, sqlfn, aliases):
     bare = aliases.get(op) if aliases else None
     if bare and bare not in names:
         names.append(bare)
-    # The operator symbol is registered only when DuckDB can parse it: a name
-    # containing '#' is rejected by the lexer in any operator position, so those
-    # operators are reachable only through their bare name (before/after/tEq/...).
-    if op and "#" not in op and op not in names:
+    # The operator symbol is registered only when DuckDB can parse it in an operator
+    # position. Two things put it out of reach:
+    #   - a name containing '#', which the lexer rejects in any operator position;
+    #   - an arity past 2, since operator syntax is unary or binary. MobilityDB binds
+    #     such an operator to its OWN 2-argument wrapper (`->` is `tjsonbObjectFieldOpr`,
+    #     not the 3-argument `tjsonbObjectField`), so registering the symbol on the wider
+    #     function would publish a name no operator syntax reaches.
+    # Either way the function stays reachable through its bare name.
+    wide = argsig is not None and len([x for x in argsig.strip("{}").split(",") if x.strip()]) > 2
+    if op and "#" not in op and not wide and op not in names:
         names.append(op)
     return names
 
@@ -2879,7 +2976,8 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         gt = None if (u or b or t or tt or tts or sf) else shape_geo_temporal(f)
         ga = None if (u or b or t or tt or tts or sf or gt) else shape_tgeoarr(f)
         pp = None if (u or b or t or tt or tts or sf or gt or ga) else shape_path(f)
-        if not u and not b and not t and not tt and not tts and not sf and not gt and not ga and not pp:
+        bt = None if (u or b or t or tt or tts or sf or gt or ga or pp) else shape_bound_tail(f)
+        if not u and not b and not t and not tt and not tts and not sf and not gt and not ga and not pp and not bt:
             continue
         STATE["grp"] = f.get("group") or "meos_ungrouped"
         sqlfn, fn = f["sqlfn"], f["name"]
@@ -2923,6 +3021,12 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             bodies.append(emit_body_ternary(f, kind, arg2, arg3))
             argsig = "{type, %s, %s}" % (arg2[0], arg3[0])
             spec_sig = "{%%s, %s, %s}" % (arg2[0], arg3[0])
+        elif bt:
+            kind, dret, vary, tail, sig = bt; n_ter += 1
+            bodies.append(emit_body_bound_tail(f, kind, vary, tail, sig))
+            _rest = "".join(", %s" % x for x in sig[1:])
+            argsig = "{type, %s%s}" % (sig[0], _rest)
+            spec_sig = "{%%s, %s%s}" % (sig[0], _rest)
         elif tt:
             kind, dret = tt; n_bin += 1
             bodies.append(emit_binary_tt(f, kind))
@@ -3013,7 +3117,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         # Names to register: the native sqlfn + any portable bare-name alias the pin
         # assigns to this fn's operator (catalog portableAliases is the SoT — invent
         # nothing). The alias reuses the SAME backing body ([[aliases-reuse-backing]]).
-        names = reg_names(f, sqlfn, aliases)
+        names = reg_names(f, sqlfn, aliases, argsig)
         if scope == "all":
             rett = ret_temporal_type(fn, "type", f.get("group"), f.get("sqlReturnType")) if dret == "MD_TEMPORAL" else dret
             for nm in names:
