@@ -13,12 +13,12 @@ SELECT numTimestamps(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5
 
 # ── H3-specific accessor: the cell resolution tracks the requested resolution ─
 query I
-SELECT startValue(th3GetResolution(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5)));
+SELECT startValue(getResolution(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5)));
 ----
 5
 
 query I
-SELECT startValue(th3GetResolution(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 8)));
+SELECT startValue(getResolution(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 8)));
 ----
 8
 
@@ -78,3 +78,29 @@ SELECT getValues(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5))[1
      = startValue(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5));
 ----
 true
+
+# ── the shared DGGS cell-index slots, answered from the tcellindex kernel ─────
+# MobilityDB backs getResolution/cellArea/cellToParent/isValidCell for every cell
+# index from one kernel, under the bare slot names. cellToPoint is NOT among them
+# for H3: it answers geodetically from th3index_to_tgeogpoint, and the tgeogpoint
+# overload above is that one.
+query I
+SELECT startValue(isValidCell(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5)));
+----
+true
+
+query I
+SELECT startValue(cellArea(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5))) > 0;
+----
+true
+
+query I
+SELECT startValue(cellToParent(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5), 3))::VARCHAR;
+----
+837541fffffffff
+
+# the parent of a resolution-5 cell at resolution 3 reports resolution 3
+query I
+SELECT startValue(getResolution(cellToParent(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5), 3)));
+----
+3

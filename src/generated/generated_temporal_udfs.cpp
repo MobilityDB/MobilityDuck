@@ -91,6 +91,7 @@ void RegisterGenerated_meos_h3_edges(ExtensionLoader &loader);
 void RegisterGenerated_meos_h3_hierarchy(ExtensionLoader &loader);
 void RegisterGenerated_meos_h3_inspection(ExtensionLoader &loader);
 void RegisterGenerated_meos_h3_latlng(ExtensionLoader &loader);
+void RegisterGenerated_meos_h3_metrics(ExtensionLoader &loader);
 void RegisterGenerated_meos_h3_traversal(ExtensionLoader &loader);
 void RegisterGenerated_meos_h3_vertex(ExtensionLoader &loader);
 void RegisterGenerated_meos_internal_temporal_inout(ExtensionLoader &loader);
@@ -236,6 +237,7 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_h3_hierarchy(loader);
     RegisterGenerated_meos_h3_inspection(loader);
     RegisterGenerated_meos_h3_latlng(loader);
+    RegisterGenerated_meos_h3_metrics(loader);
     RegisterGenerated_meos_h3_traversal(loader);
     RegisterGenerated_meos_h3_vertex(loader);
     RegisterGenerated_meos_internal_temporal_inout(loader);

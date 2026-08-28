@@ -17,6 +17,7 @@ extern "C" {
     // and links against libmeos. (Alphabetical also keeps meos_pose.h before
     // meos_rgeo.h, which depends on it.)
     #include <meos_cbuffer.h>
+    #include <meos_cellindex.h>
     #include <meos_h3.h>
     #include <meos_json.h>
     #include <meos_npoint.h>

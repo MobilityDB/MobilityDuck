@@ -919,7 +919,7 @@ static AggregateFunction MakeSetUnionScalarAggregate(const LogicalType &input_ty
 // routes SCALAR_FUNCTION_ENTRY and AGGREGATE_FUNCTION_ENTRY into one catalog set, so a
 // canonical name is reachable unless a SCALAR already occupies the folded slot — which is
 // what the *Agg spelling resolves for merge/tMin/tMax/appendInstant/appendSequence,
-// setUnion/spanUnion and minDistance. Where no scalar holds the slot the canonical name
+// setUnion/spanUnion, minDistance and tAnd/tOr. Where no scalar holds the slot the canonical name
 // MobilityDB publishes is the one a query is written against, so it is registered too.
 static void RegisterAggregate(ExtensionLoader &loader, const AggregateFunctionSet &built,
                               const vector<string> &also = {}) {
@@ -940,18 +940,20 @@ static void RegisterAggregate(ExtensionLoader &loader, const AggregateFunctionSe
 void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
     // Each aggregate registers under the name MobilityDB publishes, plus the
     // *Agg spelling this extension already published. A suffix-only name is
-    // reserved for the slots a scalar holds (tMinAgg/tMaxAgg here).
+    // reserved for the slots a scalar holds (tAndAgg/tOrAgg/tMinAgg/tMaxAgg here).
 
     // ---- TandAgg / TorAgg on tbool ----
+    // tAnd and tOr are the scalars MobilityDB publishes from tbool_ops.c, so the
+    // bare slot belongs to them and the aggregate answers to *Agg alone.
     {
-        AggregateFunctionSet set("tAnd");
+        AggregateFunctionSet set("TandAgg");
         set.AddFunction(MakeTaggAggregate<TandFn>(TemporalTypes::tbool(), TemporalTypes::tbool()));
-        RegisterAggregate(loader, set, {"TandAgg"});
+        loader.RegisterFunction(std::move(set));
     }
     {
-        AggregateFunctionSet set("tOr");
+        AggregateFunctionSet set("TorAgg");
         set.AddFunction(MakeTaggAggregate<TorFn>(TemporalTypes::tbool(), TemporalTypes::tbool()));
-        RegisterAggregate(loader, set, {"TorAgg"});
+        loader.RegisterFunction(std::move(set));
     }
 
     // ---- TcountAgg over each temporal type and over time-only inputs → tint ----

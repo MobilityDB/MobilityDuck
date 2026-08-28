@@ -246,15 +246,30 @@ SELECT TcountAgg(v::tint)::VARCHAR FROM (VALUES ('1@2000-01-01'),(NULL),('5@2000
 # The canonical MobilityDB name answers for every aggregate no scalar collides
 # with. A query written against the MobilityDB manual runs here unchanged; the
 # *Agg spelling stays valid beside it.
+#
+# tAnd and tOr are NOT in that group: MobilityDB publishes them as scalars too
+# (tAnd(tbool,tbool) and its boolean-mixed pair), and DuckDB routes scalars and
+# aggregates into one catalog set, so the bare slot holds the scalar and the
+# aggregate answers to *Agg alone.
 # =============================================================================
 
 query I
-SELECT tAnd(v::tbool)::VARCHAR FROM (VALUES ('true@2000-01-01'),('true@2000-01-02')) t(v);
+SELECT (tAnd('true@2000-01-01'::tbool, 'false@2000-01-01'::tbool))::VARCHAR;
+----
+f@2000-01-01 00:00:00+01
+
+query I
+SELECT (tOr('true@2000-01-01'::tbool, 'false@2000-01-01'::tbool))::VARCHAR;
+----
+t@2000-01-01 00:00:00+01
+
+query I
+SELECT TandAgg(v::tbool)::VARCHAR FROM (VALUES ('true@2000-01-01'),('true@2000-01-02')) t(v);
 ----
 {t@2000-01-01 00:00:00+01, t@2000-01-02 00:00:00+01}
 
 query I
-SELECT tOr(v::tbool)::VARCHAR FROM (VALUES ('true@2000-01-01'),('false@2000-01-02')) t(v);
+SELECT TorAgg(v::tbool)::VARCHAR FROM (VALUES ('true@2000-01-01'),('false@2000-01-02')) t(v);
 ----
 {t@2000-01-01 00:00:00+01, f@2000-01-02 00:00:00+01}
 
