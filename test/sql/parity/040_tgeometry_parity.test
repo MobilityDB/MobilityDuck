@@ -355,3 +355,29 @@ SELECT (len(spaceTimeBoxes(t::tgeometry, 1.0, 1.0, 1.0, INTERVAL '1 day')) >= 1)
   ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
 ----
 true
+
+# ── the return type is the one MobilityDB declares, not the operand's ─────────
+# A Temporal->Temporal function returns the operand's own type only where the
+# family is CLOSED under the operation. centroid and minDistSimplify are not:
+# MobilityDB declares centroid(tgeometry) RETURNS tgeompoint,
+# centroid(tgeography) RETURNS tgeogpoint, minDistSimplify(tgeography,float)
+# RETURNS tgeometry and minDistSimplify(tgeogpoint,float) RETURNS tgeompoint.
+query I
+SELECT typeof(centroid('SRID=4326;[Point(1 1)@2000-01-01,Point(2 2)@2000-01-02]'::tgeometry));
+----
+tgeompoint
+
+query I
+SELECT typeof(centroid('SRID=4326;[Point(1 1)@2000-01-01,Point(2 2)@2000-01-02]'::tgeography));
+----
+tgeogpoint
+
+query I
+SELECT typeof(minDistSimplify('SRID=4326;[Point(1 1)@2000-01-01,Point(3 3)@2000-01-03]'::tgeography, 1.0));
+----
+tgeometry
+
+query I
+SELECT typeof(minDistSimplify('SRID=4326;[Point(1 1)@2000-01-01,Point(3 3)@2000-01-03]'::tgeogpoint, 1.0));
+----
+tgeompoint

@@ -588,8 +588,6 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     // Centroid / convexHull / traversedArea — produce a non-temporal
     // geometry summary of the trajectory.
     loader.RegisterFunction(ScalarFunction(
-        "centroid", {TGEOM}, TGEOM, TgeoCentroidExec));
-    loader.RegisterFunction(ScalarFunction(
         "convexHull", {TGEOM}, GEOM, TgeoConvexHullExec));
     loader.RegisterFunction(ScalarFunction(
         "traversedArea", {TGEOM}, GEOM, TgeoTraversedAreaExec));
@@ -748,10 +746,6 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
             }
         };
     };
-
-    loader.RegisterFunction(ScalarFunction(
-        "minDistSimplify", {TGEOM, DBL}, TGEOM,
-        simplify_double_exec_factory(temporal_simplify_min_dist)));
 
     loader.RegisterFunction(ScalarFunction(
         "minTimeDeltaSimplify", {TGEOM, LogicalType::INTERVAL}, TGEOM,
