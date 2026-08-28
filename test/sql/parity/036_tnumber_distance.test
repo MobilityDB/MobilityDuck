@@ -44,3 +44,18 @@ query I
 SELECT nad(tfloat '[1@2000-01-01, 5@2000-01-05]', tfloat '[3@2000-01-01, 3@2000-01-05]');
 ----
 0.0
+
+# ── tDistance over two tints answers a tint, as MobilityDB declares ───────────
+# 036_tnumber_distance.in.sql:103 reads `tDistance(tint, tint) RETURNS tint`;
+# the operand type carries the answer here, so no float widening happens.
+query I
+SELECT typeof(tDistance('1@2000-01-01'::tint, '2@2000-01-01'::tint));
+----
+tint
+
+# DuckDB defines no custom infix operators, so the operator NAME is a quoted
+# function; it shares tDistance's backing and therefore its return type.
+query I
+SELECT typeof("<->"('1@2000-01-01'::tint, '2@2000-01-01'::tint));
+----
+tint

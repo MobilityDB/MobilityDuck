@@ -104,3 +104,10 @@ query I
 SELECT startValue(getResolution(cellToParent(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5), 3)));
 ----
 3
+
+# the cell boundary leaves the cell family: H3 is geodetic, so it answers a
+# tgeography, where quadbin answers a planar tgeometry (see tquadbin.test)
+query I
+SELECT typeof(cellToBoundary(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5)));
+----
+tgeography

@@ -110,3 +110,14 @@ query I
 SELECT startValue(cellToParent(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), 0))::VARCHAR;
 ----
 5192650370358181887
+
+# the planar counterpart of the H3 boundary in th3index.test
+query I
+SELECT typeof(cellToBoundary(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01')));
+----
+tgeometry
+
+query I
+SELECT typeof(startValue(cellToBoundary(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'))));
+----
+GEOMETRY

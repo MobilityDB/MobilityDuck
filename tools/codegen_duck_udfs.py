@@ -524,14 +524,6 @@ def reg_scope(name):
     # for quadbin and tgeography for h3). No name heuristic expresses that, so defer to the
     # catalog: "all" hands the function to sig_declared_accs, which registers exactly the
     # overloads MobilityDB CREATE FUNCTIONs.
-    # ⛔ cell_to_boundary is the one slot whose answer LEAVES the family — the catalog declares
-    # tgeography for th3index and tgeometry for tquadbin — and ret_temporal_type answers the
-    # operand's own type for a Temporal->Temporal function. Registering it would label a
-    # geography as a cell. Reading the return from the catalog per overload is the fix, and it
-    # moves six unrelated registrations (centroid, minDistSimplify, <->) that each need their
-    # own adjudication, so this slot DECLINES until that lands: absent, never mislabelled.
-    if name.startswith("tcellindex_cell_to_boundary"):
-        return None
     if name.startswith("tcellindex_") or re.search(r'_tcellindex(?=_|$)', name):
         return ("all", None)
     # the temporal JSONB family (its own gated non-spatial type): a tjsonb_* prefix, or a
@@ -1968,6 +1960,22 @@ def _sig_ret_for(f, sqlname, tail=()):
     for s in (f.get("sqlSignatures") or []):
         if s.get("args") == want:
             return s.get("ret")
+    return None
+
+def sig_declared_ret(f, acc, arity):
+    """The DuckDB return accessor the catalog declares for the overload taking `acc` first at
+    `arity` arguments, else None. `ret_temporal_type` answers the OPERAND'S OWN TYPE for a
+    Temporal->Temporal function, which holds only where the family is CLOSED under the
+    operation; where MobilityDB says the answer leaves the family the catalog is the SoT --
+    centroid(tgeometry) is tgeompoint, cellToBoundary(th3index) is tgeography,
+    minDistSimplify(tgeography,float) is tgeometry, tDistance(tint,tint) is tint. Only an
+    UNAMBIGUOUS match counts (one signature on that operand at that arity), so a shape the
+    catalog describes with several overloads keeps the heuristic."""
+    on = [s for s in (f.get("sqlSignatures") or [])
+          if (s.get("args") or [None])[0] == _acc_sqlname(acc)
+          and len(s.get("args") or []) == arity]
+    if len(on) == 1 and on[0].get("ret") in SIG_TEMPORAL_ACC:
+        return SIG_TEMPORAL_ACC[on[0]["ret"]]
     return None
 
 def array_declared_accs(f, tail=()):
@@ -3481,6 +3489,8 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             for a in accs:
                 sig = spec_sig % ((a,) * spec_sig.count("%s"))   # 1 or 2 accessor slots
                 r2 = ret_temporal_type(fn, a, f.get("group"), f.get("sqlReturnType")) if dret == "MD_TEMPORAL" else dret
+                if dret == "MD_TEMPORAL":
+                    r2 = sig_declared_ret(f, a, sig.count(",") + 1) or r2
                 for nm in names:
                     specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {sig}, {r2}, Gen_{fn}));')
@@ -3499,6 +3509,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             else:
                 for a in accs:
                     r2 = ret_temporal_type(fn, a, f.get("group"), f.get("sqlReturnType"))
+                    r2 = sig_declared_ret(f, a, 1) or r2
                     for nm in names:
                         specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                              f'"{reg_name(nm, f)}", {{{a}}}, {r2}, Gen_{fn}_d));')
