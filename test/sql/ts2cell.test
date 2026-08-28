@@ -1,0 +1,93 @@
+# name: test/sql/ts2cell.test
+# description: The Google S2 temporal cell index (s2cell / ts2cell)
+# group: [sql]
+
+require mobilityduck
+
+# ── static cell round-trip ──────────────────────────────────────────────────
+# The text form of an S2 cell is its hex token, which s2cell_in/s2cell_out own,
+# so the spelling a MobilityDB user writes is the spelling DuckDB accepts.
+query I
+SELECT '47c3c3'::s2cell::VARCHAR;
+----
+47c3c3
+
+query I
+SELECT typeof('47c3c3'::s2cell);
+----
+s2cell
+
+# ── the temporal cell index reports the canonical lowercase type name ────────
+query I
+SELECT typeof('{47c3c3@2000-01-01}'::ts2cell);
+----
+ts2cell
+
+# ── generated generic Temporal<T> accessor (SIG_TEMPORAL_ACC) over ts2cell ────
+query I
+SELECT numInstants('{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell);
+----
+2
+
+# ── generated traditional comparison (compops) over ts2cell ──────────────────
+query I
+SELECT '{47c3c3@2000-01-01}'::ts2cell = '{47c3c3@2000-01-01}'::ts2cell;
+----
+true
+
+# ── the cell-id value accessors report the canonical lowercase base type ─────
+query I
+SELECT typeof(startValue('{47c3c3@2000-01-01}'::ts2cell));
+----
+s2cell
+
+query I
+SELECT startValue('{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell)::VARCHAR;
+----
+47c3c3
+
+query I
+SELECT endValue('{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell)::VARCHAR;
+----
+47c3c5
+
+# ── generated cell-id valueN (Temporal<T> out-param fold) → s2cell ───────────
+# The out-parameter is spelled `S2CellId *` where the quadbin and H3 twins spell
+# it `uint64_t *`; the same typedef, so this generates identically to them.
+query I
+SELECT typeof(valueN('{47c3c3@2000-01-01}'::ts2cell, 1));
+----
+s2cell
+
+query I
+SELECT valueN('{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell, 2)::VARCHAR;
+----
+47c3c5
+
+query I
+SELECT valueN('{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell, 2)
+     = endValue('{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell);
+----
+true
+
+# ── generated cell-id getValues → LIST(s2cell) ───────────────────────────────
+query I
+SELECT typeof(getValues('{47c3c3@2000-01-01}'::ts2cell)[1]);
+----
+s2cell
+
+query I
+SELECT len(getValues('{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell));
+----
+2
+
+query I
+SELECT getValues('{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell)[1]::VARCHAR;
+----
+47c3c3
+
+query I
+SELECT getValues('{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell)[2]
+     = endValue('{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell);
+----
+true

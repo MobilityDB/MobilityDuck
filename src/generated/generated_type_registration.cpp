@@ -10,6 +10,7 @@
 #include "cbuffer/tcbuffer.hpp"
 #include "npoint/tnpoint.hpp"
 #include "quadbin/tquadbin.hpp"
+#include "s2cell/ts2cell.hpp"
 #include "pose/tpose.hpp"
 #include "posechain/tposechain.hpp"
 #include "pointcloud/tpcpoint.hpp"
@@ -138,7 +139,7 @@ LogicalType SpanTypeMapping::GetChildType(const LogicalType &type) {
     throw NotImplementedException("GetChildType: unsupported alias: " + alias);
 }
 
-// --- SetTypes: 14 type(s) from the catalog MeosType enum ---
+// --- SetTypes: 15 type(s) from the catalog MeosType enum ---
 #define DEFINE_SET_TYPE(NAME)                                          \
     LogicalType SetTypes::NAME() {                               \
         auto type = LogicalType(LogicalTypeId::BLOB);          \
@@ -155,6 +156,7 @@ DEFINE_SET_TYPE(jsonbset)
 DEFINE_SET_TYPE(cbufferset)
 DEFINE_SET_TYPE(npointset)
 DEFINE_SET_TYPE(quadbinset)
+DEFINE_SET_TYPE(s2cellset)
 DEFINE_SET_TYPE(poseset)
 DEFINE_SET_TYPE(posechainset)
 DEFINE_SET_TYPE(pcpointset)
@@ -172,6 +174,7 @@ void SetTypes::RegisterTypes(ExtensionLoader &loader) {
     loader.RegisterType("cbufferset", cbufferset());
     loader.RegisterType("npointset", npointset());
     loader.RegisterType("quadbinset", quadbinset());
+    loader.RegisterType("s2cellset", s2cellset());
     loader.RegisterType("poseset", poseset());
     loader.RegisterType("posechainset", posechainset());
     loader.RegisterType("pcpointset", pcpointset());
@@ -180,14 +183,14 @@ void SetTypes::RegisterTypes(ExtensionLoader &loader) {
 
 const std::vector<LogicalType> &SetTypes::AllTypes() {
     static std::vector<LogicalType> types = {
-        intset(), bigintset(), floatset(), textset(), dateset(), tstzset(), jsonbset(), cbufferset(), npointset(), quadbinset(), poseset(), posechainset(), pcpointset(), pcpatchset()
+        intset(), bigintset(), floatset(), textset(), dateset(), tstzset(), jsonbset(), cbufferset(), npointset(), quadbinset(), s2cellset(), poseset(), posechainset(), pcpointset(), pcpatchset()
     };
     return types;
 }
 
 MeosType SetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
     static const std::unordered_map<std::string, MeosType> alias_to_type = {
-        {"intset", T_INTSET}, {"bigintset", T_BIGINTSET}, {"floatset", T_FLOATSET}, {"textset", T_TEXTSET}, {"dateset", T_DATESET}, {"tstzset", T_TSTZSET}, {"jsonbset", T_JSONBSET}, {"cbufferset", T_CBUFFERSET}, {"npointset", T_NPOINTSET}, {"quadbinset", T_QUADBINSET}, {"poseset", T_POSESET}, {"posechainset", T_POSECHAINSET}, {"pcpointset", T_PCPOINTSET}, {"pcpatchset", T_PCPATCHSET}
+        {"intset", T_INTSET}, {"bigintset", T_BIGINTSET}, {"floatset", T_FLOATSET}, {"textset", T_TEXTSET}, {"dateset", T_DATESET}, {"tstzset", T_TSTZSET}, {"jsonbset", T_JSONBSET}, {"cbufferset", T_CBUFFERSET}, {"npointset", T_NPOINTSET}, {"quadbinset", T_QUADBINSET}, {"s2cellset", T_S2CELLSET}, {"poseset", T_POSESET}, {"posechainset", T_POSECHAINSET}, {"pcpointset", T_PCPOINTSET}, {"pcpatchset", T_PCPATCHSET}
     };
     auto it = alias_to_type.find(alias);
     return it != alias_to_type.end() ? it->second : T_UNKNOWN;
@@ -205,6 +208,7 @@ LogicalType SetTypeMapping::GetChildType(const LogicalType &type) {
     if (alias == "cbufferset") return CbufferTypes::cbuffer();
     if (alias == "npointset") return NpointTypes::npoint();
     if (alias == "quadbinset") return QuadbinTypes::quadbin();
+    if (alias == "s2cellset") return S2cellTypes::s2cell();
     if (alias == "poseset") return PoseTypes::pose();
     if (alias == "posechainset") return PosechainTypes::posechain();
     if (alias == "pcpointset") return TPcpointTypes::pcpoint();

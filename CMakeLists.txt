@@ -143,6 +143,7 @@ set(EXTENSION_SOURCES
     src/geo/tgeogpoint_in_out.cpp
     src/geo/tgeogpoint_ops.cpp
     src/quadbin/tquadbin.cpp
+    src/s2cell/ts2cell.cpp
     src/raster/raquet.cpp
     src/temporal/temporal_blob.cpp
     src/json/tjsonb.cpp

@@ -18,11 +18,26 @@ import collections
 import json, sys, re, os
 from collections import defaultdict, Counter
 
+# Transparent MEOS typedefs the catalog leaves unresolved: a family names its own alias for
+# a type the rest of the surface spells natively, and every downstream map is keyed on the
+# native spelling. Resolving the alias HERE, once, is what keeps the family regular -- the
+# alternative is repeating the aliased spelling in each of OUTPRIM / OUTPARAM_LOCAL /
+# ARRAY_ELEM / CELL_UINT, i.e. one hand special-case per map.
+# S2CellId: meos_s2cell.h `typedef uint64 S2CellId` over pg_basetypes.h `typedef uint64_t
+# uint64` -- uint64_t itself, on every platform, so the resolved spelling is not merely
+# same-width but the SAME TYPE, and the pointer positions (S2CellId * out-params and array
+# returns) are compatible rather than reinterpreted. s2cell spells the cell id natively
+# ("unsigned long") in its scalar positions and S2CellId only in the array/out-parameter
+# ones, so without this the family answers startValue but not getValues/valueN.
+C_TYPEDEF_ALIASES = {"S2CellId": "uint64_t"}
+_ALIAS_RE = re.compile(r'\b(%s)\b' % "|".join(map(re.escape, C_TYPEDEF_ALIASES)))
+
 def norm(c):
     # Strip the `const` and `struct` keywords (the 14l catalog renders canonical
     # types as e.g. `const struct Temporal *`); word-boundary so type names that
     # merely contain the substring are untouched.
-    return re.sub(r'\s+', ' ', re.sub(r'\b(const|struct)\b', '', c or '')).strip()
+    t = re.sub(r'\s+', ' ', re.sub(r'\b(const|struct)\b', '', c or '')).strip()
+    return _ALIAS_RE.sub(lambda m: C_TYPEDEF_ALIASES[m.group(1)], t)
 
 def base(canon):
     t = norm(canon)
@@ -222,6 +237,7 @@ REGISTERED_FAMILIES = {
     "tpcpoint", "pcpoint", "tpcpatch", "pcpatch",
     "tnpoint", "npoint", "nsegment",
     "tpose", "pose", "trgeometry", "trgeo", "tposechain", "posechain",
+    "ts2cell", "s2cell",
 }
 # Every temporal family token the catalog function names use; those NOT in REGISTERED_FAMILIES
 # are the fast-follow families whose DuckDB type the binding does not register yet.
@@ -233,14 +249,6 @@ KNOWN_FAMILIES = REGISTERED_FAMILIES | {
     # whose OTHER token happens to be unregistered, and emits the moment that one
     # registers. tposechain_to_tpose was rejected only for naming the then-
     # unregistered tpose, and reached the compiler once tpose registered.
-    #
-    # The S2 cell index family, whose DuckDB type the binding does not register.
-    # Naming it is what lets the gate reject its functions: `tbigint_to_ts2cell`
-    # carries a REGISTERED token too, so without the family here the gate reads it
-    # as a tbigint function, emits a call to a symbol no included MEOS header
-    # declares, and registers `ts2cell(tbigint)` as returning tbigint — the operand
-    # type standing in for the one the generator cannot name.
-    "ts2cell", "s2cell",
 }
 def unregistered_family_ref(name):
     """The first unregistered family token the name references, else None (in scope)."""
@@ -436,7 +444,8 @@ GEO_ALLTYPES = list(GEO_TYPES.values())
 # GEO_ALLTYPES, which stays geo-only for the `tgeo` supertype (geometry+geography) and the
 # geometry-argument spatial relationships. Add a new spatial family here to inherit the surface.
 SPATIAL_ALLTYPES = GEO_ALLTYPES + ["CbufferTypes::tcbuffer()", "H3indexTypes::th3index()",
-                                   "QuadbinTypes::tquadbin()", "NpointTypes::tnpoint()",
+                                   "QuadbinTypes::tquadbin()", "S2cellTypes::ts2cell()",
+                                   "NpointTypes::tnpoint()",
                                    "PoseTypes::tpose()", "TrgeometryTypes::trgeometry()",
                                    "PosechainTypes::tposechain()"]
 def reg_scope(name):
@@ -515,6 +524,12 @@ def reg_scope(name):
     # variants auto-exclude on their unmarshallable arg/return.
     if name.startswith("tquadbin_") or re.search(r'_tquadbin(?=_|$)', name):
         return ("types", ["QuadbinTypes::tquadbin()"])
+    # the Google S2 temporal cell index (its own gated spatial type, sibling of
+    # tquadbin and th3index): a ts2cell_* prefix, or a _ts2cell token anywhere. The
+    # static s2cell/s2cellset-coupled variants auto-exclude on their unmarshallable
+    # arg/return.
+    if name.startswith("ts2cell_") or re.search(r'_ts2cell(?=_|$)', name):
+        return ("types", ["S2cellTypes::ts2cell()"])
     # the DGGS cell-index operations MobilityDB backs with ONE shared kernel over the cell
     # indexes (tcellindex_get_resolution/cell_area/cell_to_parent/cell_to_boundary/
     # cell_to_point/is_valid_cell). The kernel carries no family token of its own, and which
@@ -582,7 +597,8 @@ TO_TYPE = {"tint": "TemporalTypes::tint()", "tbigint": "TemporalTypes::tbigint()
            "tgeometry": "TGeometryTypes::tgeometry()", "tgeography": "TGeographyTypes::tgeography()",
            "tgeompoint": "TgeompointType::tgeompoint()", "tgeogpoint": "TgeogpointType::tgeogpoint()",
            "tcbuffer": "CbufferTypes::tcbuffer()", "th3index": "H3indexTypes::th3index()",
-           "tquadbin": "QuadbinTypes::tquadbin()", "tjsonb": "TJsonbTypes::tjsonb()",
+           "tquadbin": "QuadbinTypes::tquadbin()", "ts2cell": "S2cellTypes::ts2cell()",
+           "tjsonb": "TJsonbTypes::tjsonb()",
            "tpcpoint": "TPcpointTypes::tpcpoint()", "tpcpatch": "TPcpatchTypes::tpcpatch()",
            "tnpoint": "NpointTypes::tnpoint()", "tpose": "PoseTypes::tpose()",
            "trgeometry": "TrgeometryTypes::trgeometry()",
@@ -623,7 +639,8 @@ SIG_TEMPORAL_ACC = {
     "tgeompoint": "TgeompointType::tgeompoint()", "tgeogpoint": "TgeogpointType::tgeogpoint()",
     "tgeometry":  "TGeometryTypes::tgeometry()",  "tgeography": "TGeographyTypes::tgeography()",
     "tcbuffer":   "CbufferTypes::tcbuffer()",      "th3index":   "H3indexTypes::th3index()",
-    "tquadbin":   "QuadbinTypes::tquadbin()",      "tjsonb":     "TJsonbTypes::tjsonb()",
+    "tquadbin":   "QuadbinTypes::tquadbin()",      "ts2cell":    "S2cellTypes::ts2cell()",
+    "tjsonb":     "TJsonbTypes::tjsonb()",
     "tpcpoint":   "TPcpointTypes::tpcpoint()",     "tpcpatch":   "TPcpatchTypes::tpcpatch()",
     "tnpoint":    "NpointTypes::tnpoint()",      "tpose":      "PoseTypes::tpose()",
     "trgeometry": "TrgeometryTypes::trgeometry()",
@@ -652,7 +669,7 @@ def sig_declared_accs(f):
 # base can never be registered as a type while its family functions stay unscoped. geom, geog and
 # h3index are absent on purpose: their set types carry a hand-written function surface of their own.
 BASE_ORDER = ["int", "bigint", "float", "text", "date", "tstz",
-              "jsonb", "cbuffer", "npoint", "quadbin", "pose", "posechain",
+              "jsonb", "cbuffer", "npoint", "quadbin", "s2cell", "pose", "posechain",
               "pcpoint", "pcpatch"]
 SET_TYPES = {b + "set": "SetTypes::%sset()" % b for b in BASE_ORDER}
 
@@ -668,6 +685,7 @@ BASE_LOGICAL = {
     "date": "LogicalType::DATE", "tstz": "LogicalType::TIMESTAMP_TZ",
     "jsonb": "TJsonbTypes::jsonb()", "cbuffer": "CbufferTypes::cbuffer()",
     "npoint": "NpointTypes::npoint()", "quadbin": "QuadbinTypes::quadbin()",
+    "s2cell": "S2cellTypes::s2cell()",
     "pose": "PoseTypes::pose()", "posechain": "PosechainTypes::posechain()",
     "pcpoint": "TPcpointTypes::pcpoint()", "pcpatch": "TPcpatchTypes::pcpatch()",
 }
@@ -943,6 +961,7 @@ CELL_UINT = {"unsigned long", "uint64_t"}
 CELL_BASEVAL = {
     "H3indexTypes::th3index()": "H3indexTypes::h3index()",
     "QuadbinTypes::tquadbin()": "QuadbinTypes::quadbin()",
+    "S2cellTypes::ts2cell()": "S2cellTypes::s2cell()",
 }
 
 def shape_emittable(f):
@@ -1194,7 +1213,8 @@ def header_symbols(incl_dir):
     TU_C_HEADERS = ("meos.h", "meos_catalog.h", "meos_internal.h",
                     "meos_geo.h", "meos_internal_geo.h",
                     "meos_cbuffer.h", "meos_h3.h", "meos_json.h", "meos_npoint.h",
-                    "meos_pointcloud.h", "meos_pose.h", "meos_quadbin.h", "meos_rgeo.h",
+                    "meos_pointcloud.h", "meos_pose.h", "meos_quadbin.h",
+                    "meos_rgeo.h", "meos_s2cell.h",
                     "pg_date.h", "pg_timestamp.h")
     syms = set()
     for name in TU_C_HEADERS:
@@ -3912,6 +3932,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            '#include "cbuffer/tcbuffer.hpp"\n'         # CbufferTypes::cbuffer()/tcbuffer()
            '#include "h3/th3index.hpp"\n'              # H3indexTypes::h3index()/th3index()
            '#include "quadbin/tquadbin.hpp"\n'         # QuadbinTypes::quadbin()/tquadbin()
+           '#include "s2cell/ts2cell.hpp"\n'           # S2cellTypes::s2cell()/ts2cell()
            '#include "json/tjsonb.hpp"\n'              # TJsonbTypes::jsonb()/tjsonb()
            '#include "pointcloud/tpcpoint.hpp"\n'      # TPcpointTypes::pcpoint()/tpcpoint()
            '#include "pointcloud/tpcpatch.hpp"\n'      # TPcpatchTypes::pcpatch()/tpcpatch()
@@ -4320,6 +4341,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
 BASE_HEADER = {
     "jsonb": "json/tjsonb.hpp", "cbuffer": "cbuffer/tcbuffer.hpp",
     "npoint": "npoint/tnpoint.hpp", "quadbin": "quadbin/tquadbin.hpp",
+    "s2cell": "s2cell/ts2cell.hpp",
     "pose": "pose/tpose.hpp", "posechain": "posechain/tposechain.hpp",
     "pcpoint": "pointcloud/tpcpoint.hpp", "pcpatch": "pointcloud/tpcpatch.hpp",
 }
