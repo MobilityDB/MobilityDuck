@@ -81,3 +81,32 @@ query I
 SELECT getValues(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'))[1];
 ----
 5194902170171867135
+
+# ── the shared DGGS cell-index slots, answered from the tcellindex kernel ─────
+# The same kernel answers these for quadbin as for H3, under the bare slot names.
+# cellToPoint is quadbin's alone among the temporal cell indexes: it returns the
+# planar tgeompoint centroid, where H3 answers cellToPoint geodetically.
+query I
+SELECT startValue(getResolution(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01')));
+----
+1
+
+query I
+SELECT startValue(isValidCell(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01')));
+----
+true
+
+query I
+SELECT startValue(cellArea(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'))) > 0;
+----
+true
+
+query I
+SELECT typeof(startValue(cellToPoint(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'))));
+----
+GEOMETRY
+
+query I
+SELECT startValue(cellToParent(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), 0))::VARCHAR;
+----
+5192650370358181887

@@ -515,6 +515,25 @@ def reg_scope(name):
     # variants auto-exclude on their unmarshallable arg/return.
     if name.startswith("tquadbin_") or re.search(r'_tquadbin(?=_|$)', name):
         return ("types", ["QuadbinTypes::tquadbin()"])
+    # the DGGS cell-index operations MobilityDB backs with ONE shared kernel over the cell
+    # indexes (tcellindex_get_resolution/cell_area/cell_to_parent/cell_to_boundary/
+    # cell_to_point/is_valid_cell). The kernel carries no family token of its own, and which
+    # families it serves is NOT uniform: a family that answers a slot from its own kernel is
+    # absent from this one (cellToPoint is quadbin alone, h3 answering it geodetically from
+    # th3index_to_tgeogpoint), and the returns differ per family (cellToBoundary is tgeometry
+    # for quadbin and tgeography for h3). No name heuristic expresses that, so defer to the
+    # catalog: "all" hands the function to sig_declared_accs, which registers exactly the
+    # overloads MobilityDB CREATE FUNCTIONs.
+    # ⛔ cell_to_boundary is the one slot whose answer LEAVES the family — the catalog declares
+    # tgeography for th3index and tgeometry for tquadbin — and ret_temporal_type answers the
+    # operand's own type for a Temporal->Temporal function. Registering it would label a
+    # geography as a cell. Reading the return from the catalog per overload is the fix, and it
+    # moves six unrelated registrations (centroid, minDistSimplify, <->) that each need their
+    # own adjudication, so this slot DECLINES until that lands: absent, never mislabelled.
+    if name.startswith("tcellindex_cell_to_boundary"):
+        return None
+    if name.startswith("tcellindex_") or re.search(r'_tcellindex(?=_|$)', name):
+        return ("all", None)
     # the temporal JSONB family (its own gated non-spatial type): a tjsonb_* prefix, or a
     # _tjsonb token anywhere. The base-jsonb-value-coupled variants (startValue/atValue with a
     # Jsonb arg/return) auto-exclude on their unmarshallable Jsonb arg/return until the base
