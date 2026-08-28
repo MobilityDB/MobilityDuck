@@ -73,6 +73,18 @@ jobs:
       # still build every target.
       reduced_ci_mode: ${{ github.event_name == 'pull_request' && 'enabled' || 'disabled' }}
 
+  # A hand-written binding declares its result type twice — in the registration
+  # DuckDB reads and in the executor template that writes the result vector —
+  # and nothing makes the two agree. The audit is source-only, so it answers in
+  # seconds and gates the pull request rather than waiting on a build.
+  source-audits:
+    name: Source audits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Declared return types are the ones the executors write
+        run: python3 scripts/return-type-audit.py .
+
   # The published artifact is a single file a user downloads and LOADs, so the
   # guarantee it has to carry is that it names no shared library it does not
   # ship, and that a stock DuckDB CLI can LOAD it and evaluate a MEOS-backed
