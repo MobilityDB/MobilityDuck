@@ -266,7 +266,14 @@ def hetero_temporal_args(f):
 def supported(f):
     """Reason string if NOT emittable (mirrors Spark's supported()), else None."""
     name = f["name"]
-    if name.startswith("meos_internal") or (f.get("group") or "").startswith("meos_internal"):
+    # The catalog states the classification in `api`, derived from the @ingroup tag:
+    # public where a group exists and is not an internal one, internal otherwise —
+    # and a function stating NO group is internal. Reading the group's NAME instead
+    # re-derives that rule and gets the no-group case backwards: the string test finds
+    # nothing to match, so an internal function passes as public and a call to it is
+    # emitted against a symbol only a private header declares (trgeometry_merge, which
+    # broke the extension build). Read what the catalog decided.
+    if f.get("api") != "public":
         return "internal"
     if not f.get("sqlfn"):
         return "no-sqlfn"            # not user-facing SQL surface
