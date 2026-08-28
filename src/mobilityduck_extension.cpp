@@ -23,6 +23,7 @@
 #include "geo/tgeogpoint.hpp"
 #include "geo/tgeogpoint_ops.hpp"
 #include "quadbin/tquadbin.hpp"
+#include "s2cell/ts2cell.hpp"
 #include "raster/raquet.hpp"
 #include "h3/th3index.hpp"
 #include "cbuffer/tcbuffer.hpp"
@@ -447,6 +448,9 @@ static void LoadInternal(ExtensionLoader &loader) {
 	QuadbinTypes::RegisterTypes(loader);
 	QuadbinTypes::RegisterCastFunctions(loader);
 	QuadbinTypes::RegisterScalarFunctions(loader);
+
+	S2cellTypes::RegisterTypes(loader);
+	S2cellTypes::RegisterCastFunctions(loader);
 
 	// Raster tiles addressed by a QUADBIN cell; registered after the quadbin,
 	// tgeompoint and stbox types its surface refers to.

@@ -17,6 +17,7 @@
 #include "cbuffer/tcbuffer.hpp"
 #include "h3/th3index.hpp"
 #include "quadbin/tquadbin.hpp"
+#include "s2cell/ts2cell.hpp"
 #include "json/tjsonb.hpp"
 #include "pointcloud/tpcpoint.hpp"
 #include "pointcloud/tpcpatch.hpp"
@@ -159,6 +160,11 @@ void RegisterGenerated_meos_rgeo_rel_ever(ExtensionLoader &loader);
 void RegisterGenerated_meos_rgeo_restrict(ExtensionLoader &loader);
 void RegisterGenerated_meos_rgeo_spatialfuncs(ExtensionLoader &loader);
 void RegisterGenerated_meos_rgeo_transf(ExtensionLoader &loader);
+void RegisterGenerated_meos_s2(ExtensionLoader &loader);
+void RegisterGenerated_meos_s2cell_accessor(ExtensionLoader &loader);
+void RegisterGenerated_meos_s2cell_comp_ever(ExtensionLoader &loader);
+void RegisterGenerated_meos_s2cell_comp_temp(ExtensionLoader &loader);
+void RegisterGenerated_meos_s2cell_conversion(ExtensionLoader &loader);
 void RegisterGenerated_meos_setspan_accessor(ExtensionLoader &loader);
 void RegisterGenerated_meos_setspan_bbox_split(ExtensionLoader &loader);
 void RegisterGenerated_meos_setspan_comp(ExtensionLoader &loader);
@@ -305,6 +311,11 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_rgeo_restrict(loader);
     RegisterGenerated_meos_rgeo_spatialfuncs(loader);
     RegisterGenerated_meos_rgeo_transf(loader);
+    RegisterGenerated_meos_s2(loader);
+    RegisterGenerated_meos_s2cell_accessor(loader);
+    RegisterGenerated_meos_s2cell_comp_ever(loader);
+    RegisterGenerated_meos_s2cell_comp_temp(loader);
+    RegisterGenerated_meos_s2cell_conversion(loader);
     RegisterGenerated_meos_setspan_accessor(loader);
     RegisterGenerated_meos_setspan_bbox_split(loader);
     RegisterGenerated_meos_setspan_comp(loader);

@@ -25,6 +25,7 @@ extern "C" {
     #include <meos_pose.h>
     #include <meos_posechain.h>
     #include <meos_quadbin.h>
+    #include <meos_s2cell.h>
     #include <meos_rgeo.h>
     // PG-compat date/timestamp arithmetic (add_date_int, add_timestamptz_interval)
     // lives in the pgtypes public leaf headers, not the meos.h umbrella.
