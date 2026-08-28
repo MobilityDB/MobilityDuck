@@ -1,0 +1,72 @@
+# name: test/sql/cell_index_spatial_surface.test
+# description: The tspatial_* inherited surface covers the types the catalog declares it for.
+#              A cell index is spatial, but MobilityDB publishes none of asText/asEWKT/SRID/
+#              setSRID/transform over a cell temporal, so neither does the binding.
+# group: [sql]
+
+require mobilityduck
+
+# ── a cell temporal renders through its own text form ───────────────────────
+# This is the path MobilityDB uses (CREATE FUNCTION asText(ts2cell) -> Temporal_as_text),
+# and it is what carries the cell's own spelling.
+query I
+SELECT '{47c3c3@2000-01-01}'::ts2cell::VARCHAR;
+----
+{47c3c3@2000-01-01 00:00:00+01}
+
+# ── the tspatial_* kernels are NOT published over a cell temporal ────────────
+# MobilityDB CREATE FUNCTIONs none of these for ts2cell, tquadbin or th3index: swept across
+# all 14 mobilitydb/sql/s2cell slices, asEWKT/SRID/setSRID/transform each appear 0 times.
+# Binding them anyway reached a MEOS kernel whose own sqlSignatures exclude the cell families,
+# which answered "Unknown output function in WKT format for type: s2cell" — a call MobilityDB
+# never makes. Absent is the honest answer; these assert it stays absent.
+
+statement error
+SELECT asText('{47c3c3@2000-01-01}'::ts2cell);
+----
+No function matches the given name and argument types 'asText(ts2cell)'
+
+statement error
+SELECT asEWKT('{47c3c3@2000-01-01}'::ts2cell);
+----
+No function matches the given name and argument types 'asEWKT(ts2cell)'
+
+statement error
+SELECT SRID('{47c3c3@2000-01-01}'::ts2cell);
+----
+No function matches the given name and argument types 'SRID(ts2cell)'
+
+statement error
+SELECT setSRID('{47c3c3@2000-01-01}'::ts2cell, 4326);
+----
+No function matches the given name and argument types 'setSRID(ts2cell, INTEGER_LITERAL)'
+
+statement error
+SELECT transform('{47c3c3@2000-01-01}'::ts2cell, 3857);
+----
+No function matches the given name and argument types 'transform(ts2cell, INTEGER_LITERAL)'
+
+# ── the sibling cell families answer identically ────────────────────────────
+statement error
+SELECT asText(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'));
+----
+No function matches the given name and argument types 'asText(tquadbin)'
+
+statement error
+SELECT transform(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), 3857);
+----
+No function matches the given name and argument types 'transform(tquadbin, INTEGER_LITERAL)'
+
+# ── a family owning its temporal surface keeps its OWN text kernel ───────────
+# trgeometry appends its reference geometry to the varlena, so it publishes a trgeometry_as_text
+# counterpart; asText resolves there and the polygon survives the round trip.
+query I
+SELECT asText(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01');
+----
+POLYGON((1 1,2 2,3 1,1 1));Pose(POINT(1 1),0.5)@2000-01-01 00:00:00+01
+
+# ── SRID reaches the pointcloud temporals the catalog declares it for ────────
+query I
+SELECT typeof(SRID(tpcpoint('0101000000000000000000F03F0000000000000040', TIMESTAMPTZ '2000-01-01')));
+----
+INTEGER

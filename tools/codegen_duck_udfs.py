@@ -448,6 +448,14 @@ SPATIAL_ALLTYPES = GEO_ALLTYPES + ["CbufferTypes::tcbuffer()", "H3indexTypes::th
                                    "NpointTypes::tnpoint()",
                                    "PoseTypes::tpose()", "TrgeometryTypes::trgeometry()",
                                    "PosechainTypes::tposechain()"]
+
+# The catalog entry for a function name, so a NAME-keyed scope rule can still consult the
+# catalog's own `sqlSignatures` -- populated in main() from the same catalog the surface is
+# generated against. reg_scope() takes a name (it is called from a dozen shape functions that
+# hold only the name), and threading the whole function dict through all of them would churn
+# every call site to reach one branch, so the lookup lives here instead.
+FN_BY_NAME = {}
+
 def reg_scope(name):
     """('all', None) generic | ('types', [accessors]) specific | None = not core family.
     Resolves the temporal type from the MobilityDB naming convention: a PREFIX
@@ -497,11 +505,28 @@ def reg_scope(name):
     # speed/... live under this MEOS name); geometry-coupled variants auto-exclude.
     if name.startswith("tpoint_"):
         return ("types", [GEO_TYPES["tgeompoint"], GEO_TYPES["tgeogpoint"]])
-    # the abstract spatial supertype tspatial_* covers ALL spatial temporal types (the 4 geo
-    # types + tcbuffer + future spatial families) with type-preserving results (setSRID/
-    # transform/transformPipeline preserve the operand type; asText/asEWKT return text);
-    # geometry-coupled variants auto-exclude. This is the TSpatial<T> inherited surface.
-    if name.startswith("tspatial_") or re.search(r'_tspatial(?=_|$)', name):
+    # the abstract spatial supertype tspatial_* covers the spatial temporal types with
+    # type-preserving results (setSRID/transform/transformPipeline preserve the operand type;
+    # asText/asEWKT return text); geometry-coupled variants auto-exclude. This is the
+    # TSpatial<T> inherited surface.
+    # ⛔ WHICH types it covers is the CATALOG's to say, not this list's. Being spatial makes a
+    # family ELIGIBLE for the surface; it does not mean MobilityDB publishes every tspatial_*
+    # kernel over it. The cell indexes are the proof: MobilityDB CREATE FUNCTIONs asText for
+    # them over the GENERIC `Temporal_as_text` and declares asEWKT/SRID/setSRID/transform for
+    # them nowhere, so a blanket registration binds them to a kernel whose own sqlSignatures
+    # exclude them -- and tspatial_as_text/as_ewkt/transform then raise "Unknown output
+    # function in WKT format for type: <cell>" from inside MEOS, on a call MobilityDB never
+    # makes. Defer to the declared signature set, keeping the blanket only when the catalog
+    # states nothing (sig_declared_accs answers None), which is its documented fallback.
+    # ⛔ The catalog restriction applies to the `tspatial_` PREFIX only -- the NAMED inherited
+    # functions. The `_tspatial_tspatial` SUFFIX names are the positional/topological
+    # OPERATORS (front/back/left/right/over*), carried by @sqlop rather than @sqlfn, and their
+    # sqlSignatures are sparse: reading a sparse list as authoritative deletes 132 working
+    # operator registrations. An operator keeps the blanket.
+    if name.startswith("tspatial_"):
+        declared = sig_declared_accs(FN_BY_NAME.get(name) or {})
+        return ("types", declared or SPATIAL_ALLTYPES)
+    if re.search(r'_tspatial(?=_|$)', name):
         return ("types", SPATIAL_ALLTYPES)
     # the geo supertype tgeo covers ONLY geometry+geography (NOT cbuffer/other spatial types).
     # Both spellings, as for every other family here: a `tgeo_*` PREFIX (tgeo_stboxes,
@@ -4511,6 +4536,9 @@ def main():
                              % (_b, _cb, _seen.most_common(3) or "no pointer-carried function"))
     # struct layouts (e.g. Match {i,j}) for the array-return LIST(STRUCT) shape — from the catalog.
     STRUCTS.update({s["name"]: s for s in d.get("structs", [])})
+    # name -> catalog entry, so the name-keyed scope rules can read the function's own
+    # sqlSignatures (the tspatial_* surface asks which types MobilityDB declares it for).
+    FN_BY_NAME.update({f["name"]: f for f in fns})
     # portable bare-name renderings: operator (@sqlop) -> bareName, straight from the
     # catalog's portableAliases (itself generated from the MEOS doxygen @sqlop tags +
     # the comparison dialect). The SoT; nothing invented here.
