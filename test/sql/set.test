@@ -398,6 +398,33 @@ SELECT set_distance(intset '{1,5}', intset '{10,15}');
 ----
 5
 
+# The canonical MobilityDB name answers the same overloads, so a query written
+# against the manual runs unchanged; the set_distance spelling stays valid.
+query I
+SELECT setDistance(5, 9);
+----
+4
+
+query I
+SELECT setDistance(intset '{1,5,10}', 7);
+----
+0
+
+query I
+SELECT setDistance(intset '{1,5}', intset '{10,15}') = set_distance(intset '{1,5}', intset '{10,15}');
+----
+true
+
+query I
+SELECT mobilitydbVersion() = mobilitydb_version();
+----
+true
+
+query I
+SELECT mobilitydbFullVersion() = mobilitydb_full_version();
+----
+true
+
 query I 
 SELECT dateset '{2000-01-01}' = dateset '{2000-01-01, 2000-01-02, 2000-01-03}';
 ----

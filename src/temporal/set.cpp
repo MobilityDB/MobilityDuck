@@ -351,27 +351,27 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("*", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, SetTypes::tstzset(), SetFunctions::Intersect_set_value));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("*", {SetTypes::tstzset(), SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Intersect_set_set));
 
-    // --- set_distance / <-> ---
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_distance", {LogicalType::INTEGER, LogicalType::INTEGER}, LogicalType::INTEGER, SetFunctions::Distance_value_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_distance", {LogicalType::BIGINT, LogicalType::BIGINT}, LogicalType::BIGINT, SetFunctions::Distance_value_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_distance", {LogicalType::DOUBLE, LogicalType::DOUBLE}, LogicalType::DOUBLE, SetFunctions::Distance_value_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_distance", {LogicalType::DATE, LogicalType::DATE}, LogicalType::INTEGER, SetFunctions::Distance_value_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_distance", {LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, LogicalType::DOUBLE, SetFunctions::Distance_value_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_distance", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::INTEGER, SetFunctions::Distance_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_distance", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::INTEGER, SetFunctions::Distance_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_distance", {SetTypes::intset(), SetTypes::intset()}, LogicalType::INTEGER, SetFunctions::Distance_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_distance", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BIGINT, SetFunctions::Distance_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_distance", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BIGINT, SetFunctions::Distance_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_distance", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BIGINT, SetFunctions::Distance_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_distance", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::DOUBLE, SetFunctions::Distance_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_distance", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::DOUBLE, SetFunctions::Distance_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_distance", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::DOUBLE, SetFunctions::Distance_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_distance", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::INTEGER, SetFunctions::Distance_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_distance", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::INTEGER, SetFunctions::Distance_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_distance", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::INTEGER, SetFunctions::Distance_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_distance", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::DOUBLE, SetFunctions::Distance_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_distance", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::DOUBLE, SetFunctions::Distance_value_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_distance", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::DOUBLE, SetFunctions::Distance_set_set));
+    // --- setDistance / <-> (the set_distance spelling stays registered) ---
+    duckdb::RegisterSerializedScalarFunctionAs(loader,  ScalarFunction("setDistance", {LogicalType::INTEGER, LogicalType::INTEGER}, LogicalType::INTEGER, SetFunctions::Distance_value_value), {"set_distance"});
+    duckdb::RegisterSerializedScalarFunctionAs(loader,  ScalarFunction("setDistance", {LogicalType::BIGINT, LogicalType::BIGINT}, LogicalType::BIGINT, SetFunctions::Distance_value_value), {"set_distance"});
+    duckdb::RegisterSerializedScalarFunctionAs(loader,  ScalarFunction("setDistance", {LogicalType::DOUBLE, LogicalType::DOUBLE}, LogicalType::DOUBLE, SetFunctions::Distance_value_value), {"set_distance"});
+    duckdb::RegisterSerializedScalarFunctionAs(loader,  ScalarFunction("setDistance", {LogicalType::DATE, LogicalType::DATE}, LogicalType::INTEGER, SetFunctions::Distance_value_value), {"set_distance"});
+    duckdb::RegisterSerializedScalarFunctionAs(loader,  ScalarFunction("setDistance", {LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, LogicalType::DOUBLE, SetFunctions::Distance_value_value), {"set_distance"});
+    duckdb::RegisterSerializedScalarFunctionAs(loader,  ScalarFunction("setDistance", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::INTEGER, SetFunctions::Distance_set_value), {"set_distance"});
+    duckdb::RegisterSerializedScalarFunctionAs(loader,  ScalarFunction("setDistance", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::INTEGER, SetFunctions::Distance_value_set), {"set_distance"});
+    duckdb::RegisterSerializedScalarFunctionAs(loader,  ScalarFunction("setDistance", {SetTypes::intset(), SetTypes::intset()}, LogicalType::INTEGER, SetFunctions::Distance_set_set), {"set_distance"});
+    duckdb::RegisterSerializedScalarFunctionAs(loader,  ScalarFunction("setDistance", {SetTypes::bigintset(), LogicalType::BIGINT}, LogicalType::BIGINT, SetFunctions::Distance_set_value), {"set_distance"});
+    duckdb::RegisterSerializedScalarFunctionAs(loader,  ScalarFunction("setDistance", {LogicalType::BIGINT, SetTypes::bigintset()}, LogicalType::BIGINT, SetFunctions::Distance_value_set), {"set_distance"});
+    duckdb::RegisterSerializedScalarFunctionAs(loader,  ScalarFunction("setDistance", {SetTypes::bigintset(), SetTypes::bigintset()}, LogicalType::BIGINT, SetFunctions::Distance_set_set), {"set_distance"});
+    duckdb::RegisterSerializedScalarFunctionAs(loader,  ScalarFunction("setDistance", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::DOUBLE, SetFunctions::Distance_set_value), {"set_distance"});
+    duckdb::RegisterSerializedScalarFunctionAs(loader,  ScalarFunction("setDistance", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::DOUBLE, SetFunctions::Distance_value_set), {"set_distance"});
+    duckdb::RegisterSerializedScalarFunctionAs(loader,  ScalarFunction("setDistance", {SetTypes::floatset(), SetTypes::floatset()}, LogicalType::DOUBLE, SetFunctions::Distance_set_set), {"set_distance"});
+    duckdb::RegisterSerializedScalarFunctionAs(loader,  ScalarFunction("setDistance", {SetTypes::dateset(), LogicalType::DATE}, LogicalType::INTEGER, SetFunctions::Distance_set_value), {"set_distance"});
+    duckdb::RegisterSerializedScalarFunctionAs(loader,  ScalarFunction("setDistance", {LogicalType::DATE, SetTypes::dateset()}, LogicalType::INTEGER, SetFunctions::Distance_value_set), {"set_distance"});
+    duckdb::RegisterSerializedScalarFunctionAs(loader,  ScalarFunction("setDistance", {SetTypes::dateset(), SetTypes::dateset()}, LogicalType::INTEGER, SetFunctions::Distance_set_set), {"set_distance"});
+    duckdb::RegisterSerializedScalarFunctionAs(loader,  ScalarFunction("setDistance", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::DOUBLE, SetFunctions::Distance_set_value), {"set_distance"});
+    duckdb::RegisterSerializedScalarFunctionAs(loader,  ScalarFunction("setDistance", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::DOUBLE, SetFunctions::Distance_value_set), {"set_distance"});
+    duckdb::RegisterSerializedScalarFunctionAs(loader,  ScalarFunction("setDistance", {SetTypes::tstzset(), SetTypes::tstzset()}, LogicalType::DOUBLE, SetFunctions::Distance_set_set), {"set_distance"});
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<->", {LogicalType::INTEGER, LogicalType::INTEGER}, LogicalType::INTEGER, SetFunctions::Distance_value_value));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<->", {LogicalType::BIGINT, LogicalType::BIGINT}, LogicalType::BIGINT, SetFunctions::Distance_value_value));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("<->", {LogicalType::DOUBLE, LogicalType::DOUBLE}, LogicalType::DOUBLE, SetFunctions::Distance_value_value));
