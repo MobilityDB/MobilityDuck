@@ -232,7 +232,15 @@ KNOWN_FAMILIES = REGISTERED_FAMILIES | {
     # name whose family token it knows, so an unlisted family rides in on a name
     # whose OTHER token happens to be unregistered, and emits the moment that one
     # registers. tposechain_to_tpose was rejected only for naming the then-
-    # unregistered tpose, and reached the compiler as soon as tpose registered.
+    # unregistered tpose, and reached the compiler once tpose registered.
+    #
+    # The S2 cell index family, whose DuckDB type the binding does not register.
+    # Naming it is what lets the gate reject its functions: `tbigint_to_ts2cell`
+    # carries a REGISTERED token too, so without the family here the gate reads it
+    # as a tbigint function, emits a call to a symbol no included MEOS header
+    # declares, and registers `ts2cell(tbigint)` as returning tbigint — the operand
+    # type standing in for the one the generator cannot name.
+    "ts2cell", "s2cell",
 }
 def unregistered_family_ref(name):
     """The first unregistered family token the name references, else None (in scope)."""
