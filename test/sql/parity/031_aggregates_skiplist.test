@@ -1,11 +1,12 @@
 # name: test/sql/parity/031_aggregates_skiplist.test
-# description: SkipList-state aggregates — TandAgg, TorAgg, TcountAgg, TminAgg,
-#              TmaxAgg, TsumAgg, TavgAgg, TcentroidAgg, MergeAgg,
-#              AppendInstantAgg, AppendSequenceAgg, SpanUnionAgg, SetUnionAgg,
-#              and the window aggregates W{min,max,sum,count,avg}Agg. Names
-#              follow MobilityDB RFC #827 — every SkipList aggregate is
-#              exposed under a Pascal-cased *Agg identifier. The MobilityDB
-#              upstream PR #828 adds the matching aliases on the PG side.
+# description: SkipList-state aggregates. Each answers to the name MobilityDB
+#              publishes — tAnd, tOr, tCount, tSum, tAvg, tCentroid and the
+#              window aggregates w{Min,Max,Sum,Count,Avg} — and an Agg suffix
+#              marks only the names a DuckDB scalar already occupies:
+#              tMinAgg, tMaxAgg, MergeAgg, AppendInstantAgg,
+#              AppendSequenceAgg, SpanUnionAgg, SetUnionAgg. The *Agg
+#              spellings this extension already published stay registered
+#              beside the canonical names, so both are exercised here.
 # group: [sql]
 
 require mobilityduck
@@ -240,3 +241,60 @@ query I
 SELECT TcountAgg(v::tint)::VARCHAR FROM (VALUES ('1@2000-01-01'),(NULL),('5@2000-01-02')) t(v);
 ----
 {1@2000-01-01 00:00:00+01, 1@2000-01-02 00:00:00+01}
+
+# =============================================================================
+# The canonical MobilityDB name answers for every aggregate no scalar collides
+# with. A query written against the MobilityDB manual runs here unchanged; the
+# *Agg spelling stays valid beside it.
+# =============================================================================
+
+query I
+SELECT tAnd(v::tbool)::VARCHAR FROM (VALUES ('true@2000-01-01'),('true@2000-01-02')) t(v);
+----
+{t@2000-01-01 00:00:00+01, t@2000-01-02 00:00:00+01}
+
+query I
+SELECT tOr(v::tbool)::VARCHAR FROM (VALUES ('true@2000-01-01'),('false@2000-01-02')) t(v);
+----
+{t@2000-01-01 00:00:00+01, f@2000-01-02 00:00:00+01}
+
+query I
+SELECT tCount(v::tint)::VARCHAR FROM (VALUES ('1@2000-01-01'),('5@2000-01-02')) t(v);
+----
+{1@2000-01-01 00:00:00+01, 1@2000-01-02 00:00:00+01}
+
+query I
+SELECT tSum(v::tint)::VARCHAR FROM (VALUES ('1@2000-01-01'),('5@2000-01-02')) t(v);
+----
+{1@2000-01-01 00:00:00+01, 5@2000-01-02 00:00:00+01}
+
+query I
+SELECT tAvg(v::tint)::VARCHAR FROM (VALUES ('1@2000-01-01'),('5@2000-01-02')) t(v);
+----
+{1@2000-01-01 00:00:00+01, 5@2000-01-02 00:00:00+01}
+
+# The canonical name and the *Agg spelling are the same aggregate, not two.
+query I
+SELECT tSum(v::tint)::VARCHAR = TsumAgg(v::tint)::VARCHAR
+FROM (VALUES ('1@2000-01-01'),('5@2000-01-02')) t(v);
+----
+true
+
+query I
+SELECT wSum(v::tint, INTERVAL '1 day')::VARCHAR
+FROM (VALUES ('1@2000-01-01'),('5@2000-01-02')) t(v);
+----
+{[1@2000-01-01 00:00:00+01, 6@2000-01-02 00:00:00+01], (5@2000-01-02 00:00:00+01, 5@2000-01-03 00:00:00+01]}
+
+query I
+SELECT wCount(v::tint, INTERVAL '1 day')::VARCHAR = WcountAgg(v::tint, INTERVAL '1 day')::VARCHAR
+FROM (VALUES ('1@2000-01-01'),('5@2000-01-02')) t(v);
+----
+true
+
+# A scalar holds these slots, so the aggregate keeps the Agg suffix and the
+# bare name stays the scalar's.
+query I
+SELECT tMinAgg(v::tint)::VARCHAR FROM (VALUES ('1@2000-01-01'),('5@2000-01-02')) t(v);
+----
+{1@2000-01-01 00:00:00+01, 5@2000-01-02 00:00:00+01}
