@@ -43,6 +43,22 @@ inline void RegisterSerializedScalarFunction(ExtensionLoader &loader, ScalarFunc
 }
 
 /**
+ * Register one scalar under the canonical MobilityDB name it is built with, and
+ * under any additional spelling this extension already publishes. The canonical
+ * name is the one the MobilityDB manual and every other binding use, so a query
+ * written against them runs here; an extra spelling stays valid beside it.
+ */
+inline void RegisterSerializedScalarFunctionAs(ExtensionLoader &loader, ScalarFunction sf,
+                                               const vector<string> &also) {
+	for (const auto &name : also) {
+		ScalarFunction alias = sf;
+		alias.name = name;
+		RegisterSerializedScalarFunction(loader, std::move(alias));
+	}
+	RegisterSerializedScalarFunction(loader, std::move(sf));
+}
+
+/**
  * Cast functions are a separate registration path from scalar functions and
  * have no shared execution wrapper, yet they call MEOS just the same (e.g. the
  * VARCHAR -> tgeompoint parse). The original function pointer is stashed in
