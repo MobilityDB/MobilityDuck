@@ -850,10 +850,15 @@ def shape_set(f):
     if len(ins) == 2 and setp(ins[0]) and setp(ins[1]):
         if rb == "Set" and rn.endswith("*"):  return ("b_set", "LogicalType::BLOB")
         if rb == "bool" and "*" not in rn:    return ("b_bool", "LogicalType::BOOLEAN")
-    # (Set, scalar element) -> Set : setUnion/setMinus/setIntersection with an element value
+    # (Set, scalar element) -> Set : setUnion/setMinus/setIntersection with an element value,
+    # in either operand order. MobilityDB declares both — setIntersection(bigint, bigintset)
+    # beside setIntersection(bigintset, bigint) — and the bool-returning branch above already
+    # carries the pair as setsc/scset, so the Set-returning one carries it the same way rather
+    # than emitting one direction and silently dropping the other.
     if len(ins) == 2 and rb == "Set" and rn.endswith("*"):
-        e1 = selem(ins[1])
+        e0, e1 = selem(ins[0]), selem(ins[1])
         if setp(ins[0]) and e1: return ("setsc_set:" + e1, "LogicalType::BLOB")
+        if setp(ins[1]) and e0: return ("scset_set:" + e0, "LogicalType::BLOB")
     # (Set, scalar PARAM) -> Set where arg2 is NOT a set element (degrees(floatset, bool)):
     # a same-set-type return whose trailing scalar is a fixed param, name-scoped to its set
     # (<elem>set_*). Distinct from the element-add setsc_set above (arg2 co-varies there).
@@ -913,6 +918,25 @@ def emit_set(f, kind):
                 f"    BinaryExecutor::ExecuteWithNulls<string_t, {cpp2}, string_t>(args.data[0], args.data[1], result, args.size(),\n"
                 f"        [&](string_t a, {cpp2} a2, ValidityMask &mask, idx_t idx) -> string_t {{\n"
                 f"            Set *s = BlobToSet(a);\n            Set *r = {name}(s, {marsh});\n            free(s);\n"
+                f"            return SetToBlobN(result, r, mask, idx);\n        }});\n}}\n")
+    if kind.startswith("scset_set:"):   # (scalar element, Set) -> Set
+        # The reversed operand order of setsc_set above, and NULL-safe for the same reason: the
+        # empty result arrives as a NULL pointer, which SetToBlobN carries to SQL NULL.
+        e = kind.split(':')[1]
+        if e == "text":
+            return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                    f"    EnsureMeosThreadInitialized();\n"
+                    f"    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+                    f"        [&](string_t a1, string_t b, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                    f"            text *t1 = MakeText(a1);\n            Set *s = BlobToSet(b);\n"
+                    f"            Set *r = {name}(t1, s);\n            free(t1); free(s);\n"
+                    f"            return SetToBlobN(result, r, mask, idx);\n        }});\n}}\n")
+        _dt, cpp1, marsh = SCALAR_ARG[e]; marsh = marsh.replace("a2", "a1")
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::ExecuteWithNulls<{cpp1}, string_t, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&]({cpp1} a1, string_t b, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                f"            Set *s = BlobToSet(b);\n            Set *r = {name}({marsh}, s);\n            free(s);\n"
                 f"            return SetToBlobN(result, r, mask, idx);\n        }});\n}}\n")
     if kind.startswith("setcsc:"):  # (Set, by-value scalar param) -> Set (degrees(floatset, bool))
         _dt, cpp2, marsh = SCALAR_ARG[kind.split(':')[1]]
@@ -3600,17 +3624,21 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         # portable bare-name alias; normalize the doxygen `@`-escape (sqlop "\@>" -> "@>").
         names = reg_names(f, sqlfn, aliases)
         # element-typed predicates: accessor from the scalar element type, BOOLEAN ret.
-        if kind.startswith("setsc_set:"):   # (Set, scalar element) -> Set (same set type)
+        if kind.startswith("setsc_set:") or kind.startswith("scset_set:"):
+            # (Set, scalar element) -> Set, and its reversed (scalar element, Set) order. The
+            # registered signature follows the C parameter order so it matches the emitted body.
             b = kind.split(':')[1]
             scd = "LogicalType::VARCHAR" if b == "text" else SCALAR_ARG[b][0]
+            setfirst = kind.startswith("setsc_set:")
             # scalar-param: register over the catalog-declared core set types (round->floatset);
             # element-add: the accessor is the element's set type (setUnion(intset)->intset).
             pairs = sp if sp is not None else [(ELEM_TO_SET[b], ELEM_TO_SET[b], None)]
             dflt = next((d for *_, d in pairs if d is not None), None)
             for acc, rett, _d in pairs:
+                sig = f"{{{acc}, {scd}}}" if setfirst else f"{{{scd}, {acc}}}"
                 for nm in names:
                     set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
-                                             f'"{reg_name(nm, f)}", {{{acc}, {scd}}}, {rett}, Gen_{fn}));')
+                                             f'"{reg_name(nm, f)}", {sig}, {rett}, Gen_{fn}));')
             # A SQL-optional trailing param (round's precision DEFAULT 0) is callable at the
             # shorter arity; emit the (Set)->Set overload with the catalog default substituted.
             if dflt is not None:
