@@ -894,22 +894,26 @@ def emit_set(f, kind):
                 f"            Set *s = BlobToSet(a);\n            bool r = {name}(s, {marsh});\n            free(s);\n"
                 f"            return r;\n        }});\n}}\n")
     if kind.startswith("setsc_set:"):   # (Set, scalar element) -> Set
+        # An element operation answers the EMPTY set as a NULL pointer — setMinus('{3}', 3) and
+        # setIntersection('{1}', 2) both do — so the result marshals through SetToBlobN, which
+        # maps that NULL to SQL NULL. The (Set,Set) twin above already answers NULL for the same
+        # emptiness; Execute + SetToBlob raises "Null pointer not allowed" instead.
         e = kind.split(':')[1]
         if e == "text":
             return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                     f"    EnsureMeosThreadInitialized();\n"
-                    f"    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),\n"
-                    f"        [&](string_t a, string_t a2) {{\n"
+                    f"    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+                    f"        [&](string_t a, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {{\n"
                     f"            Set *s = BlobToSet(a);\n            text *t2 = MakeText(a2);\n"
                     f"            Set *r = {name}(s, t2);\n            free(t2); free(s);\n"
-                    f"            return SetToBlob(result, r);\n        }});\n}}\n")
+                    f"            return SetToBlobN(result, r, mask, idx);\n        }});\n}}\n")
         _dt, cpp2, marsh = SCALAR_ARG[e]
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
-                f"    BinaryExecutor::Execute<string_t, {cpp2}, string_t>(args.data[0], args.data[1], result, args.size(),\n"
-                f"        [&](string_t a, {cpp2} a2) {{\n"
+                f"    BinaryExecutor::ExecuteWithNulls<string_t, {cpp2}, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t a, {cpp2} a2, ValidityMask &mask, idx_t idx) -> string_t {{\n"
                 f"            Set *s = BlobToSet(a);\n            Set *r = {name}(s, {marsh});\n            free(s);\n"
-                f"            return SetToBlob(result, r);\n        }});\n}}\n")
+                f"            return SetToBlobN(result, r, mask, idx);\n        }});\n}}\n")
     if kind.startswith("setcsc:"):  # (Set, by-value scalar param) -> Set (degrees(floatset, bool))
         _dt, cpp2, marsh = SCALAR_ARG[kind.split(':')[1]]
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
