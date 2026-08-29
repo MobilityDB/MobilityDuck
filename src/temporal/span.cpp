@@ -148,21 +148,9 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("span", {base_type}, span_type, SpanFunctions::Value_to_span)                 
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("intspan", {SpanTypes::floatspan()}, SpanTypes::intspan(), SpanFunctions::Floatspan_to_intspan)                 
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("floatspan", {SpanTypes::intspan()}, SpanTypes::floatspan(), SpanFunctions::Intspan_to_floatspan)                 
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("datespan", {SpanTypes::tstzspan()}, SpanTypes::datespan(), SpanFunctions::Tstzspan_to_datespan)                 
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("tstzspan", {SpanTypes::datespan()}, SpanTypes::tstzspan(), SpanFunctions::Datespan_to_tstzspan)                 
-        );
 
         duckdb::RegisterSerializedScalarFunction(loader, 
             ScalarFunction("span", {SetTypes::intset()},SpanTypes::intspan(), SpanFunctions::Set_to_span)
@@ -259,70 +247,7 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     // spans(<set_type>) is generated from the catalog (set_spans) in generated_temporal_udfs.cpp.
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction("splitNSpans", {SetTypes::intset(), LogicalType::INTEGER},
-                       LogicalType::LIST(SpanTypes::intspan()), SpanFunctions::Set_split_n_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("splitNSpans", {SetTypes::bigintset(), LogicalType::INTEGER},
-                       LogicalType::LIST(SpanTypes::bigintspan()), SpanFunctions::Set_split_n_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("splitNSpans", {SetTypes::floatset(), LogicalType::INTEGER},
-                       LogicalType::LIST(SpanTypes::floatspan()), SpanFunctions::Set_split_n_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("splitNSpans", {SetTypes::dateset(), LogicalType::INTEGER},
-                       LogicalType::LIST(SpanTypes::datespan()), SpanFunctions::Set_split_n_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("splitNSpans", {SetTypes::tstzset(), LogicalType::INTEGER},
-                       LogicalType::LIST(SpanTypes::tstzspan()), SpanFunctions::Set_split_n_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("splitEachNSpans", {SetTypes::intset(), LogicalType::INTEGER},
-                       LogicalType::LIST(SpanTypes::intspan()), SpanFunctions::Set_split_each_n_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("splitEachNSpans", {SetTypes::bigintset(), LogicalType::INTEGER},
-                       LogicalType::LIST(SpanTypes::bigintspan()), SpanFunctions::Set_split_each_n_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("splitEachNSpans", {SetTypes::floatset(), LogicalType::INTEGER},
-                       LogicalType::LIST(SpanTypes::floatspan()), SpanFunctions::Set_split_each_n_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("splitEachNSpans", {SetTypes::dateset(), LogicalType::INTEGER},
-                       LogicalType::LIST(SpanTypes::datespan()), SpanFunctions::Set_split_each_n_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("splitEachNSpans", {SetTypes::tstzset(), LogicalType::INTEGER},
-                       LogicalType::LIST(SpanTypes::tstzspan()), SpanFunctions::Set_split_each_n_spans));
 
-    // Lowercase-"spans" aliases matching MobilityDB's SQL surface
-    // (`splitNspans` / `splitEachNspans`). The camelCase forms above
-    // stay registered for back-compat with existing MobilityDuck callers.
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("splitNspans", {SetTypes::intset(), LogicalType::INTEGER},
-                       LogicalType::LIST(SpanTypes::intspan()), SpanFunctions::Set_split_n_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("splitNspans", {SetTypes::bigintset(), LogicalType::INTEGER},
-                       LogicalType::LIST(SpanTypes::bigintspan()), SpanFunctions::Set_split_n_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("splitNspans", {SetTypes::floatset(), LogicalType::INTEGER},
-                       LogicalType::LIST(SpanTypes::floatspan()), SpanFunctions::Set_split_n_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("splitNspans", {SetTypes::dateset(), LogicalType::INTEGER},
-                       LogicalType::LIST(SpanTypes::datespan()), SpanFunctions::Set_split_n_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("splitNspans", {SetTypes::tstzset(), LogicalType::INTEGER},
-                       LogicalType::LIST(SpanTypes::tstzspan()), SpanFunctions::Set_split_n_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("splitEachNspans", {SetTypes::intset(), LogicalType::INTEGER},
-                       LogicalType::LIST(SpanTypes::intspan()), SpanFunctions::Set_split_each_n_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("splitEachNspans", {SetTypes::bigintset(), LogicalType::INTEGER},
-                       LogicalType::LIST(SpanTypes::bigintspan()), SpanFunctions::Set_split_each_n_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("splitEachNspans", {SetTypes::floatset(), LogicalType::INTEGER},
-                       LogicalType::LIST(SpanTypes::floatspan()), SpanFunctions::Set_split_each_n_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("splitEachNspans", {SetTypes::dateset(), LogicalType::INTEGER},
-                       LogicalType::LIST(SpanTypes::datespan()), SpanFunctions::Set_split_each_n_spans));
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("splitEachNspans", {SetTypes::tstzset(), LogicalType::INTEGER},
-                       LogicalType::LIST(SpanTypes::tstzspan()), SpanFunctions::Set_split_each_n_spans));
 
     // floor/ceil/round/degrees/radians on floatspan are float-base scalar transforms
     // generated from the catalog (generated_temporal_udfs.cpp), full arity plus the

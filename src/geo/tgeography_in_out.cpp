@@ -248,22 +248,6 @@ inline void TgeographyFromStringExec(DataChunk &args, ExpressionState &, Vector 
 }
 
 void TGeographyTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
-    auto TgeographyAsText = ScalarFunction(
-            "asText",
-            {TGeographyTypes::tgeography()},
-            LogicalType::VARCHAR,
-            Tspatial_as_text
-        );
-        loader.RegisterFunction( TgeographyAsText);
-
-    auto TgeographyAsEWKT = ScalarFunction(
-        "asEWKT",
-        {TGeographyTypes::tgeography()},
-        LogicalType::VARCHAR,
-        Tspatial_as_ewkt
-    );
-    loader.RegisterFunction( TgeographyAsEWKT);
-
     const auto B = LogicalType::BLOB;
     const auto V = LogicalType::VARCHAR;
     const auto T = TGeographyTypes::tgeography();

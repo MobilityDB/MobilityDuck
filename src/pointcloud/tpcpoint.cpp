@@ -1132,12 +1132,6 @@ void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpointseqarr_4params);
 
-    auto tpcpoint_to_timespan_function = ScalarFunction(
-        "timeSpan",
-        {TPcpointTypes::tpcpoint()},
-        SpanTypes::tstzspan(),
-        Temporal_to_tstzspan);
-    duckdb::RegisterSerializedScalarFunction(loader,  tpcpoint_to_timespan_function);
 
     auto tpcpoint_to_tinstant_function = ScalarFunction(
         "tpcpointInst",
@@ -1164,21 +1158,7 @@ void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
     duckdb::RegisterSerializedScalarFunction(loader,  merge_function);
 
-    auto tempSubtype_function = ScalarFunction(
-        "tempSubtype",
-        {TPcpointTypes::tpcpoint()},
-        LogicalType::VARCHAR,
-        Temporal_subtype
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  tempSubtype_function);
 
-    auto interp_function = ScalarFunction(
-        "interp",
-        {TPcpointTypes::tpcpoint()},
-        LogicalType::VARCHAR,
-        Temporal_interp
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  interp_function);
 
     auto memSize_function = ScalarFunction(
         "memSize",
@@ -1209,29 +1189,8 @@ void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpoint_pcid_function);
 
-    auto startInstant_function = ScalarFunction(
-        "startInstant",
-        {TPcpointTypes::tpcpoint()},
-        TPcpointTypes::tpcpoint(),
-        Temporal_start_instant
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  startInstant_function);
 
-    auto endInstant_function = ScalarFunction(
-        "endInstant",
-        {TPcpointTypes::tpcpoint()},
-        TPcpointTypes::tpcpoint(),
-        Temporal_end_instant
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  endInstant_function);
 
-    auto instantN_function = ScalarFunction(
-        "instantN",
-        {TPcpointTypes::tpcpoint(), LogicalType::INTEGER},
-        TPcpointTypes::tpcpoint(),
-        Temporal_instant_n
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  instantN_function);
 
 
     auto tpcpoint_gettimestamptz_function = ScalarFunction(
