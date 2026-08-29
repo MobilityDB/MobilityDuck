@@ -225,9 +225,6 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                        SetFunctions::Textcat_textset_text)
     );
     duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("||", {LogicalType::VARCHAR, SetTypes::textset()}, SetTypes::textset(), SetFunctions::Textcat_text_textset)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction("||", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), SetFunctions::Textcat_textset_text)
     );
 
@@ -250,17 +247,11 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_union", {SetTypes::dateset(), LogicalType::DATE}, SetTypes::dateset(), SetFunctions::Union_set_value));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_union", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Union_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_union", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, SetTypes::tstzset(), SetFunctions::Union_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {LogicalType::INTEGER, SetTypes::intset()}, SetTypes::intset(), SetFunctions::Union_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), SetFunctions::Union_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {LogicalType::BIGINT, SetTypes::bigintset()}, SetTypes::bigintset(), SetFunctions::Union_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {SetTypes::bigintset(), LogicalType::BIGINT}, SetTypes::bigintset(), SetFunctions::Union_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {LogicalType::DOUBLE, SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Union_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), SetFunctions::Union_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {LogicalType::VARCHAR, SetTypes::textset()}, SetTypes::textset(), SetFunctions::Union_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), SetFunctions::Union_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {LogicalType::DATE, SetTypes::dateset()}, SetTypes::dateset(), SetFunctions::Union_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {SetTypes::dateset(), LogicalType::DATE}, SetTypes::dateset(), SetFunctions::Union_set_value));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Union_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, SetTypes::tstzset(), SetFunctions::Union_set_value));
 
     // --- set_minus / - ---
@@ -282,22 +273,16 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_minus", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Minus_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_minus", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, SetTypes::tstzset(), SetFunctions::Minus_set_value));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_minus", {SetTypes::tstzset(), SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Minus_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("-", {LogicalType::INTEGER, SetTypes::intset()}, SetTypes::intset(), SetFunctions::Minus_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("-", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), SetFunctions::Minus_set_value));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("-", {SetTypes::intset(), SetTypes::intset()}, SetTypes::intset(), SetFunctions::Minus_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("-", {LogicalType::BIGINT, SetTypes::bigintset()}, SetTypes::bigintset(), SetFunctions::Minus_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("-", {SetTypes::bigintset(), LogicalType::BIGINT}, SetTypes::bigintset(), SetFunctions::Minus_set_value));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("-", {SetTypes::bigintset(), SetTypes::bigintset()}, SetTypes::bigintset(), SetFunctions::Minus_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("-", {LogicalType::DOUBLE, SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Minus_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("-", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), SetFunctions::Minus_set_value));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("-", {SetTypes::floatset(), SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Minus_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("-", {LogicalType::VARCHAR, SetTypes::textset()}, SetTypes::textset(), SetFunctions::Minus_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("-", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), SetFunctions::Minus_set_value));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("-", {SetTypes::textset(), SetTypes::textset()}, SetTypes::textset(), SetFunctions::Minus_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("-", {LogicalType::DATE, SetTypes::dateset()}, SetTypes::dateset(), SetFunctions::Minus_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("-", {SetTypes::dateset(), LogicalType::DATE}, SetTypes::dateset(), SetFunctions::Minus_set_value));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("-", {SetTypes::dateset(), SetTypes::dateset()}, SetTypes::dateset(), SetFunctions::Minus_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("-", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Minus_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("-", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, SetTypes::tstzset(), SetFunctions::Minus_set_value));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("-", {SetTypes::tstzset(), SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Minus_set_set));
 
@@ -320,22 +305,16 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_intersection", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Intersect_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_intersection", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, SetTypes::tstzset(), SetFunctions::Intersect_set_value));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("set_intersection", {SetTypes::tstzset(), SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Intersect_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("*", {LogicalType::INTEGER, SetTypes::intset()}, SetTypes::intset(), SetFunctions::Intersect_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("*", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), SetFunctions::Intersect_set_value));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("*", {SetTypes::intset(), SetTypes::intset()}, SetTypes::intset(), SetFunctions::Intersect_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("*", {LogicalType::BIGINT, SetTypes::bigintset()}, SetTypes::bigintset(), SetFunctions::Intersect_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("*", {SetTypes::bigintset(), LogicalType::BIGINT}, SetTypes::bigintset(), SetFunctions::Intersect_set_value));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("*", {SetTypes::bigintset(), SetTypes::bigintset()}, SetTypes::bigintset(), SetFunctions::Intersect_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("*", {LogicalType::DOUBLE, SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Intersect_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("*", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), SetFunctions::Intersect_set_value));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("*", {SetTypes::floatset(), SetTypes::floatset()}, SetTypes::floatset(), SetFunctions::Intersect_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("*", {LogicalType::VARCHAR, SetTypes::textset()}, SetTypes::textset(), SetFunctions::Intersect_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("*", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), SetFunctions::Intersect_set_value));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("*", {SetTypes::textset(), SetTypes::textset()}, SetTypes::textset(), SetFunctions::Intersect_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("*", {LogicalType::DATE, SetTypes::dateset()}, SetTypes::dateset(), SetFunctions::Intersect_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("*", {SetTypes::dateset(), LogicalType::DATE}, SetTypes::dateset(), SetFunctions::Intersect_set_value));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("*", {SetTypes::dateset(), SetTypes::dateset()}, SetTypes::dateset(), SetFunctions::Intersect_set_set));
-    duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("*", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Intersect_value_set));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("*", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, SetTypes::tstzset(), SetFunctions::Intersect_set_value));
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("*", {SetTypes::tstzset(), SetTypes::tstzset()}, SetTypes::tstzset(), SetFunctions::Intersect_set_set));
 
