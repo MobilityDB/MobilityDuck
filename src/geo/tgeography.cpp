@@ -1180,21 +1180,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
     loader.RegisterFunction( merge_function);
 
-    auto tempSubtype_function = ScalarFunction(
-        "tempSubtype",
-        {TGeographyTypes::tgeography()},
-        LogicalType::VARCHAR,
-        Temporal_subtype
-    );
-    loader.RegisterFunction( tempSubtype_function);
 
-    auto interp_function = ScalarFunction(
-        "interp",
-        {TGeographyTypes::tgeography()},
-        LogicalType::VARCHAR,
-        Temporal_interp
-    );
-    loader.RegisterFunction( interp_function);
 
     auto memSize_function = ScalarFunction(
         "memSize",
@@ -1229,29 +1215,8 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
     loader.RegisterFunction( tgeography_end_value_function);
 
-    auto startInstant_function = ScalarFunction(
-        "startInstant",
-        {TGeographyTypes::tgeography()},
-        TGeographyTypes::tgeography(), 
-        Temporal_start_instant
-    );
-    loader.RegisterFunction( startInstant_function);
 
-    auto endInstant_function = ScalarFunction(
-        "endInstant",
-        {TGeographyTypes::tgeography()},
-        TGeographyTypes::tgeography(), 
-        Temporal_end_instant
-    );
-    loader.RegisterFunction( endInstant_function);
 
-    auto instantN_function = ScalarFunction(
-        "instantN",
-        {TGeographyTypes::tgeography(), LogicalType::INTEGER},
-        TGeographyTypes::tgeography(),  
-        Temporal_instant_n
-    );
-    loader.RegisterFunction( instantN_function);
 
 
     auto tgeography_gettimestamptz_function = ScalarFunction(

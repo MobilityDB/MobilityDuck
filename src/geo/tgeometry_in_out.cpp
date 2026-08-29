@@ -251,22 +251,6 @@ inline void TspatialFromStringExec(DataChunk &args, ExpressionState &, Vector &r
 }
 
 void TGeometryTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
-    auto TgeometryAsText = ScalarFunction(
-            "asText",
-            {TGeometryTypes::tgeometry()},
-            LogicalType::VARCHAR,
-            Tspatial_as_text
-        );
-        duckdb::RegisterSerializedScalarFunction(loader,  TgeometryAsText);
-
-    auto TgeometryAsEWKT = ScalarFunction(
-        "asEWKT",
-        {TGeometryTypes::tgeometry()},
-        LogicalType::VARCHAR,
-        Tspatial_as_ewkt
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  TgeometryAsEWKT);
-
     // ---- tgeometryFromBinary / FromEWKB (auto-detects format) ----
     const auto B = LogicalType::BLOB;
     const auto V = LogicalType::VARCHAR;

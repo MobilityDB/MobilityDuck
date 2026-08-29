@@ -1163,10 +1163,6 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nad", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::INTEGER, TemporalFunctions::Nad_tint_tint));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nad", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, LogicalType::DOUBLE, TemporalFunctions::Nad_tfloat_float));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nad", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::DOUBLE, TemporalFunctions::Nad_tfloat_tfloat));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {TemporalTypes::tint(), LogicalType::INTEGER}, LogicalType::INTEGER, TemporalFunctions::Nad_tint_int));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::INTEGER, TemporalFunctions::Nad_tint_tint));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, LogicalType::DOUBLE, TemporalFunctions::Nad_tfloat_float));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::DOUBLE, TemporalFunctions::Nad_tfloat_tfloat));
 
     // Temporal topological predicates (contains/contained/overlaps/same/adjacent +
     // @>/<@/&&/~=/-|-) for temporal × temporal (same base family) and temporal ×
@@ -1248,9 +1244,6 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // temporal_* aliases are dropped (bare names supersede them).
 
     // ttext text functions
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("lower", {TemporalTypes::ttext()}, TemporalTypes::ttext(), TemporalFunctions::Ttext_lower));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("upper", {TemporalTypes::ttext()}, TemporalTypes::ttext(), TemporalFunctions::Ttext_upper));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("initcap", {TemporalTypes::ttext()}, TemporalTypes::ttext(), TemporalFunctions::Ttext_initcap));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("||", {LogicalType::VARCHAR, TemporalTypes::ttext()}, TemporalTypes::ttext(), TemporalFunctions::Textcat_text_ttext));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("||", {TemporalTypes::ttext(), LogicalType::VARCHAR}, TemporalTypes::ttext(), TemporalFunctions::Textcat_ttext_text));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("||", {TemporalTypes::ttext(), TemporalTypes::ttext()}, TemporalTypes::ttext(), TemporalFunctions::Textcat_ttext_ttext));

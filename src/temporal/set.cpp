@@ -101,21 +101,9 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("set", {base_type}, set_type, SetFunctions::Value_to_set)                 
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("intset", {SetTypes::floatset()}, SetTypes::intset(), SetFunctions::Floatset_to_intset)                 
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("floatset", {SetTypes::intset()}, SetTypes::floatset(), SetFunctions::Intset_to_floatset)                 
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("dateset", {SetTypes::tstzset()}, SetTypes::dateset(), SetFunctions::Tstzset_to_dateset)                 
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("tstzset", {SetTypes::dateset()}, SetTypes::tstzset(), SetFunctions::Dateset_to_tstzset)                 
-        );
 
         duckdb::RegisterSerializedScalarFunction(loader, 
             ScalarFunction("memSize",{set_type}, LogicalType::INTEGER, SetFunctions::Set_mem_size)

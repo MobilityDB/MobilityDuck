@@ -143,21 +143,9 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("span", {spanset_type}, child_type, SpansetFunctions::Spanset_to_span)
         );
         
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("intspanset", {SpansetTypes::floatspanset()}, SpansetTypes::intspanset(), SpansetFunctions::Floatspanset_to_intspanset)
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("floatspanset", {SpansetTypes::intspanset()}, SpansetTypes::floatspanset(), SpansetFunctions::Intspanset_to_floatspanset)
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("datespanset", {SpansetTypes::tstzspanset()}, SpansetTypes::datespanset(), SpansetFunctions::Tstzspanset_to_datespanset)
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("tstzspanset", {SpansetTypes::datespanset()}, SpansetTypes::tstzspanset(), SpansetFunctions::Datespanset_to_tstzspanset)
-        );
 
         duckdb::RegisterSerializedScalarFunction(loader, 
             ScalarFunction("memSize", {spanset_type}, LogicalType::INTEGER, SpansetFunctions::Spanset_mem_size)
@@ -255,12 +243,6 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         );
 
         // Lowercase aliases matching MobilityDB's SQL surface
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("splitNspans", {spanset_type, LogicalType::INTEGER}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_split_n_spans)
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("splitEachNspans", {spanset_type, LogicalType::INTEGER}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_split_each_n_spans)
-        );
 
         // hash(spanset_type) / hashExtended(spanset_type, UBIGINT) are generated from
         // the catalog (meos_setspan_accessor) in generated_temporal_udfs.cpp.
