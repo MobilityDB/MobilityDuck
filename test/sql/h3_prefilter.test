@@ -108,3 +108,24 @@ SELECT NOT (
   aNe('831c02fffffffff@2001-01-01'::th3index, 590464338553208831::BIGINT::h3index));
 ----
 true
+
+# ── the temporal comparison, in either operand order ──
+# tEq and tNe answer a tbool over the value's own time; startValue keeps the assertion
+# free of the session timezone. tquadbin.test holds the quadbin counterpart.
+
+query I
+SELECT typeof(tEq('831c02fffffffff@2001-01-01'::th3index, 590464338553208831::BIGINT::h3index));
+----
+tbool
+
+query II
+SELECT startValue(tEq('831c02fffffffff@2001-01-01'::th3index, 590464338553208831::BIGINT::h3index)),
+       startValue(tEq(590464338553208831::BIGINT::h3index, '831c02fffffffff@2001-01-01'::th3index));
+----
+true	true
+
+query II
+SELECT startValue(tNe('831c02fffffffff@2001-01-01'::th3index, 590464338553208831::BIGINT::h3index)),
+       startValue(tNe(612544986753269759::BIGINT::h3index, '831c02fffffffff@2001-01-01'::th3index));
+----
+false	true
