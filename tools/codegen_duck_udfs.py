@@ -175,9 +175,21 @@ def classify(f):
             return params[:-1], lastc
     return params, None
 
-def arg_type(canon):
-    """(duck_type, marshal_expr_or_None) for an input param, else None if unmappable."""
+def arg_type(canon, fname=None):
+    """(duck_type, marshal_expr_or_None) for an input param, else None if unmappable.
+
+    `fname` is what resolves a by-value cell id, which the type alone cannot: `uint64_t`
+    is the h3index and quadbin cell id, `unsigned long` the s2cell one, and both spellings
+    are equally an ordinary hash seed. Only the owning function says which, so the ARGUMENT
+    side reads the scope exactly as `ret_type` already reads it for a bare cell-id RETURN.
+    A caller that passes no name leaves the cell id unmappable, so no other shape's view of
+    a uint64 changes.
+    """
     nc = norm(canon); b = base(canon)
+    if b in CELL_UINT and "*" not in nc and fname:
+        sc = reg_scope(fname)
+        if sc and sc[0] == "types" and len(sc[1]) == 1 and sc[1][0] in CELL_BASEVAL:
+            return (CELL_BASEVAL[sc[1][0]], None)
     if b in PTR_IN and nc.endswith("*"):
         return PTR_IN[b]
     if b in SCALAR and "*" not in nc:
@@ -309,14 +321,12 @@ def supported(f):
     if ret_type(f, out) is None:
         return "ret:" + norm(f["returnType"]["canonical"])
     for p in in_params:
-        # A by-value uint64 seed of a *_hash_extended fn has no generic arg_type mapping
-        # (uint64 is kept out of SCALAR so it does not shadow the cell-id comparisons),
-        # but it IS marshalled by shape_binary via SCALAR_ARG. Accept it ONLY for the
-        # *_hash_extended functions so temporal_hash_extended is emittable; a uint64 in
-        # any OTHER function is a cell-id base value that must STAY rejected here, else a
-        # second (generic ever/always) shape shadows the specialized cell comparison and
-        # emits a duplicate Gen_ body (redefinition).
-        if arg_type(p["canonical"]) is None and not (
+        # A by-value uint64 is either a cell id or a hash seed, and the two need opposite
+        # answers. `arg_type` resolves the cell id from the function's own scope, which
+        # leaves the *_hash_extended seed: it has no cell scope, so it stays unmappable
+        # here even though shape_binary marshals it via SCALAR_ARG. Accept it for those
+        # functions alone.
+        if arg_type(p["canonical"], f["name"]) is None and not (
                 base(p["canonical"]) in SCALAR_ARG and "*" not in norm(p["canonical"])
                 and name.endswith("_hash_extended")):
             return "arg:" + norm(p["canonical"])
@@ -1167,6 +1177,30 @@ def shape_arg(p):
         return VARCHAR_ARG[bb]
     return None
 
+def scalar_arg_for(f, p):
+    """The SCALAR_ARG triple for a by-value argument, with a cell id typed as its own cell type.
+
+    `SCALAR_ARG["uint64_t"]` is the `*_hash_extended` SEED, a native UBIGINT. A `Tcell<T>`
+    cell id is the same C type and a DIFFERENT DuckDB one, and only the function's own
+    registration scope separates them — which is what `arg_type` and the out-param branch
+    of `shape_binary` already read. Taking the seed's triple for a cell id registers
+    `eEq(th3index, UBIGINT)` where the family declares `eEq(th3index, h3index)`, so the
+    call no longer resolves. Only the DuckDB type moves; the C local and the marshal
+    expression are the seed's, because the value IS a uint64 either way.
+    """
+    t = shape_arg(p)
+    if t is None:
+        return None
+    if base(p["canonical"]) in CELL_UINT and "*" not in norm(p["canonical"]):
+        sc = reg_scope(f["name"])
+        if sc and sc[0] == "types" and len(sc[1]) == 1 and sc[1][0] in CELL_BASEVAL:
+            # A cell type is a BIGINT alias, so its vector is int64_t and the seed's
+            # uint64_t local reads it as the wrong physical type ("Expected vector of
+            # type UINT64, but found vector of type INT64"). The cell id keeps its bits
+            # across the cast, which is what the return side already writes back with.
+            return (CELL_BASEVAL[sc[1][0]], "int64_t", "(uint64_t) a2")
+    return t
+
 def shape_binary(f):
     """Binary Temporal + by-value-scalar shape (BinaryExecutor). Same correctness
     rules as shape_emittable: scalar return OR generic same-type temporal return."""
@@ -1185,7 +1219,7 @@ def shape_binary(f):
     elif is_baseptr2:                                 # marshal via PTR_IN (BlobTo<Base>) + free after
         arg2 = (PTR_IN[b2][0], "string_t", "__PTRFREE__:" + b2)
     else:
-        arg2 = SCALAR_ARG[b2]
+        arg2 = scalar_arg_for(f, ins[1])
     if out is not None:
         # Out-param fold: bool <name>(Temporal, <scalar>, <base *out>) -> the folded base value.
         # The inherited Temporal<T> value accessor valueN (meos_temporal_accessor). Only a
@@ -2456,7 +2490,8 @@ def shape_scalar_first(f):
     if not is_text1 and (b1 not in SCALAR_ARG or "*" in n1): return None
     if base(ins[1]["canonical"]) != "Temporal" or not norm(ins[1]["canonical"]).endswith("*"): return None
     if reg_scope(f["name"]) is None: return None
-    arg1 = ("LogicalType::VARCHAR", "string_t", "__TEXT__") if is_text1 else SCALAR_ARG[b1]
+    arg1 = (("LogicalType::VARCHAR", "string_t", "__TEXT__") if is_text1
+            else scalar_arg_for(f, ins[0]))
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
     if rb == "Temporal" and rn.endswith("*"):       return ("temporal", "MD_TEMPORAL", arg1)
     if rb in BYVAL_RET and "*" not in rn:           return ("scalar:" + rb, scalar_ret_duck(f), arg1)
@@ -3204,13 +3239,12 @@ def shape_h3_prefilter(f):
     if (b0 == "Set" and ptr(ins[0]) and b1 == "Temporal" and ptr(ins[1])
             and rb in ("int", "int32_t") and "*" not in rn):
         return "settemp_ebool"
-    if rb in ("int", "int32_t") and "*" not in rn:
-        sc = reg_scope(f["name"])
-        cell_ok = sc and sc[0] == "types" and len(sc[1]) == 1 and sc[1][0] in CELL_BASEVAL
-        if cell_ok and b0 == "uint64_t" and not ptr(ins[0]) and b1 == "Temporal" and ptr(ins[1]):
-            return "cell_l:" + sc[1][0]
-        if cell_ok and b0 == "Temporal" and ptr(ins[0]) and b1 == "uint64_t" and not ptr(ins[1]):
-            return "cell_r:" + sc[1][0]
+    # The cell-vs-temporal comparisons belong to the GENERIC binary shape, which reaches
+    # them now that `arg_type` resolves a by-value cell id from the function's own scope.
+    # Claiming them here too emits a second body under the same name, and the compiler is
+    # what says so: `redefinition of Gen_ever_eq_h3index_th3index`. Yielding them also
+    # widens the surface, since this pass fires for H3 alone while the generic shape serves
+    # quadbin and s2cell on the same rule.
     return None
 
 def emit_h3_prefilter(f, kind):
@@ -4663,7 +4697,7 @@ def main():
     print("\n=== sample generated registrations (first 6) ===")
     for f in emittable[:6]:
         ins, out = classify(f)
-        argts = ", ".join(arg_type(p["canonical"])[0] for p in ins)
+        argts = ", ".join(arg_type(p["canonical"], f["name"])[0] for p in ins)
         rt, kind = ret_type(f, out)
         print(f'  // {f["sqlfn"]}  <- {f["name"]}  ({kind})')
         print(f'  RegisterSerializedScalarFunction(loader, ScalarFunction("{f["sqlfn"]}", '

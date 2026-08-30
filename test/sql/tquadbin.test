@@ -121,3 +121,62 @@ query I
 SELECT typeof(startValue(cellToBoundary(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'))));
 ----
 GEOMETRY
+
+# ── a static cell compares against the temporal cell in either operand order ──
+# The generic binary shape reaches these once a by-value cell id resolves to its own
+# registered type; before that quadbin declared none of them, so every query below is
+# new surface. h3_prefilter.test holds the H3 counterpart.
+
+query I
+SELECT eEq(quadbinTileToCell(1,0,1), tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'));
+----
+true
+
+query I
+SELECT eEq(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), quadbinTileToCell(1,0,1));
+----
+true
+
+# A cell the value never takes: ever-equal is false, which is what separates the
+# comparison from one that answers true whatever it is handed.
+query I
+SELECT eEq(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), quadbinTileToCell(2,1,2));
+----
+false
+
+query II
+SELECT aEq(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), quadbinTileToCell(1,0,1)),
+       aEq(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), quadbinTileToCell(2,1,2));
+----
+true	false
+
+query II
+SELECT eNe(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), quadbinTileToCell(2,1,2)),
+       eNe(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), quadbinTileToCell(1,0,1));
+----
+true	false
+
+query II
+SELECT aNe(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), quadbinTileToCell(2,1,2)),
+       aNe(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), quadbinTileToCell(1,0,1));
+----
+true	false
+
+# ── the temporal comparison lifts the cell over the value's own time ──
+# Read through startValue so the assertion carries no session timezone.
+query I
+SELECT typeof(tEq(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), quadbinTileToCell(1,0,1)));
+----
+tbool
+
+query II
+SELECT startValue(tEq(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), quadbinTileToCell(1,0,1))),
+       startValue(tEq(quadbinTileToCell(1,0,1), tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01')));
+----
+true	true
+
+query II
+SELECT startValue(tEq(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), quadbinTileToCell(2,1,2))),
+       startValue(tNe(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), quadbinTileToCell(2,1,2)));
+----
+false	true
