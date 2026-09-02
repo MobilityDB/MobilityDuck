@@ -63,7 +63,7 @@ true
 query I
 SELECT asMFJSON(tpcpoint '2300000007000000000000000000F03F00000000000000400000000000000840000000@2024-01-01');
 ----
-{"type":"MovingPCPoint","coordinates":[[1,2,3]],"datetimes":["2024-01-01T00:00:00+01"],"interpolation":"None"}
+{"type":"MovingPCPoint","coordinates":[[1,2,3]],"datetimes":["2024-01-01T00:00:00+01:00"],"interpolation":"None"}
 
 # The contrast that gives the answer above its meaning: a pcid no row states
 # resolves to nothing, so the engine reads a coordinate through a schema it was
