@@ -21,7 +21,6 @@
 extern "C" {
     #include <meos.h>
     #include <meos_pose.h>
-    #include <meos_posechain.h>
     #include <meos_internal.h>
 }
 

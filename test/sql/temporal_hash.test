@@ -11,7 +11,7 @@ require mobilityduck
 query I
 SELECT hash(tint '1@2000-01-01');
 ----
-157457912
+157457943
 
 query I
 SELECT typeof(hash(tint '1@2000-01-01'));
@@ -23,7 +23,7 @@ UINTEGER
 query I
 SELECT hashExtended(tint '1@2000-01-01', 0);
 ----
-11445401048662056440
+11445401048662056471
 
 query I
 SELECT typeof(hashExtended(tint '1@2000-01-01', 0));
@@ -34,10 +34,10 @@ UBIGINT
 query I
 SELECT hashExtended(tint '1@2000-01-01', 42);
 ----
-10824501823241357556
+10824501823241357587
 
 # inherited over every temporal family via Temporal<T>
 query I
 SELECT hashExtended(tfloat '1.5@2000-01-01', 42);
 ----
-17681145013286498633
+17681145013286498664
