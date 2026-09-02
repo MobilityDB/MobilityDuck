@@ -748,6 +748,16 @@ SIG_TEMPORAL_ACC = {
     "trgeometry": "TrgeometryTypes::trgeometry()",
     "tposechain": "PosechainTypes::tposechain()",
 }
+# The container side of a two-operand restriction, keyed the same way: the SQL type name a
+# `sqlSignatures` entry carries. Time containers and value spans sit in one map because the
+# catalog names them the same way, and which of them an overload takes is the catalog's
+# statement rather than something a caller decides.
+SIG_CONTAINER_ACC = {
+    "tstzspan":   "SpanTypes::tstzspan()",       "tstzset":    "SetTypes::tstzset()",
+    "tstzspanset": "SpansetTypes::tstzspanset()",
+    "intspan":    "SpanTypes::intspan()",        "bigintspan": "SpanTypes::bigintspan()",
+    "floatspan":  "SpanTypes::floatspan()",      "datespan":   "SpanTypes::datespan()",
+}
 def sig_declared_accs(f):
     """The exact temporal-operand types this GENERIC (`Temporal *`) function is CREATE
     FUNCTION'd for, read from the catalog's per-overload `sqlSignatures` (the SoT) — so the
@@ -4024,19 +4034,28 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         names = reg_names(f, sqlfn, aliases)
         TSTZ_CONT = {"Span": "SpanTypes::tstzspan()", "Set": "SetTypes::tstzset()",
                      "SpanSet": "SpansetTypes::tstzspanset()"}
-        if flav == "num":                       # tnumber value span, paired (Span only)
-            pairs = [(NUMSPAN_PAIR[a], a) for a in reg_scope(fn)[1] if a in NUMSPAN_PAIR]
-        else:
-            # tstz time container, fixed. The BLANKET set is right only for the GENERIC
-            # `temporal_*` function; a family that owns its own time restriction — trgeometry
-            # does, because its varlena appends the reference geometry and the generic walker
-            # would drop it — must register over ITS OWN type alone. Registering the family
-            # function over every temporal type points e.g. `minusTime(tint, tstzset)` at
-            # `trgeometry_minus_tstzset`, which reads a tint blob as a pose skeleton plus a
-            # trailing geometry. The `num` branch above already scopes by name this way.
-            sc = reg_scope(fn)
-            accs = sc[1] if (sc and sc[0] == "types" and sc[1]) else ALL_TEMPORAL_ACCS
-            pairs = [(TSTZ_CONT[cont], a) for a in accs]
+        # THE OPERAND PAIRING IS THE CATALOG'S. Each `sqlSignatures` entry IS one CREATE
+        # FUNCTION overload, so its two argument types name the temporal type and the
+        # container that pair, for exactly the overloads the extension declares.
+        # Reading that pairing off the function NAME answers a different question and gets
+        # three things wrong at once. It cannot see which temporal types an overload set
+        # covers, so the time arm took a BLANKET list that omits tjsonb, tpcpatch and
+        # tpcpoint, while the value arm took a two-entry table that omits tbigint, having
+        # no bigintspan row at all. And it cannot see that a family owning its own time
+        # restriction — trgeometry does, its varlena appending the reference geometry the
+        # generic walker would drop — must register over its own type alone, so that had
+        # to be re-derived from a type scope beside it. The catalog states all three where
+        # the SQL is declared, which is the same move that retired the class-prefix list
+        # from the array-return shape.
+        pairs = []
+        for s in f.get("sqlSignatures") or ():
+            args = s.get("args") or ()
+            if len(args) != 2:
+                continue
+            tname, cname = (args[1], args[0]) if span_first else (args[0], args[1])
+            tacc, cacc = SIG_TEMPORAL_ACC.get(tname), SIG_CONTAINER_ACC.get(cname)
+            if tacc and cacc:
+                pairs.append((cacc, tacc))
         for spacc, tacc in pairs:
             sig = "{%s, %s}" % (tacc, spacc) if not span_first else "{%s, %s}" % (spacc, tacc)
             rett = tacc if retk == "T" else "LogicalType::BOOLEAN"   # at/minus span preserves type
