@@ -135,6 +135,36 @@ SCALAR = {
     "TimestampTz":  ("LogicalType::TIMESTAMP_TZ", "timestamp_tz_t"),
     "DateADT":      ("LogicalType::DATE",     "date_t"),
 }
+# The SCALAR SQL return types, keyed by the name the catalog reads out of the CREATE FUNCTION
+# `RETURNS` clause. A registration answers the type MobilityDB DECLARES, not the type the C kernel
+# happens to return: one SQL name is commonly served by several typed kernels whose C returns differ
+# while every declaration agrees, so keying on C splits one declared type into several registered
+# ones — nad_tint_tint / nad_tbigint_tbigint / nad_tfloat_tfloat return int / int64 / double against
+# `nearestApproachDistance(...) RETURNS float` for all three.
+# The spellings are the ones the catalog actually carries, counted over it rather than assumed: a
+# type is written several ways in the SQL sources (float 115, float8 11, double precision 6;
+# integer 98, int 2), and a map missing one silently leaves those functions on the C type.
+# Deliberately NOT SQL_BASE_TO_DUCK: that map carries the container types, which these two scalar
+# paths must never register. `cstring` / `internal` / `record` are I/O and plumbing shapes with no
+# scalar rendering and are excluded for the same reason.
+# The C returns whose DuckDB rendering OUTRANKS the SQL declaration, because PostgreSQL has no
+# unsigned SQL type to declare and says `integer`/`bigint` for want of one (SCALAR_RET_CPP states
+# the consequence: a signed registration is range-checked by DuckDB and flips the sign of a hash
+# at or above 2**31). Derived from the C type, not from a name.
+UNSIGNED_C_RET = {"uint32_t", "uint64_t"}
+# The declared scalar types whose conversion from a C return is a PLAIN CAST, and the executor C++
+# type each one needs. The declaration outranks the C type only here: a declared text / date /
+# timestamp needs a marshaller (TakeText, FromMeosDate, TakeTimestamp), which the per-C-type
+# branches already answer, and a cast would discard.
+NUMERIC_DUCK_CPP = {"LogicalType::INTEGER": "int32_t", "LogicalType::BIGINT": "int64_t",
+                    "LogicalType::DOUBLE": "double", "LogicalType::BOOLEAN": "bool"}
+NUMERIC_C_RET = {"int", "int32_t", "int64_t", "double", "bool"}
+SQL_SCALAR_RET = {"integer": "LogicalType::INTEGER", "int": "LogicalType::INTEGER",
+                  "bigint": "LogicalType::BIGINT",
+                  "float": "LogicalType::DOUBLE", "float8": "LogicalType::DOUBLE",
+                  "double precision": "LogicalType::DOUBLE",
+                  "boolean": "LogicalType::BOOLEAN", "text": "LogicalType::VARCHAR",
+                  "date": "LogicalType::DATE", "timestamptz": "LogicalType::TIMESTAMP_TZ"}
 OUTPRIM = {"int *": "LogicalType::INTEGER", "int64_t *": "LogicalType::BIGINT",
            "uint64_t *": "LogicalType::BIGINT",
            "double *": "LogicalType::DOUBLE", "bool *": "LogicalType::BOOLEAN"}
@@ -203,11 +233,26 @@ def arg_type(canon, fname=None):
         return ("LogicalType::VARCHAR", None)
     return None
 
+def outprim_ret3(f, out_canon):
+    """(registration LogicalType, out-param local C type, executor RET) for a scalar out-param —
+    the out-param counterpart of scalar_ret4, and ONE decision for the same reason: ret_type and
+    emit_body_outparam must not disagree about the type, or DuckDB meets the wrong vector.
+
+    The declared SQL type outranks the C pointer under the same two conditions as scalar_ret4 (a
+    plain numeric cast, and not an unsigned C quantity PostgreSQL can only declare signed)."""
+    n = norm(out_canon)
+    cloc, cpp = OUTPARAM_LOCAL[n]
+    sr = SQL_SCALAR_RET.get(f.get("sqlReturnType"))
+    if sr and sr in NUMERIC_DUCK_CPP and base(out_canon) not in UNSIGNED_C_RET \
+            and cpp in NUMERIC_DUCK_CPP.values():
+        return (sr, cloc, NUMERIC_DUCK_CPP[sr])
+    return (OUTPRIM[n], cloc, cpp)
+
 def ret_type(f, out_canon):
     """(duck_ret_type, kind) where kind in {ptr,scalar,outprim,outptr}. None if unmappable."""
     if out_canon is not None:
         n = norm(out_canon)
-        if n in OUTPRIM:           return (OUTPRIM[n], "outprim")
+        if n in OUTPRIM:           return (outprim_ret3(f, out_canon)[0], "outprim")
         if base(out_canon) in PTR_RET:  return (PTR_RET[base(out_canon)][0], "outptr")
         ob = outptr_base(out_canon)
         if ob:                          return (PTR_RET[ob][0], "outptr")
@@ -381,34 +426,56 @@ def is_pred_int(f):
     return (re.match(r'(ever|always)_', f["name"]) is not None
             or re.search(r'_rel_(ever|always)$', f.get("group") or "") is not None)
 
-def scalar_ret_duck(f):
-    """DuckDB registration return type for a by-value scalar return."""
-    if is_pred_int(f):
-        return "LogicalType::BOOLEAN"
-    rb = base(f["returnType"]["canonical"])
-    if rb == "Interval":     return "LogicalType::INTERVAL"
-    if rb == "TimestampTz":  return "LogicalType::TIMESTAMP_TZ"
-    if rb == "DateADT":      return "LogicalType::DATE"
-    if rb in ("text", "char"): return "LogicalType::VARCHAR"
-    return SCALAR_RET_CPP[rb][1]
+def scalar_ret4(f):
+    """(registration LogicalType, call-var C type, executor RET, return expr) for a by-value
+    scalar return — ONE decision, so the type a registration DECLARES and the type its executor
+    WRITES cannot disagree. DuckDB raises `Expected vector of type X, but found vector of type Y`
+    when they do, so scalar_ret_duck and scalar_emit3 are both projections of this tuple.
 
-def scalar_emit3(f):
-    """(call_var_ctype, executor_RET, return_expr) — for ever_/always_ the MEOS call
-    yields int but the UDF returns bool via (r != 0); an owned MEOS Interval* is
-    converted+freed via TakeInterval (preamble helper)."""
+    The catalog's declared SQL return type outranks the C one for a NUMERIC return, read first
+    exactly as ret_temporal_type reads it for a temporal return: several typed kernels commonly
+    serve one SQL name with differing C returns while every declaration agrees, and keying on C
+    splits one declared type into several registered ones. The conversion is a plain cast, so the
+    executor carries the declared type while the MEOS call keeps its own.
+
+    TWO CASES KEEP THE C TYPE, each for a stated reason and neither by name:
+    - an UNSIGNED C return (UNSIGNED_C_RET). PostgreSQL has no unsigned SQL type, so a uint32 hash
+      is DECLARED `integer` there for want of one; registering that signed makes DuckDB range-check
+      the cast and flip the sign of every hash at or above 2**31 (see SCALAR_RET_CPP). The
+      declaration records PostgreSQL's limitation, the C type records the quantity.
+    - a return needing a MARSHALLER rather than a cast (Interval / TimestampTz / DateADT / text /
+      char). Those branches already answer the declared type, and their conversion is a helper call
+      a numeric cast would discard."""
     if is_pred_int(f):
-        return ("int32_t", "bool", "(r != 0)")
+        return ("LogicalType::BOOLEAN", "int32_t", "bool", "(r != 0)")
     rb = base(f["returnType"]["canonical"])
-    if rb == "Interval":     return ("MeosInterval *", "interval_t", "TakeInterval(r)")
-    if rb == "TimestampTz":  return ("TimestampTz", "timestamp_tz_t", "TakeTimestamp(r)")
-    if rb == "DateADT":      return ("DateADT", "date_t", "FromMeosDate((int32_t) r)")
-    if rb == "text":         return ("text *", "string_t", "TakeText(result, r)")
+    if rb == "Interval":
+        return ("LogicalType::INTERVAL", "MeosInterval *", "interval_t", "TakeInterval(r)")
+    if rb == "TimestampTz":
+        return ("LogicalType::TIMESTAMP_TZ", "TimestampTz", "timestamp_tz_t", "TakeTimestamp(r)")
+    if rb == "DateADT":
+        return ("LogicalType::DATE", "DateADT", "date_t", "FromMeosDate((int32_t) r)")
+    if rb == "text":
+        return ("LogicalType::VARCHAR", "text *", "string_t", "TakeText(result, r)")
     if rb == "char":         # const char* = borrowed/static (no free); char* = owned (free)
         if "const" in (f["returnType"]["canonical"] or ""):
-            return ("const char *", "string_t", "StringVector::AddString(result, r)")
-        return ("char *", "string_t", "TakeCString(result, r)")
+            return ("LogicalType::VARCHAR", "const char *", "string_t",
+                    "StringVector::AddString(result, r)")
+        return ("LogicalType::VARCHAR", "char *", "string_t", "TakeCString(result, r)")
     ct = SCALAR_RET_CPP[rb][0]
-    return (ct, ct, "r")
+    sr = SQL_SCALAR_RET.get(f.get("sqlReturnType"))
+    if sr and sr in NUMERIC_DUCK_CPP and rb not in UNSIGNED_C_RET and rb in NUMERIC_C_RET:
+        cpp = NUMERIC_DUCK_CPP[sr]
+        return (sr, ct, cpp, f"({cpp}) r")
+    return (SCALAR_RET_CPP[rb][1], ct, ct, "r")
+
+def scalar_ret_duck(f):
+    """DuckDB registration return type for a by-value scalar return."""
+    return scalar_ret4(f)[0]
+
+def scalar_emit3(f):
+    """(call_var_ctype, executor_RET, return_expr), paired with scalar_ret_duck by construction."""
+    return scalar_ret4(f)[1:]
 
 # By-value/owned-scalar return marshalling keyed by the MEOS return base type — used by the
 # container (set/span) u_scalar branches so they handle time/Interval returns like the
@@ -1614,7 +1681,7 @@ def emit_body_outparam(f, dret, kind, vary, tail, sig, out_canon):
         decl, rett = f"{ob} *o = NULL;", "string_t"
         give, empty = "return %s;" % (PTR_RET[ob][1] % "o"), "return string_t();"
     else:
-        cloc, cpp = OUTPARAM_LOCAL[norm(out_canon)]
+        _dt, cloc, cpp = outprim_ret3(f, out_canon)   # paired with ret_type by construction
         decl, rett = f"{cloc} o = ({cloc}) 0;", cpp
         give, empty = f"return ({cpp}) o;", f"return ({cpp}) 0;"
     if vary:
@@ -2299,32 +2366,48 @@ def shape_temporal_box(f):
     if b1 == "Temporal" and b0 in BOX_MARSH: return (f"tb_l:{b0}:{ret}", sc[1])  # (Box, Temporal)
     return None
 
+def box_ret3(f, ret_key):
+    """(registration LogicalType, MEOS-call C type, executor RET) for a Temporal x box scalar —
+    the third paired decision, for the same reason as scalar_ret4 and outprim_ret3.
+
+    The C type stays on the CALL and on the sentinel test: the no-distance sentinel is the maximum
+    of the type MEOS returns, so testing it against the declared type would compare against the
+    wrong maximum. The conversion happens after the test."""
+    ccpp = "bool" if ret_key == "bool" else SCALAR_RET_CPP[ret_key][0]
+    dflt = "LogicalType::BOOLEAN" if ret_key == "bool" else SCALAR_RET_CPP[ret_key][1]
+    sr = SQL_SCALAR_RET.get(f.get("sqlReturnType"))
+    if sr and sr in NUMERIC_DUCK_CPP and ret_key not in UNSIGNED_C_RET and ret_key in NUMERIC_C_RET:
+        return (sr, ccpp, NUMERIC_DUCK_CPP[sr])
+    return (dflt, ccpp, ccpp)
+
 def emit_temporal_box(f, kind):
     name = f["name"]; parts = kind.split(":")
     side, box = parts[0], parts[1]
     sentinel = parts[2] == "sentinel"
     ret = parts[-1]
     blobto = BOX_MARSH[box][0]
-    cpp = "bool" if ret == "bool" else SCALAR_RET_CPP[ret][0]
+    _dt, cpp, ecpp = box_ret3(f, ret)   # paired with the registration by construction
     call = f"{name}(t, bx)" if side == "tb_r" else f"{name}(bx, t)"
     marshal = (f"            Temporal *t = BlobToTemporal(a);\n            {box} *bx = {blobto}(b);\n"
                if side == "tb_r" else
                f"            {box} *bx = {blobto}(a);\n            Temporal *t = BlobToTemporal(b);\n")
     frees = "free(t); free(bx);" if side == "tb_r" else "free(bx); free(t);"
     if not sentinel:
-        body = f"{marshal}            {cpp} r = {call};\n            {frees}\n            return r;"
+        body = (f"{marshal}            {cpp} r = {call};\n            {frees}\n"
+                f"            return ({ecpp}) r;")
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
-                f"    BinaryExecutor::Execute<string_t, string_t, {cpp}>(args.data[0], args.data[1], result, args.size(),\n"
+                f"    BinaryExecutor::Execute<string_t, string_t, {ecpp}>(args.data[0], args.data[1], result, args.size(),\n"
                 f"        [&](string_t a, string_t b) {{\n{body}\n        }});\n}}\n")
-    # The maximum of the return type says there is no distance, which is NULL here.
+    # The maximum of the type MEOS RETURNS says there is no distance, which is NULL here; the
+    # conversion to the declared type happens after that test, never before it.
     body = (f"{marshal}            {cpp} r = {call};\n            {frees}\n"
-            f"            if (r == std::numeric_limits<{cpp}>::max()) {{ mask.SetInvalid(idx); return {cpp}(); }}\n"
-            f"            return r;")
+            f"            if (r == std::numeric_limits<{cpp}>::max()) {{ mask.SetInvalid(idx); return {ecpp}(); }}\n"
+            f"            return ({ecpp}) r;")
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
-            f"    BinaryExecutor::ExecuteWithNulls<string_t, string_t, {cpp}>(args.data[0], args.data[1], result, args.size(),\n"
-            f"        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> {cpp} {{\n{body}\n        }});\n}}\n")
+            f"    BinaryExecutor::ExecuteWithNulls<string_t, string_t, {ecpp}>(args.data[0], args.data[1], result, args.size(),\n"
+            f"        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> {ecpp} {{\n{body}\n        }});\n}}\n")
 
 # Temporal + span -> bool: topological predicates across the value (numspan) or time
 # (tstzspan) dimension. numspan PAIRS to the tnumber's value type; tstzspan is fixed and
@@ -3919,7 +4002,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         kparts = kind.split(":")
         box_acc = BOX_MARSH[kparts[1]][1]
         ret_key = kparts[-1]
-        dret = "LogicalType::BOOLEAN" if ret_key == "bool" else SCALAR_RET_CPP[ret_key][1]
+        dret = box_ret3(f, ret_key)[0]
         for a in accs:
             sig = "{%s, %s}" % (a, box_acc) if kind.startswith("tb_r:") else "{%s, %s}" % (box_acc, a)
             for nm in names:

@@ -353,7 +353,7 @@ static void Gen_above_tspatial_tspatial(DataChunk &args, ExpressionState &, Vect
             Temporal *t2 = BlobToTemporal(in2);
             bool r = above_tspatial_tspatial(t1, t2);
             free(t1); free(t2);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -365,7 +365,7 @@ static void Gen_after_tspatial_tspatial(DataChunk &args, ExpressionState &, Vect
             Temporal *t2 = BlobToTemporal(in2);
             bool r = after_tspatial_tspatial(t1, t2);
             free(t1); free(t2);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -377,7 +377,7 @@ static void Gen_back_tspatial_tspatial(DataChunk &args, ExpressionState &, Vecto
             Temporal *t2 = BlobToTemporal(in2);
             bool r = back_tspatial_tspatial(t1, t2);
             free(t1); free(t2);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -389,7 +389,7 @@ static void Gen_before_tspatial_tspatial(DataChunk &args, ExpressionState &, Vec
             Temporal *t2 = BlobToTemporal(in2);
             bool r = before_tspatial_tspatial(t1, t2);
             free(t1); free(t2);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -401,7 +401,7 @@ static void Gen_below_tspatial_tspatial(DataChunk &args, ExpressionState &, Vect
             Temporal *t2 = BlobToTemporal(in2);
             bool r = below_tspatial_tspatial(t1, t2);
             free(t1); free(t2);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -413,7 +413,7 @@ static void Gen_front_tspatial_tspatial(DataChunk &args, ExpressionState &, Vect
             Temporal *t2 = BlobToTemporal(in2);
             bool r = front_tspatial_tspatial(t1, t2);
             free(t1); free(t2);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -425,7 +425,7 @@ static void Gen_left_tspatial_tspatial(DataChunk &args, ExpressionState &, Vecto
             Temporal *t2 = BlobToTemporal(in2);
             bool r = left_tspatial_tspatial(t1, t2);
             free(t1); free(t2);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -437,7 +437,7 @@ static void Gen_overabove_tspatial_tspatial(DataChunk &args, ExpressionState &, 
             Temporal *t2 = BlobToTemporal(in2);
             bool r = overabove_tspatial_tspatial(t1, t2);
             free(t1); free(t2);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -449,7 +449,7 @@ static void Gen_overafter_tspatial_tspatial(DataChunk &args, ExpressionState &, 
             Temporal *t2 = BlobToTemporal(in2);
             bool r = overafter_tspatial_tspatial(t1, t2);
             free(t1); free(t2);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -461,7 +461,7 @@ static void Gen_overback_tspatial_tspatial(DataChunk &args, ExpressionState &, V
             Temporal *t2 = BlobToTemporal(in2);
             bool r = overback_tspatial_tspatial(t1, t2);
             free(t1); free(t2);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -473,7 +473,7 @@ static void Gen_overbefore_tspatial_tspatial(DataChunk &args, ExpressionState &,
             Temporal *t2 = BlobToTemporal(in2);
             bool r = overbefore_tspatial_tspatial(t1, t2);
             free(t1); free(t2);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -485,7 +485,7 @@ static void Gen_overbelow_tspatial_tspatial(DataChunk &args, ExpressionState &, 
             Temporal *t2 = BlobToTemporal(in2);
             bool r = overbelow_tspatial_tspatial(t1, t2);
             free(t1); free(t2);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -497,7 +497,7 @@ static void Gen_overfront_tspatial_tspatial(DataChunk &args, ExpressionState &, 
             Temporal *t2 = BlobToTemporal(in2);
             bool r = overfront_tspatial_tspatial(t1, t2);
             free(t1); free(t2);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -509,7 +509,7 @@ static void Gen_overleft_tspatial_tspatial(DataChunk &args, ExpressionState &, V
             Temporal *t2 = BlobToTemporal(in2);
             bool r = overleft_tspatial_tspatial(t1, t2);
             free(t1); free(t2);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -521,7 +521,7 @@ static void Gen_overright_tspatial_tspatial(DataChunk &args, ExpressionState &, 
             Temporal *t2 = BlobToTemporal(in2);
             bool r = overright_tspatial_tspatial(t1, t2);
             free(t1); free(t2);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -533,7 +533,7 @@ static void Gen_right_tspatial_tspatial(DataChunk &args, ExpressionState &, Vect
             Temporal *t2 = BlobToTemporal(in2);
             bool r = right_tspatial_tspatial(t1, t2);
             free(t1); free(t2);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -545,7 +545,7 @@ static void Gen_above_stbox_tspatial(DataChunk &args, ExpressionState &, Vector 
             Temporal *t = BlobToTemporal(b);
             bool r = above_stbox_tspatial(bx, t);
             free(bx); free(t);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -557,7 +557,7 @@ static void Gen_above_tspatial_stbox(DataChunk &args, ExpressionState &, Vector 
             STBox *bx = BlobToStbox(b);
             bool r = above_tspatial_stbox(t, bx);
             free(t); free(bx);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -569,7 +569,7 @@ static void Gen_after_stbox_tspatial(DataChunk &args, ExpressionState &, Vector 
             Temporal *t = BlobToTemporal(b);
             bool r = after_stbox_tspatial(bx, t);
             free(bx); free(t);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -581,7 +581,7 @@ static void Gen_after_tspatial_stbox(DataChunk &args, ExpressionState &, Vector 
             STBox *bx = BlobToStbox(b);
             bool r = after_tspatial_stbox(t, bx);
             free(t); free(bx);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -593,7 +593,7 @@ static void Gen_back_stbox_tspatial(DataChunk &args, ExpressionState &, Vector &
             Temporal *t = BlobToTemporal(b);
             bool r = back_stbox_tspatial(bx, t);
             free(bx); free(t);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -605,7 +605,7 @@ static void Gen_back_tspatial_stbox(DataChunk &args, ExpressionState &, Vector &
             STBox *bx = BlobToStbox(b);
             bool r = back_tspatial_stbox(t, bx);
             free(t); free(bx);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -617,7 +617,7 @@ static void Gen_before_stbox_tspatial(DataChunk &args, ExpressionState &, Vector
             Temporal *t = BlobToTemporal(b);
             bool r = before_stbox_tspatial(bx, t);
             free(bx); free(t);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -629,7 +629,7 @@ static void Gen_before_tspatial_stbox(DataChunk &args, ExpressionState &, Vector
             STBox *bx = BlobToStbox(b);
             bool r = before_tspatial_stbox(t, bx);
             free(t); free(bx);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -641,7 +641,7 @@ static void Gen_below_stbox_tspatial(DataChunk &args, ExpressionState &, Vector 
             Temporal *t = BlobToTemporal(b);
             bool r = below_stbox_tspatial(bx, t);
             free(bx); free(t);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -653,7 +653,7 @@ static void Gen_below_tspatial_stbox(DataChunk &args, ExpressionState &, Vector 
             STBox *bx = BlobToStbox(b);
             bool r = below_tspatial_stbox(t, bx);
             free(t); free(bx);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -665,7 +665,7 @@ static void Gen_front_stbox_tspatial(DataChunk &args, ExpressionState &, Vector 
             Temporal *t = BlobToTemporal(b);
             bool r = front_stbox_tspatial(bx, t);
             free(bx); free(t);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -677,7 +677,7 @@ static void Gen_front_tspatial_stbox(DataChunk &args, ExpressionState &, Vector 
             STBox *bx = BlobToStbox(b);
             bool r = front_tspatial_stbox(t, bx);
             free(t); free(bx);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -689,7 +689,7 @@ static void Gen_left_stbox_tspatial(DataChunk &args, ExpressionState &, Vector &
             Temporal *t = BlobToTemporal(b);
             bool r = left_stbox_tspatial(bx, t);
             free(bx); free(t);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -701,7 +701,7 @@ static void Gen_left_tspatial_stbox(DataChunk &args, ExpressionState &, Vector &
             STBox *bx = BlobToStbox(b);
             bool r = left_tspatial_stbox(t, bx);
             free(t); free(bx);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -713,7 +713,7 @@ static void Gen_overabove_stbox_tspatial(DataChunk &args, ExpressionState &, Vec
             Temporal *t = BlobToTemporal(b);
             bool r = overabove_stbox_tspatial(bx, t);
             free(bx); free(t);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -725,7 +725,7 @@ static void Gen_overabove_tspatial_stbox(DataChunk &args, ExpressionState &, Vec
             STBox *bx = BlobToStbox(b);
             bool r = overabove_tspatial_stbox(t, bx);
             free(t); free(bx);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -737,7 +737,7 @@ static void Gen_overafter_stbox_tspatial(DataChunk &args, ExpressionState &, Vec
             Temporal *t = BlobToTemporal(b);
             bool r = overafter_stbox_tspatial(bx, t);
             free(bx); free(t);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -749,7 +749,7 @@ static void Gen_overafter_tspatial_stbox(DataChunk &args, ExpressionState &, Vec
             STBox *bx = BlobToStbox(b);
             bool r = overafter_tspatial_stbox(t, bx);
             free(t); free(bx);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -761,7 +761,7 @@ static void Gen_overback_stbox_tspatial(DataChunk &args, ExpressionState &, Vect
             Temporal *t = BlobToTemporal(b);
             bool r = overback_stbox_tspatial(bx, t);
             free(bx); free(t);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -773,7 +773,7 @@ static void Gen_overback_tspatial_stbox(DataChunk &args, ExpressionState &, Vect
             STBox *bx = BlobToStbox(b);
             bool r = overback_tspatial_stbox(t, bx);
             free(t); free(bx);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -785,7 +785,7 @@ static void Gen_overbefore_stbox_tspatial(DataChunk &args, ExpressionState &, Ve
             Temporal *t = BlobToTemporal(b);
             bool r = overbefore_stbox_tspatial(bx, t);
             free(bx); free(t);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -797,7 +797,7 @@ static void Gen_overbefore_tspatial_stbox(DataChunk &args, ExpressionState &, Ve
             STBox *bx = BlobToStbox(b);
             bool r = overbefore_tspatial_stbox(t, bx);
             free(t); free(bx);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -809,7 +809,7 @@ static void Gen_overbelow_stbox_tspatial(DataChunk &args, ExpressionState &, Vec
             Temporal *t = BlobToTemporal(b);
             bool r = overbelow_stbox_tspatial(bx, t);
             free(bx); free(t);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -821,7 +821,7 @@ static void Gen_overbelow_tspatial_stbox(DataChunk &args, ExpressionState &, Vec
             STBox *bx = BlobToStbox(b);
             bool r = overbelow_tspatial_stbox(t, bx);
             free(t); free(bx);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -833,7 +833,7 @@ static void Gen_overfront_stbox_tspatial(DataChunk &args, ExpressionState &, Vec
             Temporal *t = BlobToTemporal(b);
             bool r = overfront_stbox_tspatial(bx, t);
             free(bx); free(t);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -845,7 +845,7 @@ static void Gen_overfront_tspatial_stbox(DataChunk &args, ExpressionState &, Vec
             STBox *bx = BlobToStbox(b);
             bool r = overfront_tspatial_stbox(t, bx);
             free(t); free(bx);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -857,7 +857,7 @@ static void Gen_overleft_stbox_tspatial(DataChunk &args, ExpressionState &, Vect
             Temporal *t = BlobToTemporal(b);
             bool r = overleft_stbox_tspatial(bx, t);
             free(bx); free(t);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -869,7 +869,7 @@ static void Gen_overleft_tspatial_stbox(DataChunk &args, ExpressionState &, Vect
             STBox *bx = BlobToStbox(b);
             bool r = overleft_tspatial_stbox(t, bx);
             free(t); free(bx);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -881,7 +881,7 @@ static void Gen_overright_stbox_tspatial(DataChunk &args, ExpressionState &, Vec
             Temporal *t = BlobToTemporal(b);
             bool r = overright_stbox_tspatial(bx, t);
             free(bx); free(t);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -893,7 +893,7 @@ static void Gen_overright_tspatial_stbox(DataChunk &args, ExpressionState &, Vec
             STBox *bx = BlobToStbox(b);
             bool r = overright_tspatial_stbox(t, bx);
             free(t); free(bx);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -905,7 +905,7 @@ static void Gen_right_stbox_tspatial(DataChunk &args, ExpressionState &, Vector 
             Temporal *t = BlobToTemporal(b);
             bool r = right_stbox_tspatial(bx, t);
             free(bx); free(t);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -917,7 +917,7 @@ static void Gen_right_tspatial_stbox(DataChunk &args, ExpressionState &, Vector 
             STBox *bx = BlobToStbox(b);
             bool r = right_tspatial_stbox(t, bx);
             free(t); free(bx);
-            return r;
+            return (bool) r;
         });
 }
 
@@ -1484,127 +1484,106 @@ static void Gen_th3index_is_valid_vertex(DataChunk &args, ExpressionState &, Vec
 }
 
 
-// ===== @ingroup meos_pose_accessor =====
-static void Gen_tpose_end_value(DataChunk &args, ExpressionState &, Vector &result) {
+// ===== @ingroup meos_rgeo_modif =====
+static void Gen_trgeometry_delete_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+    TernaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, bool, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t in, timestamp_tz_t a2, bool a3, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Pose * r = tpose_end_value(t);
+            Temporal *r = trgeometry_delete_timestamptz(t, DuckDBToMeosTimestamp(a2).value, a3);
             free(t);
-            return PoseToBlobN(result, r, mask, idx);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
-static void Gen_tpose_start_value(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Pose * r = tpose_start_value(t);
-            free(t);
-            return PoseToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tpose_trajectory(DataChunk &args, ExpressionState &state, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            GSERIALIZED * r = tpose_trajectory(t);
-            free(t);
-            if (!r) { mask.SetInvalid(idx); return string_t(); }
-            string_t out = GSerializedToGeometry(r, state, result);
-            free(r);
-            return out;
-        });
-}
-
-
-// ===== @ingroup meos_npoint_restrict =====
-static void Gen_tnpoint_at_npointset(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_trgeometry_merge(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(a);
-            Set *cc = BlobToSet(b);
-            Temporal *r = tnpoint_at_npointset(t, cc);
-            free(t); free(cc);
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            Temporal *r = trgeometry_merge(t1, t2);
+            free(t1); free(t2);
             return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
-static void Gen_tnpoint_minus_npointset(DataChunk &args, ExpressionState &, Vector &result) {
+
+// ===== @ingroup meos_posechain_comp_temp =====
+static void Gen_teq_tposechain_posechain(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(a);
-            Set *cc = BlobToSet(b);
-            Temporal *r = tnpoint_minus_npointset(t, cc);
-            free(t); free(cc);
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            PoseChain *a2p = BlobToPosechain(a2);
+            Temporal *r = teq_tposechain_posechain(t, a2p);
+            free(a2p); free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tne_tposechain_posechain(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            PoseChain *a2p = BlobToPosechain(a2);
+            Temporal *r = tne_tposechain_posechain(t, a2p);
+            free(a2p); free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 
-// ===== @ingroup meos_geo_box_accessor =====
-static void Gen_stbox_hash(DataChunk &args, ExpressionState &, Vector &result) {
+// ===== @ingroup meos_pose_conversion =====
+static void Gen_tpose_make(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, uint32_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            STBox *s = BlobToStbox(in);
-            uint32_t r = stbox_hash(s);
-            free(s);
-            return r;
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            Temporal *r = tpose_make(t1, t2);
+            free(t1); free(t2);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
-static void Gen_stbox_hash_extended(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_tpose_to_tpoint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, uint64_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, uint64_t a2) {
-            STBox *s = BlobToStbox(in);
-            uint64_t r = stbox_hash_extended(s, a2);
-            free(s);
-            return r;
-        });
-}
-
-
-// ===== @ingroup meos_pose_base_accessor =====
-static void Gen_pose_hash(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, uint32_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Pose *v = BlobToPose(in);
-            uint32_t r = pose_hash(v);
-            free(v);
-            return r;
-        });
-}
-
-static void Gen_pose_hash_extended(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, uint64_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, uint64_t a2) {
-            Pose *s = BlobToPose(in);
-            uint64_t r = pose_hash_extended(s, a2);
-            free(s);
-            return r;
-        });
-}
-
-
-// ===== @ingroup meos_cbuffer_transf =====
-static void Gen_tcbuffer_expand(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tcbuffer_expand(t, a2);
+            Temporal *r = tpose_to_tpoint(t);
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+
+// ===== @ingroup meos_h3_comp =====
+static void Gen_ever_eq_h3indexset_th3index(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_s, string_t in_t, ValidityMask &mask, idx_t idx) {
+            Set *s = BlobToSet(in_s);
+            Temporal *t = BlobToTemporal(in_t);
+            int r = ever_eq_h3indexset_th3index(s, t);
+            free(s); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+
+// ===== @ingroup meos_posechain_accessor =====
+static void Gen_tposechain_num_poses(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, int32_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Temporal *t = BlobToTemporal(in);
+            int32_t r = tposechain_num_poses(t);
+            free(t);
+            return (int32_t) r;
         });
 }
 
@@ -2749,29 +2728,29 @@ void RegisterGenerated_meos_h3_vertex(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("isValidVertex", {H3indexTypes::th3index()}, TemporalTypes::tbool(), Gen_th3index_is_valid_vertex));
 }
 
-void RegisterGenerated_meos_pose_accessor(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {PoseTypes::tpose()}, PoseTypes::pose(), Gen_tpose_end_value));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {PoseTypes::tpose()}, PoseTypes::pose(), Gen_tpose_start_value));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("trajectory", {PoseTypes::tpose()}, MobilityDuckGeometryType(), Gen_tpose_trajectory));
+void RegisterGenerated_meos_rgeo_modif(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TrgeometryTypes::trgeometry(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TrgeometryTypes::trgeometry(), Gen_trgeometry_delete_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_merge));
 }
 
-void RegisterGenerated_meos_npoint_restrict(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {NpointTypes::tnpoint(), SetTypes::npointset()}, NpointTypes::tnpoint(), Gen_tnpoint_at_npointset));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {NpointTypes::tnpoint(), SetTypes::npointset()}, NpointTypes::tnpoint(), Gen_tnpoint_minus_npointset));
+void RegisterGenerated_meos_posechain_comp_temp(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tEq", {PosechainTypes::tposechain(), PosechainTypes::posechain()}, TemporalTypes::tbool(), Gen_teq_tposechain_posechain));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tNe", {PosechainTypes::tposechain(), PosechainTypes::posechain()}, TemporalTypes::tbool(), Gen_tne_tposechain_posechain));
 }
 
-void RegisterGenerated_meos_geo_box_accessor(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {StboxType::stbox()}, LogicalType::UINTEGER, Gen_stbox_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {StboxType::stbox(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_stbox_hash_extended));
+void RegisterGenerated_meos_pose_conversion(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpose", {PoseTypes::tpose(), PoseTypes::tpose()}, PoseTypes::tpose(), Gen_tpose_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompoint", {PoseTypes::tpose()}, PoseTypes::tpose(), Gen_tpose_to_tpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {PoseTypes::tpose()}, PoseTypes::tpose(), Gen_tpose_to_tpoint));
 }
 
-void RegisterGenerated_meos_pose_base_accessor(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {PoseTypes::pose()}, LogicalType::UINTEGER, Gen_pose_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {PoseTypes::pose(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_pose_hash_extended));
+void RegisterGenerated_meos_h3_comp(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eEq", {H3indexTypes::h3indexset(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_ever_eq_h3indexset_th3index));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?=", {H3indexTypes::h3indexset(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_ever_eq_h3indexset_th3index));
 }
 
-void RegisterGenerated_meos_cbuffer_transf(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("expand", {CbufferTypes::tcbuffer(), LogicalType::DOUBLE}, CbufferTypes::tcbuffer(), Gen_tcbuffer_expand));
+void RegisterGenerated_meos_posechain_accessor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numPoses", {PosechainTypes::tposechain()}, LogicalType::INTEGER, Gen_tposechain_num_poses));
 }
 
 } // namespace duckdb
