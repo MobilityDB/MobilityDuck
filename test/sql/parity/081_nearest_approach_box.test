@@ -124,16 +124,19 @@ SELECT nearestApproachDistance(
 ----
 3.0
 
-# A temporal integer carries its own span type, so it pairs with an integer box
-# and answers in integers. The value follows from the half-open form an integer
-# span normalises to, which is the span arithmetic's business rather than this
-# surface's, so what is asserted here is the type and the presence of an answer.
+# A temporal integer pairs with an integer box, and the pair answers a distance,
+# which the surface states as a float whatever the operand types: MobilityDB
+# declares `nearestApproachDistance(tint, tbox) RETURNS float` exactly as it
+# declares the tfloat one, both over the one wrapper NAD_tnumber_tbox. The value
+# follows from the half-open form an integer span normalises to, which is the
+# span arithmetic's business rather than this surface's, so what is asserted
+# here is the type and the presence of an answer.
 
 query I
 SELECT typeof(nearestApproachDistance(
   '[1@2000-01-01, 5@2000-01-02]'::tint, 'TBOXINT X([8,9])'::tbox));
 ----
-INTEGER
+DOUBLE
 
 query I
 SELECT nearestApproachDistance(
