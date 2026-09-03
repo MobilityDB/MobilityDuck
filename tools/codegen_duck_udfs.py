@@ -748,16 +748,6 @@ SIG_TEMPORAL_ACC = {
     "trgeometry": "TrgeometryTypes::trgeometry()",
     "tposechain": "PosechainTypes::tposechain()",
 }
-# The container side of a two-operand restriction, keyed the same way: the SQL type name a
-# `sqlSignatures` entry carries. Time containers and value spans sit in one map because the
-# catalog names them the same way, and which of them an overload takes is the catalog's
-# statement rather than something a caller decides.
-SIG_CONTAINER_ACC = {
-    "tstzspan":   "SpanTypes::tstzspan()",       "tstzset":    "SetTypes::tstzset()",
-    "tstzspanset": "SpansetTypes::tstzspanset()",
-    "intspan":    "SpanTypes::intspan()",        "bigintspan": "SpanTypes::bigintspan()",
-    "floatspan":  "SpanTypes::floatspan()",      "datespan":   "SpanTypes::datespan()",
-}
 def sig_declared_accs(f):
     """The exact temporal-operand types this GENERIC (`Temporal *`) function is CREATE
     FUNCTION'd for, read from the catalog's per-overload `sqlSignatures` (the SoT) — so the
@@ -2424,10 +2414,6 @@ def emit_temporal_box(f, kind):
 # applies to every temporal type. ALL_TEMPORAL_ACCS = the full temporal type set (core + all
 # spatial subtypes via SPATIAL_ALLTYPES, so a new spatial family inherits the time-restriction
 # surface atTime/minusTime/deleteTime over tstzspan/tstzset/tstzspanset).
-NUMSPAN_PAIR = {"TemporalTypes::tint()": "SpanTypes::intspan()",
-                "TemporalTypes::tfloat()": "SpanTypes::floatspan()"}
-ALL_TEMPORAL_ACCS = (["TemporalTypes::tint()", "TemporalTypes::tbigint()", "TemporalTypes::tbool()",
-                      "TemporalTypes::tfloat()", "TemporalTypes::ttext()"] + SPATIAL_ALLTYPES)
 # A family whose VALUE LAYOUT makes the generic walker wrong owns its own temporal surface and
 # must NOT take the blanket: trgeometry appends its reference geometry to the varlena, so a
 # generic `temporal_*` op would drop it — which is why MEOS publishes a `trgeometry_*` counterpart
@@ -2449,19 +2435,28 @@ def shape_temporal_span(f):
     b0 = base(ins[0]["canonical"]); n0 = norm(ins[0]["canonical"])
     b1 = base(ins[1]["canonical"]); n1 = norm(ins[1]["canonical"])
     if not (n0.endswith("*") and n1.endswith("*")): return None
-    CONT = ("Span", "Set", "SpanSet")
-    if b0 == "Temporal" and b1 in CONT:   side, cont = "ts_r", b1
-    elif b1 == "Temporal" and b0 in CONT: side, cont = "ts_l", b0
+    # The container the other operand carries, in either order. A BOX is admissible only where
+    # the function answers a temporal value, which is a restriction: `shape_temporal_box` owns
+    # the pairings of a temporal value with a box that answer a SCALAR — the topological
+    # predicates and the nearest approach. Claiming those here too emits their body TWICE, which
+    # the compiler rejects as a redefinition; a registration set cannot show it, because two
+    # identical registrations collapse in a set while two definitions do not.
+    conts = RESTRICT_CONT_BLOB if retk == "T" else CONT_BLOB
+    if b0 == "Temporal" and b1 in conts:   side, cont = "ts_r", b1
+    elif b1 == "Temporal" and b0 in conts: side, cont = "ts_l", b0
     else: return None
-    nm = f["name"]
-    flav = "tstz" if "tstz" in nm else ("num" if re.search(r'(numspan|intspan|floatspan)', nm) else None)
-    if flav is None: return None
-    if flav == "num" and cont != "Span": return None   # value-pairing only built for value spans
-    return (side + ":" + cont + ":" + flav + ":" + retk, None)
+    # WHICH overloads exist is the catalog's statement, so a function the catalog declares none
+    # for is not claimed here. Reading the function NAME to decide instead answers a question a
+    # name cannot: it admitted whatever spelling it matched whether or not the extension declares
+    # an overload, and turned away every restriction spelled otherwise — which is why a second
+    # shape existed to catch them, and why the two had to agree on which claimed what.
+    if not any(len(s.get("args") or ()) == 2 for s in (f.get("sqlSignatures") or ())):
+        return None
+    return (side + ":" + cont + ":" + retk, None)
 
 CONT_BLOB = {"Span": "BlobToSpan", "Set": "BlobToSet", "SpanSet": "BlobToSpanSet"}
 def emit_temporal_span(f, kind):
-    name = f["name"]; side, cont, _flav, retk = kind.split(":"); blob = CONT_BLOB[cont]
+    name = f["name"]; side, cont, retk = kind.split(":"); blob = RESTRICT_CONT_BLOB[cont]
     # retk == "T": a restriction (atTime/minusTime etc.) that removes everything is a
     # NULL-safe MEOS outcome -> must map to SQL NULL via ExecuteWithNulls/TemporalToBlobN
     if retk == "T":
@@ -2487,7 +2482,7 @@ def emit_temporal_span(f, kind):
 # A unary `Temporal -> Span/SpanSet/TBox/STBox` cast (timeSpan=temporal_to_tstzspan,
 # valueSpan=tnumber_to_span, tbox=tnumber_to_tbox). Registration is a PURE PROJECTION of the
 # catalog sqlSignatures — each overload's (temporal arg type -> container ret type) is read
-# straight from the catalog (mechanical, zero heuristic, no `flav`). The container return
+# straight from the catalog, so no name is read to decide it. The container return
 # marshals via PTR_RET (SpanToBlob/TboxToBlob/...), already present.
 SQL_CONTAINER_ACC = {
     "tstzspan": "SpanTypes::tstzspan()", "intspan": "SpanTypes::intspan()",
@@ -2532,45 +2527,16 @@ def emit_temporal_to_container(f, rb):
             f"            if (!r) {{ mask.SetInvalid(idx); return string_t(); }}\n"
             f"            return {toblob};\n        }});\n}}\n")
 
-# Temporal x finite-subset-of-domain -> Temporal restriction, driven by the catalog sqlSignatures
-# pairings (heuristic-free, no flav). Covers the two-operand value restrictions whose second operand
-# is a finite-subset representation of the value RANGE: atValues/minusValues (Set-of-T) and
-# atTbox/minusTbox (TBox = the joint value x time box for numbers). Each generic MEOS fn
-# (temporal_at_values, tnumber_at_tbox, ...) carries explicit [temporal-type, container-type]
-# overloads; register one per pairing whose BOTH accessors are registered (cbufferset/geomset are
-# skipped until their Duck set type lands). Complements shape_temporal_span, which owns the tstz time
-# restrictions (atTime) and the numspan value restrictions via the name heuristic; this handles what
-# it does not. The 3-operand box restrictions (atStbox with a border bool) are a separate shape.
-# Marshalling map extends CONT_BLOB with the box types (BlobToTbox/BlobToStbox already emitted).
+# The containers a two-operand restriction takes as its other operand, and the accessors their SQL
+# type names resolve to. The marshalling map extends CONT_BLOB with the box types
+# (BlobToTbox/BlobToStbox already emitted); the accessor map spans the sets, the spans and the
+# boxes alike, because which of them an overload takes is the catalog's statement rather than a
+# property of the shape. `shape_temporal_span` reads both: one shape covers every two-operand
+# restriction, over either operand order and returning a temporal value or a boolean. The
+# 3-operand box restrictions (atStbox with a border bool) are a separate shape.
 RESTRICT_CONT_BLOB = {**CONT_BLOB, "TBox": "BlobToTbox", "STBox": "BlobToStbox",
                       "TPCBox": "BlobToTpcbox"}
 FINITE_SUBSET_ACC = {**SET_TYPES, **SQL_CONTAINER_ACC}
-def shape_temporal_restrict_sig(f):
-    if supported(f) is not None: return None
-    ins, out = classify(f)
-    if out is not None or len(ins) != 2: return None
-    if base(ins[0]["canonical"]) != "Temporal" or not norm(ins[0]["canonical"]).endswith("*"): return None
-    cont = base(ins[1]["canonical"])
-    if cont not in RESTRICT_CONT_BLOB or not norm(ins[1]["canonical"]).endswith("*"): return None
-    rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
-    if rb != "Temporal" or not rn.endswith("*"): return None
-    pairs = []
-    for s in (f.get("sqlSignatures") or []):
-        if len(s.get("args", [])) != 2: continue
-        aacc = SIG_TEMPORAL_ACC.get(s["args"][0]); cacc = FINITE_SUBSET_ACC.get(s["args"][1])
-        if aacc and cacc and (aacc, cacc) not in pairs: pairs.append((aacc, cacc))
-    return (cont, pairs) if pairs else None
-
-def emit_temporal_restrict_sig(f, cont):
-    name = f["name"]; blob = RESTRICT_CONT_BLOB[cont]   # NULL-safe: a restriction that removes all -> SQL NULL
-    return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
-            f"    EnsureMeosThreadInitialized();\n"
-            f"    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),\n"
-            f"        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {{\n"
-            f"            Temporal *t = BlobToTemporal(a);\n            {cont} *cc = {blob}(b);\n"
-            f"            Temporal *r = {name}(t, cc);\n            free(t); free(cc);\n"
-            f"            return TemporalToBlobN(result, r, mask, idx);\n"
-            f"        }});\n}}\n")
 
 def shape_scalar_first(f):
     """(by-value scalar, Temporal) — the mirror of shape_binary. Covers the scalar-first
@@ -4029,11 +3995,9 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         STATE["grp"] = f.get("group") or "meos_ungrouped"
         kind, _ = s; n_bin += 1
         temporal_box_bodies.append(emit_temporal_span(f, kind))
-        fn, sqlfn = f["name"], f["sqlfn"]; side, cont, flav, retk = kind.split(":")
+        fn, sqlfn = f["name"], f["sqlfn"]; side, cont, retk = kind.split(":")
         span_first = (side == "ts_l")
         names = reg_names(f, sqlfn, aliases)
-        TSTZ_CONT = {"Span": "SpanTypes::tstzspan()", "Set": "SetTypes::tstzset()",
-                     "SpanSet": "SpansetTypes::tstzspanset()"}
         # THE OPERAND PAIRING IS THE CATALOG'S. Each `sqlSignatures` entry IS one CREATE
         # FUNCTION overload, so its two argument types name the temporal type and the
         # container that pair, for exactly the overloads the extension declares.
@@ -4053,7 +4017,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             if len(args) != 2:
                 continue
             tname, cname = (args[1], args[0]) if span_first else (args[0], args[1])
-            tacc, cacc = SIG_TEMPORAL_ACC.get(tname), SIG_CONTAINER_ACC.get(cname)
+            tacc, cacc = SIG_TEMPORAL_ACC.get(tname), FINITE_SUBSET_ACC.get(cname)
             if tacc and cacc:
                 pairs.append((cacc, tacc))
         for spacc, tacc in pairs:
@@ -4062,29 +4026,9 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             for nm in names:
                 temporal_box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {sig}, {rett}, Gen_{fn}));')
-    # Temporal x finite-subset-of-range -> Temporal restriction (atValues/minusValues),
-    # sqlSignatures-driven. Runs only for restrictions the flav path (shape_temporal_span) did NOT
-    # claim (atTime), so a function is registered by exactly one path — no double-registration.
-    for f in fns:
-        if declared is not None and f["name"] not in declared:
-            continue
-        if shape_temporal_span(f) is not None:
-            continue
-        s = shape_temporal_restrict_sig(f)
-        if s is None:
-            continue
-        STATE["grp"] = f.get("group") or "meos_ungrouped"
-        cont, pairs = s; n_bin += 1
-        fn, sqlfn = f["name"], f["sqlfn"]
-        temporal_box_bodies.append(emit_temporal_restrict_sig(f, cont))
-        names = reg_names(f, sqlfn, aliases)
-        for tacc, cacc in pairs:
-            for nm in names:
-                temporal_box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
-                                         f'"{reg_name(nm, f)}", {{{tacc}, {cacc}}}, {tacc}, Gen_{fn}));')
     # Temporal -> container conversion (timeSpan/valueSpan/tbox), sqlSignatures-driven — the
     # per-overload (temporal arg type -> container ret type) comes straight from the catalog
-    # (mechanical, no flav). Gated on retired(f): emit+register only for a group being retired
+    # rather than from a name. Gated on retired(f): emit+register only for a group being retired
     # as a coherent wave, so a not-yet-migrated hand @sqlfn (getTime/getValues/stbox/whenTrue,
     # other groups) is never double-registered against its hand reg.
     for f in fns:
