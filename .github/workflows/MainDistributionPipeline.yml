@@ -51,17 +51,26 @@ jobs:
       # (`__attribute__((unused))`). Re-enable once the MEOS port grows
       # Windows support.
       #
-      # On pull_request events the 3 emscripten Wasm cross-compiles are excluded,
-      # and the reduced matrix below leaves the two native targets that run the
-      # suite. macOS is where a non-portable binary shows up first — the loader
-      # there rejects a missing @rpath dependency outright — so osx_arm64 is one
-      # of the two a pull request keeps, and the verify-standalone job below
-      # inspects its artifact on the event that gates review. Wasm links nothing dynamically and has no
-      # CLI to load it with, so it runs on push to main and workflow_dispatch,
-      # where the full matrix is validated ahead of a release. The MEOS port
-      # rebuilds libmeos and its heavy deps (GEOS/PROJ/GDAL) from source each
-      # run, and cross-compiling those for Wasm dominates CI time.
-      exclude_archs: ${{ github.event_name == 'pull_request' && 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;wasm_mvp;wasm_eh;wasm_threads' || 'windows_amd64;windows_amd64_mingw;linux_amd64_musl' }}
+      # On pull_request events the reduced matrix below leaves the two native
+      # targets that run the suite, and one Wasm cross-compile. macOS is where a
+      # non-portable binary shows up first — the loader there rejects a missing
+      # @rpath dependency outright — so osx_arm64 is one of the two a pull
+      # request keeps, and the verify-standalone job below inspects its artifact
+      # on the event that gates review.
+      #
+      # wasm_mvp is the Wasm target a pull request keeps, because a change that
+      # does not cross-compile is otherwise found only after it merges: Wasm
+      # links nothing dynamically and has no CLI to load it with, so its jobs
+      # were excluded here entirely and main was the first event to compile
+      # them. Keeping one costs a single job — `run_in_reduced_ci_mode` is true
+      # for wasm_mvp alone, so wasm_eh and wasm_threads stay filtered by the
+      # reduced matrix whether or not they are named here, and excluding them is
+      # what states the intent. Both still build on push to main and
+      # workflow_dispatch, where the full matrix is validated ahead of a release.
+      # The MEOS port rebuilds libmeos and its heavy deps (GEOS/PROJ/GDAL) from
+      # source each run, and cross-compiling those for Wasm dominates CI time,
+      # which is why a pull request pays for one Wasm target rather than three.
+      exclude_archs: ${{ github.event_name == 'pull_request' && 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;wasm_eh;wasm_threads' || 'windows_amd64;windows_amd64_mingw;linux_amd64_musl' }}
 
       # Of the four native targets a pull request builds, two run the suite —
       # linux_amd64 and osx_arm64 — and two only build: linux_arm64 and
