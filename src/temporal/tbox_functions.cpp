@@ -114,7 +114,11 @@ void TboxFunctions::Number_timestamptz_to_tbox(DataChunk &args, ExpressionState 
     const auto &arg_type = args.data[0].GetType();
     
     if (arg_type.id() == LogicalTypeId::INTEGER) {
-        NumberTimestamptzToTboxExecutor<int64_t>(args.data[0], args.data[1], T_INT4, result, args.size());
+        // The registration declares INTEGER and the executor reads the vector as the type
+        // named here, so it is int32_t: reading it as int64_t takes 64 bits from a 32-bit
+        // vector, which DuckDB 1.4 refuses with `Expected vector of type INT64, but found
+        // vector of type INT32`. The lambda's own `Int32GetDatum` says the same width.
+        NumberTimestamptzToTboxExecutor<int32_t>(args.data[0], args.data[1], T_INT4, result, args.size());
     } else if (arg_type.id() == LogicalTypeId::DOUBLE) {
         NumberTimestamptzToTboxExecutor<double>(args.data[0], args.data[1], T_FLOAT8, result, args.size());
     } else {
@@ -188,7 +192,7 @@ void TboxFunctions::Number_tstzspan_to_tbox(DataChunk &args, ExpressionState &st
     const auto &arg_type = args.data[0].GetType();
     
     if (arg_type.id() == LogicalTypeId::INTEGER) {
-        NumberTstzspanToTboxExecutor<int64_t>(args.data[0], args.data[1], T_INT4, result, args.size());
+        NumberTstzspanToTboxExecutor<int32_t>(args.data[0], args.data[1], T_INT4, result, args.size());
     } else if (arg_type.id() == LogicalTypeId::DOUBLE) {
         NumberTstzspanToTboxExecutor<double>(args.data[0], args.data[1], T_FLOAT8, result, args.size());
     } else {
@@ -263,7 +267,7 @@ void TboxFunctions::Number_to_tbox(DataChunk &args, ExpressionState &state, Vect
     const auto &arg_type = args.data[0].GetType();
     
     if (arg_type.id() == LogicalTypeId::INTEGER) {
-        NumberToTboxExecutor<int64_t>(args.data[0], T_INT4, result, args.size());
+        NumberToTboxExecutor<int32_t>(args.data[0], T_INT4, result, args.size());
     } else if (arg_type.id() == LogicalTypeId::DOUBLE) {
         NumberToTboxExecutor<double>(args.data[0], T_FLOAT8, result, args.size());
     } else {
@@ -275,7 +279,7 @@ bool TboxFunctions::Number_to_tbox_cast(Vector &source, Vector &result, idx_t co
     const auto &source_type = source.GetType();
     
     if (source_type.id() == LogicalTypeId::INTEGER) {
-        NumberToTboxExecutor<int64_t>(source, T_INT4, result, count);
+        NumberToTboxExecutor<int32_t>(source, T_INT4, result, count);
     } else if (source_type.id() == LogicalTypeId::DOUBLE) {
         NumberToTboxExecutor<double>(source, T_FLOAT8, result, count);
     } else {
@@ -821,7 +825,7 @@ void TboxFunctions::TboxShiftValueExecutor(Vector &tbox, Vector &shift, LogicalT
 void TboxFunctions::Tbox_shift_value(DataChunk &args, ExpressionState &state, Vector &result) {
     const auto &arg_type = args.data[1].GetType();
     if (arg_type.id() == LogicalTypeId::INTEGER) {
-        TboxShiftValueExecutor<int64_t>(args.data[0], args.data[1], arg_type, result, args.size());
+        TboxShiftValueExecutor<int32_t>(args.data[0], args.data[1], arg_type, result, args.size());
     } else if (arg_type.id() == LogicalTypeId::DOUBLE) {
         TboxShiftValueExecutor<double>(args.data[0], args.data[1], arg_type, result, args.size());
     } else {
@@ -894,7 +898,7 @@ void TboxFunctions::TboxScaleValueExecutor(Vector &tbox, Vector &width, LogicalT
 void TboxFunctions::Tbox_scale_value(DataChunk &args, ExpressionState &state, Vector &result) {
     const auto &arg_type = args.data[1].GetType();
     if (arg_type.id() == LogicalTypeId::INTEGER) {
-        TboxScaleValueExecutor<int64_t>(args.data[0], args.data[1], arg_type, result, args.size());
+        TboxScaleValueExecutor<int32_t>(args.data[0], args.data[1], arg_type, result, args.size());
     } else if (arg_type.id() == LogicalTypeId::DOUBLE) {
         TboxScaleValueExecutor<double>(args.data[0], args.data[1], arg_type, result, args.size());
     } else {
@@ -970,7 +974,7 @@ void TboxFunctions::TboxShiftScaleValueExecutor(Vector &tbox, Vector &shift, Vec
 void TboxFunctions::Tbox_shift_scale_value(DataChunk &args, ExpressionState &state, Vector &result) {
     const auto &arg_type = args.data[1].GetType();
     if (arg_type.id() == LogicalTypeId::INTEGER) {
-        TboxShiftScaleValueExecutor<int64_t>(args.data[0], args.data[1], args.data[2], arg_type, result, args.size());
+        TboxShiftScaleValueExecutor<int32_t>(args.data[0], args.data[1], args.data[2], arg_type, result, args.size());
     } else if (arg_type.id() == LogicalTypeId::DOUBLE) {
         TboxShiftScaleValueExecutor<double>(args.data[0], args.data[1], args.data[2], arg_type, result, args.size());
     } else {
