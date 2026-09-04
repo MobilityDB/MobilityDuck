@@ -39,7 +39,7 @@ jobs:
     # are compiled from source on every job: 12.7 minutes of a 27.7-minute
     # Linux job, and the larger share of a macOS one. The addition is offered
     # upstream; the fork is where it runs until it is taken.
-    uses: estebanzimanyi/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.4.5-vcpkg-cache
+    uses: estebanzimanyi/extension-ci-tools/.github/workflows/_extension_distribution.yml@perf/cache-fits-the-repo-budget
     with:
       duckdb_version: v1.4.5
       extension_name: mobilityduck
