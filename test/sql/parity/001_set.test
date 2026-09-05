@@ -121,17 +121,15 @@ SELECT set(ARRAY[geometry 'Point(1 1)', 'Point empty']);
 ----
 non-empty
 
-mode skip
-# Mixed-SRID rejection silently passes: src/include/geo_util.hpp's
-# GeometryToGSerialized passes srid=0 to MEOS, stripping any SRID
-# encoded in the geometry blob. Follow-up: thread through the actual
-# geometry SRID instead of overriding to 0.
+# A set holds values of one SRID, and mixing two is an error. DuckDB's
+# GEOMETRY carries no SRID -- the spatial extension publishes neither
+# ST_SRID nor an SRID-bearing constructor for it, and its WKT reader
+# reads 'SRID=5676;Point(1 1)' as 'POINT (1 1)' -- so the operands that
+# can differ are the ones MEOS parses itself.
 statement error
-SELECT set(ARRAY[geometry 'Point(1 1)', 'SRID=5676;Point(1 1)']);
+SELECT geomset '{"Point(1 1)", "SRID=5676;Point(1 1)"}';
 ----
-mixed SRID
-
-mode unskip
+Operation on mixed SRID
 
 # =============================================================================
 # Conversion functions
