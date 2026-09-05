@@ -29,8 +29,35 @@ concurrency:
 
 
 jobs:
+  # THE ONE PLACE A SUPPORTED DUCKDB VERSION IS WRITTEN.
+  # The version used to appear nine times in this file, and the comment on the
+  # artifact download asked the reader to "keep the version here in sync with the
+  # two jobs above" — a rule nothing enforces. Every consumer below reads this
+  # job's output, so adding or dropping a supported line is one edit to the list
+  # in the `pick` step, and a matrix over it builds each version named there.
+  #
+  # The two `uses:` refs stay literal because a reusable-workflow reference admits
+  # no expression ("You cannot use contexts or expressions in this keyword"). They
+  # name the CI-TOOLS workflow to run, which is a different fact from which DuckDB
+  # versions are supported: one such workflow serves several of them through the
+  # `duckdb_version` and `ci_tools_version` inputs.
+  versions:
+    name: Supported DuckDB versions
+    runs-on: ubuntu-latest
+    outputs:
+      supported: ${{ steps.pick.outputs.supported }}
+    steps:
+      - id: pick
+        shell: bash
+        run: echo 'supported=["v1.4.5"]' >> "$GITHUB_OUTPUT"
+
   duckdb-latest-build:
-    # The v1.4.5 workflow with one addition: every job keeps a vcpkg binary
+    needs: versions
+    strategy:
+      fail-fast: false
+      matrix:
+        duckdb: ${{ fromJSON(needs.versions.outputs.supported) }}
+    # The upstream distribution workflow with one addition: every job keeps a vcpkg binary
     # cache of its own, so the dependency set the manifest names — GDAL, GEOS,
     # PROJ, OpenSSL, libmeos and the twenty ports beneath them — is restored
     # rather than compiled. The public cache the workflow reads holds an archive
@@ -41,9 +68,9 @@ jobs:
     # upstream; the fork is where it runs until it is taken.
     uses: estebanzimanyi/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.4.5-vcpkg-cache
     with:
-      duckdb_version: v1.4.5
+      duckdb_version: ${{ matrix.duckdb }}
       extension_name: mobilityduck
-      ci_tools_version: v1.4.5
+      ci_tools_version: ${{ matrix.duckdb }}
       vcpkg_commit: c27eeddba73f608f10605d80bc0144c1166f8fb7
 
       # A compiler cache only pays off if it is still there next time, and a
@@ -115,8 +142,8 @@ jobs:
   # ship, and that a stock DuckDB CLI can LOAD it and evaluate a MEOS-backed
   # expression. It runs before deploy so a non-portable binary is never released.
   verify-standalone:
-    name: Standalone load (${{ matrix.duckdb_arch }})
-    needs: duckdb-latest-build
+    name: Standalone load (${{ matrix.duckdb }}, ${{ matrix.duckdb_arch }})
+    needs: [versions, duckdb-latest-build]
     # An entry consumes the artifact of the build job of its own architecture, so the set of
     # entries is the set the build matrix produces: a pull request builds linux_amd64 and
     # osx_arm64, and asking for either of the other two would fail on a download of an artifact
@@ -137,16 +164,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        duckdb: ${{ fromJSON(needs.versions.outputs.supported) }}
         include: ${{ fromJSON(github.event_name == 'pull_request'
           && '[{"duckdb_arch":"linux_amd64","runner":"ubuntu-latest","native":true},{"duckdb_arch":"osx_arm64","runner":"macos-14","native":true}]'
           || '[{"duckdb_arch":"linux_amd64","runner":"ubuntu-latest","native":true},{"duckdb_arch":"linux_arm64","runner":"ubuntu-24.04-arm","native":true},{"duckdb_arch":"osx_amd64","runner":"macos-14","native":false},{"duckdb_arch":"osx_arm64","runner":"macos-14","native":true}]') }}
     runs-on: ${{ matrix.runner }}
     steps:
-      # Artifact name is built from duckdb_version + extension_name; keep the
-      # version here in sync with the two jobs above.
+      # Artifact name is built from duckdb_version + extension_name, both read
+      # from the matrix rather than written again.
       - uses: actions/download-artifact@v4
         with:
-          name: mobilityduck-v1.4.5-extension-${{ matrix.duckdb_arch }}
+          name: mobilityduck-${{ matrix.duckdb }}-extension-${{ matrix.duckdb_arch }}
           path: artifact
 
       - name: Assert the artifact names no non-system shared library
@@ -190,7 +218,7 @@ jobs:
             linux_arm64) CLI=duckdb_cli-linux-arm64.zip   ;;
             osx_*)       CLI=duckdb_cli-osx-universal.zip ;;
           esac
-          curl -fsSL -o duckdb.zip "https://github.com/duckdb/duckdb/releases/download/v1.4.5/${CLI}"
+          curl -fsSL -o duckdb.zip "https://github.com/duckdb/duckdb/releases/download/${{ matrix.duckdb }}/${CLI}"
           unzip -q -o duckdb.zip
           chmod +x duckdb
 
@@ -206,12 +234,16 @@ jobs:
           grep -qx 't@2012-01-01 08:00:00+01' out.txt
 
   duckdb-latest-deploy:
-    needs: [duckdb-latest-build, verify-standalone]
+    needs: [versions, duckdb-latest-build, verify-standalone]
+    strategy:
+      fail-fast: false
+      matrix:
+        duckdb: ${{ fromJSON(needs.versions.outputs.supported) }}
     uses: duckdb/extension-ci-tools/.github/workflows/_extension_deploy.yml@v1.4.5
     secrets: inherit
     with:
-      duckdb_version: v1.4.5
-      ci_tools_version: v1.4.5
+      duckdb_version: ${{ matrix.duckdb }}
+      ci_tools_version: ${{ matrix.duckdb }}
       extension_name: mobilityduck
       deploy_latest: ${{ startsWith(github.ref, 'refs/heads/v') || github.ref == 'refs/heads/main' }}
       # Gathers exactly the artifacts the build job produces, per event: the full
