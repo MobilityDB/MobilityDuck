@@ -45,6 +45,22 @@ jobs:
       extension_name: mobilityduck
       ci_tools_version: v1.4.5
       vcpkg_commit: c27eeddba73f608f10605d80bc0144c1166f8fb7
+
+      # A compiler cache only pays off if it is still there next time, and a
+      # repository gets 10 GB for all of them. The distribution workflow allows
+      # each job 5 GB, so a matrix of seven architectures overruns the budget and
+      # GitHub evicts least-recently-used to make room; the entries that lose that
+      # race are the small ones, which is why the Linux leg reads
+      # `cache hit rate 0.00 %` with all 724 objects recompiled, 46 minutes of a
+      # 51-minute job.
+      #
+      # `test_env_variables` is appended to the Docker environment file after the
+      # workflow writes its own defaults, and a later assignment wins there, so
+      # naming the ceiling here overrides the 5 GB for every architecture built in
+      # Docker. 500M is generous against the sizes the base branch actually holds,
+      # 33 to 54 MB per architecture. The macOS and Windows legs take their
+      # ceiling from the ccache action instead and are unaffected.
+      test_config: '{"test_env_variables": {"CCACHE_MAXSIZE": "500M"}}'
       # Windows is excluded because the MEOS vcpkg port does not build under
       # MSVC or MinGW: it pulls in PostgreSQL-derived sources that depend on
       # POSIX-only headers (e.g. <dirent.h>) and GCC-only attribute syntax
