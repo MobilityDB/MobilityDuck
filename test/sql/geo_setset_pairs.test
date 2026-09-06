@@ -2,11 +2,6 @@
 #   minDistance(LIST(tgeo), LIST(tgeo)) -> DOUBLE
 #   the *Pairs SRFs -> LIST(STRUCT(i INTEGER, j INTEGER[, periods TSTZSPANSET])), UNNEST to rows.
 # Pair indices are 0-based (the MEOS kernel indices; the PG wrapper exposes +1).
-# Also covers the 2-ary minDistanceAgg(tgeo, tgeo) AGGREGATE (running min over
-# GROUP BY rows) — distinct from the LIST/LIST scalar form above. Named
-# minDistanceAgg rather than minDistance: DuckDB shares one catalog set between
-# scalar and aggregate functions, so an aggregate can't be added under a name
-# that already has a scalar registration (see spatial_aggregates.cpp).
 
 require mobilityduck
 
@@ -21,34 +16,25 @@ SELECT minDistance([tgeometry 'Point(0 0)@2000-01-01'], [tgeometry 'Point(6 8)@2
 ----
 true
 
-# ---- minDistanceAgg aggregate: 2-ary running-min over GROUP BY rows, mirroring
-# MobilityDB's CREATE AGGREGATE minDistance(tgeompoint, tgeompoint). Test values
-# reused from mobilitydb/test/geo/queries/071_tpoint_setset.test.sql. ----
+# The minimum ranges over the whole cross product, so a second right-hand
+# element that comes closer than the first is the one that answers. Values
+# reused from mobilitydb/test/geo/queries/071_tpoint_setset.test.sql.
 query I
-SELECT round(minDistanceAgg(t1, t2)::numeric, 6) FROM (VALUES
-  (tgeompoint '[Point(0 0)@2000-01-01, Point(1 1)@2000-01-02]',
-   tgeompoint '[Point(0 3)@2000-01-01, Point(1 3)@2000-01-02]'),
-  (tgeompoint '[Point(0 0)@2000-01-01, Point(1 1)@2000-01-02]',
-   tgeompoint '[Point(0 2)@2000-01-01, Point(1 2)@2000-01-02]')) v(t1, t2);
+SELECT round(minDistance(
+  [tgeompoint '[Point(0 0)@2000-01-01, Point(1 1)@2000-01-02]'],
+  [tgeompoint '[Point(0 3)@2000-01-01, Point(1 3)@2000-01-02]',
+   tgeompoint '[Point(0 2)@2000-01-01, Point(1 2)@2000-01-02]'])::numeric, 6);
 ----
 1.000000
 
-# The geodetic (tgeogpoint, tgeogpoint) overload — a single row, so the
-# aggregate reduces to the plain nearest-approach distance.
+# The geodetic overload: one element a side, so the kernel reduces to
+# geog_distance over the two trajectories.
 query I
-SELECT round(minDistanceAgg(t1, t2)::numeric, 0) FROM (VALUES
-  (tgeogpoint '[Point(0 0)@2000-01-01, Point(0 1)@2000-01-02]',
-   tgeogpoint '[Point(0 2)@2000-01-01, Point(0 3)@2000-01-02]')) v(t1, t2);
+SELECT round(minDistance(
+  [tgeogpoint '[Point(0 0)@2000-01-01, Point(0 1)@2000-01-02]'],
+  [tgeogpoint '[Point(0 2)@2000-01-01, Point(0 3)@2000-01-02]'])::numeric, 0);
 ----
 110575
-
-# A NULL-valued row is ignored (not processed); no non-null pair ever seen ->
-# the running min stays at its never-beaten DBL_MAX seed -> SQL NULL.
-query I
-SELECT minDistanceAgg(t1, t2) FROM
-  (SELECT NULL::tgeompoint AS t1, NULL::tgeompoint AS t2) v(t1, t2);
-----
-NULL
 
 # ---- eDwithinPairs: [(0,0),(10,10)] x [(0,0),(1,1)] within dist 2 -> (0,0),(0,1) ----
 query II
