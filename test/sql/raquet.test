@@ -191,12 +191,15 @@ FROM (SELECT trajectoryQuadbins(tgeompoint 'POINT(0 0)@2024-01-01', 0)[1] AS c);
 ----
 0	0	0
 
-# A trajectory crossing hemispheres covers one cell per hemisphere at zoom 1.
+# The cover is the tiles the path meets, not the tiles holding the instants, so
+# a diagonal answers more than one tile per endpoint: this one spans two tile
+# columns and two Mercator rows and crosses the corner where they meet at
+# (0 0), and a monotone path across a two by two span visits 2 + 2 - 1.
 query I
 SELECT len(trajectoryQuadbins(
   tgeompoint '[POINT(-90 45)@2024-01-01, POINT(90 -45)@2024-01-02]', 1));
 ----
-2
+3
 
 query I
 SELECT trajectoryQuadbins(NULL::TGEOMPOINT, 0) IS NULL;
