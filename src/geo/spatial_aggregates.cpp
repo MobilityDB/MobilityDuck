@@ -3,11 +3,6 @@
 #include "geo/spatial_aggregates.hpp"
 #include "geo/stbox.hpp"
 #include "geo/tgeompoint.hpp"
-#include "geo/tgeogpoint.hpp"
-#include "mobilityduck/meos_exec_serial.hpp"
-
-#include <cfloat>
-#include <mutex>
 
 #include "duckdb/common/exception.hpp"
 #include "duckdb/function/aggregate_function.hpp"
@@ -277,64 +272,6 @@ static AggregateFunction MakeTcentroidAggregate(const LogicalType &input_type) {
         input_type, input_type);
 }
 
-struct MinDistanceState {
-    double min_dist;
-};
-
-struct MinDistanceFunction {
-    template <class STATE>
-    static void Initialize(STATE &state) {
-        state.min_dist = DBL_MAX;
-    }
-
-    static bool IgnoreNull() {
-        return true;
-    }
-
-    template <class A_TYPE, class B_TYPE, class STATE, class OP>
-    static void Operation(STATE &state, const A_TYPE &a, const B_TYPE &b, AggregateBinaryInput &) {
-        // Not a RegisterSerializedScalarFunction, so it isn't wrapped by
-        // WrapScalarFunctionWithMeosExecMutex — mindistance_tgeo_tgeo uses GEOS's
-        // legacy global API internally, so per-thread init + the serialization
-        // mutex have to be taken here explicitly (see meos_exec_serial.hpp).
-        EnsureMeosThreadInitialized();
-        std::lock_guard<std::mutex> guard(MeosSerializedExecMutex());
-
-        const uint8_t *abytes = reinterpret_cast<const uint8_t *>(a.GetData());
-        Temporal *t1 = reinterpret_cast<Temporal *>(malloc(a.GetSize()));
-        memcpy(t1, abytes, a.GetSize());
-
-        const uint8_t *bbytes = reinterpret_cast<const uint8_t *>(b.GetData());
-        Temporal *t2 = reinterpret_cast<Temporal *>(malloc(b.GetSize()));
-        memcpy(t2, bbytes, b.GetSize());
-
-        state.min_dist = mindistance_tgeo_tgeo(t1, t2, state.min_dist);
-        free(t1);
-        free(t2);
-    }
-
-    template <class STATE, class OP>
-    static void Combine(const STATE &source, STATE &target, AggregateInputData &) {
-        if (source.min_dist < target.min_dist) {
-            target.min_dist = source.min_dist;
-        }
-    }
-
-    template <class T, class STATE>
-    static void Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data) {
-        if (state.min_dist == DBL_MAX) {
-            finalize_data.ReturnNull();
-            return;
-        }
-        target = state.min_dist;
-    }
-};
-
-static AggregateFunction MakeMinDistanceAggregate(const LogicalType &input_type) {
-    return AggregateFunction::BinaryAggregate<MinDistanceState, string_t, string_t, double, MinDistanceFunction>(
-        input_type, input_type, LogicalType::DOUBLE);
-}
-
 } // namespace
 
 void SpatialAggregates::AddExtentOverloads(AggregateFunctionSet &extent_set) {
@@ -347,20 +284,6 @@ void SpatialAggregates::RegisterTcentroid(ExtensionLoader &loader) {
     AggregateFunctionSet tcentroid_set("TcentroidAgg");
     tcentroid_set.AddFunction(MakeTcentroidAggregate(TgeompointType::tgeompoint()));
     loader.RegisterFunction(std::move(tcentroid_set));
-}
-
-void SpatialAggregates::RegisterMinDistance(ExtensionLoader &loader) {
-    // Named "MinDistanceAgg", not "minDistance": DuckDB routes SCALAR_FUNCTION_ENTRY and
-    // AGGREGATE_FUNCTION_ENTRY into the same catalog set (DuckSchemaEntry::GetCatalogSet),
-    // so registering an aggregate under the same name as the existing scalar minDistance
-    // (LIST(tgeo), LIST(tgeo)) -> DOUBLE overloads from codegen hits ALTER_ON_CONFLICT ->
-    // AlterEntry, which requires a real ClientContext the extension-load transaction
-    // (CatalogTransaction::GetSystemTransaction) doesn't have -> crashes at load. Same
-    // reason RegisterTcentroid above uses "TcentroidAgg" instead of "tCentroid".
-    AggregateFunctionSet min_distance_set("MinDistanceAgg");
-    min_distance_set.AddFunction(MakeMinDistanceAggregate(TgeompointType::tgeompoint()));
-    min_distance_set.AddFunction(MakeMinDistanceAggregate(TgeogpointType::tgeogpoint()));
-    loader.RegisterFunction(std::move(min_distance_set));
 }
 
 } // namespace duckdb

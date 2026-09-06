@@ -7,8 +7,8 @@
 // catalog set, so an aggregate sharing a scalar's folded name takes an
 // AlterEntry path with no ClientContext and crashes at load. That is the
 // whole of the suffix's job — `Tmin(tbox)` holds `tmin`, and `merge`,
-// `appendInstant`, `appendSequence`, `setUnion`, `spanUnion` and
-// `minDistance` are scalars here. MobilityDB master carries the same five
+// `appendInstant`, `appendSequence`, `setUnion` and `spanUnion` are
+// scalars here. MobilityDB master carries the same five
 // suffixed aggregate names (`mergeAgg`, `appendInstantAgg`,
 // `appendSequenceAgg`, `tMinAgg`, `tMaxAgg`) and keeps every other
 // aggregate bare. The *Agg spellings this extension already published stay
@@ -919,7 +919,7 @@ static AggregateFunction MakeSetUnionScalarAggregate(const LogicalType &input_ty
 // routes SCALAR_FUNCTION_ENTRY and AGGREGATE_FUNCTION_ENTRY into one catalog set, so a
 // canonical name is reachable unless a SCALAR already occupies the folded slot — which is
 // what the *Agg spelling resolves for merge/tMin/tMax/appendInstant/appendSequence,
-// setUnion/spanUnion, minDistance and tAnd/tOr. Where no scalar holds the slot the canonical name
+// setUnion/spanUnion and tAnd/tOr. Where no scalar holds the slot the canonical name
 // MobilityDB publishes is the one a query is written against, so it is registered too.
 static void RegisterAggregate(ExtensionLoader &loader, const AggregateFunctionSet &built,
                               const vector<string> &also = {}) {
