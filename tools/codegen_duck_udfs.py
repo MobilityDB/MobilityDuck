@@ -1591,7 +1591,14 @@ def shape_text_array(f):
     supplied by the list's own length rather than exposed."""
     ins, out = classify(f)
     if out is not None or len(ins) < 3: return None
-    if base(ins[0]["canonical"]) != "Temporal" or not norm(ins[0]["canonical"]).endswith("*"):
+    # The path array reads the same over a SET as over a temporal — MobilityDB declares
+    # `jsonbsetExtractPath(jsonbset, text[], text)` beside `tjsonbExtractPath(tjsonb, ...)` —
+    # so the operand family is what varies, not the shape. A set scopes through
+    # set_reg_scope (`jsonbset_*` -> SetTypes::jsonbset()), which is a different map from the
+    # temporal reg_scope: reg_scope answers None for EVERY `jsonbset_*` name, including the
+    # ones the set shapes already emit, so reading it for a set operand rejects the family.
+    ob = base(ins[0]["canonical"])
+    if ob not in ("Temporal", "Set") or not norm(ins[0]["canonical"]).endswith("*"):
         return None
     # `base()` answers the sentinel for a double pointer, so the test reads the normalised
     # spelling: a `text **` is the path/keys array MobilityDB declares as `text[]`.
@@ -1612,11 +1619,18 @@ def shape_text_array(f):
     bound = ((f.get("shape") or {}).get("boundArgs") or {})
     tail = _build_tail(ins[3:], bound)
     if tail is None: return None
-    if reg_scope(f["name"]) is None: return None
+    if (set_reg_scope if ob == "Set" else reg_scope)(f["name"]) is None: return None
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
-    if not (rb == "Temporal" and rn.endswith("*")): return None
+    # The operand family and the result family are the same one: a set path operation answers a
+    # set (`jsonbset_extract_path` -> `Set *`), a temporal one a temporal. Accepting a crossed
+    # pair would emit a body marshalling the result through the wrong `*ToBlobN`.
+    if not (rb == ob and rn.endswith("*")): return None
     sig = ["LogicalType::LIST(LogicalType::VARCHAR)"] + _tail_sig(tail)
-    return ("temporal", "MD_TEMPORAL", tail, sig)
+    # `MD_SET` is the set counterpart of the `MD_TEMPORAL` sentinel: the registration resolves it
+    # per registered accessor, so the result reads as `jsonbset` rather than the raw BLOB the
+    # value travels in. Registering the storage type instead builds green and passes the suite
+    # while `asText(jsonbsetExtractPath(...))` answers "No function matches asText(BLOB)".
+    return (("set", "MD_SET") if ob == "Set" else ("temporal", "MD_TEMPORAL")) + (tail, sig)
 
 def emit_body_text_array(f, kind, tail, sig):
     name = f["name"]
@@ -1628,15 +1642,19 @@ def emit_body_text_array(f, kind, tail, sig):
          "    child.Flatten(ListVector::GetListSize(lst));"]
     call, frees = _emit_tail_consts(L, tail)
     tailargs = "".join(", " + a for a in call)
+    # The operand and result marshal through the family the shape resolved: a set reads with
+    # BlobToSet and answers through SetToBlobN, a temporal with BlobToTemporal/TemporalToBlobN.
+    ctype, blob_in, blob_out = (("Set", "BlobToSet", "SetToBlobN") if kind == "set"
+                                else ("Temporal", "BlobToTemporal", "TemporalToBlobN"))
     L += ["    BinaryExecutor::ExecuteWithNulls<string_t, list_entry_t, string_t>("
           "args.data[0], lst, result, rc,",
           "        [&](string_t in, list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {",
-          "            Temporal *t = BlobToTemporal(in);",
+          f"            {ctype} *t = {blob_in}(in);",
           "            int n = 0;",
           "            text **elems = ListToTextArr(child, le, &n);",
-          f"            Temporal *r = {name}(t, elems, n{tailargs});",
+          f"            {ctype} *r = {name}(t, elems, n{tailargs});",
           "            free(t); FreeTextArr(elems, n);",
-          "            return TemporalToBlobN(result, r, mask, idx);",
+          f"            return {blob_out}(result, r, mask, idx);",
           "        });"]
     return _close_body(L, frees)
 
@@ -3551,6 +3569,11 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             spec_sig = "{%%s, %s%s}" % (sig[0], _rest)
         elif ta:
             kind, dret, tail, sig = ta; n_ter += 1
+            # `scope, accs` above reads reg_scope, which resolves TEMPORAL scope and answers
+            # None for every set name; the set operand takes the set map the shape already
+            # cleared it on, the way the set emit paths below read set_reg_scope.
+            if kind == "set":
+                scope, accs = set_reg_scope(fn)
             bodies.append(emit_body_text_array(f, kind, tail, sig))
             _rest = "".join(", %s" % x for x in sig[1:])
             argsig = "{type, %s%s}" % (sig[0], _rest)
@@ -3647,14 +3670,16 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         # nothing). The alias reuses the SAME backing body ([[aliases-reuse-backing]]).
         names = reg_names(f, sqlfn, aliases, argsig)
         if scope == "all":
-            rett = ret_temporal_type(fn, "type", f.get("group"), f.get("sqlReturnType")) if dret == "MD_TEMPORAL" else dret
+            rett = (ret_temporal_type(fn, "type", f.get("group"), f.get("sqlReturnType")) if dret == "MD_TEMPORAL"
+                    else ret_set_type(fn, "type") if dret == "MD_SET" else dret)
             for nm in names:
                 generic_regs.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
                                     f'"{reg_name(nm, f)}", {argsig}, {rett}, Gen_{fn}));')
         else:
             for a in accs:
                 sig = spec_sig % ((a,) * spec_sig.count("%s"))   # 1 or 2 accessor slots
-                r2 = ret_temporal_type(fn, a, f.get("group"), f.get("sqlReturnType")) if dret == "MD_TEMPORAL" else dret
+                r2 = (ret_temporal_type(fn, a, f.get("group"), f.get("sqlReturnType")) if dret == "MD_TEMPORAL"
+                      else ret_set_type(fn, a) if dret == "MD_SET" else dret)
                 if dret == "MD_TEMPORAL":
                     r2 = sig_declared_ret(f, a, sig.count(",") + 1) or r2
                 for nm in names:
