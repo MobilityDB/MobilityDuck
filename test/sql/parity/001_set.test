@@ -4,8 +4,9 @@
 #
 # Queries from mobilitydb/test/temporal/queries/001_set.test.sql.
 # Expected outputs reflect MobilityDuck's display format (ISO dates,
-# UTC timestamps under TZ=UTC) rather than MobilityDB's PG-locale
-# format ("01-01-2000", "Sat Jan 01 00:00:00 2000 PST").
+# timestamps in the Europe/Brussels zone the extension pins at load)
+# rather than MobilityDB's PG-locale format ("01-01-2000",
+# "Sat Jan 01 00:00:00 2000 PST").
 
 require mobilityduck
 
@@ -121,17 +122,15 @@ SELECT set(ARRAY[geometry 'Point(1 1)', 'Point empty']);
 ----
 non-empty
 
-mode skip
-# Mixed-SRID rejection silently passes: src/include/geo_util.hpp's
-# GeometryToGSerialized passes srid=0 to MEOS, stripping any SRID
-# encoded in the geometry blob. Follow-up: thread through the actual
-# geometry SRID instead of overriding to 0.
+# A set holds values of one SRID, and mixing two is an error. DuckDB's
+# GEOMETRY carries no SRID -- the spatial extension publishes neither
+# ST_SRID nor an SRID-bearing constructor for it, and its WKT reader
+# reads 'SRID=5676;Point(1 1)' as 'POINT (1 1)' -- so the operands that
+# can differ are the ones MEOS parses itself.
 statement error
-SELECT set(ARRAY[geometry 'Point(1 1)', 'SRID=5676;Point(1 1)']);
+SELECT geomset '{"Point(1 1)", "SRID=5676;Point(1 1)"}';
 ----
-mixed SRID
-
-mode unskip
+Operation on mixed SRID
 
 # =============================================================================
 # Conversion functions
@@ -528,8 +527,6 @@ SELECT hashExtended(tstzset '{2000-01-01,2000-01-02}', 1) <> hashExtended(tstzse
 ----
 false
 
-mode skip
-
 # =============================================================================
 # Transformations
 # =============================================================================
@@ -547,12 +544,12 @@ SELECT shift(dateset '{2000-01-01, 2000-01-02, 2000-01-03}', 4);
 query I
 SELECT shift(tstzset '{2000-01-01}', '5 min');
 ----
-{"2000-01-01 00:05:00+00"}
+{"2000-01-01 00:05:00+01"}
 
 query I
 SELECT shift(tstzset '{2000-01-01, 2000-01-02, 2000-01-03}', '5 min');
 ----
-{"2000-01-01 00:05:00+00", "2000-01-02 00:05:00+00", "2000-01-03 00:05:00+00"}
+{"2000-01-01 00:05:00+01", "2000-01-02 00:05:00+01", "2000-01-03 00:05:00+01"}
 
 query I
 SELECT scale(intset '{1}', 4);
@@ -567,12 +564,12 @@ SELECT scale(dateset '{2000-01-01, 2000-01-02, 2000-01-03}', 4);
 query I
 SELECT scale(tstzset '{2000-01-01}', '1 hour');
 ----
-{"2000-01-01 00:00:00+00"}
+{"2000-01-01 00:00:00+01"}
 
 query I
 SELECT scale(tstzset '{2000-01-01, 2000-01-02, 2000-01-03}', '1 hour');
 ----
-{"2000-01-01 00:00:00+00", "2000-01-01 00:30:00+00", "2000-01-01 01:00:00+00"}
+{"2000-01-01 00:00:00+01", "2000-01-01 00:30:00+01", "2000-01-01 01:00:00+01"}
 
 query I
 SELECT shiftScale(intset '{1}', 4, 4);
@@ -587,12 +584,12 @@ SELECT shiftScale(dateset '{2000-01-01, 2000-01-02, 2000-01-03}', 4, 4);
 query I
 SELECT shiftScale(tstzset '{2000-01-01}', '1 day', '1 hour');
 ----
-{"2000-01-02 00:00:00+00"}
+{"2000-01-02 00:00:00+01"}
 
 query I
 SELECT shiftScale(tstzset '{2000-01-01, 2000-01-02, 2000-01-03}', '1 day', '1 hour');
 ----
-{"2000-01-02 00:00:00+00", "2000-01-02 00:30:00+00", "2000-01-02 01:00:00+00"}
+{"2000-01-02 00:00:00+01", "2000-01-02 00:30:00+01", "2000-01-02 01:00:00+01"}
 
 query I
 SELECT floor(floatset '{0.5, 1.5, 2.5}');
