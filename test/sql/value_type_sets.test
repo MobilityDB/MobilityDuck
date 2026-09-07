@@ -79,6 +79,46 @@ SELECT replace(asText(jsonbsetPretty(set([jsonb '{"a":1}']))), chr(10), '|');
 ----
 {"{|    \"a\": 1|}"}
 
+# The path operations read a text[] path over the set the same way they read one over a
+# tjsonb, and answer a jsonbset — so the result composes with the set accessors above.
+# MobilityDB gives null_handle a DEFAULT; DuckDB carries no SQL default, so the mode is
+# named at the call.
+query I
+SELECT asText(jsonbsetExtractPath(set([jsonb '{"a":{"b":7}}']), ['a','b'], 'use_json_null'));
+----
+{7}
+
+query I
+SELECT asText(jsonbsetDeletePath(set([jsonb '{"a":{"b":7},"c":1}']), ['a','b']));
+----
+{"{\"a\": {}, \"c\": 1}"}
+
+query I
+SELECT asText(jsonbsetDeleteArray(set([jsonb '{"a":1,"b":2}']), ['a']));
+----
+{"{\"b\": 2}"}
+
+# The same kernel carries the operator spelling MobilityDB declares beside the name.
+query I
+SELECT asText(set([jsonb '{"a":1,"b":2}']) - ['a']);
+----
+{"{\"b\": 2}"}
+
+# jsonbsetInsert registers over the same path shape and is callable, but no assertion on
+# its VALUE belongs here yet: MEOS routes it to the set kernel rather than the insert one
+# (`datum_jsonb_insert` calls `pg_jsonb_set`, whose fifth parameter is `create`, not
+# `after`), so it overwrites the element at the path instead of shifting it — the temporal
+# twin `tjsonbInsert` answers the same, which places the defect upstream of the binding.
+# Pinning today's answer would pin that, so the assertion here is that the registration
+# exists and carries the declared signature; the value case follows the upstream fix.
+query I
+SELECT count(*) FROM duckdb_functions()
+WHERE lower(function_name) = 'jsonbsetinsert'
+  AND list_aggregate(parameter_types, 'string_agg', ',') = 'jsonbset,VARCHAR[],jsonb,BOOLEAN'
+  AND return_type = 'jsonbset';
+----
+1
+
 # The spatial value sets carry the spatial transformations of their element.
 query I
 SELECT asText(round(set([pose 'Pose(Point(1.23456 2.34567),0.5)']), 2));
