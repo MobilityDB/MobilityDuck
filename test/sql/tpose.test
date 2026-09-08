@@ -94,3 +94,13 @@ query I
 SELECT nearestApproachDistance(tpose '[Pose(Point(0 0),0.1)@2000-01-01, Pose(Point(2 2),0.2)@2000-01-02]', tpose '[Pose(Point(3 3),0.1)@2000-01-01, Pose(Point(4 4),0.2)@2000-01-02]');
 ----
 2.8284271247461903
+
+# A body-frame point carried by a temporal pose, in the operand order MobilityDB declares:
+# applyPose(geometry, tpose). The rotation is zero throughout, so each placement is the frame
+# origin translated by the body point — (10,20)+(1,0) and (30,40)+(1,0) — and the expected
+# trajectory is readable without trigonometry. The two operands are deliberately DIFFERENT
+# points, so swapping them cannot produce this answer.
+query I
+SELECT asText(applyPose(geometry 'Point(1 0)', tpose '[Pose(Point(10 20), 0)@2026-01-01, Pose(Point(30 40), 0)@2026-01-02]'));
+----
+[POINT(11 20)@2026-01-01 00:00:00+01, POINT(31 40)@2026-01-02 00:00:00+01]
