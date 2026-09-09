@@ -788,6 +788,26 @@ def sig_geo_first(f):
             orders.add(False)
     return orders.pop() if len(orders) == 1 else None
 
+def sig_geo_accs(f, geo_first):
+    """The temporal accessors the catalog declares for ONE operand order, in canonical order,
+    or None where it declares that order for no type.
+
+    `sig_declared_accs` unions the types across every overload, which is the right answer while a
+    backing is registered in a single order. A backing declaring BOTH orders needs them apart: the
+    commuted overload is registered for the types ITS OWN signatures name, never for the union."""
+    def _geo(t):
+        return t.startswith("geometry") or t.startswith("geography")
+    have = set()
+    for s in (f.get("sqlSignatures") or []):
+        a = s.get("args") or []
+        if len(a) < 2:
+            continue
+        if geo_first and _geo(a[0]) and a[1] in SIG_TEMPORAL_ACC:
+            have.add(a[1])
+        elif not geo_first and a[0] in SIG_TEMPORAL_ACC and _geo(a[1]):
+            have.add(a[0])
+    return [SIG_TEMPORAL_ACC[t] for t in SIG_TEMPORAL_ACC if t in have] or None
+
 # ---------------- SET family (additive; the temporal path is left untouched) ----------------
 # Self-contained Blob<->Set marshalling reuses the hand binding's exact method
 # (malloc+memcpy in; set_mem_size out). Per-element accessors mirror CORE_TYPES.
@@ -1879,7 +1899,7 @@ def shape_geo_temporal(f):
         return ("scalar", scalar_ret_duck(f), geo_first, has_dbl)
     return None
 
-def emit_geo_temporal(f, kind, geo_first, has_dbl):
+def emit_geo_temporal(f, kind, geo_first, has_dbl, suffix=""):
     name = f["name"]
     # TWO INDEPENDENT ORDERS. `geo_first` is the SQL one — which vector the registration binds to
     # which operand, so the lambda reads its arguments in it. The MEOS call keeps the KERNEL's own
@@ -1920,7 +1940,7 @@ def emit_geo_temporal(f, kind, geo_first, has_dbl):
         body = (f"            int r = {call};\n{freeing}"
                 f"            if (r < 0) {{ mask.SetInvalid(idx); return false; }}\n"
                 f"            return r != 0;\n")
-    return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+    return (f"static void Gen_{name}{suffix}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
             f"    {head}\n"
             f"        [&]({lam_decl}) -> {rett} {{\n{marshal}{body}        }});\n}}\n")
@@ -3725,6 +3745,38 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 for nm in names:
                     specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {sig}, {r2}, Gen_{fn}));')
+        # THE COMMUTED OVERLOAD. Six geo backings are CREATE FUNCTION'd in BOTH operand orders
+        # over one MEOS kernel — `tDistance(trgeometry, geometry)` beside
+        # `tDistance(geometry, trgeometry)` — because MobilityDB gives each order its own PG
+        # wrapper and the commuted one swaps the arguments into the same call
+        # (`Tdistance_geo_trgeometry` -> `tdistance_trgeometry_geo`). `sig_geo_first` answers None
+        # there, so the block above registers the kernel's order alone and the declared commuted
+        # signature reaches no surface. Emit it as its own body: one `Gen_<fn>_rev` beside
+        # `Gen_<fn>`, over exactly the types THAT order declares (`sig_geo_accs`), never the union.
+        # ⛔ A SECOND BODY, NOT A SECOND REGISTRATION OF THE FIRST: the two differ in which vector
+        # carries which operand, and re-emitting one `Gen_` name is a C++ redefinition the load
+        # refuses.
+        if gt:
+            _commuted = not geo_first
+            _caccs = sig_geo_accs(f, _commuted)
+            if _caccs and sig_geo_first(f) is None:
+                bodies.append(emit_geo_temporal(f, kind, _commuted, has_dbl, suffix="_rev"))
+                _cslots = ["MobilityDuckGeometryType()", "%s"] if _commuted \
+                    else ["%s", "MobilityDuckGeometryType()"]
+                if has_dbl:
+                    _cslots.append("LogicalType::DOUBLE")
+                _cspec = "{" + ", ".join(_cslots) + "}"
+                _cnames = reg_names(f, sqlfn, aliases, _cspec.replace("%s", "type"))
+                for a in _caccs:
+                    _csig = _cspec % ((a,) * _cspec.count("%s"))
+                    _cr = (ret_temporal_type(fn, a, f.get("group"), f.get("sqlReturnType"))
+                           if dret == "MD_TEMPORAL" else dret)
+                    if dret == "MD_TEMPORAL":
+                        _cr = sig_declared_ret(f, a, _csig.count(",") + 1) or _cr
+                    for nm in _cnames:
+                        specific_regs.append(
+                            f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                            f'"{reg_name(nm, f)}", {_csig}, {_cr}, Gen_{fn}_rev));')
         # A (temporal, scalar-param DEFAULT)->temporal fn (round's precision integer DEFAULT 0)
         # is callable at the shorter arity; emit the (temporal)->temporal overload with the
         # catalog default substituted, over the same types.

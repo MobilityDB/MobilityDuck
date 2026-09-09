@@ -761,3 +761,20 @@ query I
 SELECT tDwithin(tgeompoint 'Point(1 1 1)@2000-01-01', tgeompoint 'Point(1 1)@2000-01-01', 2);
 ----
 t@2000-01-01 00:00:00+01
+
+# MobilityDB declares tDistance in both operand orders over the one kernel, so the
+# geometry-first form answers what the temporal-first form answers. The distances are
+# readable by hand: the origin is 5 from Point(3 4) and 10 from Point(6 8).
+
+query II
+SELECT tDistance(geometry 'Point(0 0)', tgeompoint '[Point(3 4)@2026-01-01, Point(6 8)@2026-01-02]')::VARCHAR,
+       tDistance(tgeompoint '[Point(3 4)@2026-01-01, Point(6 8)@2026-01-02]', geometry 'Point(0 0)')::VARCHAR;
+----
+[5@2026-01-01 00:00:00+01, 10@2026-01-02 00:00:00+01]	[5@2026-01-01 00:00:00+01, 10@2026-01-02 00:00:00+01]
+
+# The <-> operator spelling of the same pair, geometry first.
+
+query I
+SELECT (geometry 'Point(0 0)' <-> tgeompoint '[Point(3 4)@2026-01-01, Point(6 8)@2026-01-02]')::VARCHAR;
+----
+[5@2026-01-01 00:00:00+01, 10@2026-01-02 00:00:00+01]

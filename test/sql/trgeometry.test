@@ -101,3 +101,29 @@ query I
 SELECT asText(round(tgeompoint(tnpoint 'NPoint(1, 0.5)@2000-01-01'), 6));
 ----
 POINT(48.718663 77.764071)@2000-01-01 00:00:00+01
+
+# MobilityDB declares eDwithin and aDwithin over trgeometry in both operand orders, so the
+# geometry-first form answers what the temporal-first form answers. The body polygon spans one
+# unit from its pose origin, so a pose at (1,0) puts it within 2 of the origin and a pose at
+# (5,0) never is — the second pair is the case that refutes, and the first cannot pass by
+# accident because the two differ.
+
+query II
+SELECT eDwithin(geometry 'Point(0 0)', trgeometry 'Polygon((0 0,1 0,1 1,0 0));{Pose(Point(1 0),0)@2026-01-01, Pose(Point(9 0),0)@2026-01-02}', 2.0),
+       eDwithin(trgeometry 'Polygon((0 0,1 0,1 1,0 0));{Pose(Point(1 0),0)@2026-01-01, Pose(Point(9 0),0)@2026-01-02}', geometry 'Point(0 0)', 2.0);
+----
+true	true
+
+query II
+SELECT eDwithin(geometry 'Point(0 0)', trgeometry 'Polygon((0 0,1 0,1 1,0 0));{Pose(Point(5 0),0)@2026-01-01, Pose(Point(9 0),0)@2026-01-02}', 2.0),
+       eDwithin(trgeometry 'Polygon((0 0,1 0,1 1,0 0));{Pose(Point(5 0),0)@2026-01-01, Pose(Point(9 0),0)@2026-01-02}', geometry 'Point(0 0)', 2.0);
+----
+false	false
+
+# Always-within over the same movement is false, since the body ends 9 units away.
+
+query II
+SELECT aDwithin(geometry 'Point(0 0)', trgeometry 'Polygon((0 0,1 0,1 1,0 0));{Pose(Point(1 0),0)@2026-01-01, Pose(Point(9 0),0)@2026-01-02}', 2.0),
+       aDwithin(trgeometry 'Polygon((0 0,1 0,1 1,0 0));{Pose(Point(1 0),0)@2026-01-01, Pose(Point(9 0),0)@2026-01-02}', geometry 'Point(0 0)', 2.0);
+----
+false	false
