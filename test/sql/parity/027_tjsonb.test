@@ -162,13 +162,23 @@ SELECT tjsonbPathQueryFirst(TJSONB('{"a":{"b":7}}@2000-01-01'), '$.a.b'::jsonpat
 ----
 "7"@2000-01-01 00:00:00+01	"[7]"@2000-01-01 00:00:00+01
 
-# Insert takes the path as a list and the new value as jsonb. The last argument is
-# create-if-missing, so a missing key appears only when it is true.
+# Insert takes the path as a list and the new value as jsonb. The last argument chooses
+# which side of an existing element the value lands on, so a path naming a key the object
+# does not hold creates it whichever way the flag reads.
 query II
 SELECT tjsonbInsert(TJSONB('{"a":{}}@2000-01-01'), ['a','b'], '9'::jsonb, false)::VARCHAR,
        tjsonbInsert(TJSONB('{"a":{}}@2000-01-01'), ['a','b'], '9'::jsonb, true)::VARCHAR;
 ----
-"{\"a\": {}}"@2000-01-01 00:00:00+01	"{\"a\": {\"b\": 9}}"@2000-01-01 00:00:00+01
+"{\"a\": {\"b\": 9}}"@2000-01-01 00:00:00+01	"{\"a\": {\"b\": 9}}"@2000-01-01 00:00:00+01
+
+# An array element is where the flag reads: the value lands before the element the path
+# names when it is false and after it when it is true. The object case above cannot show
+# that, both of its columns answering the same, so the two live together.
+query II
+SELECT tjsonbInsert(TJSONB('{"a":[1,2]}@2000-01-01'), ['a','1'], '9'::jsonb, false)::VARCHAR,
+       tjsonbInsert(TJSONB('{"a":[1,2]}@2000-01-01'), ['a','1'], '9'::jsonb, true)::VARCHAR;
+----
+"{\"a\": [1, 9, 2]}"@2000-01-01 00:00:00+01	"{\"a\": [1, 2, 9]}"@2000-01-01 00:00:00+01
 
 # The value accessors are generated from the out-parameter shape, so they answer the
 # jsonb the catalog declares and a miss is SQL NULL rather than an error.
