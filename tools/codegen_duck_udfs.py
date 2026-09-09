@@ -762,6 +762,32 @@ def sig_declared_accs(f):
     have = {a for s in sigs for a in s["args"] if a in SIG_TEMPORAL_ACC}
     return [SIG_TEMPORAL_ACC[t] for t in SIG_TEMPORAL_ACC if t in have] or None
 
+def sig_geo_first(f):
+    """Which operand a geometry-and-temporal function takes FIRST **in SQL**, read from the
+    catalog's `sqlSignatures`: True geometry-first, False temporal-first, None when the declared
+    overloads do not agree on one order (or name no such pair).
+
+    The C parameter order answers a different question. A MobilityDB wrapper is free to read its
+    arguments in the opposite order and swap them into the MEOS call — `Tpose_apply_geo` reads
+    `(geometry, tpose)` and calls `tpose_apply_geo(temp, body)` — so the kernel's order is the
+    KERNEL's, and only the signature states the surface's. Where every declared overload agrees on
+    one order, that order IS the surface; registering the C one instead publishes a signature
+    MobilityDB does not declare. Where the overloads declare BOTH orders (the commuted wrapper
+    pairs, `tDistance(trgeometry, geometry)` beside `tDistance(geometry, trgeometry)`) there is no
+    single answer, so the caller keeps its own choice and the second order stays unregistered."""
+    def _geo(t):
+        return t.startswith("geometry") or t.startswith("geography")
+    orders = set()
+    for s in (f.get("sqlSignatures") or []):
+        a = s.get("args") or []
+        if len(a) < 2:
+            continue
+        if _geo(a[0]) and a[1] in SIG_TEMPORAL_ACC:
+            orders.add(True)
+        elif a[0] in SIG_TEMPORAL_ACC and _geo(a[1]):
+            orders.add(False)
+    return orders.pop() if len(orders) == 1 else None
+
 # ---------------- SET family (additive; the temporal path is left untouched) ----------------
 # Self-contained Blob<->Set marshalling reuses the hand binding's exact method
 # (malloc+memcpy in; set_mem_size out). Per-element accessors mirror CORE_TYPES.
@@ -1830,7 +1856,12 @@ def shape_geo_temporal(f):
         return None
     if not all(norm(ins[i]["canonical"]).endswith("*") for i in (0, 1)):
         return None
+    # The SQL operand order, when the catalog states one, OVERRIDES the C parameter order: the
+    # wrapper, not the kernel, decides what the surface looks like (sig_geo_first).
     geo_first = (bs[0] == "GSERIALIZED")
+    _declared_first = sig_geo_first(f)
+    if _declared_first is not None:
+        geo_first = _declared_first
     has_dbl = len(ins) == 3
     if has_dbl and (base(ins[2]["canonical"]) != "double" or "*" in norm(ins[2]["canonical"])):
         return None
@@ -1850,8 +1881,15 @@ def shape_geo_temporal(f):
 
 def emit_geo_temporal(f, kind, geo_first, has_dbl):
     name = f["name"]
+    # TWO INDEPENDENT ORDERS. `geo_first` is the SQL one — which vector the registration binds to
+    # which operand, so the lambda reads its arguments in it. The MEOS call keeps the KERNEL's own
+    # parameter order, a separate fact and the only one the C signature admits: where the wrapper
+    # swaps (tpose_apply_geo takes the temporal first and backs applyPose(geometry, tpose)) the two
+    # differ, and driving both from one flag passes a GSERIALIZED * where a Temporal * is expected.
+    ins, _out = classify(f)
+    c_geo_first = base(ins[0]["canonical"]) == "GSERIALIZED"
     decl = "string_t in_g, string_t in_t" if geo_first else "string_t in_t, string_t in_g"
-    call_args = "gs, t" if geo_first else "t, gs"
+    call_args = "gs, t" if c_geo_first else "t, gs"
     # When the temporal operand is geodetic, coerce the geometry to geography so the
     # planar/geodetic flags + bbox match before the MEOS call (MEOS correctly errors on a
     # mixed planar/geodetic pair). DuckDB has a single GEOMETRY type, so this cross-argument
