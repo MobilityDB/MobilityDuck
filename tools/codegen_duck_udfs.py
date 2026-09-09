@@ -3031,6 +3031,8 @@ CORE_CTOR_ACC = {
     "tint": "TemporalTypes::tint()", "tbigint": "TemporalTypes::tbigint()",
     "tbool": "TemporalTypes::tbool()", "tfloat": "TemporalTypes::tfloat()",
     "ttext": "TemporalTypes::ttext()",
+    "tgeompoint": "TgeompointType::tgeompoint()",
+    "tgeogpoint": "TgeogpointType::tgeogpoint()",
 }
 TEMPORAL_CTOR = {
     "temporal_as_tinstant":     "to_inst",     # <t>Inst(<t>)
