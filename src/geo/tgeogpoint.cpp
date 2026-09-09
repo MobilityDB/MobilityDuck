@@ -195,23 +195,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "tgeogpointSeq",
-            {LogicalType::LIST(tgeogpoint())},
-            tgeogpoint(),
-            TgeompointFunctions::Tgeompoint_sequence_constructor
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "tgeogpointSeqSet",
-            {LogicalType::LIST(tgeogpoint())},
-            tgeogpoint(),
-            TemporalFunctions::Tsequenceset_constructor
-        )
-    );
 
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
@@ -232,50 +216,10 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
      * Transformation functions
      ****************************************************/
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "tgeogpointInst",
-            {tgeogpoint()},
-            tgeogpoint(),
-            TemporalFunctions::Temporal_to_tinstant
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "tgeogpointSeq",
-            {tgeogpoint(), LogicalType::VARCHAR},
-            tgeogpoint(),
-            TemporalFunctions::Temporal_to_tsequence
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "tgeogpointSeq",
-            {tgeogpoint()},
-            tgeogpoint(),
-            TemporalFunctions::Temporal_to_tsequence
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "tgeogpointSeqSet",
-            {tgeogpoint(), LogicalType::VARCHAR},
-            tgeogpoint(),
-            TemporalFunctions::Temporal_to_tsequenceset
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "tgeogpointSeqSet",
-            {tgeogpoint()},
-            tgeogpoint(),
-            TemporalFunctions::Temporal_to_tsequenceset
-        )
-    );
 
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
@@ -1445,10 +1389,8 @@ void TgeogpointType::RegisterRoundtripIO(ExtensionLoader &loader) {
 
     /* tgeogpointFromHexWKB / FromHexEWKB */
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tgeogpointFromHexWKB",  {V}, T, TgeogFromHexWkbExec));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tgeogpointFromHexEWKB", {V}, T, TgeogFromHexWkbExec));
 
     /* tgeogpointFromMFJSON */
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tgeogpointFromMFJSON", {V}, T, TgeogFromMfjsonExec));
 }
 
 // ============================================================
