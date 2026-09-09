@@ -104,13 +104,11 @@ SELECT asText(set([jsonb '{"a":1,"b":2}']) - ['a']);
 ----
 {"{\"b\": 2}"}
 
-# jsonbsetInsert registers over the same path shape and is callable, but no assertion on
-# its VALUE belongs here yet: MEOS routes it to the set kernel rather than the insert one
-# (`datum_jsonb_insert` calls `pg_jsonb_set`, whose fifth parameter is `create`, not
-# `after`), so it overwrites the element at the path instead of shifting it — the temporal
-# twin `tjsonbInsert` answers the same, which places the defect upstream of the binding.
-# Pinning today's answer would pin that, so the assertion here is that the registration
-# exists and carries the declared signature; the value case follows the upstream fix.
+# jsonbsetInsert registers over the same path shape and shifts the element at the path
+# rather than overwriting it, MEOS routing it to `pg_jsonb_insert`, whose fifth parameter
+# reads as `after`. The assertion here is that the registration exists and carries the
+# declared signature; its temporal twin `tjsonbInsert` pins the value in
+# test/sql/parity/027_tjsonb.test.
 query I
 SELECT count(*) FROM duckdb_functions()
 WHERE lower(function_name) = 'jsonbsetinsert'
