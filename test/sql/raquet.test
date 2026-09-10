@@ -38,6 +38,23 @@ FROM tile;
 ----
 true
 
+# A NULL nodata value states that the tile has none, whether the query writes
+# it or reads it from a column, so the tile is the one built without it. A
+# NULL in any other argument leaves no tile to build.
+
+query III
+SELECT raquet(from_hex('2a'), 1, 1, quadbinTileToCell(0, 0, 0), 'UINT8', NULL) = rq,
+  raquet(from_hex('2a'), 1, 1, quadbinTileToCell(0, 0, 0), 'UINT8', NULL::DOUBLE) = rq,
+  raquet(from_hex('2a'), 1, 1, quadbinTileToCell(0, 0, 0), 'UINT8', n) = rq
+FROM tile, (VALUES (NULL::DOUBLE)) v(n);
+----
+true	true	true
+
+query I
+SELECT raquet(NULL, 1, 1, quadbinTileToCell(0, 0, 0), 'UINT8', 255.0) IS NULL;
+----
+true
+
 # The hex-encoded WKB pair round-trips the tile.
 
 query I

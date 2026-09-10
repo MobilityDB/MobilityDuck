@@ -775,9 +775,13 @@ void RaquetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "raquet", {BLB, I32, I32, QB, V}, RQ,
         RaquetFunctions::Raquet_constructor));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+    /* A NULL nodata value states that the tile has none, so the constructor
+     * reads its NULL arguments itself rather than the call answering NULL */
+    ScalarFunction raquet_with_nodata(
         "raquet", {BLB, I32, I32, QB, V, D}, RQ,
-        RaquetFunctions::Raquet_constructor));
+        RaquetFunctions::Raquet_constructor);
+    raquet_with_nodata.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
+    duckdb::RegisterSerializedScalarFunction(loader, raquet_with_nodata);
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "raquetRead", {BLB}, RQ, RaquetFunctions::Raquet_read));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
