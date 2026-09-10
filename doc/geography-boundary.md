@@ -46,7 +46,7 @@ GEOGRAPHY.SetAlias("GEOGRAPHY");
 ExtensionLoader::RegisterType(loader, "GEOGRAPHY", GEOGRAPHY);
 ```
 
-The alias makes `INSERT INTO … VALUES (geography 'POINT(4.35 50.85)')` parse, `SELECT ST_GeogFromText('POINT(4.35 50.85)')` type-check, and TemporalParquet round-trips preserve the type information (the alias is stored in the Parquet `temporal` footer JSON; readers reconstruct it).
+The alias makes `INSERT INTO … VALUES (geography 'POINT(4.35 50.85)')` parse, `SELECT ST_GeogFromText('POINT(4.35 50.85)')` type-check, and a Parquet round-trip preserves the type information: the column is a GeoParquet geometry column, described in the file's `geo` metadata (see [Parquet round-trip preservation](#parquet-round-trip-preservation)).
 
 ## I/O surface
 
@@ -91,9 +91,27 @@ The complete set of inter-type conversions involving `GEOGRAPHY`. Implicit casts
 
 This is the same shape MobilityDB-on-Postgres has between `geometry` / `geography` / `tgeompoint` / `tgeogpoint`. MobilityDuck mirrors the matrix; MEOS does the conversion work.
 
-## TemporalParquet round-trip preservation
+## Parquet round-trip preservation
 
-A column declared `GEOGRAPHY` in MobilityDuck is written to Parquet as `BYTE_ARRAY` carrying MEOS-WKB with the geodetic flag in the type tag. The TemporalParquet footer JSON records the type alias (`"base_type": "geography"`), so a downstream reader (MobilityDuck, MobilityDB, MobilitySpark, MobilityAPI) reconstructs both the alias and the geodetic interpretation without ambiguity:
+A static `GEOGRAPHY` column is not a temporal column, so the TemporalParquet `temporal` metadata does not describe it: TemporalParquet's type table defines temporal types, sets, spans and boxes, and no static geometry or geography type. A static `GEOGRAPHY` column is a GeoParquet geometry column. GeoParquet 2.0 stores it as a `BYTE_ARRAY` of WKB carrying the Parquet `GEOGRAPHY` logical type, and describes it in the file's `geo` metadata with `edges` set to `"spherical"`; an absent `crs` there means `OGC:CRS84`, longitude and latitude on WGS 84. The `temporal` metadata describes only the temporal columns beside it. A downstream reader (MobilityDuck, MobilityDB, MobilitySpark, MobilityAPI) therefore reads the geodetic interpretation of each column from the one specification that defines its kind.
+
+The file's `geo` key:
+
+```json
+{
+  "version": "2.0.0",
+  "primary_column": "footprint",
+  "columns": {
+    "footprint": {
+      "encoding":       "WKB",
+      "geometry_types": [],
+      "edges":          "spherical"
+    }
+  }
+}
+```
+
+The file's `temporal` key:
 
 ```json
 {
@@ -107,19 +125,12 @@ A column declared `GEOGRAPHY` in MobilityDuck is written to Parquet as `BYTE_ARR
       "srid":          4326,
       "edges":         "spherical",
       "geodetic":      true
-    },
-    "footprint": {
-      "encoding":      "MEOS-WKB",
-      "base_type":     "geography",
-      "srid":          4326,
-      "edges":         "spherical",
-      "geodetic":      true
     }
   }
 }
 ```
 
-Closed-algebra producers (`spaceTimeSplit`, `valueSet`, `eIntersection`) preserve the type — `eIntersection(GEOGRAPHY, GEOGRAPHY)` returns `GEOGRAPHY`, and the round-trip through Parquet is a no-op as long as the writer and reader both honour the footer convention.
+Closed-algebra producers (`spaceTimeSplit`, `valueSet`, `eIntersection`) preserve the type — `eIntersection(GEOGRAPHY, GEOGRAPHY)` returns `GEOGRAPHY`, and the round-trip through Parquet is a no-op as long as the writer and reader both honour the `geo` and `temporal` metadata.
 
 ## Pitfalls a binding implementation must avoid
 
@@ -139,7 +150,7 @@ Closed-algebra producers (`spaceTimeSplit`, `valueSet`, `eIntersection`) preserv
 | `tgeogpoint` LogicalType + temporal-geographic UDFs | MobilityDuck `src/geo/tgeogpoint*.cpp` | Already registered |
 | `GEOGRAPHY` LogicalType + ST_GeogFromText / ST_AsText / ST_AsBinary / ST_GeogFromBinary | (planned PR, see "Pending work" below) | Pending |
 | Casts between `GEOMETRY` ⇄ `GEOGRAPHY` and `GEOGRAPHY` ⇄ `TGEOGPOINT` | (planned PR) | Pending |
-| TemporalParquet footer support for `"base_type": "geography"` | `tools/temporal_parquet.py` | Already supports arbitrary `base_type` strings; the consumer reads the alias verbatim |
+| GeoParquet `geo` metadata for a static `GEOGRAPHY` column | (planned, with the `GEOGRAPHY` LogicalType) | Pending |
 | Tests for round-trip, value-equality, cast-matrix, length/area numeric checks | `test/sql/geography.test` (planned) | Pending |
 
 The retirement of the old `Spherical_lonlat_rect_area_m2` / `Geodetic_stbox_footprint_area` workaround (which previously approximated geodetic area in the binding because MEOS-1.3 `stbox_area` could SIGSEGV) is in [PR #165](https://github.com/MobilityDB/MobilityDuck/pull/165); the present design assumes that workaround is gone.
