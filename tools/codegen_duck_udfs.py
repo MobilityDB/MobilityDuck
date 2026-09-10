@@ -2983,6 +2983,92 @@ def emit_span(f, kind, C=SPAN_C):
             f"            bool r = {name}(s1, s2);\n            free(s1); free(s2);\n            return r;\n"
             f"        }});\n}}\n")
 
+# ---------------- CONTAINER SCALARS: a number between two containers ----------------
+# distance(intspan, intspan) -> integer, setDistance(tstzset, timestamptz) -> float: a by-value
+# number between a set, span or span set and a second container or one base value. The C name
+# carries no scope the name-keyed rules read, and the operand order the SQL surface declares is not
+# always the C one -- distance(integer, intspan) and distance(intspan, integer) are one kernel,
+# distance_span_int -- so the registrations come from the catalog's own sqlSignatures: each
+# signature registers once, over the body whose operand order it spells, and a signature spelling
+# neither order reaches no surface. The return is the declared one (scalar_ret4), so the bigint set
+# distance MobilityDB declares `float` registers DOUBLE while the kernel keeps its int64.
+# Admitted by @ingroup: the comparators (meos_setspan_comp, `cmp`) have the same shape and join
+# when their hand set_cmp/span_cmp/spanset_cmp registrations retire, as their own change.
+CONTAINER_SCALAR_GROUPS = {"meos_setspan_dist"}
+CONT_BLOBTO = {"Set": "BlobToSet", "Span": "BlobToSpan", "SpanSet": "BlobToSpanSet"}
+CONT_SQL_ACC = {"Set": SET_SIG_ACC, "Span": SPAN_TYPES, "SpanSet": SPANSET_TYPES}
+def shape_container_scalar(f):
+    """The C operands as [("C", Set|Span|SpanSet) | ("E", base)] for a by-value number between two
+    containers or a container and one base value, else None."""
+    if f.get("group") not in CONTAINER_SCALAR_GROUPS or supported(f) is not None:
+        return None
+    ins, out = classify(f)
+    if out is not None or len(ins) != 2:
+        return None
+    rb = base(f["returnType"]["canonical"])
+    if rb not in NUMERIC_C_RET or rb == "bool" or "*" in norm(f["returnType"]["canonical"]):
+        return None
+    ops = []
+    for p in ins:
+        b, n = base(p["canonical"]), norm(p["canonical"])
+        if b in CONT_BLOBTO and n.endswith("*"):
+            ops.append(("C", b))
+        elif b in ELEM_TO_SPAN and "*" not in n:
+            ops.append(("E", b))
+        else:
+            return None
+    return ops if any(k == "C" for k, _b in ops) else None
+
+def container_scalar_sigs(f, ops):
+    """[(duck argument types, reversed)] for each declared signature: one spelling the C operand
+    order, or the reversed one a commuted SQL form declares. A position naming a type this surface
+    does not register drops its signature. A base value matches where the DuckDB type of its SQL
+    name is the one its C type marshals through."""
+    def duck(op, sqlt):
+        k, b = op
+        if k == "C":
+            return CONT_SQL_ACC[b].get(sqlt)
+        return SCALAR_ARG[b][0] if SQL_BASE_TO_DUCK.get(sqlt) == SCALAR_ARG[b][0] else None
+    out = []
+    for s in f.get("sqlSignatures") or []:
+        a = s.get("args") or []
+        if len(a) != 2:
+            continue
+        fwd = [duck(ops[0], a[0]), duck(ops[1], a[1])]
+        rev = [duck(ops[1], a[0]), duck(ops[0], a[1])]
+        if all(fwd):
+            out.append((fwd, False))
+        elif all(rev):
+            out.append((rev, True))
+    return out
+
+def emit_container_scalar(f, ops, rev):
+    """The body for one operand order: `Gen_<fn>` reads the operands off the vectors in the C order,
+    `Gen_<fn>_rev` in the commuted order its SQL form declares; both make the same call."""
+    name = f["name"]
+    _reg, ct, rett, rexpr = scalar_ret4(f)
+    held = [1, 0] if rev else [0, 1]        # held[v] = the C operand vector v carries
+    vt = lambda k, b: "string_t" if k == "C" else SCALAR_ARG[b][1]
+    t0, t1 = vt(*ops[held[0]]), vt(*ops[held[1]])
+    decls, call, frees = [], [], []
+    for i, (k, b) in enumerate(ops):
+        v = held.index(i)
+        if k == "C":
+            decls.append(f"            {b} *x{i} = {CONT_BLOBTO[b]}(a{v});\n")
+            call.append(f"x{i}")
+            frees.append(f"free(x{i});")
+        else:
+            call.append(SCALAR_ARG[b][2].replace("a2", f"a{v}"))
+    sfx = "_rev" if rev else ""
+    return (f"static void Gen_{name}{sfx}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+            f"    EnsureMeosThreadInitialized();\n"
+            f"    BinaryExecutor::Execute<{t0}, {t1}, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
+            f"        [&]({t0} a0, {t1} a1) {{\n"
+            + "".join(decls) +
+            f"            {ct} r = {name}({', '.join(call)});\n"
+            f"            {' '.join(frees)}\n"
+            f"            return {rexpr};\n        }});\n}}\n")
+
 # ---- canonical names only — NO coexistence prefix, ever ----
 # The North Star binding has ZERO hand-written UDFs, so there is nothing to coexist
 # with: the generator OWNS every canonical name it emits, and the hand registration it
@@ -3032,7 +3118,11 @@ RETIRED_GROUPS = {# The JSON value accessors: valueAtTimestamp reaches the out-p
                   # temporal × tstzspan, and tnumber × {numspan, tbox} — generated from
                   # the box/span shapes; the hand temporal_* snake aliases and the mixed
                   # cross-product operator regs in temporal.cpp are deleted.
-                  "meos_temporal_bbox_topo"}
+                  "meos_temporal_bbox_topo",
+                  # Set/span/spanset distance (distance/setDistance + <->) in both operand
+                  # orders, from shape_container_scalar; the hand span_distance/set_distance
+                  # registrations and their executors are deleted.
+                  "meos_setspan_dist"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
@@ -3043,6 +3133,7 @@ RETIRED_GROUPS = {# The JSON value accessors: valueAtTimestamp reaches the out-p
 RETIRE_UNCOVERED_OK = set()
 def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
+TEMPORAL_CBASES = {"Temporal", "TInstant", "TSequence", "TSequenceSet"}
 def reg_name(nm, f):
     return nm            # canonical always; the g_ coexistence prefix is removed for good
 def reg_names(f, sqlfn, aliases, argsig=None):
@@ -3057,6 +3148,14 @@ def reg_names(f, sqlfn, aliases, argsig=None):
     # never the `_bbox` backing tag. (catalog SoT: sqlfnBackingOnly / publicSqlName.)
     names = [] if f.get("sqlfnBackingOnly") else [sqlfn]
     bare = aliases.get(op) if aliases else None
+    # The portable aliases name operators over the temporal type families (the catalog's
+    # portableAliases.scope.inScopeTypeFamilies), and a set, span or span set is none of them. A
+    # function over no temporal operand that states its own public SQL name keeps that name:
+    # <-> between two spans is `distance`, while `tDistance`, the alias <-> carries, is declared
+    # only over temporal values.
+    if bare and names and not any(base(p["canonical"]) in TEMPORAL_CBASES
+                                  for p in f.get("params") or []):
+        bare = None
     if bare and bare not in names:
         names.append(bare)
     # The operator symbol is registered only when DuckDB can parse it in an operator
@@ -3987,6 +4086,29 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     for nm in names:
                         specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                              f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
+    # CONTAINER SCALARS — one registration per declared signature, over the body whose operand
+    # order it spells (shape_container_scalar).
+    for f in fns:
+        if declared is not None and f["name"] not in declared:
+            continue
+        ops = shape_container_scalar(f)
+        if ops is None:
+            continue
+        sigs = container_scalar_sigs(f, ops)
+        if not sigs:
+            continue
+        STATE["grp"] = f.get("group") or "meos_ungrouped"
+        n_set += 1
+        fn = f["name"]
+        dret = scalar_ret4(f)[0]
+        for rev in sorted({r for _a, r in sigs}):
+            set_bodies.append(emit_container_scalar(f, ops, rev))
+        names = reg_names(f, f["sqlfn"], aliases)
+        for (a0, a1), rev in sigs:
+            body = f"Gen_{fn}_rev" if rev else f"Gen_{fn}"
+            for nm in names:
+                set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                         f'"{reg_name(nm, f)}", {{{a0}, {a1}}}, {dret}, {body}));')
     # SET family — separate loop (the temporal path above is untouched).
     for f in fns:
         if declared is not None and f["name"] not in declared:

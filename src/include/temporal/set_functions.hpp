@@ -84,10 +84,6 @@ struct SetFunctions {
     static void Intersect_set_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Intersect_set_set(DataChunk &args, ExpressionState &state, Vector &result);
     static void Intersect_value_set(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Distance_set_value(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Distance_set_set(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Distance_value_set(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Distance_value_value(DataChunk &args, ExpressionState &state, Vector &result);
     //TODO: Selectivity functions
     static void Set_eq(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_ne(DataChunk &args, ExpressionState &state, Vector &result);

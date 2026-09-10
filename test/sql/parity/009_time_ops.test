@@ -5,7 +5,7 @@
 # Time-only specialisations of operators between tstzset / tstzspan
 # and timestamptz / interval:
 # - Shift arithmetic: tstzset/tstzspan + interval
-# - Distance operator <-> returning INTERVAL for time types
+# - Distance operator <-> answering the seconds between two times, as a float
 
 require mobilityduck
 
@@ -21,14 +21,18 @@ SELECT tstzspan '[2000-01-01, 2000-01-02]' + interval '1 day';
 ----
 [2000-01-02 00:00:00+01, 2000-01-03 00:00:00+01]
 
-# Time-difference distance
+# Time-difference distance: MobilityDB declares distance(tstzspan, tstzspan) RETURNS float, the
+# seconds between the two operands. Expected values from
+# mobilitydb/test/temporal/expected/009_time_ops.test.out at the line cited.
 
+# 009_time_ops.test.out:1333
 query I
-SELECT timestamptz '2000-01-01' <-> tstzset '{2000-01-03}';
+SELECT timestamptz '2001-01-01' <-> tstzset '{2001-01-02, 2001-01-03, 2001-01-05}';
 ----
-2 days
+86400
 
+# 009_time_ops.test.out:1393
 query I
-SELECT tstzspan '[2000-01-01, 2000-01-02]' <-> tstzspan '[2000-01-04, 2000-01-05]';
+SELECT timestamptz '2001-01-05' <-> tstzspan '[2001-01-01, 2001-01-03]';
 ----
-2 days
+172800
