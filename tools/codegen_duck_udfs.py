@@ -855,6 +855,28 @@ def ret_set_type(name, arg_acc):
 # registers nothing here (they are gated to their own family files).
 SET_SQL_TO_ACC = dict(SET_TYPES)
 
+# The set type a declared (set, scalar) -> set signature names: the registered set types plus
+# h3indexset, which carries its own hand-registered type (see BASE_ORDER).
+SET_SIG_ACC = {**SET_TYPES, "h3indexset": "H3indexTypes::h3indexset()"}
+
+def declared_element_pairs(f, setfirst):
+    """[(set accessor, result accessor, None)] for the two-argument signatures the catalog declares
+    for f, reading the set at the position the body reads it; None when it declares none.
+
+    The set a (Set, scalar) -> Set kernel works on is the one its signature names, not the set of
+    its scalar: h3_uncompact_cells takes a resolution over an h3indexset, and jsonbset_delete a key
+    over a jsonbset, and neither integer nor text is an element of the set it reads."""
+    two = [s for s in (f.get("sqlSignatures") or []) if len(s["args"]) == 2]
+    if not two:
+        return None
+    pos = 0 if setfirst else 1
+    out = []
+    for s in two:
+        acc, rett = SET_SIG_ACC.get(s["args"][pos]), SET_SIG_ACC.get(s["ret"])
+        if acc and rett and (acc, rett, None) not in out:
+            out.append((acc, rett, None))
+    return out
+
 def set_scalar_param_sigs(f):
     """For a 2-arg (Set, scalar)->Set function, decide from the catalog sqlSignatures
     whether arg2 is a fixed PARAM (precision/SRID) rather than a set ELEMENT, and if so
@@ -3483,9 +3505,6 @@ def emit_baseval_scalar(f, bb, rb):
 # a cell type is a BIGINT alias, so its vector is int64_t, read into the MEOS call as uint64_t and
 # written back as int64_t, the id keeping its bits both ways.
 CELL_SQL = {_acc_sqlname(v): v for v in CELL_BASEVAL.values()}         # h3index / quadbin / s2cell
-# The set types a static cell function answers: the registered set types (quadbinset, s2cellset,
-# intset, ...) plus h3indexset, which carries its own hand-registered type (see BASE_ORDER).
-STATIC_SET_SQL = {**SET_TYPES, "h3indexset": "H3indexTypes::h3indexset()"}
 
 def static_cell_arg(p, sqlt, i):
     """(DuckDB type, executor C++ type, MEOS-call expression, pre-call lines, post-call lines) for
@@ -3507,7 +3526,7 @@ def static_cell_arg(p, sqlt, i):
     if b == "char" and n.count("*") == 1 and sqlt == "text":
         return ("LogicalType::VARCHAR", "string_t", "%s.GetString().c_str()" % v, "", "")
     if b in ("Set", "Span") and n.endswith("*"):
-        acc = STATIC_SET_SQL.get(sqlt) if b == "Set" else SQL_BASE_TO_DUCK.get(sqlt)
+        acc = SET_SIG_ACC.get(sqlt) if b == "Set" else SQL_BASE_TO_DUCK.get(sqlt)
         if not acc:
             return None
         loc = "p%d" % i
@@ -3525,7 +3544,7 @@ def static_cell_ret(f, sqlr):
         # A bare uint64 that is not a cell is the *_hash_extended value (native unsigned).
         return ("LogicalType::UBIGINT", "uint64_t", "uint64_t", "return r;", False)
     if b == "Set" and n.endswith("*"):
-        acc = STATIC_SET_SQL.get(sqlr)
+        acc = SET_SIG_ACC.get(sqlr)
         if not acc:
             return None
         return (acc, "string_t", "Set *", "return SetToBlobN(result, r, mask, idx);", True)
@@ -3984,6 +4003,12 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         sp = set_scalar_param_sigs(f) if kind.startswith("setsc_set:") else None
         if sp is not None and not sp:
             continue
+        # (Set, scalar element)->Set whose declared signatures name only sets this surface does not
+        # register: no body, no registration, as for the scalar-param case above.
+        ep = (declared_element_pairs(f, kind.startswith("setsc_set:"))
+              if sp is None and kind.startswith(("setsc_set:", "scset_set:")) else None)
+        if ep is not None and not ep:
+            continue
         n_set += 1
         set_bodies.append(emit_set(f, kind))
         fn, sqlfn = f["name"], f["sqlfn"]
@@ -3997,8 +4022,10 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             scd = "LogicalType::VARCHAR" if b == "text" else SCALAR_ARG[b][0]
             setfirst = kind.startswith("setsc_set:")
             # scalar-param: register over the catalog-declared core set types (round->floatset);
-            # element-add: the accessor is the element's set type (setUnion(intset)->intset).
-            pairs = sp if sp is not None else [(ELEM_TO_SET[b], ELEM_TO_SET[b], None)]
+            # element-add: register over the set each declared signature names
+            # (setUnion(intset, integer)->intset, jsonbsetDelete(jsonbset, text)->jsonbset); a
+            # function the catalog declares no signature for takes the element's set type.
+            pairs = sp if sp is not None else (ep or [(ELEM_TO_SET[b], ELEM_TO_SET[b], None)])
             dflt = next((d for *_, d in pairs if d is not None), None)
             for acc, rett, _d in pairs:
                 sig = f"{{{acc}, {scd}}}" if setfirst else f"{{{scd}, {acc}}}"
