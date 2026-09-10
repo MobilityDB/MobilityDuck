@@ -259,31 +259,50 @@ void RaquetFunctions::Raquet_height(
         });
 }
 
-void RaquetFunctions::Raquet_nodata(
-    DataChunk &args, ExpressionState &state, Vector &result)
-{
-    UnaryExecutor::Execute<string_t, double>(
-        args.data[0], result, args.size(),
-        [&](string_t blob) -> double {
-            Raquet *rq = BlobToRaquet(blob);
-            double nd = raquet_nodata(rq);
-            free(rq);
-            return nd;
-        });
-}
-
-void RaquetFunctions::Raquet_pixtype(
+void RaquetFunctions::Raquet_band_pixel_type(
     DataChunk &args, ExpressionState &state, Vector &result)
 {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),
         [&](string_t blob) -> string_t {
             Raquet *rq = BlobToRaquet(blob);
-            char *str = raquet_pixtype(rq);
+            char *str = raquet_band_pixel_type(rq);
             free(rq);
             std::string copy(str ? str : "");
             if (str) free(str);
             return StringVector::AddString(result, copy);
+        });
+}
+
+void RaquetFunctions::Raquet_band_has_nodata_value(
+    DataChunk &args, ExpressionState &state, Vector &result)
+{
+    UnaryExecutor::Execute<string_t, bool>(
+        args.data[0], result, args.size(),
+        [&](string_t blob) -> bool {
+            Raquet *rq = BlobToRaquet(blob);
+            bool has = raquet_band_has_nodata_value(rq);
+            free(rq);
+            return has;
+        });
+}
+
+/* A band stating no nodata value answers NULL */
+void RaquetFunctions::Raquet_band_nodata_value(
+    DataChunk &args, ExpressionState &state, Vector &result)
+{
+    UnaryExecutor::ExecuteWithNulls<string_t, double>(
+        args.data[0], result, args.size(),
+        [&](string_t blob, ValidityMask &mask, idx_t idx) -> double {
+            Raquet *rq = BlobToRaquet(blob);
+            double nd;
+            bool found = raquet_band_nodata_value(rq, &nd);
+            free(rq);
+            if (!found) {
+                mask.SetInvalid(idx);
+                return double();
+            }
+            return nd;
         });
 }
 
@@ -805,9 +824,11 @@ void RaquetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "height", {RQ}, I32, RaquetFunctions::Raquet_height));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "nodata", {RQ}, D, RaquetFunctions::Raquet_nodata));
+        "bandPixelType", {RQ}, V, RaquetFunctions::Raquet_band_pixel_type));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "pixtype", {RQ}, V, RaquetFunctions::Raquet_pixtype));
+        "bandHasNoDataValue", {RQ}, B, RaquetFunctions::Raquet_band_has_nodata_value));
+    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+        "bandNoDataValue", {RQ}, D, RaquetFunctions::Raquet_band_nodata_value));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "pixels", {RQ}, BLB, RaquetFunctions::Raquet_pixels));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(

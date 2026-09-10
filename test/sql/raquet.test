@@ -13,10 +13,24 @@ CREATE TABLE tile AS
 SELECT raquet(from_hex('2a'), 1, 1, quadbinTileToCell(0, 0, 0), 'UINT8') AS rq;
 
 query IIII
-SELECT quadbin(rq) = quadbinTileToCell(0, 0, 0), width(rq), height(rq), pixtype(rq)
+SELECT quadbin(rq) = quadbinTileToCell(0, 0, 0), width(rq), height(rq), bandPixelType(rq)
 FROM tile;
 ----
 true	1	1	uint8
+
+# The tile states no nodata value, so its nodata value is NULL; the sixth
+# argument of the constructor states one.
+
+query II
+SELECT bandHasNoDataValue(rq), bandNoDataValue(rq) IS NULL FROM tile;
+----
+false	true
+
+query II
+SELECT bandHasNoDataValue(t), bandNoDataValue(t)
+FROM (SELECT raquet(from_hex('2a'), 1, 1, quadbinTileToCell(0, 0, 0), 'UINT8', 255.0) AS t);
+----
+true	255.0
 
 # The tile round-trips through its text (hex-WKB) form.
 query I
@@ -33,7 +47,7 @@ SELECT pixels(rq) = from_hex('2a') FROM tile;
 true
 
 query I
-SELECT raquet(pixels(rq), width(rq), height(rq), quadbin(rq), pixtype(rq)) = rq
+SELECT raquet(pixels(rq), width(rq), height(rq), quadbin(rq), bandPixelType(rq)) = rq
 FROM tile;
 ----
 true
