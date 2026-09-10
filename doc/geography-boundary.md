@@ -97,18 +97,23 @@ A column declared `GEOGRAPHY` in MobilityDuck is written to Parquet as `BYTE_ARR
 
 ```json
 {
-  "temporal": {
+  "version": "2.0.0",
+  "columns": {
     "trajectory": {
-      "base_type": "tgeogpoint",
-      "geodetic":  true,
-      "srid":      4326,
-      "subtype":   "Sequence",
-      "interpolation": "linear"
+      "encoding":      "MEOS-WKB",
+      "base_type":     "tgeogpoint",
+      "subtype":       "Sequence",
+      "interpolation": "linear",
+      "srid":          4326,
+      "edges":         "spherical",
+      "geodetic":      true
     },
     "footprint": {
-      "base_type": "geography",
-      "geodetic":  true,
-      "srid":      4326
+      "encoding":      "MEOS-WKB",
+      "base_type":     "geography",
+      "srid":          4326,
+      "edges":         "spherical",
+      "geodetic":      true
     }
   }
 }

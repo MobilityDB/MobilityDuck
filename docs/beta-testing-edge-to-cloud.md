@@ -209,4 +209,4 @@ Fix: `geom_to_geog(gs)` (public MEOS API) properly rebuilds the GSERIALIZED with
 - [ ] `examples/quickstart/quickstart.sql` — readable and self-contained for a new user
 - [ ] `examples/generic-ingest/generic_ingest.sql` — instructions clear, macros well-named
 - [ ] No `Co-Authored-By` or internal planning references in commit messages
-- [ ] Confirm `temporalFooter()` output matches the TemporalParquet spec in PR #911
+- [ ] Confirm `temporalFooter()` output matches the [TemporalParquet specification](https://github.com/MobilityDB/MobilityLakehouse/blob/main/spec/temporalparquet.md)

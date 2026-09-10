@@ -235,17 +235,78 @@ WHERE vessel_id = 1
 # temporalFooter — JSON metadata builder for KV_METADATA embedding
 # =============================================================================
 
-# Single-column map produces correct TemporalParquet JSON
+# A geodetic column: spherical edges, a bbox and a tspan covering
 query T
 SELECT temporalFooter(MAP {'traj': 'tgeogpoint'})
 ----
-{"version":"1.0.0","columns":{"traj":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tgeogpoint"}}}
+{"version":"2.0.0","columns":{"traj":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tgeogpoint","edges":"spherical","geodetic":true,"covering":{"bbox":{"xmin":["traj_bbox","xmin"],"ymin":["traj_bbox","ymin"],"xmax":["traj_bbox","xmax"],"ymax":["traj_bbox","ymax"]},"tspan":{"tmin":["traj_tspan","tmin"],"tmax":["traj_tspan","tmax"]}}}}}
 
-# Multi-column map preserves insertion order
+# A numeric and a planar column, in insertion order
 query T
 SELECT temporalFooter(MAP {'temperature': 'tfloat', 'position': 'tgeompoint'})
 ----
-{"version":"1.0.0","columns":{"temperature":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tfloat"},"position":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tgeompoint"}}}
+{"version":"2.0.0","columns":{"temperature":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tfloat","covering":{"vspan":{"vmin":["temperature_vspan","vmin"],"vmax":["temperature_vspan","vmax"]},"tspan":{"tmin":["temperature_tspan","tmin"],"tmax":["temperature_tspan","tmax"]}}},"position":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tgeompoint","edges":"planar","geodetic":false,"covering":{"bbox":{"xmin":["position_bbox","xmin"],"ymin":["position_bbox","ymin"],"xmax":["position_bbox","xmax"],"ymax":["position_bbox","ymax"]},"tspan":{"tmin":["position_tspan","tmin"],"tmax":["position_tspan","tmax"]}}}}}
+
+# A time-only column carries a tspan covering and nothing spatial
+query T
+SELECT temporalFooter(MAP {'active': 'tbool'})
+----
+{"version":"2.0.0","columns":{"active":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tbool","covering":{"tspan":{"tmin":["active_tspan","tmin"],"tmax":["active_tspan","tmax"]}}}}}
+
+# A column that is not a temporal type carries no covering and no edges
+query T
+SELECT temporalFooter(MAP {'period': 'tstzspan'})
+----
+{"version":"2.0.0","columns":{"period":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tstzspan"}}}
+
+# A column name is written as a JSON string, whatever it holds
+query T
+SELECT temporalFooter(MAP {'a"b\c': 'tstzspan'})
+----
+{"version":"2.0.0","columns":{"a\"b\\c":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tstzspan"}}}
+
+# A shard with its covering columns: the bbox covering is a GeoParquet bounding
+# box column (a root struct of DOUBLE fields in GeoParquet order) and the time
+# extent is the tspan struct the footer declares
+statement ok
+COPY (
+  SELECT asBinary(traj) AS traj,
+         {'xmin': Xmin(stbox(traj)), 'ymin': Ymin(stbox(traj)),
+          'xmax': Xmax(stbox(traj)), 'ymax': Ymax(stbox(traj))} AS traj_bbox,
+         {'tmin': Tmin(stbox(traj)), 'tmax': Tmax(stbox(traj))} AS traj_tspan
+  FROM (SELECT tgeompoint '[POINT(5 52)@2026-01-01 00:00:00+00,
+                            POINT(6 53)@2026-01-01 01:00:00+00]' AS traj)
+)
+TO '__TEST_DIR__/covered.parquet' (
+    FORMAT PARQUET,
+    KV_METADATA {'temporal': temporalFooter(MAP {'traj': 'tgeompoint'})}
+)
+
+query TT nosort
+SELECT name, type FROM parquet_schema('__TEST_DIR__/covered.parquet')
+WHERE name IN ('traj', 'xmin', 'ymin', 'xmax', 'ymax', 'tmin', 'tmax')
+----
+traj	BYTE_ARRAY
+xmin	DOUBLE
+ymin	DOUBLE
+xmax	DOUBLE
+ymax	DOUBLE
+tmin	INT64
+tmax	INT64
+
+query I
+SELECT count(*) FROM read_parquet('__TEST_DIR__/covered.parquet')
+WHERE traj_bbox.xmax >= 5.5 AND traj_bbox.ymin <= 52.5
+  AND traj_tspan.tmin <= TIMESTAMPTZ '2026-01-01 00:30:00+00'
+----
+1
+
+query T
+SELECT value = temporalFooter(MAP {'traj': 'tgeompoint'})::BLOB AS ok
+FROM parquet_kv_metadata('__TEST_DIR__/covered.parquet')
+WHERE key = 'temporal'::BLOB
+----
+true
 
 # KV_METADATA round-trip: footer survives Parquet file-level metadata
 statement ok
