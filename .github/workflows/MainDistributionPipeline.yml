@@ -57,16 +57,21 @@ jobs:
       fail-fast: false
       matrix:
         duckdb: ${{ fromJSON(needs.versions.outputs.supported) }}
-    # The upstream distribution workflow with one addition: every job keeps a vcpkg binary
+    # The upstream distribution workflow with two additions. Every job keeps a vcpkg binary
     # cache of its own, so the dependency set the manifest names — GDAL, GEOS,
     # PROJ, OpenSSL, libmeos and the twenty ports beneath them — is restored
     # rather than compiled. The public cache the workflow reads holds an archive
     # only for the dependency sets DuckDB itself builds, and this extension
     # carries a port of its own, so twenty-seven of its twenty-eight packages
     # are compiled from source on every job: 12.7 minutes of a 27.7-minute
-    # Linux job, and the larger share of a macOS one. The addition is offered
-    # upstream; the fork is where it runs until it is taken.
-    uses: estebanzimanyi/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.4.5-vcpkg-cache
+    # Linux job, and the larger share of a macOS one. And the macOS, Windows and
+    # Wasm jobs start beside the Linux one rather than after it. Upstream holds
+    # them until Linux succeeds, so a run lasts the Linux job plus the slowest of
+    # the others — 21 and then 41 minutes when the Wasm cross-compile follows a
+    # Linux build — where jobs that start together last as long as the slowest
+    # one. The cache is offered upstream as duckdb/extension-ci-tools#400; the
+    # fork is where both run.
+    uses: estebanzimanyi/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.4.5-parallel-legs
     with:
       duckdb_version: ${{ matrix.duckdb }}
       extension_name: mobilityduck
@@ -88,6 +93,14 @@ jobs:
       # 33 to 54 MB per architecture. The macOS and Windows legs take their
       # ceiling from the ccache action instead and are unaffected.
       test_config: '{"test_env_variables": {"CCACHE_MAXSIZE": "500M"}}'
+      # A pull request reads the caches its base branch holds and writes none of
+      # its own. A cache a pull request writes is readable by that pull request
+      # alone, so each entry it saves serves only its own reruns while taking room
+      # from the 10 GB every run shares — a macOS compiler cache is about 1.1 GB an
+      # entry — and those entries are the ones that push main's small Linux caches
+      # out, leaving a Linux leg to recompile DuckDB as described above. Pushes to
+      # main keep writing, so the entries every pull request inherits stay current.
+      save_cache: ${{ github.event_name != 'pull_request' }}
       # Windows is excluded because the MEOS vcpkg port does not build under
       # MSVC or MinGW: it pulls in PostgreSQL-derived sources that depend on
       # POSIX-only headers (e.g. <dirent.h>) and GCC-only attribute syntax
@@ -95,25 +108,22 @@ jobs:
       # Windows support.
       #
       # On pull_request events the reduced matrix below leaves the two native
-      # targets that run the suite, and one Wasm cross-compile. macOS is where a
+      # targets that run the suite. macOS is where a
       # non-portable binary shows up first — the loader there rejects a missing
       # @rpath dependency outright — so osx_arm64 is one of the two a pull
       # request keeps, and the verify-standalone job below inspects its artifact
       # on the event that gates review.
       #
-      # wasm_mvp is the Wasm target a pull request keeps, because a change that
-      # does not cross-compile is otherwise found only after it merges: Wasm
-      # links nothing dynamically and has no CLI to load it with, so its jobs
-      # were excluded here entirely and main was the first event to compile
-      # them. Keeping one costs a single job — `run_in_reduced_ci_mode` is true
-      # for wasm_mvp alone, so wasm_eh and wasm_threads stay filtered by the
-      # reduced matrix whether or not they are named here, and excluding them is
-      # what states the intent. Both still build on push to main and
-      # workflow_dispatch, where the full matrix is validated ahead of a release.
-      # The MEOS port rebuilds libmeos and its heavy deps (GEOS/PROJ/GDAL) from
-      # source each run, and cross-compiling those for Wasm dominates CI time,
-      # which is why a pull request pays for one Wasm target rather than three.
-      exclude_archs: ${{ github.event_name == 'pull_request' && 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;wasm_eh;wasm_threads' || 'windows_amd64;windows_amd64_mingw;linux_amd64_musl' }}
+      # A pull request builds no Wasm target. The Wasm cross-compile is the
+      # longest job in the matrix even beside the others: 33 to 41 minutes of
+      # compile with its dependencies restored, and 73 when a change to the MEOS
+      # port leaves its 28 dependencies to be cross-compiled again, so a pull
+      # request that waited on it could not stay under an hour. All three Wasm
+      # targets build on every push to main and on workflow_dispatch, where a
+      # change that does not cross-compile shows up against the commit that
+      # merged it. Wasm links nothing dynamically and has no CLI to load it
+      # with, so a build is the whole of what those jobs check.
+      exclude_archs: ${{ github.event_name == 'pull_request' && 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;wasm_mvp;wasm_eh;wasm_threads' || 'windows_amd64;windows_amd64_mingw;linux_amd64_musl' }}
 
       # Of the four native targets a pull request builds, two run the suite —
       # linux_amd64 and osx_arm64 — and two only build: linux_arm64 and
