@@ -3470,6 +3470,143 @@ def emit_baseval_scalar(f, bb, rb):
             f"            {bb} *v = {marshal};\n            {cct} r = {name}(v);\n            free(v);\n"
             f"            return {rexpr};\n        }});\n}}\n")
 
+# ---------------- STATIC cell surface: h3index / quadbin / s2cell with no temporal operand ----------------
+# A cell index is carried BY VALUE, the eight bytes of an H3Index / Quadbin / S2CellId, which C spells
+# `uint64_t` or `unsigned long` and which is equally an ordinary hash seed. The temporal cell surface
+# resolves which one a parameter is from the function's registration scope (arg_type), but a static
+# function has no temporal operand and so no scope: reg_scope answers None for every `h3_*`,
+# `quadbin_*` and `s2cell_*` kernel, and supported() rejects its cell argument. What does state the
+# type is the catalog's own sqlSignatures, which spell each position in the SQL type MobilityDB
+# declares -- `cellToParent(quadbin, integer)` -- so this shape reads every argument and the result
+# from the signature and the C parameter list together, and registers one overload per signature.
+# The value conversions are the hand executor's (src/quadbin/tquadbin.cpp Quadbin_tile_to_cell):
+# a cell type is a BIGINT alias, so its vector is int64_t, read into the MEOS call as uint64_t and
+# written back as int64_t, the id keeping its bits both ways.
+CELL_SQL = {_acc_sqlname(v): v for v in CELL_BASEVAL.values()}         # h3index / quadbin / s2cell
+# The set types a static cell function answers: the registered set types (quadbinset, s2cellset,
+# intset, ...) plus h3indexset, which carries its own hand-registered type (see BASE_ORDER).
+STATIC_SET_SQL = {**SET_TYPES, "h3indexset": "H3indexTypes::h3indexset()"}
+
+def static_cell_arg(p, sqlt, i):
+    """(DuckDB type, executor C++ type, MEOS-call expression, pre-call lines, post-call lines) for
+    argument `i`, whose C parameter is `p` and whose declared SQL type is `sqlt`; None if unmappable."""
+    b, n, v = base(p["canonical"]), norm(p["canonical"]), "a%d" % i
+    if b in CELL_UINT and "*" not in n:
+        if sqlt in CELL_SQL:
+            return (CELL_SQL[sqlt], "int64_t", "static_cast<uint64_t>(%s)" % v, "", "")
+        if b in SCALAR_ARG:                  # the *_hash_extended seed, a native UBIGINT
+            dt, cpp, _ = SCALAR_ARG[b]
+            return (dt, cpp, v, "", "")
+        return None
+    if "*" not in n and b in SCALAR_ARG:
+        dt, cpp, ex = SCALAR_ARG[b]
+        return (dt, cpp, ex.replace("a2", v), "", "")
+    if "*" not in n and b == "uint32_t" and sqlt in SQL_SCALAR_RET:
+        # A resolution or tile coordinate: MEOS takes it unsigned, MobilityDB declares it `integer`.
+        return (SQL_SCALAR_RET[sqlt], "int32_t", "static_cast<uint32_t>(%s)" % v, "", "")
+    if b == "char" and n.count("*") == 1 and sqlt == "text":
+        return ("LogicalType::VARCHAR", "string_t", "%s.GetString().c_str()" % v, "", "")
+    if b in ("Set", "Span") and n.endswith("*"):
+        acc = STATIC_SET_SQL.get(sqlt) if b == "Set" else SQL_BASE_TO_DUCK.get(sqlt)
+        if not acc:
+            return None
+        loc = "p%d" % i
+        return (acc, "string_t", loc,
+                "%s *%s = %s;\n            " % (b, loc, PTR_IN[b][1] % v), "free(%s); " % loc)
+    return None
+
+def static_cell_ret(f, sqlr):
+    """(DuckDB type, executor C++ type, C type of the MEOS result, return lines, NULL-able) for the
+    result of `f` declared as SQL type `sqlr`; None if unmappable."""
+    rc = f["returnType"]["canonical"]; b, n = base(rc), norm(rc)
+    if b in CELL_UINT and "*" not in n:
+        if sqlr in CELL_SQL:
+            return (CELL_SQL[sqlr], "int64_t", "uint64_t", "return static_cast<int64_t>(r);", False)
+        # A bare uint64 that is not a cell is the *_hash_extended value (native unsigned).
+        return ("LogicalType::UBIGINT", "uint64_t", "uint64_t", "return r;", False)
+    if b == "Set" and n.endswith("*"):
+        acc = STATIC_SET_SQL.get(sqlr)
+        if not acc:
+            return None
+        return (acc, "string_t", "Set *", "return SetToBlobN(result, r, mask, idx);", True)
+    if b == "STBox" and n.endswith("*"):
+        return (SQL_BASE_TO_DUCK["stbox"], "string_t", "STBox *",
+                "if (!r) { mask.SetInvalid(idx); return string_t(); }\n"
+                "            return StboxToBlob(result, r);", True)
+    if b == "GSERIALIZED" and n.endswith("*"):
+        return ("MobilityDuckGeometryType()", "string_t", "GSERIALIZED *",
+                "if (!r) { mask.SetInvalid(idx); return string_t(); }\n"
+                "            string_t out = GSerializedToGeometry(r, state, result);\n"
+                "            free(r);\n            return out;", True)
+    if b == "char" and n.endswith("*"):
+        dt, cct, rett, rexpr = scalar_ret4(f)
+        return (dt, rett, cct, "if (!r) { mask.SetInvalid(idx); return string_t(); }\n"
+                "            return %s;" % rexpr, True)
+    if b in BYVAL_RET and "*" not in n:
+        dt, cct, rett, rexpr = scalar_ret4(f)
+        return (dt, rett, cct, "return %s;" % rexpr, False)
+    return None
+
+def shape_static_cell(f):
+    """[(sqlSignature, [arg tuples], ret tuple)] for a static cell function, else None. One entry per
+    declared signature the marshalling reaches; the set constructor over a registered set type is
+    left to the hand `Value_to_set` loop, which registers `set(<base>)` for every SetTypes type."""
+    if f.get("api") != "public" or not f.get("sqlfn"):
+        return None
+    if re.search(r'_(out|in|send|recv)$', f["sqlfn"]):
+        return None
+    if reg_scope(f["name"]) is not None or unregistered_family_ref(f["name"]) is not None:
+        return None
+    ins, out = classify(f)
+    if out is not None or not 1 <= len(ins) <= 3:
+        return None
+    # What makes a function part of the static cell surface is a by-value cell id among its C
+    # operands or as its C result. A function over cell SETS alone (set_eq, union_set_set over
+    # quadbinset) is a set-family kernel whose body the set loop already emits; claiming it here
+    # would emit that body twice.
+    byval_cell = lambda c: base(c) in CELL_UINT and "*" not in norm(c)
+    if not (any(byval_cell(p["canonical"]) for p in ins) or byval_cell(f["returnType"]["canonical"])):
+        return None
+    sigs = []
+    for s in f.get("sqlSignatures") or []:
+        if len(s["args"]) != len(ins):
+            continue
+        # The C type alone cannot say a uint64 is a cell -- set_hash_extended answers a uint64 hash
+        # over a set -- so a position counts only where the signature ALSO declares a cell type.
+        if not (any(byval_cell(p["canonical"]) and t in CELL_SQL for p, t in zip(ins, s["args"]))
+                or (byval_cell(f["returnType"]["canonical"]) and s["ret"] in CELL_SQL)):
+            continue
+        if s.get("sqlName", f["sqlfn"]) == "set" and s["ret"] in SET_TYPES:
+            continue
+        args = [static_cell_arg(p, t, i) for i, (p, t) in enumerate(zip(ins, s["args"]))]
+        ret = static_cell_ret(f, s["ret"])
+        if ret is None or any(a is None for a in args):
+            continue
+        sigs.append((s, args, ret))
+    return sigs or None
+
+def emit_static_cell(f, args, ret):
+    name, n = f["name"], len(args)
+    ex = {1: "UnaryExecutor", 2: "BinaryExecutor", 3: "TernaryExecutor"}[n]
+    _dt, rett, cct, rlines, nulls = ret
+    tps = ", ".join(a[1] for a in args)
+    vecs = ", ".join("args.data[%d]" % i for i in range(n))
+    params = ", ".join("%s a%d" % (a[1], i) for i, a in enumerate(args))
+    pre, post = "".join(a[3] for a in args), "".join(a[4] for a in args)
+    call = ", ".join(a[2] for a in args)
+    state = "state" if "GSerializedToGeometry" in rlines else ""
+    if nulls:
+        head = (f"    {ex}::ExecuteWithNulls<{tps}, {rett}>({vecs}, result, args.size(),\n"
+                f"        [&]({params}, ValidityMask &mask, idx_t idx) -> {rett} {{\n")
+    else:
+        head = (f"    {ex}::Execute<{tps}, {rett}>({vecs}, result, args.size(),\n"
+                f"        [&]({params}) -> {rett} {{\n")
+    return (f"static void Gen_{name}(DataChunk &args, ExpressionState &{state}, Vector &result) {{\n"
+            f"    EnsureMeosThreadInitialized();\n{head}"
+            f"            {pre}{cct} r = {name}({call});\n"
+            + (f"            {post}\n" if post else "")
+            + f"            {rlines}\n        }});\n}}\n")
+
 def gen_cpp(fns, out_path, declared=None, aliases=None):
     bodies, generic_regs, specific_regs = GReg(), GReg(), GReg()
     set_bodies, set_generic_regs, set_specific_regs = GReg(), GReg(), GReg()
@@ -3545,6 +3682,25 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 specific_regs.append(
                     f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                     f'"{reg_name(nm, f)}", {{{acc}, LogicalType::VARCHAR}}, LogicalType::VARCHAR, Gen_{fn}));')
+            continue
+        # STATIC cell functions (h3index/quadbin/s2cell with no temporal operand): one Gen_<fn>
+        # body, registered over every declared signature whose marshalling matches the body's.
+        # Self-contained (own body + regs + continue): supported() rejects the by-value cell
+        # argument, so none of the shapes below claims these.
+        stc = shape_static_cell(f)
+        if stc:
+            STATE["grp"] = f.get("group") or "meos_ungrouped"
+            fn = f["name"]
+            _s0, args0, ret0 = stc[0]
+            bodies.append(emit_static_cell(f, args0, ret0))
+            body_key = ([a[1] for a in args0], ret0[1])
+            for s, sargs, sret in stc:
+                if ([a[1] for a in sargs], sret[1]) != body_key:
+                    continue            # a signature the one body does not marshal
+                slots = ", ".join(a[0] for a in sargs)
+                for nm in reg_names(f, s.get("sqlName", f["sqlfn"]), aliases, "{%s}" % slots):
+                    specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                         f'"{reg_name(nm, f)}", {{{slots}}}, {sret[0]}, Gen_{fn}));')
             continue
         # Base-value UNARY scalar accessors (Cbuffer/Npoint/Nsegment radius/route/
         # position/SRID/hash/...): a base value in, a scalar out. Self-contained (own

@@ -147,20 +147,6 @@ bool QuadbinFunctions::Tquadbin_out_cast(
  * Static cell helpers
  * ===================================================================== */
 
-void QuadbinFunctions::Quadbin_tile_to_cell(
-    DataChunk &args, ExpressionState &state, Vector &result)
-{
-    TernaryExecutor::Execute<int32_t, int32_t, int32_t, int64_t>(
-        args.data[0], args.data[1], args.data[2], result, args.size(),
-        [](int32_t x, int32_t y, int32_t z) -> int64_t {
-            Quadbin cell = quadbin_tile_to_cell(
-                static_cast<uint32_t>(x),
-                static_cast<uint32_t>(y),
-                static_cast<uint32_t>(z));
-            return static_cast<int64_t>(cell);
-        });
-}
-
 /* quadbinCellToTileX/Y/Z: expose each tile coordinate as a separate scalar.
  * DuckDB has no STRUCT type in the current MobilityDuck surface; three
  * functions mirror the (x,y,z) MobilityDB SQL pattern. */
@@ -324,10 +310,7 @@ void QuadbinTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     const auto V   = LogicalType::VARCHAR;
     const auto TS  = LogicalType::TIMESTAMP_TZ;
 
-    /* Static cell helpers */
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "quadbinTileToCell", {I32, I32, I32}, QB,
-        QuadbinFunctions::Quadbin_tile_to_cell));
+    /* Static cell helpers (quadbinTileToCell and the catalog's static cell surface are generated) */
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "quadbinCellToTileX", {QB}, I32,
         QuadbinFunctions::Quadbin_cell_to_tile_x));
