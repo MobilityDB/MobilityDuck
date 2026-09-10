@@ -1,0 +1,167 @@
+# name: test/sql/container_distance.test
+# description: distance and setDistance between sets, spans and span sets, from the catalog
+# group: [sql]
+#
+# Every expected value is MobilityDB's, cited beside each query from
+# mobilitydb/test/temporal/expected/, and every return type is the one its CREATE FUNCTION
+# declares in mobilitydb/sql/temporal/. A time distance is the seconds between the two operands,
+# as a float. A set or span set is measured through its bounding span, so two span sets whose
+# gaps interleave are at distance 0.
+
+require mobilityduck
+
+# ── setDistance, the named portable form of <-> over sets (002_set_ops_tbl.test.out) ──
+
+# 002_set_ops_tbl.test.out:457
+query I
+SELECT setDistance(1, intset '{3, 7}');
+----
+2
+
+# 002_set_ops_tbl.test.out:463
+query I
+SELECT setDistance(intset '{3, 7}', 1);
+----
+2
+
+# 002_set_ops_tbl.test.out:469
+query I
+SELECT setDistance(intset '{3, 7}', intset '{10, 20}');
+----
+3
+
+# 002_set_ops_tbl.test.out:475
+query I
+SELECT round(setDistance(1.0, floatset '{3.5, 7.5}'), 6);
+----
+2.5
+
+# 002_set_ops_tbl.test.out:481
+query I
+SELECT setDistance(date '2001-01-01', dateset '{2001-01-05, 2001-01-10}');
+----
+4
+
+# ── <-> between times, in both operand orders (009_time_ops.test.out) ──
+
+# 009_time_ops.test.out:1351
+query I
+SELECT timestamptz '2001-01-06' <-> tstzset '{2001-01-01, 2001-01-03, 2001-01-05}';
+----
+86400
+
+# 009_time_ops.test.out:1369
+query I
+SELECT timestamptz '2001-01-01' <-> tstzspan '(2001-01-01, 2001-01-03]';
+----
+0
+
+# 009_time_ops.test.out:1405
+query I
+SELECT timestamptz '2001-01-01' <-> tstzspanset '{[2001-01-02, 2001-01-03],[2001-01-04, 2001-01-05]}';
+----
+86400
+
+# 009_time_ops.test.out:1435
+query I
+SELECT timestamptz '2001-01-06' <-> tstzspanset '{[2001-01-02, 2001-01-03],[2001-01-04, 2001-01-05]}';
+----
+86400
+
+# 009_time_ops.test.out:1441
+query I
+SELECT tstzset '{2001-01-01, 2001-01-03, 2001-01-05}' <-> timestamptz '2001-01-01';
+----
+0
+
+# 009_time_ops.test.out:1459
+query I
+SELECT tstzset '{2001-01-01, 2001-01-03}' <-> tstzset '{2001-01-02, 2001-01-04}';
+----
+0
+
+# 009_time_ops.test.out:1477
+query I
+SELECT tstzspan '[2001-01-01, 2001-01-03]' <-> tstzspan '(2001-01-03, 2001-01-05]';
+----
+0
+
+# 009_time_ops.test.out:1495
+query I
+SELECT tstzspanset '{[2001-01-01, 2001-01-03],[2001-01-04, 2001-01-05]}' <-> timestamptz '2001-01-01';
+----
+0
+
+# 009_time_ops.test.out:1507
+query I
+SELECT tstzspanset '{[2001-01-01, 2001-01-02],[2001-01-03, 2001-01-04]}' <-> tstzspan '[2001-01-01, 2001-01-04]';
+----
+0
+
+# 009_time_ops.test.out:1519
+query I
+SELECT tstzspanset '{[2001-01-03, 2001-01-04],[2001-01-07, 2001-01-08]}' <-> tstzspanset '{[2001-01-01, 2001-01-02],[2001-01-05, 2001-01-06]}';
+----
+0
+
+# ── the declared return type, one per container family ──
+
+# 005_span_ops.in.sql:1657 distance(intspan, intspan) RETURNS integer
+query I
+SELECT typeof(intspan '[1, 3]' <-> intspan '[5, 6]');
+----
+INTEGER
+
+# 005_span_ops.in.sql:1682 distance(bigintspan, bigint) RETURNS bigint
+query I
+SELECT typeof(distance(bigintspan '[1, 3]', 5::BIGINT));
+----
+BIGINT
+
+# 002_set_ops.in.sql:1658 setDistance(bigintset, bigintset) RETURNS float
+query I
+SELECT typeof(setDistance(bigintset '{1}', bigintset '{5}'));
+----
+DOUBLE
+
+# 009_spanset_ops.in.sql:2774 distance(integer, intspanset) RETURNS integer
+query I
+SELECT typeof(5 <-> intspanset '{[1, 3]}');
+----
+INTEGER
+
+# 009_spanset_ops.in.sql:2923 distance(datespanset, date) RETURNS integer
+query I
+SELECT typeof(datespanset '{[2001-01-01, 2001-01-02]}' <-> date '2001-01-05');
+----
+INTEGER
+
+# 005_span_ops.in.sql:1773 distance(tstzspan, tstzspan) RETURNS float
+query I
+SELECT typeof(tstzspan '[2001-01-01, 2001-01-03]' <-> tstzspan '[2001-01-05, 2001-01-06]');
+----
+DOUBLE
+
+# ── names MobilityDB does not declare bind to nothing ──
+
+# tDistance is the portable name of <-> over temporal values only.
+statement error
+SELECT tDistance(intspan '[1, 3]', intspan '[5, 6]');
+----
+No function matches the given name and argument types
+
+# No distance between two base values is declared.
+statement error
+SELECT setDistance(5, 9);
+----
+No function matches the given name and argument types
+
+statement error
+SELECT span_distance(intspan '[1, 3]', 5);
+----
+does not exist
+
+statement error
+SELECT set_distance(intset '{1, 5}', 7);
+----
+does not exist

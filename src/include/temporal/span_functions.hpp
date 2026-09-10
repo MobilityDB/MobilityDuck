@@ -105,10 +105,6 @@ struct SpanFunctions {
     static void Minus_span_span(DataChunk &args, ExpressionState &state, Vector &result);
     static void Minus_value_span(DataChunk &args, ExpressionState &state, Vector &result);
     static void Minus_span_value(DataChunk &args, ExpressionState &state, Vector &result);
-        // Distance operators
-    static void Distance_span_span(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Distance_value_span(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Distance_span_value(DataChunk &args, ExpressionState &state, Vector &result);
     
 };
 
