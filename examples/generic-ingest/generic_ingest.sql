@@ -101,7 +101,8 @@ SELECT count(*) AS trajectories FROM trajectories;
 -- Step 3: write TemporalParquet shard
 --
 -- The TemporalParquet footer (KV_METADATA 'temporal') declares traj as a
--- tgeogpoint column encoded with MEOS-WKB.  Any MEOS-aware reader can
+-- tgeogpoint column encoded with MEOS-WKB, with its covering columns traj_bbox
+-- (a GeoParquet bounding box column) and traj_tspan.  Any MEOS-aware reader can
 -- reconstruct the typed value from the BYTE_ARRAY column without a schema file.
 -- ─────────────────────────────────────────────────────────────────────────────
 
@@ -109,6 +110,9 @@ COPY (
     SELECT
         entity_id,
         asBinary(traj)    AS traj,
+        {'xmin': Xmin(stbox(traj)), 'ymin': Ymin(stbox(traj)),
+         'xmax': Xmax(stbox(traj)), 'ymax': Ymax(stbox(traj))} AS traj_bbox,
+        {'tmin': Tmin(stbox(traj)), 'tmax': Tmax(stbox(traj))} AS traj_tspan,
         numInstants(traj) AS ping_count
     FROM trajectories
 )

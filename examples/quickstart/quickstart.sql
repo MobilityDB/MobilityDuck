@@ -91,13 +91,17 @@ SELECT count(*) AS trajectories FROM trajectories;
 -- temporalFooter()   → TemporalParquet JSON metadata injected via KV_METADATA
 --
 -- Any MEOS-WKB-aware reader (MobilityDB, MobilitySpark, PyMEOS) can decode
--- the traj column using the base_type declared in the footer.
+-- the traj column using the base_type declared in the footer, which also
+-- declares the covering columns traj_bbox and traj_tspan written beside it.
 -- ─────────────────────────────────────────────────────────────────────────────
 
 COPY (
     SELECT
         entity_id,
         asBinary(traj)    AS traj,
+        {'xmin': Xmin(stbox(traj)), 'ymin': Ymin(stbox(traj)),
+         'xmax': Xmax(stbox(traj)), 'ymax': Ymax(stbox(traj))} AS traj_bbox,
+        {'tmin': Tmin(stbox(traj)), 'tmax': Tmax(stbox(traj))} AS traj_tspan,
         numInstants(traj) AS ping_count
     FROM trajectories
 )
