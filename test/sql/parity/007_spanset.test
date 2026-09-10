@@ -524,7 +524,7 @@ SELECT timestamps(tstzspanset '{[2000-01-01,2000-01-01]}');
 # =============================================================================
 
 query I
-SELECT spanset_cmp(intspanset '{[1,1]}', intspanset '{[1,2),[2,3),[3,4)}');
+SELECT cmp(intspanset '{[1,1]}', intspanset '{[1,2),[2,3),[3,4)}');
 ----
 -1
 
