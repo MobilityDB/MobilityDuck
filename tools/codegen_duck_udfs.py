@@ -2992,9 +2992,9 @@ def emit_span(f, kind, C=SPAN_C):
 # signature registers once, over the body whose operand order it spells, and a signature spelling
 # neither order reaches no surface. The return is the declared one (scalar_ret4), so the bigint set
 # distance MobilityDB declares `float` registers DOUBLE while the kernel keeps its int64.
-# Admitted by @ingroup: the comparators (meos_setspan_comp, `cmp`) have the same shape and join
-# when their hand set_cmp/span_cmp/spanset_cmp registrations retire, as their own change.
-CONTAINER_SCALAR_GROUPS = {"meos_setspan_dist"}
+# Admitted by @ingroup: the distances, and the comparators' `cmp`, whose eq/ne/lt/le/gt/ge
+# siblings the set and span loops already register over every type.
+CONTAINER_SCALAR_GROUPS = {"meos_setspan_dist", "meos_setspan_comp"}
 CONT_BLOBTO = {"Set": "BlobToSet", "Span": "BlobToSpan", "SpanSet": "BlobToSpanSet"}
 CONT_SQL_ACC = {"Set": SET_SIG_ACC, "Span": SPAN_TYPES, "SpanSet": SPANSET_TYPES}
 def shape_container_scalar(f):
@@ -3122,7 +3122,11 @@ RETIRED_GROUPS = {# The JSON value accessors: valueAtTimestamp reaches the out-p
                   # Set/span/spanset distance (distance/setDistance + <->) in both operand
                   # orders, from shape_container_scalar; the hand span_distance/set_distance
                   # registrations and their executors are deleted.
-                  "meos_setspan_dist"}
+                  "meos_setspan_dist",
+                  # Set/span/spanset comparison (eq/ne/lt/le/gt/ge/cmp + = <> < <= > >=): the
+                  # bare names and operators come from the set and span loops, cmp from
+                  # shape_container_scalar; the hand set_eq/span_eq/spanset_eq... are deleted.
+                  "meos_setspan_comp"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).

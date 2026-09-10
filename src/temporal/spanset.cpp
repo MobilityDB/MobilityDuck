@@ -246,49 +246,6 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
         // hash(spanset_type) / hashExtended(spanset_type, UBIGINT) are generated from
         // the catalog (meos_setspan_accessor) in generated_temporal_udfs.cpp.
-
-        // comparison operators
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("spanset_eq", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_eq)
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("=", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_eq)
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("spanset_ne", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_ne)
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("<>", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_ne)
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("spanset_le", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_le)
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("<=", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_le)
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("spanset_lt", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_lt)
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("<", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_lt)
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("spanset_ge", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_ge)
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(">=", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_ge)
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("spanset_gt", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_gt)
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(">", {spanset_type, spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_gt)
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("spanset_cmp", {spanset_type, spanset_type}, LogicalType::INTEGER, SpansetFunctions::Spanset_cmp)
-        );
     }
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction("duration", {SpansetTypes::datespanset()}, LogicalType::INTERVAL, SpansetFunctions::Datespanset_duration)

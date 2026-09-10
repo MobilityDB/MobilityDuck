@@ -260,52 +260,6 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         ScalarFunction("round", {LogicalType::DOUBLE, LogicalType::INTEGER}, LogicalType::DOUBLE, SpanFunctions::Float_round)
     );
 
-    for (const auto &span_type : SpanTypes::AllTypes()) {
-        duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("span_eq", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_eq)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("span_ne", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_ne)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("span_lt", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_lt)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("span_le", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_le)
-    );
-    
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("span_ge", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_ge)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("span_gt", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_gt)
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("span_cmp", {span_type, span_type}, LogicalType::INTEGER, SpanFunctions::Span_cmp)
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("=", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_eq)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("<>", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_ne)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("<", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_lt)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("<=", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_le)
-    );
-    
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(">=", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_ge)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(">", {span_type, span_type}, LogicalType::BOOLEAN, SpanFunctions::Span_gt)
-    );
-    }
-
 
     
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_union", {SpanTypes::intspan(), LogicalType::INTEGER}, SpansetTypes::intspanset(), SpanFunctions::Union_span_value)

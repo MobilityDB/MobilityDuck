@@ -85,13 +85,6 @@ struct SetFunctions {
     static void Intersect_set_set(DataChunk &args, ExpressionState &state, Vector &result);
     static void Intersect_value_set(DataChunk &args, ExpressionState &state, Vector &result);
     //TODO: Selectivity functions
-    static void Set_eq(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Set_ne(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Set_lt(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Set_le(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Set_ge(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Set_gt(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Set_cmp(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb
