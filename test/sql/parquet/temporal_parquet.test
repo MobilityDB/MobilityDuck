@@ -265,6 +265,31 @@ SELECT temporalFooter(MAP {'a"b\c': 'tstzspan'})
 ----
 {"version":"2.0.0","columns":{"a\"b\\c":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tstzspan"}}}
 
+# Every temporal base type the MEOS-API covering descriptor lists, each with the
+# edges and the coverings its base type fixes, and two types it lists none for
+query TT
+SELECT t, temporalFooter(MAP {'col': t})
+FROM (VALUES ('tgeompoint'), ('tgeogpoint'), ('tgeometry'), ('tgeography'), ('tcbuffer'),
+             ('tnpoint'), ('tpose'), ('trgeometry'), ('tint'), ('tfloat'), ('tbigint'),
+             ('tbool'), ('ttext'), ('tposechain'), ('tstzspan')) v(t)
+ORDER BY t
+----
+tbigint	{"version":"2.0.0","columns":{"col":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tbigint","covering":{"vspan":{"vmin":["col_vspan","vmin"],"vmax":["col_vspan","vmax"]},"tspan":{"tmin":["col_tspan","tmin"],"tmax":["col_tspan","tmax"]}}}}}
+tbool	{"version":"2.0.0","columns":{"col":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tbool","covering":{"tspan":{"tmin":["col_tspan","tmin"],"tmax":["col_tspan","tmax"]}}}}}
+tcbuffer	{"version":"2.0.0","columns":{"col":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tcbuffer","covering":{"bbox":{"xmin":["col_bbox","xmin"],"ymin":["col_bbox","ymin"],"xmax":["col_bbox","xmax"],"ymax":["col_bbox","ymax"]},"tspan":{"tmin":["col_tspan","tmin"],"tmax":["col_tspan","tmax"]}}}}}
+tfloat	{"version":"2.0.0","columns":{"col":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tfloat","covering":{"vspan":{"vmin":["col_vspan","vmin"],"vmax":["col_vspan","vmax"]},"tspan":{"tmin":["col_tspan","tmin"],"tmax":["col_tspan","tmax"]}}}}}
+tgeogpoint	{"version":"2.0.0","columns":{"col":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tgeogpoint","edges":"spherical","geodetic":true,"covering":{"bbox":{"xmin":["col_bbox","xmin"],"ymin":["col_bbox","ymin"],"xmax":["col_bbox","xmax"],"ymax":["col_bbox","ymax"]},"tspan":{"tmin":["col_tspan","tmin"],"tmax":["col_tspan","tmax"]}}}}}
+tgeography	{"version":"2.0.0","columns":{"col":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tgeography","edges":"spherical","geodetic":true,"covering":{"bbox":{"xmin":["col_bbox","xmin"],"ymin":["col_bbox","ymin"],"xmax":["col_bbox","xmax"],"ymax":["col_bbox","ymax"]},"tspan":{"tmin":["col_tspan","tmin"],"tmax":["col_tspan","tmax"]}}}}}
+tgeometry	{"version":"2.0.0","columns":{"col":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tgeometry","edges":"planar","geodetic":false,"covering":{"bbox":{"xmin":["col_bbox","xmin"],"ymin":["col_bbox","ymin"],"xmax":["col_bbox","xmax"],"ymax":["col_bbox","ymax"]},"tspan":{"tmin":["col_tspan","tmin"],"tmax":["col_tspan","tmax"]}}}}}
+tgeompoint	{"version":"2.0.0","columns":{"col":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tgeompoint","edges":"planar","geodetic":false,"covering":{"bbox":{"xmin":["col_bbox","xmin"],"ymin":["col_bbox","ymin"],"xmax":["col_bbox","xmax"],"ymax":["col_bbox","ymax"]},"tspan":{"tmin":["col_tspan","tmin"],"tmax":["col_tspan","tmax"]}}}}}
+tint	{"version":"2.0.0","columns":{"col":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tint","covering":{"vspan":{"vmin":["col_vspan","vmin"],"vmax":["col_vspan","vmax"]},"tspan":{"tmin":["col_tspan","tmin"],"tmax":["col_tspan","tmax"]}}}}}
+tnpoint	{"version":"2.0.0","columns":{"col":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tnpoint","covering":{"bbox":{"xmin":["col_bbox","xmin"],"ymin":["col_bbox","ymin"],"xmax":["col_bbox","xmax"],"ymax":["col_bbox","ymax"]},"tspan":{"tmin":["col_tspan","tmin"],"tmax":["col_tspan","tmax"]}}}}}
+tpose	{"version":"2.0.0","columns":{"col":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tpose","covering":{"bbox":{"xmin":["col_bbox","xmin"],"ymin":["col_bbox","ymin"],"xmax":["col_bbox","xmax"],"ymax":["col_bbox","ymax"]},"tspan":{"tmin":["col_tspan","tmin"],"tmax":["col_tspan","tmax"]}}}}}
+tposechain	{"version":"2.0.0","columns":{"col":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tposechain"}}}
+trgeometry	{"version":"2.0.0","columns":{"col":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"trgeometry","covering":{"bbox":{"xmin":["col_bbox","xmin"],"ymin":["col_bbox","ymin"],"xmax":["col_bbox","xmax"],"ymax":["col_bbox","ymax"]},"tspan":{"tmin":["col_tspan","tmin"],"tmax":["col_tspan","tmax"]}}}}}
+tstzspan	{"version":"2.0.0","columns":{"col":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"tstzspan"}}}
+ttext	{"version":"2.0.0","columns":{"col":{"encoding":"MEOS-WKB","encoding_version":"1.0","base_type":"ttext","covering":{"tspan":{"tmin":["col_tspan","tmin"],"tmax":["col_tspan","tmax"]}}}}}
+
 # A shard with its covering columns: the bbox covering is a GeoParquet bounding
 # box column (a root struct of DOUBLE fields in GeoParquet order) and the time
 # extent is the tspan struct the footer declares

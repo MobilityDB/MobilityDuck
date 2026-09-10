@@ -1,10 +1,10 @@
 #include "temporal/temporal_parquet.hpp"
+#include "temporal/temporal_covering.hpp"
 #include "duckdb/common/vector_operations/unary_executor.hpp"
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 
 #include <cstdio>
-#include <initializer_list>
 #include <string>
 
 namespace duckdb {
@@ -13,32 +13,6 @@ namespace duckdb {
  * specification spec/temporalparquet.md */
 static constexpr const char *TEMPORAL_PARQUET_VERSION = "2.0.0";
 static constexpr const char *MEOS_WKB_ENCODING_VERSION = "1.0";
-
-/* The class of a temporal base type, which fixes the covering columns it
- * carries, as spec/covering-columns.md lists them */
-enum class TemporalCoveringClass { SPATIAL, NUMBER, TIME_ONLY, NONE };
-
-static TemporalCoveringClass CoveringClassOf(const std::string &base_type) {
-    for (auto type : {"tgeompoint", "tgeogpoint", "tgeometry", "tgeography", "tcbuffer",
-                      "tnpoint", "tpose", "trgeometry"}) {
-        if (base_type == type) return TemporalCoveringClass::SPATIAL;
-    }
-    for (auto type : {"tint", "tfloat", "tbigint"}) {
-        if (base_type == type) return TemporalCoveringClass::NUMBER;
-    }
-    for (auto type : {"tbool", "ttext"}) {
-        if (base_type == type) return TemporalCoveringClass::TIME_ONLY;
-    }
-    return TemporalCoveringClass::NONE;
-}
-
-/* GeoParquet's `edges` for the base types that fix it: a geodetic value moves
- * between two instants along the shortest path on the sphere */
-static const char *EdgesOf(const std::string &base_type) {
-    if (base_type == "tgeompoint" || base_type == "tgeometry") return "planar";
-    if (base_type == "tgeogpoint" || base_type == "tgeography") return "spherical";
-    return nullptr;
-}
 
 /* Append the JSON string literal holding @p s */
 static void AppendJsonString(std::string &out, const std::string &s) {
@@ -65,29 +39,28 @@ static void AppendJsonString(std::string &out, const std::string &s) {
     out += '"';
 }
 
-/* Append the covering @p key of column @p column: each bound maps to the field
- * of the struct column `<column>_<key>` that carries it */
-static void AppendCovering(std::string &out, const std::string &column, const char *key,
-                           std::initializer_list<const char *> bounds) {
-    const std::string target = column + "_" + key;
-    AppendJsonString(out, key);
+/* Append the covering @p covering of column @p column: each bound maps to the
+ * field of the struct column that carries it */
+static void AppendCovering(std::string &out, const std::string &column,
+                           const TemporalCovering &covering) {
+    const std::string target = column + covering.column_suffix;
+    AppendJsonString(out, covering.key);
     out += ":{";
-    bool first = true;
-    for (auto bound : bounds) {
-        if (!first) out += ",";
-        first = false;
-        AppendJsonString(out, bound);
+    for (const char *const *bound = covering.bounds; *bound; bound++) {
+        if (bound != covering.bounds) out += ",";
+        AppendJsonString(out, *bound);
         out += ":[";
         AppendJsonString(out, target);
         out += ",";
-        AppendJsonString(out, bound);
+        AppendJsonString(out, *bound);
         out += "]";
     }
     out += "}";
 }
 
 /* Append the metadata of the temporal column @p column of type @p base_type.
- * The map names no SRID, CRS or Z, so the footer states none of them */
+ * The map names no SRID, CRS or Z, so the footer states none of them; the
+ * edges and the coverings the base type fixes come from the MEOS-API catalog */
 static void AppendColumn(std::string &out, const std::string &column,
                          const std::string &base_type) {
     AppendJsonString(out, column);
@@ -95,24 +68,19 @@ static void AppendColumn(std::string &out, const std::string &column,
     out += MEOS_WKB_ENCODING_VERSION;
     out += "\",\"base_type\":";
     AppendJsonString(out, base_type);
-    const char *edges = EdgesOf(base_type);
-    if (edges) {
+    const TemporalCoveringType *type = TemporalCoveringOf(base_type);
+    if (type && type->edges) {
         out += ",\"edges\":\"";
-        out += edges;
+        out += type->edges;
         out += "\",\"geodetic\":";
-        out += std::string(edges) == "planar" ? "false" : "true";
+        out += std::string(type->edges) == "planar" ? "false" : "true";
     }
-    auto covering = CoveringClassOf(base_type);
-    if (covering != TemporalCoveringClass::NONE) {
+    if (type && type->coverings[0].key) {
         out += ",\"covering\":{";
-        if (covering == TemporalCoveringClass::SPATIAL) {
-            AppendCovering(out, column, "bbox", {"xmin", "ymin", "xmax", "ymax"});
-            out += ",";
-        } else if (covering == TemporalCoveringClass::NUMBER) {
-            AppendCovering(out, column, "vspan", {"vmin", "vmax"});
-            out += ",";
+        for (const TemporalCovering *covering = type->coverings; covering->key; covering++) {
+            if (covering != type->coverings) out += ",";
+            AppendCovering(out, column, *covering);
         }
-        AppendCovering(out, column, "tspan", {"tmin", "tmax"});
         out += "}";
     }
     out += "}";
