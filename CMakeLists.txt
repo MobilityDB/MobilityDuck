@@ -105,6 +105,7 @@ set(EXTENSION_SOURCES
     src/generated/generated_temporal_udfs_6.cpp
     src/generated/generated_temporal_udfs_7.cpp
     src/generated/generated_type_registration.cpp
+    src/generated/generated_temporal_covering.cpp
     src/temporal/temporal.cpp
     src/temporal/temporal_functions.cpp
     src/temporal/temporal_aggregates.cpp
