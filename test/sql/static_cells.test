@@ -1,0 +1,219 @@
+# name: test/sql/static_cells.test
+# description: the static cell surface (h3index / quadbin / s2cell with no temporal operand),
+#   generated from the catalog. Every expected value is MobilityDB's own, cited by its
+#   regression file; each family carries a case that must answer false or raise.
+# group: [sql]
+
+require mobilityduck
+
+# ── h3index: resolution and hierarchy (h3/expected/252_h3index_ops.test.out:1-50) ──
+
+query III
+SELECT getResolution('831c02fffffffff'::h3index),
+       getResolution('871fa44a8ffffff'::h3index),
+       getResolution('8a2a1072b59ffff'::h3index);
+----
+3	7	10
+
+query II
+SELECT getResolution(cellToParent('8a2a1072b59ffff'::h3index, 5)),
+       cellToParent('8a2a1072b59ffff'::h3index, 5) = '852a1073fffffff'::h3index;
+----
+5	true
+
+query I
+SELECT cellToParent('871fa44a8ffffff'::h3index, 7) = '871fa44a8ffffff'::h3index;
+----
+true
+
+statement error
+SELECT cellToParent('831c02fffffffff'::h3index, 7);
+----
+The parent resolution must not be finer than the resolution of the cell
+
+# ── h3index: validity (h3/expected/250_h3index.test.out:44-106) ──
+# gridDisk answers 7 cells for 8a2a1072b59ffff, which it refuses for an invalid cell, so the cell is
+# valid. The h3index input here admits only a cell, a directed edge or a vertex, so the value that
+# is not a cell is a directed edge: 115283473fffffff carries mode 2 in bits 59-62.
+
+query IIII
+SELECT isValidCell('8a2a1072b59ffff'::h3index),
+       isValidDirectedEdge('8a2a1072b59ffff'::h3index),
+       isValidCell('115283473fffffff'::h3index),
+       isValidDirectedEdge('115283473fffffff'::h3index);
+----
+true	false	false	true
+
+statement error
+SELECT gridDisk('115283473fffffff'::h3index, 1);
+----
+h3index 115283473fffffff is not a valid H3 cell
+
+# ── h3index: traversal. An h3indexset is read here through the one accessor it carries,
+#    eEq(h3indexset, th3index): a disk holds its own centre, a parent's children hold the cell,
+#    and a disk far away holds neither ──
+
+query III
+WITH t AS (SELECT th3index(tgeompoint 'SRID=4326;Point(4.35 50.85)@2024-01-01', 10) AS th)
+SELECT eEq(gridDisk(startValue(th), 1), th),
+       eEq(cellToChildren(cellToParent(startValue(th), 9), 10), th),
+       eEq(gridDisk('831c02fffffffff'::h3index, 1), th)
+FROM t;
+----
+true	true	false
+
+# ── h3index: geometry (h3/expected/252_h3index_ops.test.out:51-79) ──
+
+query II
+SELECT round(ST_X(cellToPoint('871fa44a8ffffff'::h3index)), 6) = 4.297401,
+       round(ST_Y(cellToPoint('871fa44a8ffffff'::h3index)), 6) = 50.8043;
+----
+true	true
+
+query I
+SELECT typeof(cellToBoundary('871fa44a8ffffff'::h3index));
+----
+GEOMETRY
+
+# ── quadbin: built from tiles, which quadbin/expected/355_quadbin_golden.test.out:1-23 ties to
+#    480fffffffffffff (0,0,0), 48427fffffffffff (3,5,4) and 48a6227affffffff (524,343,10) ──
+
+query III
+SELECT getResolution(quadbinTileToCell(0, 0, 0)),
+       getResolution(quadbinTileToCell(3, 5, 4)),
+       getResolution(quadbinTileToCell(524, 343, 10));
+----
+0	4	10
+
+# quadbin/expected/356_quadbin_ops.test.out:19-60
+
+query II
+SELECT cellToParent(quadbinTileToCell(3, 5, 4), 0) = quadbinTileToCell(0, 0, 0),
+       getResolution(cellToParent(quadbinTileToCell(3, 5, 4), 2));
+----
+true	2
+
+query II
+SELECT quadbinCellSibling(quadbinCellSibling(quadbinTileToCell(3, 5, 4), 'right'), 'left')
+         = quadbinTileToCell(3, 5, 4),
+       getResolution(quadbinCellSibling(quadbinTileToCell(3, 5, 4), 'up'));
+----
+true	4
+
+# 356_quadbin_ops.test.out:31-35, 63-78
+
+query IIII
+SELECT numValues(cellToChildren(quadbinTileToCell(0, 0, 0), 1)),
+       numValues(gridDisk(quadbinTileToCell(524, 343, 10), 0)),
+       numValues(gridDisk(quadbinTileToCell(524, 343, 10), 1)),
+       numValues(gridDisk(quadbinTileToCell(524, 343, 10), 2));
+----
+4	1	9	25
+
+# quadbin/expected/350_quadbin.test.out:89-123 — 504b5fffffffffff is a valid INDEX and not a
+# valid CELL (decimal forms: the text form this binding reads)
+
+query IIII
+SELECT isValidIndex('5192650370358181887'::quadbin),
+       isValidIndex('5785823699403800575'::quadbin),
+       isValidCell('5785823699403800575'::quadbin),
+       isValidCell('5209362947100377087'::quadbin);
+----
+true	true	false	true
+
+# 350_quadbin.test.out:44-66, as the named comparisons
+
+query IIII
+SELECT eq(quadbinTileToCell(0, 0, 0), quadbinTileToCell(0, 0, 0)),
+       eq(quadbinTileToCell(0, 0, 0), quadbinTileToCell(3, 5, 4)),
+       lt(quadbinTileToCell(0, 0, 0), quadbinTileToCell(3, 5, 4)),
+       ge(quadbinTileToCell(3, 5, 4), quadbinTileToCell(0, 0, 0));
+----
+true	false	true	true
+
+# 355_quadbin_golden.test.out:64-98 — xMax rounds away from 4.570312
+
+query IIII
+SELECT round(xMin(stbox(quadbinTileToCell(524, 343, 10))), 6) = 4.21875,
+       round(yMin(stbox(quadbinTileToCell(524, 343, 10))), 6) = 50.736455,
+       round(xMax(stbox(quadbinTileToCell(524, 343, 10))), 6) = 4.570312,
+       round(yMax(stbox(quadbinTileToCell(524, 343, 10))), 6) = 50.958427;
+----
+true	true	false	true
+
+query II
+SELECT round(ST_X(cellToPoint(quadbinTileToCell(524, 343, 10))), 6) = 4.394531,
+       round(ST_Y(cellToPoint(quadbinTileToCell(524, 343, 10))), 6) = 50.847573;
+----
+true	true
+
+# ── s2cell: comparison, hash, validity (s2cell/expected/600_s2cell.test.out:27-116) ──
+
+query II
+SELECT cmp('47c3c444c0000000'::s2cell, '47c3c444c0000004'::s2cell),
+       cmp('47c3c444c0000000'::s2cell, '47c3c444c0000000'::s2cell);
+----
+-1	0
+
+query II
+SELECT hash('47c3c444c0000000'::s2cell) = hash('47c3c444c0000000'::s2cell),
+       hash('47c3c444c0000000'::s2cell) = hash('47c3c444c0000004'::s2cell);
+----
+true	false
+
+query III
+SELECT hashExtended('47c3c444c0000000'::s2cell, 1) = hashExtended('47c3c444c0000000'::s2cell, 1),
+       isValidCell('47c3c444c0000000'::s2cell),
+       isValidCell('1'::s2cell);
+----
+true	true	true
+
+query II
+SELECT s2CellToToken('47c3c444c0000000'::s2cell),
+       s2TokenToCell('47c3c444c') = '47c3c444c0000000'::s2cell;
+----
+47c3c444c	true
+
+# ── s2cell: hierarchy (s2cell/expected/602_s2cell_ops.test.out:25-97), as the relations it
+#    states, over one cell; the face is the top three bits of the id (0x47… = face 2) ──
+
+query I
+SELECT s2GetFace('47c3c444c'::s2cell);
+----
+2
+
+query III
+SELECT getResolution(cellToParent('47c3c444c'::s2cell, 8)),
+       s2CellContains(cellToParent('47c3c444c'::s2cell, 8), '47c3c444c'::s2cell),
+       s2CellContains('47c3c444c'::s2cell, cellToParent('47c3c444c'::s2cell, 8));
+----
+8	true	false
+
+query I
+SELECT s2CommonAncestorLevel('47c3c444c'::s2cell, cellToParent('47c3c444c'::s2cell, 8));
+----
+8
+
+query II
+SELECT getResolution(s2CellToChild(cellToParent('47c3c444c'::s2cell, 8), 9, 0)),
+       s2CellContains(cellToParent('47c3c444c'::s2cell, 8),
+                      s2CellToChild(cellToParent('47c3c444c'::s2cell, 8), 9, 2));
+----
+9	true
+
+statement error
+SELECT s2CellToChild(cellToParent('47c3c444c'::s2cell, 8), 10, 0);
+----
+The child level 10 must be exactly one finer than the cell level 8
+
+query II
+SELECT numValues(cellToChildren(cellToParent('47c3c444c'::s2cell, 8), 9)),
+       numValues(cellToChildren(cellToParent('47c3c444c'::s2cell, 8), 10));
+----
+4	16
+
+query II
+SELECT le(s2RangeMin(cellToParent('47c3c444c'::s2cell, 10)), cellToParent('47c3c444c'::s2cell, 10)),
+       ge(s2RangeMax(cellToParent('47c3c444c'::s2cell, 10)), cellToParent('47c3c444c'::s2cell, 10));
+----
+true	true
