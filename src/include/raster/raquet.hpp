@@ -36,8 +36,9 @@ struct RaquetFunctions {
     static void Raquet_quadbin(DataChunk &args, ExpressionState &state, Vector &result);
     static void Raquet_width(DataChunk &args, ExpressionState &state, Vector &result);
     static void Raquet_height(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_nodata(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_pixtype(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Raquet_band_pixel_type(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Raquet_band_has_nodata_value(DataChunk &args, ExpressionState &state, Vector &result);
+    static void Raquet_band_nodata_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Raquet_pixels(DataChunk &args, ExpressionState &state, Vector &result);
     static void Raquet_as_binary(DataChunk &args, ExpressionState &state, Vector &result);
     static void Raquet_from_binary(DataChunk &args, ExpressionState &state, Vector &result);
