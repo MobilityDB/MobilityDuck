@@ -5,9 +5,11 @@
 #include "duckdb/common/vector.hpp"
 #include "duckdb/storage/arena_allocator.hpp"
 #include "duckdb/execution/expression_executor_state.hpp"
+#include "duckdb_version_compat.hpp"
+#if !MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
 #include "spatial/geometry/geometry_serialization.hpp"
 #include "spatial/geometry/sgl.hpp"
-#include "duckdb_version_compat.hpp"
+#endif
 
 namespace duckdb {
 
@@ -66,6 +68,22 @@ inline string_t GSerializedToGeometry(const GSERIALIZED *gs, ArenaAllocator &are
         throw InvalidInputException("Failed to convert GSERIALIZED to EWKB");
     }
 
+#if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
+    // DuckDB core reads EWKB itself: it drops the SRID and writes the
+    // little-endian ISO WKB its GEOMETRY type stores, so a loadable extension
+    // needs none of the spatial extension's code for this conversion.
+    (void)arena;
+    string_t blob;
+    const string_t ewkb(const_char_ptr_cast(ewkb_data), static_cast<uint32_t>(ewkb_size));
+    try {
+        Geometry::FromBinary(ewkb, blob, result, /*strict=*/true);
+    } catch (...) {
+        free(ewkb_data);
+        throw;
+    }
+    free(ewkb_data);
+    return blob;
+#else
     GeometryAllocator alloc(arena);
     sgl::wkb_reader reader(alloc);
     reader.set_allow_mixed_zm(true);
@@ -89,6 +107,7 @@ inline string_t GSerializedToGeometry(const GSERIALIZED *gs, ArenaAllocator &are
 
     free(ewkb_data);
     return blob;
+#endif
 }
 
 inline string_t GSerializedToGeometry(const GSERIALIZED *gs, ExpressionState &state, Vector &result) {

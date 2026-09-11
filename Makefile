@@ -20,12 +20,11 @@ include extension-ci-tools/makefiles/duckdb_extension.Makefile
 # (hub ICU not reliably resolvable). So we stage the locally-built ICU into the
 # expected path before the unittester runs.
 #
-# Target DuckDB is the v1.4.x LTS line, with later versions (v1.5.x) supported
-# in a multi-version matrix the same way MobilityDB supports PostgreSQL 13-18 —
-# so the staging path must NOT hardcode the version or platform. We derive both
-# from the freshly-built duckdb binary (authoritative for whatever is being
-# tested); DUCKDB_VERSION_TAG and the uname map are fallbacks only.
-DUCKDB_VERSION_TAG := v1.4.5
+# Target DuckDB is v1.5.5. The staging path does NOT hardcode the version or
+# platform: both are read from the freshly-built duckdb binary (authoritative
+# for whatever is being tested), and DUCKDB_VERSION_TAG and the uname map are
+# used only when that binary gives no answer.
+DUCKDB_VERSION_TAG := v1.5.5
 
 define stage_icu
 	@if [ -f ./build/$(1)/extension/icu/icu.duckdb_extension ]; then \

@@ -526,11 +526,17 @@ std::string MobilityduckExtension::Version() const {
 
 extern "C" {
 
+// The entry point of the loadable extension alone, guarded as DuckDB guards its
+// own (duckdb/extension/parquet/parquet_extension.cpp). A loadable extension
+// runs in a DuckDB that links no generated extension loader, so it takes the
+// spatial extension the user has installed, the way it takes ICU, where a
+// static build registers its own through MobilityduckExtension::Load.
+#if defined(DUCKDB_BUILD_LOADABLE_EXTENSION)
 DUCKDB_CPP_EXTENSION_ENTRY(mobilityduck, loader) {
-	duckdb::DuckDB db_wrapper(loader.GetDatabaseInstance());
-	duckdb::ExtensionHelper::LoadExtension(db_wrapper, "spatial");
+	duckdb::ExtensionHelper::TryAutoLoadExtension(loader.GetDatabaseInstance(), "spatial");
 	duckdb::LoadInternal(loader);
 }
+#endif
 
 DUCKDB_EXTENSION_API const char *mobilityduck_version() {
 	return duckdb::DuckDB::LibraryVersion();

@@ -54,8 +54,8 @@ public:
     //! Build the tree from everything gathered since BeginBulkConstruct.
     ErrorData FinishBulkConstruct();
 
-    //! Commit a drop operation
-    void CommitDrop(IndexLock &index_lock) override;
+    //! Resets all index storage, clearing the index entirely
+    void ResetStorage(IndexLock &index_lock) override;
 
     bool MergeIndexes(IndexLock &state, BoundIndex &other_index) override;
 

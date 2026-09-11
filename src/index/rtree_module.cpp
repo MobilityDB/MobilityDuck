@@ -772,7 +772,7 @@ vector<row_t> TRTreeIndex::Search(const void *query_box, IndexSearchOp op) const
 // Required BoundIndex Interface Methods
 //------------------------------------------------------------------------------
 
-void TRTreeIndex::CommitDrop(IndexLock &index_lock) {
+void TRTreeIndex::ResetStorage(IndexLock &index_lock) {
     if (rtree_) {
         rtree_free(rtree_);
         rtree_ = nullptr;

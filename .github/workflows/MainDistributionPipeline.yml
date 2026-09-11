@@ -49,7 +49,7 @@ jobs:
     steps:
       - id: pick
         shell: bash
-        run: echo 'supported=["v1.4.5"]' >> "$GITHUB_OUTPUT"
+        run: echo 'supported=["v1.5.5"]' >> "$GITHUB_OUTPUT"
 
   duckdb-latest-build:
     needs: versions
@@ -66,7 +66,7 @@ jobs:
     # are compiled from source on every job: 12.7 minutes of a 27.7-minute
     # Linux job, and the larger share of a macOS one. The addition is offered
     # upstream; the fork is where it runs until it is taken.
-    uses: estebanzimanyi/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.4.5-vcpkg-cache
+    uses: estebanzimanyi/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.5.5-vcpkg-cache
     with:
       duckdb_version: ${{ matrix.duckdb }}
       extension_name: mobilityduck
@@ -239,7 +239,7 @@ jobs:
       fail-fast: false
       matrix:
         duckdb: ${{ fromJSON(needs.versions.outputs.supported) }}
-    uses: duckdb/extension-ci-tools/.github/workflows/_extension_deploy.yml@v1.4.5
+    uses: duckdb/extension-ci-tools/.github/workflows/_extension_deploy.yml@v1.5.5
     secrets: inherit
     with:
       duckdb_version: ${{ matrix.duckdb }}
