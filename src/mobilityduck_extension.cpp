@@ -49,7 +49,9 @@
 #include "temporal/temporal_parquet.hpp"
 
 #include <mutex>
+#include <exception>
 #include <fstream>
+#include <filesystem>
 #include <cstdlib>
 #include <string>
 
@@ -159,17 +161,14 @@ static bool file_exists(const std::string &p) {
     return file_exists(p.c_str());
 }
 
-static std::string GetTempDir() {
-	const char *tmp = std::getenv("TMPDIR");
-	if (!tmp || !*tmp) {
-		tmp = "/tmp";
-	}
-	return std::string(tmp);
+// A file in the system's directory for scratch files: TMPDIR (then TMP, TEMP)
+// on POSIX, the user's scratch directory on Windows.
+static std::string TempFilePath(const char *name) {
+	return (std::filesystem::temp_directory_path() / name).string();
 }
 
 static std::string EnsureEmbeddedSridCsvOnDisk() {
-    std::string dir  = GetTempDir();
-    std::string path = dir + "/mobilityduck_spatial_ref_sys.csv";
+    std::string path = TempFilePath("mobilityduck_spatial_ref_sys.csv");
 
     if (!file_exists(path)) {
         std::ofstream out(path, std::ios::binary);
@@ -187,24 +186,35 @@ static std::string EnsureEmbeddedSridCsvOnDisk() {
     return path;
 }
 
-// Configure MEOS exactly once with a CSV path
+// Configure MEOS exactly once with a CSV path. No exception leaves the
+// std::call_once: a failure is kept and rethrown to every caller, since a
+// call_once whose function throws leaves later callers waiting on the flag
+// under MinGW's runtime.
 static void ConfigureMeosSridCsvOnce() {
     static std::once_flag once;
+    static std::exception_ptr failure;
     std::call_once(once, [] {
-        const char *env_path = std::getenv(MDUCK_SRID_ENV_NAME);
-        const char *chosen   = nullptr;
+        try {
+            const char *env_path = std::getenv(MDUCK_SRID_ENV_NAME);
+            const char *chosen   = nullptr;
 
-        if (env_path && *env_path && file_exists(env_path)) {
-            chosen = env_path;
-        } else {
-            static std::string embedded_path = EnsureEmbeddedSridCsvOnDisk();
-            chosen = embedded_path.c_str();
-        }
+            if (env_path && *env_path && file_exists(env_path)) {
+                chosen = env_path;
+            } else {
+                static std::string embedded_path = EnsureEmbeddedSridCsvOnDisk();
+                chosen = embedded_path.c_str();
+            }
 
-        if (chosen) {
-            meos_set_spatial_ref_sys_csv(chosen);
+            if (chosen) {
+                meos_set_spatial_ref_sys_csv(chosen);
+            }
+        } catch (...) {
+            failure = std::current_exception();
         }
     });
+    if (failure) {
+        std::rethrow_exception(failure);
+    }
 }
 
 // The network-point (npoint) family carries no SRID/geometry of its own: a route
@@ -212,8 +222,7 @@ static void ConfigureMeosSridCsvOnce() {
 // route_geom() reads the CSV). Ship the canonical example `ways` network embedded and
 // point MEOS at it, exactly as ConfigureMeosSridCsvOnce does for spatial_ref_sys.
 static std::string EnsureEmbeddedWaysCsvOnDisk() {
-    std::string dir  = GetTempDir();
-    std::string path = dir + "/mobilityduck_ways.csv";
+    std::string path = TempFilePath("mobilityduck_ways.csv");
 
     if (!file_exists(path)) {
         std::ofstream out(path, std::ios::binary);
@@ -233,21 +242,29 @@ static std::string EnsureEmbeddedWaysCsvOnDisk() {
 
 static void ConfigureMeosWaysCsvOnce() {
     static std::once_flag once;
+    static std::exception_ptr failure;
     std::call_once(once, [] {
-        const char *env_path = std::getenv(MDUCK_WAYS_ENV_NAME);
-        const char *chosen   = nullptr;
+        try {
+            const char *env_path = std::getenv(MDUCK_WAYS_ENV_NAME);
+            const char *chosen   = nullptr;
 
-        if (env_path && *env_path && file_exists(env_path)) {
-            chosen = env_path;
-        } else {
-            static std::string embedded_path = EnsureEmbeddedWaysCsvOnDisk();
-            chosen = embedded_path.c_str();
-        }
+            if (env_path && *env_path && file_exists(env_path)) {
+                chosen = env_path;
+            } else {
+                static std::string embedded_path = EnsureEmbeddedWaysCsvOnDisk();
+                chosen = embedded_path.c_str();
+            }
 
-        if (chosen) {
-            meos_set_ways_csv(chosen);
+            if (chosen) {
+                meos_set_ways_csv(chosen);
+            }
+        } catch (...) {
+            failure = std::current_exception();
         }
     });
+    if (failure) {
+        std::rethrow_exception(failure);
+    }
 }
 
 // =====================================================================
@@ -292,17 +309,10 @@ static void LoadInternal(ExtensionLoader &loader) {
         /* Set the MEOS timezone to Europe/Brussels so that all temporal-type
          * text I/O uses a consistent, named timezone on every platform.
          * Brussels is a non-UTC zone that surfaces bugs hidden by UTC (e.g.
-         * off-by-one-hour errors in timestamp handling).
-         *
-         * Skip the timezone init when no IANA timezone database is present on
-         * the system (Alpine/musl images, minimal containers, edge devices).
-         * Without /usr/share/zoneinfo, MEOS's pgtz code fails on opendir;
-         * skipping the timezone init lets the extension load against UTC
-         * instead of erroring at startup. */
-        struct stat tz_st {};
-        if (stat("/usr/share/zoneinfo", &tz_st) == 0 && (tz_st.st_mode & S_IFDIR)) {
-            meos_initialize_timezone("Europe/Brussels");
-        }
+         * off-by-one-hour errors in timestamp handling). MEOS carries its
+         * own time zone database, so the zone is the same on every host,
+         * whether or not it has a zone directory. */
+        meos_initialize_timezone("Europe/Brussels");
         meos_initialize_error_handler(&MobilityduckMeosErrorHandler);
     });
 
@@ -504,9 +514,23 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TemporalParquetFunctions::Register(loader);
 }
 
-void MobilityduckExtension::Load(ExtensionLoader &loader) {
-	DuckDB db_wrapper(loader.GetDatabaseInstance());
+// A static build registers the spatial extension it links through the
+// extension loader DuckDB generates for it. A loadable extension runs in a
+// DuckDB that links no such loader, so it takes the spatial extension the user
+// has installed, the way it takes ICU; its object never names
+// ExtensionHelper::LoadExtension, which a linker that keeps every function of
+// an object (MinGW's) would otherwise fail to resolve.
+static void LoadSpatial(DatabaseInstance &db) {
+#if defined(DUCKDB_BUILD_LOADABLE_EXTENSION)
+	ExtensionHelper::TryAutoLoadExtension(db, "spatial");
+#else
+	DuckDB db_wrapper(db);
 	ExtensionHelper::LoadExtension(db_wrapper, "spatial");
+#endif
+}
+
+void MobilityduckExtension::Load(ExtensionLoader &loader) {
+	LoadSpatial(loader.GetDatabaseInstance());
 	LoadInternal(loader);
 }
 
@@ -527,13 +551,10 @@ std::string MobilityduckExtension::Version() const {
 extern "C" {
 
 // The entry point of the loadable extension alone, guarded as DuckDB guards its
-// own (duckdb/extension/parquet/parquet_extension.cpp). A loadable extension
-// runs in a DuckDB that links no generated extension loader, so it takes the
-// spatial extension the user has installed, the way it takes ICU, where a
-// static build registers its own through MobilityduckExtension::Load.
+// own (duckdb/extension/parquet/parquet_extension.cpp).
 #if defined(DUCKDB_BUILD_LOADABLE_EXTENSION)
 DUCKDB_CPP_EXTENSION_ENTRY(mobilityduck, loader) {
-	duckdb::ExtensionHelper::TryAutoLoadExtension(loader.GetDatabaseInstance(), "spatial");
+	duckdb::LoadSpatial(loader.GetDatabaseInstance());
 	duckdb::LoadInternal(loader);
 }
 #endif
