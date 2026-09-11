@@ -9,7 +9,11 @@
           "zlib",
           "expat",
           "h3",
-          "libxml2",
+          {
+            "name": "libxml2",
+            "features": [ "zlib", { "name": "iconv", "platform": "!mingw" } ],
+            "default-features": false
+          },
           {
             "name": "sqlite3",
             "features": [ "rtree" ],
