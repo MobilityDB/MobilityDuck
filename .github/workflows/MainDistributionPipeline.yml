@@ -84,10 +84,16 @@ jobs:
       # `test_env_variables` is appended to the Docker environment file after the
       # workflow writes its own defaults, and a later assignment wins there, so
       # naming the ceiling here overrides the 5 GB for every architecture built in
-      # Docker. 500M is generous against the sizes the base branch actually holds,
-      # 33 to 54 MB per architecture. The macOS and Windows legs take their
-      # ceiling from the ccache action instead and are unaffected.
-      test_config: '{"test_env_variables": {"CCACHE_MAXSIZE": "500M"}}'
+      # Docker. The ceiling bounds the cache directory, which the Docker legs keep
+      # uncompressed (CCACHE_NOCOMPRESS=1), while the entry saved from it is a
+      # zstd archive about six times smaller. One build writes about 300 MB of
+      # objects, and a job starts from the directory the last one saved, which
+      # after a DuckDB version change holds the other version's objects. 1.5G
+      # holds such a restored directory and a full rebuild without evicting the
+      # objects the next job reads, and saves an entry of at most about 250 MB.
+      # The macOS and Windows legs take their ceiling from the ccache action
+      # instead and are unaffected.
+      test_config: '{"test_env_variables": {"CCACHE_MAXSIZE": "1.5G"}}'
       # Windows is excluded because the MEOS vcpkg port does not build under
       # MSVC or MinGW: it pulls in PostgreSQL-derived sources that depend on
       # POSIX-only headers (e.g. <dirent.h>) and GCC-only attribute syntax
