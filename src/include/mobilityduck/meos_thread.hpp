@@ -1,7 +1,5 @@
 #pragma once
 
-#include <sys/stat.h>
-
 extern "C" {
 #include <meos.h>
 }
@@ -27,13 +25,9 @@ namespace duckdb {
 // to initialise them.
 inline void EnsureMeosThreadInitialized() {
 	static thread_local const bool meos_thread_ready = []() {
-		// The timezone init reads the IANA database, which minimal images
-		// (Alpine/musl, edge devices) do not ship; without it MEOS's pgtz code
-		// fails on opendir, so the thread keeps the default zone instead.
-		struct stat tz_st {};
-		if (stat("/usr/share/zoneinfo", &tz_st) == 0 && (tz_st.st_mode & S_IFDIR)) {
-			meos_initialize_timezone("Europe/Brussels");
-		}
+		// MEOS carries its own time zone database, so the zone is the same on
+		// every host, whether or not it has a zone directory.
+		meos_initialize_timezone("Europe/Brussels");
 		meos_initialize_collation();
 		return true;
 	}();
