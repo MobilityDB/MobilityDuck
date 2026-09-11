@@ -771,7 +771,7 @@ vector<row_t> TSPTreeIndex::Search(const void *query_box, IndexSearchOp op) cons
 // Required BoundIndex Interface Methods
 //------------------------------------------------------------------------------
 
-void TSPTreeIndex::CommitDrop(IndexLock &index_lock) {
+void TSPTreeIndex::ResetStorage(IndexLock &index_lock) {
     if (sptree_) {
         sptree_free(sptree_);
         sptree_ = nullptr;

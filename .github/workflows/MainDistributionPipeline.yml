@@ -49,7 +49,7 @@ jobs:
     steps:
       - id: pick
         shell: bash
-        run: echo 'supported=["v1.4.5"]' >> "$GITHUB_OUTPUT"
+        run: echo 'supported=["v1.5.5"]' >> "$GITHUB_OUTPUT"
 
   duckdb-latest-build:
     needs: versions
@@ -66,7 +66,7 @@ jobs:
     # are compiled from source on every job: 12.7 minutes of a 27.7-minute
     # Linux job, and the larger share of a macOS one. The addition is offered
     # upstream; the fork is where it runs until it is taken.
-    uses: estebanzimanyi/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.4.5-vcpkg-cache
+    uses: estebanzimanyi/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.5.5-vcpkg-cache
     with:
       duckdb_version: ${{ matrix.duckdb }}
       extension_name: mobilityduck
@@ -84,36 +84,29 @@ jobs:
       # `test_env_variables` is appended to the Docker environment file after the
       # workflow writes its own defaults, and a later assignment wins there, so
       # naming the ceiling here overrides the 5 GB for every architecture built in
-      # Docker. 500M is generous against the sizes the base branch actually holds,
-      # 33 to 54 MB per architecture. The macOS and Windows legs take their
-      # ceiling from the ccache action instead and are unaffected.
-      test_config: '{"test_env_variables": {"CCACHE_MAXSIZE": "500M"}}'
+      # Docker. The ceiling bounds the cache directory, which the Docker legs keep
+      # uncompressed (CCACHE_NOCOMPRESS=1), while the entry saved from it is a
+      # zstd archive about six times smaller. One build writes about 300 MB of
+      # objects, and a job starts from the directory the last one saved, which
+      # after a DuckDB version change holds the other version's objects. 1.5G
+      # holds such a restored directory and a full rebuild without evicting the
+      # objects the next job reads, and saves an entry of at most about 250 MB.
+      # The macOS and Windows legs take their ceiling from the ccache action
+      # instead and are unaffected.
+      test_config: '{"test_env_variables": {"CCACHE_MAXSIZE": "1.5G"}}'
       # Windows is excluded because the MEOS vcpkg port does not build under
       # MSVC or MinGW: it pulls in PostgreSQL-derived sources that depend on
       # POSIX-only headers (e.g. <dirent.h>) and GCC-only attribute syntax
       # (`__attribute__((unused))`). Re-enable once the MEOS port grows
       # Windows support.
       #
-      # On pull_request events the reduced matrix below leaves the two native
-      # targets that run the suite, and one Wasm cross-compile. macOS is where a
-      # non-portable binary shows up first — the loader there rejects a missing
-      # @rpath dependency outright — so osx_arm64 is one of the two a pull
-      # request keeps, and the verify-standalone job below inspects its artifact
-      # on the event that gates review.
-      #
-      # wasm_mvp is the Wasm target a pull request keeps, because a change that
-      # does not cross-compile is otherwise found only after it merges: Wasm
-      # links nothing dynamically and has no CLI to load it with, so its jobs
-      # were excluded here entirely and main was the first event to compile
-      # them. Keeping one costs a single job — `run_in_reduced_ci_mode` is true
-      # for wasm_mvp alone, so wasm_eh and wasm_threads stay filtered by the
-      # reduced matrix whether or not they are named here, and excluding them is
-      # what states the intent. Both still build on push to main and
-      # workflow_dispatch, where the full matrix is validated ahead of a release.
-      # The MEOS port rebuilds libmeos and its heavy deps (GEOS/PROJ/GDAL) from
-      # source each run, and cross-compiling those for Wasm dominates CI time,
-      # which is why a pull request pays for one Wasm target rather than three.
-      exclude_archs: ${{ github.event_name == 'pull_request' && 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;wasm_eh;wasm_threads' || 'windows_amd64;windows_amd64_mingw;linux_amd64_musl' }}
+      # On pull_request events the reduced matrix leaves the two native targets
+      # that run the suite. macOS is where a non-portable binary shows up first
+      # — the loader there rejects a missing @rpath dependency outright — so
+      # osx_arm64 is one of the two a pull request keeps, and the
+      # verify-standalone job below inspects its artifact on the event that
+      # gates review.
+      exclude_archs: 'windows_amd64;windows_amd64_mingw;linux_amd64_musl'
 
       # Of the four native targets a pull request builds, two run the suite —
       # linux_amd64 and osx_arm64 — and two only build: linux_arm64 and
@@ -153,8 +146,7 @@ jobs:
     # Reading an artifact's declared dependencies works from any host — `otool`/`readelf` parse
     # headers and do not execute code — so that assertion covers every entry. Running the loader
     # needs a host of the artifact's own architecture, so `native` marks the entries where the
-    # LOAD step can run. Wasm is skipped: nothing is dynamically linked and there is no CLI to
-    # LOAD it with.
+    # LOAD step can run.
     #
     # GitHub has no Intel macOS runner: a job asking for `macos-13` is never assigned one and is
     # cancelled at the 24h queue limit having run no step, which reads as a red check that no code
@@ -239,7 +231,7 @@ jobs:
       fail-fast: false
       matrix:
         duckdb: ${{ fromJSON(needs.versions.outputs.supported) }}
-    uses: duckdb/extension-ci-tools/.github/workflows/_extension_deploy.yml@v1.4.5
+    uses: duckdb/extension-ci-tools/.github/workflows/_extension_deploy.yml@v1.5.5
     secrets: inherit
     with:
       duckdb_version: ${{ matrix.duckdb }}
@@ -250,6 +242,7 @@ jobs:
       # matrix on push/dispatch, and on pull_request the linux_amd64 the reduced
       # matrix leaves, since asking for an arch that matrix does not build fails
       # on "Artifact not found for name: mobilityduck-…-linux_arm64" and cancels
-      # its siblings with it. (Windows/musl stay excluded everywhere — the MEOS
-      # vcpkg port does not build under MSVC/MinGW; see the build job above.)
-      exclude_archs: ${{ github.event_name == 'pull_request' && 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;linux_arm64;osx_amd64;osx_arm64;wasm_mvp;wasm_eh;wasm_threads' || 'windows_amd64;windows_amd64_mingw;linux_amd64_musl' }}
+      # its siblings with it. The build workflow produces no Wasm artifact, so
+      # the Wasm targets of this workflow's own matrix are excluded on every
+      # event, as are Windows and musl (see the build job above).
+      exclude_archs: ${{ github.event_name == 'pull_request' && 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;linux_arm64;osx_amd64;osx_arm64;wasm_mvp;wasm_eh;wasm_threads' || 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;wasm_mvp;wasm_eh;wasm_threads' }}

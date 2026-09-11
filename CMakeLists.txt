@@ -49,7 +49,20 @@ if(NOT CMAKE_MATCH_1)
 endif()
 string(SUBSTRING "${CMAKE_MATCH_1}" 0 10 MOBILITYDUCK_MEOS_PIN)
 message(STATUS "MobilityDuck reports linked MEOS ${MOBILITYDUCK_MEOS_PIN}")
-add_definitions(-DMOBILITYDUCK_MEOS_PIN="${MOBILITYDUCK_MEOS_PIN}")
+
+# The linked MEOS commit and the extension version, the `git describe` of this
+# tree that DuckDB defines as EXT_VERSION_MOBILITYDUCK on every object of this
+# directory, are read by src/mobilityduck_extension.cpp alone, and each is
+# defined on that file alone. A definition on every object puts a value that
+# changes with each commit on every compile command line, so the compiler
+# cache finds none of them by its direct lookup and preprocesses every one.
+set_property(SOURCE src/mobilityduck_extension.cpp APPEND PROPERTY COMPILE_DEFINITIONS
+  MOBILITYDUCK_MEOS_PIN="${MOBILITYDUCK_MEOS_PIN}")
+if(NOT "${DUCKDB_EXTENSION_MOBILITYDUCK_EXT_VERSION}" STREQUAL "")
+  remove_definitions(-DEXT_VERSION_MOBILITYDUCK="${DUCKDB_EXTENSION_MOBILITYDUCK_EXT_VERSION}")
+  set_property(SOURCE src/mobilityduck_extension.cpp APPEND PROPERTY COMPILE_DEFINITIONS
+    EXT_VERSION_MOBILITYDUCK="${DUCKDB_EXTENSION_MOBILITYDUCK_EXT_VERSION}")
+endif()
 
 # H3 headers: the all-families libmeos exposes meos_h3.h, which includes
 # <h3api.h>. SIBLING-FROM MobilityDB CMakeLists.txt H3 block (find_path
