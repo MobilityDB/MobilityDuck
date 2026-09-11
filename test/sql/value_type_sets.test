@@ -54,7 +54,7 @@ query II
 SELECT typeof(unnest), unnest::VARCHAR
 FROM SetUnnest(set([CAST(5209574053332910079 AS quadbin)]));
 ----
-quadbin	5209574053332910079
+quadbin	484c1fffffffffff
 
 # A jsonb element reaches its set through the value the temporal type carries.
 query I

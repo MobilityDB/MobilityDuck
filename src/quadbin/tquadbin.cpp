@@ -81,8 +81,7 @@ inline string_t TempToBlob(Vector &result, Temporal *t) {
 /* =====================================================================
  * In / out — static QUADBIN cell (BIGINT)
  *
- * QUADBIN cells are represented as decimal uint64 integers in CARTO's
- * canonical form (e.g. 5193776270265024512).
+ * QUADBIN cells are represented as hexadecimal cell ids.
  * ===================================================================== */
 
 bool QuadbinFunctions::Quadbin_in_cast(
@@ -92,8 +91,8 @@ bool QuadbinFunctions::Quadbin_in_cast(
         source, result, count,
         [&](string_t s) -> int64_t {
             std::string str(s.GetData(), s.GetSize());
-            uint64_t v = std::stoull(str);
-            return static_cast<int64_t>(v);
+            Quadbin cell = quadbin_in(str.c_str());
+            return static_cast<int64_t>(cell);
         });
     return true;
 }
@@ -104,8 +103,10 @@ bool QuadbinFunctions::Quadbin_out_cast(
     UnaryExecutor::Execute<int64_t, string_t>(
         source, result, count,
         [&](int64_t v) -> string_t {
-            std::string s = std::to_string(static_cast<uint64_t>(v));
-            return StringVector::AddString(result, s);
+            char *str = quadbin_index_to_string(static_cast<Quadbin>(v));
+            std::string copy(str);
+            free(str);
+            return StringVector::AddString(result, copy);
         });
     return true;
 }

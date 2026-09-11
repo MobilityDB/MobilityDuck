@@ -110,14 +110,24 @@ SELECT numValues(cellToChildren(quadbinTileToCell(0, 0, 0), 1)),
 ----
 4	1	9	25
 
+# quadbin/expected/350_quadbin.test.out:1-10 — the text form is the hexadecimal cell id, with or
+# without its 0x prefix
+
+query III
+SELECT '480fffffffffffff'::quadbin::VARCHAR,
+       '0x480fffffffffffff'::quadbin::VARCHAR,
+       '0x480fffffffffffff'::quadbin = '480fffffffffffff'::quadbin;
+----
+480fffffffffffff	480fffffffffffff	true
+
 # quadbin/expected/350_quadbin.test.out:89-123 — 504b5fffffffffff is a valid INDEX and not a
-# valid CELL (decimal forms: the text form this binding reads)
+# valid CELL
 
 query IIII
-SELECT isValidIndex('5192650370358181887'::quadbin),
-       isValidIndex('5785823699403800575'::quadbin),
-       isValidCell('5785823699403800575'::quadbin),
-       isValidCell('5209362947100377087'::quadbin);
+SELECT isValidIndex('480fffffffffffff'::quadbin),
+       isValidIndex('504b5fffffffffff'::quadbin),
+       isValidCell('504b5fffffffffff'::quadbin),
+       isValidCell('484b5fffffffffff'::quadbin);
 ----
 true	true	false	true
 

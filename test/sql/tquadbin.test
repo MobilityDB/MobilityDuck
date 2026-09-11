@@ -4,7 +4,7 @@ require mobilityduck
 query I
 SELECT quadbinTileToCell(1, 0, 1);
 ----
-5194902170171867135
+4817ffffffffffff
 
 query I
 SELECT quadbinGetResolution(quadbinTileToCell(2, 1, 2));
@@ -52,12 +52,12 @@ quadbin
 query I
 SELECT startValue(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'));
 ----
-5194902170171867135
+4817ffffffffffff
 
 query I
 SELECT endValue(tquadbin(quadbinTileToCell(2,1,2), TIMESTAMPTZ '2024-06-01'));
 ----
-5199124294822526975
+4826ffffffffffff
 
 # ── generated cell-id valueN (Temporal<T> out-param fold) → quadbin ───────────
 query I
@@ -80,7 +80,7 @@ quadbin
 query I
 SELECT getValues(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'))[1];
 ----
-5194902170171867135
+4817ffffffffffff
 
 # ── the shared DGGS cell-index slots, answered from the tcellindex kernel ─────
 # The same kernel answers these for quadbin as for H3, under the bare slot names.
@@ -109,7 +109,7 @@ GEOMETRY
 query I
 SELECT startValue(cellToParent(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), 0))::VARCHAR;
 ----
-5192650370358181887
+480fffffffffffff
 
 # the planar counterpart of the H3 boundary in th3index.test
 query I
