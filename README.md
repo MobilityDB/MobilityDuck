@@ -117,9 +117,6 @@ Alternatively, you can download a pre-build extension binary from the list below
 |  Linux arm64 |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/20683220519/artifacts/5015017114)   |
 |  macOS amd64 |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/20683220519/artifacts/5015011297)   |
 |  macOS arm64 |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/20683220519/artifacts/5015015385)   |
-|    Wasm EH   |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/20683220519/artifacts/5015060096)   |
-|   Wasm MVP   |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/20683220519/artifacts/5015050266)   |
-| Wasm threads |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/20683220519/artifacts/5015059125)   |
 
 To use your independent DuckDB shell, first, run the shell with an additional flag:
 ```bash

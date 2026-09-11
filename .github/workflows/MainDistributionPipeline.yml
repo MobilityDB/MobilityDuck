@@ -100,26 +100,13 @@ jobs:
       # (`__attribute__((unused))`). Re-enable once the MEOS port grows
       # Windows support.
       #
-      # On pull_request events the reduced matrix below leaves the two native
-      # targets that run the suite, and one Wasm cross-compile. macOS is where a
-      # non-portable binary shows up first — the loader there rejects a missing
-      # @rpath dependency outright — so osx_arm64 is one of the two a pull
-      # request keeps, and the verify-standalone job below inspects its artifact
-      # on the event that gates review.
-      #
-      # wasm_mvp is the Wasm target a pull request keeps, because a change that
-      # does not cross-compile is otherwise found only after it merges: Wasm
-      # links nothing dynamically and has no CLI to load it with, so its jobs
-      # were excluded here entirely and main was the first event to compile
-      # them. Keeping one costs a single job — `run_in_reduced_ci_mode` is true
-      # for wasm_mvp alone, so wasm_eh and wasm_threads stay filtered by the
-      # reduced matrix whether or not they are named here, and excluding them is
-      # what states the intent. Both still build on push to main and
-      # workflow_dispatch, where the full matrix is validated ahead of a release.
-      # The MEOS port rebuilds libmeos and its heavy deps (GEOS/PROJ/GDAL) from
-      # source each run, and cross-compiling those for Wasm dominates CI time,
-      # which is why a pull request pays for one Wasm target rather than three.
-      exclude_archs: ${{ github.event_name == 'pull_request' && 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;wasm_eh;wasm_threads' || 'windows_amd64;windows_amd64_mingw;linux_amd64_musl' }}
+      # On pull_request events the reduced matrix leaves the two native targets
+      # that run the suite. macOS is where a non-portable binary shows up first
+      # — the loader there rejects a missing @rpath dependency outright — so
+      # osx_arm64 is one of the two a pull request keeps, and the
+      # verify-standalone job below inspects its artifact on the event that
+      # gates review.
+      exclude_archs: 'windows_amd64;windows_amd64_mingw;linux_amd64_musl'
 
       # Of the four native targets a pull request builds, two run the suite —
       # linux_amd64 and osx_arm64 — and two only build: linux_arm64 and
@@ -159,8 +146,7 @@ jobs:
     # Reading an artifact's declared dependencies works from any host — `otool`/`readelf` parse
     # headers and do not execute code — so that assertion covers every entry. Running the loader
     # needs a host of the artifact's own architecture, so `native` marks the entries where the
-    # LOAD step can run. Wasm is skipped: nothing is dynamically linked and there is no CLI to
-    # LOAD it with.
+    # LOAD step can run.
     #
     # GitHub has no Intel macOS runner: a job asking for `macos-13` is never assigned one and is
     # cancelled at the 24h queue limit having run no step, which reads as a red check that no code
@@ -256,6 +242,7 @@ jobs:
       # matrix on push/dispatch, and on pull_request the linux_amd64 the reduced
       # matrix leaves, since asking for an arch that matrix does not build fails
       # on "Artifact not found for name: mobilityduck-…-linux_arm64" and cancels
-      # its siblings with it. (Windows/musl stay excluded everywhere — the MEOS
-      # vcpkg port does not build under MSVC/MinGW; see the build job above.)
-      exclude_archs: ${{ github.event_name == 'pull_request' && 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;linux_arm64;osx_amd64;osx_arm64;wasm_mvp;wasm_eh;wasm_threads' || 'windows_amd64;windows_amd64_mingw;linux_amd64_musl' }}
+      # its siblings with it. The build workflow produces no Wasm artifact, so
+      # the Wasm targets of this workflow's own matrix are excluded on every
+      # event, as are Windows and musl (see the build job above).
+      exclude_archs: ${{ github.event_name == 'pull_request' && 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;linux_arm64;osx_amd64;osx_arm64;wasm_mvp;wasm_eh;wasm_threads' || 'windows_amd64;windows_amd64_mingw;linux_amd64_musl;wasm_mvp;wasm_eh;wasm_threads' }}
