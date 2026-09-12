@@ -512,22 +512,32 @@ static void LoadInternal(ExtensionLoader &loader) {
 
 // A static build registers the spatial extension it links through the
 // extension loader DuckDB generates for it. A loadable extension runs in a
-// DuckDB that links no such loader, so it takes the spatial extension the user
-// has installed, the way it takes ICU; its object never names
-// ExtensionHelper::LoadExtension, which a linker that keeps every function of
-// an object (MinGW's) would otherwise fail to resolve.
+// DuckDB that links no such loader, so it loads the spatial extension the user
+// has installed, the way LoadInternal loads ICU, and reports rather than fails
+// when none is available; its object never names ExtensionHelper::LoadExtension,
+// which a linker that keeps every function of an object (MinGW's) would
+// otherwise fail to resolve.
 static void LoadSpatial(DatabaseInstance &db) {
 #if defined(DUCKDB_BUILD_LOADABLE_EXTENSION)
-	ExtensionHelper::TryAutoLoadExtension(db, "spatial");
+	try {
+		ExtensionHelper::AutoLoadExtension(db, "spatial");
+	} catch (const std::exception &e) {
+		fprintf(stderr,
+		        "mobilityduck: spatial extension not available (%s); its "
+		        "functions are not loaded.\n", e.what());
+	}
 #else
 	DuckDB db_wrapper(db);
 	ExtensionHelper::LoadExtension(db_wrapper, "spatial");
 #endif
 }
 
+// DuckDB runs extension optimizers in the order they register, so MobilityDuck
+// registers its own before it loads the spatial extension, and its index joins
+// take a && join ahead of spatial's join rewrite.
 void MobilityduckExtension::Load(ExtensionLoader &loader) {
-	LoadSpatial(loader.GetDatabaseInstance());
 	LoadInternal(loader);
+	LoadSpatial(loader.GetDatabaseInstance());
 }
 
 std::string MobilityduckExtension::Name() {
@@ -550,8 +560,8 @@ extern "C" {
 // own (duckdb/extension/parquet/parquet_extension.cpp).
 #if defined(DUCKDB_BUILD_LOADABLE_EXTENSION)
 DUCKDB_CPP_EXTENSION_ENTRY(mobilityduck, loader) {
-	duckdb::LoadSpatial(loader.GetDatabaseInstance());
 	duckdb::LoadInternal(loader);
+	duckdb::LoadSpatial(loader.GetDatabaseInstance());
 }
 #endif
 
