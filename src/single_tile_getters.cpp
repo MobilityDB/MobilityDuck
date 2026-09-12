@@ -23,10 +23,6 @@ namespace duckdb {
 
 namespace {
 
-// MobilityDB default torigin for time tiles: '2000-01-03' (a Monday).
-// In MEOS PG-epoch microseconds: 2 days * 86_400 * 1_000_000.
-constexpr int64_t DEFAULT_TIME_ORIGIN_MEOS = 2LL * 86400LL * 1000000LL;
-
 inline string_t MallocBlobToResult(Vector &result, void *buf, size_t sz) {
     string_t blob(reinterpret_cast<const char *>(buf), UnsafeNumericCast<uint32_t>(sz));
     string_t stored = StringVector::AddStringOrBlob(result, blob);

@@ -29,6 +29,14 @@ SELECT count(*) FROM spaceTimeSplit(tgeompoint '[POINT(0 0)@2000-01-01 00:00:00+
 ----
 3
 
+# spaceTimeSplit defaults to MEOS's time origin, a Monday: the week holding
+# 2001-01-03 to 2001-01-07 is one bin
+
+query I
+SELECT count(*) FROM spaceTimeSplit(tgeompoint '[POINT(1 1)@2001-01-03 00:00:00+00, POINT(1 1)@2001-01-07 00:00:00+00]', 5.0, 5.0, 5.0, INTERVAL '1 week');
+----
+1
+
 # spaceSplit with explicit sorigin
 
 query I

@@ -58,3 +58,21 @@ query I
 SELECT asText(getSpaceTimeTile(ST_GeomFromText('POINT(7 3)'), TIMESTAMP '2000-01-05', 5.0, 5.0, 5.0, INTERVAL '2 days'));
 ----
 STBOX XT(((5,0),(10,5)),[2000-01-03 01:00:00+01, 2000-01-05 01:00:00+01))
+
+# The default time origin is MEOS's, a Monday: the week holding 2001-01-03
+# to 2001-01-07 is one tile
+
+query I
+SELECT len(timeTiles(stbox 'STBOX XT(((0, 0), (1, 1)), [2001-01-03 00:00:00+00, 2001-01-07 00:00:00+00])', INTERVAL '1 week'));
+----
+1
+
+query I
+SELECT len(spaceTimeTiles(stbox 'STBOX XT(((0, 0), (1, 1)), [2001-01-03 00:00:00+00, 2001-01-07 00:00:00+00])', 5.0, 5.0, 5.0, INTERVAL '1 week'));
+----
+1
+
+query I
+SELECT len(spaceTimeBoxes(tgeompoint '[POINT(1 1)@2001-01-03 00:00:00+00, POINT(1 1)@2001-01-07 00:00:00+00]', 5.0, 5.0, 5.0, INTERVAL '1 week'));
+----
+1
