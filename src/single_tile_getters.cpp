@@ -18,6 +18,7 @@
 #include "duckdb/common/exception.hpp"
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
+#include "mobilityduck/meos_exec_serial.hpp"
 
 namespace duckdb {
 
@@ -359,30 +360,30 @@ void SingleTileGetters::RegisterScalarFunctions(ExtensionLoader &loader) {
     LogicalType geometry = MobilityDuckGeometryType();
 
     // ---- tbox getters ----
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getValueTile",
         {LogicalType::DOUBLE, LogicalType::DOUBLE},
         TboxType::tbox(), GetValueTileExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getValueTile",
         {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
         TboxType::tbox(), GetValueTileExec));
 
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getTBoxTimeTile",
         {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL},
         TboxType::tbox(), GetTBoxTimeTileExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getTBoxTimeTile",
         {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ},
         TboxType::tbox(), GetTBoxTimeTileExec));
 
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getValueTimeTile",
         {LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ,
          LogicalType::DOUBLE, LogicalType::INTERVAL},
         TboxType::tbox(), GetValueTimeTileExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getValueTimeTile",
         {LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ,
          LogicalType::DOUBLE, LogicalType::INTERVAL,
@@ -391,43 +392,43 @@ void SingleTileGetters::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     // ---- stbox getters ----
     // 4-arg: full xyz sizes, default sorigin
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getSpaceTile",
         {geometry, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
         StboxType::stbox(), GetSpaceTileExec));
     // 5-arg: full xyz sizes + explicit sorigin
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getSpaceTile",
         {geometry, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, geometry},
         StboxType::stbox(), GetSpaceTileExec));
     // 2-arg: uniform xyz, default sorigin
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getSpaceTile",
         {geometry, LogicalType::DOUBLE},
         StboxType::stbox(), GetSpaceTileUniformExec));
 
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getStboxTimeTile",
         {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL},
         StboxType::stbox(), GetStboxTimeTileExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getStboxTimeTile",
         {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ},
         StboxType::stbox(), GetStboxTimeTileExec));
 
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getSpaceTimeTile",
         {geometry, LogicalType::TIMESTAMP_TZ,
          LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE,
          LogicalType::INTERVAL},
         StboxType::stbox(), GetSpaceTimeTileExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getSpaceTimeTile",
         {geometry, LogicalType::TIMESTAMP_TZ,
          LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE,
          LogicalType::INTERVAL, geometry},
         StboxType::stbox(), GetSpaceTimeTileExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getSpaceTimeTile",
         {geometry, LogicalType::TIMESTAMP_TZ,
          LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE,

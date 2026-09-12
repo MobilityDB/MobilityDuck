@@ -256,11 +256,11 @@ void TPcpatchTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
 
 
 void TPcpatchTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    loader.RegisterCastFunction( LogicalType::VARCHAR, TPcpatchTypes::tpcpatch(), TpcpatchFunctions::StringToTpcpatch);
-    loader.RegisterCastFunction( TPcpatchTypes::tpcpatch(), LogicalType::VARCHAR, TpcpatchFunctions::TpcpatchToString);
+    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, TPcpatchTypes::tpcpatch(), TpcpatchFunctions::StringToTpcpatch);
+    RegisterMeosCastFunction(loader, TPcpatchTypes::tpcpatch(), LogicalType::VARCHAR, TpcpatchFunctions::TpcpatchToString);
     // Base pcpatch value render cast: generated startValue/endValue return the pcpatch
     // base value, rendered as hex-WKB text via pcpatch_hex_out (cbuffer sibling pattern).
-    loader.RegisterCastFunction( TPcpatchTypes::pcpatch(), LogicalType::VARCHAR, TpcpatchFunctions::Pcpatch_out_cast);
+    RegisterMeosCastFunction(loader, TPcpatchTypes::pcpatch(), LogicalType::VARCHAR, TpcpatchFunctions::Pcpatch_out_cast);
 }
 
 }

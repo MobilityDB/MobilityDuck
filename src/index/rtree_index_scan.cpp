@@ -19,6 +19,7 @@
 #include "index/rtree_module.hpp"
 #include "temporal/temporal_blob.hpp"
 #include "index/rtree_index_scan.hpp"
+#include "mobilityduck/meos_exec_serial.hpp"
 
 namespace duckdb {
 
@@ -255,7 +256,7 @@ TableFunction TRTreeIndexScanFunction::GetFunction() {
 // Register
 // -------------------------------------------------------------------------
 void TRTreeModule::RegisterIndexScan(ExtensionLoader &loader) {
-	loader.RegisterFunction( TRTreeIndexScanFunction::GetFunction());
+	RegisterMeosFunction(loader, TRTreeIndexScanFunction::GetFunction());
 }
 
 } 

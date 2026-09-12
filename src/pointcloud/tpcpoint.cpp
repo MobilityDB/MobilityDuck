@@ -1213,58 +1213,58 @@ void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     const LogicalType IVAL  = LogicalType::INTERVAL;
 
     // ---- Accessors ----
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "valueAtTimestamp", {TGEOM, TSTZ}, LogicalType::VARCHAR,
         Tinstant_value));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getTime", {TGEOM}, SpansetTypes::tstzspanset(),
         TemporalFunctions::Temporal_time));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "duration", {TGEOM}, IVAL,
         TemporalFunctions::Temporal_duration));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "duration", {TGEOM, LogicalType::BOOLEAN}, IVAL,
         TemporalFunctions::Temporal_duration));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "lowerInc", {TGEOM}, LogicalType::BOOLEAN,
         TemporalFunctions::Temporal_lower_inc));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "upperInc", {TGEOM}, LogicalType::BOOLEAN,
         TemporalFunctions::Temporal_upper_inc));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "numInstants", {TGEOM}, LogicalType::INTEGER,
         TemporalFunctions::Temporal_num_instants));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "instants", {TGEOM}, LogicalType::LIST(TGEOM),
         TemporalFunctions::Temporal_instants));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "numSequences", {TGEOM}, LogicalType::INTEGER,
         TemporalFunctions::Temporal_num_sequences));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "sequences", {TGEOM}, LogicalType::LIST(TGEOM),
         TemporalFunctions::Temporal_sequences));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "startSequence", {TGEOM}, TGEOM,
         TemporalFunctions::Temporal_start_sequence));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "endSequence", {TGEOM}, TGEOM,
         TemporalFunctions::Temporal_end_sequence));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "sequenceN", {TGEOM, LogicalType::INTEGER}, TGEOM,
         TemporalFunctions::Temporal_sequence_n));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "numTimestamps", {TGEOM}, LogicalType::INTEGER,
         TemporalFunctions::Temporal_num_timestamps));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "startTimestamp", {TGEOM}, TSTZ,
         TemporalFunctions::Temporal_start_timestamptz));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "endTimestamp", {TGEOM}, TSTZ,
         TemporalFunctions::Temporal_end_timestamptz));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "timestampN", {TGEOM, LogicalType::INTEGER}, TSTZ,
         TemporalFunctions::Temporal_timestamptz_n));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "segments", {TGEOM}, LogicalType::LIST(TGEOM),
         TemporalFunctions::Temporal_segments));
 
@@ -1274,7 +1274,7 @@ void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
              {SetTypes::tstzset(),        TemporalFunctions::Temporal_at_tstzset},
              {SpanTypes::tstzspan(),      TemporalFunctions::Temporal_at_tstzspan},
              {SpansetTypes::tstzspanset(), TemporalFunctions::Temporal_at_tstzspanset}}) {
-        loader.RegisterFunction(ScalarFunction(
+        RegisterMeosFunction(loader, ScalarFunction(
             "atTime", {TGEOM, t.first}, TGEOM, t.second));
     }
     for (const auto &t : std::vector<std::pair<LogicalType, scalar_function_t>>{
@@ -1282,69 +1282,69 @@ void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
              {SetTypes::tstzset(),        TemporalFunctions::Temporal_minus_tstzset},
              {SpanTypes::tstzspan(),      TemporalFunctions::Temporal_minus_tstzspan},
              {SpansetTypes::tstzspanset(), TemporalFunctions::Temporal_minus_tstzspanset}}) {
-        loader.RegisterFunction(ScalarFunction(
+        RegisterMeosFunction(loader, ScalarFunction(
             "minusTime", {TGEOM, t.first}, TGEOM, t.second));
     }
 
     // beforeTimestamp / afterTimestamp accept timestamptz
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "beforeTimestamp", {TGEOM, TSTZ}, TGEOM,
         TemporalFunctions::Temporal_before_timestamptz));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "afterTimestamp", {TGEOM, TSTZ}, TGEOM,
         TemporalFunctions::Temporal_after_timestamptz));
 
     // ---- Modifiers (shift / scale / shiftScale / append / insert / update /
     // delete) ----
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "shiftTime", {TGEOM, IVAL}, TGEOM,
         TemporalFunctions::Temporal_shift_time));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "scaleTime", {TGEOM, IVAL}, TGEOM,
         TemporalFunctions::Temporal_scale_time));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "shiftScaleTime", {TGEOM, IVAL, IVAL}, TGEOM,
         TemporalFunctions::Temporal_shift_scale_time));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "appendInstant", {TGEOM, TGEOM}, TGEOM,
         TemporalFunctions::Temporal_append_tinstant));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "appendSequence", {TGEOM, TGEOM}, TGEOM,
         TemporalFunctions::Temporal_append_tsequence));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "insert", {TGEOM, TGEOM}, TGEOM,
         TemporalFunctions::Temporal_insert));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "insert", {TGEOM, TGEOM, LogicalType::BOOLEAN}, TGEOM,
         TemporalFunctions::Temporal_insert));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "update", {TGEOM, TGEOM}, TGEOM,
         TemporalFunctions::Temporal_update));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "update", {TGEOM, TGEOM, LogicalType::BOOLEAN}, TGEOM,
         TemporalFunctions::Temporal_update));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "deleteTime", {TGEOM, TSTZ}, TGEOM,
         TemporalFunctions::Temporal_delete_timestamptz));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "deleteTime", {TGEOM, TSTZ, LogicalType::BOOLEAN}, TGEOM,
         TemporalFunctions::Temporal_delete_timestamptz));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "deleteTime", {TGEOM, SetTypes::tstzset()}, TGEOM,
         TemporalFunctions::Temporal_delete_tstzset));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "deleteTime", {TGEOM, SetTypes::tstzset(), LogicalType::BOOLEAN}, TGEOM,
         TemporalFunctions::Temporal_delete_tstzset));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "deleteTime", {TGEOM, SpanTypes::tstzspan()}, TGEOM,
         TemporalFunctions::Temporal_delete_tstzspan));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "deleteTime", {TGEOM, SpanTypes::tstzspan(), LogicalType::BOOLEAN}, TGEOM,
         TemporalFunctions::Temporal_delete_tstzspan));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "deleteTime", {TGEOM, SpansetTypes::tstzspanset()}, TGEOM,
         TemporalFunctions::Temporal_delete_tstzspanset));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "deleteTime", {TGEOM, SpansetTypes::tstzspanset(), LogicalType::BOOLEAN}, TGEOM,
         TemporalFunctions::Temporal_delete_tstzspanset));
 
@@ -1362,10 +1362,10 @@ void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         {"temporal_ge", TemporalFunctions::Temporal_ge},
     };
     for (const auto &c : named_cmps) {
-        loader.RegisterFunction(ScalarFunction(
+        RegisterMeosFunction(loader, ScalarFunction(
             c.name, {TGEOM, TGEOM}, LogicalType::BOOLEAN, c.fn));
     }
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "temporal_cmp", {TGEOM, TGEOM}, LogicalType::INTEGER,
         TemporalFunctions::Temporal_cmp));
 
@@ -1379,7 +1379,7 @@ void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         {">=", TemporalFunctions::Temporal_ge},
     };
     for (const auto &c : op_cmps) {
-        loader.RegisterFunction(ScalarFunction(
+        RegisterMeosFunction(loader, ScalarFunction(
             c.name, {TGEOM, TGEOM}, LogicalType::BOOLEAN, c.fn));
     }
 }

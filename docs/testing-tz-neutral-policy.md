@@ -55,6 +55,13 @@ The correct approach is:
 
 ### DuckDB sqllogictest (MobilityDuck)
 
+MEOS in MobilityDuck reads and writes timestamps, and turns them into dates, in
+the zone of the DuckDB session: a session starts in `Europe/Brussels`, and
+`SET TimeZone = '<zone>'` moves MEOS with it, the way MobilityDB follows the
+PostgreSQL session TimeZone. A literal without an offset names a local time of
+that zone. A test whose expected strings carry an offset states its zone with
+`SET TimeZone` first, and every offset it expects is that zone's.
+
 Two approaches are available — prefer them in the order listed:
 
 #### a) Numeric/boolean value accessors (first choice)

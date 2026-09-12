@@ -266,65 +266,65 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_union", {LogicalType::INTEGER, SpanTypes::intspan()}, SpansetTypes::intspanset(), SpanFunctions::Union_value_span)
     );
-loader.RegisterFunction( ScalarFunction("span_union", {SpanTypes::intspan(), SpanTypes::intspan()}, SpansetTypes::intspanset(), SpanFunctions::Union_span_span)
+RegisterMeosFunction(loader, ScalarFunction("span_union", {SpanTypes::intspan(), SpanTypes::intspan()}, SpansetTypes::intspanset(), SpanFunctions::Union_span_span)
     );
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {SpanTypes::intspan(), LogicalType::INTEGER}, SpansetTypes::intspanset(), SpanFunctions::Union_span_value)
     );
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {LogicalType::INTEGER, SpanTypes::intspan()}, SpansetTypes::intspanset(), SpanFunctions::Union_value_span)
     );
-loader.RegisterFunction( ScalarFunction("+", {SpanTypes::intspan(), SpanTypes::intspan()}, SpansetTypes::intspanset(), SpanFunctions::Union_span_span)
+RegisterMeosFunction(loader, ScalarFunction("+", {SpanTypes::intspan(), SpanTypes::intspan()}, SpansetTypes::intspanset(), SpanFunctions::Union_span_span)
     );
 
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_union", {SpanTypes::bigintspan(), LogicalType::BIGINT}, SpansetTypes::bigintspanset(), SpanFunctions::Union_span_value)
     );
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_union", {LogicalType::BIGINT, SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), SpanFunctions::Union_value_span)
     );
-loader.RegisterFunction( ScalarFunction("span_union", {SpanTypes::bigintspan(), SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), SpanFunctions::Union_span_span)
+RegisterMeosFunction(loader, ScalarFunction("span_union", {SpanTypes::bigintspan(), SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), SpanFunctions::Union_span_span)
     );
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {SpanTypes::bigintspan(), LogicalType::BIGINT}, SpansetTypes::bigintspanset(), SpanFunctions::Union_span_value)
     );
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {LogicalType::BIGINT, SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), SpanFunctions::Union_value_span)
     );
-loader.RegisterFunction( ScalarFunction("+", {SpanTypes::bigintspan(), SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), SpanFunctions::Union_span_span)
+RegisterMeosFunction(loader, ScalarFunction("+", {SpanTypes::bigintspan(), SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), SpanFunctions::Union_span_span)
     );
 
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_union", {SpanTypes::floatspan(), LogicalType::DOUBLE}, SpansetTypes::floatspanset(), SpanFunctions::Union_span_value)
     );
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_union", {LogicalType::DOUBLE, SpanTypes::floatspan()}, SpansetTypes::floatspanset(), SpanFunctions::Union_value_span)
     );
-loader.RegisterFunction( ScalarFunction("span_union", {SpanTypes::floatspan(), SpanTypes::floatspan()}, SpansetTypes::floatspanset(), SpanFunctions::Union_span_span)
+RegisterMeosFunction(loader, ScalarFunction("span_union", {SpanTypes::floatspan(), SpanTypes::floatspan()}, SpansetTypes::floatspanset(), SpanFunctions::Union_span_span)
     );
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {SpanTypes::floatspan(), LogicalType::DOUBLE}, SpansetTypes::floatspanset(), SpanFunctions::Union_span_value)
     );
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {LogicalType::DOUBLE, SpanTypes::floatspan()}, SpansetTypes::floatspanset(), SpanFunctions::Union_value_span)
     );
-loader.RegisterFunction( ScalarFunction("+", {SpanTypes::floatspan(), SpanTypes::floatspan()}, SpansetTypes::floatspanset(), SpanFunctions::Union_span_span)
+RegisterMeosFunction(loader, ScalarFunction("+", {SpanTypes::floatspan(), SpanTypes::floatspan()}, SpansetTypes::floatspanset(), SpanFunctions::Union_span_span)
     );
 
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_union", {SpanTypes::datespan(), LogicalType::DATE}, SpansetTypes::datespanset(), SpanFunctions::Union_span_value)
     );
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_union", {LogicalType::DATE, SpanTypes::datespan()}, SpansetTypes::datespanset(), SpanFunctions::Union_value_span)
     );
-loader.RegisterFunction( ScalarFunction("span_union", {SpanTypes::datespan(), SpanTypes::datespan()}, SpansetTypes::datespanset(), SpanFunctions::Union_span_span)
+RegisterMeosFunction(loader, ScalarFunction("span_union", {SpanTypes::datespan(), SpanTypes::datespan()}, SpansetTypes::datespanset(), SpanFunctions::Union_span_span)
     );
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {SpanTypes::datespan(), LogicalType::DATE}, SpansetTypes::datespanset(), SpanFunctions::Union_span_value)
     );
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {LogicalType::DATE, SpanTypes::datespan()}, SpansetTypes::datespanset(), SpanFunctions::Union_value_span)
     );
-loader.RegisterFunction( ScalarFunction("+", {SpanTypes::datespan(), SpanTypes::datespan()}, SpansetTypes::datespanset(), SpanFunctions::Union_span_span)
+RegisterMeosFunction(loader, ScalarFunction("+", {SpanTypes::datespan(), SpanTypes::datespan()}, SpansetTypes::datespanset(), SpanFunctions::Union_span_span)
     );  
 
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_union", {SpanTypes::tstzspan(), LogicalType::TIMESTAMP_TZ}, SpansetTypes::tstzspanset(), SpanFunctions::Union_span_value)
     );
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_union", {LogicalType::TIMESTAMP_TZ, SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), SpanFunctions::Union_value_span)
     );
-loader.RegisterFunction( ScalarFunction("span_union", {SpanTypes::tstzspan(), SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), SpanFunctions::Union_span_span)
+RegisterMeosFunction(loader, ScalarFunction("span_union", {SpanTypes::tstzspan(), SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), SpanFunctions::Union_span_span)
     );
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {SpanTypes::tstzspan(), LogicalType::TIMESTAMP_TZ}, SpansetTypes::tstzspanset(), SpanFunctions::Union_span_value)
     );
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {LogicalType::TIMESTAMP_TZ, SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), SpanFunctions::Union_value_span)
     );
-loader.RegisterFunction( ScalarFunction("+", {SpanTypes::tstzspan(), SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), SpanFunctions::Union_span_span)
+RegisterMeosFunction(loader, ScalarFunction("+", {SpanTypes::tstzspan(), SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), SpanFunctions::Union_span_span)
     );
 
     duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("span_intersection", {SpanTypes::intspan(), LogicalType::INTEGER}, SpanTypes::intspan(), SpanFunctions::Intersection_span_value)

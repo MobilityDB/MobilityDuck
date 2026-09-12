@@ -1948,7 +1948,7 @@ void TgeompointType::RegisterTpointSplit(ExtensionLoader &loader) {
             TableFunction fn("spaceSplit", args, /*function=*/nullptr, SpaceSplitBind,
                              /*init_global=*/nullptr, SpaceSplitLocalInit);
             fn.in_out_function = SpaceSplitInOut;
-            loader.RegisterFunction(fn);
+            RegisterMeosFunction(loader, fn);
         }
     }
 
@@ -1964,7 +1964,7 @@ void TgeompointType::RegisterTpointSplit(ExtensionLoader &loader) {
             TableFunction fn("spaceTimeSplit", args, /*function=*/nullptr, SpaceTimeSplitBind,
                              /*init_global=*/nullptr, SpaceSplitLocalInit);
             fn.in_out_function = SpaceTimeSplitInOut;
-            loader.RegisterFunction(fn);
+            RegisterMeosFunction(loader, fn);
         }
     }
 }

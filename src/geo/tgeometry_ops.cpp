@@ -20,6 +20,7 @@
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "spatial/spatial_types.hpp"
+#include "mobilityduck/meos_exec_serial.hpp"
 
 extern "C" {
     #include <meos.h>
@@ -549,13 +550,13 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     // -----------------------------------------------------------------
     // Distance — `tdistance(...)` and `<->`.
     // -----------------------------------------------------------------
-    loader.RegisterFunction(ScalarFunction("tdistance",
+    RegisterMeosFunction(loader, ScalarFunction("tdistance",
         {TGEOM, GEOM}, tfloat, TgeoGeoDistanceExec<tdistance_tgeo_geo>));
-    loader.RegisterFunction(ScalarFunction("tdistance",
+    RegisterMeosFunction(loader, ScalarFunction("tdistance",
         {TGEOM, TGEOM}, tfloat, TgeoTgeoDistanceExec<tdistance_tgeo_tgeo>));
-    loader.RegisterFunction(ScalarFunction("<->",
+    RegisterMeosFunction(loader, ScalarFunction("<->",
         {TGEOM, GEOM}, tfloat, TgeoGeoDistanceExec<tdistance_tgeo_geo>));
-    loader.RegisterFunction(ScalarFunction("<->",
+    RegisterMeosFunction(loader, ScalarFunction("<->",
         {TGEOM, TGEOM}, tfloat, TgeoTgeoDistanceExec<tdistance_tgeo_tgeo>));
 
     // -----------------------------------------------------------------
@@ -565,33 +566,33 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     // -----------------------------------------------------------------
     const LogicalType INT32 = LogicalType::INTEGER;
 
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "SRID", {TGEOM}, INT32, TspatialSridExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "setSRID", {TGEOM, INT32}, TGEOM, TspatialSetSridExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "transform", {TGEOM, INT32}, TGEOM, TspatialTransformExec));
 
     // tgeometry → stbox is a cast in the SQL surface; expose it as a
     // function for now to keep the implementation a single template.
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "stbox", {TGEOM}, stbox, TspatialToStboxExec));
 
     // tgeometry <-> tgeompoint coercion functions.
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "tgeompoint", {TGEOM}, TgeompointType::tgeompoint(),
         TgeometryToTgeompointExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "tgeometry", {TgeompointType::tgeompoint()}, TGEOM,
         TgeompointToTgeometryExec));
 
     // Centroid / convexHull / traversedArea — produce a non-temporal
     // geometry summary of the trajectory.
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "convexHull", {TGEOM}, GEOM, TgeoConvexHullExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "traversedArea", {TGEOM}, GEOM, TgeoTraversedAreaExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "traversedArea", {TGEOM, LogicalType::BOOLEAN}, GEOM, TgeoTraversedAreaExec));
 
     // -----------------------------------------------------------------
@@ -654,7 +655,7 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     };
 
     LogicalType list_stbox = LogicalType::LIST(stbox);
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "spaceBoxes", {TGEOM, DBL, DBL, DBL}, list_stbox, space_boxes_exec));
 
     auto space_time_boxes_exec = [emit_stbox_list]
@@ -695,7 +696,7 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
         }
     };
 
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "spaceTimeBoxes",
         {TGEOM, DBL, DBL, DBL, LogicalType::INTERVAL},
         list_stbox, space_time_boxes_exec));
@@ -746,7 +747,7 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
         };
     };
 
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "minTimeDeltaSimplify", {TGEOM, LogicalType::INTERVAL}, TGEOM,
         [](DataChunk &args, ExpressionState &, Vector &result) {
             BinaryExecutor::Execute<string_t, interval_t, string_t>(
@@ -761,17 +762,17 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
                 });
         }));
 
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "maxDistSimplify", {TGEOM, DBL}, TGEOM,
         simplify_double_bool_exec_factory(temporal_simplify_max_dist)));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "maxDistSimplify", {TGEOM, DBL, LogicalType::BOOLEAN}, TGEOM,
         simplify_double_bool_exec_factory(temporal_simplify_max_dist)));
 
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "douglasPeuckerSimplify", {TGEOM, DBL}, TGEOM,
         simplify_double_bool_exec_factory(temporal_simplify_dp)));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "douglasPeuckerSimplify", {TGEOM, DBL, LogicalType::BOOLEAN}, TGEOM,
         simplify_double_bool_exec_factory(temporal_simplify_dp)));
 }

@@ -306,37 +306,33 @@ static void LoadInternal(ExtensionLoader &loader) {
 	static std::once_flag meos_init_flag;
     std::call_once(meos_init_flag, []() {
         meos_initialize();
-        /* Set the MEOS timezone to Europe/Brussels so that all temporal-type
-         * text I/O uses a consistent, named timezone on every platform.
-         * Brussels is a non-UTC zone that surfaces bugs hidden by UTC (e.g.
-         * off-by-one-hour errors in timestamp handling). MEOS carries its
-         * own time zone database, so the zone is the same on every host,
-         * whether or not it has a zone directory. */
-        meos_initialize_timezone("Europe/Brussels");
+        /* MEOS starts in MEOS_DEFAULT_TIMEZONE (meos_thread.hpp) and, from the
+         * first MEOS call of a query on, reads and writes timestamps in the
+         * zone of the session running it. */
+        meos_initialize_timezone(MEOS_DEFAULT_TIMEZONE);
         meos_initialize_error_handler(&MobilityduckMeosErrorHandler);
     });
 
-    // Single-timezone model: ensure DuckDB's session timezone matches the
-    // MEOS timezone so bare TIMESTAMPTZ display agrees with MEOS composite
-    // type strings.  This needs ICU for the named "Europe/Brussels" zone.
+    // A new session starts in MEOS_DEFAULT_TIMEZONE, so a bare TIMESTAMPTZ and
+    // a temporal value print in the same zone; `SET TimeZone` moves both, MEOS
+    // following the session on each thread (meos_thread.hpp). The named zone
+    // needs ICU.
     //
     // If ICU cannot be auto-loaded (no on-disk copy AND no network egress:
     // CI docker images, edge/musl deployments, offline installs), degrade
-    // gracefully to the session default (UTC) instead of failing the whole
-    // extension load.  Tests that assert Brussels display stage ICU locally
-    // via the Makefile's stage_icu.
+    // gracefully instead of failing the whole extension load.  Tests that
+    // assert Brussels display stage ICU locally via the Makefile's stage_icu.
     auto &db = loader.GetDatabaseInstance();
     try {
         ExtensionHelper::AutoLoadExtension(db, "icu");
         auto &config = DBConfig::GetConfig(db);
-        config.SetOptionByName("TimeZone", Value("Europe/Brussels"));
+        config.SetOptionByName("TimeZone", Value(MEOS_DEFAULT_TIMEZONE));
     } catch (const std::exception &e) {
-        // ICU unavailable: leave the session timezone at its default.
-        // Temporal-type text I/O is unaffected; only bare TIMESTAMPTZ display
-        // falls back to UTC.
+        // ICU unavailable: the session states no TimeZone, so MEOS stays in
+        // MEOS_DEFAULT_TIMEZONE while a bare TIMESTAMPTZ prints in UTC.
         fprintf(stderr,
                 "mobilityduck: ICU not available (%s); session timezone left "
-                "at default instead of Europe/Brussels.\n", e.what());
+                "at default instead of %s.\n", e.what(), MEOS_DEFAULT_TIMEZONE);
     }
 
 

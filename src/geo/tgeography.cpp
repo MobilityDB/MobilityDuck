@@ -14,6 +14,7 @@
 #include<time_util.hpp>
 #include "geo_util.hpp"
 #include "spatial/spatial_types.hpp"
+#include "mobilityduck/meos_exec_serial.hpp"
 
 extern "C" {
     #include <meos.h>
@@ -1096,14 +1097,14 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeographyTypes::tgeography(),
         Tgeog_constructor
     );
-    loader.RegisterFunction( tgeography_function);
+    RegisterMeosFunction(loader, tgeography_function);
         
     auto tgeography_from_timestamp_function = ScalarFunction(
         "tgeography",
         {LogicalType::VARCHAR, LogicalType::TIMESTAMP_TZ}, 
         TGeographyTypes::tgeography(), 
         Tgeoginst_constructor);
-    loader.RegisterFunction( tgeography_from_timestamp_function);
+    RegisterMeosFunction(loader, tgeography_from_timestamp_function);
 
      auto tgeography_from_tstzspan_function = ScalarFunction(
         "tgeography", 
@@ -1111,7 +1112,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeographyTypes::tgeography(),  
         Tgeography_sequence_from_tstzspan
     );
-    loader.RegisterFunction( tgeography_from_tstzspan_function);
+    RegisterMeosFunction(loader, tgeography_from_tstzspan_function);
 
     auto tgeography_from_tstzspan_default = ScalarFunction(
         "tgeography", 
@@ -1119,7 +1120,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeographyTypes::tgeography(),  
         Tgeography_sequence_from_tstzspan
     );
-    loader.RegisterFunction( tgeography_from_tstzspan_default);
+    RegisterMeosFunction(loader, tgeography_from_tstzspan_default);
 
      auto tgeographyseqarr_1param= ScalarFunction(
         "tgeographySeq", 
@@ -1127,7 +1128,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeographyTypes::tgeography(),
         Tgeography_sequence_constructor
     );
-    loader.RegisterFunction( tgeographyseqarr_1param);
+    RegisterMeosFunction(loader, tgeographyseqarr_1param);
 
     auto tgeographyseqarr_2params = ScalarFunction(
         "tgeographySeq", 
@@ -1135,7 +1136,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeographyTypes::tgeography(),
         Tgeography_sequence_constructor
     );
-    loader.RegisterFunction( tgeographyseqarr_2params);
+    RegisterMeosFunction(loader, tgeographyseqarr_2params);
 
     auto tgeographyseqarr_3params = ScalarFunction(
         "tgeographySeq", 
@@ -1143,7 +1144,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeographyTypes::tgeography(),
         Tgeography_sequence_constructor
     );
-    loader.RegisterFunction( tgeographyseqarr_3params);
+    RegisterMeosFunction(loader, tgeographyseqarr_3params);
 
     auto tgeographyseqarr_4params = ScalarFunction(
         "tgeographySeq", 
@@ -1151,7 +1152,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeographyTypes::tgeography(),
         Tgeography_sequence_constructor
     );
-    loader.RegisterFunction( tgeographyseqarr_4params);
+    RegisterMeosFunction(loader, tgeographyseqarr_4params);
 
     // timeSpan(tgeography) is generated (meos_temporal_conversion, RETIRED_GROUPS).
 
@@ -1160,7 +1161,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         {TGeographyTypes::tgeography()},
         TGeographyTypes::tgeography(),  
         Temporal_to_tinstant);
-    loader.RegisterFunction( tgeography_to_tinstant_function);
+    RegisterMeosFunction(loader, tgeography_to_tinstant_function);
 
 
     auto setInterp_function = ScalarFunction(
@@ -1169,7 +1170,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeographyTypes::tgeography(),
         Temporal_set_interp
     );
-    loader.RegisterFunction( setInterp_function);
+    RegisterMeosFunction(loader, setInterp_function);
 
 
     auto merge_function = ScalarFunction(
@@ -1178,7 +1179,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         TGeographyTypes::tgeography(),
         Temporal_merge
     );
-    loader.RegisterFunction( merge_function);
+    RegisterMeosFunction(loader, merge_function);
 
 
 
@@ -1188,7 +1189,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         LogicalType::INTEGER,
         Temporal_mem_size
     );
-    loader.RegisterFunction( memSize_function);
+    RegisterMeosFunction(loader, memSize_function);
 
     auto getValue_function = ScalarFunction(
         "getValue",
@@ -1196,7 +1197,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         MobilityDuckGeometryType(),
         Tinstant_value
     );
-    loader.RegisterFunction( getValue_function);
+    RegisterMeosFunction(loader, getValue_function);
     
 
     auto tgeography_start_value_function = ScalarFunction(
@@ -1205,7 +1206,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         MobilityDuckGeometryType(),
         Temporal_start_value
     );
-    loader.RegisterFunction( tgeography_start_value_function);
+    RegisterMeosFunction(loader, tgeography_start_value_function);
 
     auto tgeography_end_value_function = ScalarFunction(
         "endValue", 
@@ -1213,7 +1214,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         MobilityDuckGeometryType(),
         Temporal_end_value
     );
-    loader.RegisterFunction( tgeography_end_value_function);
+    RegisterMeosFunction(loader, tgeography_end_value_function);
 
 
 
@@ -1224,7 +1225,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         {TGeographyTypes::tgeography()},
         LogicalType::TIMESTAMP_TZ,
         Tinstant_timestamptz);
-    loader.RegisterFunction( tgeography_gettimestamptz_function);
+    RegisterMeosFunction(loader, tgeography_gettimestamptz_function);
 
     // ===================================================================
     // Foundational tgeography surface — accessors, time/value-restrict,
@@ -1240,65 +1241,65 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     const LogicalType BIGI  = LogicalType::BIGINT;
 
     // ---- Accessors ----
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "valueSet", {TGEOM}, SpatialSetType::geomset(),
         TemporalFunctions::Temporal_valueset));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "valueN", {TGEOM, BIGI}, GEOM,
         TemporalFunctions::Temporal_value_n));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "valueAtTimestamp", {TGEOM, TSTZ}, GEOM,
         TemporalFunctions::Temporal_value_at_timestamptz));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getTime", {TGEOM}, SpansetTypes::tstzspanset(),
         TemporalFunctions::Temporal_time));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "duration", {TGEOM}, IVAL,
         TemporalFunctions::Temporal_duration));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "duration", {TGEOM, LogicalType::BOOLEAN}, IVAL,
         TemporalFunctions::Temporal_duration));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "lowerInc", {TGEOM}, LogicalType::BOOLEAN,
         TemporalFunctions::Temporal_lower_inc));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "upperInc", {TGEOM}, LogicalType::BOOLEAN,
         TemporalFunctions::Temporal_upper_inc));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "numInstants", {TGEOM}, LogicalType::INTEGER,
         TemporalFunctions::Temporal_num_instants));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "instants", {TGEOM}, LogicalType::LIST(TGEOM),
         TemporalFunctions::Temporal_instants));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "numSequences", {TGEOM}, LogicalType::INTEGER,
         TemporalFunctions::Temporal_num_sequences));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "sequences", {TGEOM}, LogicalType::LIST(TGEOM),
         TemporalFunctions::Temporal_sequences));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "startSequence", {TGEOM}, TGEOM,
         TemporalFunctions::Temporal_start_sequence));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "endSequence", {TGEOM}, TGEOM,
         TemporalFunctions::Temporal_end_sequence));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "sequenceN", {TGEOM, LogicalType::INTEGER}, TGEOM,
         TemporalFunctions::Temporal_sequence_n));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "numTimestamps", {TGEOM}, LogicalType::INTEGER,
         TemporalFunctions::Temporal_num_timestamps));
     // timestamps(tgeography) is generated from the catalog (temporal_timestamps) in generated_temporal_udfs.cpp.
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "startTimestamp", {TGEOM}, TSTZ,
         TemporalFunctions::Temporal_start_timestamptz));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "endTimestamp", {TGEOM}, TSTZ,
         TemporalFunctions::Temporal_end_timestamptz));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "timestampN", {TGEOM, LogicalType::INTEGER}, TSTZ,
         TemporalFunctions::Temporal_timestamptz_n));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "segments", {TGEOM}, LogicalType::LIST(TGEOM),
         TemporalFunctions::Temporal_segments));
 
@@ -1308,7 +1309,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
              {SetTypes::tstzset(),        TemporalFunctions::Temporal_at_tstzset},
              {SpanTypes::tstzspan(),      TemporalFunctions::Temporal_at_tstzspan},
              {SpansetTypes::tstzspanset(), TemporalFunctions::Temporal_at_tstzspanset}}) {
-        loader.RegisterFunction(ScalarFunction(
+        RegisterMeosFunction(loader, ScalarFunction(
             "atTime", {TGEOM, t.first}, TGEOM, t.second));
     }
     for (const auto &t : std::vector<std::pair<LogicalType, scalar_function_t>>{
@@ -1316,15 +1317,15 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
              {SetTypes::tstzset(),        TemporalFunctions::Temporal_minus_tstzset},
              {SpanTypes::tstzspan(),      TemporalFunctions::Temporal_minus_tstzspan},
              {SpansetTypes::tstzspanset(), TemporalFunctions::Temporal_minus_tstzspanset}}) {
-        loader.RegisterFunction(ScalarFunction(
+        RegisterMeosFunction(loader, ScalarFunction(
             "minusTime", {TGEOM, t.first}, TGEOM, t.second));
     }
 
     // beforeTimestamp / afterTimestamp accept timestamptz and tstzspan
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "beforeTimestamp", {TGEOM, TSTZ}, TGEOM,
         TemporalFunctions::Temporal_before_timestamptz));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "afterTimestamp", {TGEOM, TSTZ}, TGEOM,
         TemporalFunctions::Temporal_after_timestamptz));
 
@@ -1333,83 +1334,83 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // tgeompoint-side handlers (subtype-agnostic — they call MEOS's
     // tgeo_at_geom etc. under the hood) and over a geomset go through
     // the temporal-functions multi-value handlers.
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "atValues", {TGEOM, GEOM}, TGEOM,
         TgeompointFunctions::Tgeompoint_at_value));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "atValues", {TGEOM, SpatialSetType::geomset()}, TGEOM,
         TemporalFunctions::Temporal_at_values));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "minusValues", {TGEOM, GEOM}, TGEOM,
         TemporalFunctions::Temporal_minus_value));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "minusValues", {TGEOM, SpatialSetType::geomset()}, TGEOM,
         TemporalFunctions::Temporal_minus_value));
 
     // ---- Spatial restrict (atGeometry / minusGeometry / atStbox / minusStbox)
     // Reuse tgeompoint's Tgeo_* handlers — they operate on Temporal * and
     // delegate to the subtype-agnostic MEOS `tgeo_at_geom` etc.
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "atGeometry", {TGEOM, GEOM}, TGEOM,
         TgeompointFunctions::Tgeo_at_geom));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "minusGeometry", {TGEOM, GEOM}, TGEOM,
         TgeompointFunctions::Tgeo_minus_geom));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "minusStbox", {TGEOM, StboxType::stbox()}, TGEOM,
         TgeompointFunctions::Tgeo_minus_stbox));
 
     // ---- Modifiers (shift / scale / shiftScale / append / insert / update /
     // delete / round) ----
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "shiftTime", {TGEOM, IVAL}, TGEOM,
         TemporalFunctions::Temporal_shift_time));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "scaleTime", {TGEOM, IVAL}, TGEOM,
         TemporalFunctions::Temporal_scale_time));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "shiftScaleTime", {TGEOM, IVAL, IVAL}, TGEOM,
         TemporalFunctions::Temporal_shift_scale_time));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "appendInstant", {TGEOM, TGEOM}, TGEOM,
         TemporalFunctions::Temporal_append_tinstant));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "appendSequence", {TGEOM, TGEOM}, TGEOM,
         TemporalFunctions::Temporal_append_tsequence));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "insert", {TGEOM, TGEOM}, TGEOM,
         TemporalFunctions::Temporal_insert));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "insert", {TGEOM, TGEOM, LogicalType::BOOLEAN}, TGEOM,
         TemporalFunctions::Temporal_insert));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "update", {TGEOM, TGEOM}, TGEOM,
         TemporalFunctions::Temporal_update));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "update", {TGEOM, TGEOM, LogicalType::BOOLEAN}, TGEOM,
         TemporalFunctions::Temporal_update));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "deleteTime", {TGEOM, TSTZ}, TGEOM,
         TemporalFunctions::Temporal_delete_timestamptz));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "deleteTime", {TGEOM, TSTZ, LogicalType::BOOLEAN}, TGEOM,
         TemporalFunctions::Temporal_delete_timestamptz));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "deleteTime", {TGEOM, SetTypes::tstzset()}, TGEOM,
         TemporalFunctions::Temporal_delete_tstzset));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "deleteTime", {TGEOM, SetTypes::tstzset(), LogicalType::BOOLEAN}, TGEOM,
         TemporalFunctions::Temporal_delete_tstzset));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "deleteTime", {TGEOM, SpanTypes::tstzspan()}, TGEOM,
         TemporalFunctions::Temporal_delete_tstzspan));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "deleteTime", {TGEOM, SpanTypes::tstzspan(), LogicalType::BOOLEAN}, TGEOM,
         TemporalFunctions::Temporal_delete_tstzspan));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "deleteTime", {TGEOM, SpansetTypes::tstzspanset()}, TGEOM,
         TemporalFunctions::Temporal_delete_tstzspanset));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "deleteTime", {TGEOM, SpansetTypes::tstzspanset(), LogicalType::BOOLEAN}, TGEOM,
         TemporalFunctions::Temporal_delete_tstzspanset));
 
@@ -1427,10 +1428,10 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         {"temporal_ge", TemporalFunctions::Temporal_ge},
     };
     for (const auto &c : named_cmps) {
-        loader.RegisterFunction(ScalarFunction(
+        RegisterMeosFunction(loader, ScalarFunction(
             c.name, {TGEOM, TGEOM}, LogicalType::BOOLEAN, c.fn));
     }
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "temporal_cmp", {TGEOM, TGEOM}, LogicalType::INTEGER,
         TemporalFunctions::Temporal_cmp));
 
@@ -1444,7 +1445,7 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         {">=", TemporalFunctions::Temporal_ge},
     };
     for (const auto &c : op_cmps) {
-        loader.RegisterFunction(ScalarFunction(
+        RegisterMeosFunction(loader, ScalarFunction(
             c.name, {TGEOM, TGEOM}, LogicalType::BOOLEAN, c.fn));
     }
 }
