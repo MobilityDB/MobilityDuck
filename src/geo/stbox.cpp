@@ -940,18 +940,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         RegisterMeosFunction(loader, ScalarFunction("spaceTimeBoxes", {P, D, D, D, I, G, TS},         LB, StboxFunctions::Tgeo_space_time_boxes));
         RegisterMeosFunction(loader, ScalarFunction("spaceTimeBoxes", {P, D, D, D, I, G, TS, BB},     LB, StboxFunctions::Tgeo_space_time_boxes));
 
-        // getSpaceTile(point geometry, xsz, ysz, zsz[, sorigin])
-        RegisterMeosFunction(loader, ScalarFunction("getSpaceTile", {G, D, D, D},     B, StboxFunctions::Stbox_get_space_tile));
-        RegisterMeosFunction(loader, ScalarFunction("getSpaceTile", {G, D, D, D, G},  B, StboxFunctions::Stbox_get_space_tile));
-
-        // getStboxTimeTile(t timestamptz, duration[, torigin])
-        RegisterMeosFunction(loader, ScalarFunction("getStboxTimeTile", {TS, I},      B, StboxFunctions::Stbox_get_time_tile));
-        RegisterMeosFunction(loader, ScalarFunction("getStboxTimeTile", {TS, I, TS},  B, StboxFunctions::Stbox_get_time_tile));
-
-        // getSpaceTimeTile(point, t, xsz, ysz, zsz, duration[, sorigin[, torigin]])
-        RegisterMeosFunction(loader, ScalarFunction("getSpaceTimeTile", {G, TS, D, D, D, I},          B, StboxFunctions::Stbox_get_space_time_tile));
-        RegisterMeosFunction(loader, ScalarFunction("getSpaceTimeTile", {G, TS, D, D, D, I, G},       B, StboxFunctions::Stbox_get_space_time_tile));
-        RegisterMeosFunction(loader, ScalarFunction("getSpaceTimeTile", {G, TS, D, D, D, I, G, TS},   B, StboxFunctions::Stbox_get_space_time_tile));
+        // The single-tile getters getSpaceTile, getStboxTimeTile and
+        // getSpaceTimeTile are registered by single_tile_getters.cpp.
     }
 }
 
