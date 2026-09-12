@@ -685,7 +685,6 @@ void TGeogpointOps::RegisterScalarFunctions(ExtensionLoader &loader) {
             Temporal *t = DecodeTemporalCopy(t_data[i]);
             GSERIALIZED *origin = geompoint_make3dz(0, 0.0, 0.0, 0.0);
             MeosInterval iv = IntervaltToInterval(dur_data[i]);
-            constexpr int64_t DEFAULT_TIME_ORIGIN_MEOS = 2LL * 86400LL * 1000000LL;
             int count = 0;
             STBox *boxes = tgeo_space_time_boxes(
                 t, x_data[i], y_data[i], z_data[i], &iv, origin,

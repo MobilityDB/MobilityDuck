@@ -5399,8 +5399,6 @@ interpType ParseInterpString(const string_t &s) {
         "' (expected one of: none, discrete, step, linear)");
 }
 
-constexpr TimestampTz DEFAULT_T_ORIGIN = 0;  // 2000-01-03 in MEOS internal repr
-
 } // namespace
 
 void TemporalFunctions::Temporal_tprecision(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -5419,7 +5417,7 @@ void TemporalFunctions::Temporal_tprecision(DataChunk &args, ExpressionState &st
             out_validity.SetInvalid(row);
             continue;
         }
-        TimestampTz origin = DEFAULT_T_ORIGIN;
+        TimestampTz origin = DEFAULT_TIME_ORIGIN_MEOS;
         if (has_origin) {
             auto &ov = args.data[2];
             if (!FlatVector::Validity(ov).RowIsValid(row)) {
@@ -5459,7 +5457,7 @@ void TemporalFunctions::Temporal_tsample(DataChunk &args, ExpressionState &state
             out_validity.SetInvalid(row);
             continue;
         }
-        TimestampTz origin = DEFAULT_T_ORIGIN;
+        TimestampTz origin = DEFAULT_TIME_ORIGIN_MEOS;
         if (has_origin) {
             auto &ov = args.data[2];
             if (!FlatVector::Validity(ov).RowIsValid(row)) {

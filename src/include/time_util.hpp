@@ -9,6 +9,11 @@ namespace duckdb {
 constexpr int32_t EPOCH_OFFSET_DAYS = 10957;
 constexpr int64_t EPOCH_OFFSET_MICROS = EPOCH_OFFSET_DAYS * 86400000000;
 
+// MEOS's DEFAULT_TIME_ORIGIN, the torigin MobilityDB's tiling, splitting and
+// binning functions default to: '2000-01-03' (a Monday).
+// In MEOS PG-epoch microseconds: 2 days * 86_400 * 1_000_000.
+constexpr int64_t DEFAULT_TIME_ORIGIN_MEOS = 2LL * 86400LL * 1000000LL;
+
 // DuckDB → MEOS
 inline int32_t ToMeosDate(duckdb::date_t d) {
     return static_cast<int32_t>(d) - EPOCH_OFFSET_DAYS;

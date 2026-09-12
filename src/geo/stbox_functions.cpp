@@ -2935,7 +2935,7 @@ void StboxFunctions::Stbox_time_tiles(DataChunk &args, ExpressionState &state, V
         }
         STBox *bounds = BlobToStboxTile(in_box[row]);
         MeosInterval mi = IntervaltToInterval(in_dur[row]);
-        TimestampTz torigin = 0;
+        TimestampTz torigin = DEFAULT_TIME_ORIGIN_MEOS;
         if (has_torigin) {
             timestamp_tz_t t = FlatVector::GetData<timestamp_tz_t>(args.data[2])[row];
             torigin = (TimestampTz) DuckDBToMeosTimestamp(t).value;
@@ -2978,7 +2978,7 @@ void StboxFunctions::Stbox_space_time_tiles(DataChunk &args, ExpressionState &st
             origin = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[5])[row], bounds->srid);
         }
         if (!origin) origin = DefaultOriginPoint();
-        TimestampTz torigin = 0;
+        TimestampTz torigin = DEFAULT_TIME_ORIGIN_MEOS;
         if (has_torigin) {
             timestamp_tz_t t = FlatVector::GetData<timestamp_tz_t>(args.data[6])[row];
             torigin = (TimestampTz) DuckDBToMeosTimestamp(t).value;
@@ -3060,7 +3060,7 @@ void StboxFunctions::Tgeo_space_time_boxes(DataChunk &args, ExpressionState &sta
             origin = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[5])[row], srid);
         }
         if (!origin) origin = DefaultOriginPoint();
-        TimestampTz torigin = 0;
+        TimestampTz torigin = DEFAULT_TIME_ORIGIN_MEOS;
         if (has_torigin) {
             timestamp_tz_t t = FlatVector::GetData<timestamp_tz_t>(args.data[6])[row];
             torigin = (TimestampTz) DuckDBToMeosTimestamp(t).value;
@@ -3130,7 +3130,7 @@ void StboxFunctions::Stbox_get_time_tile(DataChunk &args, ExpressionState &state
         }
         TimestampTz t = (TimestampTz) DuckDBToMeosTimestamp(in_t[row]).value;
         MeosInterval mi = IntervaltToInterval(in_dur[row]);
-        TimestampTz torigin = 0;
+        TimestampTz torigin = DEFAULT_TIME_ORIGIN_MEOS;
         if (has_torigin) {
             timestamp_tz_t to = FlatVector::GetData<timestamp_tz_t>(args.data[2])[row];
             torigin = (TimestampTz) DuckDBToMeosTimestamp(to).value;
@@ -3177,7 +3177,7 @@ void StboxFunctions::Stbox_get_space_time_tile(DataChunk &args, ExpressionState 
             origin = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[6])[row], 0);
         }
         if (!origin) origin = DefaultOriginPoint();
-        TimestampTz torigin = 0;
+        TimestampTz torigin = DEFAULT_TIME_ORIGIN_MEOS;
         if (has_torigin) {
             timestamp_tz_t to = FlatVector::GetData<timestamp_tz_t>(args.data[7])[row];
             torigin = (TimestampTz) DuckDBToMeosTimestamp(to).value;

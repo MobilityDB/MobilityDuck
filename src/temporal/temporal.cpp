@@ -1610,10 +1610,6 @@ void TboxValueTilesExec(DataChunk &args, ExpressionState &, Vector &result) {
     }
 }
 
-// MobilityDB default torigin for time bins: '2000-01-03' (a Monday).
-// In MEOS PG-epoch microseconds that is 2 days * 86_400 * 1_000_000.
-constexpr int64_t DEFAULT_TIME_ORIGIN_MEOS = 2LL * 86400LL * 1000000LL;
-
 // timeTiles(tbox, duration [, torigin])
 void TboxTimeTilesExec(DataChunk &args, ExpressionState &, Vector &result) {
     auto &tbox_vec = args.data[0];
@@ -1992,7 +1988,7 @@ void LoadTemporalSplitRow(TemporalSplitLocalState &state, const TemporalSplitBin
     const bool has_vorigin = bd.with_value && input.ColumnCount() > vorigin_col &&
                              !FlatVector::IsNull(input.data[vorigin_col], row);
     MeosInterval mi {};
-    TimestampTz torigin = 0;
+    TimestampTz torigin = DEFAULT_TIME_ORIGIN_MEOS;
     if (bd.with_time) {
         mi = IntervaltToInterval(FlatVector::GetData<interval_t>(input.data[duration_col])[row]);
         if (input.ColumnCount() > torigin_col && !FlatVector::IsNull(input.data[torigin_col], row)) {

@@ -24,6 +24,19 @@ SELECT tprecision(tfloat '[1@2000-01-01, 5@2000-01-05]', INTERVAL '1 day', TIMES
 ----
 [1.020833333333334@1999-12-31 01:00:00+01, 1.541666666666667@2000-01-01 01:00:00+01, 3.541666666666666@2000-01-03 01:00:00+01, 4.520833333333333@2000-01-04 01:00:00+01]
 
+# tprecision and tsample default to MEOS's time origin, a Monday, so their
+# weekly bins start on Mondays
+
+query I
+SELECT startTimestamp(tprecision(tfloat '[1@2001-01-03 00:00:00+00, 1@2001-01-07 00:00:00+00]', INTERVAL '1 week')) = TIMESTAMPTZ '2001-01-01 00:00:00+00';
+----
+true
+
+query I
+SELECT startTimestamp(tsample(tfloat '[1@2001-01-07 00:00:00+00, 1@2001-01-21 00:00:00+00]', INTERVAL '1 week')) = TIMESTAMPTZ '2001-01-08 00:00:00+00';
+----
+true
+
 # tsample(tfloat, interval) — discrete by default
 
 query I

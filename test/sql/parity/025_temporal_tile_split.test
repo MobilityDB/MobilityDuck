@@ -70,6 +70,19 @@ SELECT count(*) FROM timeSplit(tint '[1@2000-01-01 00:00:00+00, 5@2000-01-05 00:
 ----
 2
 
+# timeSplit defaults to MEOS's time origin, a Monday: the week holding
+# 2001-01-03 to 2001-01-07 is one bin, starting Monday 2001-01-01
+
+query I
+SELECT count(*) FROM timeSplit(tint '[1@2001-01-03 00:00:00+00, 1@2001-01-07 00:00:00+00]', INTERVAL '1 week');
+----
+1
+
+query I
+SELECT "time" = TIMESTAMPTZ '2001-01-01 00:00:00+00' FROM timeSplit(tint '[1@2001-01-03 00:00:00+00, 1@2001-01-07 00:00:00+00]', INTERVAL '1 week');
+----
+true
+
 # valueTimeSplit cross-product (value × time bins)
 
 query I

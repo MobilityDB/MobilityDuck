@@ -1718,7 +1718,7 @@ void LoadSpaceSplitRow(ClientContext &context, SpaceSplitLocalState &state,
         origin = GeometryToGSerialized(origin_blob, 0);
     }
     col++;
-    TimestampTz torigin = 0;
+    TimestampTz torigin = DEFAULT_TIME_ORIGIN_MEOS;
     if (with_time && input.ColumnCount() > col && !FlatVector::IsNull(input.data[col], row_idx)) {
         timestamp_tz_t t = FlatVector::GetData<timestamp_tz_t>(input.data[col])[row_idx];
         torigin = (TimestampTz) DuckDBToMeosTimestamp(t).value;
