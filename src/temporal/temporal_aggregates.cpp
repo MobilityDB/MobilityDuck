@@ -50,6 +50,7 @@
 #include "duckdb/function/aggregate_function.hpp"
 #include "duckdb/function/function_set.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
+#include "mobilityduck/meos_exec_serial.hpp"
 
 namespace duckdb {
 
@@ -927,13 +928,13 @@ static void RegisterAggregate(ExtensionLoader &loader, const AggregateFunctionSe
     for (const auto &fn : built.functions) {
         canonical.AddFunction(fn);
     }
-    loader.RegisterFunction(std::move(canonical));
+    RegisterMeosFunction(loader, std::move(canonical));
     for (const auto &name : also) {
         AggregateFunctionSet alias(name);
         for (const auto &fn : built.functions) {
             alias.AddFunction(fn);
         }
-        loader.RegisterFunction(std::move(alias));
+        RegisterMeosFunction(loader, std::move(alias));
     }
 }
 
@@ -948,12 +949,12 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
     {
         AggregateFunctionSet set("TandAgg");
         set.AddFunction(MakeTaggAggregate<TandFn>(TemporalTypes::tbool(), TemporalTypes::tbool()));
-        loader.RegisterFunction(std::move(set));
+        RegisterMeosFunction(loader, std::move(set));
     }
     {
         AggregateFunctionSet set("TorAgg");
         set.AddFunction(MakeTaggAggregate<TorFn>(TemporalTypes::tbool(), TemporalTypes::tbool()));
-        loader.RegisterFunction(std::move(set));
+        RegisterMeosFunction(loader, std::move(set));
     }
 
     // ---- TcountAgg over each temporal type and over time-only inputs → tint ----
@@ -986,14 +987,14 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
         set.AddFunction(MakeTaggAggregate<TminTintFn>(TemporalTypes::tint(),    TemporalTypes::tint()));
         set.AddFunction(MakeTaggAggregate<TminTfloatFn>(TemporalTypes::tfloat(), TemporalTypes::tfloat()));
         set.AddFunction(MakeTaggAggregate<TminTtextFn>(TemporalTypes::ttext(),   TemporalTypes::ttext()));
-        loader.RegisterFunction(std::move(set));
+        RegisterMeosFunction(loader, std::move(set));
     }
     {
         AggregateFunctionSet set("TmaxAgg");
         set.AddFunction(MakeTaggAggregate<TmaxTintFn>(TemporalTypes::tint(),    TemporalTypes::tint()));
         set.AddFunction(MakeTaggAggregate<TmaxTfloatFn>(TemporalTypes::tfloat(), TemporalTypes::tfloat()));
         set.AddFunction(MakeTaggAggregate<TmaxTtextFn>(TemporalTypes::ttext(),   TemporalTypes::ttext()));
-        loader.RegisterFunction(std::move(set));
+        RegisterMeosFunction(loader, std::move(set));
     }
 
     // ---- TsumAgg on tint, tfloat ----
@@ -1037,7 +1038,7 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
             TGeographyTypes::tgeography(), TGeographyTypes::tgeography()));
         set.AddFunction(MakeTaggAggregate<MergeAggFn>(
             TGeogpointType::tgeogpoint(), TGeogpointType::tgeogpoint()));
-        loader.RegisterFunction(std::move(set));
+        RegisterMeosFunction(loader, std::move(set));
     }
 
     // ---- AppendInstantAgg over each temporal type → same type ----
@@ -1051,7 +1052,7 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
         set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TGeometryTypes::tgeometry()));
         set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TGeographyTypes::tgeography()));
         set.AddFunction(MakeTemporalStateAggregate<AppendInstantAggFn>(TGeogpointType::tgeogpoint()));
-        loader.RegisterFunction(std::move(set));
+        RegisterMeosFunction(loader, std::move(set));
     }
 
     // ---- AppendSequenceAgg over each temporal type → same type ----
@@ -1065,7 +1066,7 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
         set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(TGeometryTypes::tgeometry()));
         set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(TGeographyTypes::tgeography()));
         set.AddFunction(MakeTemporalStateAggregate<AppendSequenceAggFn>(TGeogpointType::tgeogpoint()));
-        loader.RegisterFunction(std::move(set));
+        RegisterMeosFunction(loader, std::move(set));
     }
 
     // ---- SpanUnionAgg(span | spanset) -> typed spanset ----
@@ -1095,7 +1096,7 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
         for (const auto &p : spanset_pairs) {
             set.AddFunction(MakeSpanSetAggregate<SpanUnionFromSpanSetFn>(p.in, p.out));
         }
-        loader.RegisterFunction(std::move(set));
+        RegisterMeosFunction(loader, std::move(set));
     }
 
     // ---- Window aggregates: WminAgg / WmaxAgg / WsumAgg / WcountAgg / WavgAgg ----
@@ -1157,7 +1158,7 @@ void TemporalAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
         for (const auto &p : set_pairs) {
             set.AddFunction(MakeSetAggregate<SetUnionFromSetFn>(p.in, p.out));
         }
-        loader.RegisterFunction(std::move(set));
+        RegisterMeosFunction(loader, std::move(set));
     }
 }
 

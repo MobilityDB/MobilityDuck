@@ -1373,7 +1373,7 @@ void TemporalTypes::RegisterTemporalUnnestFunction(ExtensionLoader &loader) {
                             TemporalUnnestExec,
                             TemporalUnnestBind,
                             TemporalUnnestInit);
-            loader.RegisterFunction(fn);
+            RegisterMeosFunction(loader, fn);
         }
     }
 }
@@ -1448,7 +1448,7 @@ void TemporalTypes::RegisterWkbFunctions(ExtensionLoader &loader) {
         { ttext(),  "ttextFromBinary" },
     };
     for (auto &e : types) {
-        loader.RegisterFunction(
+        RegisterMeosFunction(loader, 
             ScalarFunction("asBinary", {e.type}, B, TemporalScalarAsWkbExec));
         duckdb::RegisterSerializedScalarFunction(
             loader,
@@ -1732,59 +1732,59 @@ void TboxValueTimeTilesExec(DataChunk &args, ExpressionState &, Vector &result) 
 
 void TemporalTypes::RegisterTileGetters(ExtensionLoader &loader) {
     // Single-bin getters — getBin(value, size, origin) -> <type>span
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getBin", {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::INTEGER},
         SpanTypes::intspan(), GetBinIntExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getBin", {LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
         SpanTypes::bigintspan(), GetBinBigintExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getBin", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
         SpanTypes::floatspan(), GetBinFloatExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getBin", {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ},
         SpanTypes::tstzspan(), GetBinTstzExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "getBin", {LogicalType::DATE, LogicalType::INTERVAL, LogicalType::DATE},
         SpanTypes::datespan(), GetBinDateExec));
 
     LogicalType list_tbox = LogicalType::LIST(TboxType::tbox());
 
     // valueTiles(tbox, vsize [, vorigin]) — both INTEGER and DOUBLE size variants
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "valueTiles", {TboxType::tbox(), LogicalType::INTEGER},
         list_tbox, TboxValueTilesExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "valueTiles", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTEGER},
         list_tbox, TboxValueTilesExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "valueTiles", {TboxType::tbox(), LogicalType::DOUBLE},
         list_tbox, TboxValueTilesExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "valueTiles", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::DOUBLE},
         list_tbox, TboxValueTilesExec));
 
     // timeTiles(tbox, duration [, torigin])
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "timeTiles", {TboxType::tbox(), LogicalType::INTERVAL},
         list_tbox, TboxTimeTilesExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "timeTiles", {TboxType::tbox(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ},
         list_tbox, TboxTimeTilesExec));
 
     // valueTimeTiles(tbox, vsize, duration [, vorigin, torigin])
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "valueTimeTiles", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTERVAL},
         list_tbox, TboxValueTimeTilesExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "valueTimeTiles",
         {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTERVAL,
          LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ},
         list_tbox, TboxValueTimeTilesExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "valueTimeTiles", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::INTERVAL},
         list_tbox, TboxValueTimeTilesExec));
-    loader.RegisterFunction(ScalarFunction(
+    RegisterMeosFunction(loader, ScalarFunction(
         "valueTimeTiles",
         {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::INTERVAL,
          LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ},
@@ -2102,7 +2102,7 @@ void RegisterTemporalSplit(ExtensionLoader &loader, const string &name, vector<L
                      /*init_global=*/nullptr, TemporalSplitLocalInit);
     fn.in_out_function = TemporalSplitInOut;
     fn.function_info = make_shared_ptr<TemporalSplitInfo>(std::move(ttype), with_value, is_int, with_time);
-    loader.RegisterFunction(fn);
+    RegisterMeosFunction(loader, fn);
 }
 
 } // anonymous namespace

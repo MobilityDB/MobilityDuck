@@ -440,7 +440,7 @@ void SetTypes::RegisterSetUnnest(ExtensionLoader &loader) {
                          SetUnnestExec,
                          SetUnnestBind,
                          SetUnnestInit);
-        loader.RegisterFunction(fn);
+        RegisterMeosFunction(loader, fn);
     }
 }
 
@@ -613,7 +613,7 @@ void SetTypes::RegisterSetUnionAgg(ExtensionLoader &loader) {
                 SetUnionSetFunction>(set_type, set_type));
     }
 
-    loader.RegisterFunction(std::move(set_union_set));
+    RegisterMeosFunction(loader, std::move(set_union_set));
 }
 
 } // namespace duckdb

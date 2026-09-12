@@ -203,7 +203,7 @@ void TGeogpointType::RegisterScalarInOutFunctions(ExtensionLoader &loader){
             LogicalType::VARCHAR,
             Tspatial_as_text
         );
-        loader.RegisterFunction( TgeogpointAsText);
+        RegisterMeosFunction(loader, TgeogpointAsText);
 
     auto TgeogpointAsEWKT = ScalarFunction(
         "asEWKT",
@@ -211,7 +211,7 @@ void TGeogpointType::RegisterScalarInOutFunctions(ExtensionLoader &loader){
         LogicalType::VARCHAR,
         Tspatial_as_ewkt
     );
-    loader.RegisterFunction( TgeogpointAsEWKT);
+    RegisterMeosFunction(loader, TgeogpointAsEWKT);
 }
 
 

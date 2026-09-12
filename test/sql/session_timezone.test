@@ -1,0 +1,106 @@
+# name: test/sql/session_timezone.test
+# description: MEOS reads and writes timestamps, and turns them into dates, in
+#              the zone of the session, the way MobilityDB follows the
+#              PostgreSQL session TimeZone. A literal without an offset names a
+#              local time of that zone; a value prints in it. A session starts
+#              in Europe/Brussels.
+# group: [sql]
+
+require mobilityduck
+
+query I
+SELECT tstzspan '[2026-01-15 08:00:00, 2026-01-15 09:00:00]';
+----
+[2026-01-15 08:00:00+01, 2026-01-15 09:00:00+01]
+
+statement ok
+SET TimeZone = 'UTC'
+
+# A literal without an offset is a local time of the session's zone, read by a
+# cast and by a constructor alike
+query I
+SELECT tstzspan '[2026-01-15 08:00:00, 2026-01-15 09:00:00]';
+----
+[2026-01-15 08:00:00+00, 2026-01-15 09:00:00+00]
+
+query I
+SELECT stbox('SRID=25832;STBOX XT(((0,0),(1,1)),[2026-01-15 08:00:00, 2026-01-15 09:00:00])');
+----
+SRID=25832;STBOX XT(((0,0),(1,1)),[2026-01-15 08:00:00+00, 2026-01-15 09:00:00+00])
+
+# An offset names the same instant in every zone; the value prints in the session's
+query I
+SELECT tint '1@2026-01-15 08:00:00+01';
+----
+1@2026-01-15 07:00:00+00
+
+# The exact predicate reads the window in the session's zone, the same hour a
+# TIMESTAMP bound beside it reads
+query I
+SELECT atStbox(tgeompoint 'SRID=25832;[Point(0.5 0.5)@2026-01-15 08:30:00+00, Point(0.6 0.6)@2026-01-15 08:40:00+00]',
+  stbox('SRID=25832;STBOX XT(((0,0),(1,1)),[2026-01-15 08:00:00, 2026-01-15 09:00:00])')) IS NOT NULL;
+----
+true
+
+# A date is taken in the session's zone: 23:30 UTC is still the 15th in UTC
+query I
+SELECT (tstzspan '[2026-01-15 23:30:00+00, 2026-01-15 23:45:00+00]')::datespan;
+----
+[2026-01-15, 2026-01-16)
+
+# Every worker thread follows the session: each row parses its own string
+statement ok
+SET threads = 4
+
+query I
+SELECT count(*) FROM range(200000) t(i)
+WHERE (('[2026-01-15 08:00:00, 2026-01-15 09:' || lpad((i % 60)::VARCHAR, 2, '0') || ':00]')::tstzspan)::VARCHAR
+  LIKE '%+00]';
+----
+200000
+
+statement ok
+SET TimeZone = 'Europe/Brussels'
+
+query I
+SELECT tstzspan '[2026-01-15 08:00:00, 2026-01-15 09:00:00]';
+----
+[2026-01-15 08:00:00+01, 2026-01-15 09:00:00+01]
+
+query I
+SELECT (tstzspan '[2026-01-15 23:30:00+00, 2026-01-15 23:45:00+00]')::datespan;
+----
+[2026-01-16, 2026-01-17)
+
+query I
+SELECT count(*) FROM range(200000) t(i)
+WHERE (('[2026-01-15 08:00:00, 2026-01-15 09:' || lpad((i % 60)::VARCHAR, 2, '0') || ':00]')::tstzspan)::VARCHAR
+  LIKE '%+01]';
+----
+200000
+
+statement ok
+SET TimeZone = 'America/New_York'
+
+query I
+SELECT tint '1@2026-01-15 08:00:00+01';
+----
+1@2026-01-15 02:00:00-05
+
+# An abbreviation the session's zone defines reads through that zone, and a
+# switch of zone between two reads leaves no trace of the zone it replaced
+statement ok
+SET TimeZone = 'Europe/Moscow'
+
+query I
+SELECT tstzspan '[2001-01-15 12:00:00 MSK, 2001-01-15 13:00:00 MSK]';
+----
+[2001-01-15 12:00:00+03, 2001-01-15 13:00:00+03]
+
+statement ok
+SET TimeZone = 'America/New_York'
+
+query I
+SELECT tstzspan '[2001-01-15 12:00:00 MSK, 2001-01-15 13:00:00 MSK]';
+----
+[2001-01-15 04:00:00-05, 2001-01-15 05:00:00-05]

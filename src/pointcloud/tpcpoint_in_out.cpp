@@ -258,11 +258,11 @@ void TPcpointTypes::RegisterScalarInOutFunctions(ExtensionLoader &loader){
 
 
 void TPcpointTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    loader.RegisterCastFunction( LogicalType::VARCHAR, TPcpointTypes::tpcpoint(), TpcpointFunctions::StringToTpcpoint);
-    loader.RegisterCastFunction( TPcpointTypes::tpcpoint(), LogicalType::VARCHAR, TpcpointFunctions::TpcpointToString);
+    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, TPcpointTypes::tpcpoint(), TpcpointFunctions::StringToTpcpoint);
+    RegisterMeosCastFunction(loader, TPcpointTypes::tpcpoint(), LogicalType::VARCHAR, TpcpointFunctions::TpcpointToString);
     // Base pcpoint value render cast: generated startValue/endValue return the pcpoint
     // base value, rendered as hex-WKB text via pcpoint_hex_out (cbuffer sibling pattern).
-    loader.RegisterCastFunction( TPcpointTypes::pcpoint(), LogicalType::VARCHAR, TpcpointFunctions::Pcpoint_out_cast);
+    RegisterMeosCastFunction(loader, TPcpointTypes::pcpoint(), LogicalType::VARCHAR, TpcpointFunctions::Pcpoint_out_cast);
 }
 
 }

@@ -19,6 +19,7 @@
 #include "index/sptree_module.hpp"
 #include "temporal/temporal_blob.hpp"
 #include "index/sptree_index_scan.hpp"
+#include "mobilityduck/meos_exec_serial.hpp"
 
 namespace duckdb {
 
@@ -255,7 +256,7 @@ TableFunction TSPTreeIndexScanFunction::GetFunction() {
 // Register
 // -------------------------------------------------------------------------
 void TSPTreeModule::RegisterIndexScan(ExtensionLoader &loader) {
-	loader.RegisterFunction( TSPTreeIndexScanFunction::GetFunction());
+	RegisterMeosFunction(loader, TSPTreeIndexScanFunction::GetFunction());
 }
 
 } 

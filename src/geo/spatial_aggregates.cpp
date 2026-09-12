@@ -8,6 +8,7 @@
 #include "duckdb/function/aggregate_function.hpp"
 #include "duckdb/function/function_set.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
+#include "mobilityduck/meos_exec_serial.hpp"
 
 namespace duckdb {
 
@@ -283,7 +284,7 @@ void SpatialAggregates::AddExtentOverloads(AggregateFunctionSet &extent_set) {
 void SpatialAggregates::RegisterTcentroid(ExtensionLoader &loader) {
     AggregateFunctionSet tcentroid_set("TcentroidAgg");
     tcentroid_set.AddFunction(MakeTcentroidAggregate(TgeompointType::tgeompoint()));
-    loader.RegisterFunction(std::move(tcentroid_set));
+    RegisterMeosFunction(loader, std::move(tcentroid_set));
 }
 
 } // namespace duckdb

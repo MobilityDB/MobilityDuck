@@ -6,6 +6,7 @@
 
 #include <cstdio>
 #include <string>
+#include "mobilityduck/meos_exec_serial.hpp"
 
 namespace duckdb {
 
@@ -133,7 +134,7 @@ static void TemporalFooterFun(DataChunk &args, ExpressionState &state, Vector &r
 
 void TemporalParquetFunctions::Register(ExtensionLoader &loader) {
     auto map_type = LogicalType::MAP(LogicalType::VARCHAR, LogicalType::VARCHAR);
-    loader.RegisterFunction(
+    RegisterMeosFunction(loader, 
         ScalarFunction("temporalFooter", {map_type}, LogicalType::VARCHAR, TemporalFooterFun));
 }
 

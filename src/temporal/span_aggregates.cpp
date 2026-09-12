@@ -14,6 +14,7 @@
 #include "duckdb/function/aggregate_function.hpp"
 #include "duckdb/function/function_set.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
+#include "mobilityduck/meos_exec_serial.hpp"
 
 namespace duckdb {
 
@@ -478,7 +479,7 @@ void SpanAggregates::RegisterAggregateFunctions(ExtensionLoader &loader) {
     extent_set.AddFunction(MakeExtentBlobToSpanAggregate<TstzSpanExtentFromTemporal>(
         TemporalTypes::ttext(), SpanTypes::tstzspan()));
 
-    loader.RegisterFunction(std::move(extent_set));
+    RegisterMeosFunction(loader, std::move(extent_set));
 }
 
 } // namespace duckdb

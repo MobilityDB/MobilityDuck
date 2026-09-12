@@ -9,6 +9,7 @@
 #include "duckdb/common/exception.hpp"
 #include "duckdb/function/table_function.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
+#include "mobilityduck/meos_exec_serial.hpp"
 
 namespace duckdb {
 
@@ -244,27 +245,27 @@ static TableFunction MakeBinsFunction(const LogicalType &input_type, const Logic
 
 void SpanTableFunctions::RegisterBins(ExtensionLoader &loader) {
     // span variants
-    loader.RegisterFunction(MakeBinsFunction<BinsKind::intspan>(
+    RegisterMeosFunction(loader, MakeBinsFunction<BinsKind::intspan>(
         SpanTypes::intspan(), LogicalType::INTEGER, LogicalType::INTEGER));
-    loader.RegisterFunction(MakeBinsFunction<BinsKind::bigintspan>(
+    RegisterMeosFunction(loader, MakeBinsFunction<BinsKind::bigintspan>(
         SpanTypes::bigintspan(), LogicalType::BIGINT, LogicalType::BIGINT));
-    loader.RegisterFunction(MakeBinsFunction<BinsKind::floatspan>(
+    RegisterMeosFunction(loader, MakeBinsFunction<BinsKind::floatspan>(
         SpanTypes::floatspan(), LogicalType::DOUBLE, LogicalType::DOUBLE));
-    loader.RegisterFunction(MakeBinsFunction<BinsKind::datespan>(
+    RegisterMeosFunction(loader, MakeBinsFunction<BinsKind::datespan>(
         SpanTypes::datespan(), LogicalType::INTERVAL, LogicalType::DATE));
-    loader.RegisterFunction(MakeBinsFunction<BinsKind::tstzspan>(
+    RegisterMeosFunction(loader, MakeBinsFunction<BinsKind::tstzspan>(
         SpanTypes::tstzspan(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ));
 
     // spanset variants
-    loader.RegisterFunction(MakeBinsFunction<BinsKind::INTSPANSET>(
+    RegisterMeosFunction(loader, MakeBinsFunction<BinsKind::INTSPANSET>(
         SpansetTypes::intspanset(), LogicalType::INTEGER, LogicalType::INTEGER));
-    loader.RegisterFunction(MakeBinsFunction<BinsKind::BIGINTSPANSET>(
+    RegisterMeosFunction(loader, MakeBinsFunction<BinsKind::BIGINTSPANSET>(
         SpansetTypes::bigintspanset(), LogicalType::BIGINT, LogicalType::BIGINT));
-    loader.RegisterFunction(MakeBinsFunction<BinsKind::FLOATSPANSET>(
+    RegisterMeosFunction(loader, MakeBinsFunction<BinsKind::FLOATSPANSET>(
         SpansetTypes::floatspanset(), LogicalType::DOUBLE, LogicalType::DOUBLE));
-    loader.RegisterFunction(MakeBinsFunction<BinsKind::DATESPANSET>(
+    RegisterMeosFunction(loader, MakeBinsFunction<BinsKind::DATESPANSET>(
         SpansetTypes::datespanset(), LogicalType::INTERVAL, LogicalType::DATE));
-    loader.RegisterFunction(MakeBinsFunction<BinsKind::TSTZSPANSET>(
+    RegisterMeosFunction(loader, MakeBinsFunction<BinsKind::TSTZSPANSET>(
         SpansetTypes::tstzspanset(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ));
 }
 
