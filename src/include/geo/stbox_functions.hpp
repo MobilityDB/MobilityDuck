@@ -162,9 +162,6 @@ struct StboxFunctions {
     static void Stbox_space_time_tiles(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tgeo_space_boxes(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tgeo_space_time_boxes(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Stbox_get_space_tile(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Stbox_get_time_tile(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Stbox_get_space_time_tile(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 }
