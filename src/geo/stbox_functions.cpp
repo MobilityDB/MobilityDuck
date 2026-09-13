@@ -200,40 +200,6 @@ void StboxFunctions::Stbox_from_hexwkb(DataChunk &args, ExpressionState &state, 
     }
 }
 
-void StboxFunctions::Stbox_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        args.data[0], result, args.size(),
-        [&](string_t input_stbox) -> string_t {
-            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
-            size_t data_size = input_stbox.GetSize();
-            if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid stbox data: insufficient size");
-            }
-            uint8_t *data_copy = (uint8_t*)malloc(data_size);
-            memcpy(data_copy, data, data_size);
-            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
-            if (!stbox) {
-                free(data_copy);
-                throw InternalException("Failure in Stbox_as_text: unable to cast binary to stbox");
-            }
-            int dbl_dig_for_wkt = OUT_DEFAULT_DECIMAL_DIGITS;
-            char *str = stbox_out(stbox, dbl_dig_for_wkt);
-            if (!str) {
-                free(stbox);
-                throw InternalException("Failure in Stbox_as_text: stbox_out returned null");
-            }
-            std::string ret_str(str);
-            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-            free(str);
-            free(stbox);
-            return stored_data;
-        }
-    );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
 void StboxFunctions::Stbox_as_wkb(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(
         args.data[0], result, args.size(),

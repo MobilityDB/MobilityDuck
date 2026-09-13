@@ -23,16 +23,19 @@ SELECT asEWKT('{47c3c3@2000-01-01}'::ts2cell);
 ----
 SRID=4326;{47c3c3@2000-01-01 00:00:00+01}
 
-# ── the other tspatial_* kernels are NOT published over a cell temporal ──────
-# MobilityDB CREATE FUNCTIONs none of SRID/setSRID/transform for ts2cell, tquadbin or
-# th3index, and its asText over them binds Temporal_as_text (above), not a tspatial_* kernel.
-# Binding the tspatial_* ones anyway reached a MEOS kernel whose own sqlSignatures exclude the
-# cell families, a call MobilityDB never makes. These assert they stay absent.
-
-statement error
+# ── asText is published over a cell temporal ────────────────────────────────
+# MobilityDB binds asText(ts2cell), asText(tquadbin) and asText(th3index) to Temporal_as_text,
+# behind the typed MEOS outputs ts2cell_out, tquadbin_out and th3index_out, and the binding
+# registers asText from those outputs, answering the cell's own text form.
+query I
 SELECT asText('{47c3c3@2000-01-01}'::ts2cell);
 ----
-No function matches the given name and argument types 'asText(ts2cell)'
+{47c3c3@2000-01-01 00:00:00+01}
+
+# ── the other tspatial_* kernels are NOT published over a cell temporal ──────
+# MobilityDB CREATE FUNCTIONs none of SRID/setSRID/transform for ts2cell, tquadbin or
+# th3index. Binding the tspatial_* ones anyway reached a MEOS kernel whose own sqlSignatures
+# exclude the cell families, a call MobilityDB never makes. These assert they stay absent.
 
 statement error
 SELECT SRID('{47c3c3@2000-01-01}'::ts2cell);
@@ -50,10 +53,10 @@ SELECT transform('{47c3c3@2000-01-01}'::ts2cell, 3857);
 No function matches the given name and argument types 'transform(ts2cell, INTEGER_LITERAL)'
 
 # ── the sibling cell families answer identically ────────────────────────────
-statement error
+query I
 SELECT asText(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'));
 ----
-No function matches the given name and argument types 'asText(tquadbin)'
+4817ffffffffffff@2024-01-01 00:00:00+01
 
 statement error
 SELECT transform(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), 3857);

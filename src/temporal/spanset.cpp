@@ -95,21 +95,6 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         auto child_type = SpansetTypeMapping::GetChildType(spanset_type);    // span     
         auto base_type = SpansetTypeMapping::GetBaseType(spanset_type); 
         auto set_type = SpansetTypeMapping::GetSetType(spanset_type);       // set
-        // Register: asText
-        if (spanset_type == SpansetTypes::floatspanset()) {            
-            duckdb::RegisterSerializedScalarFunction(loader,  // asText(floatset)
-                ScalarFunction("asText", {spanset_type}, LogicalType::VARCHAR, SpansetFunctions::Spanset_as_text)
-            );
-            
-            duckdb::RegisterSerializedScalarFunction(loader,  // asText(floatset, int)
-                ScalarFunction("asText", {spanset_type, LogicalType::INTEGER}, LogicalType::VARCHAR, SpansetFunctions::Spanset_as_text)
-            );
-        } else {            
-            duckdb::RegisterSerializedScalarFunction(loader,  // All other set types
-                ScalarFunction("asText", {spanset_type}, LogicalType::VARCHAR, SpansetFunctions::Spanset_as_text)
-            );
-        }
-
         // asBinary / asHexWKB and *FromBinary / *FromHexWKB — spanset_as_wkb /
         // spanset_from_wkb are subtype-agnostic; the format encodes the
         // spanset type, so each per-type alias routes to the same executor.

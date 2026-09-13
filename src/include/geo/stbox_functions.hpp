@@ -26,7 +26,6 @@ struct StboxFunctions {
      ****************************************************/
     static void Stbox_from_wkb(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_from_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Stbox_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_as_wkb(DataChunk &args, ExpressionState &state, Vector &result);
     static void Stbox_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
 

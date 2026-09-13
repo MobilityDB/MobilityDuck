@@ -12,17 +12,18 @@ WHERE type_name IN ('cbufferset', 'jsonbset', 'npointset', 'pcpatchset',
 ----
 8
 
-# A pointer-carried element: the constructor keeps each value and asText reads it back.
+# A pointer-carried element: the constructor keeps each value and asText reads it back,
+# writing each element's Well-Known Text as MobilityDB's asText over a spatial set does.
 query I
 SELECT asText(set([CAST('Cbuffer(Point(1 1),0.5)' AS cbuffer),
                    CAST('Cbuffer(Point(3 3),2)' AS cbuffer)]));
 ----
-{"Cbuffer(0101000000000000000000F03F000000000000F03F,0.5)", "Cbuffer(010100000000000000000008400000000000000840,2)"}
+{"Cbuffer(POINT(1 1),0.5)", "Cbuffer(POINT(3 3),2)"}
 
 query I
 SELECT asText(set([CAST('POSE(Point(1 1),0.5)' AS pose)]));
 ----
-{"POSE (0101000000000000000000F03F000000000000F03F, 0.5)"}
+{"Pose(POINT(1 1),0.5)"}
 
 query I
 SELECT asText(set([CAST('NPoint(1,0.5)' AS npoint)]));
@@ -39,7 +40,7 @@ SELECT asText(set([CAST(5209574053332910079 AS quadbin)]));
 query I
 SELECT asText(set(CAST('Cbuffer(Point(1 1),0.5)' AS cbuffer)));
 ----
-{"Cbuffer(0101000000000000000000F03F000000000000F03F,0.5)"}
+{"Cbuffer(POINT(1 1),0.5)"}
 
 # Unnest answers the registered element type, not a bare BLOB.
 query II
@@ -135,22 +136,22 @@ WHERE lower(function_name) = 'jsonbsetinsert'
 query I
 SELECT asText(round(set([pose 'Pose(Point(1.23456 2.34567),0.5)']), 2));
 ----
-{"POSE (0101000000AE47E17A14AEF33FCDCCCCCCCCCC0240, 0.5)"}
+{"Pose(POINT(1.23 2.35),0.5)"}
 
 query I
 SELECT asText(round(set([cbuffer 'Cbuffer(Point(1.23456 2.34567),3.14159)']), 2));
 ----
-{"Cbuffer(0101000000AE47E17A14AEF33FCDCCCCCCCCCC0240,3.14)"}
+{"Cbuffer(POINT(1.23 2.35),3.14)"}
 
 query I
-SELECT asText(setSRID(set([pose 'Pose(Point(1 2),0.5)']), 4326));
+SELECT asEWKT(setSRID(set([pose 'Pose(Point(1 2),0.5)']), 4326));
 ----
-{"POSE (0101000020E6100000000000000000F03F0000000000000040, 0.5)"}
+SRID=4326;{"Pose(POINT(1 2),0.5)"}
 
 query I
-SELECT asText(transform(setSRID(set([pose 'Pose(Point(1 2),0.5)']), 4326), 3857));
+SELECT asEWKT(transform(setSRID(set([pose 'Pose(Point(1 2),0.5)']), 4326), 3857), 6);
 ----
-{"POSE (0101000020110F0000310C4ADA772DFB4066F404ABE12E0B41, 0.5)"}
+SRID=3857;{"Pose(POINT(111319.490793 222684.208506),0.5)"}
 
 query I
 SELECT routes(set([npoint 'NPoint(1, 0.5)', npoint 'NPoint(2, 0.25)']));
@@ -177,7 +178,7 @@ SELECT startValue(minusValues(tjsonb '{"a":1}@2000-01-01', set([jsonb '{"a":2}']
 query I
 SELECT asText(posesetFromHexWKB(asHexWKB(set([pose 'Pose(Point(1 2),0.5)']))));
 ----
-{"POSE (0101000000000000000000F03F0000000000000040, 0.5)"}
+{"Pose(POINT(1 2),0.5)"}
 
 query I
 SELECT asText(jsonbsetFromHexWKB(asHexWKB(set([jsonb '{"a":1}']))));

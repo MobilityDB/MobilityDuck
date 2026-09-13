@@ -101,21 +101,6 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     for (const auto &span_type : SpanTypes::AllTypes()) {
         auto base_type = SpanTypeMapping::GetChildType(span_type);         
 
-        // Register: asText
-        if (span_type == SpanTypes::floatspan()) {            
-            duckdb::RegisterSerializedScalarFunction(loader,  // asText(floatspan)
-                ScalarFunction("asText", {span_type}, LogicalType::VARCHAR, SpanFunctions::Span_as_text)
-            );
-            
-            duckdb::RegisterSerializedScalarFunction(loader,  // asText(floatspan, int)
-                ScalarFunction("asText", {span_type, LogicalType::INTEGER}, LogicalType::VARCHAR, SpanFunctions::Span_as_text)
-            );
-        } else {            
-            duckdb::RegisterSerializedScalarFunction(loader,  // All other span types
-                ScalarFunction("asText", {span_type}, LogicalType::VARCHAR, SpanFunctions::Span_as_text)
-            );
-        }
-
         // asBinary / asHexWKB and the *FromBinary / *FromHexWKB constructors.
         // span_as_wkb / span_from_wkb are subtype-agnostic; the format
         // encodes the span type, so each per-type FromBinary alias routes
