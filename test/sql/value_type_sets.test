@@ -79,6 +79,20 @@ SELECT replace(asText(jsonbsetPretty(set([jsonb '{"a":1}']))), chr(10), '|');
 ----
 {"{|    \"a\": 1|}"}
 
+# A set function registers the set type MobilityDB declares it returns, which need not be the
+# set type it reads: jsonbsetArrayLength answers an intset, jsonbsetPretty a textset and routes
+# a bigintset.
+query III
+SELECT lower(function_name), list_aggregate(parameter_types, 'string_agg', ','), return_type
+FROM duckdb_functions()
+WHERE lower(function_name) IN ('jsonbsetarraylength', 'jsonbsetpretty', 'routes')
+  AND list_aggregate(parameter_types, 'string_agg', ',') IN ('jsonbset', 'npointset')
+ORDER BY 1;
+----
+jsonbsetarraylength	jsonbset	intset
+jsonbsetpretty	jsonbset	textset
+routes	npointset	bigintset
+
 # The path operations read a text[] path over the set the same way they read one over a
 # tjsonb, and answer a jsonbset — so the result composes with the set accessors above.
 # MobilityDB gives null_handle a DEFAULT; DuckDB carries no SQL default, so the mode is
