@@ -929,6 +929,44 @@ def trailing_arg_default(f):
     defs = {s["argDefaults"][-1] for s in (f.get("sqlSignatures") or []) if s.get("argDefaults")}
     return next(iter(defs)) if len(defs) == 1 and None not in defs else None
 
+# Macro name -> value, from the catalog's `macros`: a literal a PG wrapper binds is spelled as
+# the MEOS macro (OUT_DEFAULT_DECIMAL_DIGITS), whose value the catalog states. Filled in main().
+MACRO_VALUES = {}
+
+def declared_text_sigs(f):
+    """[(set accessor, two, one)] for the text signatures the catalog declares for f over the set
+    types a declared signature can name (SET_SIG_ACC, as declared_element_pairs reads them): two
+    where the digit count is an argument, one where the one-argument form answers, declared alone
+    (asText(pcpointset)) or through the count's SQL default (asText(cbufferset, integer DEFAULT
+    15)). geomset and geogset carry a hand-written text surface of their own and are left to it."""
+    out = []
+    for s in f.get("sqlSignatures") or []:
+        acc = SET_SIG_ACC.get(s["args"][0]) if s["args"] else None
+        if not acc:
+            continue
+        n = len(s["args"])
+        dflt = (s.get("argDefaults") or [None] * n)[-1] if n == 2 else None
+        out.append((acc, n == 2, n == 1 or dflt is not None))
+    return out
+
+def text_arities(f):
+    """(two, one) for a text rendering (X, scalar) -> char *: `two` is True when the catalog
+    declares the two-argument SQL form, `one` the value the one-argument form binds the scalar
+    to (the trailing argument's SQL default, else the literal a one-argument signature binds),
+    or None when no one-argument form is declared. The registered arities are the declared ones:
+    asText(floatset, integer DEFAULT 15) is both, asText(jsonbset) the second alone."""
+    sigs = [s for s in (f.get("sqlSignatures") or [])
+            if s.get("sqlName", f.get("sqlfn")) == f.get("sqlfn")]
+    two = any(len(s["args"]) == 2 for s in sigs)
+    one = trailing_arg_default(f)
+    if one is None:
+        for s in sigs:
+            bound = list((s.get("boundArgs") or {}).values())
+            if len(s["args"]) == 1 and len(bound) == 1:
+                one = str(MACRO_VALUES.get(bound[0], bound[0]))
+                break
+    return two, one
+
 def emit_defaulted_unary(name, blobto, toblob, ctype, dval):
     """The shorter (X)->X overload of an (X, scalar-param DEFAULT)->X blob-container function
     (set/span/spanset): a UnaryExecutor body calling the MEOS fn with the default substituted."""
@@ -1026,6 +1064,22 @@ def shape_set(f):
             and "*" not in norm(ins[1]["canonical"]) and rb == "uint64_t" and "*" not in rn
             and set_reg_scope(f["name"])):
         return ("bsc:" + base(ins[1]["canonical"]), "LogicalType::UBIGINT")
+    # (Set, scalar PARAM) -> owned C string: the text rendering a set publishes with its digit
+    # count (asText(floatset, integer)), as shape_span's u2text arm renders a span; name-scoped
+    # like setcsc, or else scoped by the set types its signatures declare, as the generic
+    # spatialset_as_text is for cbufferset, poseset, posechainset, pcpointset and pcpatchset.
+    # The kind names the declared arity: u2text when the two-argument form is declared (its
+    # one-argument form, if any, follows from the default), u2text_d when only the one-argument
+    # form is, bound to the literal its signature passes (asText(jsonbset)).
+    if (len(ins) == 2 and setp(ins[0]) and base(ins[1]["canonical"]) in SCALAR_ARG
+            and "*" not in norm(ins[1]["canonical"]) and rb == "char" and rn.endswith("*")
+            and (set_reg_scope(f["name"]) or declared_text_sigs(f))):
+        two, one = text_arities(f)
+        if two:
+            return ("u2text:" + base(ins[1]["canonical"]), "LogicalType::VARCHAR")
+        if one is not None:
+            return ("u2text_d:" + str(sql_default_to_cpp(one)), "LogicalType::VARCHAR")
+        return None
     if set_reg_scope(f["name"]) is None: return None
     if len(ins) == 1 and setp(ins[0]):
         if rb == "Set" and rn.endswith("*"):       return ("u_set", "LogicalType::BLOB")
@@ -1036,6 +1090,22 @@ def shape_set(f):
 
 def emit_set(f, kind):
     name = f["name"]
+    if kind.startswith("u2text:"):  # (Set, by-value scalar) -> owned C string (asText), as emit_span
+        _dt, cpp2, marsh = SCALAR_ARG[kind.split(':', 1)[1]]
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::Execute<string_t, {cpp2}, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t a, {cpp2} a2) {{\n"
+                f"            Set *s = BlobToSet(a);\n            char *r = {name}(s, {marsh});\n            free(s);\n"
+                f"            return TakeCString(result, r);\n        }});\n}}\n")
+    if kind.startswith("u2text_d:"):  # the same, with the scalar bound to its SQL DEFAULT
+        dflt = kind.split(':', 1)[1]
+        return (f"static void Gen_{name}_d(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),\n"
+                f"        [&](string_t a) {{\n"
+                f"            Set *s = BlobToSet(a);\n            char *r = {name}(s, {dflt});\n            free(s);\n"
+                f"            return TakeCString(result, r);\n        }});\n}}\n")
     if kind.startswith("setsc:"):   # (Set, scalar) -> bool
         e = kind.split(':')[1]
         if e == "text":
@@ -2802,6 +2872,9 @@ def shape_span(f, C=SPAN_C):
         if rb == cb and rn.endswith("*"):           return ("u_span", "LogicalType::BLOB")
         if rb in BYVAL_RET and "*" not in rn:       return ("u_scalar:" + rb, byval_ret_duck(rb))
         if rb == "Interval" and rn.endswith("*"):   return ("u_scalar:Interval", "LogicalType::INTERVAL")
+        # (X) -> owned C string: the text rendering a span or span set publishes (asText), as
+        # shape_set's unary arm renders a set.
+        if rb in ("text", "char") and rn.endswith("*"): return ("u_scalar:" + rb, "LogicalType::VARCHAR")
         return None
     if len(ins) != 2: return None
     # element predicates: (X, scalar)->bool / (scalar, X)->bool (contains/left/...)
@@ -2831,7 +2904,12 @@ def shape_span(f, C=SPAN_C):
     # from a constant here. No scope gate: the arm is bounded by the shape itself.
     if (contp(ins[0]) and base(ins[1]["canonical"]) in SCALAR_ARG
             and "*" not in norm(ins[1]["canonical"]) and rb == "char" and rn.endswith("*")):
-        return ("u2text:" + base(ins[1]["canonical"]), "LogicalType::VARCHAR")
+        two, one = text_arities(f)
+        if two:
+            return ("u2text:" + base(ins[1]["canonical"]), "LogicalType::VARCHAR")
+        if one is not None:
+            return ("u2text_d:" + str(sql_default_to_cpp(one)), "LogicalType::VARCHAR")
+        return None
     # (X, scalar PARAM) -> X : a same-container return whose scalar is NOT an element
     # (floatspan_round/floatspanset_round's precision integer). Name-scoped (<elem>span_round
     # -> that container type), so the round=float-only base-value scoping falls out.
@@ -4177,6 +4255,48 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                         set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                                  f'"{reg_name(nm, f)}", {{{acc}}}, {rett}, Gen_{fn}_d));')
             continue
+        if kind.startswith("u2text_d:"):   # (Set)->text alone: asText(jsonbset), its digit count bound
+            if set_reg_scope(fn) is None:   # scoped by its declared signatures
+                for a, _two, one in declared_text_sigs(f):
+                    if one:
+                        for nm in names:
+                            set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                                     f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
+                continue
+            scope, accs = set_reg_scope(fn)
+            acc_list = ["type"] if scope == "all" else accs
+            sink = set_generic_regs if scope == "all" else set_specific_regs
+            for a in acc_list:
+                for nm in names:
+                    sink.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
+            continue
+        if kind.startswith("u2text:"):   # (Set, scalar PARAM)->text: asText(floatset, integer)
+            scd = SCALAR_ARG[kind.split(':', 1)[1]][0]
+            _, dflt = text_arities(f)
+            if dflt is not None:
+                set_bodies.append(emit_set(f, "u2text_d:" + str(sql_default_to_cpp(dflt))))
+            if set_reg_scope(fn) is None:   # scoped by its declared signatures, each at its arity
+                for a, two, one in declared_text_sigs(f):
+                    for nm in names:
+                        if two:
+                            set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                                     f'"{reg_name(nm, f)}", {{{a}, {scd}}}, {dret}, Gen_{fn}));')
+                        if one:
+                            set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                                     f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
+                continue
+            scope, accs = set_reg_scope(fn)
+            acc_list = ["type"] if scope == "all" else accs
+            sink = set_generic_regs if scope == "all" else set_specific_regs
+            for a in acc_list:
+                for nm in names:
+                    sink.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                f'"{reg_name(nm, f)}", {{{a}, {scd}}}, {dret}, Gen_{fn}));')
+                    if dflt is not None:
+                        sink.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                    f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
+            continue
         if kind.startswith("setcsc:"):   # (Set, scalar PARAM)->Set: degrees(floatset, bool)
             b = kind.split(':')[1]; scd = SCALAR_ARG[b][0]
             scope, accs = set_reg_scope(fn)
@@ -4295,17 +4415,27 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                               f'"{reg_name(nm, f)}", {sig}, {racc}, Gen_{fn}));')
                 continue
+            # text rendering alone at one argument: the digit count bound to the literal the
+            # declared signature passes, as the set loop registers asText(jsonbset).
+            if kind.startswith("u2text_d:"):
+                acc = C.get("single") or (C["scope"](fn) or (None, []))[1]
+                accs_here = [acc] if isinstance(acc, str) else list(acc)
+                for a in accs_here:
+                    for nm in names:
+                        span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                                  f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
+                continue
             # text rendering: the (X, int) form the MEOS entry declares, plus the shorter arity
             # the canonical SQL reaches through that argument's DEFAULT.
             if kind.startswith("u2text:"):
-                acc = C["single"] or (C["scope"](fn) or (None, []))[1]
+                acc = C.get("single") or (C["scope"](fn) or (None, []))[1]
                 accs_here = [acc] if isinstance(acc, str) else list(acc)
                 scd = SCALAR_ARG[kind.split(':', 1)[1]][0]
                 for a in accs_here:
                     for nm in names:
                         span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                                   f'"{reg_name(nm, f)}", {{{a}, {scd}}}, {dret}, Gen_{fn}));')
-                dflt = trailing_arg_default(f)
+                _, dflt = text_arities(f)
                 if dflt is not None:
                     span_bodies.append(emit_span(f, "u2text_d:" + str(sql_default_to_cpp(dflt)), C))
                     for a in accs_here:
@@ -5158,6 +5288,22 @@ def main():
                              % (_b, _cb, _seen.most_common(3) or "no pointer-carried function"))
     # struct layouts (e.g. Match {i,j}) for the array-return LIST(STRUCT) shape — from the catalog.
     STRUCTS.update({s["name"]: s for s in d.get("structs", [])})
+    # macro values, so a literal a PG wrapper binds by macro name renders as its value.
+    MACRO_VALUES.update({m["name"]: m["value"] for m in d.get("macros", []) if "value" in m})
+    # A typed text or binary output names two wrappers, its type's I/O function and its asText
+    # (tint_out: `#Temporal_out(), #Temporal_as_text()`), so its first wrapper's SQL name is an
+    # I/O name, which supported() drops as a cast, while one of its signatures carries the SQL name
+    # the surface registers. Such a function takes that name when its signatures carry exactly
+    # one non-I/O name, and keeps that name's signatures only.
+    for f in fns:
+        if not re.search(r'_(out|in|send|recv)$', f.get("sqlfn") or ""):
+            continue
+        sigs = f.get("sqlSignatures") or []
+        other = {s.get("sqlName") for s in sigs
+                 if s.get("sqlName") and not re.search(r'_(out|in|send|recv)$', s["sqlName"])}
+        if len(other) == 1:
+            f["sqlfn"] = other.pop()
+            f["sqlSignatures"] = [s for s in sigs if s.get("sqlName") == f["sqlfn"]]
     # name -> catalog entry, so the name-keyed scope rules can read the function's own
     # sqlSignatures (the tspatial_* surface asks which types MobilityDB declares it for).
     FN_BY_NAME.update({f["name"]: f for f in fns})

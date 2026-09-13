@@ -18,39 +18,6 @@ extern "C" {
 
 namespace duckdb {
 
-// --- AsText ---
-void SpansetFunctions::Spanset_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input_vec = args.data[0];
-    input_vec.Flatten(args.size());
-
-    bool has_digits = args.ColumnCount() > 1;
-    Vector *digits_vec_ptr = has_digits ? &args.data[1] : nullptr;
-    if (has_digits) digits_vec_ptr->Flatten(args.size());
-
-    for (idx_t i = 0; i < args.size(); i++) {
-        if (FlatVector::IsNull(input_vec, i) || (has_digits && FlatVector::IsNull(*digits_vec_ptr, i))) {
-            FlatVector::SetNull(result, i, true);
-            continue;
-        }
-
-        auto blob = FlatVector::GetData<string_t>(input_vec)[i];
-        int digits = has_digits ? FlatVector::GetData<int32_t>(*digits_vec_ptr)[i] : 15;
-
-        const uint8_t *data = (const uint8_t *)blob.GetData();
-        size_t size = blob.GetSize();
-
-        SpanSet *s = (SpanSet *)malloc(size);
-        memcpy(s, data, size);
-
-        char *cstr = spanset_out(s, digits);
-        auto str = StringVector::AddString(result, cstr);
-        FlatVector::GetData<string_t>(result)[i] = str;
-
-        free(s);
-        free(cstr);
-    }
-}
-
 
 // --- Cast to text ---
 bool SpansetFunctions::Spanset_to_text(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
