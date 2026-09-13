@@ -1,7 +1,7 @@
 # name: test/sql/cell_index_spatial_surface.test
 # description: The tspatial_* inherited surface covers the types the catalog declares it for.
-#              A cell index is spatial, but MobilityDB publishes none of asText/asEWKT/SRID/
-#              setSRID/transform over a cell temporal, so neither does the binding.
+#              A cell index is spatial: MobilityDB publishes asEWKT over a cell temporal and
+#              none of SRID/setSRID/transform, and the binding follows it.
 # group: [sql]
 
 require mobilityduck
@@ -14,22 +14,25 @@ SELECT '{47c3c3@2000-01-01}'::ts2cell::VARCHAR;
 ----
 {47c3c3@2000-01-01 00:00:00+01}
 
-# ── the tspatial_* kernels are NOT published over a cell temporal ────────────
-# MobilityDB CREATE FUNCTIONs none of these for ts2cell, tquadbin or th3index: swept across
-# all 14 mobilitydb/sql/s2cell slices, asEWKT/SRID/setSRID/transform each appear 0 times.
-# Binding them anyway reached a MEOS kernel whose own sqlSignatures exclude the cell families,
-# which answered "Unknown output function in WKT format for type: s2cell" — a call MobilityDB
-# never makes. Absent is the honest answer; these assert it stays absent.
+# ── asEWKT is published over a cell temporal ────────────────────────────────
+# MobilityDB binds asEWKT(ts2cell), asEWKT(tquadbin) and asEWKT(th3index) to Tspatial_as_ewkt,
+# which answers the cell's text form behind the SRID the cell carries: its 603_ts2cell test
+# reads SRID=4326;[47c3c3@..., 54b5c9@...]. The binding answers the same.
+query I
+SELECT asEWKT('{47c3c3@2000-01-01}'::ts2cell);
+----
+SRID=4326;{47c3c3@2000-01-01 00:00:00+01}
+
+# ── the other tspatial_* kernels are NOT published over a cell temporal ──────
+# MobilityDB CREATE FUNCTIONs none of SRID/setSRID/transform for ts2cell, tquadbin or
+# th3index, and its asText over them binds Temporal_as_text (above), not a tspatial_* kernel.
+# Binding the tspatial_* ones anyway reached a MEOS kernel whose own sqlSignatures exclude the
+# cell families, a call MobilityDB never makes. These assert they stay absent.
 
 statement error
 SELECT asText('{47c3c3@2000-01-01}'::ts2cell);
 ----
 No function matches the given name and argument types 'asText(ts2cell)'
-
-statement error
-SELECT asEWKT('{47c3c3@2000-01-01}'::ts2cell);
-----
-No function matches the given name and argument types 'asEWKT(ts2cell)'
 
 statement error
 SELECT SRID('{47c3c3@2000-01-01}'::ts2cell);
