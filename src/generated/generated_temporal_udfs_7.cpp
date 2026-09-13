@@ -3898,7 +3898,7 @@ void RegisterGenerated_meos_s2_base_accessor(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_npoint_set_accessor(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("routes", {SetTypes::npointset()}, SetTypes::npointset(), Gen_npointset_routes));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("routes", {SetTypes::npointset()}, SetTypes::bigintset(), Gen_npointset_routes));
 }
 
 void RegisterGenerated_meos_h3_base_inspection(ExtensionLoader &loader) {

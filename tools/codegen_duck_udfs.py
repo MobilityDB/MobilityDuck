@@ -846,6 +846,16 @@ def set_reg_scope(name):
             return ("types", [acc])
     return None
 def ret_set_type(name, arg_acc):
+    # The set type the catalog declares for the set this registration reads, read as
+    # declared_element_pairs reads a signature's `ret`: jsonbset_pretty answers a textset,
+    # jsonbset_array_length an intset and npointset_routes a bigintset, none of them the set
+    # they read. The generic loop (`type`) registers over every set type and keeps its own.
+    f = FN_BY_NAME.get(name)
+    if f and arg_acc != "type":
+        for s in f.get("sqlSignatures") or []:
+            if (s.get("args") and SET_SIG_ACC.get(s["args"][0]) == arg_acc
+                    and SET_SIG_ACC.get(s.get("ret"))):
+                return SET_SIG_ACC[s["ret"]]
     # `*_to_<settype>` conversion CHANGES type -> target; else preserve the arg's set type.
     m = re.search(r'_to_(intset|bigintset|floatset|textset|dateset|tstzset)$', name)
     return SET_TYPES[m.group(1)] if m else arg_acc
