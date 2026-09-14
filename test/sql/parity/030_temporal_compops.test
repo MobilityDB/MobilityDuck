@@ -1,7 +1,7 @@
 # name: test/sql/parity/030_temporal_compops.test
-# description: Temporal comparison predicates returning Temporal — tEq,
-#              tNe, tLt, tLe, tGt,
-#              tGe across (base × t, t × base, t × t).
+# description: Temporal comparison predicates returning Temporal — tEqual,
+#              tNotEqual, tLessThan, tLessEqual, tGreaterThan,
+#              tGreaterEqual across (base × t, t × base, t × t).
 #              MobilityDB also exposes these as `?=`/`?<>`/`?<` etc. operators;
 #              DuckDB's parser does not accept multi-character operator tokens
 #              (`?=`, `#=`), so only the named functions are registered here.
@@ -9,80 +9,80 @@
 
 require mobilityduck
 
-# tEq with value × t (tint side)
+# tEqual with value × t (tint side)
 
 query I
-SELECT tEq(1, tint '[1@2000-01-01, 2@2000-01-02]');
+SELECT tEqual(1, tint '[1@2000-01-01, 2@2000-01-02]');
 ----
 [t@2000-01-01 00:00:00+01, f@2000-01-02 00:00:00+01]
 
 query I
-SELECT tEq(tint '[1@2000-01-01, 2@2000-01-02]', 1);
+SELECT tEqual(tint '[1@2000-01-01, 2@2000-01-02]', 1);
 ----
 [t@2000-01-01 00:00:00+01, f@2000-01-02 00:00:00+01]
 
-# tEq on tbool
+# tEqual on tbool
 
 query I
-SELECT tEq(true, tbool '[t@2000-01-01, f@2000-01-02]');
+SELECT tEqual(true, tbool '[t@2000-01-01, f@2000-01-02]');
 ----
 [t@2000-01-01 00:00:00+01, f@2000-01-02 00:00:00+01]
 
-# tEq on tfloat (continuous interpolation crosses the threshold)
+# tEqual on tfloat (continuous interpolation crosses the threshold)
 
 query I
-SELECT tEq(2.5, tfloat '[1@2000-01-01, 5@2000-01-03]');
+SELECT tEqual(2.5, tfloat '[1@2000-01-01, 5@2000-01-03]');
 ----
 {[f@2000-01-01 00:00:00+01, t@2000-01-01 18:00:00+01], (f@2000-01-01 18:00:00+01, f@2000-01-03 00:00:00+01]}
 
-# tEq on ttext
+# tEqual on ttext
 
 query I
-SELECT tNe('hello', ttext '["hello"@2000-01-01, "world"@2000-01-02]');
+SELECT tNotEqual('hello', ttext '["hello"@2000-01-01, "world"@2000-01-02]');
 ----
 [f@2000-01-01 00:00:00+01, t@2000-01-02 00:00:00+01]
 
-# tEq with two temporals (same shape)
+# tEqual with two temporals (same shape)
 
 query I
-SELECT tEq(tint '[1@2000-01-01, 2@2000-01-02]', tint '[1@2000-01-01, 3@2000-01-02]');
+SELECT tEqual(tint '[1@2000-01-01, 2@2000-01-02]', tint '[1@2000-01-01, 3@2000-01-02]');
 ----
 [t@2000-01-01 00:00:00+01, f@2000-01-02 00:00:00+01]
 
-# tLt — strict less-than
+# tLessThan — strict less-than
 
 query I
-SELECT tLt(tint '[1@2000-01-01, 5@2000-01-02]', 3);
+SELECT tLessThan(tint '[1@2000-01-01, 5@2000-01-02]', 3);
 ----
 [t@2000-01-01 00:00:00+01, f@2000-01-02 00:00:00+01]
 
-# tLe vs tLt at the boundary value
+# tLessEqual vs tLessThan at the boundary value
 
 query I
-SELECT tLe(tint '[3@2000-01-01]', 3);
+SELECT tLessEqual(tint '[3@2000-01-01]', 3);
 ----
 [t@2000-01-01 00:00:00+01]
 
 query I
-SELECT tLt(tint '[3@2000-01-01]', 3);
+SELECT tLessThan(tint '[3@2000-01-01]', 3);
 ----
 [f@2000-01-01 00:00:00+01]
 
-# tGe / tGt symmetric to tle / tlt
+# tGreaterEqual / tGreaterThan symmetric to tLessEqual / tLessThan
 
 query I
-SELECT tGe(tint '[3@2000-01-01]', 3);
+SELECT tGreaterEqual(tint '[3@2000-01-01]', 3);
 ----
 [t@2000-01-01 00:00:00+01]
 
 query I
-SELECT tGt(tint '[3@2000-01-01]', 3);
+SELECT tGreaterThan(tint '[3@2000-01-01]', 3);
 ----
 [f@2000-01-01 00:00:00+01]
 
 # Ordered comparisons on ttext
 
 query I
-SELECT tLt(ttext '["a"@2000-01-01, "z"@2000-01-02]', 'm');
+SELECT tLessThan(ttext '["a"@2000-01-01, "z"@2000-01-02]', 'm');
 ----
 [t@2000-01-01 00:00:00+01, f@2000-01-02 00:00:00+01]

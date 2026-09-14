@@ -662,45 +662,45 @@ true
 
 # The time-position operators <<# / #>> / &<# / #&> use `#`, which DuckDB
 # reserves for positional column references, so they are invoked through
-# their canonical backing functions before / after / overbefore / overafter
+# their canonical backing functions spanBefore / spanAfter / spanOverbefore / spanOverafter
 # (the same functions MobilityDB binds those operators to).
 query I
-SELECT before(datespan '[2000-01-03,2000-01-05)', date '2000-01-05');
+SELECT spanBefore(datespan '[2000-01-03,2000-01-05)', date '2000-01-05');
 ----
 true
 
 query I
-SELECT before(date '2000-01-05', datespan '[2000-01-03,2000-01-05)');
+SELECT spanBefore(date '2000-01-05', datespan '[2000-01-03,2000-01-05)');
 ----
 false
 
 query I
-SELECT after(datespan '[2000-01-03,2000-01-05)', date '2000-01-05');
+SELECT spanAfter(datespan '[2000-01-03,2000-01-05)', date '2000-01-05');
 ----
 false
 
 query I
-SELECT after(date '2000-01-05', datespan '[2000-01-03,2000-01-05)');
+SELECT spanAfter(date '2000-01-05', datespan '[2000-01-03,2000-01-05)');
 ----
 true
 
 query I
-SELECT overbefore(datespan '[2000-01-03,2000-01-05)', date '2000-01-05');
+SELECT spanOverbefore(datespan '[2000-01-03,2000-01-05)', date '2000-01-05');
 ----
 true
 
 query I
-SELECT overbefore(date '2000-01-05', datespan '[2000-01-03,2000-01-05)');
+SELECT spanOverbefore(date '2000-01-05', datespan '[2000-01-03,2000-01-05)');
 ----
 false
 
 query I
-SELECT overafter(datespan '[2000-01-03,2000-01-05)', date '2000-01-05');
+SELECT spanOverafter(datespan '[2000-01-03,2000-01-05)', date '2000-01-05');
 ----
 false
 
 query I
-SELECT overafter(date '2000-01-05', datespan '[2000-01-03,2000-01-05)');
+SELECT spanOverafter(date '2000-01-05', datespan '[2000-01-03,2000-01-05)');
 ----
 true
 

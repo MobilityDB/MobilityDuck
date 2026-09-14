@@ -39,7 +39,7 @@ true	true	true
 
 # A position predicate.
 query I
-SELECT left(tpcbox 'TPCBOX(X((0,0),(1,1)), 1)', tpcbox 'TPCBOX(X((5,5),(6,6)), 1)');
+SELECT tpcboxLeft(tpcbox 'TPCBOX(X((0,0),(1,1)), 1)', tpcbox 'TPCBOX(X((5,5),(6,6)), 1)');
 ----
 true
 

@@ -1272,7 +1272,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         // ever/always spatial comparisons (meos_temporal_comp_ever) are supplied by
         // the generated surface (geometry-arg overloads via the Temporal+GSERIALIZED path).
 
-        // spatial temporal comparisons tEq/tNe (meos_temporal_comp_temp) are supplied
+        // spatial temporal comparisons tEqual/tNotEqual (meos_temporal_comp_temp) are supplied
         // by the generated surface (geometry-arg overloads via the Temporal+GSERIALIZED path).
     }
 

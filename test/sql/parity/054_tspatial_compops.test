@@ -1,60 +1,60 @@
 # name: test/sql/parity/054_tspatial_compops.test
 # description: Tspatial × {geometry, tspatial} comparison predicates —
-#              eEq / aEq / eNe / aNe and tEq /
-#              tNe. The MobilityDB operators `?=` / `?<>` / `#=` etc.
+#              eEqual / aEqual / eNotEqual / aNotEqual and tEqual /
+#              tNotEqual. The MobilityDB operators `?=` / `?<>` / `#=` etc.
 #              are unreachable in DuckDB's parser, so only named functions
 #              are registered.
 # group: [sql]
 
 require mobilityduck
 
-# eEq across (geo × tgeo, tgeo × geo, tgeo × tgeo)
+# eEqual across (geo × tgeo, tgeo × geo, tgeo × tgeo)
 
 query I
-SELECT eEq(ST_GeomFromText('POINT(0 0)'), tgeompoint '[POINT(0 0)@2000-01-01]');
+SELECT eEqual(ST_GeomFromText('POINT(0 0)'), tgeompoint '[POINT(0 0)@2000-01-01]');
 ----
 true
 
 query I
-SELECT eEq(tgeompoint '[POINT(0 0)@2000-01-01, POINT(1 1)@2000-01-02]', ST_GeomFromText('POINT(0 0)'));
+SELECT eEqual(tgeompoint '[POINT(0 0)@2000-01-01, POINT(1 1)@2000-01-02]', ST_GeomFromText('POINT(0 0)'));
 ----
 true
 
 query I
-SELECT eEq(tgeompoint '[POINT(0 0)@2000-01-01]', tgeompoint '[POINT(0 0)@2000-01-01]');
+SELECT eEqual(tgeompoint '[POINT(0 0)@2000-01-01]', tgeompoint '[POINT(0 0)@2000-01-01]');
 ----
 true
 
-# aEq / eNe / aNe
+# aEqual / eNotEqual / aNotEqual
 
 query I
-SELECT aEq(tgeompoint '[POINT(5 5)@2000-01-01]', ST_GeomFromText('POINT(5 5)'));
-----
-true
-
-query I
-SELECT eNe(tgeompoint '[POINT(0 0)@2000-01-01, POINT(1 1)@2000-01-02]', ST_GeomFromText('POINT(0 0)'));
+SELECT aEqual(tgeompoint '[POINT(5 5)@2000-01-01]', ST_GeomFromText('POINT(5 5)'));
 ----
 true
 
 query I
-SELECT aNe(ST_GeomFromText('POINT(5 5)'), tgeompoint '[POINT(0 0)@2000-01-01, POINT(1 1)@2000-01-02]');
+SELECT eNotEqual(tgeompoint '[POINT(0 0)@2000-01-01, POINT(1 1)@2000-01-02]', ST_GeomFromText('POINT(0 0)'));
 ----
 true
 
-# tEq returns tbool with t/f along the trajectory
+query I
+SELECT aNotEqual(ST_GeomFromText('POINT(5 5)'), tgeompoint '[POINT(0 0)@2000-01-01, POINT(1 1)@2000-01-02]');
+----
+true
+
+# tEqual returns tbool with t/f along the trajectory
 
 query I
-SELECT tEq(tgeompoint '[POINT(0 0)@2000-01-01]', tgeompoint '[POINT(0 0)@2000-01-01]');
+SELECT tEqual(tgeompoint '[POINT(0 0)@2000-01-01]', tgeompoint '[POINT(0 0)@2000-01-01]');
 ----
 [t@2000-01-01 00:00:00+01]
 
 query I
-SELECT tEq(tgeompoint '[POINT(0 0)@2000-01-01]', ST_GeomFromText('POINT(0 0)'));
+SELECT tEqual(tgeompoint '[POINT(0 0)@2000-01-01]', ST_GeomFromText('POINT(0 0)'));
 ----
 {[t@2000-01-01 00:00:00+01]}
 
 query I
-SELECT tNe(ST_GeomFromText('POINT(5 5)'), tgeompoint '[POINT(0 0)@2000-01-01]');
+SELECT tNotEqual(ST_GeomFromText('POINT(5 5)'), tgeompoint '[POINT(0 0)@2000-01-01]');
 ----
 {[t@2000-01-01 00:00:00+01]}

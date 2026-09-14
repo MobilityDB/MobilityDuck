@@ -41,9 +41,9 @@ No function matches the given name and argument types
 #    the resolution-6 cell of a point it covers, and not that of a point far away ──
 
 query II
-SELECT eEq(h3UncompactCells(geoToH3IndexSet(ST_Point(1, 1), 5), 6),
+SELECT eEqual(h3UncompactCells(geoToH3IndexSet(ST_Point(1, 1), 5), 6),
            th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 6)),
-       eEq(h3UncompactCells(geoToH3IndexSet(ST_Point(1, 1), 5), 6),
+       eEqual(h3UncompactCells(geoToH3IndexSet(ST_Point(1, 1), 5), 6),
            th3index('SRID=4326;[Point(40 40)@2000-01-01]'::tgeompoint, 6));
 ----
 true	false
