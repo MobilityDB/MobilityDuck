@@ -50,14 +50,14 @@ SELECT gridDisk('115283473fffffff'::h3index, 1);
 h3index 115283473fffffff is not a valid H3 cell
 
 # ── h3index: traversal. An h3indexset is read here through the one accessor it carries,
-#    eEq(h3indexset, th3index): a disk holds its own centre, a parent's children hold the cell,
+#    eEqual(h3indexset, th3index): a disk holds its own centre, a parent's children hold the cell,
 #    and a disk far away holds neither ──
 
 query III
 WITH t AS (SELECT th3index(tgeompoint 'SRID=4326;Point(4.35 50.85)@2024-01-01', 10) AS th)
-SELECT eEq(gridDisk(startValue(th), 1), th),
-       eEq(cellToChildren(cellToParent(startValue(th), 9), 10), th),
-       eEq(gridDisk('831c02fffffffff'::h3index, 1), th)
+SELECT eEqual(gridDisk(startValue(th), 1), th),
+       eEqual(cellToChildren(cellToParent(startValue(th), 9), 10), th),
+       eEqual(gridDisk('831c02fffffffff'::h3index, 1), th)
 FROM t;
 ----
 true	true	false

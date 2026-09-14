@@ -63,6 +63,6 @@ PoseChain(Pose(POINT(0 0),0),Pose(POINT(10 0),0))@2000-01-01 00:00:00+01
 
 # Ever-equal against a chain of the same length
 query I
-SELECT eEq(tposechain 'PoseChain(Pose(Point(1 1), 0))@2000-01-01', tposechain 'PoseChain(Pose(Point(1 1), 0))@2000-01-01');
+SELECT eEqual(tposechain 'PoseChain(Pose(Point(1 1), 0))@2000-01-01', tposechain 'PoseChain(Pose(Point(1 1), 0))@2000-01-01');
 ----
 true

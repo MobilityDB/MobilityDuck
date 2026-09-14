@@ -45,8 +45,8 @@ LogicalType H3indexTypes::th3index() {
 
 /* An h3indexset is a MEOS Set of h3index cells (the WKB-serialized Set blob). It is the
  * static geometry->cells prefilter value produced by geoToH3IndexSet and consumed by
- * eEq(h3indexset, th3index); registering it as its own BLOB alias lets that overload
- * resolve distinctly from eEq(th3index, th3index). */
+ * eEqual(h3indexset, th3index); registering it as its own BLOB alias lets that overload
+ * resolve distinctly from eEqual(th3index, th3index). */
 LogicalType H3indexTypes::h3indexset() {
     auto type = LogicalType(LogicalTypeId::BLOB);
     type.SetAlias("h3indexset");
