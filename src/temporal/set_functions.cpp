@@ -43,39 +43,6 @@ static text *TextFromString(string_t s) {
 
 } 
 
-// --- AsText ---
-void SetFunctions::Set_as_text(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input_vec = args.data[0];
-    input_vec.Flatten(args.size());
-
-    bool has_digits = args.ColumnCount() > 1;
-    Vector *digits_vec_ptr = has_digits ? &args.data[1] : nullptr;
-    if (has_digits) digits_vec_ptr->Flatten(args.size());
-
-    for (idx_t i = 0; i < args.size(); i++) {
-        if (FlatVector::IsNull(input_vec, i) || (has_digits && FlatVector::IsNull(*digits_vec_ptr, i))) {
-            FlatVector::SetNull(result, i, true);
-            continue;
-        }
-
-        auto blob = FlatVector::GetData<string_t>(input_vec)[i];
-        int digits = has_digits ? FlatVector::GetData<int32_t>(*digits_vec_ptr)[i] : 15;
-
-        const uint8_t *data = (const uint8_t *)blob.GetData();
-        size_t size = blob.GetSize();
-
-        Set *s = (Set *)malloc(size);
-        memcpy(s, data, size);
-
-        char *cstr = set_out(s, digits);
-        auto str = StringVector::AddString(result, cstr);
-        FlatVector::GetData<string_t>(result)[i] = str;
-
-            free(s);
-            free(cstr);
-    }
-}
-
 // --- asBinary (WKB) ---
 void SetFunctions::Set_as_binary(DataChunk &args, ExpressionState &state, Vector &result) {
     UnaryExecutor::Execute<string_t, string_t>(

@@ -76,18 +76,9 @@ void SetTypes::RegisterCastFunctions(ExtensionLoader &loader) {
 
 void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     for (const auto &set_type : SetTypes::AllTypes()) {
-        auto base_type = SetTypeMapping::GetChildType(set_type);         
+        auto base_type = SetTypeMapping::GetChildType(set_type);
 
-        // Register: asText over the QUADBIN and S2 cell sets, whose text output the
-        // pinned MEOS commit exposes only through the internal set_out. The generated
-        // surface registers asText over every other set type from its public output.
-        if (set_type == SetTypes::quadbinset() || set_type == SetTypes::s2cellset()) {
-            duckdb::RegisterSerializedScalarFunction(loader,
-                ScalarFunction("asText", {set_type}, LogicalType::VARCHAR, SetFunctions::Set_as_text)
-            );
-        }
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
+        duckdb::RegisterSerializedScalarFunction(loader,
             ScalarFunction("set", {LogicalType::LIST(base_type)}, set_type, SetFunctions::Set_constructor)                 
         );        
 
