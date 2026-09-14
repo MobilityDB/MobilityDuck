@@ -204,8 +204,6 @@ static void TpcpointAsMfjsonExec(DataChunk &args, ExpressionState &, Vector &res
         int options = (cc > 1) ? FlatVector::GetData<int32_t>(args.data[1])[row] : 0;
         int flags   = (cc > 2) ? FlatVector::GetData<int32_t>(args.data[2])[row] : 0;
         int maxdd   = (cc > 3) ? FlatVector::GetData<int32_t>(args.data[3])[row] : 15;
-        // Match the canonical Temporal_as_mfjson clamp (precision in [0, 15]).
-        if (maxdd > 15) maxdd = 15; else if (maxdd < 0) maxdd = 0;
         char *json = temporal_as_mfjson(t, (options & 1) != 0, flags, maxdd, nullptr);
         if (!json) { valid.SetInvalid(row); continue; }
         out[row] = StringVector::AddString(result, json);

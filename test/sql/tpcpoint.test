@@ -144,6 +144,13 @@ SELECT asMFJSON(tpcpoint '2300000001000000000000000000F03F0000000000000040000000
 ----
 PCSCHEMA for pcid 1 not registered
 
+# A negative MF-JSON precision reaches MEOS, which refuses it before reading
+# the coordinates
+statement error
+SELECT asMFJSON(tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01', 0, 0, -1);
+----
+cannot be negative
+
 # Test invalid input is rejected deterministically
 statement error
 SELECT tpcpoint('not-a-valid-tpcpoint');

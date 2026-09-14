@@ -20,6 +20,12 @@ SELECT asText(tgeompoint '  Point(2 2)@2012-01-01 08:00:00  ');
 ----
 POINT(2 2)@2012-01-01 08:00:00+01
 
+# A negative count reaches MEOS, which refuses it
+statement error
+SELECT asText([tgeompoint 'Point(1 1)@2012-01-01 08:00:00'], -1);
+----
+cannot be negative
+
 query I
 SELECT asEWKT(tgeompoint 'Point(1 1)@2012-01-01 08:00:00');
 ----
