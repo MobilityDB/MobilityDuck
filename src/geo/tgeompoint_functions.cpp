@@ -87,9 +87,6 @@ static void spatialarr_wkt_array(DataChunk &args, ExpressionState &state, Vector
 				continue;
 			}
 			maxdd = FlatVector::GetData<int32_t>(dd_vec)[row];
-			if (maxdd < 0) {
-				throw InvalidInputException("Spatialarr_as_text/asEWKT: maxdecimaldigits must be non-negative");
-			}
 		}
 
 		const list_entry_t le = in_list_entries[row];
