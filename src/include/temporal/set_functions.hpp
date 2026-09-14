@@ -27,7 +27,6 @@ struct SetFunctions {
     static bool Tstzset_to_dateset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     // scalar functions
-    static void Set_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_as_binary(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_from_binary(DataChunk &args, ExpressionState &state, Vector &result);
