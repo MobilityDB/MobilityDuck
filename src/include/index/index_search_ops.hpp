@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstring>
+
 #include "duckdb.hpp"
 #include "meos_wrapper_simple.hpp"
 
@@ -49,6 +51,10 @@ struct IndexOperatorEntry {
 //! named here so that a query reaches the index however it is written. The temporal orderings are
 //! the exception: they carry no symbol, `<<#` and its siblings not being operators DuckDB lexes,
 //! so the word is the only spelling to route.
+//!
+//! A word is also reached through its class-prefixed spelling: the functions behind the position
+//! operators carry the name of the class they compare, `stboxLeft`, `tboxBefore`, `spanOverleft`,
+//! and such a spelling reaches the entry of the word it prefixes (see IndexOperatorWord).
 static constexpr IndexOperatorEntry INDEX_OPERATORS[] = {
     {"&&", INDEX_OVERLAPS, INDEX_OVERLAPS, INDEX_AXIS_EXTENT},
     {"overlaps", INDEX_OVERLAPS, INDEX_OVERLAPS, INDEX_AXIS_EXTENT},
@@ -119,13 +125,37 @@ inline bool IndexBboxHasAxis(MeosType bbox_type, IndexOperatorAxis axis) {
 	}
 }
 
+//! The class prefixes a word of INDEX_OPERATORS takes in its class-prefixed spelling, longest first
+//! so that `spansetLeft` is read as `spanset` + `Left` and never as `span` + `setLeft`.
+static constexpr const char *INDEX_OPERATOR_CLASS_PREFIXES[] = {
+    "spanset", "tpcbox", "stbox", "tbox", "span", "set",
+};
+
+//! Return the word of INDEX_OPERATORS that `name` spells. A class-prefixed spelling, one of
+//! INDEX_OPERATOR_CLASS_PREFIXES followed by an uppercase letter, spells the remainder with its
+//! first letter lowercased: `stboxOverleft` spells `overleft`. Every other name, a symbol or an
+//! unprefixed word, spells itself.
+inline string IndexOperatorWord(const string &name) {
+	for (auto prefix : INDEX_OPERATOR_CLASS_PREFIXES) {
+		const size_t length = strlen(prefix);
+		if (name.size() > length && name.compare(0, length, prefix) == 0 && name[length] >= 'A' &&
+		    name[length] <= 'Z') {
+			string word = name.substr(length);
+			word[0] = static_cast<char>(word[0] - 'A' + 'a');
+			return word;
+		}
+	}
+	return name;
+}
+
 //! Return the operation `name` asks of an index over `bbox_type`, false when such an index answers
-//! no such operator. `query_on_left` names the operand order: true when the query is the left
-//! argument.
+//! no such operator. `name` is a symbol, a word or the word's class-prefixed spelling.
+//! `query_on_left` names the operand order: true when the query is the left argument.
 inline bool IndexSearchOpFromName(const string &name, MeosType bbox_type, bool query_on_left,
                                   IndexSearchOp &result) {
+	const string word = IndexOperatorWord(name);
 	for (auto &entry : INDEX_OPERATORS) {
-		if (name == entry.name && IndexBboxHasAxis(bbox_type, entry.axis)) {
+		if (word == entry.name && IndexBboxHasAxis(bbox_type, entry.axis)) {
 			result = query_on_left ? entry.commuted : entry.direct;
 			return true;
 		}
@@ -133,14 +163,25 @@ inline bool IndexSearchOpFromName(const string &name, MeosType bbox_type, bool q
 	return false;
 }
 
-//! The operator names an index over `bbox_type` answers. Overlap and containment compare whole
-//! extents, so every box type answers those; an ordering operator is answered only where the box
-//! carries the axis it orders along.
+//! The operator names an index over `bbox_type` answers, each word under its bare and its
+//! class-prefixed spellings. Overlap and containment compare whole extents, so every box type
+//! answers those; an ordering operator is answered only where the box carries the axis it orders
+//! along.
 inline unordered_set<string> IndexOperatorNames(MeosType bbox_type) {
 	unordered_set<string> names;
 	for (auto &entry : INDEX_OPERATORS) {
-		if (IndexBboxHasAxis(bbox_type, entry.axis)) {
-			names.insert(entry.name);
+		if (!IndexBboxHasAxis(bbox_type, entry.axis)) {
+			continue;
+		}
+		const string name = entry.name;
+		names.insert(name);
+		if (name[0] < 'a' || name[0] > 'z') {
+			continue;
+		}
+		string capitalized = name;
+		capitalized[0] = static_cast<char>(capitalized[0] - 'a' + 'A');
+		for (auto prefix : INDEX_OPERATOR_CLASS_PREFIXES) {
+			names.insert(prefix + capitalized);
 		}
 	}
 	return names;
