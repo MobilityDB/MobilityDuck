@@ -358,10 +358,10 @@ true
 
 # ── the return type is the one MobilityDB declares, not the operand's ─────────
 # A Temporal->Temporal function returns the operand's own type only where the
-# family is CLOSED under the operation. centroid and minDistSimplify are not:
-# MobilityDB declares centroid(tgeometry) RETURNS tgeompoint,
-# centroid(tgeography) RETURNS tgeogpoint, minDistSimplify(tgeography,float)
-# RETURNS tgeometry and minDistSimplify(tgeogpoint,float) RETURNS tgeompoint.
+# family is CLOSED under the operation. centroid is not: MobilityDB declares
+# centroid(tgeometry) RETURNS tgeompoint and centroid(tgeography) RETURNS
+# tgeogpoint. minDistSimplify is: minDistSimplify(tgeography,float) RETURNS
+# tgeography and minDistSimplify(tgeogpoint,float) RETURNS tgeogpoint.
 query I
 SELECT typeof(centroid('SRID=4326;[Point(1 1)@2000-01-01,Point(2 2)@2000-01-02]'::tgeometry));
 ----
@@ -375,7 +375,7 @@ tgeogpoint
 query I
 SELECT typeof(minDistSimplify('SRID=4326;[Point(1 1)@2000-01-01,Point(3 3)@2000-01-03]'::tgeography, 1.0));
 ----
-tgeometry
+tgeography
 
 query I
 SELECT typeof(minDistSimplify('SRID=4326;[Point(1 1)@2000-01-01,Point(3 3)@2000-01-03]'::tgeogpoint, 1.0));
