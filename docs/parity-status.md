@@ -1,8 +1,8 @@
 # MobilityDuck parity status — surface-level audit
 
-Generated 2026-08-26. **Addressable scope** (every family, excluding PG-only helpers): 1904/3121 names covered (61.0%).
+Generated 2026-08-26. **Addressable scope** (every family, excluding PG-only helpers): 1905/3121 names covered (61.0%).
 
-Of the 1217 not covered, **269** name only value types MobilityDuck registers and are missing a registration of their own, and **948** are blocked on a value type the binding does not register at all — a type family it does not carry yet. The blocking types, and the sections behind them, are in appendix C.
+Of the 1216 not covered, **268** name only value types MobilityDuck registers and are missing a registration of their own, and **948** are blocked on a value type the binding does not register at all — a type family it does not carry yet. The blocking types, and the sections behind them, are in appendix C.
 
 **Out of scope** (PG-only — no DuckDB equivalent exists): 542 names skipped — 96 from PG-only sections (GiST/SPGiST opclasses, set/span/spanset index files, `019_geo_constructors.in.sql` PG geometric types, `999_oid_cache.in.sql`) plus 446 PG helper functions inside active sections (`*_in/_out/_recv/_send`, `*_transfn/_combinefn/_finalfn/_serialize/_deserialize`, `*_sel/_joinsel/_supportfn/_analyze`, `*_typmod_in/_typmod_out`).  Listed in appendix B; not counted in the headline.
 
@@ -172,7 +172,7 @@ Per-section counts: `Addressable` = MDB names minus PG-only helpers (see appendi
 | `quadbin/362_tquadbin_spatialrels.in.sql` | 12 | 12 | 0 | 0 | 100% | 0 | 0 |
 | `quadbin/364_tquadbin_tempspatialrels.in.sql` | 6 | 6 | 0 | 0 | 100% | 0 | 0 |
 | `quadbin/372_tquadbin_gist.in.sql` | 1 | 0 | 1 | 0 | 0% | 0 | 0 |
-| `raster/500_raster.in.sql` | 31 | 29 | 2 | 0 | 94% | 4 | 6 |
+| `raster/500_raster.in.sql` | 31 | 30 | 1 | 0 | 97% | 4 | 6 |
 | `rgeo/150_trgeo.in.sql` | 88 | 0 | 0 | 88 | 0% | 5 | 6 |
 | `rgeo/154_trgeo_compops.in.sql` | 6 | 0 | 0 | 6 | 0% | 0 | 18 |
 | `rgeo/156_trgeo_spatialfuncs.in.sql` | 19 | 0 | 0 | 19 | 0% | 0 | 0 |
@@ -211,7 +211,7 @@ Per-section counts: `Addressable` = MDB names minus PG-only helpers (see appendi
 | `temporal/040_temporal_aggfuncs.in.sql` | 0 | 0 | 0 | 0 | 0% | 47 | 0 |
 | `temporal/042_temporal_waggfuncs.in.sql` | 0 | 0 | 0 | 0 | 0% | 11 | 0 |
 | `temporal/046_temporal_analytics.in.sql` | 5 | 4 | 1 | 0 | 80% | 0 | 0 |
-| **TOTAL** | **3121** | **1904** | **269** | **948** | **61%** | **446** | — |
+| **TOTAL** | **3121** | **1905** | **268** | **948** | **61%** | **446** | — |
 
 ## Missing function names per section
 
@@ -588,10 +588,9 @@ Every value type these name is one MobilityDuck already registers, so each is a 
 
 - `tquadbin_gist_consistent`
 
-### `raster/500_raster.in.sql` — 2 missing of 31 addressable (94% covered)
+### `raster/500_raster.in.sql` — 1 missing of 31 addressable (97% covered)
 
 - `numBands`
-- `quadbins`
 
 ### `rgeo/175_trgeo_geom_clip.in.sql` — 1 missing of 2 addressable (0% covered)
 
