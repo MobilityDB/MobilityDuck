@@ -34,17 +34,18 @@ actually run into:
 Function names you've used in MobilityDB — `tnumber_abs(t)`,
 `atTime(temp, ts)`, `length(tgeompoint)`, `eContains(geom, tgeo)`,
 `speed(tgeompoint)`, `tbool_and(t1, t2)`, the operators `&&`, `<->`,
-`|=|`, `@>`, `<@`, the named `before` / `overBefore` / … position
-predicates — all work as-is in MobilityDuck.
+`|=|`, `@>`, `<@`, the class-prefixed `stboxBefore` / `tboxOverbefore` / …
+position predicates — all work as-is in MobilityDuck.
 
 A few feature areas where MobilityDuck is on parity:
 
 - **Value access and modifiers**: `at`, `minus`, `atValues`,
   `atTime`, `minusTime`, `atTbox`, `atStbox`.
 - **Boxop and posop predicates**: `&&`, `@>`, `<@`, `-|-`, `<<`,
-  `>>`, `&<`, `&>`, plus the time-axis `before` / `overBefore` /
-  `after` / `overAfter` named-function forms (DuckDB's parser
-  doesn't accept `<<#`-style operator names).
+  `>>`, `&<`, `&>`, plus the time-axis `stboxBefore` / `stboxOverbefore` /
+  `stboxAfter` / `stboxOverafter` named-function forms and their `tbox`,
+  `span` and `tpcbox` siblings (DuckDB's parser doesn't accept `<<#`-style
+  operator names).
 - **Distance**: temporal distance (`<->`), nearest-approach
   (`nearestApproachDistance`, `nearestApproachInstant`),
   `shortestLine`, and the kNN-shaped `|=|` operator.
@@ -123,23 +124,29 @@ can keep the same query as long as you write the named form.
 
 | Axis | MobilityDB operator | Named function (works on both engines) | Meaning |
 |---|---|---|---|
-| Time | `<<#` | `before(a, b)` | strictly before |
-| Time | `&<#` | `overBefore(a, b)` | not after (overlap-before) |
-| Time | `#>>` | `after(a, b)` | strictly after |
-| Time | `#&>` | `overAfter(a, b)` | not before (overlap-after) |
-| Y-axis (vertical) | `<<\|` | `below(a, b)` | strictly below |
-| Y-axis | `&<\|` | `overBelow(a, b)` | not above |
-| Y-axis | `\|>>` | `above(a, b)` | strictly above |
-| Y-axis | `\|&>` | `overAbove(a, b)` | not below |
-| Z-axis (depth, 3D) | `<</` | `front(a, b)` | strictly in front |
-| Z-axis | `&</` | `overFront(a, b)` | not behind |
-| Z-axis | `/>>` | `back(a, b)` | strictly behind |
-| Z-axis | `/&>` | `overBack(a, b)` | not in front |
+| Time | `<<#` | `stboxBefore(a, b)` | strictly before |
+| Time | `&<#` | `stboxOverbefore(a, b)` | not after (overlap-before) |
+| Time | `#>>` | `stboxAfter(a, b)` | strictly after |
+| Time | `#&>` | `stboxOverafter(a, b)` | not before (overlap-after) |
+| Y-axis (vertical) | `<<\|` | `stboxBelow(a, b)` | strictly below |
+| Y-axis | `&<\|` | `stboxOverbelow(a, b)` | not above |
+| Y-axis | `\|>>` | `stboxAbove(a, b)` | strictly above |
+| Y-axis | `\|&>` | `stboxOverabove(a, b)` | not below |
+| Z-axis (depth, 3D) | `<</` | `stboxFront(a, b)` | strictly in front |
+| Z-axis | `&</` | `stboxOverfront(a, b)` | not behind |
+| Z-axis | `/>>` | `stboxBack(a, b)` | strictly behind |
+| Z-axis | `/&>` | `stboxOverback(a, b)` | not in front |
+
+The function behind a position operator carries the class prefix of the
+box its operands compare on. The table names the spatiotemporal forms; the
+temporal numbers take `tbox` (`tboxBefore`), the point clouds `tpcbox`
+(`tpcboxBelow`), and the sets, spans and span sets `set`, `span` and
+`spanset` (`spanBefore`).
 
 The X-axis operators (`<<`, `>>`, `&<`, `&>` — strictly-left,
 strictly-right, overlap-left, overlap-right) **are** valid in
 DuckDB and work as operators in both engines, alongside the named
-forms `temporal_left`, `temporal_right`, etc.
+forms `stboxLeft`, `tboxRight`, `spanOverleft`, etc.
 
 ## Things that are spelled differently in MobilityDuck
 
