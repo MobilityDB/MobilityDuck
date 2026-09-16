@@ -131,7 +131,7 @@ FROM tile;
 
 # POINT(0 0) falls in the single pixel of the tile.
 query I
-SELECT startValue(rasterTileValue(rq, tgeompoint 'POINT(0 0)@2024-01-01')) = 42.0
+SELECT startValue(rasterTileValue(tgeompoint 'POINT(0 0)@2024-01-01', rq)) = 42.0
 FROM tile;
 ----
 true
@@ -139,7 +139,7 @@ true
 # The array form samples a set of tiles, keeping the highest zoom where they
 # overlap; with a single tile it agrees with the scalar form.
 query I
-SELECT startValue(rasterTileValue([rq], tgeompoint 'POINT(0 0)@2024-01-01')) = 42.0
+SELECT startValue(rasterTileValue(tgeompoint 'POINT(0 0)@2024-01-01', [rq])) = 42.0
 FROM tile;
 ----
 true
@@ -150,11 +150,11 @@ true
 query I
 SELECT startValue(
   rasterTileValueQuadbin(
+    tgeompoint 'POINT(0 0)@2024-01-01',
     from_hex('2a'),            -- 1-byte pixel buffer, value 42
     1, 1,                      -- tile width x height in pixels
     quadbinTileToCell(0, 0, 0),
-    'UINT8', 0.0, false,
-    tgeompoint 'POINT(0 0)@2024-01-01'
+    'UINT8', 0.0, false
   )
 ) = 42.0;
 ----
@@ -163,18 +163,18 @@ true
 # A trajectory outside the tile bounding box samples nothing.
 query I
 SELECT rasterTileValueQuadbin(
+  tgeompoint 'POINT(90 -45)@2024-01-01',    -- SE hemisphere
   from_hex('2a'), 1, 1,
   quadbinTileToCell(0, 0, 1),               -- NW quadrant of zoom 1: lon -180..0, lat 0..85
-  'UINT8', 0.0, false,
-  tgeompoint 'POINT(90 -45)@2024-01-01'     -- SE hemisphere
+  'UINT8', 0.0, false
 ) IS NULL;
 ----
 true
 
 # An unknown pixel type is rejected.
 statement error
-SELECT rasterTileValueQuadbin(from_hex('2a'), 1, 1, quadbinTileToCell(0, 0, 0),
-  'UINT4', 0.0, false, tgeompoint 'POINT(0 0)@2024-01-01');
+SELECT rasterTileValueQuadbin(tgeompoint 'POINT(0 0)@2024-01-01', from_hex('2a'), 1, 1,
+  quadbinTileToCell(0, 0, 0), 'UINT4', 0.0, false);
 ----
 Unknown pixel type "UINT4"
 
@@ -184,14 +184,14 @@ Unknown pixel type "UINT4"
 # tile nobody asked for.
 
 statement error
-SELECT rasterTileValueQuadbin(from_hex('2a'), 65537, 1, quadbinTileToCell(0, 0, 0),
-  'UINT8', 0.0, false, tgeompoint 'POINT(0 0)@2024-01-01');
+SELECT rasterTileValueQuadbin(tgeompoint 'POINT(0 0)@2024-01-01', from_hex('2a'), 65537, 1,
+  quadbinTileToCell(0, 0, 0), 'UINT8', 0.0, false);
 ----
 must be at most 65535
 
 statement error
-SELECT rasterTileValueQuadbin(from_hex('2a'), 1, -1, quadbinTileToCell(0, 0, 0),
-  'UINT8', 0.0, false, tgeompoint 'POINT(0 0)@2024-01-01');
+SELECT rasterTileValueQuadbin(tgeompoint 'POINT(0 0)@2024-01-01', from_hex('2a'), 1, -1,
+  quadbinTileToCell(0, 0, 0), 'UINT8', 0.0, false);
 ----
 must be positive
 
@@ -207,18 +207,18 @@ SELECT raquet(from_hex('2a'), 0, 1, quadbinTileToCell(0, 0, 0), 'UINT8');
 ----
 must be positive
 
-# ── trajectoryQuadbins ──────────────────────────────────────────────────────
+# ── quadbins ────────────────────────────────────────────────────────────────
 
 # A single-instant trajectory at the origin covers exactly one zoom-0 cell.
 query I
-SELECT len(trajectoryQuadbins(tgeompoint 'POINT(0 0)@2024-01-01', 0));
+SELECT len(quadbins(tgeompoint 'POINT(0 0)@2024-01-01', 0));
 ----
 1
 
 # The cell covering the origin at zoom 0 is the world tile.
 query III
 SELECT quadbinCellToTileX(c), quadbinCellToTileY(c), quadbinCellToTileZ(c)
-FROM (SELECT trajectoryQuadbins(tgeompoint 'POINT(0 0)@2024-01-01', 0)[1] AS c);
+FROM (SELECT quadbins(tgeompoint 'POINT(0 0)@2024-01-01', 0)[1] AS c);
 ----
 0	0	0
 
@@ -227,12 +227,12 @@ FROM (SELECT trajectoryQuadbins(tgeompoint 'POINT(0 0)@2024-01-01', 0)[1] AS c);
 # columns and two Mercator rows and crosses the corner where they meet at
 # (0 0), and a monotone path across a two by two span visits 2 + 2 - 1.
 query I
-SELECT len(trajectoryQuadbins(
+SELECT len(quadbins(
   tgeompoint '[POINT(-90 45)@2024-01-01, POINT(90 -45)@2024-01-02]', 1));
 ----
 3
 
 query I
-SELECT trajectoryQuadbins(NULL::TGEOMPOINT, 0) IS NULL;
+SELECT quadbins(NULL::TGEOMPOINT, 0) IS NULL;
 ----
 true

@@ -621,9 +621,9 @@ void RaquetFunctions::Raster_tile_value(
 {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
-        [&](string_t tile, string_t traj, ValidityMask &mask, idx_t idx) -> string_t {
-            Raquet *rq = BlobToRaquet(tile);
+        [&](string_t traj, string_t tile, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemp(traj);
+            Raquet *rq = BlobToRaquet(tile);
             Temporal *res = raster_tile_value(t, rq);
             free(rq); free(t);
             if (!res) { mask.SetInvalid(idx); return string_t(); }
@@ -631,14 +631,14 @@ void RaquetFunctions::Raster_tile_value(
         });
 }
 
-/* rasterTileValue(LIST(raquet), tgeompoint): where tiles overlap, the value of
+/* rasterTileValue(tgeompoint, LIST(raquet)): where tiles overlap, the value of
  * the tile of highest zoom wins. */
 void RaquetFunctions::Raster_tile_value_array(
     DataChunk &args, ExpressionState &state, Vector &result)
 {
     const idx_t row_count = args.size();
-    auto &tiles = args.data[0];
-    auto &trajs = args.data[1];
+    auto &trajs = args.data[0];
+    auto &tiles = args.data[1];
     tiles.Flatten(row_count);
     trajs.Flatten(row_count);
     auto list_entries = FlatVector::GetData<list_entry_t>(tiles);
@@ -686,14 +686,14 @@ void RaquetFunctions::Raster_tile_value_quadbin(
     const idx_t row_count = args.size();
     for (idx_t c = 0; c < args.ColumnCount(); c++) args.data[c].Flatten(row_count);
 
-    auto pixels     = FlatVector::GetData<string_t>(args.data[0]);
-    auto width      = FlatVector::GetData<int32_t>(args.data[1]);
-    auto height     = FlatVector::GetData<int32_t>(args.data[2]);
-    auto cell       = FlatVector::GetData<int64_t>(args.data[3]);
-    auto pixtype    = FlatVector::GetData<string_t>(args.data[4]);
-    auto nodata     = FlatVector::GetData<double>(args.data[5]);
-    auto has_nodata = FlatVector::GetData<bool>(args.data[6]);
-    auto traj       = FlatVector::GetData<string_t>(args.data[7]);
+    auto traj       = FlatVector::GetData<string_t>(args.data[0]);
+    auto pixels     = FlatVector::GetData<string_t>(args.data[1]);
+    auto width      = FlatVector::GetData<int32_t>(args.data[2]);
+    auto height     = FlatVector::GetData<int32_t>(args.data[3]);
+    auto cell       = FlatVector::GetData<int64_t>(args.data[4]);
+    auto pixtype    = FlatVector::GetData<string_t>(args.data[5]);
+    auto nodata     = FlatVector::GetData<double>(args.data[6]);
+    auto has_nodata = FlatVector::GetData<bool>(args.data[7]);
     auto out        = FlatVector::GetData<string_t>(result);
     auto &out_validity = FlatVector::Validity(result);
 
@@ -720,8 +720,8 @@ void RaquetFunctions::Raster_tile_value_quadbin(
     if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-/* trajectoryQuadbins(traj, zoom): the distinct cells at a zoom level the
- * trajectory covers, a join key against a Raquet table. */
+/* quadbins(traj, zoom): the distinct cells at a zoom level the trajectory
+ * covers, a join key against a Raquet table. */
 void RaquetFunctions::Trajectory_quadbins(
     DataChunk &args, ExpressionState &state, Vector &result)
 {
@@ -878,15 +878,15 @@ void RaquetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     /* Sampling */
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "rasterTileValue", {RQ, TG}, TF, RaquetFunctions::Raster_tile_value));
+        "rasterTileValue", {TG, RQ}, TF, RaquetFunctions::Raster_tile_value));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "rasterTileValue", {LogicalType::LIST(RQ), TG}, TF,
+        "rasterTileValue", {TG, LogicalType::LIST(RQ)}, TF,
         RaquetFunctions::Raster_tile_value_array));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "rasterTileValueQuadbin", {BLB, I32, I32, QB, V, D, B, TG}, TF,
+        "rasterTileValueQuadbin", {TG, BLB, I32, I32, QB, V, D, B}, TF,
         RaquetFunctions::Raster_tile_value_quadbin));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "trajectoryQuadbins", {TG, I32}, LogicalType::LIST(QB),
+        "quadbins", {TG, I32}, LogicalType::LIST(QB),
         RaquetFunctions::Trajectory_quadbins));
 }
 
