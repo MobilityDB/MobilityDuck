@@ -1,7 +1,7 @@
 # name: test/sql/parity/034_temporal_posops.test
 # description: Temporal position predicates — before/after/overbefore/overafter
 #              (time axis) and left/right/overleft/overright (numeric axis on
-#              tnumber × {numspan, tbox, tnumber}), bare canonical names.
+#              tnumber × {numspan, tbox, tnumber}), under the tbox-prefixed names.
 # group: [sql]
 
 require mobilityduck
@@ -9,47 +9,47 @@ require mobilityduck
 # Time axis
 
 query I
-SELECT before(tint '[1@2000-01-01]', tint '[1@2000-01-02]');
+SELECT tboxBefore(tint '[1@2000-01-01]', tint '[1@2000-01-02]');
 ----
 true
 
 query I
-SELECT after(tint '[1@2000-01-02]', tint '[1@2000-01-01]');
+SELECT tboxAfter(tint '[1@2000-01-02]', tint '[1@2000-01-01]');
 ----
 true
 
 query I
-SELECT overbefore(tstzspan '[2000-01-01, 2000-01-02]', tint '[1@2000-01-02]');
+SELECT tboxOverbefore(tstzspan '[2000-01-01, 2000-01-02]', tint '[1@2000-01-02]');
 ----
 true
 
 query I
-SELECT overafter(tint '[1@2000-01-02]', tstzspan '[2000-01-01, 2000-01-02]');
+SELECT tboxOverafter(tint '[1@2000-01-02]', tstzspan '[2000-01-01, 2000-01-02]');
 ----
 true
 
 # Numeric axis on tnumber × numspan
 
 query I
-SELECT left(tint '[1@2000-01-01]', intspan '[5, 10)');
+SELECT tboxLeft(tint '[1@2000-01-01]', intspan '[5, 10)');
 ----
 true
 
 query I
-SELECT right(tfloat '[10@2000-01-01]', floatspan '[1, 5)');
+SELECT tboxRight(tfloat '[10@2000-01-01]', floatspan '[1, 5)');
 ----
 true
 
-# Bare names agree with the operator forms
+# The named functions agree with the operator forms
 
 query I
-SELECT left(tint '[1@2000-01-01]', intspan '[5, 10)')
+SELECT tboxLeft(tint '[1@2000-01-01]', intspan '[5, 10)')
      = (tint '[1@2000-01-01]' << intspan '[5, 10)');
 ----
 true
 
 query I
-SELECT overleft(tint '[1@2000-01-01]', intspan '[5, 10)')
+SELECT tboxOverleft(tint '[1@2000-01-01]', intspan '[5, 10)')
      = (tint '[1@2000-01-01]' &< intspan '[5, 10)');
 ----
 true
@@ -57,13 +57,13 @@ true
 # Numeric axis on tnumber × tbox
 
 query I
-SELECT left(tint '[1@2000-01-01]', tbox 'TBOXINT XT([5, 10),[2000-01-01, 2000-01-02])');
+SELECT tboxLeft(tint '[1@2000-01-01]', tbox 'TBOXINT XT([5, 10),[2000-01-01, 2000-01-02])');
 ----
 true
 
 # Numeric axis on tnumber × tnumber
 
 query I
-SELECT left(tint '[1@2000-01-01]', tint '[5@2000-01-01, 10@2000-01-02]');
+SELECT tboxLeft(tint '[1@2000-01-01]', tint '[5@2000-01-01, 10@2000-01-02]');
 ----
 true

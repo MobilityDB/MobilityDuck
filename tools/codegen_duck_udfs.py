@@ -4577,6 +4577,11 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         # to be re-derived from a type scope beside it. The catalog states all three where
         # the SQL is declared, which is the same move that retired the class-prefix list
         # from the array-return shape.
+        # The overload states its SQL name too. One kernel backs overloads of several names:
+        # `before_temporal_tstzspan` is `tboxBefore` over the temporal numbers, `stboxBefore`
+        # over the spatiotemporal types, `tpcboxBefore` over the point clouds and `spanBefore`
+        # over the rest, the class of the bounding box each temporal type carries. The
+        # kernel's own sqlfn names one of them, so each overload registers under its own.
         pairs = []
         for s in f.get("sqlSignatures") or ():
             args = s.get("args") or ()
@@ -4585,11 +4590,11 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             tname, cname = (args[1], args[0]) if span_first else (args[0], args[1])
             tacc, cacc = SIG_TEMPORAL_ACC.get(tname), FINITE_SUBSET_ACC.get(cname)
             if tacc and cacc:
-                pairs.append((cacc, tacc))
-        for spacc, tacc in pairs:
+                pairs.append((cacc, tacc, s.get("sqlName") or sqlfn))
+        for spacc, tacc, signame in pairs:
             sig = "{%s, %s}" % (tacc, spacc) if not span_first else "{%s, %s}" % (spacc, tacc)
             rett = tacc if retk == "T" else "LogicalType::BOOLEAN"   # at/minus span preserves type
-            for nm in names:
+            for nm in (names if signame == sqlfn else reg_names(f, signame, aliases)):
                 temporal_box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {sig}, {rett}, Gen_{fn}));')
     # Temporal -> container conversion (timeSpan/valueSpan/tbox), sqlSignatures-driven — the

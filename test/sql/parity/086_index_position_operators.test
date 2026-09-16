@@ -26,7 +26,7 @@ SELECT (SELECT count(*) FROM pos_idx WHERE t << 'STBOX XT(((500,500),(501,501)),
 499	499
 
 query II
-SELECT (SELECT count(*) FROM pos_idx WHERE overleft(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox)), (SELECT count(*) FROM pos_scan WHERE overleft(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox));
+SELECT (SELECT count(*) FROM pos_idx WHERE stboxOverleft(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox)), (SELECT count(*) FROM pos_scan WHERE stboxOverleft(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox));
 ----
 501	501
 
@@ -36,44 +36,44 @@ SELECT (SELECT count(*) FROM pos_idx WHERE t >> 'STBOX XT(((500,500),(501,501)),
 2498	2498
 
 query II
-SELECT (SELECT count(*) FROM pos_idx WHERE overright(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox)), (SELECT count(*) FROM pos_scan WHERE overright(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox));
+SELECT (SELECT count(*) FROM pos_idx WHERE stboxOverright(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox)), (SELECT count(*) FROM pos_scan WHERE stboxOverright(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox));
 ----
 2500	2500
 
 query II
-SELECT (SELECT count(*) FROM pos_idx WHERE below(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox)), (SELECT count(*) FROM pos_scan WHERE below(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox));
+SELECT (SELECT count(*) FROM pos_idx WHERE stboxBelow(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox)), (SELECT count(*) FROM pos_scan WHERE stboxBelow(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox));
 ----
 499	499
 
 query II
-SELECT (SELECT count(*) FROM pos_idx WHERE above(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox)), (SELECT count(*) FROM pos_scan WHERE above(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox));
+SELECT (SELECT count(*) FROM pos_idx WHERE stboxAbove(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox)), (SELECT count(*) FROM pos_scan WHERE stboxAbove(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox));
 ----
 2498	2498
 
 query II
-SELECT (SELECT count(*) FROM pos_idx WHERE before(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox)), (SELECT count(*) FROM pos_scan WHERE before(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox));
+SELECT (SELECT count(*) FROM pos_idx WHERE stboxBefore(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox)), (SELECT count(*) FROM pos_scan WHERE stboxBefore(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox));
 ----
 365	365
 
 query II
-SELECT (SELECT count(*) FROM pos_idx WHERE overbefore(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox)), (SELECT count(*) FROM pos_scan WHERE overbefore(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox));
+SELECT (SELECT count(*) FROM pos_idx WHERE stboxOverbefore(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox)), (SELECT count(*) FROM pos_scan WHERE stboxOverbefore(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox));
 ----
 367	367
 
 query II
-SELECT (SELECT count(*) FROM pos_idx WHERE after(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox)), (SELECT count(*) FROM pos_scan WHERE after(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox));
+SELECT (SELECT count(*) FROM pos_idx WHERE stboxAfter(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox)), (SELECT count(*) FROM pos_scan WHERE stboxAfter(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox));
 ----
 2632	2632
 
 query II
-SELECT (SELECT count(*) FROM pos_idx WHERE overafter(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox)), (SELECT count(*) FROM pos_scan WHERE overafter(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox));
+SELECT (SELECT count(*) FROM pos_idx WHERE stboxOverafter(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox)), (SELECT count(*) FROM pos_scan WHERE stboxOverafter(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox));
 ----
 2634	2634
 
 # The equality above is only evidence if the index is what answered the left column: an operator
 # the index declines is answered by a scan, and a scan agrees with a scan for free. Each axis is
-# witnessed here -- a spatial operator written as a symbol, the same one written as a word, and a
-# temporal one, which carries no symbol.
+# witnessed here -- a spatial operator written as a symbol, the same one written as its
+# stbox-prefixed word, and a temporal one, which carries no symbol.
 
 query II
 EXPLAIN SELECT count(*) FROM pos_idx WHERE t << 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox;
@@ -81,16 +81,16 @@ EXPLAIN SELECT count(*) FROM pos_idx WHERE t << 'STBOX XT(((500,500),(501,501)),
 physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*
 
 query II
-EXPLAIN SELECT count(*) FROM pos_idx WHERE overleft(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox);
+EXPLAIN SELECT count(*) FROM pos_idx WHERE stboxOverleft(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox);
 ----
 physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*
 
 query II
-EXPLAIN SELECT count(*) FROM pos_idx WHERE below(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox);
+EXPLAIN SELECT count(*) FROM pos_idx WHERE stboxBelow(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox);
 ----
 physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*
 
 query II
-EXPLAIN SELECT count(*) FROM pos_idx WHERE overbefore(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox);
+EXPLAIN SELECT count(*) FROM pos_idx WHERE stboxOverbefore(t, 'STBOX XT(((500,500),(501,501)),[2001-01-01,2001-01-02])'::stbox);
 ----
 physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*

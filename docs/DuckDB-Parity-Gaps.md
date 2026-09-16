@@ -20,14 +20,14 @@ listed alongside.
 
 | MobilityDB operator | Semantics                          | MobilityDuck equivalent          |
 |---------------------|------------------------------------|----------------------------------|
-| `\|>>`              | strictly above (Y or Z dimension)  | `above(a, b)`                    |
-| `<<\|`              | strictly below                     | `below(a, b)`                    |
-| `&<\|`              | overlaps-or-below                  | `overbelow(a, b)`                |
-| `\|&>`              | overlaps-or-above                  | `overabove(a, b)`                |
-| `/>>`               | strictly in front (Z)              | `front(a, b)`                    |
-| `<</`               | strictly behind (Z)                | `back(a, b)`                     |
-| `&</`               | overlaps-or-behind                 | `overback(a, b)`                 |
-| `/&>`               | overlaps-or-in-front               | `overfront(a, b)`                |
+| `\|>>`              | strictly above (Y dimension)       | `stboxAbove(a, b)`               |
+| `<<\|`              | strictly below                     | `stboxBelow(a, b)`               |
+| `&<\|`              | overlaps-or-below                  | `stboxOverbelow(a, b)`           |
+| `\|&>`              | overlaps-or-above                  | `stboxOverabove(a, b)`           |
+| `<</`               | strictly in front (Z)              | `stboxFront(a, b)`               |
+| `/>>`               | strictly behind (Z)                | `stboxBack(a, b)`                |
+| `&</`               | overlaps-or-in-front               | `stboxOverfront(a, b)`           |
+| `/&>`               | overlaps-or-behind                 | `stboxOverback(a, b)`            |
 | `~=`                | "same" (geometric equality)        | not exposed at SQL level         |
 | `<#>`               | nearest-approach distance          | `nearestApproachDistance(a, b)`  |
 | `\|=\|`             | distance between trajectories      | `distance(a, b)` (named form)    |
@@ -37,8 +37,10 @@ tokens, and MobilityDuck registers them as operators (see
 `src/temporal/temporal.cpp` "tspatial × {stbox, tspatial} position predicates").
 Only the multi-character forms above are unreachable.
 
-The above/below/front/back named functions cover the entire set of position
-predicates between {`tgeompoint`, `tgeometry`, `stbox`} pairs. Any code that
+The `stboxAbove`/`stboxBelow`/`stboxFront`/`stboxBack` named functions and their
+`stboxOver*` variants cover the entire set of position predicates between
+{`tgeompoint`, `tgeometry`, `stbox`} pairs; as in MobilityDB, the function behind a
+position operator carries the class prefix of the box it compares. Any code that
 ports MobilityDB SQL using `|>>` etc. should rewrite the operator to the named
 function — semantics are identical.
 
