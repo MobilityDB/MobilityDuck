@@ -207,32 +207,44 @@ SELECT raquet(from_hex('2a'), 0, 1, quadbinTileToCell(0, 0, 0), 'UINT8');
 ----
 must be positive
 
-# ── quadbins ────────────────────────────────────────────────────────────────
+# ── The tiles a trajectory covers ───────────────────────────────────────────
+# The QUADBIN cells a trajectory covers at a zoom are the values of its
+# temporal quadbin cell, the join key of a Raquet table.
 
 # A single-instant trajectory at the origin covers exactly one zoom-0 cell.
 query I
-SELECT len(quadbins(tgeompoint 'POINT(0 0)@2024-01-01', 0));
+SELECT len(getValues(tquadbin(tgeompoint 'SRID=4326;POINT(0 0)@2024-01-01', 0)));
 ----
 1
 
 # The cell covering the origin at zoom 0 is the world tile.
 query III
 SELECT quadbinCellToTileX(c), quadbinCellToTileY(c), quadbinCellToTileZ(c)
-FROM (SELECT quadbins(tgeompoint 'POINT(0 0)@2024-01-01', 0)[1] AS c);
+FROM (SELECT getValues(tquadbin(tgeompoint 'SRID=4326;POINT(0 0)@2024-01-01', 0))[1] AS c);
 ----
 0	0	0
 
-# The cover is the tiles the path meets, not the tiles holding the instants, so
-# a diagonal answers more than one tile per endpoint: this one spans two tile
-# columns and two Mercator rows and crosses the corner where they meet at
-# (0 0), and a monotone path across a two by two span visits 2 + 2 - 1.
+# The cover is the tiles the path enters. A QUADBIN tile holds its west and
+# north boundaries, so the corner where four zoom-1 tiles meet at (0 0) belongs
+# to the tile east of the meridian and south of the parallel: this diagonal
+# goes from the north-western tile straight into the south-eastern one and
+# enters neither of the two tiles it touches at that corner.
 query I
-SELECT len(quadbins(
-  tgeompoint '[POINT(-90 45)@2024-01-01, POINT(90 -45)@2024-01-02]', 1));
+SELECT getValues(tquadbin(
+  tgeompoint 'SRID=4326;[POINT(-90 45)@2024-01-01, POINT(90 -45)@2024-01-02]', 1));
 ----
-3
+[4813ffffffffffff, 481fffffffffffff]
+
+# Moved one degree south, the diagonal passes west of the corner and crosses
+# the south-western tile on the way, a monotone path across a two by two span
+# visiting 2 + 2 - 1 tiles.
+query I
+SELECT getValues(tquadbin(
+  tgeompoint 'SRID=4326;[POINT(-90 44)@2024-01-01, POINT(90 -46)@2024-01-02]', 1));
+----
+[4813ffffffffffff, 481bffffffffffff, 481fffffffffffff]
 
 query I
-SELECT quadbins(NULL::TGEOMPOINT, 0) IS NULL;
+SELECT getValues(tquadbin(NULL::TGEOMPOINT, 0)) IS NULL;
 ----
 true

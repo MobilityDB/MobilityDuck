@@ -720,51 +720,6 @@ void RaquetFunctions::Raster_tile_value_quadbin(
     if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-/* quadbins(traj, zoom): the distinct cells at a zoom level the trajectory
- * covers, a join key against a Raquet table. */
-void RaquetFunctions::Trajectory_quadbins(
-    DataChunk &args, ExpressionState &state, Vector &result)
-{
-    const idx_t row_count = args.size();
-    auto &trajs = args.data[0];
-    auto &zooms = args.data[1];
-    trajs.Flatten(row_count);
-    zooms.Flatten(row_count);
-    auto traj_data = FlatVector::GetData<string_t>(trajs);
-    auto zoom_data = FlatVector::GetData<int32_t>(zooms);
-    auto list_entries = FlatVector::GetData<list_entry_t>(result);
-    auto &out_validity = FlatVector::Validity(result);
-
-    idx_t off = 0;
-    for (idx_t row = 0; row < row_count; row++) {
-        if (!FlatVector::Validity(trajs).RowIsValid(row) ||
-            !FlatVector::Validity(zooms).RowIsValid(row)) {
-            out_validity.SetInvalid(row);
-            list_entries[row] = list_entry_t{off, 0};
-            continue;
-        }
-        Temporal *t = BlobToTemp(traj_data[row]);
-        int count = 0;
-        uint64_t *cells = trajectory_quadbins(
-            t, static_cast<uint32_t>(zoom_data[row]), &count);
-        free(t);
-
-        idx_t n = (cells && count > 0) ? (idx_t) count : 0;
-        ListVector::Reserve(result, off + n);
-        ListVector::SetListSize(result, off + n);
-        list_entries[row] = list_entry_t{off, (uint64_t) n};
-        if (n > 0) {
-            auto cell_data = FlatVector::GetData<int64_t>(ListVector::GetEntry(result));
-            for (idx_t k = 0; k < n; k++) {
-                cell_data[off + k] = static_cast<int64_t>(cells[k]);
-            }
-            off += n;
-        }
-        if (cells) free(cells);
-    }
-    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
-}
-
 /* =====================================================================
  * Registration
  * ===================================================================== */
@@ -885,9 +840,6 @@ void RaquetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "rasterTileValueQuadbin", {TG, BLB, I32, I32, QB, V, D, B}, TF,
         RaquetFunctions::Raster_tile_value_quadbin));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "quadbins", {TG, I32}, LogicalType::LIST(QB),
-        RaquetFunctions::Trajectory_quadbins));
 }
 
 } // namespace duckdb
