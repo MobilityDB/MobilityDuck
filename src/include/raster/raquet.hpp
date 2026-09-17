@@ -68,7 +68,6 @@ struct RaquetFunctions {
     static void Raster_tile_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Raster_tile_value_array(DataChunk &args, ExpressionState &state, Vector &result);
     static void Raster_tile_value_quadbin(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Trajectory_quadbins(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb
