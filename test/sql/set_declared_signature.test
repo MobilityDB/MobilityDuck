@@ -33,17 +33,17 @@ SELECT jsonbsetDelete(set(['a', 'b']), 'a');
 No function matches the given name and argument types
 
 statement error
-SELECT h3UncompactCells(set([1, 2]), 6);
+SELECT uncompactCells(set([1, 2]), 6);
 ----
 No function matches the given name and argument types
 
-# ── h3UncompactCells(h3indexset, integer): the resolution-6 children of a resolution-5 cover hold
+# ── uncompactCells(h3indexset, integer): the resolution-6 children of a resolution-5 cover hold
 #    the resolution-6 cell of a point it covers, and not that of a point far away ──
 
 query II
-SELECT eEqual(h3UncompactCells(geoToH3IndexSet(ST_Point(1, 1), 5), 6),
+SELECT eEqual(uncompactCells(geoToH3IndexSet(ST_Point(1, 1), 5), 6),
            th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 6)),
-       eEqual(h3UncompactCells(geoToH3IndexSet(ST_Point(1, 1), 5), 6),
+       eEqual(uncompactCells(geoToH3IndexSet(ST_Point(1, 1), 5), 6),
            th3index('SRID=4326;[Point(40 40)@2000-01-01]'::tgeompoint, 6));
 ----
 true	false
