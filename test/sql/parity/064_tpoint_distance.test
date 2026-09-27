@@ -54,3 +54,15 @@ query I
 SELECT round(nad(tgeompoint '[POINT(0 0)@2000-01-01, POINT(2 2)@2000-01-02]', tgeompoint '[POINT(3 3)@2000-01-01, POINT(5 5)@2000-01-02]')::numeric, 6);
 ----
 4.242641
+
+# Two trips meeting at an instant one of them excludes share no time, so the nearest approach
+# distance and the ever-within predicate have no answer, as MobilityDB answers them
+query I
+SELECT nearestApproachDistance(tgeompoint '[POINT(0 0)@2000-01-01, POINT(0 0)@2000-01-02)', tgeompoint '[POINT(0 0)@2000-01-02, POINT(0 0)@2000-01-03]') IS NULL;
+----
+true
+
+query I
+SELECT eDwithin(tgeompoint '[POINT(0 0)@2000-01-01, POINT(0 0)@2000-01-02)', tgeompoint '[POINT(0 0)@2000-01-02, POINT(0 0)@2000-01-03]', 300.0) IS NULL;
+----
+true
