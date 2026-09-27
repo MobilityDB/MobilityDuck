@@ -39,6 +39,7 @@
 #include "duckdb/common/vector_operations/unary_executor.hpp"
 #include "duckdb/common/vector_operations/binary_executor.hpp"
 #include "duckdb/common/vector_operations/ternary_executor.hpp"
+#include <cfloat>
 #include <cstring>
 #include <cstdlib>
 #include <limits>

@@ -477,6 +477,26 @@ def scalar_emit3(f):
     """(call_var_ctype, executor_RET, return_expr), paired with scalar_ret_duck by construction."""
     return scalar_ret4(f)[1:]
 
+# The by-value guards a PG wrapper returns NULL on, as the catalog states them
+# (`shape.nullableResult`, read from the wrapper's `if (<guard>) PG_RETURN_NULL();`): a
+# three-valued predicate answering unknown, and the distance sentinel. They name the result
+# `result`; the generated body names it `r`. A pointer result's guard (`! result`,
+# `result == NULL`) is the NULL pointer the pointer paths already map.
+SCALAR_NULL_GUARD = {"if (result < 0)": "r < 0",
+                     "if (result == DBL_MAX)": "r == DBL_MAX"}
+
+def scalar_exec(f, rett, rexpr):
+    """(executor method, extra lambda parameters, lambda return annotation, return statement) for
+    a by-value scalar return. Where the catalog states the result can be absent, the executor is
+    ExecuteWithNulls and the row is NULL on the guard, as #emit_geo_temporal states `r < 0` for
+    its three-valued predicates; everywhere else the plain executor returns the value."""
+    guard = SCALAR_NULL_GUARD.get((f.get("shape") or {}).get("nullableResult"))
+    if guard is None:
+        return ("Execute", "", "", f"return {rexpr};")
+    return ("ExecuteWithNulls", ", ValidityMask &mask, idx_t idx", f" -> {rett}",
+            f"if ({guard}) {{ mask.SetInvalid(idx); return {rett}(); }}\n"
+            f"            return {rexpr};")
+
 # By-value/owned-scalar return marshalling keyed by the MEOS return base type — used by the
 # container (set/span) u_scalar branches so they handle time/Interval returns like the
 # temporal detectors do. (call_var_ctype, executor_RET, return_expr).
@@ -996,13 +1016,14 @@ def emit_defaulted_unary_temporal_scalar(f, dval):
     scalar return exactly like emit_body's scalar branch (scalar_emit3)."""
     name = f["name"]
     cct, rett, rexpr = scalar_emit3(f)
+    ex, prm, ann, ret = scalar_exec(f, rett, rexpr)
     return (f"static void Gen_{name}_d(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
-            f"    UnaryExecutor::Execute<string_t, {rett}>(args.data[0], result, args.size(),\n"
-            f"        [&](string_t in) {{\n"
+            f"    UnaryExecutor::{ex}<string_t, {rett}>(args.data[0], result, args.size(),\n"
+            f"        [&](string_t in{prm}){ann} {{\n"
             f"            Temporal *t = BlobToTemporal(in);\n"
             f"            {cct} r = {name}(t, {dval});\n            free(t);\n"
-            f"            return {rexpr};\n"
+            f"            {ret}\n"
             f"        }});\n}}\n")
 
 # Element scalar type -> the Set type it implies (for contains/contained/left/...
@@ -1351,14 +1372,15 @@ def emit_body(f, kind):
                 f"            return out;\n"
                 f"        }});\n}}\n")
     cct, rett, rexpr = scalar_emit3(f)
+    ex, prm, ann, ret = scalar_exec(f, rett, rexpr)
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
-            f"    UnaryExecutor::Execute<string_t, {rett}>(args.data[0], result, args.size(),\n"
-            f"        [&](string_t in) {{\n"
+            f"    UnaryExecutor::{ex}<string_t, {rett}>(args.data[0], result, args.size(),\n"
+            f"        [&](string_t in{prm}){ann} {{\n"
             f"            Temporal *t = BlobToTemporal(in);\n"
             f"            {cct} r = {name}(t);\n"
             f"            free(t);\n"
-            f"            return {rexpr};\n"
+            f"            {ret}\n"
             f"        }});\n}}\n")
 
 # 2nd-arg scalar marshalling for binary Temporal+scalar fns: base -> (duck arg type, cpp type, MEOS-call expr from `a2`)
@@ -1490,11 +1512,12 @@ def emit_body_binary(f, kind, arg2):
                 f"            return TemporalToBlobN(result, r, mask, idx);\n"
                 f"        }});\n}}\n")
     ctype, rett, _rx = scalar_emit3(f)
-    inner = f"{pre}{ctype} r = {name}(t, {call2});\n            {post}free(t);\n            return {_rx};"
+    ex, prm, ann, ret = scalar_exec(f, rett, _rx)
+    inner = f"{pre}{ctype} r = {name}(t, {call2});\n            {post}free(t);\n            {ret}"
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
-            f"    BinaryExecutor::Execute<string_t, {cpp2}, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
-            f"        [&](string_t in, {cpp2} a2) {{\n"
+            f"    BinaryExecutor::{ex}<string_t, {cpp2}, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
+            f"        [&](string_t in, {cpp2} a2{prm}){ann} {{\n"
             f"            Temporal *t = BlobToTemporal(in);\n"
             f"            {inner}\n"
             f"        }});\n}}\n")
@@ -1571,12 +1594,13 @@ def emit_body_ternary(f, kind, arg2, arg3):
                 f"            Temporal *r = {name}(t, {e2}, {e3});\n            free(t);\n"
                 f"            return TemporalToBlobN(result, r, mask, idx);\n        }});\n}}\n")
     ctype, rett, _rx = scalar_emit3(f)
-    inner = f"{ctype} r = {name}(t, {e2}, {e3});\n            free(t);\n            return {_rx};"
+    ex, prm, ann, ret = scalar_exec(f, rett, _rx)
+    inner = f"{ctype} r = {name}(t, {e2}, {e3});\n            free(t);\n            {ret}"
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
-            f"    TernaryExecutor::Execute<string_t, {cpp2}, {cpp3}, {rett}>("
+            f"    TernaryExecutor::{ex}<string_t, {cpp2}, {cpp3}, {rett}>("
             f"args.data[0], args.data[1], args.data[2], result, args.size(),\n"
-            f"        [&](string_t in, {cpp2} a2, {cpp3} a3) {{\n"
+            f"        [&](string_t in, {cpp2} a2, {cpp3} a3{prm}){ann} {{\n"
             f"            Temporal *t = BlobToTemporal(in);\n"
             f"            {inner}\n"
             f"        }});\n}}\n")
@@ -1900,11 +1924,12 @@ def emit_binary_tt(f, kind):
                 f"            Temporal *r = {name}(t1, t2);\n            free(t1); free(t2);\n"
                 f"            return TemporalToBlobN(result, r, mask, idx);\n        }});\n}}\n")
     ctype, rett, _rx = scalar_emit3(f)
-    inner = f"{ctype} r = {name}(t1, t2);\n            free(t1); free(t2);\n            return {_rx};"
+    ex, prm, ann, ret = scalar_exec(f, rett, _rx)
+    inner = f"{ctype} r = {name}(t1, t2);\n            free(t1); free(t2);\n            {ret}"
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
-            f"    BinaryExecutor::Execute<string_t, string_t, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
-            f"        [&](string_t in1, string_t in2) {{\n"
+            f"    BinaryExecutor::{ex}<string_t, string_t, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
+            f"        [&](string_t in1, string_t in2{prm}){ann} {{\n"
             f"            Temporal *t1 = BlobToTemporal(in1);\n"
             f"            Temporal *t2 = BlobToTemporal(in2);\n"
             f"            {inner}\n"
@@ -1942,12 +1967,13 @@ def emit_binary_tt_scalar(f, kind, arg3):
                 f"            Temporal *r = {name}(t1, t2, {e3});\n            free(t1); free(t2);\n"
                 f"            return TemporalToBlobN(result, r, mask, idx);\n        }});\n}}\n")
     ctype, rett, _rx = scalar_emit3(f)
-    inner = f"{ctype} r = {name}(t1, t2, {e3});\n            free(t1); free(t2);\n            return {_rx};"
+    ex, prm, ann, ret = scalar_exec(f, rett, _rx)
+    inner = f"{ctype} r = {name}(t1, t2, {e3});\n            free(t1); free(t2);\n            {ret}"
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
-            f"    TernaryExecutor::Execute<string_t, string_t, {cpp3}, {rett}>("
+            f"    TernaryExecutor::{ex}<string_t, string_t, {cpp3}, {rett}>("
             f"args.data[0], args.data[1], args.data[2], result, args.size(),\n"
-            f"        [&](string_t in1, string_t in2, {cpp3} a2) {{\n"
+            f"        [&](string_t in1, string_t in2, {cpp3} a2{prm}){ann} {{\n"
             f"            Temporal *t1 = BlobToTemporal(in1);\n"
             f"            Temporal *t2 = BlobToTemporal(in2);\n"
             f"            {inner}\n"
@@ -2212,21 +2238,22 @@ def emit_tgeoarr_scalar(f):
     """DuckDB scalar over two LIST(temporal-blob) args -> double (minDistance). Each LIST row is
     marshalled to a fresh Temporal** via ListToTemporalArr, the MEOS kernel called, the arrays freed."""
     name = f["name"]
+    ex, prm, _ann, ret = scalar_exec(f, "double", "r")
     return (
 f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
 f"    EnsureMeosThreadInitialized();\n"
 f"    auto &lv1 = args.data[0]; auto &lv2 = args.data[1];\n"
 f"    auto &child1 = ListVector::GetEntry(lv1); child1.Flatten(ListVector::GetListSize(lv1));\n"
 f"    auto &child2 = ListVector::GetEntry(lv2); child2.Flatten(ListVector::GetListSize(lv2));\n"
-f"    BinaryExecutor::Execute<list_entry_t, list_entry_t, double>(\n"
+f"    BinaryExecutor::{ex}<list_entry_t, list_entry_t, double>(\n"
 f"        lv1, lv2, result, args.size(),\n"
-f"        [&](list_entry_t le1, list_entry_t le2) -> double {{\n"
+f"        [&](list_entry_t le1, list_entry_t le2{prm}) -> double {{\n"
 f"            int n1, n2;\n"
 f"            const Temporal **a1 = ListToTemporalArr(child1, le1, &n1);\n"
 f"            const Temporal **a2 = ListToTemporalArr(child2, le2, &n2);\n"
 f"            double r = {name}(a1, n1, a2, n2);\n"
 f"            FreeTemporalArr(a1, n1); FreeTemporalArr(a2, n2);\n"
-f"            return r;\n"
+f"            {ret}\n"
 f"        }});\n}}\n")
 
 def emit_pairs_scalar(f, has_dist, has_periods):
@@ -2749,11 +2776,12 @@ def emit_scalar_first(f, kind, arg1):
                 f"            {pre}Temporal *r = {name}({call1}, t);\n            {post}free(t);\n"
                 f"            return TemporalToBlobN(result, r, mask, idx);\n        }});\n}}\n")
     ctype, rett, _rx = scalar_emit3(f)
-    inner = f"{pre}{ctype} r = {name}({call1}, t);\n            {post}free(t);\n            return {_rx};"
+    ex, prm, ann, ret = scalar_exec(f, rett, _rx)
+    inner = f"{pre}{ctype} r = {name}({call1}, t);\n            {post}free(t);\n            {ret}"
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
-            f"    BinaryExecutor::Execute<{cpp1}, string_t, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
-            f"        [&]({cpp1} a1, string_t in) {{\n"
+            f"    BinaryExecutor::{ex}<{cpp1}, string_t, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
+            f"        [&]({cpp1} a1, string_t in{prm}){ann} {{\n"
             f"            Temporal *t = BlobToTemporal(in);\n"
             f"            {inner}\n"
             f"        }});\n}}\n")
@@ -3676,12 +3704,13 @@ def shape_baseval_scalar(f):
 def emit_baseval_scalar(f, bb, rb):
     name = f["name"]; marshal = PTR_IN[bb][1] % "in"
     cct, rett, rexpr = byval_ret3(rb)
+    ex, prm, ann, ret = scalar_exec(f, rett, rexpr)
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
-            f"    UnaryExecutor::Execute<string_t, {rett}>(args.data[0], result, args.size(),\n"
-            f"        [&](string_t in) {{\n"
+            f"    UnaryExecutor::{ex}<string_t, {rett}>(args.data[0], result, args.size(),\n"
+            f"        [&](string_t in{prm}){ann} {{\n"
             f"            {bb} *v = {marshal};\n            {cct} r = {name}(v);\n            free(v);\n"
-            f"            return {rexpr};\n        }});\n}}\n")
+            f"            {ret}\n        }});\n}}\n")
 
 # ---------------- STATIC cell surface: h3index / quadbin / s2cell with no temporal operand ----------------
 # A cell index is carried BY VALUE, the eight bytes of an H3Index / Quadbin / S2CellId, which C spells
@@ -4662,7 +4691,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            '#include "duckdb/common/vector_operations/unary_executor.hpp"\n'
            '#include "duckdb/common/vector_operations/binary_executor.hpp"\n'
            '#include "duckdb/common/vector_operations/ternary_executor.hpp"\n'
-           '#include <cstring>\n#include <cstdlib>\n#include <limits>\n\n'
+           '#include <cfloat>\n#include <cstring>\n#include <cstdlib>\n#include <limits>\n\n'
            "namespace duckdb {\nnamespace {\n"
            "// Self-contained blob<->Temporal marshalling (generated owns it; no hand-header dep).\n"
            "inline string_t TemporalToBlob(Vector &result, Temporal *t) {\n"
