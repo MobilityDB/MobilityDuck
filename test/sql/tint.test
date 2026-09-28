@@ -637,3 +637,17 @@ query I
 SELECT tbigintFromHexWKB(asHexWKB(tbigint '42@2000-01-01')) = tbigint '42@2000-01-01';
 ----
 true
+
+# A trailing argument MobilityDB declares with a default may be left out, and the shorter call
+# answers what the full call answers with that default
+query I
+SELECT deleteTime(tint '[1@2001-01-01, 2@2001-01-02, 3@2001-01-03]', timestamptz '2001-01-02') =
+  deleteTime(tint '[1@2001-01-01, 2@2001-01-02, 3@2001-01-03]', timestamptz '2001-01-02', true);
+----
+true
+
+query I
+SELECT afterTimestamp(tint '[1@2001-01-01, 2@2001-01-03]', timestamptz '2001-01-02') =
+  afterTimestamp(tint '[1@2001-01-01, 2@2001-01-03]', timestamptz '2001-01-02', true);
+----
+true

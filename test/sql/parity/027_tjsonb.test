@@ -90,6 +90,14 @@ SELECT tint(TJSONB('{"a":1}@2000-01-01'), 'a', 'use_json_null')::VARCHAR,
 ----
 1@2000-01-01 00:00:00+01	t@2000-01-01 00:00:00+01	"x"@2000-01-01 00:00:00+01
 
+# The mode may be left out, and the call answers what it answers with MobilityDB's default mode
+query III
+SELECT tint(TJSONB('{"a":1}@2000-01-01'), 'a') = tint(TJSONB('{"a":1}@2000-01-01'), 'a', 'raise_exception'),
+       tbool(TJSONB('{"b":true}@2000-01-01'), 'b') = tbool(TJSONB('{"b":true}@2000-01-01'), 'b', 'raise_exception'),
+       ttext(TJSONB('{"c":"x"}@2000-01-01'), 'c') = ttext(TJSONB('{"c":"x"}@2000-01-01'), 'c', 'raise_exception');
+----
+true	true	true
+
 # The mode is parsed by MEOS, so an unknown one is its error rather than a silent default.
 statement error
 SELECT tint(TJSONB('{"a":1}@2000-01-01'), 'a', 'not_a_mode');
