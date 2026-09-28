@@ -345,6 +345,376 @@ inline string_t TakeCString(Vector &result, char *s) {
 }
 
 
+// ===== @ingroup meos_temporal_restrict =====
+static void Gen_tbool_at_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, bool a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tbool_at_value(t, a2);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tbool_minus_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, bool a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tbool_minus_value(t, a2);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_after_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    TernaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, bool, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t in, timestamp_tz_t a2, bool a3, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = temporal_after_timestamptz(t, DuckDBToMeosTimestamp(a2).value, a3);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_after_timestamptz_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, timestamp_tz_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = temporal_after_timestamptz(t, DuckDBToMeosTimestamp(a2).value, true);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_at_max(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = temporal_at_max(t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_at_min(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = temporal_at_min(t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_at_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, timestamp_tz_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = temporal_at_timestamptz(t, DuckDBToMeosTimestamp(a2).value);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_before_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    TernaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, bool, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t in, timestamp_tz_t a2, bool a3, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = temporal_before_timestamptz(t, DuckDBToMeosTimestamp(a2).value, a3);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_before_timestamptz_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, timestamp_tz_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = temporal_before_timestamptz(t, DuckDBToMeosTimestamp(a2).value, true);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_minus_max(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = temporal_minus_max(t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_minus_min(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = temporal_minus_min(t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_minus_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, timestamp_tz_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = temporal_minus_timestamptz(t, DuckDBToMeosTimestamp(a2).value);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tfloat_at_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tfloat_at_value(t, a2);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tfloat_minus_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tfloat_minus_value(t, a2);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tint_at_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tint_at_value(t, a2);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tint_minus_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tint_minus_value(t, a2);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_ttext_at_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            text *a2t = MakeText(a2);
+            Temporal *r = ttext_at_value(t, a2t);
+            free(a2t); free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_ttext_minus_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            text *a2t = MakeText(a2);
+            Temporal *r = ttext_minus_value(t, a2t);
+            free(a2t); free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_at_tstzset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(a);
+            Set *cc = BlobToSet(b);
+            Temporal *r = temporal_at_tstzset(t, cc);
+            free(t); free(cc);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_at_tstzspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(a);
+            Span *cc = BlobToSpan(b);
+            Temporal *r = temporal_at_tstzspan(t, cc);
+            free(t); free(cc);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_at_tstzspanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(a);
+            SpanSet *cc = BlobToSpanSet(b);
+            Temporal *r = temporal_at_tstzspanset(t, cc);
+            free(t); free(cc);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_at_values(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(a);
+            Set *cc = BlobToSet(b);
+            Temporal *r = temporal_at_values(t, cc);
+            free(t); free(cc);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_minus_tstzset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(a);
+            Set *cc = BlobToSet(b);
+            Temporal *r = temporal_minus_tstzset(t, cc);
+            free(t); free(cc);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_minus_tstzspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(a);
+            Span *cc = BlobToSpan(b);
+            Temporal *r = temporal_minus_tstzspan(t, cc);
+            free(t); free(cc);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_minus_tstzspanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(a);
+            SpanSet *cc = BlobToSpanSet(b);
+            Temporal *r = temporal_minus_tstzspanset(t, cc);
+            free(t); free(cc);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_minus_values(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(a);
+            Set *cc = BlobToSet(b);
+            Temporal *r = temporal_minus_values(t, cc);
+            free(t); free(cc);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tnumber_at_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(a);
+            Span *cc = BlobToSpan(b);
+            Temporal *r = tnumber_at_span(t, cc);
+            free(t); free(cc);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tnumber_at_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(a);
+            SpanSet *cc = BlobToSpanSet(b);
+            Temporal *r = tnumber_at_spanset(t, cc);
+            free(t); free(cc);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tnumber_at_tbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(a);
+            TBox *cc = BlobToTbox(b);
+            Temporal *r = tnumber_at_tbox(t, cc);
+            free(t); free(cc);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tnumber_minus_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(a);
+            Span *cc = BlobToSpan(b);
+            Temporal *r = tnumber_minus_span(t, cc);
+            free(t); free(cc);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tnumber_minus_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(a);
+            SpanSet *cc = BlobToSpanSet(b);
+            Temporal *r = tnumber_minus_spanset(t, cc);
+            free(t); free(cc);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tnumber_minus_tbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(a);
+            TBox *cc = BlobToTbox(b);
+            Temporal *r = tnumber_minus_tbox(t, cc);
+            free(t); free(cc);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+
 // ===== @ingroup meos_geo_rel_ever =====
 static void Gen_acontains_geo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -1361,1144 +1731,1151 @@ static void Gen_etouches_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &, V
 }
 
 
-// ===== @ingroup meos_geo_bbox_topo =====
-static void Gen_adjacent_tspatial_tspatial(DataChunk &args, ExpressionState &, Vector &result) {
+// ===== @ingroup meos_cbuffer_rel_ever =====
+static void Gen_acontains_geo_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            int r = acontains_geo_tcbuffer(gs, t);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+static void Gen_acontains_tcbuffer_cbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in);
+            Cbuffer *a2p = BlobToCbuffer(a2);
+            int32_t r = acontains_tcbuffer_cbuffer(t, a2p);
+            free(a2p); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
+        });
+}
+
+static void Gen_acontains_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            int r = acontains_tcbuffer_geo(t, gs);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+static void Gen_acovers_geo_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            int r = acovers_geo_tcbuffer(gs, t);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+static void Gen_acovers_tcbuffer_cbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in);
+            Cbuffer *a2p = BlobToCbuffer(a2);
+            int32_t r = acovers_tcbuffer_cbuffer(t, a2p);
+            free(a2p); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
+        });
+}
+
+static void Gen_acovers_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            int r = acovers_tcbuffer_geo(t, gs);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+static void Gen_adisjoint_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            int r = adisjoint_tcbuffer_geo(t, gs);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+static void Gen_adisjoint_tcbuffer_cbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in);
+            Cbuffer *a2p = BlobToCbuffer(a2);
+            int32_t r = adisjoint_tcbuffer_cbuffer(t, a2p);
+            free(a2p); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
+        });
+}
+
+static void Gen_adisjoint_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
-            bool r = adjacent_tspatial_tspatial(t1, t2);
+            int32_t r = adisjoint_tcbuffer_tcbuffer(t1, t2);
             free(t1); free(t2);
-            return (bool) r;
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
         });
 }
 
-static void Gen_contained_tspatial_tspatial(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_adwithin_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, bool>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t in_t, string_t in_g, double d, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            int r = adwithin_tcbuffer_geo(t, gs, d);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+static void Gen_adwithin_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, bool>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t in1, string_t in2, double a2, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
-            bool r = contained_tspatial_tspatial(t1, t2);
+            int32_t r = adwithin_tcbuffer_tcbuffer(t1, t2, a2);
             free(t1); free(t2);
-            return (bool) r;
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
         });
 }
 
-static void Gen_contains_tspatial_tspatial(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_aintersects_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            int r = aintersects_tcbuffer_geo(t, gs);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+static void Gen_aintersects_tcbuffer_cbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in);
+            Cbuffer *a2p = BlobToCbuffer(a2);
+            int32_t r = aintersects_tcbuffer_cbuffer(t, a2p);
+            free(a2p); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
+        });
+}
+
+static void Gen_aintersects_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
-            bool r = contains_tspatial_tspatial(t1, t2);
+            int32_t r = aintersects_tcbuffer_tcbuffer(t1, t2);
             free(t1); free(t2);
-            return (bool) r;
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
         });
 }
 
-static void Gen_overlaps_tspatial_tspatial(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_atouches_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            int r = atouches_tcbuffer_geo(t, gs);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+static void Gen_atouches_tcbuffer_cbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in);
+            Cbuffer *a2p = BlobToCbuffer(a2);
+            int32_t r = atouches_tcbuffer_cbuffer(t, a2p);
+            free(a2p); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
+        });
+}
+
+static void Gen_econtains_tcbuffer_cbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in);
+            Cbuffer *a2p = BlobToCbuffer(a2);
+            int32_t r = econtains_tcbuffer_cbuffer(t, a2p);
+            free(a2p); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
+        });
+}
+
+static void Gen_econtains_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            int r = econtains_tcbuffer_geo(t, gs);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+static void Gen_ecovers_geo_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            int r = ecovers_geo_tcbuffer(gs, t);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+static void Gen_ecovers_tcbuffer_cbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in);
+            Cbuffer *a2p = BlobToCbuffer(a2);
+            int32_t r = ecovers_tcbuffer_cbuffer(t, a2p);
+            free(a2p); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
+        });
+}
+
+static void Gen_ecovers_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            int r = ecovers_tcbuffer_geo(t, gs);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+static void Gen_edisjoint_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            int r = edisjoint_tcbuffer_geo(t, gs);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+static void Gen_edisjoint_tcbuffer_cbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in);
+            Cbuffer *a2p = BlobToCbuffer(a2);
+            int32_t r = edisjoint_tcbuffer_cbuffer(t, a2p);
+            free(a2p); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
+        });
+}
+
+static void Gen_edwithin_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, bool>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t in_t, string_t in_g, double d, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            int r = edwithin_tcbuffer_geo(t, gs, d);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+static void Gen_edwithin_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, bool>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t in1, string_t in2, double a2, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
-            bool r = overlaps_tspatial_tspatial(t1, t2);
+            int32_t r = edwithin_tcbuffer_tcbuffer(t1, t2, a2);
             free(t1); free(t2);
-            return (bool) r;
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
         });
 }
 
-static void Gen_same_tspatial_tspatial(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_eintersects_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2) {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            int r = eintersects_tcbuffer_geo(t, gs);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+static void Gen_eintersects_tcbuffer_cbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in);
+            Cbuffer *a2p = BlobToCbuffer(a2);
+            int32_t r = eintersects_tcbuffer_cbuffer(t, a2p);
+            free(a2p); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
+        });
+}
+
+static void Gen_eintersects_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
-            bool r = same_tspatial_tspatial(t1, t2);
+            int32_t r = eintersects_tcbuffer_tcbuffer(t1, t2);
             free(t1); free(t2);
-            return (bool) r;
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
         });
 }
 
-static void Gen_adjacent_stbox_tspatial(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_etouches_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
-            STBox *bx = BlobToStbox(a);
-            Temporal *t = BlobToTemporal(b);
-            bool r = adjacent_stbox_tspatial(bx, t);
-            free(bx); free(t);
-            return (bool) r;
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            int r = etouches_tcbuffer_geo(t, gs);
+            free(t); free(gs);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
         });
 }
 
-static void Gen_adjacent_tspatial_stbox(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_etouches_tcbuffer_cbuffer(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
-            Temporal *t = BlobToTemporal(a);
-            STBox *bx = BlobToStbox(b);
-            bool r = adjacent_tspatial_stbox(t, bx);
-            free(t); free(bx);
-            return (bool) r;
-        });
-}
-
-static void Gen_contained_stbox_tspatial(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
-            STBox *bx = BlobToStbox(a);
-            Temporal *t = BlobToTemporal(b);
-            bool r = contained_stbox_tspatial(bx, t);
-            free(bx); free(t);
-            return (bool) r;
-        });
-}
-
-static void Gen_contained_tspatial_stbox(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
-            Temporal *t = BlobToTemporal(a);
-            STBox *bx = BlobToStbox(b);
-            bool r = contained_tspatial_stbox(t, bx);
-            free(t); free(bx);
-            return (bool) r;
-        });
-}
-
-static void Gen_contains_stbox_tspatial(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
-            STBox *bx = BlobToStbox(a);
-            Temporal *t = BlobToTemporal(b);
-            bool r = contains_stbox_tspatial(bx, t);
-            free(bx); free(t);
-            return (bool) r;
-        });
-}
-
-static void Gen_contains_tspatial_stbox(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
-            Temporal *t = BlobToTemporal(a);
-            STBox *bx = BlobToStbox(b);
-            bool r = contains_tspatial_stbox(t, bx);
-            free(t); free(bx);
-            return (bool) r;
-        });
-}
-
-static void Gen_overlaps_stbox_tspatial(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
-            STBox *bx = BlobToStbox(a);
-            Temporal *t = BlobToTemporal(b);
-            bool r = overlaps_stbox_tspatial(bx, t);
-            free(bx); free(t);
-            return (bool) r;
-        });
-}
-
-static void Gen_overlaps_tspatial_stbox(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
-            Temporal *t = BlobToTemporal(a);
-            STBox *bx = BlobToStbox(b);
-            bool r = overlaps_tspatial_stbox(t, bx);
-            free(t); free(bx);
-            return (bool) r;
-        });
-}
-
-static void Gen_same_stbox_tspatial(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
-            STBox *bx = BlobToStbox(a);
-            Temporal *t = BlobToTemporal(b);
-            bool r = same_stbox_tspatial(bx, t);
-            free(bx); free(t);
-            return (bool) r;
-        });
-}
-
-static void Gen_same_tspatial_stbox(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
-            Temporal *t = BlobToTemporal(a);
-            STBox *bx = BlobToStbox(b);
-            bool r = same_tspatial_stbox(t, bx);
-            free(t); free(bx);
-            return (bool) r;
-        });
-}
-
-
-// ===== @ingroup meos_temporal_math =====
-static void Gen_add_float_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](double a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = add_float_tfloat(a1, t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
+            Cbuffer *a2p = BlobToCbuffer(a2);
+            int32_t r = etouches_tcbuffer_cbuffer(t, a2p);
+            free(a2p); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
         });
 }
 
-static void Gen_add_int_tint(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int32_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = add_int_tint(a1, t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
 
-static void Gen_add_tfloat_float(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = add_tfloat_float(t, a2);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_add_tint_int(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = add_tint_int(t, a2);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_add_bigint_tbigint(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = add_bigint_tbigint(a1, t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_add_tbigint_bigint(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = add_tbigint_bigint(t, a2);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_add_tnumber_tnumber(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t1 = BlobToTemporal(in1);
-            Temporal *t2 = BlobToTemporal(in2);
-            Temporal *r = add_tnumber_tnumber(t1, t2);
-            free(t1); free(t2);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_div_float_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](double a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = div_float_tfloat(a1, t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_div_int_tint(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int32_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = div_int_tint(a1, t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_div_tfloat_float(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = div_tfloat_float(t, a2);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_div_bigint_tbigint(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = div_bigint_tbigint(a1, t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_div_tnumber_tnumber(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t1 = BlobToTemporal(in1);
-            Temporal *t2 = BlobToTemporal(in2);
-            Temporal *r = div_tnumber_tnumber(t1, t2);
-            free(t1); free(t2);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_mul_float_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](double a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = mul_float_tfloat(a1, t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_mul_int_tint(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int32_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = mul_int_tint(a1, t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_mul_tfloat_float(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = mul_tfloat_float(t, a2);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_mul_tint_int(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = mul_tint_int(t, a2);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_mul_bigint_tbigint(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = mul_bigint_tbigint(a1, t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_mul_tbigint_bigint(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = mul_tbigint_bigint(t, a2);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_mul_tnumber_tnumber(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t1 = BlobToTemporal(in1);
-            Temporal *t2 = BlobToTemporal(in2);
-            Temporal *r = mul_tnumber_tnumber(t1, t2);
-            free(t1); free(t2);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_sub_float_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](double a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = sub_float_tfloat(a1, t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_sub_int_tint(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int32_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = sub_int_tint(a1, t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_sub_tfloat_float(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = sub_tfloat_float(t, a2);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_sub_tint_int(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = sub_tint_int(t, a2);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_sub_bigint_tbigint(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = sub_bigint_tbigint(a1, t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_sub_tbigint_bigint(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = sub_tbigint_bigint(t, a2);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_sub_tnumber_tnumber(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t1 = BlobToTemporal(in1);
-            Temporal *t2 = BlobToTemporal(in2);
-            Temporal *r = sub_tnumber_tnumber(t1, t2);
-            free(t1); free(t2);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_temporal_derivative(DataChunk &args, ExpressionState &, Vector &result) {
+// ===== @ingroup meos_setspan_transf =====
+static void Gen_floatset_ceil(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
         [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = temporal_derivative(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tfloat_exp(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tfloat_exp(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tfloat_ln(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tfloat_ln(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tfloat_log10(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tfloat_log10(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tfloat_sin(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tfloat_sin(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tfloat_cos(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tfloat_cos(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tfloat_tan(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tfloat_tan(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tnumber_abs(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tnumber_abs(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tnumber_trend(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tnumber_trend(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tnumber_angular_difference(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tnumber_angular_difference(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tnumber_delta_value(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tnumber_delta_value(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-
-// ===== @ingroup meos_setspan_inout =====
-static void Gen_set_from_hexwkb(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Set *r = set_from_hexwkb(in.GetString().c_str());
+            Set *s = BlobToSet(in);
+            Set *r = floatset_ceil(s);
+            free(s);
             return SetToBlobN(result, r, mask, idx);
         });
 }
 
-static void Gen_span_from_hexwkb(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_floatset_degrees(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, bool a2) {
+            Set *s = BlobToSet(a);
+            Set *r = floatset_degrees(s, a2);
+            free(s);
+            return SetToBlob(result, r);
+        });
+}
+
+static void Gen_floatset_degrees_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a) {
+            Set *s = BlobToSet(a);
+            Set *r = floatset_degrees(s, false);
+            free(s);
+            return SetToBlob(result, r);
+        });
+}
+
+static void Gen_floatset_floor(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
         [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Span *r = span_from_hexwkb(in.GetString().c_str());
+            Set *s = BlobToSet(in);
+            Set *r = floatset_floor(s);
+            free(s);
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_floatset_radians(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *s = BlobToSet(in);
+            Set *r = floatset_radians(s);
+            free(s);
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_set_round(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *s = BlobToSet(a);
+            Set *r = set_round(s, a2);
+            free(s);
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_set_round_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a) {
+            Set *s = BlobToSet(a);
+            Set *r = set_round(s, 0);
+            free(s);
+            return SetToBlob(result, r);
+        });
+}
+
+static void Gen_textcat_text_textset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a1, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            text *t1 = MakeText(a1);
+            Set *s = BlobToSet(b);
+            Set *r = textcat_text_textset(t1, s);
+            free(t1); free(s);
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_textcat_textset_text(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *s = BlobToSet(a);
+            text *t2 = MakeText(a2);
+            Set *r = textcat_textset_text(s, t2);
+            free(t2); free(s);
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_textset_initcap(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *s = BlobToSet(in);
+            Set *r = textset_initcap(s);
+            free(s);
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_textset_lower(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *s = BlobToSet(in);
+            Set *r = textset_lower(s);
+            free(s);
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_textset_upper(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *s = BlobToSet(in);
+            Set *r = textset_upper(s);
+            free(s);
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_bigintspan_expand(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *s = BlobToSpan(in);
+            Span *r = bigintspan_expand(s, a2);
+            free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanToBlob(result, r);
         });
 }
 
-static void Gen_spanset_from_hexwkb(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_floatspan_expand(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *s = BlobToSpan(in);
+            Span *r = floatspan_expand(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanToBlob(result, r);
+        });
+}
+
+static void Gen_intspan_expand(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *s = BlobToSpan(in);
+            Span *r = intspan_expand(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanToBlob(result, r);
+        });
+}
+
+static void Gen_floatspan_ceil(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
         [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            SpanSet *r = spanset_from_hexwkb(in.GetString().c_str());
+            Span *s = BlobToSpan(in);
+            Span *r = floatspan_ceil(s);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanToBlob(result, r);
+        });
+}
+
+static void Gen_floatspan_degrees(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, bool a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *s = BlobToSpan(in);
+            Span *r = floatspan_degrees(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanToBlob(result, r);
+        });
+}
+
+static void Gen_floatspan_degrees_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a) {
+            Span *s = BlobToSpan(a);
+            Span *r = floatspan_degrees(s, false);
+            free(s);
+            return SpanToBlob(result, r);
+        });
+}
+
+static void Gen_floatspan_floor(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *s = BlobToSpan(in);
+            Span *r = floatspan_floor(s);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanToBlob(result, r);
+        });
+}
+
+static void Gen_floatspan_radians(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *s = BlobToSpan(in);
+            Span *r = floatspan_radians(s);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanToBlob(result, r);
+        });
+}
+
+static void Gen_floatspan_round(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *s = BlobToSpan(in);
+            Span *r = floatspan_round(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanToBlob(result, r);
+        });
+}
+
+static void Gen_floatspan_round_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a) {
+            Span *s = BlobToSpan(a);
+            Span *r = floatspan_round(s, 0);
+            free(s);
+            return SpanToBlob(result, r);
+        });
+}
+
+static void Gen_floatspanset_ceil(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            SpanSet *s = BlobToSpanSet(in);
+            SpanSet *r = floatspanset_ceil(s);
+            free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
         });
 }
 
-static void Gen_bigintset_out(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_floatspanset_floor(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Set *s = BlobToSet(in);
-            char * r = bigintset_out(s);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_dateset_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Set *s = BlobToSet(in);
-            char * r = dateset_out(s);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_floatset_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, int32_t a2) {
-            Set *s = BlobToSet(a);
-            char *r = floatset_out(s, a2);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_floatset_out_d(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t a) {
-            Set *s = BlobToSet(a);
-            char *r = floatset_out(s, 15);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_intset_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Set *s = BlobToSet(in);
-            char * r = intset_out(s);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_textset_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Set *s = BlobToSet(in);
-            char * r = textset_out(s);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_tstzset_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Set *s = BlobToSet(in);
-            char * r = tstzset_out(s);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_bigintspan_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Span *s = BlobToSpan(in);
-            char * r = bigintspan_out(s);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_datespan_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Span *s = BlobToSpan(in);
-            char * r = datespan_out(s);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_floatspan_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, int32_t a2) {
-            Span *s = BlobToSpan(a);
-            char *r = floatspan_out(s, a2);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_floatspan_out_d(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t a) {
-            Span *s = BlobToSpan(a);
-            char *r = floatspan_out(s, 15);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_intspan_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Span *s = BlobToSpan(in);
-            char * r = intspan_out(s);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_tstzspan_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Span *s = BlobToSpan(in);
-            char * r = tstzspan_out(s);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_bigintspanset_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s = BlobToSpanSet(in);
-            char * r = bigintspanset_out(s);
+            SpanSet *r = floatspanset_floor(s);
             free(s);
-            return TakeCString(result, r);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
         });
 }
 
-static void Gen_datespanset_out(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_floatspanset_degrees(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
+    BinaryExecutor::ExecuteWithNulls<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, bool a2, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s = BlobToSpanSet(in);
-            char * r = datespanset_out(s);
+            SpanSet *r = floatspanset_degrees(s, a2);
             free(s);
-            return TakeCString(result, r);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
         });
 }
 
-static void Gen_floatspanset_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, int32_t a2) {
-            SpanSet *s = BlobToSpanSet(a);
-            char *r = floatspanset_out(s, a2);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_floatspanset_out_d(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_floatspanset_degrees_d(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
         [&](string_t a) {
             SpanSet *s = BlobToSpanSet(a);
-            char *r = floatspanset_out(s, 15);
+            SpanSet *r = floatspanset_degrees(s, false);
             free(s);
-            return TakeCString(result, r);
+            return SpanSetToBlob(result, r);
         });
 }
 
-static void Gen_intspanset_out(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_floatspanset_radians(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            SpanSet *s = BlobToSpanSet(in);
+            SpanSet *r = floatspanset_radians(s);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
+        });
+}
+
+static void Gen_floatspanset_round(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            SpanSet *s = BlobToSpanSet(in);
+            SpanSet *r = floatspanset_round(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
+        });
+}
+
+static void Gen_floatspanset_round_d(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            SpanSet *s = BlobToSpanSet(in);
-            char * r = intspanset_out(s);
+        [&](string_t a) {
+            SpanSet *s = BlobToSpanSet(a);
+            SpanSet *r = floatspanset_round(s, 0);
             free(s);
-            return TakeCString(result, r);
+            return SpanSetToBlob(result, r);
         });
 }
 
-static void Gen_tstzspanset_out(DataChunk &args, ExpressionState &, Vector &result) {
+
+// ===== @ingroup meos_temporal_analytics_similarity =====
+static void Gen_temporal_dyntimewarp_distance(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            SpanSet *s = BlobToSpanSet(in);
-            char * r = tstzspanset_out(s);
-            free(s);
-            return TakeCString(result, r);
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> double {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            double r = temporal_dyntimewarp_distance(t1, t2);
+            free(t1); free(t2);
+            if (r == DBL_MAX) { mask.SetInvalid(idx); return double(); }
+            return (double) r;
         });
 }
 
-
-// ===== @ingroup meos_temporal_conversion =====
-static void Gen_tbool_to_tint(DataChunk &args, ExpressionState &, Vector &result) {
+struct PathBind_temporal_dyntimewarp_path : public TableFunctionData { string_t a, b; };
+struct PathState_temporal_dyntimewarp_path : public GlobalTableFunctionState {
+    idx_t idx = 0;
+    std::vector<int32_t> col0;
+    std::vector<int32_t> col1;
+};
+static unique_ptr<FunctionData> PathBindFn_temporal_dyntimewarp_path(ClientContext &, TableFunctionBindInput &input,
+        vector<LogicalType> &return_types, vector<string> &names) {
+    if (input.inputs.size() != 2 || input.inputs[0].IsNull() || input.inputs[1].IsNull())
+        throw BinderException("dynTimeWarpPath: expects two non-null temporal arguments");
+    auto bind = make_uniq<PathBind_temporal_dyntimewarp_path>();
+    bind->a = StringValue::Get(input.inputs[0]);
+    bind->b = StringValue::Get(input.inputs[1]);
+    return_types = {LogicalType::INTEGER, LogicalType::INTEGER};
+    names = {"i", "j"};
+    return std::move(bind);
+}
+static unique_ptr<GlobalTableFunctionState> PathInit_temporal_dyntimewarp_path(ClientContext &, TableFunctionInitInput &input) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tbool_to_tint(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
+    auto &bind = input.bind_data->Cast<PathBind_temporal_dyntimewarp_path>();
+    auto state = make_uniq<PathState_temporal_dyntimewarp_path>();
+    Temporal *t1 = BlobToTemporal(bind.a);
+    Temporal *t2 = BlobToTemporal(bind.b);
+    int count = 0;
+    Match *path = temporal_dyntimewarp_path(t1, t2, &count);
+    free(t1); free(t2);
+    if (path) {
+            state->col0.reserve(count);
+            state->col1.reserve(count);
+        for (int k = 0; k < count; k++) {
+                state->col0.push_back(path[k].i);
+                state->col1.push_back(path[k].j);
+        }
+        free(path);
+    }
+    return std::move(state);
+}
+static void PathExec_temporal_dyntimewarp_path(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &state = input.global_state->Cast<PathState_temporal_dyntimewarp_path>();
+    idx_t total = state.col0.size();
+    idx_t count = MinValue<idx_t>(STANDARD_VECTOR_SIZE, total - state.idx);
+    auto out0 = FlatVector::GetData<int32_t>(output.data[0]);
+    auto out1 = FlatVector::GetData<int32_t>(output.data[1]);
+    for (idx_t k = 0; k < count; k++) {
+        out0[k] = state.col0[state.idx + k];
+        out1[k] = state.col1[state.idx + k];
+    }
+    state.idx += count;
+    output.SetCardinality(count);
 }
 
-static void Gen_tfloat_to_tint(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_temporal_frechet_distance(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tfloat_to_tint(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> double {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            double r = temporal_frechet_distance(t1, t2);
+            free(t1); free(t2);
+            if (r == DBL_MAX) { mask.SetInvalid(idx); return double(); }
+            return (double) r;
         });
 }
 
-static void Gen_tfloat_to_tbigint(DataChunk &args, ExpressionState &, Vector &result) {
+struct PathBind_temporal_frechet_path : public TableFunctionData { string_t a, b; };
+struct PathState_temporal_frechet_path : public GlobalTableFunctionState {
+    idx_t idx = 0;
+    std::vector<int32_t> col0;
+    std::vector<int32_t> col1;
+};
+static unique_ptr<FunctionData> PathBindFn_temporal_frechet_path(ClientContext &, TableFunctionBindInput &input,
+        vector<LogicalType> &return_types, vector<string> &names) {
+    if (input.inputs.size() != 2 || input.inputs[0].IsNull() || input.inputs[1].IsNull())
+        throw BinderException("frechetDistancePath: expects two non-null temporal arguments");
+    auto bind = make_uniq<PathBind_temporal_frechet_path>();
+    bind->a = StringValue::Get(input.inputs[0]);
+    bind->b = StringValue::Get(input.inputs[1]);
+    return_types = {LogicalType::INTEGER, LogicalType::INTEGER};
+    names = {"i", "j"};
+    return std::move(bind);
+}
+static unique_ptr<GlobalTableFunctionState> PathInit_temporal_frechet_path(ClientContext &, TableFunctionInitInput &input) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tfloat_to_tbigint(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
+    auto &bind = input.bind_data->Cast<PathBind_temporal_frechet_path>();
+    auto state = make_uniq<PathState_temporal_frechet_path>();
+    Temporal *t1 = BlobToTemporal(bind.a);
+    Temporal *t2 = BlobToTemporal(bind.b);
+    int count = 0;
+    Match *path = temporal_frechet_path(t1, t2, &count);
+    free(t1); free(t2);
+    if (path) {
+            state->col0.reserve(count);
+            state->col1.reserve(count);
+        for (int k = 0; k < count; k++) {
+                state->col0.push_back(path[k].i);
+                state->col1.push_back(path[k].j);
+        }
+        free(path);
+    }
+    return std::move(state);
+}
+static void PathExec_temporal_frechet_path(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &state = input.global_state->Cast<PathState_temporal_frechet_path>();
+    idx_t total = state.col0.size();
+    idx_t count = MinValue<idx_t>(STANDARD_VECTOR_SIZE, total - state.idx);
+    auto out0 = FlatVector::GetData<int32_t>(output.data[0]);
+    auto out1 = FlatVector::GetData<int32_t>(output.data[1]);
+    for (idx_t k = 0; k < count; k++) {
+        out0[k] = state.col0[state.idx + k];
+        out1[k] = state.col1[state.idx + k];
+    }
+    state.idx += count;
+    output.SetCardinality(count);
 }
 
-static void Gen_tint_to_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_temporal_hausdorff_distance(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tint_to_tfloat(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> double {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            double r = temporal_hausdorff_distance(t1, t2);
+            free(t1); free(t2);
+            if (r == DBL_MAX) { mask.SetInvalid(idx); return double(); }
+            return (double) r;
         });
 }
 
-static void Gen_tint_to_tbigint(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_temporal_average_hausdorff_distance(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tint_to_tbigint(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> double {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            double r = temporal_average_hausdorff_distance(t1, t2);
+            free(t1); free(t2);
+            if (r == DBL_MAX) { mask.SetInvalid(idx); return double(); }
+            return (double) r;
         });
 }
 
-static void Gen_tbigint_to_tint(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_temporal_lcss_distance(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tbigint_to_tint(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tbigint_to_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tbigint_to_tfloat(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_temporal_to_tstzspan(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Span *r = temporal_to_tstzspan(t);
-            free(t);
-            if (!r) { mask.SetInvalid(idx); return string_t(); }
-            return SpanToBlob(result, r);
-        });
-}
-
-static void Gen_tnumber_to_span(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Span *r = tnumber_to_span(t);
-            free(t);
-            if (!r) { mask.SetInvalid(idx); return string_t(); }
-            return SpanToBlob(result, r);
-        });
-}
-
-static void Gen_tnumber_to_tbox(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            TBox *r = tnumber_to_tbox(t);
-            free(t);
-            if (!r) { mask.SetInvalid(idx); return string_t(); }
-            return TboxToBlob(result, r);
+    TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, double>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t in1, string_t in2, double a2, ValidityMask &mask, idx_t idx) -> double {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            double r = temporal_lcss_distance(t1, t2, a2);
+            free(t1); free(t2);
+            if (r == DBL_MAX) { mask.SetInvalid(idx); return double(); }
+            return (double) r;
         });
 }
 
 
-// ===== @ingroup meos_pointcloud_box_pos =====
-static void Gen_left_tpcbox_tpcbox(DataChunk &args, ExpressionState &, Vector &result) {
+// ===== @ingroup meos_geo_box_pos =====
+static void Gen_above_stbox_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b) {
-            TPCBox *s1 = BlobToTpcbox(a);
-            TPCBox *s2 = BlobToTpcbox(b);
-            bool r = left_tpcbox_tpcbox(s1, s2);
+            STBox *s1 = BlobToStbox(a);
+            STBox *s2 = BlobToStbox(b);
+            bool r = above_stbox_stbox(s1, s2);
             free(s1); free(s2);
             return r;
         });
 }
 
-static void Gen_overleft_tpcbox_tpcbox(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_after_stbox_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b) {
-            TPCBox *s1 = BlobToTpcbox(a);
-            TPCBox *s2 = BlobToTpcbox(b);
-            bool r = overleft_tpcbox_tpcbox(s1, s2);
+            STBox *s1 = BlobToStbox(a);
+            STBox *s2 = BlobToStbox(b);
+            bool r = after_stbox_stbox(s1, s2);
             free(s1); free(s2);
             return r;
         });
 }
 
-static void Gen_right_tpcbox_tpcbox(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_back_stbox_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b) {
-            TPCBox *s1 = BlobToTpcbox(a);
-            TPCBox *s2 = BlobToTpcbox(b);
-            bool r = right_tpcbox_tpcbox(s1, s2);
+            STBox *s1 = BlobToStbox(a);
+            STBox *s2 = BlobToStbox(b);
+            bool r = back_stbox_stbox(s1, s2);
             free(s1); free(s2);
             return r;
         });
 }
 
-static void Gen_overright_tpcbox_tpcbox(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_before_stbox_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b) {
-            TPCBox *s1 = BlobToTpcbox(a);
-            TPCBox *s2 = BlobToTpcbox(b);
-            bool r = overright_tpcbox_tpcbox(s1, s2);
+            STBox *s1 = BlobToStbox(a);
+            STBox *s2 = BlobToStbox(b);
+            bool r = before_stbox_stbox(s1, s2);
             free(s1); free(s2);
             return r;
         });
 }
 
-static void Gen_below_tpcbox_tpcbox(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_below_stbox_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b) {
-            TPCBox *s1 = BlobToTpcbox(a);
-            TPCBox *s2 = BlobToTpcbox(b);
-            bool r = below_tpcbox_tpcbox(s1, s2);
+            STBox *s1 = BlobToStbox(a);
+            STBox *s2 = BlobToStbox(b);
+            bool r = below_stbox_stbox(s1, s2);
             free(s1); free(s2);
             return r;
         });
 }
 
-static void Gen_overbelow_tpcbox_tpcbox(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_front_stbox_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b) {
-            TPCBox *s1 = BlobToTpcbox(a);
-            TPCBox *s2 = BlobToTpcbox(b);
-            bool r = overbelow_tpcbox_tpcbox(s1, s2);
+            STBox *s1 = BlobToStbox(a);
+            STBox *s2 = BlobToStbox(b);
+            bool r = front_stbox_stbox(s1, s2);
             free(s1); free(s2);
             return r;
         });
 }
 
-static void Gen_above_tpcbox_tpcbox(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_left_stbox_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b) {
-            TPCBox *s1 = BlobToTpcbox(a);
-            TPCBox *s2 = BlobToTpcbox(b);
-            bool r = above_tpcbox_tpcbox(s1, s2);
+            STBox *s1 = BlobToStbox(a);
+            STBox *s2 = BlobToStbox(b);
+            bool r = left_stbox_stbox(s1, s2);
             free(s1); free(s2);
             return r;
         });
 }
 
-static void Gen_overabove_tpcbox_tpcbox(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_overabove_stbox_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b) {
-            TPCBox *s1 = BlobToTpcbox(a);
-            TPCBox *s2 = BlobToTpcbox(b);
-            bool r = overabove_tpcbox_tpcbox(s1, s2);
+            STBox *s1 = BlobToStbox(a);
+            STBox *s2 = BlobToStbox(b);
+            bool r = overabove_stbox_stbox(s1, s2);
             free(s1); free(s2);
             return r;
         });
 }
 
-static void Gen_front_tpcbox_tpcbox(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_overafter_stbox_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b) {
-            TPCBox *s1 = BlobToTpcbox(a);
-            TPCBox *s2 = BlobToTpcbox(b);
-            bool r = front_tpcbox_tpcbox(s1, s2);
+            STBox *s1 = BlobToStbox(a);
+            STBox *s2 = BlobToStbox(b);
+            bool r = overafter_stbox_stbox(s1, s2);
             free(s1); free(s2);
             return r;
         });
 }
 
-static void Gen_overfront_tpcbox_tpcbox(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_overback_stbox_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b) {
-            TPCBox *s1 = BlobToTpcbox(a);
-            TPCBox *s2 = BlobToTpcbox(b);
-            bool r = overfront_tpcbox_tpcbox(s1, s2);
+            STBox *s1 = BlobToStbox(a);
+            STBox *s2 = BlobToStbox(b);
+            bool r = overback_stbox_stbox(s1, s2);
             free(s1); free(s2);
             return r;
         });
 }
 
-static void Gen_back_tpcbox_tpcbox(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_overbefore_stbox_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b) {
-            TPCBox *s1 = BlobToTpcbox(a);
-            TPCBox *s2 = BlobToTpcbox(b);
-            bool r = back_tpcbox_tpcbox(s1, s2);
+            STBox *s1 = BlobToStbox(a);
+            STBox *s2 = BlobToStbox(b);
+            bool r = overbefore_stbox_stbox(s1, s2);
             free(s1); free(s2);
             return r;
         });
 }
 
-static void Gen_overback_tpcbox_tpcbox(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_overbelow_stbox_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b) {
-            TPCBox *s1 = BlobToTpcbox(a);
-            TPCBox *s2 = BlobToTpcbox(b);
-            bool r = overback_tpcbox_tpcbox(s1, s2);
+            STBox *s1 = BlobToStbox(a);
+            STBox *s2 = BlobToStbox(b);
+            bool r = overbelow_stbox_stbox(s1, s2);
             free(s1); free(s2);
             return r;
         });
 }
 
-static void Gen_before_tpcbox_tpcbox(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_overfront_stbox_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b) {
-            TPCBox *s1 = BlobToTpcbox(a);
-            TPCBox *s2 = BlobToTpcbox(b);
-            bool r = before_tpcbox_tpcbox(s1, s2);
+            STBox *s1 = BlobToStbox(a);
+            STBox *s2 = BlobToStbox(b);
+            bool r = overfront_stbox_stbox(s1, s2);
             free(s1); free(s2);
             return r;
         });
 }
 
-static void Gen_overbefore_tpcbox_tpcbox(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_overleft_stbox_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b) {
-            TPCBox *s1 = BlobToTpcbox(a);
-            TPCBox *s2 = BlobToTpcbox(b);
-            bool r = overbefore_tpcbox_tpcbox(s1, s2);
+            STBox *s1 = BlobToStbox(a);
+            STBox *s2 = BlobToStbox(b);
+            bool r = overleft_stbox_stbox(s1, s2);
             free(s1); free(s2);
             return r;
         });
 }
 
-static void Gen_after_tpcbox_tpcbox(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_overright_stbox_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b) {
-            TPCBox *s1 = BlobToTpcbox(a);
-            TPCBox *s2 = BlobToTpcbox(b);
-            bool r = after_tpcbox_tpcbox(s1, s2);
+            STBox *s1 = BlobToStbox(a);
+            STBox *s2 = BlobToStbox(b);
+            bool r = overright_stbox_stbox(s1, s2);
             free(s1); free(s2);
             return r;
         });
 }
 
-static void Gen_overafter_tpcbox_tpcbox(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_right_stbox_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b) {
-            TPCBox *s1 = BlobToTpcbox(a);
-            TPCBox *s2 = BlobToTpcbox(b);
-            bool r = overafter_tpcbox_tpcbox(s1, s2);
+            STBox *s1 = BlobToStbox(a);
+            STBox *s2 = BlobToStbox(b);
+            bool r = right_stbox_stbox(s1, s2);
             free(s1); free(s2);
             return r;
         });
@@ -2649,373 +3026,108 @@ static void Gen_jsonbset_pretty(DataChunk &args, ExpressionState &, Vector &resu
 }
 
 
-// ===== @ingroup meos_geo_accessor =====
-static void Gen_tgeo_centroid(DataChunk &args, ExpressionState &, Vector &result) {
+// ===== @ingroup meos_json_comp_ever =====
+static void Gen_always_eq_tjsonb_jsonb(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tgeo_centroid(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
+            Jsonb *a2p = BlobToJsonb(a2);
+            int32_t r = always_eq_tjsonb_jsonb(t, a2p);
+            free(a2p); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
         });
 }
 
-static void Gen_tpoint_angular_difference(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_always_eq_tjsonb_tjsonb(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            int32_t r = always_eq_tjsonb_tjsonb(t1, t2);
+            free(t1); free(t2);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
+        });
+}
+
+static void Gen_always_ne_tjsonb_jsonb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tpoint_angular_difference(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
+            Jsonb *a2p = BlobToJsonb(a2);
+            int32_t r = always_ne_tjsonb_jsonb(t, a2p);
+            free(a2p); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
         });
 }
 
-static void Gen_tpoint_azimuth(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_always_ne_tjsonb_tjsonb(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            int32_t r = always_ne_tjsonb_tjsonb(t1, t2);
+            free(t1); free(t2);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
+        });
+}
+
+static void Gen_ever_eq_tjsonb_jsonb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tpoint_azimuth(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
+            Jsonb *a2p = BlobToJsonb(a2);
+            int32_t r = ever_eq_tjsonb_jsonb(t, a2p);
+            free(a2p); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
         });
 }
 
-static void Gen_tpoint_cumulative_length(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_ever_eq_tjsonb_tjsonb(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            int32_t r = ever_eq_tjsonb_tjsonb(t1, t2);
+            free(t1); free(t2);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
+        });
+}
+
+static void Gen_ever_ne_tjsonb_jsonb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tpoint_cumulative_length(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
+            Jsonb *a2p = BlobToJsonb(a2);
+            int32_t r = ever_ne_tjsonb_jsonb(t, a2p);
+            free(a2p); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
         });
 }
 
-static void Gen_tpoint_get_x(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_ever_ne_tjsonb_tjsonb(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tpoint_get_x(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tpoint_get_y(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tpoint_get_y(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tpoint_get_z(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tpoint_get_z(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tpoint_is_simple(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, bool>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Temporal *t = BlobToTemporal(in);
-            bool r = tpoint_is_simple(t);
-            free(t);
-            return (bool) r;
-        });
-}
-
-static void Gen_tpoint_length(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, double>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> double {
-            Temporal *t = BlobToTemporal(in);
-            double r = tpoint_length(t);
-            free(t);
-            if (r == DBL_MAX) { mask.SetInvalid(idx); return double(); }
-            return (double) r;
-        });
-}
-
-static void Gen_tpoint_speed(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tpoint_speed(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-
-// ===== @ingroup meos_cellindex =====
-static void Gen_tcellindex_get_resolution(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tcellindex_get_resolution(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tcellindex_is_valid_cell(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tcellindex_is_valid_cell(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tcellindex_cell_to_parent(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tcellindex_cell_to_parent(t, a2);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tcellindex_cell_to_point(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tcellindex_cell_to_point(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tcellindex_cell_to_boundary(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tcellindex_cell_to_boundary(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tcellindex_cell_area(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tcellindex_cell_area(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_tquadbin_cell_to_quadkey(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = tquadbin_cell_to_quadkey(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-
-// ===== @ingroup meos_box_comp =====
-static void Gen_tbox_hash(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, uint32_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            TBox *s = BlobToTbox(in);
-            uint32_t r = tbox_hash(s);
-            free(s);
-            return r;
-        });
-}
-
-static void Gen_tbox_hash_extended(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, uint64_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, uint64_t a2) {
-            TBox *s = BlobToTbox(in);
-            uint64_t r = tbox_hash_extended(s, a2);
-            free(s);
-            return r;
-        });
-}
-
-static void Gen_tbox_eq(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
-            TBox *s1 = BlobToTbox(a);
-            TBox *s2 = BlobToTbox(b);
-            bool r = tbox_eq(s1, s2);
-            free(s1); free(s2);
-            return r;
-        });
-}
-
-static void Gen_tbox_ge(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
-            TBox *s1 = BlobToTbox(a);
-            TBox *s2 = BlobToTbox(b);
-            bool r = tbox_ge(s1, s2);
-            free(s1); free(s2);
-            return r;
-        });
-}
-
-static void Gen_tbox_gt(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
-            TBox *s1 = BlobToTbox(a);
-            TBox *s2 = BlobToTbox(b);
-            bool r = tbox_gt(s1, s2);
-            free(s1); free(s2);
-            return r;
-        });
-}
-
-static void Gen_tbox_le(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
-            TBox *s1 = BlobToTbox(a);
-            TBox *s2 = BlobToTbox(b);
-            bool r = tbox_le(s1, s2);
-            free(s1); free(s2);
-            return r;
-        });
-}
-
-static void Gen_tbox_lt(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
-            TBox *s1 = BlobToTbox(a);
-            TBox *s2 = BlobToTbox(b);
-            bool r = tbox_lt(s1, s2);
-            free(s1); free(s2);
-            return r;
-        });
-}
-
-static void Gen_tbox_ne(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
-            TBox *s1 = BlobToTbox(a);
-            TBox *s2 = BlobToTbox(b);
-            bool r = tbox_ne(s1, s2);
-            free(s1); free(s2);
-            return r;
-        });
-}
-
-
-// ===== @ingroup meos_quadbin_base_comp =====
-static void Gen_quadbin_eq(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, int64_t a1) -> bool {
-            bool r = quadbin_eq(static_cast<uint64_t>(a0), static_cast<uint64_t>(a1));
-            return (bool) r;
-        });
-}
-
-static void Gen_quadbin_ne(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, int64_t a1) -> bool {
-            bool r = quadbin_ne(static_cast<uint64_t>(a0), static_cast<uint64_t>(a1));
-            return (bool) r;
-        });
-}
-
-static void Gen_quadbin_lt(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, int64_t a1) -> bool {
-            bool r = quadbin_lt(static_cast<uint64_t>(a0), static_cast<uint64_t>(a1));
-            return (bool) r;
-        });
-}
-
-static void Gen_quadbin_le(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, int64_t a1) -> bool {
-            bool r = quadbin_le(static_cast<uint64_t>(a0), static_cast<uint64_t>(a1));
-            return (bool) r;
-        });
-}
-
-static void Gen_quadbin_gt(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, int64_t a1) -> bool {
-            bool r = quadbin_gt(static_cast<uint64_t>(a0), static_cast<uint64_t>(a1));
-            return (bool) r;
-        });
-}
-
-static void Gen_quadbin_ge(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, int64_t a1) -> bool {
-            bool r = quadbin_ge(static_cast<uint64_t>(a0), static_cast<uint64_t>(a1));
-            return (bool) r;
-        });
-}
-
-static void Gen_quadbin_cmp(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, int64_t, int32_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, int64_t a1) -> int32_t {
-            int32_t r = quadbin_cmp(static_cast<uint64_t>(a0), static_cast<uint64_t>(a1));
-            return (int32_t) r;
-        });
-}
-
-static void Gen_quadbin_hash(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<int64_t, uint32_t>(args.data[0], result, args.size(),
-        [&](int64_t a0) -> uint32_t {
-            uint32_t r = quadbin_hash(static_cast<uint64_t>(a0));
-            return r;
-        });
-}
-
-static void Gen_quadbin_hash_extended(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, uint64_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, uint64_t a1) -> uint64_t {
-            uint64_t r = quadbin_hash_extended(static_cast<uint64_t>(a0), a1);
-            return r;
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            int32_t r = ever_ne_tjsonb_tjsonb(t1, t2);
+            free(t1); free(t2);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
         });
 }
 
@@ -3032,12 +3144,34 @@ static void Gen_temporal_simplify_dp(DataChunk &args, ExpressionState &, Vector 
         });
 }
 
+static void Gen_temporal_simplify_dp_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = temporal_simplify_dp(t, a2, true);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
 static void Gen_temporal_simplify_max_dist(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     TernaryExecutor::ExecuteWithNulls<string_t, double, bool, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t in, double a2, bool a3, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = temporal_simplify_max_dist(t, a2, a3);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_simplify_max_dist_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = temporal_simplify_max_dist(t, a2, true);
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -3055,125 +3189,342 @@ static void Gen_temporal_simplify_min_dist(DataChunk &args, ExpressionState &, V
 }
 
 
-// ===== @ingroup meos_rgeo_comp_temp =====
-static void Gen_teq_geo_trgeometry(DataChunk &args, ExpressionState &, Vector &result) {
+// ===== @ingroup meos_temporal_bool =====
+static void Gen_tand_bool_tbool(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
-            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
-                GSERIALIZED *gs_geog = geom_to_geog(gs);
-                free(gs); gs = gs_geog;
-            }
-            Temporal *r = teq_geo_trgeometry(gs, t);
-            free(t); free(gs);
+    BinaryExecutor::ExecuteWithNulls<bool, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](bool a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tand_bool_tbool(a1, t);
+            free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
-static void Gen_teq_trgeometry_geo(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_tand_tbool_bool(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
-            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
-                GSERIALIZED *gs_geog = geom_to_geog(gs);
-                free(gs); gs = gs_geog;
-            }
-            Temporal *r = teq_trgeometry_geo(t, gs);
-            free(t); free(gs);
+    BinaryExecutor::ExecuteWithNulls<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, bool a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tand_tbool_bool(t, a2);
+            free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
-static void Gen_tne_geo_trgeometry(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_tand_tbool_tbool(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
-            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
-                GSERIALIZED *gs_geog = geom_to_geog(gs);
-                free(gs); gs = gs_geog;
-            }
-            Temporal *r = tne_geo_trgeometry(gs, t);
-            free(t); free(gs);
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            Temporal *r = tand_tbool_tbool(t1, t2);
+            free(t1); free(t2);
             return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
-static void Gen_tne_trgeometry_geo(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_tnot_tbool(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tnot_tbool(t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tor_bool_tbool(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<bool, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](bool a1, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tor_bool_tbool(a1, t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tor_tbool_bool(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, bool a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tor_tbool_bool(t, a2);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tor_tbool_tbool(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
-            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
-                GSERIALIZED *gs_geog = geom_to_geog(gs);
-                free(gs); gs = gs_geog;
-            }
-            Temporal *r = tne_trgeometry_geo(t, gs);
-            free(t); free(gs);
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            Temporal *r = tor_tbool_tbool(t1, t2);
+            free(t1); free(t2);
             return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 
-// ===== @ingroup meos_pointcloud_box_accessor =====
-static void Gen_tpcbox_hasx(DataChunk &args, ExpressionState &, Vector &result) {
+// ===== @ingroup meos_s2cell_base_comp =====
+static void Gen_s2cell_eq(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, bool>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            TPCBox *v = BlobToTpcbox(in);
-            bool r = tpcbox_hasx(v);
-            free(v);
+    BinaryExecutor::Execute<int64_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](int64_t a0, int64_t a1) -> bool {
+            bool r = s2cell_eq(static_cast<uint64_t>(a0), static_cast<uint64_t>(a1));
+            return (bool) r;
+        });
+}
+
+static void Gen_s2cell_ne(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<int64_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](int64_t a0, int64_t a1) -> bool {
+            bool r = s2cell_ne(static_cast<uint64_t>(a0), static_cast<uint64_t>(a1));
+            return (bool) r;
+        });
+}
+
+static void Gen_s2cell_lt(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<int64_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](int64_t a0, int64_t a1) -> bool {
+            bool r = s2cell_lt(static_cast<uint64_t>(a0), static_cast<uint64_t>(a1));
+            return (bool) r;
+        });
+}
+
+static void Gen_s2cell_le(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<int64_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](int64_t a0, int64_t a1) -> bool {
+            bool r = s2cell_le(static_cast<uint64_t>(a0), static_cast<uint64_t>(a1));
+            return (bool) r;
+        });
+}
+
+static void Gen_s2cell_gt(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<int64_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](int64_t a0, int64_t a1) -> bool {
+            bool r = s2cell_gt(static_cast<uint64_t>(a0), static_cast<uint64_t>(a1));
+            return (bool) r;
+        });
+}
+
+static void Gen_s2cell_ge(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<int64_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](int64_t a0, int64_t a1) -> bool {
+            bool r = s2cell_ge(static_cast<uint64_t>(a0), static_cast<uint64_t>(a1));
+            return (bool) r;
+        });
+}
+
+static void Gen_s2cell_cmp(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<int64_t, int64_t, int32_t>(args.data[0], args.data[1], result, args.size(),
+        [&](int64_t a0, int64_t a1) -> int32_t {
+            int32_t r = s2cell_cmp(static_cast<uint64_t>(a0), static_cast<uint64_t>(a1));
+            return (int32_t) r;
+        });
+}
+
+static void Gen_s2cell_hash(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<int64_t, uint32_t>(args.data[0], result, args.size(),
+        [&](int64_t a0) -> uint32_t {
+            uint32_t r = s2cell_hash(static_cast<uint64_t>(a0));
             return r;
         });
 }
 
-static void Gen_tpcbox_hasz(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_s2cell_hash_extended(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, bool>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            TPCBox *v = BlobToTpcbox(in);
-            bool r = tpcbox_hasz(v);
-            free(v);
+    BinaryExecutor::Execute<int64_t, uint64_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
+        [&](int64_t a0, uint64_t a1) -> uint64_t {
+            uint64_t r = s2cell_hash_extended(static_cast<uint64_t>(a0), a1);
             return r;
         });
 }
 
-static void Gen_tpcbox_hast(DataChunk &args, ExpressionState &, Vector &result) {
+
+// ===== @ingroup meos_pointcloud_box_comp =====
+static void Gen_tpcbox_eq(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, bool>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            TPCBox *v = BlobToTpcbox(in);
-            bool r = tpcbox_hast(v);
-            free(v);
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            TPCBox *s1 = BlobToTpcbox(a);
+            TPCBox *s2 = BlobToTpcbox(b);
+            bool r = tpcbox_eq(s1, s2);
+            free(s1); free(s2);
             return r;
         });
 }
 
-static void Gen_tpcbox_srid(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_tpcbox_ne(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, int32_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            TPCBox *v = BlobToTpcbox(in);
-            int32_t r = tpcbox_srid(v);
-            free(v);
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            TPCBox *s1 = BlobToTpcbox(a);
+            TPCBox *s2 = BlobToTpcbox(b);
+            bool r = tpcbox_ne(s1, s2);
+            free(s1); free(s2);
             return r;
         });
 }
 
-static void Gen_tpcbox_pcid(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_tpcbox_lt(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, uint32_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            TPCBox *v = BlobToTpcbox(in);
-            uint32_t r = tpcbox_pcid(v);
-            free(v);
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            TPCBox *s1 = BlobToTpcbox(a);
+            TPCBox *s2 = BlobToTpcbox(b);
+            bool r = tpcbox_lt(s1, s2);
+            free(s1); free(s2);
             return r;
+        });
+}
+
+static void Gen_tpcbox_le(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            TPCBox *s1 = BlobToTpcbox(a);
+            TPCBox *s2 = BlobToTpcbox(b);
+            bool r = tpcbox_le(s1, s2);
+            free(s1); free(s2);
+            return r;
+        });
+}
+
+static void Gen_tpcbox_gt(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            TPCBox *s1 = BlobToTpcbox(a);
+            TPCBox *s2 = BlobToTpcbox(b);
+            bool r = tpcbox_gt(s1, s2);
+            free(s1); free(s2);
+            return r;
+        });
+}
+
+static void Gen_tpcbox_ge(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            TPCBox *s1 = BlobToTpcbox(a);
+            TPCBox *s2 = BlobToTpcbox(b);
+            bool r = tpcbox_ge(s1, s2);
+            free(s1); free(s2);
+            return r;
+        });
+}
+
+
+// ===== @ingroup meos_pointcloud_restrict =====
+static void Gen_tpcpoint_at_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Pcpoint *a2p = BlobToPcpoint(a2);
+            Temporal *r = tpcpoint_at_value(t, a2p);
+            free(a2p); free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tpcpoint_minus_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Pcpoint *a2p = BlobToPcpoint(a2);
+            Temporal *r = tpcpoint_minus_value(t, a2p);
+            free(a2p); free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tpcpatch_at_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Pcpatch *a2p = BlobToPcpatch(a2);
+            Temporal *r = tpcpatch_at_value(t, a2p);
+            free(a2p); free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tpcpatch_minus_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Pcpatch *a2p = BlobToPcpatch(a2);
+            Temporal *r = tpcpatch_minus_value(t, a2p);
+            free(a2p); free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+
+// ===== @ingroup meos_json_accessor =====
+static void Gen_tjsonb_end_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Jsonb * r = tjsonb_end_value(t);
+            free(t);
+            return JsonbToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tjsonb_start_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Jsonb * r = tjsonb_start_value(t);
+            free(t);
+            return JsonbToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tjsonb_value_at_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto rc = args.size();
+    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, rc,
+        [&](string_t in, timestamp_tz_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Jsonb *o = NULL;
+            bool ok = tjsonb_value_at_timestamptz(t, DuckDBToMeosTimestamp(a2).value, true, &o);
+            free(t);
+            if (! ok) { mask.SetInvalid(idx); return string_t(); }
+            return JsonbToBlob(result, o);
+        });
+}
+
+static void Gen_tjsonb_value_n(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto rc = args.size();
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, rc,
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Jsonb *o = NULL;
+            bool ok = tjsonb_value_n(t, a2, &o);
+            free(t);
+            if (! ok) { mask.SetInvalid(idx); return string_t(); }
+            return JsonbToBlob(result, o);
         });
 }
 
@@ -3224,136 +3575,108 @@ static void Gen_pose_as_text_d(DataChunk &args, ExpressionState &, Vector &resul
 }
 
 
-// ===== @ingroup meos_rgeo_conversion =====
-static void Gen_trgeometry_to_tpose(DataChunk &args, ExpressionState &, Vector &result) {
+// ===== @ingroup meos_npoint_conversion =====
+static void Gen_tgeompoint_to_tnpoint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
         [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = trgeometry_to_tpose(t);
+            Temporal *r = tgeompoint_to_tnpoint(t);
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
-static void Gen_trgeometry_to_tgeompoint(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_tnpoint_to_tgeompoint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
         [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = trgeometry_to_tgeompoint(t);
-            free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_trgeometry_to_tgeometry(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Temporal *r = trgeometry_to_tgeometry(t);
+            Temporal *r = tnpoint_to_tgeompoint(t);
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 
-// ===== @ingroup meos_h3_base_accessor =====
-static void Gen_h3_is_valid_cell(DataChunk &args, ExpressionState &, Vector &result) {
+// ===== @ingroup meos_posechain_comp_temp =====
+static void Gen_teq_tposechain_posechain(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<int64_t, bool>(args.data[0], result, args.size(),
-        [&](int64_t a0) -> bool {
-            bool r = h3_is_valid_cell(static_cast<uint64_t>(a0));
-            return (bool) r;
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            PoseChain *a2p = BlobToPosechain(a2);
+            Temporal *r = teq_tposechain_posechain(t, a2p);
+            free(a2p); free(t);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
-static void Gen_h3_is_valid_directed_edge(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_tne_tposechain_posechain(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<int64_t, bool>(args.data[0], result, args.size(),
-        [&](int64_t a0) -> bool {
-            bool r = h3_is_valid_directed_edge(static_cast<uint64_t>(a0));
-            return (bool) r;
-        });
-}
-
-static void Gen_h3_is_valid_vertex(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<int64_t, bool>(args.data[0], result, args.size(),
-        [&](int64_t a0) -> bool {
-            bool r = h3_is_valid_vertex(static_cast<uint64_t>(a0));
-            return (bool) r;
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            PoseChain *a2p = BlobToPosechain(a2);
+            Temporal *r = tne_tposechain_posechain(t, a2p);
+            free(a2p); free(t);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
 
-// ===== @ingroup meos_quadbin_set_accessor =====
-static void Gen_quadbinset_values(DataChunk &args, ExpressionState &, Vector &result) {
+// ===== @ingroup meos_pose_conversion =====
+static void Gen_tpose_make(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    auto &in_vec = args.data[0];
-    idx_t row_count = args.size();
-    in_vec.Flatten(row_count);
-    auto &result_validity = FlatVector::Validity(result);
-    auto list_entries = FlatVector::GetData<list_entry_t>(result);
-    idx_t off = 0;
-    for (idx_t i = 0; i < row_count; ++i) {
-        if (in_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
-        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
-        Set *in = BlobToSet(blob);
-        int count = 0;
-        uint64_t * arr = quadbinset_values(in, &count);
-        free(in);
-        int n = (arr && count > 0) ? count : 0;
-        ListVector::Reserve(result, off + n);
-        ListVector::SetListSize(result, off + n);
-        list_entries[i] = list_entry_t{off, (uint64_t) n};
-        if (n > 0) {
-            auto &child_vector = ListVector::GetEntry(result);
-            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
-            auto *cd = FlatVector::GetData<int64_t>(child_vector);
-            for (int j = 0; j < n; ++j) { cd[off + j] = (int64_t) arr[j]; }
-            off += n;
-        }
-        if (arr) free(arr);
-        result_validity.SetValid(i);
-    }
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            Temporal *r = tpose_make(t1, t2);
+            free(t1); free(t2);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tpose_to_tpoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tpose_to_tpoint(t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
 }
 
 
-// ===== @ingroup meos_npoint_base_srid =====
-static void Gen_npoint_srid(DataChunk &args, ExpressionState &, Vector &result) {
+// ===== @ingroup meos_rgeo_spatialfuncs =====
+static void Gen_trgeometry_body_point_trajectory(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            Temporal *r = trgeometry_body_point_trajectory(t, gs);
+            free(t); free(gs);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+
+// ===== @ingroup meos_posechain_accessor =====
+static void Gen_tposechain_num_poses(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, int32_t>(args.data[0], result, args.size(),
         [&](string_t in) {
-            Npoint *v = BlobToNpoint(in);
-            int32_t r = npoint_srid(v);
-            free(v);
-            return r;
-        });
-}
-
-static void Gen_nsegment_srid(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, int32_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Nsegment *v = BlobToNsegment(in);
-            int32_t r = nsegment_srid(v);
-            free(v);
-            return r;
-        });
-}
-
-
-// ===== @ingroup meos_cbuffer_transf =====
-static void Gen_tcbuffer_expand(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tcbuffer_expand(t, a2);
+            int32_t r = tposechain_num_poses(t);
             free(t);
-            return TemporalToBlobN(result, r, mask, idx);
+            return (int32_t) r;
         });
 }
 
@@ -3371,19 +3694,330 @@ static void Gen_quadbinset_out(DataChunk &args, ExpressionState &, Vector &resul
 }
 
 
-// ===== @ingroup meos_s2cell_inout =====
-static void Gen_ts2cell_out(DataChunk &args, ExpressionState &, Vector &result) {
+// ===== @ingroup meos_h3_inout =====
+static void Gen_th3index_out(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
         [&](string_t in) {
             Temporal *t = BlobToTemporal(in);
-            char * r = ts2cell_out(t);
+            char * r = th3index_out(t);
             free(t);
             return TakeCString(result, r);
         });
 }
 
 } // anonymous
+
+void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atValue", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_tbool_at_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValue", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_tbool_minus_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TemporalTypes::tint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tint(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TemporalTypes::tbigint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tbigint(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TemporalTypes::tbool(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TemporalTypes::tfloat(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TemporalTypes::ttext(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::ttext(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TgeompointType::tgeompoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TgeompointType::tgeompoint(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TgeogpointType::tgeogpoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TgeogpointType::tgeogpoint(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TGeometryTypes::tgeometry(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TGeometryTypes::tgeometry(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TGeographyTypes::tgeography(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TGeographyTypes::tgeography(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {CbufferTypes::tcbuffer(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, CbufferTypes::tcbuffer(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {H3indexTypes::th3index(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, H3indexTypes::th3index(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {QuadbinTypes::tquadbin(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, QuadbinTypes::tquadbin(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {S2cellTypes::ts2cell(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, S2cellTypes::ts2cell(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TJsonbTypes::tjsonb(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TJsonbTypes::tjsonb(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TPcpointTypes::tpcpoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TPcpointTypes::tpcpoint(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TPcpatchTypes::tpcpatch(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TPcpatchTypes::tpcpatch(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {NpointTypes::tnpoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, NpointTypes::tnpoint(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {PoseTypes::tpose(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, PoseTypes::tpose(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TrgeometryTypes::trgeometry(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TrgeometryTypes::trgeometry(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {PosechainTypes::tposechain(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, PosechainTypes::tposechain(), Gen_temporal_after_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TemporalTypes::tint(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tint(), Gen_temporal_after_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TemporalTypes::tbigint(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tbigint(), Gen_temporal_after_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TemporalTypes::tbool(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tbool(), Gen_temporal_after_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TemporalTypes::tfloat(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tfloat(), Gen_temporal_after_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TemporalTypes::ttext(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::ttext(), Gen_temporal_after_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TgeompointType::tgeompoint(), LogicalType::TIMESTAMP_TZ}, TgeompointType::tgeompoint(), Gen_temporal_after_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TgeogpointType::tgeogpoint(), LogicalType::TIMESTAMP_TZ}, TgeogpointType::tgeogpoint(), Gen_temporal_after_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TGeometryTypes::tgeometry(), LogicalType::TIMESTAMP_TZ}, TGeometryTypes::tgeometry(), Gen_temporal_after_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TGeographyTypes::tgeography(), LogicalType::TIMESTAMP_TZ}, TGeographyTypes::tgeography(), Gen_temporal_after_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {CbufferTypes::tcbuffer(), LogicalType::TIMESTAMP_TZ}, CbufferTypes::tcbuffer(), Gen_temporal_after_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {H3indexTypes::th3index(), LogicalType::TIMESTAMP_TZ}, H3indexTypes::th3index(), Gen_temporal_after_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {QuadbinTypes::tquadbin(), LogicalType::TIMESTAMP_TZ}, QuadbinTypes::tquadbin(), Gen_temporal_after_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {S2cellTypes::ts2cell(), LogicalType::TIMESTAMP_TZ}, S2cellTypes::ts2cell(), Gen_temporal_after_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TJsonbTypes::tjsonb(), LogicalType::TIMESTAMP_TZ}, TJsonbTypes::tjsonb(), Gen_temporal_after_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TPcpointTypes::tpcpoint(), LogicalType::TIMESTAMP_TZ}, TPcpointTypes::tpcpoint(), Gen_temporal_after_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TPcpatchTypes::tpcpatch(), LogicalType::TIMESTAMP_TZ}, TPcpatchTypes::tpcpatch(), Gen_temporal_after_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {NpointTypes::tnpoint(), LogicalType::TIMESTAMP_TZ}, NpointTypes::tnpoint(), Gen_temporal_after_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {PoseTypes::tpose(), LogicalType::TIMESTAMP_TZ}, PoseTypes::tpose(), Gen_temporal_after_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {TrgeometryTypes::trgeometry(), LogicalType::TIMESTAMP_TZ}, TrgeometryTypes::trgeometry(), Gen_temporal_after_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("afterTimestamp", {PosechainTypes::tposechain(), LogicalType::TIMESTAMP_TZ}, PosechainTypes::tposechain(), Gen_temporal_after_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atMax", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_at_max));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atMax", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_at_max));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atMax", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_at_max));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atMax", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_temporal_at_max));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atMin", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_at_min));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atMin", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_at_min));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atMin", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_at_min));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atMin", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_temporal_at_min));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tint(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tint(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tbigint(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tbigint(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tbool(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tbool(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tfloat(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tfloat(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::ttext(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::ttext(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TgeompointType::tgeompoint(), LogicalType::TIMESTAMP_TZ}, TgeompointType::tgeompoint(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TgeogpointType::tgeogpoint(), LogicalType::TIMESTAMP_TZ}, TgeogpointType::tgeogpoint(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TGeometryTypes::tgeometry(), LogicalType::TIMESTAMP_TZ}, TGeometryTypes::tgeometry(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TGeographyTypes::tgeography(), LogicalType::TIMESTAMP_TZ}, TGeographyTypes::tgeography(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {CbufferTypes::tcbuffer(), LogicalType::TIMESTAMP_TZ}, CbufferTypes::tcbuffer(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {H3indexTypes::th3index(), LogicalType::TIMESTAMP_TZ}, H3indexTypes::th3index(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {QuadbinTypes::tquadbin(), LogicalType::TIMESTAMP_TZ}, QuadbinTypes::tquadbin(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {S2cellTypes::ts2cell(), LogicalType::TIMESTAMP_TZ}, S2cellTypes::ts2cell(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TJsonbTypes::tjsonb(), LogicalType::TIMESTAMP_TZ}, TJsonbTypes::tjsonb(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TPcpointTypes::tpcpoint(), LogicalType::TIMESTAMP_TZ}, TPcpointTypes::tpcpoint(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TPcpatchTypes::tpcpatch(), LogicalType::TIMESTAMP_TZ}, TPcpatchTypes::tpcpatch(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {NpointTypes::tnpoint(), LogicalType::TIMESTAMP_TZ}, NpointTypes::tnpoint(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {PoseTypes::tpose(), LogicalType::TIMESTAMP_TZ}, PoseTypes::tpose(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TrgeometryTypes::trgeometry(), LogicalType::TIMESTAMP_TZ}, TrgeometryTypes::trgeometry(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {PosechainTypes::tposechain(), LogicalType::TIMESTAMP_TZ}, PosechainTypes::tposechain(), Gen_temporal_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::tint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tint(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::tbigint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tbigint(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::tbool(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::tfloat(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::ttext(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::ttext(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TgeompointType::tgeompoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TgeompointType::tgeompoint(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TgeogpointType::tgeogpoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TgeogpointType::tgeogpoint(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TGeometryTypes::tgeometry(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TGeometryTypes::tgeometry(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TGeographyTypes::tgeography(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TGeographyTypes::tgeography(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {CbufferTypes::tcbuffer(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, CbufferTypes::tcbuffer(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {H3indexTypes::th3index(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, H3indexTypes::th3index(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {QuadbinTypes::tquadbin(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, QuadbinTypes::tquadbin(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {S2cellTypes::ts2cell(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, S2cellTypes::ts2cell(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TJsonbTypes::tjsonb(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TJsonbTypes::tjsonb(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TPcpointTypes::tpcpoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TPcpointTypes::tpcpoint(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TPcpatchTypes::tpcpatch(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TPcpatchTypes::tpcpatch(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {NpointTypes::tnpoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, NpointTypes::tnpoint(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {PoseTypes::tpose(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, PoseTypes::tpose(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TrgeometryTypes::trgeometry(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TrgeometryTypes::trgeometry(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {PosechainTypes::tposechain(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, PosechainTypes::tposechain(), Gen_temporal_before_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::tint(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tint(), Gen_temporal_before_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::tbigint(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tbigint(), Gen_temporal_before_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::tbool(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tbool(), Gen_temporal_before_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::tfloat(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tfloat(), Gen_temporal_before_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::ttext(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::ttext(), Gen_temporal_before_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TgeompointType::tgeompoint(), LogicalType::TIMESTAMP_TZ}, TgeompointType::tgeompoint(), Gen_temporal_before_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TgeogpointType::tgeogpoint(), LogicalType::TIMESTAMP_TZ}, TgeogpointType::tgeogpoint(), Gen_temporal_before_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TGeometryTypes::tgeometry(), LogicalType::TIMESTAMP_TZ}, TGeometryTypes::tgeometry(), Gen_temporal_before_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TGeographyTypes::tgeography(), LogicalType::TIMESTAMP_TZ}, TGeographyTypes::tgeography(), Gen_temporal_before_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {CbufferTypes::tcbuffer(), LogicalType::TIMESTAMP_TZ}, CbufferTypes::tcbuffer(), Gen_temporal_before_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {H3indexTypes::th3index(), LogicalType::TIMESTAMP_TZ}, H3indexTypes::th3index(), Gen_temporal_before_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {QuadbinTypes::tquadbin(), LogicalType::TIMESTAMP_TZ}, QuadbinTypes::tquadbin(), Gen_temporal_before_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {S2cellTypes::ts2cell(), LogicalType::TIMESTAMP_TZ}, S2cellTypes::ts2cell(), Gen_temporal_before_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TJsonbTypes::tjsonb(), LogicalType::TIMESTAMP_TZ}, TJsonbTypes::tjsonb(), Gen_temporal_before_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TPcpointTypes::tpcpoint(), LogicalType::TIMESTAMP_TZ}, TPcpointTypes::tpcpoint(), Gen_temporal_before_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TPcpatchTypes::tpcpatch(), LogicalType::TIMESTAMP_TZ}, TPcpatchTypes::tpcpatch(), Gen_temporal_before_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {NpointTypes::tnpoint(), LogicalType::TIMESTAMP_TZ}, NpointTypes::tnpoint(), Gen_temporal_before_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {PoseTypes::tpose(), LogicalType::TIMESTAMP_TZ}, PoseTypes::tpose(), Gen_temporal_before_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {TrgeometryTypes::trgeometry(), LogicalType::TIMESTAMP_TZ}, TrgeometryTypes::trgeometry(), Gen_temporal_before_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("beforeTimestamp", {PosechainTypes::tposechain(), LogicalType::TIMESTAMP_TZ}, PosechainTypes::tposechain(), Gen_temporal_before_timestamptz_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusMax", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_minus_max));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusMax", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_minus_max));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusMax", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_minus_max));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusMax", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_temporal_minus_max));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusMin", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_minus_min));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusMin", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_minus_min));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusMin", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_minus_min));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusMin", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_temporal_minus_min));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tint(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tint(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tbigint(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tbigint(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tbool(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tbool(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tfloat(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tfloat(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::ttext(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::ttext(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TgeompointType::tgeompoint(), LogicalType::TIMESTAMP_TZ}, TgeompointType::tgeompoint(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TgeogpointType::tgeogpoint(), LogicalType::TIMESTAMP_TZ}, TgeogpointType::tgeogpoint(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TGeometryTypes::tgeometry(), LogicalType::TIMESTAMP_TZ}, TGeometryTypes::tgeometry(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TGeographyTypes::tgeography(), LogicalType::TIMESTAMP_TZ}, TGeographyTypes::tgeography(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {CbufferTypes::tcbuffer(), LogicalType::TIMESTAMP_TZ}, CbufferTypes::tcbuffer(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {H3indexTypes::th3index(), LogicalType::TIMESTAMP_TZ}, H3indexTypes::th3index(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {QuadbinTypes::tquadbin(), LogicalType::TIMESTAMP_TZ}, QuadbinTypes::tquadbin(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {S2cellTypes::ts2cell(), LogicalType::TIMESTAMP_TZ}, S2cellTypes::ts2cell(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TJsonbTypes::tjsonb(), LogicalType::TIMESTAMP_TZ}, TJsonbTypes::tjsonb(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TPcpointTypes::tpcpoint(), LogicalType::TIMESTAMP_TZ}, TPcpointTypes::tpcpoint(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TPcpatchTypes::tpcpatch(), LogicalType::TIMESTAMP_TZ}, TPcpatchTypes::tpcpatch(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {NpointTypes::tnpoint(), LogicalType::TIMESTAMP_TZ}, NpointTypes::tnpoint(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {PoseTypes::tpose(), LogicalType::TIMESTAMP_TZ}, PoseTypes::tpose(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TrgeometryTypes::trgeometry(), LogicalType::TIMESTAMP_TZ}, TrgeometryTypes::trgeometry(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {PosechainTypes::tposechain(), LogicalType::TIMESTAMP_TZ}, PosechainTypes::tposechain(), Gen_temporal_minus_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atValue", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_tfloat_at_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValue", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_tfloat_minus_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atValue", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tint(), Gen_tint_at_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValue", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tint(), Gen_tint_minus_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atValue", {TemporalTypes::ttext(), LogicalType::VARCHAR}, TemporalTypes::ttext(), Gen_ttext_at_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValue", {TemporalTypes::ttext(), LogicalType::VARCHAR}, TemporalTypes::ttext(), Gen_ttext_minus_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {CbufferTypes::tcbuffer(), SetTypes::tstzset()}, CbufferTypes::tcbuffer(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TGeometryTypes::tgeometry(), SetTypes::tstzset()}, TGeometryTypes::tgeometry(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TGeographyTypes::tgeography(), SetTypes::tstzset()}, TGeographyTypes::tgeography(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TgeompointType::tgeompoint(), SetTypes::tstzset()}, TgeompointType::tgeompoint(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TgeogpointType::tgeogpoint(), SetTypes::tstzset()}, TgeogpointType::tgeogpoint(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {H3indexTypes::th3index(), SetTypes::tstzset()}, H3indexTypes::th3index(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TJsonbTypes::tjsonb(), SetTypes::tstzset()}, TJsonbTypes::tjsonb(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {NpointTypes::tnpoint(), SetTypes::tstzset()}, NpointTypes::tnpoint(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TPcpointTypes::tpcpoint(), SetTypes::tstzset()}, TPcpointTypes::tpcpoint(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TPcpatchTypes::tpcpatch(), SetTypes::tstzset()}, TPcpatchTypes::tpcpatch(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {PoseTypes::tpose(), SetTypes::tstzset()}, PoseTypes::tpose(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {PosechainTypes::tposechain(), SetTypes::tstzset()}, PosechainTypes::tposechain(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {QuadbinTypes::tquadbin(), SetTypes::tstzset()}, QuadbinTypes::tquadbin(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TrgeometryTypes::trgeometry(), SetTypes::tstzset()}, TrgeometryTypes::trgeometry(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {S2cellTypes::ts2cell(), SetTypes::tstzset()}, S2cellTypes::ts2cell(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tbool(), SetTypes::tstzset()}, TemporalTypes::tbool(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tint(), SetTypes::tstzset()}, TemporalTypes::tint(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tbigint(), SetTypes::tstzset()}, TemporalTypes::tbigint(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tfloat(), SetTypes::tstzset()}, TemporalTypes::tfloat(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::ttext(), SetTypes::tstzset()}, TemporalTypes::ttext(), Gen_temporal_at_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {CbufferTypes::tcbuffer(), SpanTypes::tstzspan()}, CbufferTypes::tcbuffer(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TGeometryTypes::tgeometry(), SpanTypes::tstzspan()}, TGeometryTypes::tgeometry(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TGeographyTypes::tgeography(), SpanTypes::tstzspan()}, TGeographyTypes::tgeography(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TgeompointType::tgeompoint(), SpanTypes::tstzspan()}, TgeompointType::tgeompoint(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TgeogpointType::tgeogpoint(), SpanTypes::tstzspan()}, TgeogpointType::tgeogpoint(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {H3indexTypes::th3index(), SpanTypes::tstzspan()}, H3indexTypes::th3index(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TJsonbTypes::tjsonb(), SpanTypes::tstzspan()}, TJsonbTypes::tjsonb(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {NpointTypes::tnpoint(), SpanTypes::tstzspan()}, NpointTypes::tnpoint(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TPcpointTypes::tpcpoint(), SpanTypes::tstzspan()}, TPcpointTypes::tpcpoint(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TPcpatchTypes::tpcpatch(), SpanTypes::tstzspan()}, TPcpatchTypes::tpcpatch(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {PoseTypes::tpose(), SpanTypes::tstzspan()}, PoseTypes::tpose(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {PosechainTypes::tposechain(), SpanTypes::tstzspan()}, PosechainTypes::tposechain(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, QuadbinTypes::tquadbin(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TrgeometryTypes::trgeometry(), SpanTypes::tstzspan()}, TrgeometryTypes::trgeometry(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {S2cellTypes::ts2cell(), SpanTypes::tstzspan()}, S2cellTypes::ts2cell(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tbool(), SpanTypes::tstzspan()}, TemporalTypes::tbool(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tint(), SpanTypes::tstzspan()}, TemporalTypes::tint(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tbigint(), SpanTypes::tstzspan()}, TemporalTypes::tbigint(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tfloat(), SpanTypes::tstzspan()}, TemporalTypes::tfloat(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::ttext(), SpanTypes::tstzspan()}, TemporalTypes::ttext(), Gen_temporal_at_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {CbufferTypes::tcbuffer(), SpansetTypes::tstzspanset()}, CbufferTypes::tcbuffer(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TGeometryTypes::tgeometry(), SpansetTypes::tstzspanset()}, TGeometryTypes::tgeometry(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TGeographyTypes::tgeography(), SpansetTypes::tstzspanset()}, TGeographyTypes::tgeography(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TgeompointType::tgeompoint(), SpansetTypes::tstzspanset()}, TgeompointType::tgeompoint(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TgeogpointType::tgeogpoint(), SpansetTypes::tstzspanset()}, TgeogpointType::tgeogpoint(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {H3indexTypes::th3index(), SpansetTypes::tstzspanset()}, H3indexTypes::th3index(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TJsonbTypes::tjsonb(), SpansetTypes::tstzspanset()}, TJsonbTypes::tjsonb(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {NpointTypes::tnpoint(), SpansetTypes::tstzspanset()}, NpointTypes::tnpoint(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TPcpointTypes::tpcpoint(), SpansetTypes::tstzspanset()}, TPcpointTypes::tpcpoint(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TPcpatchTypes::tpcpatch(), SpansetTypes::tstzspanset()}, TPcpatchTypes::tpcpatch(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {PoseTypes::tpose(), SpansetTypes::tstzspanset()}, PoseTypes::tpose(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {PosechainTypes::tposechain(), SpansetTypes::tstzspanset()}, PosechainTypes::tposechain(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {QuadbinTypes::tquadbin(), SpansetTypes::tstzspanset()}, QuadbinTypes::tquadbin(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TrgeometryTypes::trgeometry(), SpansetTypes::tstzspanset()}, TrgeometryTypes::trgeometry(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {S2cellTypes::ts2cell(), SpansetTypes::tstzspanset()}, S2cellTypes::ts2cell(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tbool(), SpansetTypes::tstzspanset()}, TemporalTypes::tbool(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tint(), SpansetTypes::tstzspanset()}, TemporalTypes::tint(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tbigint(), SpansetTypes::tstzspanset()}, TemporalTypes::tbigint(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::tfloat(), SpansetTypes::tstzspanset()}, TemporalTypes::tfloat(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTime", {TemporalTypes::ttext(), SpansetTypes::tstzspanset()}, TemporalTypes::ttext(), Gen_temporal_at_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {CbufferTypes::tcbuffer(), SetTypes::cbufferset()}, CbufferTypes::tcbuffer(), Gen_temporal_at_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {TJsonbTypes::tjsonb(), SetTypes::jsonbset()}, TJsonbTypes::tjsonb(), Gen_temporal_at_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {TPcpointTypes::tpcpoint(), SetTypes::pcpointset()}, TPcpointTypes::tpcpoint(), Gen_temporal_at_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {TPcpatchTypes::tpcpatch(), SetTypes::pcpatchset()}, TPcpatchTypes::tpcpatch(), Gen_temporal_at_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {PoseTypes::tpose(), SetTypes::poseset()}, PoseTypes::tpose(), Gen_temporal_at_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {PosechainTypes::tposechain(), SetTypes::posechainset()}, PosechainTypes::tposechain(), Gen_temporal_at_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {QuadbinTypes::tquadbin(), SetTypes::quadbinset()}, QuadbinTypes::tquadbin(), Gen_temporal_at_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {TrgeometryTypes::trgeometry(), SetTypes::poseset()}, TrgeometryTypes::trgeometry(), Gen_temporal_at_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {S2cellTypes::ts2cell(), SetTypes::s2cellset()}, S2cellTypes::ts2cell(), Gen_temporal_at_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {TemporalTypes::tint(), SetTypes::intset()}, TemporalTypes::tint(), Gen_temporal_at_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {TemporalTypes::tbigint(), SetTypes::bigintset()}, TemporalTypes::tbigint(), Gen_temporal_at_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {TemporalTypes::tfloat(), SetTypes::floatset()}, TemporalTypes::tfloat(), Gen_temporal_at_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {TemporalTypes::ttext(), SetTypes::textset()}, TemporalTypes::ttext(), Gen_temporal_at_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {CbufferTypes::tcbuffer(), SetTypes::tstzset()}, CbufferTypes::tcbuffer(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TGeometryTypes::tgeometry(), SetTypes::tstzset()}, TGeometryTypes::tgeometry(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TGeographyTypes::tgeography(), SetTypes::tstzset()}, TGeographyTypes::tgeography(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TgeompointType::tgeompoint(), SetTypes::tstzset()}, TgeompointType::tgeompoint(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TgeogpointType::tgeogpoint(), SetTypes::tstzset()}, TgeogpointType::tgeogpoint(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {H3indexTypes::th3index(), SetTypes::tstzset()}, H3indexTypes::th3index(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TJsonbTypes::tjsonb(), SetTypes::tstzset()}, TJsonbTypes::tjsonb(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {NpointTypes::tnpoint(), SetTypes::tstzset()}, NpointTypes::tnpoint(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TPcpointTypes::tpcpoint(), SetTypes::tstzset()}, TPcpointTypes::tpcpoint(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TPcpatchTypes::tpcpatch(), SetTypes::tstzset()}, TPcpatchTypes::tpcpatch(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {PoseTypes::tpose(), SetTypes::tstzset()}, PoseTypes::tpose(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {PosechainTypes::tposechain(), SetTypes::tstzset()}, PosechainTypes::tposechain(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {QuadbinTypes::tquadbin(), SetTypes::tstzset()}, QuadbinTypes::tquadbin(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TrgeometryTypes::trgeometry(), SetTypes::tstzset()}, TrgeometryTypes::trgeometry(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {S2cellTypes::ts2cell(), SetTypes::tstzset()}, S2cellTypes::ts2cell(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tbool(), SetTypes::tstzset()}, TemporalTypes::tbool(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tint(), SetTypes::tstzset()}, TemporalTypes::tint(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tbigint(), SetTypes::tstzset()}, TemporalTypes::tbigint(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tfloat(), SetTypes::tstzset()}, TemporalTypes::tfloat(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::ttext(), SetTypes::tstzset()}, TemporalTypes::ttext(), Gen_temporal_minus_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {CbufferTypes::tcbuffer(), SpanTypes::tstzspan()}, CbufferTypes::tcbuffer(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TGeometryTypes::tgeometry(), SpanTypes::tstzspan()}, TGeometryTypes::tgeometry(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TGeographyTypes::tgeography(), SpanTypes::tstzspan()}, TGeographyTypes::tgeography(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TgeompointType::tgeompoint(), SpanTypes::tstzspan()}, TgeompointType::tgeompoint(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TgeogpointType::tgeogpoint(), SpanTypes::tstzspan()}, TgeogpointType::tgeogpoint(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {H3indexTypes::th3index(), SpanTypes::tstzspan()}, H3indexTypes::th3index(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TJsonbTypes::tjsonb(), SpanTypes::tstzspan()}, TJsonbTypes::tjsonb(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {NpointTypes::tnpoint(), SpanTypes::tstzspan()}, NpointTypes::tnpoint(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TPcpointTypes::tpcpoint(), SpanTypes::tstzspan()}, TPcpointTypes::tpcpoint(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TPcpatchTypes::tpcpatch(), SpanTypes::tstzspan()}, TPcpatchTypes::tpcpatch(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {PoseTypes::tpose(), SpanTypes::tstzspan()}, PoseTypes::tpose(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {PosechainTypes::tposechain(), SpanTypes::tstzspan()}, PosechainTypes::tposechain(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, QuadbinTypes::tquadbin(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TrgeometryTypes::trgeometry(), SpanTypes::tstzspan()}, TrgeometryTypes::trgeometry(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {S2cellTypes::ts2cell(), SpanTypes::tstzspan()}, S2cellTypes::ts2cell(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tbool(), SpanTypes::tstzspan()}, TemporalTypes::tbool(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tint(), SpanTypes::tstzspan()}, TemporalTypes::tint(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tbigint(), SpanTypes::tstzspan()}, TemporalTypes::tbigint(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tfloat(), SpanTypes::tstzspan()}, TemporalTypes::tfloat(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::ttext(), SpanTypes::tstzspan()}, TemporalTypes::ttext(), Gen_temporal_minus_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {CbufferTypes::tcbuffer(), SpansetTypes::tstzspanset()}, CbufferTypes::tcbuffer(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TGeometryTypes::tgeometry(), SpansetTypes::tstzspanset()}, TGeometryTypes::tgeometry(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TGeographyTypes::tgeography(), SpansetTypes::tstzspanset()}, TGeographyTypes::tgeography(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TgeompointType::tgeompoint(), SpansetTypes::tstzspanset()}, TgeompointType::tgeompoint(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TgeogpointType::tgeogpoint(), SpansetTypes::tstzspanset()}, TgeogpointType::tgeogpoint(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {H3indexTypes::th3index(), SpansetTypes::tstzspanset()}, H3indexTypes::th3index(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TJsonbTypes::tjsonb(), SpansetTypes::tstzspanset()}, TJsonbTypes::tjsonb(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {NpointTypes::tnpoint(), SpansetTypes::tstzspanset()}, NpointTypes::tnpoint(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TPcpointTypes::tpcpoint(), SpansetTypes::tstzspanset()}, TPcpointTypes::tpcpoint(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TPcpatchTypes::tpcpatch(), SpansetTypes::tstzspanset()}, TPcpatchTypes::tpcpatch(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {PoseTypes::tpose(), SpansetTypes::tstzspanset()}, PoseTypes::tpose(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {PosechainTypes::tposechain(), SpansetTypes::tstzspanset()}, PosechainTypes::tposechain(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {QuadbinTypes::tquadbin(), SpansetTypes::tstzspanset()}, QuadbinTypes::tquadbin(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TrgeometryTypes::trgeometry(), SpansetTypes::tstzspanset()}, TrgeometryTypes::trgeometry(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {S2cellTypes::ts2cell(), SpansetTypes::tstzspanset()}, S2cellTypes::ts2cell(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tbool(), SpansetTypes::tstzspanset()}, TemporalTypes::tbool(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tint(), SpansetTypes::tstzspanset()}, TemporalTypes::tint(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tbigint(), SpansetTypes::tstzspanset()}, TemporalTypes::tbigint(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tfloat(), SpansetTypes::tstzspanset()}, TemporalTypes::tfloat(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTime", {TemporalTypes::ttext(), SpansetTypes::tstzspanset()}, TemporalTypes::ttext(), Gen_temporal_minus_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {CbufferTypes::tcbuffer(), SetTypes::cbufferset()}, CbufferTypes::tcbuffer(), Gen_temporal_minus_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {TJsonbTypes::tjsonb(), SetTypes::jsonbset()}, TJsonbTypes::tjsonb(), Gen_temporal_minus_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {TPcpointTypes::tpcpoint(), SetTypes::pcpointset()}, TPcpointTypes::tpcpoint(), Gen_temporal_minus_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {TPcpatchTypes::tpcpatch(), SetTypes::pcpatchset()}, TPcpatchTypes::tpcpatch(), Gen_temporal_minus_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {PoseTypes::tpose(), SetTypes::poseset()}, PoseTypes::tpose(), Gen_temporal_minus_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {PosechainTypes::tposechain(), SetTypes::posechainset()}, PosechainTypes::tposechain(), Gen_temporal_minus_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {QuadbinTypes::tquadbin(), SetTypes::quadbinset()}, QuadbinTypes::tquadbin(), Gen_temporal_minus_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {TrgeometryTypes::trgeometry(), SetTypes::poseset()}, TrgeometryTypes::trgeometry(), Gen_temporal_minus_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {S2cellTypes::ts2cell(), SetTypes::s2cellset()}, S2cellTypes::ts2cell(), Gen_temporal_minus_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {TemporalTypes::tint(), SetTypes::intset()}, TemporalTypes::tint(), Gen_temporal_minus_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {TemporalTypes::tbigint(), SetTypes::bigintset()}, TemporalTypes::tbigint(), Gen_temporal_minus_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {TemporalTypes::tfloat(), SetTypes::floatset()}, TemporalTypes::tfloat(), Gen_temporal_minus_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {TemporalTypes::ttext(), SetTypes::textset()}, TemporalTypes::ttext(), Gen_temporal_minus_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atSpan", {TemporalTypes::tint(), SpanTypes::intspan()}, TemporalTypes::tint(), Gen_tnumber_at_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atSpan", {TemporalTypes::tbigint(), SpanTypes::bigintspan()}, TemporalTypes::tbigint(), Gen_tnumber_at_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atSpan", {TemporalTypes::tfloat(), SpanTypes::floatspan()}, TemporalTypes::tfloat(), Gen_tnumber_at_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atSpanset", {TemporalTypes::tint(), SpansetTypes::intspanset()}, TemporalTypes::tint(), Gen_tnumber_at_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atSpanset", {TemporalTypes::tbigint(), SpansetTypes::bigintspanset()}, TemporalTypes::tbigint(), Gen_tnumber_at_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atSpanset", {TemporalTypes::tfloat(), SpansetTypes::floatspanset()}, TemporalTypes::tfloat(), Gen_tnumber_at_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTbox", {TemporalTypes::tint(), TboxType::tbox()}, TemporalTypes::tint(), Gen_tnumber_at_tbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTbox", {TemporalTypes::tbigint(), TboxType::tbox()}, TemporalTypes::tbigint(), Gen_tnumber_at_tbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atTbox", {TemporalTypes::tfloat(), TboxType::tbox()}, TemporalTypes::tfloat(), Gen_tnumber_at_tbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusSpan", {TemporalTypes::tint(), SpanTypes::intspan()}, TemporalTypes::tint(), Gen_tnumber_minus_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusSpan", {TemporalTypes::tbigint(), SpanTypes::bigintspan()}, TemporalTypes::tbigint(), Gen_tnumber_minus_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusSpan", {TemporalTypes::tfloat(), SpanTypes::floatspan()}, TemporalTypes::tfloat(), Gen_tnumber_minus_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusSpanset", {TemporalTypes::tint(), SpansetTypes::intspanset()}, TemporalTypes::tint(), Gen_tnumber_minus_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusSpanset", {TemporalTypes::tbigint(), SpansetTypes::bigintspanset()}, TemporalTypes::tbigint(), Gen_tnumber_minus_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusSpanset", {TemporalTypes::tfloat(), SpansetTypes::floatspanset()}, TemporalTypes::tfloat(), Gen_tnumber_minus_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTbox", {TemporalTypes::tint(), TboxType::tbox()}, TemporalTypes::tint(), Gen_tnumber_minus_tbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTbox", {TemporalTypes::tbigint(), TboxType::tbox()}, TemporalTypes::tbigint(), Gen_tnumber_minus_tbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusTbox", {TemporalTypes::tfloat(), TboxType::tbox()}, TemporalTypes::tfloat(), Gen_tnumber_minus_tbox));
+}
 
 void RegisterGenerated_meos_geo_rel_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("aContains", {MobilityDuckGeometryType(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_acontains_geo_tgeo));
@@ -3510,600 +4144,144 @@ void RegisterGenerated_meos_geo_rel_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("eTouches", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_etouches_tcbuffer_tcbuffer));
 }
 
-void RegisterGenerated_meos_geo_bbox_topo(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {S2cellTypes::ts2cell(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {S2cellTypes::ts2cell(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {PoseTypes::tpose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {PoseTypes::tpose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {PosechainTypes::tposechain(), PosechainTypes::tposechain()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {PosechainTypes::tposechain(), PosechainTypes::tposechain()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {S2cellTypes::ts2cell(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {S2cellTypes::ts2cell(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {PoseTypes::tpose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {PoseTypes::tpose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {PosechainTypes::tposechain(), PosechainTypes::tposechain()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {PosechainTypes::tposechain(), PosechainTypes::tposechain()}, LogicalType::BOOLEAN, Gen_contained_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {S2cellTypes::ts2cell(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {S2cellTypes::ts2cell(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {PoseTypes::tpose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {PoseTypes::tpose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {PosechainTypes::tposechain(), PosechainTypes::tposechain()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {PosechainTypes::tposechain(), PosechainTypes::tposechain()}, LogicalType::BOOLEAN, Gen_contains_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {S2cellTypes::ts2cell(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {S2cellTypes::ts2cell(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {PoseTypes::tpose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {PoseTypes::tpose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {PosechainTypes::tposechain(), PosechainTypes::tposechain()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {PosechainTypes::tposechain(), PosechainTypes::tposechain()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {H3indexTypes::th3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {S2cellTypes::ts2cell(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {S2cellTypes::ts2cell(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {PoseTypes::tpose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {PoseTypes::tpose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {PosechainTypes::tposechain(), PosechainTypes::tposechain()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {PosechainTypes::tposechain(), PosechainTypes::tposechain()}, LogicalType::BOOLEAN, Gen_same_tspatial_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {StboxType::stbox(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {StboxType::stbox(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {StboxType::stbox(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {StboxType::stbox(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {StboxType::stbox(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {StboxType::stbox(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {StboxType::stbox(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {StboxType::stbox(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {StboxType::stbox(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {StboxType::stbox(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {StboxType::stbox(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {StboxType::stbox(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {StboxType::stbox(), PosechainTypes::tposechain()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {StboxType::stbox(), PosechainTypes::tposechain()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {TGeometryTypes::tgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {TGeometryTypes::tgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {TGeographyTypes::tgeography(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {TGeographyTypes::tgeography(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {S2cellTypes::ts2cell(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {S2cellTypes::ts2cell(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {NpointTypes::tnpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {NpointTypes::tnpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {PoseTypes::tpose(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {PoseTypes::tpose(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {TrgeometryTypes::trgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {TrgeometryTypes::trgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("adjacent", {PosechainTypes::tposechain(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {PosechainTypes::tposechain(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {StboxType::stbox(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {StboxType::stbox(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {StboxType::stbox(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {StboxType::stbox(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {StboxType::stbox(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {StboxType::stbox(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {StboxType::stbox(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {StboxType::stbox(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {StboxType::stbox(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {StboxType::stbox(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {StboxType::stbox(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {StboxType::stbox(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {StboxType::stbox(), PosechainTypes::tposechain()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {StboxType::stbox(), PosechainTypes::tposechain()}, LogicalType::BOOLEAN, Gen_contained_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {TGeometryTypes::tgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {TGeometryTypes::tgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {TGeographyTypes::tgeography(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {TGeographyTypes::tgeography(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {S2cellTypes::ts2cell(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {S2cellTypes::ts2cell(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {NpointTypes::tnpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {NpointTypes::tnpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {PoseTypes::tpose(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {PoseTypes::tpose(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {TrgeometryTypes::trgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {TrgeometryTypes::trgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contained", {PosechainTypes::tposechain(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {PosechainTypes::tposechain(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contained_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {StboxType::stbox(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {StboxType::stbox(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {StboxType::stbox(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {StboxType::stbox(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {StboxType::stbox(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {StboxType::stbox(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {StboxType::stbox(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {StboxType::stbox(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {StboxType::stbox(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {StboxType::stbox(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {StboxType::stbox(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {StboxType::stbox(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {StboxType::stbox(), PosechainTypes::tposechain()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {StboxType::stbox(), PosechainTypes::tposechain()}, LogicalType::BOOLEAN, Gen_contains_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {TGeometryTypes::tgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {TGeometryTypes::tgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {TGeographyTypes::tgeography(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {TGeographyTypes::tgeography(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {S2cellTypes::ts2cell(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {S2cellTypes::ts2cell(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {NpointTypes::tnpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {NpointTypes::tnpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {PoseTypes::tpose(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {PoseTypes::tpose(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {TrgeometryTypes::trgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {TrgeometryTypes::trgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("contains", {PosechainTypes::tposechain(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {PosechainTypes::tposechain(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_contains_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {StboxType::stbox(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {StboxType::stbox(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {StboxType::stbox(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {StboxType::stbox(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {StboxType::stbox(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {StboxType::stbox(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {StboxType::stbox(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {StboxType::stbox(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {StboxType::stbox(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {StboxType::stbox(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {StboxType::stbox(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {StboxType::stbox(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {StboxType::stbox(), PosechainTypes::tposechain()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {StboxType::stbox(), PosechainTypes::tposechain()}, LogicalType::BOOLEAN, Gen_overlaps_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {TGeometryTypes::tgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {TGeometryTypes::tgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {TGeographyTypes::tgeography(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {TGeographyTypes::tgeography(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {S2cellTypes::ts2cell(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {S2cellTypes::ts2cell(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {NpointTypes::tnpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {NpointTypes::tnpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {PoseTypes::tpose(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {PoseTypes::tpose(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {TrgeometryTypes::trgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {TrgeometryTypes::trgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("overlaps", {PosechainTypes::tposechain(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {PosechainTypes::tposechain(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overlaps_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {StboxType::stbox(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {StboxType::stbox(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {StboxType::stbox(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {StboxType::stbox(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {StboxType::stbox(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {StboxType::stbox(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {StboxType::stbox(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {StboxType::stbox(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {StboxType::stbox(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {StboxType::stbox(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {StboxType::stbox(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {StboxType::stbox(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {StboxType::stbox(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {StboxType::stbox(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {StboxType::stbox(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {StboxType::stbox(), PosechainTypes::tposechain()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {StboxType::stbox(), PosechainTypes::tposechain()}, LogicalType::BOOLEAN, Gen_same_stbox_tspatial));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {TGeometryTypes::tgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {TGeometryTypes::tgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {TGeographyTypes::tgeography(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {TGeographyTypes::tgeography(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {CbufferTypes::tcbuffer(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {H3indexTypes::th3index(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {QuadbinTypes::tquadbin(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {S2cellTypes::ts2cell(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {S2cellTypes::ts2cell(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {NpointTypes::tnpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {NpointTypes::tnpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {PoseTypes::tpose(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {PoseTypes::tpose(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {TrgeometryTypes::trgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {TrgeometryTypes::trgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("same", {PosechainTypes::tposechain(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {PosechainTypes::tposechain(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_same_tspatial_stbox));
+void RegisterGenerated_meos_cbuffer_rel_ever(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aContains", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_acontains_geo_tcbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aContains", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_acontains_tcbuffer_cbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aContains", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_acontains_tcbuffer_geo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aCovers", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_acovers_geo_tcbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aCovers", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_acovers_tcbuffer_cbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aCovers", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_acovers_tcbuffer_geo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjoint", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_adisjoint_tcbuffer_geo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjoint", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_adisjoint_tcbuffer_cbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjoint", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_adisjoint_tcbuffer_tcbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDwithin", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_adwithin_tcbuffer_geo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aDwithin", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_adwithin_tcbuffer_tcbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersects", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_aintersects_tcbuffer_geo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersects", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_aintersects_tcbuffer_cbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersects", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_aintersects_tcbuffer_tcbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aTouches", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_atouches_tcbuffer_geo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aTouches", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_atouches_tcbuffer_cbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eContains", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_econtains_tcbuffer_cbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eContains", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_econtains_tcbuffer_geo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eCovers", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_ecovers_geo_tcbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eCovers", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_ecovers_tcbuffer_cbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eCovers", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_ecovers_tcbuffer_geo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eDisjoint", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_edisjoint_tcbuffer_geo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eDisjoint", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_edisjoint_tcbuffer_cbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eDwithin", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_edwithin_tcbuffer_geo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eDwithin", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_edwithin_tcbuffer_tcbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersects", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_eintersects_tcbuffer_geo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersects", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_eintersects_tcbuffer_cbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersects", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_eintersects_tcbuffer_tcbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eTouches", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_etouches_tcbuffer_geo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eTouches", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_etouches_tcbuffer_cbuffer));
 }
 
-void RegisterGenerated_meos_temporal_math(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tAdd", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_add_float_tfloat));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_add_float_tfloat));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tAdd", {LogicalType::INTEGER, TemporalTypes::tint()}, TemporalTypes::tint(), Gen_add_int_tint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {LogicalType::INTEGER, TemporalTypes::tint()}, TemporalTypes::tint(), Gen_add_int_tint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tAdd", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_add_tfloat_float));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_add_tfloat_float));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tAdd", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tint(), Gen_add_tint_int));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tint(), Gen_add_tint_int));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tAdd", {LogicalType::BIGINT, TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_add_bigint_tbigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {LogicalType::BIGINT, TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_add_bigint_tbigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tAdd", {TemporalTypes::tbigint(), LogicalType::BIGINT}, TemporalTypes::tbigint(), Gen_add_tbigint_bigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {TemporalTypes::tbigint(), LogicalType::BIGINT}, TemporalTypes::tbigint(), Gen_add_tbigint_bigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tAdd", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tint(), Gen_add_tnumber_tnumber));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tint(), Gen_add_tnumber_tnumber));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tAdd", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_add_tnumber_tnumber));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_add_tnumber_tnumber));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tDiv", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_div_float_tfloat));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("/", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_div_float_tfloat));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tDiv", {LogicalType::INTEGER, TemporalTypes::tint()}, TemporalTypes::tint(), Gen_div_int_tint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("/", {LogicalType::INTEGER, TemporalTypes::tint()}, TemporalTypes::tint(), Gen_div_int_tint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tDiv", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_div_tfloat_float));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("/", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_div_tfloat_float));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tDiv", {LogicalType::BIGINT, TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_div_bigint_tbigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("/", {LogicalType::BIGINT, TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_div_bigint_tbigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tDiv", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tint(), Gen_div_tnumber_tnumber));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("/", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tint(), Gen_div_tnumber_tnumber));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tDiv", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_div_tnumber_tnumber));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("/", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_div_tnumber_tnumber));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tMul", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_mul_float_tfloat));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_mul_float_tfloat));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tMul", {LogicalType::INTEGER, TemporalTypes::tint()}, TemporalTypes::tint(), Gen_mul_int_tint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {LogicalType::INTEGER, TemporalTypes::tint()}, TemporalTypes::tint(), Gen_mul_int_tint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tMul", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_mul_tfloat_float));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_mul_tfloat_float));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tMul", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tint(), Gen_mul_tint_int));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tint(), Gen_mul_tint_int));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tMul", {LogicalType::BIGINT, TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_mul_bigint_tbigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {LogicalType::BIGINT, TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_mul_bigint_tbigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tMul", {TemporalTypes::tbigint(), LogicalType::BIGINT}, TemporalTypes::tbigint(), Gen_mul_tbigint_bigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {TemporalTypes::tbigint(), LogicalType::BIGINT}, TemporalTypes::tbigint(), Gen_mul_tbigint_bigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tMul", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tint(), Gen_mul_tnumber_tnumber));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tint(), Gen_mul_tnumber_tnumber));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tMul", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_mul_tnumber_tnumber));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_mul_tnumber_tnumber));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tSub", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_sub_float_tfloat));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_sub_float_tfloat));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tSub", {LogicalType::INTEGER, TemporalTypes::tint()}, TemporalTypes::tint(), Gen_sub_int_tint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {LogicalType::INTEGER, TemporalTypes::tint()}, TemporalTypes::tint(), Gen_sub_int_tint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tSub", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_sub_tfloat_float));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_sub_tfloat_float));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tSub", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tint(), Gen_sub_tint_int));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tint(), Gen_sub_tint_int));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tSub", {LogicalType::BIGINT, TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_sub_bigint_tbigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {LogicalType::BIGINT, TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_sub_bigint_tbigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tSub", {TemporalTypes::tbigint(), LogicalType::BIGINT}, TemporalTypes::tbigint(), Gen_sub_tbigint_bigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {TemporalTypes::tbigint(), LogicalType::BIGINT}, TemporalTypes::tbigint(), Gen_sub_tbigint_bigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tSub", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tint(), Gen_sub_tnumber_tnumber));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tint(), Gen_sub_tnumber_tnumber));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tSub", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_sub_tnumber_tnumber));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_sub_tnumber_tnumber));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("derivative", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_derivative));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("exp", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tfloat_exp));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("ln", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tfloat_ln));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("log10", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tfloat_log10));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("sin", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tfloat_sin));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("cos", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tfloat_cos));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tan", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tfloat_tan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("abs", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_tnumber_abs));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("abs", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tnumber_abs));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("trend", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_tnumber_trend));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("trend", {TemporalTypes::tfloat()}, TemporalTypes::tint(), Gen_tnumber_trend));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("angularDifference", {TemporalTypes::tint()}, TemporalTypes::tfloat(), Gen_tnumber_angular_difference));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("angularDifference", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tnumber_angular_difference));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("deltaValue", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_tnumber_delta_value));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("deltaValue", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_tnumber_delta_value));
+void RegisterGenerated_meos_setspan_transf(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ceil", {SetTypes::floatset()}, SetTypes::floatset(), Gen_floatset_ceil));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {SetTypes::floatset(), LogicalType::BOOLEAN}, SetTypes::floatset(), Gen_floatset_degrees));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {SetTypes::floatset()}, SetTypes::floatset(), Gen_floatset_degrees_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("floor", {SetTypes::floatset()}, SetTypes::floatset(), Gen_floatset_floor));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("radians", {SetTypes::floatset()}, SetTypes::floatset(), Gen_floatset_radians));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::cbufferset(), LogicalType::INTEGER}, SetTypes::cbufferset(), Gen_set_round));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::npointset(), LogicalType::INTEGER}, SetTypes::npointset(), Gen_set_round));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::poseset(), LogicalType::INTEGER}, SetTypes::poseset(), Gen_set_round));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::posechainset(), LogicalType::INTEGER}, SetTypes::posechainset(), Gen_set_round));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::floatset(), LogicalType::INTEGER}, SetTypes::floatset(), Gen_set_round));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::cbufferset()}, SetTypes::cbufferset(), Gen_set_round_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::npointset()}, SetTypes::npointset(), Gen_set_round_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::poseset()}, SetTypes::poseset(), Gen_set_round_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::posechainset()}, SetTypes::posechainset(), Gen_set_round_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::floatset()}, SetTypes::floatset(), Gen_set_round_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("setConcat", {LogicalType::VARCHAR, SetTypes::textset()}, SetTypes::textset(), Gen_textcat_text_textset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("||", {LogicalType::VARCHAR, SetTypes::textset()}, SetTypes::textset(), Gen_textcat_text_textset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("setConcat", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), Gen_textcat_textset_text));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("||", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), Gen_textcat_textset_text));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("initcap", {SetTypes::textset()}, SetTypes::textset(), Gen_textset_initcap));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lower", {SetTypes::textset()}, SetTypes::textset(), Gen_textset_lower));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("upper", {SetTypes::textset()}, SetTypes::textset(), Gen_textset_upper));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("expand", {SpanTypes::bigintspan(), LogicalType::BIGINT}, SpanTypes::bigintspan(), Gen_bigintspan_expand));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("expand", {SpanTypes::floatspan(), LogicalType::DOUBLE}, SpanTypes::floatspan(), Gen_floatspan_expand));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("expand", {SpanTypes::intspan(), LogicalType::INTEGER}, SpanTypes::intspan(), Gen_intspan_expand));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ceil", {SpanTypes::floatspan()}, SpanTypes::floatspan(), Gen_floatspan_ceil));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {SpanTypes::floatspan(), LogicalType::BOOLEAN}, SpanTypes::floatspan(), Gen_floatspan_degrees));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {SpanTypes::floatspan()}, SpanTypes::floatspan(), Gen_floatspan_degrees_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("floor", {SpanTypes::floatspan()}, SpanTypes::floatspan(), Gen_floatspan_floor));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("radians", {SpanTypes::floatspan()}, SpanTypes::floatspan(), Gen_floatspan_radians));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SpanTypes::floatspan(), LogicalType::INTEGER}, SpanTypes::floatspan(), Gen_floatspan_round));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SpanTypes::floatspan()}, SpanTypes::floatspan(), Gen_floatspan_round_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ceil", {SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_floatspanset_ceil));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("floor", {SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_floatspanset_floor));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {SpansetTypes::floatspanset(), LogicalType::BOOLEAN}, SpansetTypes::floatspanset(), Gen_floatspanset_degrees));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_floatspanset_degrees_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("radians", {SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_floatspanset_radians));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SpansetTypes::floatspanset(), LogicalType::INTEGER}, SpansetTypes::floatspanset(), Gen_floatspanset_round));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_floatspanset_round_d));
 }
 
-void RegisterGenerated_meos_setspan_inout(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("cbuffersetFromHexWKB", {LogicalType::VARCHAR}, SetTypes::cbufferset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("cbuffersetFromHexEWKB", {LogicalType::VARCHAR}, SetTypes::cbufferset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("jsonbsetFromHexWKB", {LogicalType::VARCHAR}, SetTypes::jsonbset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("npointsetFromHexWKB", {LogicalType::VARCHAR}, SetTypes::npointset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("npointsetFromHexEWKB", {LogicalType::VARCHAR}, SetTypes::npointset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("pcpointsetFromHexWKB", {LogicalType::VARCHAR}, SetTypes::pcpointset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("pcpointsetFromHexEWKB", {LogicalType::VARCHAR}, SetTypes::pcpointset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("pcpatchsetFromHexWKB", {LogicalType::VARCHAR}, SetTypes::pcpatchset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("pcpatchsetFromHexEWKB", {LogicalType::VARCHAR}, SetTypes::pcpatchset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("posesetFromHexWKB", {LogicalType::VARCHAR}, SetTypes::poseset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("posesetFromHexEWKB", {LogicalType::VARCHAR}, SetTypes::poseset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("posechainsetFromHexWKB", {LogicalType::VARCHAR}, SetTypes::posechainset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("posechainsetFromHexEWKB", {LogicalType::VARCHAR}, SetTypes::posechainset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("quadbinsetFromHexWKB", {LogicalType::VARCHAR}, SetTypes::quadbinset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("quadbinsetFromHexEWKB", {LogicalType::VARCHAR}, SetTypes::quadbinset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("s2cellsetFromHexWKB", {LogicalType::VARCHAR}, SetTypes::s2cellset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("s2cellsetFromHexEWKB", {LogicalType::VARCHAR}, SetTypes::s2cellset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("intsetFromHexWKB", {LogicalType::VARCHAR}, SetTypes::intset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("bigintsetFromHexWKB", {LogicalType::VARCHAR}, SetTypes::bigintset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("floatsetFromHexWKB", {LogicalType::VARCHAR}, SetTypes::floatset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("textsetFromHexWKB", {LogicalType::VARCHAR}, SetTypes::textset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("datesetFromHexWKB", {LogicalType::VARCHAR}, SetTypes::dateset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tstzsetFromHexWKB", {LogicalType::VARCHAR}, SetTypes::tstzset(), Gen_set_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("intspanFromHexWKB", {LogicalType::VARCHAR}, SpanTypes::intspan(), Gen_span_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("bigintspanFromHexWKB", {LogicalType::VARCHAR}, SpanTypes::bigintspan(), Gen_span_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("floatspanFromHexWKB", {LogicalType::VARCHAR}, SpanTypes::floatspan(), Gen_span_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tstzspanFromHexWKB", {LogicalType::VARCHAR}, SpanTypes::tstzspan(), Gen_span_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("datespanFromHexWKB", {LogicalType::VARCHAR}, SpanTypes::datespan(), Gen_span_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("intspansetFromHexWKB", {LogicalType::VARCHAR}, SpansetTypes::intspanset(), Gen_spanset_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("bigintspansetFromHexWKB", {LogicalType::VARCHAR}, SpansetTypes::bigintspanset(), Gen_spanset_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("floatspansetFromHexWKB", {LogicalType::VARCHAR}, SpansetTypes::floatspanset(), Gen_spanset_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("datespansetFromHexWKB", {LogicalType::VARCHAR}, SpansetTypes::datespanset(), Gen_spanset_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tstzspansetFromHexWKB", {LogicalType::VARCHAR}, SpansetTypes::tstzspanset(), Gen_spanset_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::bigintset()}, LogicalType::VARCHAR, Gen_bigintset_out));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::dateset()}, LogicalType::VARCHAR, Gen_dateset_out));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::floatset(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_floatset_out));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::floatset()}, LogicalType::VARCHAR, Gen_floatset_out_d));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::intset()}, LogicalType::VARCHAR, Gen_intset_out));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::textset()}, LogicalType::VARCHAR, Gen_textset_out));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::tstzset()}, LogicalType::VARCHAR, Gen_tstzset_out));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SpanTypes::bigintspan()}, LogicalType::VARCHAR, Gen_bigintspan_out));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SpanTypes::datespan()}, LogicalType::VARCHAR, Gen_datespan_out));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SpanTypes::floatspan(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_floatspan_out));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SpanTypes::floatspan()}, LogicalType::VARCHAR, Gen_floatspan_out_d));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SpanTypes::intspan()}, LogicalType::VARCHAR, Gen_intspan_out));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SpanTypes::tstzspan()}, LogicalType::VARCHAR, Gen_tstzspan_out));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SpansetTypes::bigintspanset()}, LogicalType::VARCHAR, Gen_bigintspanset_out));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SpansetTypes::datespanset()}, LogicalType::VARCHAR, Gen_datespanset_out));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SpansetTypes::floatspanset(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_floatspanset_out));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SpansetTypes::floatspanset()}, LogicalType::VARCHAR, Gen_floatspanset_out_d));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SpansetTypes::intspanset()}, LogicalType::VARCHAR, Gen_intspanset_out));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SpansetTypes::tstzspanset()}, LogicalType::VARCHAR, Gen_tstzspanset_out));
+void RegisterGenerated_meos_temporal_analytics_similarity(ExtensionLoader &loader) {
+    for (auto &type : TemporalTypes::AllTypes()) {
+        loader.RegisterFunction(TableFunction("dynTimeWarpPath", {type, type}, PathExec_temporal_dyntimewarp_path, PathBindFn_temporal_dyntimewarp_path, PathInit_temporal_dyntimewarp_path));
+        loader.RegisterFunction(TableFunction("frechetDistancePath", {type, type}, PathExec_temporal_frechet_path, PathBindFn_temporal_frechet_path, PathInit_temporal_frechet_path));
+    }
+    for (auto &type : std::vector<LogicalType>{TgeompointType::tgeompoint(), TgeogpointType::tgeogpoint(), TGeometryTypes::tgeometry(), TGeographyTypes::tgeography(), CbufferTypes::tcbuffer(), H3indexTypes::th3index(), QuadbinTypes::tquadbin(), S2cellTypes::ts2cell(), NpointTypes::tnpoint(), PoseTypes::tpose(), PosechainTypes::tposechain()}) {
+        loader.RegisterFunction(TableFunction("dynTimeWarpPath", {type, type}, PathExec_temporal_dyntimewarp_path, PathBindFn_temporal_dyntimewarp_path, PathInit_temporal_dyntimewarp_path));
+        loader.RegisterFunction(TableFunction("frechetDistancePath", {type, type}, PathExec_temporal_frechet_path, PathBindFn_temporal_frechet_path, PathInit_temporal_frechet_path));
+    }
+    RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpDistance", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::DOUBLE, Gen_temporal_dyntimewarp_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpDistance", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::DOUBLE, Gen_temporal_dyntimewarp_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpDistance", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::DOUBLE, Gen_temporal_dyntimewarp_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpDistance", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::DOUBLE, Gen_temporal_dyntimewarp_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("dynTimeWarpDistance", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::DOUBLE, Gen_temporal_dyntimewarp_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistance", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::DOUBLE, Gen_temporal_frechet_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistance", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::DOUBLE, Gen_temporal_frechet_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistance", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::DOUBLE, Gen_temporal_frechet_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistance", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::DOUBLE, Gen_temporal_frechet_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("frechetDistance", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::DOUBLE, Gen_temporal_frechet_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hausdorffDistance", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::DOUBLE, Gen_temporal_hausdorff_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hausdorffDistance", {TemporalTypes::tbigint(), TemporalTypes::tbigint()}, LogicalType::DOUBLE, Gen_temporal_hausdorff_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hausdorffDistance", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::DOUBLE, Gen_temporal_hausdorff_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hausdorffDistance", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::DOUBLE, Gen_temporal_hausdorff_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hausdorffDistance", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::DOUBLE, Gen_temporal_hausdorff_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("averageHausdorffDistance", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::DOUBLE, Gen_temporal_average_hausdorff_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("averageHausdorffDistance", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, LogicalType::DOUBLE, Gen_temporal_average_hausdorff_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("averageHausdorffDistance", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::DOUBLE, Gen_temporal_average_hausdorff_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("averageHausdorffDistance", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::DOUBLE, Gen_temporal_average_hausdorff_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lcssDistance", {TemporalTypes::tint(), TemporalTypes::tint(), LogicalType::DOUBLE}, LogicalType::DOUBLE, Gen_temporal_lcss_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lcssDistance", {TemporalTypes::tfloat(), TemporalTypes::tfloat(), LogicalType::DOUBLE}, LogicalType::DOUBLE, Gen_temporal_lcss_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lcssDistance", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint(), LogicalType::DOUBLE}, LogicalType::DOUBLE, Gen_temporal_lcss_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lcssDistance", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint(), LogicalType::DOUBLE}, LogicalType::DOUBLE, Gen_temporal_lcss_distance));
 }
 
-void RegisterGenerated_meos_temporal_conversion(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tint", {TemporalTypes::tbool()}, TemporalTypes::tint(), Gen_tbool_to_tint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tbool()}, TemporalTypes::tint(), Gen_tbool_to_tint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tint", {TemporalTypes::tfloat()}, TemporalTypes::tint(), Gen_tfloat_to_tint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tfloat()}, TemporalTypes::tint(), Gen_tfloat_to_tint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tbigint", {TemporalTypes::tfloat()}, TemporalTypes::tbigint(), Gen_tfloat_to_tbigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tfloat()}, TemporalTypes::tbigint(), Gen_tfloat_to_tbigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tfloat", {TemporalTypes::tint()}, TemporalTypes::tfloat(), Gen_tint_to_tfloat));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tint()}, TemporalTypes::tfloat(), Gen_tint_to_tfloat));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tbigint", {TemporalTypes::tint()}, TemporalTypes::tbigint(), Gen_tint_to_tbigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tint()}, TemporalTypes::tbigint(), Gen_tint_to_tbigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tint", {TemporalTypes::tbigint()}, TemporalTypes::tint(), Gen_tbigint_to_tint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tbigint()}, TemporalTypes::tint(), Gen_tbigint_to_tint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tfloat", {TemporalTypes::tbigint()}, TemporalTypes::tfloat(), Gen_tbigint_to_tfloat));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tbigint()}, TemporalTypes::tfloat(), Gen_tbigint_to_tfloat));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {CbufferTypes::tcbuffer()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {CbufferTypes::tcbuffer()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {TGeometryTypes::tgeometry()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TGeometryTypes::tgeometry()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {TGeographyTypes::tgeography()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TGeographyTypes::tgeography()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {TgeompointType::tgeompoint()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TgeompointType::tgeompoint()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {TgeogpointType::tgeogpoint()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TgeogpointType::tgeogpoint()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {H3indexTypes::th3index()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {H3indexTypes::th3index()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {TJsonbTypes::tjsonb()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TJsonbTypes::tjsonb()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {NpointTypes::tnpoint()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {NpointTypes::tnpoint()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {TPcpointTypes::tpcpoint()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TPcpointTypes::tpcpoint()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {TPcpatchTypes::tpcpatch()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TPcpatchTypes::tpcpatch()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {PoseTypes::tpose()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {PoseTypes::tpose()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {PosechainTypes::tposechain()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {PosechainTypes::tposechain()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {QuadbinTypes::tquadbin()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {QuadbinTypes::tquadbin()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {TrgeometryTypes::trgeometry()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TrgeometryTypes::trgeometry()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {S2cellTypes::ts2cell()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {S2cellTypes::ts2cell()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {TemporalTypes::tbool()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tbool()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {TemporalTypes::tint()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tint()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {TemporalTypes::tbigint()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tbigint()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {TemporalTypes::tfloat()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tfloat()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeSpan", {TemporalTypes::ttext()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::ttext()}, SpanTypes::tstzspan(), Gen_temporal_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("valueSpan", {TemporalTypes::tint()}, SpanTypes::intspan(), Gen_tnumber_to_span));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tint()}, SpanTypes::intspan(), Gen_tnumber_to_span));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("valueSpan", {TemporalTypes::tbigint()}, SpanTypes::bigintspan(), Gen_tnumber_to_span));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tbigint()}, SpanTypes::bigintspan(), Gen_tnumber_to_span));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("valueSpan", {TemporalTypes::tfloat()}, SpanTypes::floatspan(), Gen_tnumber_to_span));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tfloat()}, SpanTypes::floatspan(), Gen_tnumber_to_span));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tbox", {TemporalTypes::tint()}, TboxType::tbox(), Gen_tnumber_to_tbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tint()}, TboxType::tbox(), Gen_tnumber_to_tbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tbox", {TemporalTypes::tbigint()}, TboxType::tbox(), Gen_tnumber_to_tbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tbigint()}, TboxType::tbox(), Gen_tnumber_to_tbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tbox", {TemporalTypes::tfloat()}, TboxType::tbox(), Gen_tnumber_to_tbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tfloat()}, TboxType::tbox(), Gen_tnumber_to_tbox));
-}
-
-void RegisterGenerated_meos_pointcloud_box_pos(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcboxLeft", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_left_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_left_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcboxOverleft", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_overleft_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_overleft_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcboxRight", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_right_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_right_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcboxOverright", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_overright_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_overright_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcboxBelow", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_below_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<<|", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_below_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcboxOverbelow", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_overbelow_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&<|", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_overbelow_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcboxAbove", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_above_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("|>>", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_above_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcboxOverabove", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_overabove_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("|&>", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_overabove_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcboxFront", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_front_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<</", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_front_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcboxOverfront", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_overfront_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("&</", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_overfront_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcboxBack", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_back_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("/>>", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_back_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcboxOverback", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_overback_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("/&>", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_overback_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcboxBefore", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_before_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcboxOverbefore", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_overbefore_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcboxAfter", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_after_tpcbox_tpcbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcboxOverafter", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_overafter_tpcbox_tpcbox));
+void RegisterGenerated_meos_geo_box_pos(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxAbove", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_above_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("|>>", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_above_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxAfter", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_after_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxBack", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_back_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("/>>", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_back_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxBefore", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_before_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxBelow", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_below_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<<|", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_below_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxFront", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_front_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<</", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_front_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxLeft", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_left_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<<", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_left_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxOverabove", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overabove_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("|&>", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overabove_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxOverafter", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overafter_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxOverback", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overback_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("/&>", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overback_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxOverbefore", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overbefore_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxOverbelow", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overbelow_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&<|", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overbelow_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxOverfront", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overfront_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&</", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overfront_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxOverleft", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overleft_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&<", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overleft_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxOverright", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overright_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&>", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_overright_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxRight", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_right_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">>", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_right_stbox_stbox));
 }
 
 void RegisterGenerated_meos_json_set_json(ExtensionLoader &loader) {
@@ -4122,88 +4300,38 @@ void RegisterGenerated_meos_json_set_json(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("jsonbsetPretty", {SetTypes::jsonbset()}, SetTypes::textset(), Gen_jsonbset_pretty));
 }
 
-void RegisterGenerated_meos_geo_accessor(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("centroid", {TgeompointType::tgeompoint()}, TgeompointType::tgeompoint(), Gen_tgeo_centroid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("centroid", {TgeogpointType::tgeogpoint()}, TgeogpointType::tgeogpoint(), Gen_tgeo_centroid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("centroid", {TGeometryTypes::tgeometry()}, TgeompointType::tgeompoint(), Gen_tgeo_centroid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("centroid", {TGeographyTypes::tgeography()}, TgeogpointType::tgeogpoint(), Gen_tgeo_centroid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("angularDifference", {TgeompointType::tgeompoint()}, TemporalTypes::tfloat(), Gen_tpoint_angular_difference));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("angularDifference", {TgeogpointType::tgeogpoint()}, TemporalTypes::tfloat(), Gen_tpoint_angular_difference));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("azimuth", {TgeompointType::tgeompoint()}, TemporalTypes::tfloat(), Gen_tpoint_azimuth));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("azimuth", {TgeogpointType::tgeogpoint()}, TemporalTypes::tfloat(), Gen_tpoint_azimuth));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("cumulativeLength", {TgeompointType::tgeompoint()}, TemporalTypes::tfloat(), Gen_tpoint_cumulative_length));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("cumulativeLength", {TgeogpointType::tgeogpoint()}, TemporalTypes::tfloat(), Gen_tpoint_cumulative_length));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("getX", {TgeompointType::tgeompoint()}, TemporalTypes::tfloat(), Gen_tpoint_get_x));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("getX", {TgeogpointType::tgeogpoint()}, TemporalTypes::tfloat(), Gen_tpoint_get_x));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("getY", {TgeompointType::tgeompoint()}, TemporalTypes::tfloat(), Gen_tpoint_get_y));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("getY", {TgeogpointType::tgeogpoint()}, TemporalTypes::tfloat(), Gen_tpoint_get_y));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("getZ", {TgeompointType::tgeompoint()}, TemporalTypes::tfloat(), Gen_tpoint_get_z));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("getZ", {TgeogpointType::tgeogpoint()}, TemporalTypes::tfloat(), Gen_tpoint_get_z));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("isSimple", {TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_tpoint_is_simple));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("isSimple", {TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_tpoint_is_simple));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("length", {TgeompointType::tgeompoint()}, LogicalType::DOUBLE, Gen_tpoint_length));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("length", {TgeogpointType::tgeogpoint()}, LogicalType::DOUBLE, Gen_tpoint_length));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("speed", {TgeompointType::tgeompoint()}, TemporalTypes::tfloat(), Gen_tpoint_speed));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("speed", {TgeogpointType::tgeogpoint()}, TemporalTypes::tfloat(), Gen_tpoint_speed));
-}
-
-void RegisterGenerated_meos_cellindex(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("getResolution", {H3indexTypes::th3index()}, TemporalTypes::tint(), Gen_tcellindex_get_resolution));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("getResolution", {QuadbinTypes::tquadbin()}, TemporalTypes::tint(), Gen_tcellindex_get_resolution));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("getResolution", {S2cellTypes::ts2cell()}, TemporalTypes::tint(), Gen_tcellindex_get_resolution));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("isValidCell", {H3indexTypes::th3index()}, TemporalTypes::tbool(), Gen_tcellindex_is_valid_cell));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("isValidCell", {QuadbinTypes::tquadbin()}, TemporalTypes::tbool(), Gen_tcellindex_is_valid_cell));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("isValidCell", {S2cellTypes::ts2cell()}, TemporalTypes::tbool(), Gen_tcellindex_is_valid_cell));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("cellToParent", {H3indexTypes::th3index(), LogicalType::INTEGER}, H3indexTypes::th3index(), Gen_tcellindex_cell_to_parent));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("cellToParent", {QuadbinTypes::tquadbin(), LogicalType::INTEGER}, QuadbinTypes::tquadbin(), Gen_tcellindex_cell_to_parent));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("cellToParent", {S2cellTypes::ts2cell(), LogicalType::INTEGER}, S2cellTypes::ts2cell(), Gen_tcellindex_cell_to_parent));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("cellToPoint", {QuadbinTypes::tquadbin()}, TgeompointType::tgeompoint(), Gen_tcellindex_cell_to_point));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("cellToPoint", {S2cellTypes::ts2cell()}, TgeogpointType::tgeogpoint(), Gen_tcellindex_cell_to_point));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("cellToBoundary", {H3indexTypes::th3index()}, TGeographyTypes::tgeography(), Gen_tcellindex_cell_to_boundary));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("cellToBoundary", {QuadbinTypes::tquadbin()}, TGeometryTypes::tgeometry(), Gen_tcellindex_cell_to_boundary));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("cellToBoundary", {S2cellTypes::ts2cell()}, TGeographyTypes::tgeography(), Gen_tcellindex_cell_to_boundary));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("cellArea", {H3indexTypes::th3index()}, TemporalTypes::tfloat(), Gen_tcellindex_cell_area));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("cellArea", {QuadbinTypes::tquadbin()}, TemporalTypes::tfloat(), Gen_tcellindex_cell_area));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("cellArea", {S2cellTypes::ts2cell()}, TemporalTypes::tfloat(), Gen_tcellindex_cell_area));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbinCellToQuadkey", {QuadbinTypes::tquadbin()}, TemporalTypes::ttext(), Gen_tquadbin_cell_to_quadkey));
-}
-
-void RegisterGenerated_meos_box_comp(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {TboxType::tbox()}, LogicalType::UINTEGER, Gen_tbox_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {TboxType::tbox(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_tbox_hash_extended));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {TboxType::tbox(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_tbox_eq));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("=", {TboxType::tbox(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_tbox_eq));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {TboxType::tbox(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_tbox_ge));
-    RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {TboxType::tbox(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_tbox_ge));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {TboxType::tbox(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_tbox_gt));
-    RegisterSerializedScalarFunction(loader, ScalarFunction(">", {TboxType::tbox(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_tbox_gt));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("le", {TboxType::tbox(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_tbox_le));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<=", {TboxType::tbox(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_tbox_le));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {TboxType::tbox(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_tbox_lt));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<", {TboxType::tbox(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_tbox_lt));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {TboxType::tbox(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_tbox_ne));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {TboxType::tbox(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_tbox_ne));
-}
-
-void RegisterGenerated_meos_quadbin_base_comp(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::BOOLEAN, Gen_quadbin_eq));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::BOOLEAN, Gen_quadbin_ne));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::BOOLEAN, Gen_quadbin_lt));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("le", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::BOOLEAN, Gen_quadbin_le));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::BOOLEAN, Gen_quadbin_gt));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::BOOLEAN, Gen_quadbin_ge));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::INTEGER, Gen_quadbin_cmp));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {QuadbinTypes::quadbin()}, LogicalType::UINTEGER, Gen_quadbin_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {QuadbinTypes::quadbin(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_quadbin_hash_extended));
+void RegisterGenerated_meos_json_comp_ever(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aEqual", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, LogicalType::BOOLEAN, Gen_always_eq_tjsonb_jsonb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%=", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, LogicalType::BOOLEAN, Gen_always_eq_tjsonb_jsonb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aEqual", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, LogicalType::BOOLEAN, Gen_always_eq_tjsonb_tjsonb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%=", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, LogicalType::BOOLEAN, Gen_always_eq_tjsonb_tjsonb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aNotEqual", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, LogicalType::BOOLEAN, Gen_always_ne_tjsonb_jsonb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%<>", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, LogicalType::BOOLEAN, Gen_always_ne_tjsonb_jsonb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aNotEqual", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, LogicalType::BOOLEAN, Gen_always_ne_tjsonb_tjsonb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%<>", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, LogicalType::BOOLEAN, Gen_always_ne_tjsonb_tjsonb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eEqual", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, LogicalType::BOOLEAN, Gen_ever_eq_tjsonb_jsonb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?=", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, LogicalType::BOOLEAN, Gen_ever_eq_tjsonb_jsonb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eEqual", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, LogicalType::BOOLEAN, Gen_ever_eq_tjsonb_tjsonb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?=", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, LogicalType::BOOLEAN, Gen_ever_eq_tjsonb_tjsonb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eNotEqual", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, LogicalType::BOOLEAN, Gen_ever_ne_tjsonb_jsonb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, LogicalType::BOOLEAN, Gen_ever_ne_tjsonb_jsonb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eNotEqual", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, LogicalType::BOOLEAN, Gen_ever_ne_tjsonb_tjsonb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, LogicalType::BOOLEAN, Gen_ever_ne_tjsonb_tjsonb));
 }
 
 void RegisterGenerated_meos_temporal_analytics_simplify(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("douglasPeuckerSimplify", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_temporal_simplify_dp));
     RegisterSerializedScalarFunction(loader, ScalarFunction("douglasPeuckerSimplify", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::BOOLEAN}, TgeompointType::tgeompoint(), Gen_temporal_simplify_dp));
     RegisterSerializedScalarFunction(loader, ScalarFunction("douglasPeuckerSimplify", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::BOOLEAN}, TGeometryTypes::tgeometry(), Gen_temporal_simplify_dp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("douglasPeuckerSimplify", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_temporal_simplify_dp_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("douglasPeuckerSimplify", {TgeompointType::tgeompoint(), LogicalType::DOUBLE}, TgeompointType::tgeompoint(), Gen_temporal_simplify_dp_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("douglasPeuckerSimplify", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE}, TGeometryTypes::tgeometry(), Gen_temporal_simplify_dp_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("maxDistSimplify", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_temporal_simplify_max_dist));
     RegisterSerializedScalarFunction(loader, ScalarFunction("maxDistSimplify", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::BOOLEAN}, TgeompointType::tgeompoint(), Gen_temporal_simplify_max_dist));
     RegisterSerializedScalarFunction(loader, ScalarFunction("maxDistSimplify", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::BOOLEAN}, TGeometryTypes::tgeometry(), Gen_temporal_simplify_max_dist));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("maxDistSimplify", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_temporal_simplify_max_dist_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("maxDistSimplify", {TgeompointType::tgeompoint(), LogicalType::DOUBLE}, TgeompointType::tgeompoint(), Gen_temporal_simplify_max_dist_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("maxDistSimplify", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE}, TGeometryTypes::tgeometry(), Gen_temporal_simplify_max_dist_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minDistSimplify", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_temporal_simplify_min_dist));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minDistSimplify", {TgeompointType::tgeompoint(), LogicalType::DOUBLE}, TgeompointType::tgeompoint(), Gen_temporal_simplify_min_dist));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minDistSimplify", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE}, TgeogpointType::tgeogpoint(), Gen_temporal_simplify_min_dist));
@@ -4211,19 +4339,62 @@ void RegisterGenerated_meos_temporal_analytics_simplify(ExtensionLoader &loader)
     RegisterSerializedScalarFunction(loader, ScalarFunction("minDistSimplify", {TGeographyTypes::tgeography(), LogicalType::DOUBLE}, TGeographyTypes::tgeography(), Gen_temporal_simplify_min_dist));
 }
 
-void RegisterGenerated_meos_rgeo_comp_temp(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tEqual", {MobilityDuckGeometryType(), TrgeometryTypes::trgeometry()}, TemporalTypes::tbool(), Gen_teq_geo_trgeometry));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tEqual", {TrgeometryTypes::trgeometry(), MobilityDuckGeometryType()}, TemporalTypes::tbool(), Gen_teq_trgeometry_geo));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tNotEqual", {MobilityDuckGeometryType(), TrgeometryTypes::trgeometry()}, TemporalTypes::tbool(), Gen_tne_geo_trgeometry));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tNotEqual", {TrgeometryTypes::trgeometry(), MobilityDuckGeometryType()}, TemporalTypes::tbool(), Gen_tne_trgeometry_geo));
+void RegisterGenerated_meos_temporal_bool(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tAnd", {LogicalType::BOOLEAN, TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_tand_bool_tbool));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&", {LogicalType::BOOLEAN, TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_tand_bool_tbool));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tAnd", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_tand_tbool_bool));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_tand_tbool_bool));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tAnd", {TemporalTypes::tbool(), TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_tand_tbool_tbool));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&", {TemporalTypes::tbool(), TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_tand_tbool_tbool));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tNot", {TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_tnot_tbool));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("~", {TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_tnot_tbool));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tOr", {LogicalType::BOOLEAN, TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_tor_bool_tbool));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("|", {LogicalType::BOOLEAN, TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_tor_bool_tbool));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tOr", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_tor_tbool_bool));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("|", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_tor_tbool_bool));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tOr", {TemporalTypes::tbool(), TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_tor_tbool_tbool));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("|", {TemporalTypes::tbool(), TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_tor_tbool_tbool));
 }
 
-void RegisterGenerated_meos_pointcloud_box_accessor(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("hasX", {TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_tpcbox_hasx));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("hasZ", {TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_tpcbox_hasz));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("hasT", {TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_tpcbox_hast));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {TpcboxType::tpcbox()}, LogicalType::INTEGER, Gen_tpcbox_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("pcid", {TpcboxType::tpcbox()}, LogicalType::UINTEGER, Gen_tpcbox_pcid));
+void RegisterGenerated_meos_s2cell_base_comp(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {S2cellTypes::s2cell(), S2cellTypes::s2cell()}, LogicalType::BOOLEAN, Gen_s2cell_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {S2cellTypes::s2cell(), S2cellTypes::s2cell()}, LogicalType::BOOLEAN, Gen_s2cell_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {S2cellTypes::s2cell(), S2cellTypes::s2cell()}, LogicalType::BOOLEAN, Gen_s2cell_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("le", {S2cellTypes::s2cell(), S2cellTypes::s2cell()}, LogicalType::BOOLEAN, Gen_s2cell_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {S2cellTypes::s2cell(), S2cellTypes::s2cell()}, LogicalType::BOOLEAN, Gen_s2cell_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {S2cellTypes::s2cell(), S2cellTypes::s2cell()}, LogicalType::BOOLEAN, Gen_s2cell_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {S2cellTypes::s2cell(), S2cellTypes::s2cell()}, LogicalType::INTEGER, Gen_s2cell_cmp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {S2cellTypes::s2cell()}, LogicalType::UINTEGER, Gen_s2cell_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {S2cellTypes::s2cell(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_s2cell_hash_extended));
+}
+
+void RegisterGenerated_meos_pointcloud_box_comp(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_tpcbox_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("=", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_tpcbox_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_tpcbox_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_tpcbox_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_tpcbox_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_tpcbox_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("le", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_tpcbox_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<=", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_tpcbox_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_tpcbox_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_tpcbox_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_tpcbox_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {TpcboxType::tpcbox(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_tpcbox_ge));
+}
+
+void RegisterGenerated_meos_pointcloud_restrict(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atValue", {TPcpointTypes::tpcpoint(), TPcpointTypes::pcpoint()}, TPcpointTypes::tpcpoint(), Gen_tpcpoint_at_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValue", {TPcpointTypes::tpcpoint(), TPcpointTypes::pcpoint()}, TPcpointTypes::tpcpoint(), Gen_tpcpoint_minus_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atValue", {TPcpatchTypes::tpcpatch(), TPcpatchTypes::pcpatch()}, TPcpatchTypes::tpcpatch(), Gen_tpcpatch_at_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValue", {TPcpatchTypes::tpcpatch(), TPcpatchTypes::pcpatch()}, TPcpatchTypes::tpcpatch(), Gen_tpcpatch_minus_value));
+}
+
+void RegisterGenerated_meos_json_accessor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {TJsonbTypes::tjsonb()}, TJsonbTypes::jsonb(), Gen_tjsonb_end_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {TJsonbTypes::tjsonb()}, TJsonbTypes::jsonb(), Gen_tjsonb_start_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueAtTimestamp", {TJsonbTypes::tjsonb(), LogicalType::TIMESTAMP_TZ}, TJsonbTypes::jsonb(), Gen_tjsonb_value_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueN", {TJsonbTypes::tjsonb(), LogicalType::INTEGER}, TJsonbTypes::jsonb(), Gen_tjsonb_value_n));
 }
 
 void RegisterGenerated_meos_pose_base_inout(ExtensionLoader &loader) {
@@ -4233,33 +4404,38 @@ void RegisterGenerated_meos_pose_base_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {PoseTypes::pose()}, LogicalType::VARCHAR, Gen_pose_as_text_d));
 }
 
-void RegisterGenerated_meos_rgeo_conversion(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpose", {TrgeometryTypes::trgeometry()}, PoseTypes::tpose(), Gen_trgeometry_to_tpose));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompoint", {TrgeometryTypes::trgeometry()}, TgeompointType::tgeompoint(), Gen_trgeometry_to_tgeompoint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometry", {TrgeometryTypes::trgeometry()}, TGeometryTypes::tgeometry(), Gen_trgeometry_to_tgeometry));
+void RegisterGenerated_meos_npoint_conversion(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tnpoint", {TgeompointType::tgeompoint()}, NpointTypes::tnpoint(), Gen_tgeompoint_to_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TgeompointType::tgeompoint()}, NpointTypes::tnpoint(), Gen_tgeompoint_to_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompoint", {NpointTypes::tnpoint()}, TgeompointType::tgeompoint(), Gen_tnpoint_to_tgeompoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {NpointTypes::tnpoint()}, TgeompointType::tgeompoint(), Gen_tnpoint_to_tgeompoint));
 }
 
-void RegisterGenerated_meos_h3_base_accessor(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("isValidCell", {H3indexTypes::h3index()}, LogicalType::BOOLEAN, Gen_h3_is_valid_cell));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("isValidDirectedEdge", {H3indexTypes::h3index()}, LogicalType::BOOLEAN, Gen_h3_is_valid_directed_edge));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("isValidVertex", {H3indexTypes::h3index()}, LogicalType::BOOLEAN, Gen_h3_is_valid_vertex));
+void RegisterGenerated_meos_posechain_comp_temp(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tEqual", {PosechainTypes::tposechain(), PosechainTypes::posechain()}, TemporalTypes::tbool(), Gen_teq_tposechain_posechain));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tNotEqual", {PosechainTypes::tposechain(), PosechainTypes::posechain()}, TemporalTypes::tbool(), Gen_tne_tposechain_posechain));
 }
 
-void RegisterGenerated_meos_npoint_base_srid(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {NpointTypes::npoint()}, LogicalType::INTEGER, Gen_npoint_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {NpointTypes::nsegment()}, LogicalType::INTEGER, Gen_nsegment_srid));
+void RegisterGenerated_meos_pose_conversion(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpose", {PoseTypes::tpose(), PoseTypes::tpose()}, PoseTypes::tpose(), Gen_tpose_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompoint", {PoseTypes::tpose()}, PoseTypes::tpose(), Gen_tpose_to_tpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {PoseTypes::tpose()}, PoseTypes::tpose(), Gen_tpose_to_tpoint));
 }
 
-void RegisterGenerated_meos_cbuffer_transf(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("expand", {CbufferTypes::tcbuffer(), LogicalType::DOUBLE}, CbufferTypes::tcbuffer(), Gen_tcbuffer_expand));
+void RegisterGenerated_meos_rgeo_spatialfuncs(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bodyPointTrajectory", {TrgeometryTypes::trgeometry(), MobilityDuckGeometryType()}, TgeompointType::tgeompoint(), Gen_trgeometry_body_point_trajectory));
+}
+
+void RegisterGenerated_meos_posechain_accessor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numPoses", {PosechainTypes::tposechain()}, LogicalType::INTEGER, Gen_tposechain_num_poses));
 }
 
 void RegisterGenerated_meos_quadbin_set_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::quadbinset()}, LogicalType::VARCHAR, Gen_quadbinset_out));
 }
 
-void RegisterGenerated_meos_s2cell_inout(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {S2cellTypes::ts2cell()}, LogicalType::VARCHAR, Gen_ts2cell_out));
+void RegisterGenerated_meos_h3_inout(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {H3indexTypes::th3index()}, LogicalType::VARCHAR, Gen_th3index_out));
 }
 
 } // namespace duckdb

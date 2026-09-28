@@ -1009,6 +1009,34 @@ def emit_defaulted_unary_temporal(name, subcast, dval):
             f"            return TemporalToBlobN(result, r, mask, idx);\n"
             f"        }});\n}}\n")
 
+def emit_defaulted_ternary(f, kind, arg2, dval):
+    """The shorter (Temporal, scalar)->X overload of a (Temporal, scalar, scalar-param
+    DEFAULT)->X function (tquadbin(tgeompoint, integer[, borderInc boolean DEFAULT TRUE])): the
+    body of #emit_body_ternary with the trailing default substituted, over a BinaryExecutor, as
+    #emit_defaulted_unary_temporal is the shorter overload of a binary function."""
+    name = f["name"]; dt2, cpp2, _ = arg2
+    e2 = arg2[2]
+    if kind == "temporal":
+        return (f"static void Gen_{name}_d(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::ExecuteWithNulls<string_t, {cpp2}, string_t>("
+                f"args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t in, {cpp2} a2, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                f"            Temporal *t = BlobToTemporal(in);\n"
+                f"            Temporal *r = {name}(t, {e2}, {dval});\n            free(t);\n"
+                f"            return TemporalToBlobN(result, r, mask, idx);\n        }});\n}}\n")
+    ctype, rett, _rx = scalar_emit3(f)
+    ex, prm, ann, ret = scalar_exec(f, rett, _rx)
+    return (f"static void Gen_{name}_d(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+            f"    EnsureMeosThreadInitialized();\n"
+            f"    BinaryExecutor::{ex}<string_t, {cpp2}, {rett}>("
+            f"args.data[0], args.data[1], result, args.size(),\n"
+            f"        [&](string_t in, {cpp2} a2{prm}){ann} {{\n"
+            f"            Temporal *t = BlobToTemporal(in);\n"
+            f"            {ctype} r = {name}(t, {e2}, {dval});\n            free(t);\n"
+            f"            {ret}\n"
+            f"        }});\n}}\n")
+
 def emit_defaulted_unary_temporal_scalar(f, dval):
     """The shorter (Temporal)->scalar overload of a (Temporal, scalar-param DEFAULT)->scalar
     function (duration(temporal[,boolean]), asText/asEWKT(tspatial[,int])): a UnaryExecutor
@@ -4191,6 +4219,36 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     for nm in names:
                         specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                              f'"{reg_name(nm, f)}", {{{a}}}, {r2}, Gen_{fn}_d));')
+        # A (temporal, scalar, scalar-param DEFAULT)->X fn (tquadbin(tgeompoint, integer[,
+        # borderInc DEFAULT TRUE])) is callable one argument shorter too: the same overload one
+        # position up, the binary body with the trailing default substituted.
+        if t and trailing_arg_default(f):
+            # The default reaches the kernel the way the argument it stands for does: a by-value
+            # scalar as its C++ literal, a text argument through the marshalling its column takes
+            # (null_handle_type_from_string of 'raise_exception'), the literal as its string_t.
+            _raw = trailing_arg_default(f)
+            _a3 = t[3]
+            if _a3[1] == "string_t":
+                _lit = '"%s"' % _raw.strip().strip("'")
+                dflt = _a3[2].replace("a2", "string_t(%s)" % _lit)
+            else:
+                dflt = sql_default_to_cpp(_raw)
+            bodies.append(emit_defaulted_ternary(f, kind, arg2, dflt))
+            if scope == "all":
+                rett = (ret_temporal_type(fn, "type", f.get("group"), f.get("sqlReturnType"))
+                        if dret == "MD_TEMPORAL" else dret)
+                for nm in names:
+                    generic_regs.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                        f'"{reg_name(nm, f)}", {{type, {arg2[0]}}}, {rett}, Gen_{fn}_d));')
+            else:
+                for a in accs:
+                    r2 = dret
+                    if dret == "MD_TEMPORAL":
+                        r2 = (sig_declared_ret(f, a, 2)
+                              or ret_temporal_type(fn, a, f.get("group"), f.get("sqlReturnType")))
+                    for nm in names:
+                        specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                             f'"{reg_name(nm, f)}", {{{a}, {arg2[0]}}}, {r2}, Gen_{fn}_d));')
         # Same shorter-arity overload for a (Temporal, scalar-param DEFAULT)->SCALAR fn
         # (duration(temporal[,boolean]) DEFAULT FALSE; asText/asEWKT(tspatial[,int]) DEFAULT 15):
         # the 1-arg form is canonical SQL but geo-only-hand today — generate it for every type
