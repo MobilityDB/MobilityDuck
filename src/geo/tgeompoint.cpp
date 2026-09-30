@@ -1519,12 +1519,12 @@ void TgeoAsMVTGeomExec(DataChunk &args, ExpressionState &state, Vector &result) 
         if (cc > 3) buffer = FlatVector::GetData<int32_t>(args.data[3])[row];
         if (cc > 4) clip   = FlatVector::GetData<bool>(args.data[4])[row];
 
-        MvtGeom mvt = tpoint_as_mvtgeom(t, bx, extent, buffer, clip);
+        GSERIALIZED *geom = nullptr;
+        int64 *times = nullptr;
+        int count = 0;
+        bool found = tpoint_as_mvtgeom(t, bx, extent, buffer, clip, &geom, &times, &count);
         free(t); free(bx);
-        GSERIALIZED *geom = mvt.geom;
-        int64 *times = mvt.times;
-        int count = mvt.count;
-        if (!geom) {
+        if (!found || !geom) {
             out_validity.SetInvalid(row);
             times_entries[row] = list_entry_t{total_times, 0};
             if (geom) free(geom);
@@ -1738,17 +1738,11 @@ void LoadSpaceSplitRow(ClientContext &context, SpaceSplitLocalState &state,
     GSERIALIZED **bins = nullptr;
     TimestampTz *tbins = nullptr;
     if (with_time) {
-        SpaceTimeSplit sts = tgeo_space_time_split(temp, xsize, ysize, zsize, &mi, origin,
-                                                   torigin, bitmatrix, true);
-        trajs = sts.fragments;
-        bins  = sts.space_bins;
-        tbins = sts.time_bins;
-        count = sts.count;
+        trajs = tgeo_space_time_split(temp, xsize, ysize, zsize, &mi, origin, torigin,
+                                      bitmatrix, true, &bins, &tbins, &count);
     } else {
-        SpaceSplit ss = tgeo_space_split(temp, xsize, ysize, zsize, origin, bitmatrix, true);
-        trajs = ss.fragments;
-        bins  = ss.bins;
-        count = ss.count;
+        trajs = tgeo_space_split(temp, xsize, ysize, zsize, origin, bitmatrix, true, &bins,
+                                 &count);
     }
     free(temp);
     free(origin);
