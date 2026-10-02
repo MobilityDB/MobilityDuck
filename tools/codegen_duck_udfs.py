@@ -3637,7 +3637,10 @@ def shape_h3_prefilter(f):
     b0, b1 = base(ins[0]["canonical"]), base(ins[1]["canonical"])
     rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
     ptr = lambda p: norm(p["canonical"]).endswith("*")
-    if b0 == "GSERIALIZED" and ptr(ins[0]) and b1 == "int" and "*" not in norm(ins[1]["canonical"]):
+    # The resolution is a 32-bit integer however MEOS spells it (`int` or the `int32` of the
+    # SQL-exposed integer convention), as the integer return check of this file reads it.
+    if (b0 == "GSERIALIZED" and ptr(ins[0]) and b1 in ("int", "int32_t")
+            and "*" not in norm(ins[1]["canonical"])):
         if rb == "Set" and rn.endswith("*"):
             return "geo2set"
         if rb == "uint64_t" and "*" not in rn:
