@@ -112,10 +112,10 @@ for `tgeometry` / `tgeompoint` / `tgeography` / `tgeogpoint`.
 
 | Name | Notes |
 |---|---|
-| `timeSplit(temp, interval, ts)` | all 8 temporal types |
-| `valueSplit(tint\|tfloat, size, origin)` | |
+| `timeSplit(temp, interval, ts [, borderInc])` | all 8 temporal types; borderInc defaults to true |
+| `valueSplit(tint\|tfloat, size, origin [, borderInc])` | borderInc defaults to true |
 | `quadSplit(stbox)` | 4 quadrants in 2D, 8 octants in 3D |
-| `valueTimeSplit(tnumber, vsize, dur, vorigin, torigin)` | emits `LIST<STRUCT(value, time, tnumber)>` |
+| `valueTimeSplit(tnumber, vsize, dur, vorigin, torigin [, borderInc])` | emits `LIST<STRUCT(value, time, tnumber)>`; borderInc defaults to true |
 | `spaceSplit(tgeompoint\|tgeometry, …)` | emits `LIST<STRUCT(part, space)>` |
 | `spaceTimeSplit(tgeompoint\|tgeometry, …)` | emits `LIST<STRUCT(part, space, time)>` |
 

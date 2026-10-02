@@ -1,0 +1,54 @@
+# name: test/sql/parity/025_temporal_tile_border_inc.test
+# description: the grid functions give the cell holding the upper border its own piece unless borderInc is false
+# group: [sql]
+#
+# Every grid function over a value or an extent with an upper border takes the trailing optional
+# borderInc of MobilityDB, default true. Each case below puts the upper border of its extent on the
+# lower bound of a cell: borderInc true answers that cell as a piece holding the border alone,
+# false leaves it out, and the omitted argument answers as true.
+
+require mobilityduck
+
+# =============================================================================
+# valueTiles(tbox, size, origin [, borderInc]) and timeTiles(tbox, duration, origin [, borderInc])
+# =============================================================================
+
+query I
+SELECT len(valueTiles(tbox 'TBOXFLOAT X([1, 10])', 5.0, 0.0));
+----
+3
+
+query I
+SELECT len(valueTiles(tbox 'TBOXFLOAT X([1, 10])', 5.0, 0.0, false));
+----
+2
+
+query I
+SELECT len(timeTiles(tbox 'TBOXFLOAT XT([1, 2],[2000-01-01, 2000-01-03])', interval '1 day', timestamptz '2000-01-01', false));
+----
+2
+
+# =============================================================================
+# timeSplit(temporal, duration, origin [, borderInc]) and valueSplit(tnumber, size, origin [, borderInc])
+# =============================================================================
+
+query I
+SELECT count(*) FROM timeSplit(tfloat '[1@2000-01-01, 3@2000-01-03]', interval '1 day', timestamptz '2000-01-01');
+----
+3
+
+query I
+SELECT count(*) FROM timeSplit(tfloat '[1@2000-01-01, 3@2000-01-03]', interval '1 day', timestamptz '2000-01-01', false);
+----
+2
+
+query I
+SELECT count(*) FROM valueSplit(tfloat '[1@2000-01-01, 10@2000-01-03]', 5.0, 0.0, false);
+----
+2
+
+# A NULL borderInc answers no tile, as the other arguments do
+query I
+SELECT valueTiles(tbox 'TBOXFLOAT X([1, 10])', 5.0, 0.0, NULL) IS NULL;
+----
+true

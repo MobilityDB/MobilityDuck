@@ -132,12 +132,14 @@ SELECT numInstants(tpcpatch '4F000000010000000000000002000000000000000000F03F000
 ----
 1
 
-# Test asMFJSON produces valid MF-JSON (pcid / npoints / 2D bounds from the
-# serialized value; schema-free)
-query I
-SELECT asMFJSON(tpcpatch '4F000000010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040000000000000000000000000000000@2024-01-01') IS NOT NULL;
+# Test asMFJSON is registered. The MF-JSON form writes the points of each patch,
+# which requires decoding them against the pgPointCloud PCSCHEMA of its pcid.
+# This file registers none, so the call reports the missing schema, as
+# test/sql/tpcpoint.test states for the point of the same pcid.
+statement error
+SELECT asMFJSON(tpcpatch '4F000000010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040000000000000000000000000000000@2024-01-01');
 ----
-true
+PCSCHEMA for pcid 1 not registered
 
 # A negative MF-JSON precision reaches MEOS, which refuses it
 statement error
