@@ -38,6 +38,9 @@ struct BinsBindData : public FunctionData {
     string blob;
     Value vsize;
     Value vorigin;
+    // borderInc, the trailing optional argument of bins(): true gives the bin holding the upper
+    // border of the extent its own piece
+    bool border_inc = true;
 
     unique_ptr<FunctionData> Copy() const override {
         auto r = make_uniq<BinsBindData>();
@@ -46,13 +49,15 @@ struct BinsBindData : public FunctionData {
         r->blob = blob;
         r->vsize = vsize;
         r->vorigin = vorigin;
+        r->border_inc = border_inc;
         // DuckDB 1.4 disallows implicit derived->base unique_ptr conversion;
         // explicit base-type construction from the moved-from derived pointer.
         return unique_ptr_cast<BinsBindData, FunctionData>(std::move(r));
     }
     bool Equals(const FunctionData &other_p) const override {
         auto &other = other_p.Cast<BinsBindData>();
-        return kind == other.kind && blob == other.blob && vsize == other.vsize && vorigin == other.vorigin;
+        return kind == other.kind && blob == other.blob && vsize == other.vsize && vorigin == other.vorigin &&
+               border_inc == other.border_inc;
     }
 };
 
@@ -83,7 +88,7 @@ static unique_ptr<GlobalTableFunctionState> BinsInitGlobal(ClientContext &, Tabl
             Span *s = reinterpret_cast<Span *>(malloc(raw_size));
             memcpy(s, raw_blob, raw_size);
             state->bins = intspan_bins(s, bind_data.vsize.GetValue<int32_t>(),
-                                       bind_data.vorigin.GetValue<int32_t>(), &state->count);
+                                       bind_data.vorigin.GetValue<int32_t>(), bind_data.border_inc, &state->count);
             free(s);
             break;
         }
@@ -91,7 +96,7 @@ static unique_ptr<GlobalTableFunctionState> BinsInitGlobal(ClientContext &, Tabl
             Span *s = reinterpret_cast<Span *>(malloc(raw_size));
             memcpy(s, raw_blob, raw_size);
             state->bins = bigintspan_bins(s, bind_data.vsize.GetValue<int64_t>(),
-                                          bind_data.vorigin.GetValue<int64_t>(), &state->count);
+                                          bind_data.vorigin.GetValue<int64_t>(), bind_data.border_inc, &state->count);
             free(s);
             break;
         }
@@ -99,7 +104,7 @@ static unique_ptr<GlobalTableFunctionState> BinsInitGlobal(ClientContext &, Tabl
             Span *s = reinterpret_cast<Span *>(malloc(raw_size));
             memcpy(s, raw_blob, raw_size);
             state->bins = floatspan_bins(s, bind_data.vsize.GetValue<double>(),
-                                         bind_data.vorigin.GetValue<double>(), &state->count);
+                                         bind_data.vorigin.GetValue<double>(), bind_data.border_inc, &state->count);
             free(s);
             break;
         }
@@ -109,7 +114,7 @@ static unique_ptr<GlobalTableFunctionState> BinsInitGlobal(ClientContext &, Tabl
             interval_t duck_duration = bind_data.vsize.GetValue<interval_t>();
             MeosInterval duration = IntervaltToInterval(duck_duration);
             int32_t torigin = ToMeosDate(bind_data.vorigin.GetValue<date_t>());
-            state->bins = datespan_bins(s, &duration, torigin, &state->count);
+            state->bins = datespan_bins(s, &duration, torigin, bind_data.border_inc, &state->count);
             free(s);
             break;
         }
@@ -121,7 +126,7 @@ static unique_ptr<GlobalTableFunctionState> BinsInitGlobal(ClientContext &, Tabl
             timestamp_tz_t in_ts;
             in_ts.value = bind_data.vorigin.GetValueUnsafe<timestamp_t>().value;
             timestamp_tz_t meos_ts = DuckDBToMeosTimestamp(in_ts);
-            state->bins = tstzspan_bins(s, &duration, meos_ts.value, &state->count);
+            state->bins = tstzspan_bins(s, &duration, meos_ts.value, bind_data.border_inc, &state->count);
             free(s);
             break;
         }
@@ -129,7 +134,7 @@ static unique_ptr<GlobalTableFunctionState> BinsInitGlobal(ClientContext &, Tabl
             SpanSet *ss = reinterpret_cast<SpanSet *>(malloc(raw_size));
             memcpy(ss, raw_blob, raw_size);
             state->bins = intspanset_bins(ss, bind_data.vsize.GetValue<int32_t>(),
-                                          bind_data.vorigin.GetValue<int32_t>(), &state->count);
+                                          bind_data.vorigin.GetValue<int32_t>(), bind_data.border_inc, &state->count);
             free(ss);
             break;
         }
@@ -137,7 +142,7 @@ static unique_ptr<GlobalTableFunctionState> BinsInitGlobal(ClientContext &, Tabl
             SpanSet *ss = reinterpret_cast<SpanSet *>(malloc(raw_size));
             memcpy(ss, raw_blob, raw_size);
             state->bins = bigintspanset_bins(ss, bind_data.vsize.GetValue<int64_t>(),
-                                             bind_data.vorigin.GetValue<int64_t>(), &state->count);
+                                             bind_data.vorigin.GetValue<int64_t>(), bind_data.border_inc, &state->count);
             free(ss);
             break;
         }
@@ -145,7 +150,7 @@ static unique_ptr<GlobalTableFunctionState> BinsInitGlobal(ClientContext &, Tabl
             SpanSet *ss = reinterpret_cast<SpanSet *>(malloc(raw_size));
             memcpy(ss, raw_blob, raw_size);
             state->bins = floatspanset_bins(ss, bind_data.vsize.GetValue<double>(),
-                                            bind_data.vorigin.GetValue<double>(), &state->count);
+                                            bind_data.vorigin.GetValue<double>(), bind_data.border_inc, &state->count);
             free(ss);
             break;
         }
@@ -155,7 +160,7 @@ static unique_ptr<GlobalTableFunctionState> BinsInitGlobal(ClientContext &, Tabl
             interval_t duck_duration = bind_data.vsize.GetValue<interval_t>();
             MeosInterval duration = IntervaltToInterval(duck_duration);
             int32_t torigin = ToMeosDate(bind_data.vorigin.GetValue<date_t>());
-            state->bins = datespanset_bins(ss, &duration, torigin, &state->count);
+            state->bins = datespanset_bins(ss, &duration, torigin, bind_data.border_inc, &state->count);
             free(ss);
             break;
         }
@@ -167,7 +172,7 @@ static unique_ptr<GlobalTableFunctionState> BinsInitGlobal(ClientContext &, Tabl
             timestamp_tz_t in_ts;
             in_ts.value = bind_data.vorigin.GetValueUnsafe<timestamp_t>().value;
             timestamp_tz_t meos_ts = DuckDBToMeosTimestamp(in_ts);
-            state->bins = tstzspanset_bins(ss, &duration, meos_ts.value, &state->count);
+            state->bins = tstzspanset_bins(ss, &duration, meos_ts.value, bind_data.border_inc, &state->count);
             free(ss);
             break;
         }
@@ -196,10 +201,10 @@ static void BinsExecute(ClientContext &, TableFunctionInput &data_p, DataChunk &
 template <BinsKind KIND>
 static unique_ptr<FunctionData> BinsBind(ClientContext &, TableFunctionBindInput &input,
                                           vector<LogicalType> &return_types, vector<string> &names) {
-    if (input.inputs.size() != 3) {
-        throw BinderException("bins(...) requires exactly 3 arguments");
+    if (input.inputs.size() != 3 && input.inputs.size() != 4) {
+        throw BinderException("bins(...) requires 3 or 4 arguments");
     }
-    for (idx_t i = 0; i < 3; i++) {
+    for (idx_t i = 0; i < input.inputs.size(); i++) {
         if (input.inputs[i].IsNull()) {
             throw BinderException("bins(...) does not accept NULL arguments");
         }
@@ -211,6 +216,9 @@ static unique_ptr<FunctionData> BinsBind(ClientContext &, TableFunctionBindInput
     data->blob.assign(blob.GetData(), blob.GetSize());
     data->vsize = input.inputs[1];
     data->vorigin = input.inputs[2];
+    if (input.inputs.size() == 4) {
+        data->border_inc = input.inputs[3].GetValue<bool>();
+    }
 
     LogicalType span_out;
     switch (KIND) {
@@ -233,40 +241,49 @@ static unique_ptr<FunctionData> BinsBind(ClientContext &, TableFunctionBindInput
 
 template <BinsKind KIND>
 static TableFunction MakeBinsFunction(const LogicalType &input_type, const LogicalType &vsize_type,
-                                       const LogicalType &vorigin_type) {
-    return TableFunction("bins",
-                         {input_type, vsize_type, vorigin_type},
-                         BinsExecute,
-                         BinsBind<KIND>,
-                         BinsInitGlobal);
+                                       const LogicalType &vorigin_type, bool with_border_inc) {
+    vector<LogicalType> arguments = {input_type, vsize_type, vorigin_type};
+    if (with_border_inc) {
+        arguments.push_back(LogicalType::BOOLEAN);
+    }
+    return TableFunction("bins", arguments, BinsExecute, BinsBind<KIND>, BinsInitGlobal);
+}
+
+//! Register bins() over one type with and without its trailing borderInc, as MobilityDB declares
+//! `bins(intspan, vsize int, vorigin int DEFAULT 0, borderInc boolean DEFAULT TRUE)`
+template <BinsKind KIND>
+static void RegisterBinsOverloads(ExtensionLoader &loader, const LogicalType &input_type,
+                                  const LogicalType &vsize_type, const LogicalType &vorigin_type) {
+    RegisterMeosFunction(loader, MakeBinsFunction<KIND>(input_type, vsize_type, vorigin_type, false));
+    RegisterMeosFunction(loader, MakeBinsFunction<KIND>(input_type, vsize_type, vorigin_type, true));
 }
 
 } // namespace
 
 void SpanTableFunctions::RegisterBins(ExtensionLoader &loader) {
     // span variants
-    RegisterMeosFunction(loader, MakeBinsFunction<BinsKind::intspan>(
-        SpanTypes::intspan(), LogicalType::INTEGER, LogicalType::INTEGER));
-    RegisterMeosFunction(loader, MakeBinsFunction<BinsKind::bigintspan>(
-        SpanTypes::bigintspan(), LogicalType::BIGINT, LogicalType::BIGINT));
-    RegisterMeosFunction(loader, MakeBinsFunction<BinsKind::floatspan>(
-        SpanTypes::floatspan(), LogicalType::DOUBLE, LogicalType::DOUBLE));
-    RegisterMeosFunction(loader, MakeBinsFunction<BinsKind::datespan>(
-        SpanTypes::datespan(), LogicalType::INTERVAL, LogicalType::DATE));
-    RegisterMeosFunction(loader, MakeBinsFunction<BinsKind::tstzspan>(
-        SpanTypes::tstzspan(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ));
+    RegisterBinsOverloads<BinsKind::intspan>(loader,
+        SpanTypes::intspan(), LogicalType::INTEGER, LogicalType::INTEGER);
+    RegisterBinsOverloads<BinsKind::bigintspan>(loader,
+        SpanTypes::bigintspan(), LogicalType::BIGINT, LogicalType::BIGINT);
+    RegisterBinsOverloads<BinsKind::floatspan>(loader,
+        SpanTypes::floatspan(), LogicalType::DOUBLE, LogicalType::DOUBLE);
+    RegisterBinsOverloads<BinsKind::datespan>(loader,
+        SpanTypes::datespan(), LogicalType::INTERVAL, LogicalType::DATE);
+    RegisterBinsOverloads<BinsKind::tstzspan>(loader,
+        SpanTypes::tstzspan(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ);
 
     // spanset variants
-    RegisterMeosFunction(loader, MakeBinsFunction<BinsKind::INTSPANSET>(
-        SpansetTypes::intspanset(), LogicalType::INTEGER, LogicalType::INTEGER));
-    RegisterMeosFunction(loader, MakeBinsFunction<BinsKind::BIGINTSPANSET>(
-        SpansetTypes::bigintspanset(), LogicalType::BIGINT, LogicalType::BIGINT));
-    RegisterMeosFunction(loader, MakeBinsFunction<BinsKind::FLOATSPANSET>(
-        SpansetTypes::floatspanset(), LogicalType::DOUBLE, LogicalType::DOUBLE));
-    RegisterMeosFunction(loader, MakeBinsFunction<BinsKind::DATESPANSET>(
-        SpansetTypes::datespanset(), LogicalType::INTERVAL, LogicalType::DATE));
-    RegisterMeosFunction(loader, MakeBinsFunction<BinsKind::TSTZSPANSET>(
-        SpansetTypes::tstzspanset(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ));
+    RegisterBinsOverloads<BinsKind::INTSPANSET>(loader,
+        SpansetTypes::intspanset(), LogicalType::INTEGER, LogicalType::INTEGER);
+    RegisterBinsOverloads<BinsKind::BIGINTSPANSET>(loader,
+        SpansetTypes::bigintspanset(), LogicalType::BIGINT, LogicalType::BIGINT);
+    RegisterBinsOverloads<BinsKind::FLOATSPANSET>(loader,
+        SpansetTypes::floatspanset(), LogicalType::DOUBLE, LogicalType::DOUBLE);
+    RegisterBinsOverloads<BinsKind::DATESPANSET>(loader,
+        SpansetTypes::datespanset(), LogicalType::INTERVAL, LogicalType::DATE);
+    RegisterBinsOverloads<BinsKind::TSTZSPANSET>(loader,
+        SpansetTypes::tstzspanset(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ);
 }
 
 } // namespace duckdb

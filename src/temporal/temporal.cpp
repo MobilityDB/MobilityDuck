@@ -1562,12 +1562,15 @@ inline void EmitTboxList(Vector &result, idx_t row_idx, TBox *tiles, int count,
     total_offset += count;
 }
 
-// valueTiles(tbox, vsize [, vorigin]) — int branch uses int xsize/xorigin, float uses double
+// valueTiles(tbox, vsize [, vorigin [, borderInc]]) — int branch uses int xsize/xorigin, float uses
+// double
 void TboxValueTilesExec(DataChunk &args, ExpressionState &, Vector &result) {
     auto &tbox_vec = args.data[0];
     auto &vsize_vec = args.data[1];
     Vector *vorigin_vec = args.ColumnCount() >= 3 ? &args.data[2] : nullptr;
+    Vector *border_vec = args.ColumnCount() >= 4 ? &args.data[3] : nullptr;
     idx_t row_count = args.size();
+    if (border_vec) border_vec->Flatten(row_count);
     tbox_vec.Flatten(row_count);
     vsize_vec.Flatten(row_count);
     if (vorigin_vec) vorigin_vec->Flatten(row_count);
@@ -1582,7 +1585,8 @@ void TboxValueTilesExec(DataChunk &args, ExpressionState &, Vector &result) {
     auto tbox_data = FlatVector::GetData<string_t>(tbox_vec);
     for (idx_t i = 0; i < row_count; ++i) {
         if (FlatVector::IsNull(tbox_vec, i) || FlatVector::IsNull(vsize_vec, i) ||
-            (vorigin_vec && FlatVector::IsNull(*vorigin_vec, i))) {
+            (vorigin_vec && FlatVector::IsNull(*vorigin_vec, i)) ||
+            (border_vec && FlatVector::IsNull(*border_vec, i))) {
             result_validity.SetInvalid(i);
             continue;
         }
@@ -1595,11 +1599,11 @@ void TboxValueTilesExec(DataChunk &args, ExpressionState &, Vector &result) {
         if (box->span.spantype == T_INTSPAN) {
             int32_t vsize = FlatVector::GetData<int32_t>(vsize_vec)[i];
             int32_t vorigin = vorigin_vec ? FlatVector::GetData<int32_t>(*vorigin_vec)[i] : 0;
-            tiles = tintbox_value_tiles(box, vsize, vorigin, &count);
+            tiles = tintbox_value_tiles(box, vsize, vorigin, border_vec ? FlatVector::GetData<bool>(*border_vec)[i] : true, &count);
         } else if (box->span.spantype == T_FLOATSPAN) {
             double vsize = FlatVector::GetData<double>(vsize_vec)[i];
             double vorigin = vorigin_vec ? FlatVector::GetData<double>(*vorigin_vec)[i] : 0.0;
-            tiles = tfloatbox_value_tiles(box, vsize, vorigin, &count);
+            tiles = tfloatbox_value_tiles(box, vsize, vorigin, border_vec ? FlatVector::GetData<bool>(*border_vec)[i] : true, &count);
         } else {
             free(box);
             throw InvalidInputException("valueTiles: tbox has no value dimension");
@@ -1610,12 +1614,14 @@ void TboxValueTilesExec(DataChunk &args, ExpressionState &, Vector &result) {
     }
 }
 
-// timeTiles(tbox, duration [, torigin])
+// timeTiles(tbox, duration [, torigin [, borderInc]])
 void TboxTimeTilesExec(DataChunk &args, ExpressionState &, Vector &result) {
     auto &tbox_vec = args.data[0];
     auto &dur_vec = args.data[1];
     Vector *torigin_vec = args.ColumnCount() >= 3 ? &args.data[2] : nullptr;
+    Vector *border_vec = args.ColumnCount() >= 4 ? &args.data[3] : nullptr;
     idx_t row_count = args.size();
+    if (border_vec) border_vec->Flatten(row_count);
     tbox_vec.Flatten(row_count);
     dur_vec.Flatten(row_count);
     if (torigin_vec) torigin_vec->Flatten(row_count);
@@ -1631,7 +1637,8 @@ void TboxTimeTilesExec(DataChunk &args, ExpressionState &, Vector &result) {
     auto dur_data = FlatVector::GetData<interval_t>(dur_vec);
     for (idx_t i = 0; i < row_count; ++i) {
         if (FlatVector::IsNull(tbox_vec, i) || FlatVector::IsNull(dur_vec, i) ||
-            (torigin_vec && FlatVector::IsNull(*torigin_vec, i))) {
+            (torigin_vec && FlatVector::IsNull(*torigin_vec, i)) ||
+            (border_vec && FlatVector::IsNull(*border_vec, i))) {
             result_validity.SetInvalid(i);
             continue;
         }
@@ -1650,9 +1657,9 @@ void TboxTimeTilesExec(DataChunk &args, ExpressionState &, Vector &result) {
         int count = 0;
         TBox *tiles = nullptr;
         if (box->span.spantype == T_INTSPAN) {
-            tiles = tintbox_time_tiles(box, &iv, (TimestampTz) torigin_meos.value, &count);
+            tiles = tintbox_time_tiles(box, &iv, (TimestampTz) torigin_meos.value, border_vec ? FlatVector::GetData<bool>(*border_vec)[i] : true, &count);
         } else if (box->span.spantype == T_FLOATSPAN) {
-            tiles = tfloatbox_time_tiles(box, &iv, (TimestampTz) torigin_meos.value, &count);
+            tiles = tfloatbox_time_tiles(box, &iv, (TimestampTz) torigin_meos.value, border_vec ? FlatVector::GetData<bool>(*border_vec)[i] : true, &count);
         } else {
             free(box);
             throw InvalidInputException("timeTiles: tbox has no value dimension to dispatch on");
@@ -1663,14 +1670,16 @@ void TboxTimeTilesExec(DataChunk &args, ExpressionState &, Vector &result) {
     }
 }
 
-// valueTimeTiles(tbox, vsize, duration [, vorigin, torigin])
+// valueTimeTiles(tbox, vsize, duration [, vorigin, torigin [, borderInc]])
 void TboxValueTimeTilesExec(DataChunk &args, ExpressionState &, Vector &result) {
     auto &tbox_vec = args.data[0];
     auto &vsize_vec = args.data[1];
     auto &dur_vec = args.data[2];
     Vector *vorigin_vec = args.ColumnCount() >= 4 ? &args.data[3] : nullptr;
     Vector *torigin_vec = args.ColumnCount() >= 5 ? &args.data[4] : nullptr;
+    Vector *border_vec = args.ColumnCount() >= 6 ? &args.data[5] : nullptr;
     idx_t row_count = args.size();
+    if (border_vec) border_vec->Flatten(row_count);
     tbox_vec.Flatten(row_count);
     vsize_vec.Flatten(row_count);
     dur_vec.Flatten(row_count);
@@ -1690,7 +1699,8 @@ void TboxValueTimeTilesExec(DataChunk &args, ExpressionState &, Vector &result) 
         if (FlatVector::IsNull(tbox_vec, i) || FlatVector::IsNull(vsize_vec, i) ||
             FlatVector::IsNull(dur_vec, i) ||
             (vorigin_vec && FlatVector::IsNull(*vorigin_vec, i)) ||
-            (torigin_vec && FlatVector::IsNull(*torigin_vec, i))) {
+            (torigin_vec && FlatVector::IsNull(*torigin_vec, i)) ||
+            (border_vec && FlatVector::IsNull(*border_vec, i))) {
             result_validity.SetInvalid(i);
             continue;
         }
@@ -1712,12 +1722,12 @@ void TboxValueTimeTilesExec(DataChunk &args, ExpressionState &, Vector &result) 
             int32_t vsize = FlatVector::GetData<int32_t>(vsize_vec)[i];
             int32_t vorigin = vorigin_vec ? FlatVector::GetData<int32_t>(*vorigin_vec)[i] : 0;
             tiles = tintbox_value_time_tiles(box, vsize, &iv, vorigin,
-                                             (TimestampTz) torigin_meos.value, &count);
+                                             (TimestampTz) torigin_meos.value, border_vec ? FlatVector::GetData<bool>(*border_vec)[i] : true, &count);
         } else if (box->span.spantype == T_FLOATSPAN) {
             double vsize = FlatVector::GetData<double>(vsize_vec)[i];
             double vorigin = vorigin_vec ? FlatVector::GetData<double>(*vorigin_vec)[i] : 0.0;
             tiles = tfloatbox_value_time_tiles(box, vsize, &iv, vorigin,
-                                               (TimestampTz) torigin_meos.value, &count);
+                                               (TimestampTz) torigin_meos.value, border_vec ? FlatVector::GetData<bool>(*border_vec)[i] : true, &count);
         } else {
             free(box);
             throw InvalidInputException("valueTimeTiles: tbox has no value dimension");
@@ -1763,6 +1773,12 @@ void TemporalTypes::RegisterTileGetters(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction(
         "valueTiles", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::DOUBLE},
         list_tbox, TboxValueTilesExec));
+    RegisterMeosFunction(loader, ScalarFunction(
+        "valueTiles", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::BOOLEAN},
+        list_tbox, TboxValueTilesExec));
+    RegisterMeosFunction(loader, ScalarFunction(
+        "valueTiles", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::BOOLEAN},
+        list_tbox, TboxValueTilesExec));
 
     // timeTiles(tbox, duration [, torigin])
     RegisterMeosFunction(loader, ScalarFunction(
@@ -1770,6 +1786,10 @@ void TemporalTypes::RegisterTileGetters(ExtensionLoader &loader) {
         list_tbox, TboxTimeTilesExec));
     RegisterMeosFunction(loader, ScalarFunction(
         "timeTiles", {TboxType::tbox(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ},
+        list_tbox, TboxTimeTilesExec));
+    RegisterMeosFunction(loader, ScalarFunction(
+        "timeTiles",
+        {TboxType::tbox(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN},
         list_tbox, TboxTimeTilesExec));
 
     // valueTimeTiles(tbox, vsize, duration [, vorigin, torigin])
@@ -1788,6 +1808,16 @@ void TemporalTypes::RegisterTileGetters(ExtensionLoader &loader) {
         "valueTimeTiles",
         {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::INTERVAL,
          LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ},
+        list_tbox, TboxValueTimeTilesExec));
+    RegisterMeosFunction(loader, ScalarFunction(
+        "valueTimeTiles",
+        {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTERVAL,
+         LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN},
+        list_tbox, TboxValueTimeTilesExec));
+    RegisterMeosFunction(loader, ScalarFunction(
+        "valueTimeTiles",
+        {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::INTERVAL,
+         LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN},
         list_tbox, TboxValueTimeTilesExec));
 }
 
@@ -1869,11 +1899,11 @@ unique_ptr<LocalTableFunctionState> TemporalSplitLocalInit(ExecutionContext &, T
 }
 
 /* Split one input row into the local state.  Input column layout:
- *   timeSplit:      [0]=temporal, [1]=duration, [2]=origin (optional)
- *   valueSplit:     [0]=tnumber, [1]=size, [2]=origin (optional)
+ *   timeSplit:      [0]=temporal, [1]=duration, [2]=origin (optional), [3]=borderInc (optional)
+ *   valueSplit:     [0]=tnumber, [1]=size, [2]=origin (optional), [3]=borderInc (optional)
  *   valueTimeSplit: [0]=tnumber, [1]=vsize, [2]=duration,
- *                   [3]=vorigin and [4]=torigin (optional, together)
- * A NULL temporal, size or duration splits into no row. */
+ *                   [3]=vorigin and [4]=torigin (optional, together), [5]=borderInc (optional)
+ * A NULL temporal, size, duration or borderInc splits into no row; an absent borderInc is true. */
 void LoadTemporalSplitRow(TemporalSplitLocalState &state, const TemporalSplitBindData &bd,
                           DataChunk &input, idx_t row) {
     state.Reset();
@@ -1891,6 +1921,14 @@ void LoadTemporalSplitRow(TemporalSplitLocalState &state, const TemporalSplitBin
     const idx_t torigin_col = bd.with_value ? 4 : 2;
     const bool has_vorigin = bd.with_value && input.ColumnCount() > vorigin_col &&
                              !FlatVector::IsNull(input.data[vorigin_col], row);
+    const idx_t border_col = (bd.with_value && bd.with_time) ? 5 : 3;
+    bool border_inc = true;
+    if (input.ColumnCount() > border_col) {
+        if (FlatVector::IsNull(input.data[border_col], row)) {
+            return;
+        }
+        border_inc = FlatVector::GetData<bool>(input.data[border_col])[row];
+    }
     MeosInterval mi {};
     TimestampTz torigin = DEFAULT_TIME_ORIGIN_MEOS;
     if (bd.with_time) {
@@ -1911,19 +1949,19 @@ void LoadTemporalSplitRow(TemporalSplitLocalState &state, const TemporalSplitBin
     int *ibins = nullptr;
     double *dbins = nullptr;
     if (!bd.with_value) {
-        parts = temporal_time_split(temp, &mi, torigin, &tbins, &count);
+        parts = temporal_time_split(temp, &mi, torigin, border_inc, &tbins, &count);
     } else if (bd.is_int) {
         int vsize = FlatVector::GetData<int32_t>(input.data[1])[row];
         int vorigin = has_vorigin ? FlatVector::GetData<int32_t>(input.data[vorigin_col])[row] : 0;
         parts = bd.with_time
-            ? tint_value_time_split(temp, vsize, &mi, vorigin, torigin, &ibins, &tbins, &count)
-            : tint_value_split(temp, vsize, vorigin, &ibins, &count);
+            ? tint_value_time_split(temp, vsize, &mi, vorigin, torigin, border_inc, &ibins, &tbins, &count)
+            : tint_value_split(temp, vsize, vorigin, border_inc, &ibins, &count);
     } else {
         double vsize = FlatVector::GetData<double>(input.data[1])[row];
         double vorigin = has_vorigin ? FlatVector::GetData<double>(input.data[vorigin_col])[row] : 0.0;
         parts = bd.with_time
-            ? tfloat_value_time_split(temp, vsize, &mi, vorigin, torigin, &dbins, &tbins, &count)
-            : tfloat_value_split(temp, vsize, vorigin, &dbins, &count);
+            ? tfloat_value_time_split(temp, vsize, &mi, vorigin, torigin, border_inc, &dbins, &tbins, &count)
+            : tfloat_value_split(temp, vsize, vorigin, border_inc, &dbins, &count);
     }
     free(temp);
 
@@ -2016,16 +2054,19 @@ void TemporalTypes::RegisterTemporalTileSplit(ExtensionLoader &loader) {
     const auto D  = LogicalType::DOUBLE;
     const auto IV = LogicalType::INTERVAL;
     const auto TS = LogicalType::TIMESTAMP_TZ;
+    const auto B  = LogicalType::BOOLEAN;
 
-    // timeSplit(temporal, interval [, timestamptz])
+    // timeSplit(temporal, interval [, timestamptz [, borderInc]])
     for (const auto &ttype : AllTypes()) {
         RegisterTemporalSplit(loader, "timeSplit", {ttype, IV}, ttype, false, false, true);
         RegisterTemporalSplit(loader, "timeSplit", {ttype, IV, TS}, ttype, false, false, true);
+        RegisterTemporalSplit(loader, "timeSplit", {ttype, IV, TS, B}, ttype, false, false, true);
     }
     // also for tgeompoint
     for (const auto &ttype : {TgeompointType::tgeompoint()}) {
         RegisterTemporalSplit(loader, "timeSplit", {ttype, IV}, ttype, false, false, true);
         RegisterTemporalSplit(loader, "timeSplit", {ttype, IV, TS}, ttype, false, false, true);
+        RegisterTemporalSplit(loader, "timeSplit", {ttype, IV, TS, B}, ttype, false, false, true);
     }
 
     // valueSplit is registered separately via RegisterTnumberValueSplit
@@ -2036,6 +2077,9 @@ void TemporalTypes::RegisterTemporalTileSplit(ExtensionLoader &loader) {
     // valueTimeSplit(tfloat, double, interval [, double, timestamptz])
     RegisterTemporalSplit(loader, "valueTimeSplit", {tfloat(), D, IV}, tfloat(), true, false, true);
     RegisterTemporalSplit(loader, "valueTimeSplit", {tfloat(), D, IV, D, TS}, tfloat(), true, false, true);
+    // each full form also takes borderInc
+    RegisterTemporalSplit(loader, "valueTimeSplit", {tint(), I, IV, I, TS, B}, tint(), true, true, true);
+    RegisterTemporalSplit(loader, "valueTimeSplit", {tfloat(), D, IV, D, TS, B}, tfloat(), true, false, true);
 }
 
 /* ***************************************************
@@ -2054,6 +2098,9 @@ void TemporalTypes::RegisterTnumberValueSplit(ExtensionLoader &loader) {
     RegisterTemporalSplit(loader, "valueSplit", {tint(), I, I}, tint(), true, true, false);
     RegisterTemporalSplit(loader, "valueSplit", {tfloat(), D}, tfloat(), true, false, false);
     RegisterTemporalSplit(loader, "valueSplit", {tfloat(), D, D}, tfloat(), true, false, false);
+    const auto B = LogicalType::BOOLEAN;
+    RegisterTemporalSplit(loader, "valueSplit", {tint(), I, I, B}, tint(), true, true, false);
+    RegisterTemporalSplit(loader, "valueSplit", {tfloat(), D, D, B}, tfloat(), true, false, false);
 }
 
 } // namespace duckdb
