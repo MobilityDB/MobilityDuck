@@ -18,6 +18,7 @@
 
 #include "index/sptree_module.hpp"
 #include "index/sptree_index_scan.hpp"
+#include "index/index_search_ops.hpp"
 #include "time_util.hpp"
 
 
@@ -93,6 +94,14 @@ private:
                     query_on_left = func_expr.children.size() == 2 &&
                                     func_expr.children[0]->type == ExpressionType::VALUE_CONSTANT;
                 } else {
+                    return false;
+                }
+                // The index answers an operator only in an operand order it has a search for: an
+                // overlapping ordering with the query on the left (`query &< column`) has none, so
+                // the predicate stays a filter and a scan answers it.
+                IndexSearchOp search_op;
+                if (!IndexSearchOpFromName(function_name, sptree_index.GetBboxType(), query_on_left,
+                                           search_op)) {
                     return false;
                 }
 
