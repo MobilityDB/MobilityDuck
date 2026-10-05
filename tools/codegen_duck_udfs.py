@@ -481,9 +481,13 @@ def scalar_emit3(f):
 # (`shape.nullableResult`, read from the wrapper's `if (<guard>) PG_RETURN_NULL();`): a
 # three-valued predicate answering unknown, and the distance sentinel. They name the result
 # `result`; the generated body names it `r`. A pointer result's guard (`! result`,
-# `result == NULL`) is the NULL pointer the pointer paths already map.
+# `result == NULL`) is the NULL pointer the pointer paths already map. The distance sentinel of
+# distance_sentinel is the maximum of the type MEOS returns, tested on `r` in that type before
+# its conversion to the declared one, as #emit_temporal_box tests it.
 SCALAR_NULL_GUARD = {"if (result < 0)": "r < 0",
-                     "if (result == DBL_MAX)": "r == DBL_MAX"}
+                     "if (result == DBL_MAX)": "r == DBL_MAX",
+                     "if (datum_eq(result, distance_sentinel(basetype), basetype))":
+                         "r == std::numeric_limits<decltype(r)>::max()"}
 
 def scalar_exec(f, rett, rexpr):
     """(executor method, extra lambda parameters, lambda return annotation, return statement) for

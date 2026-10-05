@@ -59,3 +59,21 @@ query I
 SELECT typeof("<->"('1@2000-01-01'::tint, '2@2000-01-01'::tint));
 ----
 tint
+
+# ── two values sharing no time have no nearest approach ───────────────────────
+# NAD_tnumber_tnumber returns NULL where nad_tnumber_tnumber answers the distance
+# sentinel, the maximum of the type the distance is computed in.
+query I
+SELECT nearestApproachDistance(tint '[1@2000-01-01, 5@2000-01-05]', tint '[3@2000-02-01, 3@2000-02-05]') IS NULL;
+----
+true
+
+query I
+SELECT nearestApproachDistance(tbigint '[1@2000-01-01, 5@2000-01-05]', tbigint '[3@2000-02-01, 3@2000-02-05]') IS NULL;
+----
+true
+
+query I
+SELECT nearestApproachDistance(tfloat '[1@2000-01-01, 5@2000-01-05]', tfloat '[3@2000-02-01, 3@2000-02-05]') IS NULL;
+----
+true
