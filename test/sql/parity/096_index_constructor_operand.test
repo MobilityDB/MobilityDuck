@@ -1,0 +1,117 @@
+# name: test/sql/parity/096_index_constructor_operand.test
+# description: a box built by a constructor call over constants reaches the index like a literal
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+CREATE TABLE box_idx(box stbox, label varchar);
+
+statement ok
+CREATE TABLE box_scan(box stbox, label varchar);
+
+statement ok
+INSERT INTO box_idx SELECT ('STBOX X((' || i || ',' || i || '),(' || (i + 0.5) || ',' || (i + 0.5) || '))')::stbox, 'STBOX X((500,500),(600,600))' FROM range(1,3000) tbl(i);
+
+statement ok
+INSERT INTO box_scan SELECT * FROM box_idx;
+
+# only one of the two tables is indexed, so the answers below are the index's against a scan's
+statement ok
+CREATE INDEX i_box ON box_idx USING TRTREE (box);
+
+# The constructor over a constant folds to the same constant as the cast, so both take the index.
+
+query II
+EXPLAIN SELECT count(*) FROM box_idx WHERE box && stbox('STBOX X((500,500),(600,600))');
+----
+physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*
+
+query II
+EXPLAIN SELECT count(*) FROM box_idx WHERE box && 'STBOX X((500,500),(600,600))'::stbox;
+----
+physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*
+
+query II
+SELECT (SELECT count(*) FROM box_idx WHERE box && stbox('STBOX X((500,500),(600,600))')), (SELECT count(*) FROM box_scan WHERE box && stbox('STBOX X((500,500),(600,600))'));
+----
+101	101
+
+query II
+EXPLAIN SELECT count(*) FROM box_idx WHERE stbox('STBOX X((500,500),(600,600))') @> box;
+----
+physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*
+
+query II
+SELECT (SELECT count(*) FROM box_idx WHERE stbox('STBOX X((500,500),(600,600))') @> box), (SELECT count(*) FROM box_scan WHERE stbox('STBOX X((500,500),(600,600))') @> box);
+----
+100	100
+
+query II
+EXPLAIN SELECT count(*) FROM box_idx WHERE box && stbox(ST_MakeEnvelope(500, 500, 600, 600));
+----
+physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*
+
+query II
+SELECT (SELECT count(*) FROM box_idx WHERE box && stbox(ST_MakeEnvelope(500, 500, 600, 600))), (SELECT count(*) FROM box_scan WHERE box && stbox(ST_MakeEnvelope(500, 500, 600, 600)));
+----
+101	101
+
+# A constructor over a column has a different box on every row, so no single search can answer it
+# and the predicate stays a filter over a scan.
+
+query II
+EXPLAIN SELECT count(*) FROM box_idx WHERE box && stbox(label);
+----
+physical_plan	<!REGEX>:.*MOBILITY RTREE INDEX.*
+
+query II
+SELECT (SELECT count(*) FROM box_idx WHERE box && stbox(label)), (SELECT count(*) FROM box_scan WHERE box && stbox(label));
+----
+101	101
+
+# The same holds of the SP-tree index.
+
+statement ok
+CREATE TABLE trip_idx(t tgeompoint);
+
+statement ok
+CREATE TABLE trip_scan(t tgeompoint);
+
+statement ok
+INSERT INTO trip_idx SELECT ('Point(' || i || ' ' || i || ')@' || strftime(DATE '2000-01-01' + INTERVAL (i) DAY, '%Y-%m-%d'))::tgeompoint FROM range(1,3000) tbl(i);
+
+statement ok
+INSERT INTO trip_scan SELECT * FROM trip_idx;
+
+statement ok
+CREATE INDEX i_trip ON trip_idx USING TSPTREE (t);
+
+query II
+EXPLAIN SELECT count(*) FROM trip_idx WHERE t && stbox('STBOX XT(((500,500),(600,600)),[2001-01-01,2001-06-01])');
+----
+physical_plan	<REGEX>:.*MOBILITY SPTREE INDEX.*
+
+query II
+SELECT (SELECT count(*) FROM trip_idx WHERE t && stbox('STBOX XT(((500,500),(600,600)),[2001-01-01,2001-06-01])')), (SELECT count(*) FROM trip_scan WHERE t && stbox('STBOX XT(((500,500),(600,600)),[2001-01-01,2001-06-01])'));
+----
+18	18
+
+query II
+EXPLAIN SELECT t FROM trip_idx ORDER BY t |=| stbox('STBOX X((500.2,500.2),(500.2,500.2))') LIMIT 3;
+----
+physical_plan	<REGEX>:.*MOBILITY SPTREE INDEX.*
+
+query I
+SELECT ST_AsText(startValue(t)) FROM trip_idx ORDER BY t |=| stbox('STBOX X((500.2,500.2),(500.2,500.2))') LIMIT 3;
+----
+POINT (500 500)
+POINT (501 501)
+POINT (499 499)
+
+query I
+SELECT ST_AsText(startValue(t)) FROM trip_scan ORDER BY t |=| stbox('STBOX X((500.2,500.2),(500.2,500.2))') LIMIT 3;
+----
+POINT (500 500)
+POINT (501 501)
+POINT (499 499)
