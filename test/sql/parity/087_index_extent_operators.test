@@ -40,7 +40,7 @@ SELECT (SELECT count(*) FROM ext_idx WHERE t -|- 'STBOX XT(((10,10),(20,20)),[20
 2	2
 
 query II
-SELECT (SELECT count(*) FROM ext_idx WHERE adjacent(t, 'STBOX XT(((10,10),(20,20)),[2000-01-01,2010-01-01])'::stbox)), (SELECT count(*) FROM ext_scan WHERE adjacent(t, 'STBOX XT(((10,10),(20,20)),[2000-01-01,2010-01-01])'::stbox));
+SELECT (SELECT count(*) FROM ext_idx WHERE stboxAdjacent(t, 'STBOX XT(((10,10),(20,20)),[2000-01-01,2010-01-01])'::stbox)), (SELECT count(*) FROM ext_scan WHERE stboxAdjacent(t, 'STBOX XT(((10,10),(20,20)),[2000-01-01,2010-01-01])'::stbox));
 ----
 2	2
 
@@ -55,6 +55,6 @@ EXPLAIN SELECT count(*) FROM ext_idx WHERE t ~= 'STBOX XT(((1,1),(1,1)),[2000-01
 physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*
 
 query II
-EXPLAIN SELECT count(*) FROM ext_idx WHERE adjacent(t, 'STBOX XT(((10,10),(20,20)),[2000-01-01,2010-01-01])'::stbox);
+EXPLAIN SELECT count(*) FROM ext_idx WHERE stboxAdjacent(t, 'STBOX XT(((10,10),(20,20)),[2000-01-01,2010-01-01])'::stbox);
 ----
 physical_plan	<REGEX>:.*MOBILITY RTREE INDEX.*

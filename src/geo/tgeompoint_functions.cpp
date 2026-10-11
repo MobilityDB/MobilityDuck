@@ -872,7 +872,7 @@ void TgeompointFunctions::Tpoint_length(DataChunk &args, ExpressionState &state,
                 free(data_copy);
                 throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
-            double ret = tpoint_length(temp);
+            double ret = tpoint_length(temp, true);
             free(temp);
             return ret;
         }
@@ -895,7 +895,7 @@ void TgeompointFunctions::Tpoint_cumulative_length(DataChunk &args, ExpressionSt
                 free(data_copy);
                 throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
-            Temporal *ret = tpoint_cumulative_length(temp);
+            Temporal *ret = tpoint_cumulative_length(temp, true);
             free(temp);
             if (!ret) {
                 throw InvalidInputException("Failed to compute cumulative length of tgeompoint");
@@ -1505,7 +1505,7 @@ void TgeompointFunctions::ShortestLine_tgeo_tgeo(DataChunk &args, ExpressionStat
                 free(tgeom2_data_copy);
                 throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
-            GSERIALIZED *ret = shortestline_tgeo_tgeo(tgeom1, tgeom2);
+            GSERIALIZED *ret = shortestline_tgeo_tgeo(tgeom1, tgeom2, true);
             if (!ret) {
                 free(tgeom1);
                 free(tgeom2);
@@ -1663,7 +1663,7 @@ void TgeompointFunctions::Tdistance_tgeo_tgeo(DataChunk &args, ExpressionState &
                 throw InvalidInputException("Invalid tgeompoint data: null pointer");
             }
 
-            Temporal *ret = tdistance_tgeo_tgeo(tgeom1, tgeom2);
+            Temporal *ret = tdistance_tgeo_tgeo(tgeom1, tgeom2, true);
             if (!ret) {
                 free(tgeom1);
                 free(tgeom2);
@@ -1857,7 +1857,7 @@ string_t ApplyAffineToTgeoStraggler(Vector &result, string_t input_blob, const A
     uint8_t *data_copy = (uint8_t *)malloc(data_size);
     memcpy(data_copy, input_blob.GetData(), data_size);
     Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
-    Temporal *ret = tgeo_affine(temp, &m);
+    Temporal *ret = tgeo_affine(temp, m.afac, m.bfac, m.cfac, m.dfac, m.efac, m.ffac, m.gfac, m.hfac, m.ifac, m.xoff, m.yoff, m.zoff);
     free(temp);
     if (!ret) {
         throw InternalException("tgeo_affine returned null");
@@ -2132,7 +2132,7 @@ void TgeompointFunctions::Nai_tgeo_geo(DataChunk &args, ExpressionState &state, 
         Temporal *temp = reinterpret_cast<Temporal *>(tcopy);
         GSERIALIZED *gs = GeometryToGSerialized(in_g[i], 0);
         if (!gs) { free(temp); outv.SetInvalid(i); continue; }
-        TInstant *inst = nai_tgeo_geo(temp, gs);
+        TInstant *inst = nai_tgeo_geo(temp, gs, true);
         free(temp); free(gs);
         if (!inst) { outv.SetInvalid(i); continue; }
         out[i] = NaiToHex(result, inst);
@@ -2158,7 +2158,7 @@ void TgeompointFunctions::Nai_geo_tgeo(DataChunk &args, ExpressionState &state, 
         Temporal *temp = reinterpret_cast<Temporal *>(tcopy);
         GSERIALIZED *gs = GeometryToGSerialized(in_g[i], 0);
         if (!gs) { free(temp); outv.SetInvalid(i); continue; }
-        TInstant *inst = nai_tgeo_geo(temp, gs);
+        TInstant *inst = nai_tgeo_geo(temp, gs, true);
         free(temp); free(gs);
         if (!inst) { outv.SetInvalid(i); continue; }
         out[i] = NaiToHex(result, inst);
@@ -2176,7 +2176,7 @@ void TgeompointFunctions::Nad_tgeo_geo(DataChunk &args, ExpressionState &state, 
             Temporal *temp = reinterpret_cast<Temporal *>(tcopy);
             GSERIALIZED *gs = GeometryToGSerialized(gblob, 0);
             if (!gs) { free(temp); mask.SetInvalid(idx); return 0.0; }
-            double d = nad_tgeo_geo(temp, gs);
+            double d = nad_tgeo_geo(temp, gs, true);
             free(temp); free(gs);
             if (d == DBL_MAX) { mask.SetInvalid(idx); return 0.0; }
             return d;
@@ -2194,7 +2194,7 @@ void TgeompointFunctions::Nad_geo_tgeo(DataChunk &args, ExpressionState &state, 
             Temporal *temp = reinterpret_cast<Temporal *>(tcopy);
             GSERIALIZED *gs = GeometryToGSerialized(gblob, 0);
             if (!gs) { free(temp); mask.SetInvalid(idx); return 0.0; }
-            double d = nad_tgeo_geo(temp, gs);
+            double d = nad_tgeo_geo(temp, gs, true);
             free(temp); free(gs);
             if (d == DBL_MAX) { mask.SetInvalid(idx); return 0.0; }
             return d;
@@ -2211,7 +2211,7 @@ void TgeompointFunctions::Nad_tgeo_tgeo(DataChunk &args, ExpressionState &state,
             memcpy(acopy, ablob.GetData(), asz); memcpy(bcopy, bblob.GetData(), bsz);
             Temporal *ta = reinterpret_cast<Temporal *>(acopy);
             Temporal *tb = reinterpret_cast<Temporal *>(bcopy);
-            double d = nad_tgeo_tgeo(ta, tb);
+            double d = nad_tgeo_tgeo(ta, tb, true);
             free(ta); free(tb);
             if (d == DBL_MAX) { mask.SetInvalid(idx); return 0.0; }
             return d;
@@ -2221,7 +2221,7 @@ void TgeompointFunctions::Nad_tgeo_tgeo(DataChunk &args, ExpressionState &state,
 
 /* ***************************************************
  * Affine/translate/rotate/rotateX/Y/Z/transscale/scale transforms
- * All build an AFFINE struct and delegate to tgeo_affine (or tgeo_scale).
+ * All build an AFFINE struct and delegate to tgeo_affine (or tgeo_scale_geo).
  ****************************************************/
 
 namespace {
@@ -2231,7 +2231,7 @@ string_t ApplyAffineToTgeo(Vector &result, string_t blob, const AFFINE &m) {
     uint8_t *copy = (uint8_t *)malloc(sz);
     memcpy(copy, blob.GetData(), sz);
     Temporal *temp = reinterpret_cast<Temporal *>(copy);
-    Temporal *ret = tgeo_affine(temp, &m);
+    Temporal *ret = tgeo_affine(temp, m.afac, m.bfac, m.cfac, m.dfac, m.efac, m.ffac, m.gfac, m.hfac, m.ifac, m.xoff, m.yoff, m.zoff);
     free(temp);
     if (!ret) throw InternalException("tgeo_affine returned null");
     size_t rsz = temporal_mem_size(ret);
@@ -2474,7 +2474,7 @@ void TgeompointFunctions::Tgeo_scale_geom(DataChunk &args, ExpressionState &stat
         Temporal *temp = reinterpret_cast<Temporal *>(tcopy);
         GSERIALIZED *scale = GeometryToGSerialized(in_g[i], 0);
         if (!scale) { free(temp); outv.SetInvalid(i); continue; }
-        Temporal *ret = tgeo_scale(temp, scale, nullptr);
+        Temporal *ret = tgeo_scale_geo(temp, scale, nullptr);
         free(temp); free(scale);
         if (!ret) { outv.SetInvalid(i); continue; }
         size_t rsz = temporal_mem_size(ret);
@@ -2507,7 +2507,7 @@ void TgeompointFunctions::Tgeo_scale_geom_origin(DataChunk &args, ExpressionStat
         GSERIALIZED *scale  = GeometryToGSerialized(in_g[i], 0);
         GSERIALIZED *origin = GeometryToGSerialized(in_o[i], 0);
         if (!scale || !origin) { free(temp); if (scale) free(scale); if (origin) free(origin); outv.SetInvalid(i); continue; }
-        Temporal *ret = tgeo_scale(temp, scale, origin);
+        Temporal *ret = tgeo_scale_geo(temp, scale, origin);
         free(temp); free(scale); free(origin);
         if (!ret) { outv.SetInvalid(i); continue; }
         size_t rsz = temporal_mem_size(ret);

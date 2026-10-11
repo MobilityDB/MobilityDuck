@@ -889,9 +889,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         return tinstant_value(reinterpret_cast<const TInstant *>(t));
     };
 
-    // getValue(tint / tbool / tfloat) — instant-level accessor
-    mobilityduck::RegisterTemporalDatumAccessor<int64_t>(
-        loader, "getValue", TemporalTypes::tint(),   LogicalType::BIGINT,  tinstant_value_temporal);
+    // getValue(tbool / tfloat) — instant-level accessor. The tint overload is owned by the
+    // generated surface (tint_value, canonical INTEGER return), as for startValue below.
     mobilityduck::RegisterTemporalDatumAccessor<bool>(
         loader, "getValue", TemporalTypes::tbool(),  LogicalType::BOOLEAN, tinstant_value_temporal);
     mobilityduck::RegisterTemporalDatumAccessor<double>(

@@ -31,8 +31,8 @@ true	true	7
 
 # Topological predicates over two boxes of one schema.
 query III
-SELECT contains(tpcbox 'TPCBOX(X((0,0),(10,10)), 1)', tpcbox 'TPCBOX(X((3,3),(5,5)), 1)'),
-       overlaps(tpcbox 'TPCBOX(X((0,0),(10,10)), 1)', tpcbox 'TPCBOX(X((3,3),(5,5)), 1)'),
+SELECT tpcboxContains(tpcbox 'TPCBOX(X((0,0),(10,10)), 1)', tpcbox 'TPCBOX(X((3,3),(5,5)), 1)'),
+       tpcboxOverlaps(tpcbox 'TPCBOX(X((0,0),(10,10)), 1)', tpcbox 'TPCBOX(X((3,3),(5,5)), 1)'),
        tpcbox 'TPCBOX(X((0,0),(10,10)), 1)' = tpcbox 'TPCBOX(X((0,0),(10,10)), 1)';
 ----
 true	true	true
@@ -46,6 +46,6 @@ true
 # Two boxes written in different schemas describe different coordinate spaces,
 # so comparing them is an error rather than a silent answer.
 statement error
-SELECT overlaps(tpcbox 'TPCBOX(X((0,0),(10,10)), 1)', tpcbox 'TPCBOX(X((3,3),(5,5)), 2)');
+SELECT tpcboxOverlaps(tpcbox 'TPCBOX(X((0,0),(10,10)), 1)', tpcbox 'TPCBOX(X((3,3),(5,5)), 2)');
 ----
 different schemas

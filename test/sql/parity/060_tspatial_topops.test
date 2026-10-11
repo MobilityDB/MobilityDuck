@@ -12,7 +12,7 @@ require mobilityduck
 query I
 SELECT (tgeompoint '[POINT(0 0)@2000-01-01, POINT(10 10)@2000-01-02]'
         @> stbox 'STBOX X((1, 1), (5, 5))')
-     = contains(tgeompoint '[POINT(0 0)@2000-01-01, POINT(10 10)@2000-01-02]',
+     = stboxContains(tgeompoint '[POINT(0 0)@2000-01-01, POINT(10 10)@2000-01-02]',
                 stbox 'STBOX X((1, 1), (5, 5))');
 ----
 true
@@ -20,7 +20,7 @@ true
 # stbox × tspatial direction
 
 query I
-SELECT overlaps(stbox 'STBOX X((0, 0), (10, 10))',
+SELECT stboxOverlaps(stbox 'STBOX X((0, 0), (10, 10))',
                 tgeompoint '[POINT(5 5)@2000-01-01]');
 ----
 true
@@ -54,20 +54,20 @@ false
 # Adjacent — point on the box corner shares the boundary
 
 query I
-SELECT adjacent(tgeompoint '[POINT(0 0)@2000-01-01]', stbox 'STBOX X((0, 0), (5, 5))');
+SELECT stboxAdjacent(tgeompoint '[POINT(0 0)@2000-01-01]', stbox 'STBOX X((0, 0), (5, 5))');
 ----
 true
 
 # Contains via stbox × tspatial
 
 query I
-SELECT contains(stbox 'STBOX X((0, 0), (10, 10))', tgeompoint '[POINT(5 5)@2000-01-01]');
+SELECT stboxContains(stbox 'STBOX X((0, 0), (10, 10))', tgeompoint '[POINT(5 5)@2000-01-01]');
 ----
 true
 
 # Contained as the inverse
 
 query I
-SELECT contained(tgeompoint '[POINT(5 5)@2000-01-01]', stbox 'STBOX X((0, 0), (10, 10))');
+SELECT stboxContained(tgeompoint '[POINT(5 5)@2000-01-01]', stbox 'STBOX X((0, 0), (10, 10))');
 ----
 true

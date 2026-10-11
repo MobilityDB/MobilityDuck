@@ -360,7 +360,7 @@ void TgeoTgeoDistTempExec(DataChunk &args, ExpressionState &, Vector &result) {
 // Distance helpers — `tdistance(...)` and `<->`
 // ====================================================================
 
-template <Temporal *(*FN)(const Temporal *, const GSERIALIZED *)>
+template <Temporal *(*FN)(const Temporal *, const GSERIALIZED *, bool)>
 void TgeoGeoDistanceExec(DataChunk &args, ExpressionState &, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
@@ -368,21 +368,21 @@ void TgeoGeoDistanceExec(DataChunk &args, ExpressionState &, Vector &result) {
             Temporal *t = DecodeTemporalCopy(t_blob);
             int32 srid = tspatial_srid(t);
             GSERIALIZED *gs = GeometryToGSerialized(g_blob, srid);
-            Temporal *r = FN(t, gs);
+            Temporal *r = FN(t, gs, true);
             free(t); free(gs);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return TemporalToBlob(result, r);
         });
 }
 
-template <Temporal *(*FN)(const Temporal *, const Temporal *)>
+template <Temporal *(*FN)(const Temporal *, const Temporal *, bool)>
 void TgeoTgeoDistanceExec(DataChunk &args, ExpressionState &, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
         args.data[0], args.data[1], result, args.size(),
         [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t1 = DecodeTemporalCopy(a);
             Temporal *t2 = DecodeTemporalCopy(b);
-            Temporal *r = FN(t1, t2);
+            Temporal *r = FN(t1, t2, true);
             free(t1); free(t2);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return TemporalToBlob(result, r);
@@ -488,7 +488,7 @@ void TgeoCentroidExec(DataChunk &args, ExpressionState &state, Vector &result) {
         args.data[0], result, args.size(),
         [&](string_t blob) -> string_t {
             Temporal *t = DecodeTemporalCopy(blob);
-            Temporal *r = tgeo_centroid(t);
+            Temporal *r = tgeo_centroid(t, true);
             free(t);
             if (!r) throw InvalidInputException("centroid failed");
             return TemporalToBlob(result, r);

@@ -1,153 +1,184 @@
 # name: test/sql/tpcpoint.test
 # description: Core tpcpoint type port — construction, text/WKB I/O and
 #              basic accessors. A tpcpoint value is a temporal
-#              pgpointcloud point: an opaque pgpointcloud pcpoint
-#              (SERIALIZED_POINT varlena, hex-WKB at the MEOS layer) that
-#              moves over time. MEOS exposes no type-specific
-#              tpcpoint_in/_out — the type binds to the generic
-#              temporal_in(str, T_TPCPOINT) / temporal_out dispatch, the
-#              same path the canonical MobilityDB SQL uses. Multi-instant
-#              sequences need a registered pgpointcloud PCSCHEMA (a
-#              catalog the standalone engine does not have), so these
-#              self-contained checks exercise the schema-free instant
-#              path and the deterministic rejection of invalid input.
-#              The pcpoint hex literal below is pcid 1, X=1.0 Y=2.0
-#              Z=3.0, followed by the three reserved bytes pgpointcloud
-#              sizes a serialized point with (sizeof(SERIALIZED_POINT) - 1
-#              plus the schema point size, 12 - 1 + 24 = 35); MEOS emits
-#              them as zeros. The canonical serialized output carries the
-#              varlena length in the header (2300... in -> 8C00... out).
+#              pgpointcloud point: a pgpointcloud pcpoint that moves over
+#              time. The text of a pcpoint is the hex of its pgPointCloud
+#              WKB, which MEOS reads through the schema of its pcid, so the
+#              file registers the schema of pcid 1 first. The pcpoint hex
+#              literal below is the little-endian WKB of pcid 1, X=1.0
+#              Y=2.0 Z=3.0: the endian flag 01, the pcid and the three
+#              doubles; MEOS writes it back unchanged.
 # group: [sql]
 
 require mobilityduck
 
+# The text of a pcpoint and of a pcpatch is the hex of its pgPointCloud WKB, read through the
+# schema its pcid names, so the schema of pcid 1 is registered first: three dimensions X, Y
+# and Z of type double.
+statement ok
+CREATE TABLE pointcloud_schemas (
+  pcid         integer PRIMARY KEY,
+  srid         integer NOT NULL,
+  compression  text    NOT NULL DEFAULT 'none',
+  description  text
+);
+
+statement ok
+CREATE TABLE pointcloud_dimensions (
+  pcid            integer NOT NULL,
+  dim_no          integer NOT NULL,
+  dim_name        text    NOT NULL,
+  interpretation  text    NOT NULL,
+  dim_scale       double  NOT NULL DEFAULT 1,
+  dim_offset      double  NOT NULL DEFAULT 0,
+  active          boolean NOT NULL DEFAULT true,
+  description     text,
+  PRIMARY KEY (pcid, dim_no)
+);
+
+statement ok
+INSERT INTO pointcloud_schemas VALUES (1, 0, 'none', 'Three dimensions of type double');
+
+statement ok
+INSERT INTO pointcloud_dimensions VALUES
+  (1, 1, 'X', 'double', 1, 0, true, NULL),
+  (1, 2, 'Y', 'double', 1, 0, true, NULL),
+  (1, 3, 'Z', 'double', 1, 0, true, NULL);
+
+query I
+SELECT pointCloudSchemaRegister(s.pcid, s.srid, s.compression,
+         list({'dim_no': d.dim_no, 'dim_name': d.dim_name,
+               'interpretation': d.interpretation, 'dim_scale': d.dim_scale,
+               'dim_offset': d.dim_offset, 'active': d.active,
+               'description': d.description} ORDER BY d.dim_no))
+FROM pointcloud_schemas s JOIN pointcloud_dimensions d USING (pcid)
+GROUP BY s.pcid, s.srid, s.compression;
+----
+true
+
 # Test tpcpoint constructor with parentheses (instant, hex-WKB pcpoint)
 query I
-SELECT (tpcpoint('2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01'))::text;
+SELECT (tpcpoint('0101000000000000000000F03F00000000000000400000000000000840@2024-01-01'))::text;
 ----
-8C00000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01 00:00:00+01
+0101000000000000000000F03F00000000000000400000000000000840@2024-01-01 00:00:00+01
 
 # Test tpcpoint constructor without parentheses
 query I
-SELECT (tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01')::text;
+SELECT (tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01')::text;
 ----
-8C00000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01 00:00:00+01
+0101000000000000000000F03F00000000000000400000000000000840@2024-01-01 00:00:00+01
 
 # Test the VARCHAR <-> TPCPOINT cast round-trips through temporal_out
 query I
-SELECT (tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01')::text;
+SELECT (tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01')::text;
 ----
-8C00000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01 00:00:00+01
+0101000000000000000000F03F00000000000000400000000000000840@2024-01-01 00:00:00+01
 
 # Test tempSubtype with instant
 query I
-SELECT tempSubtype(tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01');
+SELECT tempSubtype(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01');
 ----
 Instant
 
 # Test interp accessor on an instant
 query I
-SELECT interp(tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01');
+SELECT interp(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01');
 ----
 None
 
 # Test memSize is positive
 query I
-SELECT memSize(tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01') > 0;
+SELECT memSize(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01') > 0;
 ----
 true
 
 # Test getValue surfaces the pcpoint value in canonical hex-WKB text
 query I
-SELECT getValue(tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01');
+SELECT getValue(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01');
 ----
-8C00000001000000000000000000F03F00000000000000400000000000000840000000
+0101000000000000000000F03F00000000000000400000000000000840
 
 # Test startValue surfaces the pcpoint value in canonical hex-WKB text
 query I
-SELECT startValue(tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01');
+SELECT startValue(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01');
 ----
-8C00000001000000000000000000F03F00000000000000400000000000000840000000
+0101000000000000000000F03F00000000000000400000000000000840
 
 # Test endValue (same value at the single instant)
 query I
-SELECT endValue(tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01');
+SELECT endValue(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01');
 ----
-8C00000001000000000000000000F03F00000000000000400000000000000840000000
+0101000000000000000000F03F00000000000000400000000000000840
 
 # Test pcid returns the pgpointcloud schema id (schema-free, reads the
 # serialized pcid field)
 query I
-SELECT pcid(tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01');
+SELECT pcid(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01');
 ----
 1
 
 # Test getTimestamp on an instant
 query I
-SELECT getTimestamp(tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2023-01-01 10:00:00+00');
+SELECT getTimestamp(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2023-01-01 10:00:00+00');
 ----
 2023-01-01 11:00:00+01
 
 # Test tpcpointInst transformation round-trips the instant
 query I
-SELECT (tpcpointInst(tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01'))::text;
+SELECT (tpcpointInst(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01'))::text;
 ----
-8C00000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01 00:00:00+01
+0101000000000000000000F03F00000000000000400000000000000840@2024-01-01 00:00:00+01
 
 # Test startInstant
 query I
-SELECT (startInstant(tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01'))::text;
+SELECT (startInstant(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01'))::text;
 ----
-8C00000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01 00:00:00+01
+0101000000000000000000F03F00000000000000400000000000000840@2024-01-01 00:00:00+01
 
 # Test binary round-trip is identity (subtype-agnostic MEOS-WKB)
 query I
-SELECT (tpcpointFromBinary(asBinary(tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01')))::text
-     = (tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01')::text;
+SELECT (tpcpointFromBinary(asBinary(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01')))::text
+     = (tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01')::text;
 ----
 true
 
 # Test hex-WKB round-trip is identity
 query I
-SELECT (tpcpointFromHexWKB(asHexWKB(tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01')))::text
-     = (tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01')::text;
+SELECT (tpcpointFromHexWKB(asHexWKB(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01')))::text
+     = (tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01')::text;
 ----
 true
 
 # Test tpcpointFromText constructor
 query I
-SELECT (tpcpointFromText('2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01'))::text IS NOT NULL;
+SELECT (tpcpointFromText('0101000000000000000000F03F00000000000000400000000000000840@2024-01-01'))::text IS NOT NULL;
 ----
 true
 
 # Test timeSpan function
 query I
-SELECT timeSpan(tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01');
+SELECT timeSpan(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01');
 ----
 [2024-01-01 00:00:00+01, 2024-01-01 00:00:00+01]
 
 # Test numInstants generic accessor
 query I
-SELECT numInstants(tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01');
+SELECT numInstants(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01');
 ----
 1
 
-# Test asMFJSON is registered (parity with canonical MobilityDB
-# asMFJSON(tpcpoint, options, flags, maxdecimaldigits)). The MF-JSON form
-# renders the point coordinates, which requires decoding the pcpoint against
-# its pgPointCloud PCSCHEMA. This file registers none, so the call reports the
-# missing schema deterministically rather than emitting a malformed value; a
-# database that states one registers it through pointCloudSchemaRegister and
-# reads the coordinates, which test/sql/pointcloud_schema.test exercises.
-statement error
-SELECT asMFJSON(tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01');
+# Test asMFJSON (parity with canonical MobilityDB asMFJSON(tpcpoint, options,
+# flags, maxdecimaldigits)). The MF-JSON form renders the point coordinates,
+# decoded through the schema of pcid 1 registered above.
+query I
+SELECT asMFJSON(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01');
 ----
-PCSCHEMA for pcid 1 not registered
+{"type":"MovingPCPoint","coordinates":[[1,2,3]],"values":[{"pcid":1,"pt":[1,2,3]}],"datetimes":["2024-01-01T00:00:00+01:00"],"interpolation":"None"}
 
 # A negative MF-JSON precision reaches MEOS, which refuses it before reading
 # the coordinates
 statement error
-SELECT asMFJSON(tpcpoint '2300000001000000000000000000F03F00000000000000400000000000000840000000@2024-01-01', 0, 0, -1);
+SELECT asMFJSON(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01', 0, 0, -1);
 ----
 cannot be negative
 

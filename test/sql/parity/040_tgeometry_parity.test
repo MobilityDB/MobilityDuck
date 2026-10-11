@@ -171,7 +171,7 @@ SELECT t1::tgeometry && t2::tgeometry FROM (VALUES
 true
 
 query I
-SELECT contains(t::tgeometry, '[2000-01-01, 2000-01-02]'::tstzspan) FROM
+SELECT stboxContains(t::tgeometry, '[2000-01-01, 2000-01-02]'::tstzspan) FROM
   (VALUES ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
 ----
 true

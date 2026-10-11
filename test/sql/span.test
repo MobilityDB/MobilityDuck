@@ -244,12 +244,12 @@ SELECT round(floatspan '[1.5, 2.5]');
 [2, 3]
 
 query I 
-SELECT contains(floatspan '[1.5, 2.5]', 1.5);
+SELECT spanContains(floatspan '[1.5, 2.5]', 1.5);
 ----
 true
 
 query I
-SELECT contained(1.5, floatspan '[1.5, 2.5]');
+SELECT spanContained(1.5, floatspan '[1.5, 2.5]');
 ----
 true
 
