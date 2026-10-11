@@ -73,8 +73,7 @@ void StboxType::RegisterCastFunctions(ExtensionLoader &loader) {
 
 void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("stbox", {LogicalType::VARCHAR}, stbox(), StboxFunctions::Stbox_in, nullptr, nullptr, nullptr,
-                     nullptr, LogicalType(LogicalTypeId::INVALID), FunctionStability::VOLATILE));
+        ScalarFunction("stbox", {LogicalType::VARCHAR}, stbox(), StboxFunctions::Stbox_in));
 
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
