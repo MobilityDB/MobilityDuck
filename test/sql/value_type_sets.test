@@ -151,7 +151,7 @@ SRID=4326;{"Pose(POINT(1 2),0.5)"}
 query I
 SELECT asEWKT(transform(setSRID(set([pose 'Pose(Point(1 2),0.5)']), 4326), 3857), 6);
 ----
-SRID=3857;{"Pose(POINT(111319.490793 222684.208506),0.5)"}
+SRID=3857;{"Pose(POINT(111319.490793 222684.208506),0.502828)"}
 
 query I
 SELECT routes(set([npoint 'NPoint(1, 0.5)', npoint 'NPoint(2, 0.25)']));

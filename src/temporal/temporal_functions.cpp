@@ -5112,13 +5112,13 @@ void TempTempDoublePred(DataChunk &args, Vector &result, Fn fn) {
 } // namespace
 
 void TemporalFunctions::Temporal_frechet_distance(DataChunk &args, ExpressionState &state, Vector &result) {
-    TempTempDoublePred(args, result, [](Temporal *a, Temporal *b) { return temporal_frechet_distance(a, b); });
+    TempTempDoublePred(args, result, [](Temporal *a, Temporal *b) { return temporal_frechet_distance(a, b, true); });
 }
 void TemporalFunctions::Temporal_dyntimewarp_distance(DataChunk &args, ExpressionState &state, Vector &result) {
-    TempTempDoublePred(args, result, [](Temporal *a, Temporal *b) { return temporal_dyntimewarp_distance(a, b); });
+    TempTempDoublePred(args, result, [](Temporal *a, Temporal *b) { return temporal_dyntimewarp_distance(a, b, true); });
 }
 void TemporalFunctions::Temporal_hausdorff_distance(DataChunk &args, ExpressionState &state, Vector &result) {
-    TempTempDoublePred(args, result, [](Temporal *a, Temporal *b) { return temporal_hausdorff_distance(a, b); });
+    TempTempDoublePred(args, result, [](Temporal *a, Temporal *b) { return temporal_hausdorff_distance(a, b, true); });
 }
 
 

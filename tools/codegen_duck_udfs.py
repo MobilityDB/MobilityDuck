@@ -953,6 +953,78 @@ def trailing_arg_default(f):
     defs = {s["argDefaults"][-1] for s in (f.get("sqlSignatures") or []) if s.get("argDefaults")}
     return next(iter(defs)) if len(defs) == 1 and None not in defs else None
 
+# A MEOS function whose last by-value parameter every SQL signature fixes to one literal: some
+# signatures bind it (`boundArgs`, the planar overloads of tdistance binding spheroid to true)
+# and the others declare it as a trailing argument with that literal as its default (the
+# geodetic overloads, `spheroid boolean DEFAULT true`). Every call MobilityDB declares is then
+# answered by the function with that literal, so the surface registers it at the shorter
+# arity, through a forwarding overload of the same name that supplies the literal. It reads
+# the default as #trailing_arg_default reads it and the binding as #_build_tail reads a
+# function-wide `shape.boundArgs`, here stated per signature. The shapes read the projected
+# record and emit their usual call; FORWARDED holds the overloads the generated units define.
+FORWARDED = []
+BOUND_TAIL_SQL = {"bool": "boolean", "int": "integer", "double": "float"}
+
+def project_bound_tail(f, fixed=()):
+    """The record of f without its last SQL-facing parameter, when every sqlSignature fixes that
+    parameter to the same literal and at least one binds it; else None. A binding the catalog
+    states for the whole function (`shape.boundArgs`, every signature agreeing) is projected
+    only for a parameter named in `fixed`, the ones this rule already found fixed per
+    signature elsewhere in the catalog (spheroid, bound by tdwithin as by tdistance), so the
+    functions whose whole-function binding the shapes read through #_build_tail keep it. The
+    forwarding overload is appended to FORWARDED."""
+    sigs = f.get("sqlSignatures") or []
+    params = f.get("params") or []
+    shape = f.get("shape") or {}
+    outs = set(shape.get("outParams") or [])
+    if not sigs:
+        return None
+    inputs = [p for p in params if p.get("name") not in outs]
+    if not inputs:
+        return None
+    last = inputs[-1]
+    sqlt = BOUND_TAIL_SQL.get(base(last["canonical"]))
+    if sqlt is None or "*" in norm(last["canonical"]):
+        return None
+    whole = shape.get("boundArgs")
+    if whole:
+        if set(whole) != {last["name"]} or last["name"] not in fixed:
+            return None
+        if any(s.get("boundArgs") or s.get("argDefaults") for s in sigs):
+            return None
+        sigs = [dict(s, boundArgs=dict(whole)) for s in sigs]
+    lits, binds, newsigs = set(), False, []
+    for s in sigs:
+        bound = s.get("boundArgs") or {}
+        defs = s.get("argDefaults")
+        if bound:
+            if set(bound) != {last["name"]} or defs:
+                return None
+            lits.add(bound[last["name"]]); binds = True
+            ns = {k: v for k, v in s.items() if k != "boundArgs"}
+        elif defs and defs[-1] is not None and s["args"] and s["args"][-1] == sqlt:
+            if any(d is not None for d in defs[:-1]):
+                return None
+            lits.add(defs[-1])
+            ns = {k: v for k, v in s.items() if k != "argDefaults"}
+            ns["args"] = s["args"][:-1]
+        else:
+            return None
+        newsigs.append(ns)
+    if not binds or len(lits) != 1:
+        return None
+    lit = sql_default_to_cpp(str(MACRO_VALUES.get(next(iter(lits)), next(iter(lits)))))
+    g = dict(f)
+    g["params"] = [p for p in params if p is not last]
+    g["sqlSignatures"] = newsigs
+    if whole:
+        g["shape"] = {k: v for k, v in shape.items() if k != "boundArgs"}
+    decl = ", ".join("%s p%d" % (p["cType"], i) for i, p in enumerate(g["params"]))
+    call = ", ".join(lit if p is last else "p%d" % g["params"].index(p) for p in params)
+    FORWARDED.append("inline %s %s(%s) {\n    return ::%s(%s);\n}\n"
+                     % (f["returnType"]["c"], f["name"], decl, f["name"], call))
+    return g
+
 # Macro name -> value, from the catalog's `macros`: a literal a PG wrapper binds is spelled as
 # the MEOS macro (OUT_DEFAULT_DECIMAL_DIGITS), whose value the catalog states. Filled in main().
 MACRO_VALUES = {}
@@ -1367,6 +1439,9 @@ def emit_body(f, kind):
                 f"        }});\n}}\n")
     if kind.startswith("baseval:"):   # (Temporal) -> base value ptr (startValue/endValue -> Cbuffer *)
         rb = kind.split(":", 1)[1]    # {Base}ToBlobN owns the free + NULL-safe marshalling
+        # The marshaller is the one PTR_RET states for the C type, NULL-safe: PoseChain marshals
+        # through PosechainToBlob, which the C type does not spell.
+        rb = PTR_RET[rb][1].split("(", 1)[0][:-len("ToBlob")]
         cct = norm(f["returnType"]["canonical"])   # e.g. "Cbuffer *"
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
@@ -3147,14 +3222,18 @@ CONT_BLOBTO = {"Set": "BlobToSet", "Span": "BlobToSpan", "SpanSet": "BlobToSpanS
 CONT_SQL_ACC = {"Set": SET_SIG_ACC, "Span": SPAN_TYPES, "SpanSet": SPANSET_TYPES}
 def shape_container_scalar(f):
     """The C operands as [("C", Set|Span|SpanSet) | ("E", base)] for a by-value number between two
-    containers or a container and one base value, else None."""
+    containers or a container and one base value, else None. The distance between two time
+    values is an interval, which MEOS returns owned and #scalar_ret4 marshals through
+    TakeInterval, as it does for the duration of a span."""
     if f.get("group") not in CONTAINER_SCALAR_GROUPS or supported(f) is not None:
         return None
     ins, out = classify(f)
     if out is not None or len(ins) != 2:
         return None
     rb = base(f["returnType"]["canonical"])
-    if rb not in NUMERIC_C_RET or rb == "bool" or "*" in norm(f["returnType"]["canonical"]):
+    rn = norm(f["returnType"]["canonical"])
+    interval = rb == "Interval" and rn.endswith("*") and rn.count("*") == 1
+    if not interval and (rb not in NUMERIC_C_RET or rb == "bool" or "*" in rn):
         return None
     ops = []
     for p in ins:
@@ -4964,6 +5043,10 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "inline string_t TakeCString(Vector &result, char *s) {\n"
            "    string_t out = StringVector::AddString(result, s);\n    free(s);\n    return out;\n}\n\n"
            )
+    if FORWARDED:
+        src += ("// The functions whose last parameter every SQL signature fixes to one literal, at the\n"
+                "// arity the SQL surface calls them (project_bound_tail).\n"
+                + "".join(FORWARDED) + "\n")
 
     # ---- ARRAY-RETURN family: <elem>* + int* count -> LIST(<elem>) (getValues/timestamps/
     # spans/tboxes). Standalone pass because these span Set/Temporal/SpanSet inputs and because
@@ -5467,6 +5550,12 @@ def main():
         if len(other) == 1:
             f["sqlfn"] = other.pop()
             f["sqlSignatures"] = [s for s in sigs if s.get("sqlName") == f["sqlfn"]]
+    # A last parameter every signature fixes to one literal leaves the SQL surface: the shapes
+    # see the shorter record, and the generated units forward it with the literal.
+    projected = {f["name"]: project_bound_tail(f) for f in fns}
+    fixed = {p["name"] for f in fns if projected[f["name"]]
+             for p in f["params"] if p not in projected[f["name"]]["params"]}
+    fns = [projected[f["name"]] or project_bound_tail(f, fixed) or f for f in fns]
     # name -> catalog entry, so the name-keyed scope rules can read the function's own
     # sqlSignatures (the tspatial_* surface asks which types MobilityDB declares it for).
     FN_BY_NAME.update({f["name"]: f for f in fns})

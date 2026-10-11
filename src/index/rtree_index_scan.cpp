@@ -78,7 +78,7 @@ static double ExactDistance(MeosType bbox_type, const string_t &value, const voi
 			break;
 		}
 	} else {
-		distance = nad_tgeo_stbox(temp, static_cast<const STBox *>(query_box));
+		distance = nad_tgeo_stbox(temp, static_cast<const STBox *>(query_box), true);
 	}
 	free(temp);
 	return distance;

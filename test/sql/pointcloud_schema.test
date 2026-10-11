@@ -57,13 +57,13 @@ GROUP BY s.pcid, s.srid, s.compression;
 ----
 true
 
-# The text form of a value is its serialized bytes, so it reads the same under
-# a right schema and a wrong one. The MF-JSON form decodes the coordinates
-# through the schema, so it is what proves the registration took.
+# The MF-JSON form decodes the coordinates through the schema and names the
+# reference system the schema states, so it is what proves the registration
+# took.
 query I
-SELECT asMFJSON(tpcpoint '2300000007000000000000000000F03F00000000000000400000000000000840000000@2024-01-01');
+SELECT asMFJSON(tpcpoint '0107000000000000000000F03F00000000000000400000000000000840@2024-01-01');
 ----
-{"type":"MovingPCPoint","coordinates":[[1,2,3]],"values":[{"pcid":7,"pt":[1,2,3]}],"datetimes":["2024-01-01T00:00:00+01:00"],"interpolation":"None"}
+{"type":"MovingPCPoint","crs":{"type":"Name","properties":{"name":"EPSG:4326"}},"coordinates":[[1,2,3]],"values":[{"pcid":7,"pt":[1,2,3]}],"datetimes":["2024-01-01T00:00:00+01:00"],"interpolation":"None"}
 
 # The contrast that gives the answer above its meaning: a pcid no row states
 # resolves to nothing, so the engine reads a coordinate through a schema it was
@@ -71,6 +71,6 @@ SELECT asMFJSON(tpcpoint '2300000007000000000000000000F03F0000000000000040000000
 # never registers, because the engine holds a registration for the life of the
 # process and a suite may run a file more than once.
 statement error
-SELECT asMFJSON(tpcpoint '2300000063000000000000000000F03F00000000000000400000000000000840000000@2024-01-01');
+SELECT asMFJSON(tpcpoint '0163000000000000000000F03F00000000000000400000000000000840@2024-01-01');
 ----
 PCSCHEMA for pcid 99 not registered

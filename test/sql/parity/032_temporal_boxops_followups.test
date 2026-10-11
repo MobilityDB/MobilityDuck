@@ -10,19 +10,19 @@ require mobilityduck
 # Named-function aliases agree with the operator forms
 
 query I
-SELECT contains(tint '[1@2000-01-01, 5@2000-01-05]', tint '[2@2000-01-02, 3@2000-01-03]')
+SELECT tboxContains(tint '[1@2000-01-01, 5@2000-01-05]', tint '[2@2000-01-02, 3@2000-01-03]')
      = (tint '[1@2000-01-01, 5@2000-01-05]' @> tint '[2@2000-01-02, 3@2000-01-03]');
 ----
 true
 
 query I
-SELECT contained(tint '[2@2000-01-02, 3@2000-01-03]', tint '[1@2000-01-01, 5@2000-01-05]')
+SELECT tboxContained(tint '[2@2000-01-02, 3@2000-01-03]', tint '[1@2000-01-01, 5@2000-01-05]')
      = (tint '[2@2000-01-02, 3@2000-01-03]' <@ tint '[1@2000-01-01, 5@2000-01-05]');
 ----
 true
 
 query I
-SELECT overlaps(tint '[1@2000-01-01]', tint '[1@2000-01-01]');
+SELECT tboxOverlaps(tint '[1@2000-01-01]', tint '[1@2000-01-01]');
 ----
 true
 
@@ -33,21 +33,21 @@ true
 # adjacent.
 
 query I
-SELECT adjacent(tint '[1@2000-01-01, 2@2000-01-02]', tint '[3@2000-01-03, 4@2000-01-04]');
+SELECT tboxAdjacent(tint '[1@2000-01-01, 2@2000-01-02]', tint '[3@2000-01-03, 4@2000-01-04]');
 ----
 false
 
 # Aliases also work for (temporal × tstzspan)
 
 query I
-SELECT contains(tstzspan '[2000-01-01, 2000-01-10]', tint '[3@2000-01-03, 4@2000-01-04]');
+SELECT tboxContains(tstzspan '[2000-01-01, 2000-01-10]', tint '[3@2000-01-03, 4@2000-01-04]');
 ----
 true
 
 # Aliases on (tnumber × numspan) and (tnumber × tbox)
 
 query I
-SELECT overlaps(tint '[1@2000-01-01, 5@2000-01-05]', intspan '[2, 4)');
+SELECT tboxOverlaps(tint '[1@2000-01-01, 5@2000-01-05]', intspan '[2, 4)');
 ----
 true
 

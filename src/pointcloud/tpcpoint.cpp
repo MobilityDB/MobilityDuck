@@ -1168,16 +1168,7 @@ void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
     duckdb::RegisterSerializedScalarFunction(loader,  memSize_function);
 
-    auto getValue_function = ScalarFunction(
-        "getValue",
-        {TPcpointTypes::tpcpoint()},
-        LogicalType::VARCHAR,
-        Tinstant_value
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  getValue_function);
-
-
-    /* startValue/endValue are now GENERATED (they return the pcpoint base value,
+    /* getValue, startValue and endValue are now GENERATED (they return the pcpoint base value,
      * rendered as hex-WKB text via the pcpoint->VARCHAR cast), mirroring the cbuffer
      * sibling; the hand VARCHAR registrations are retired to avoid an ambiguous overload. */
 

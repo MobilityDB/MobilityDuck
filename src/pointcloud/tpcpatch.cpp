@@ -1206,16 +1206,7 @@ void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
     duckdb::RegisterSerializedScalarFunction(loader,  memSize_function);
 
-    auto getValue_function = ScalarFunction(
-        "getValue",
-        {TPcpatchTypes::tpcpatch()},
-        LogicalType::VARCHAR,
-        Tinstant_value
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  getValue_function);
-
-
-    /* startValue/endValue are now GENERATED (they return the pcpatch base value,
+    /* getValue, startValue and endValue are now GENERATED (they return the pcpatch base value,
      * rendered as hex-WKB text via the pcpatch->VARCHAR cast), mirroring the cbuffer
      * sibling; the hand VARCHAR registrations are retired to avoid an ambiguous overload. */
 

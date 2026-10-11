@@ -202,7 +202,7 @@ static void TpcpatchAsMfjsonExec(DataChunk &args, ExpressionState &, Vector &res
         int options = (cc > 1) ? FlatVector::GetData<int32_t>(args.data[1])[row] : 0;
         int flags   = (cc > 2) ? FlatVector::GetData<int32_t>(args.data[2])[row] : 0;
         int maxdd   = (cc > 3) ? FlatVector::GetData<int32_t>(args.data[3])[row] : 15;
-        char *json = temporal_as_mfjson(t, (options & 1) != 0, flags, maxdd, nullptr);
+        char *json = temporal_as_mfjson(t, options, flags, maxdd, nullptr);
         if (!json) { valid.SetInvalid(row); continue; }
         out[row] = StringVector::AddString(result, json);
         free(json);

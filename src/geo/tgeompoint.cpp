@@ -1467,7 +1467,7 @@ void TgeoAsMfjsonExec(DataChunk &args, ExpressionState &state, Vector &result) {
             srs.assign(s.GetData(), s.GetSize());
             srs_cstr = srs.empty() ? nullptr : srs.c_str();
         }
-        char *json = temporal_as_mfjson(t, with_bbox, flags, precision, srs_cstr);
+        char *json = temporal_as_mfjson(t, with_bbox ? 1 : 0, flags, precision, srs_cstr);
         free(t);
         if (!json) {
             out_validity.SetInvalid(row);
