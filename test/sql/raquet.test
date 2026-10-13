@@ -213,14 +213,14 @@ must be positive
 
 # A single-instant trajectory at the origin covers exactly one zoom-0 cell.
 query I
-SELECT len(getValues(tquadbin(tgeompoint 'SRID=4326;POINT(0 0)@2024-01-01', 0)));
+SELECT numValues(getValues(tquadbin(tgeompoint 'SRID=4326;POINT(0 0)@2024-01-01', 0)));
 ----
 1
 
 # The cell covering the origin at zoom 0 is the world tile.
 query III
 SELECT quadbinCellToTileX(c), quadbinCellToTileY(c), quadbinCellToTileZ(c)
-FROM (SELECT getValues(tquadbin(tgeompoint 'SRID=4326;POINT(0 0)@2024-01-01', 0))[1] AS c);
+FROM (SELECT startValue(tquadbin(tgeompoint 'SRID=4326;POINT(0 0)@2024-01-01', 0)) AS c);
 ----
 0	0	0
 
@@ -230,19 +230,19 @@ FROM (SELECT getValues(tquadbin(tgeompoint 'SRID=4326;POINT(0 0)@2024-01-01', 0)
 # goes from the north-western tile straight into the south-eastern one and
 # enters neither of the two tiles it touches at that corner.
 query I
-SELECT getValues(tquadbin(
-  tgeompoint 'SRID=4326;[POINT(-90 45)@2024-01-01, POINT(90 -45)@2024-01-02]', 1));
+SELECT asText(getValues(tquadbin(
+  tgeompoint 'SRID=4326;[POINT(-90 45)@2024-01-01, POINT(90 -45)@2024-01-02]', 1)));
 ----
-[4813ffffffffffff, 481fffffffffffff]
+{"4813ffffffffffff", "481fffffffffffff"}
 
 # Moved one degree south, the diagonal passes west of the corner and crosses
 # the south-western tile on the way, a monotone path across a two by two span
 # visiting 2 + 2 - 1 tiles.
 query I
-SELECT getValues(tquadbin(
-  tgeompoint 'SRID=4326;[POINT(-90 44)@2024-01-01, POINT(90 -46)@2024-01-02]', 1));
+SELECT asText(getValues(tquadbin(
+  tgeompoint 'SRID=4326;[POINT(-90 44)@2024-01-01, POINT(90 -46)@2024-01-02]', 1)));
 ----
-[4813ffffffffffff, 481bffffffffffff, 481fffffffffffff]
+{"4813ffffffffffff", "481bffffffffffff", "481fffffffffffff"}
 
 query I
 SELECT getValues(tquadbin(NULL::TGEOMPOINT, 0)) IS NULL;

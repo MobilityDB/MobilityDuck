@@ -201,17 +201,12 @@ REGISTER_MACRO_RE = re.compile(
 
 # Names registered through dynamic patterns the static scan can't see —
 # e.g. `StringUtil::Lower(type.GetAlias())` that resolves at runtime to
-# "tbool"/"tint"/"tfloat"/"ttext", or per-type accessors registered by
-# `RegisterTemporalDatumAccessor` template helpers (`minValue`,
-# `maxValue`, `getValue`, `startValue`, `endValue`).  These ARE
-# registered (verified by tests passing); listed here so the audit
-# reflects reality.
+# "tbool"/"tint"/"tfloat"/"ttext".  These ARE registered (verified by
+# tests passing); listed here so the audit reflects reality.
 DYNAMIC_REGISTERED = {
     # Per-subtype constructors registered through the
     # TemporalTypes::RegisterScalarFunctions loop.
     "tbool", "tint", "tfloat", "ttext",
-    # Accessors registered through RegisterTemporalDatumAccessor.
-    "minValue", "maxValue", "getValue", "startValue", "endValue",
     # Binary / HexWKB / MFJSON parsers registered through
     # TemporalTypes::RegisterWkbFunctions (loops over scalar types).
     "tboolFromBinary", "tintFromBinary", "tfloatFromBinary", "ttextFromBinary",

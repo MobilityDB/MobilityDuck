@@ -67,15 +67,15 @@ SELECT valueN(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5), 1)
 ----
 true
 
-# ── generated cell-id getValues → LIST(h3index) ──────────────────────────────
+# ── getValues → h3indexset, the set of the values (temporal_valueset) ────────
 query I
-SELECT typeof(getValues(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5))[1]);
+SELECT typeof(getValues(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5)));
 ----
-h3index
+h3indexset
 
 query I
-SELECT getValues(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5))[1]
-     = startValue(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5));
+SELECT asEWKT(getValues(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5)))
+     = 'SRID=4326;{"' || startValue(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5))::VARCHAR || '"}';
 ----
 true
 

@@ -436,7 +436,7 @@ SELECT ST_AsTexT(getValue(tgeompoint 'Point(1 1)@2000-01-01'));
 POINT (1 1)
 
 query I 
-SELECT asEWKT(valueSet(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}'));
+SELECT asEWKT(getValues(tgeompoint '{[Point(1 1)@2000-01-01, Point(2 2)@2000-01-02, Point(1 1)@2000-01-03],[Point(3 3)@2000-01-04, Point(3 3)@2000-01-05]}'));
 ----
 {"POINT(1 1)", "POINT(2 2)", "POINT(3 3)"}
 

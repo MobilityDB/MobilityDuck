@@ -50,6 +50,28 @@ inline MeosInterval IntervaltToInterval(interval_t duckdb_interval) {
     return meos_interval;
 }
 
+/* A DuckDB interval passed as the `const Interval *` a MEOS function reads: the unnamed object built
+ * at the argument converts through #IntervaltToInterval and lives to the end of the call's full expression,
+ * so a generated call reads `f(t, MeosIntervalArg(a2))` with no statement of its own, as
+ * #DuckDBToMeosTimestamp marshals a timestamp argument in one expression */
+struct MeosIntervalArg {
+    MeosInterval v;
+    explicit MeosIntervalArg(interval_t duckdb_interval) : v(IntervaltToInterval(duckdb_interval)) {}
+    operator const MeosInterval *() const { return &v; }
+};
+
+/* An interval SQL literal (a parameter's DEFAULT '0 minutes') passed as the `const Interval *` a
+ * MEOS function reads, parsed by the MEOS interval_in as the SQL default is, released at the end
+ * of the call's full expression, as #MeosIntervalArg passes a column value */
+struct MeosIntervalLiteral {
+    MeosInterval *p;
+    explicit MeosIntervalLiteral(const char *text) : p(interval_in(text, -1)) {}
+    ~MeosIntervalLiteral() { free(p); }
+    MeosIntervalLiteral(const MeosIntervalLiteral &) = delete;
+    MeosIntervalLiteral &operator=(const MeosIntervalLiteral &) = delete;
+    operator const MeosInterval *() const { return p; }
+};
+
 inline timestamp_tz_t DuckDBToMeosTimestamp(timestamp_tz_t duckdb_ts) {
     timestamp_tz_t meos_ts;
     meos_ts.value = duckdb_ts.value - EPOCH_OFFSET_MICROS;

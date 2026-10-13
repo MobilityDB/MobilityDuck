@@ -9,6 +9,7 @@
 #include "temporal/spanset.hpp"
 #include "temporal/tbox.hpp"
 #include "geo/stbox.hpp"
+#include "geo/geoset.hpp"
 #include "pointcloud/tpcbox.hpp"
 #include "geo/tgeompoint.hpp"
 #include "geo/tgeogpoint.hpp"
@@ -209,6 +210,7 @@ void RegisterGenerated_meos_setspan_topo(ExtensionLoader &loader);
 void RegisterGenerated_meos_setspan_transf(ExtensionLoader &loader);
 void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader);
 void RegisterGenerated_meos_temporal_agg(ExtensionLoader &loader);
+void RegisterGenerated_meos_temporal_analytics_reduction(ExtensionLoader &loader);
 void RegisterGenerated_meos_temporal_analytics_similarity(ExtensionLoader &loader);
 void RegisterGenerated_meos_temporal_analytics_simplify(ExtensionLoader &loader);
 void RegisterGenerated_meos_temporal_bbox_pos(ExtensionLoader &loader);
@@ -393,6 +395,7 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_setspan_transf(loader);
     RegisterGenerated_meos_temporal_accessor(loader);
     RegisterGenerated_meos_temporal_agg(loader);
+    RegisterGenerated_meos_temporal_analytics_reduction(loader);
     RegisterGenerated_meos_temporal_analytics_similarity(loader);
     RegisterGenerated_meos_temporal_analytics_simplify(loader);
     RegisterGenerated_meos_temporal_bbox_pos(loader);
