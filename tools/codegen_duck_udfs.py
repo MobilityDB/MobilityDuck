@@ -231,6 +231,8 @@ def arg_type(canon, fname=None):
         return ("LogicalType::VARCHAR", None)
     if b == "nullHandleType" and "*" not in nc:
         return ("LogicalType::VARCHAR", None)
+    if b == "Interval" and nc.count("*") == 1:   # a duration: by-value INTERVAL (#shape_arg)
+        return ("LogicalType::INTERVAL", None)
     return None
 
 def outprim_ret3(f, out_canon):
@@ -584,7 +586,10 @@ def reg_scope(name):
             return ("types", CORE_TYPES["tbool"] + CORE_TYPES["ttext"])
         if base == "tnumber_tnumber":
             return ("types", CORE_TYPES["tint"] + CORE_TYPES["tfloat"] + CORE_TYPES["tbigint"])
-    if name.startswith("temporal_"):
+    # A subtype accessor (tinstant_timestamptz behind getTimestamp) is generic over the temporal
+    # types as a temporal_* one is; the catalog's sqlSignatures then narrow it to the declared set
+    # (#sig_declared_accs), and MEOS checks the subtype itself.
+    if name.startswith(("temporal_", "tinstant_", "tsequence_", "tsequenceset_")):
         return ("all", None)
     # A `<src>_to_<dst>` CONVERSION names its OPERAND with the PREFIX and its RESULT with the
     # suffix, so the `_<type>` token searches below must not read the target as the operand
@@ -1092,6 +1097,7 @@ def emit_defaulted_ternary(f, kind, arg2, dval):
     #emit_defaulted_unary_temporal is the shorter overload of a binary function."""
     name = f["name"]; dt2, cpp2, _ = arg2
     e2 = arg2[2]
+    subcast = "" if base(f["returnType"]["canonical"]) == "Temporal" else "(Temporal *) "
     if kind == "temporal":
         return (f"static void Gen_{name}_d(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
@@ -1099,7 +1105,7 @@ def emit_defaulted_ternary(f, kind, arg2, dval):
                 f"args.data[0], args.data[1], result, args.size(),\n"
                 f"        [&](string_t in, {cpp2} a2, ValidityMask &mask, idx_t idx) -> string_t {{\n"
                 f"            Temporal *t = BlobToTemporal(in);\n"
-                f"            Temporal *r = {name}(t, {e2}, {dval});\n            free(t);\n"
+                f"            Temporal *r = {subcast}{name}(t, {e2}, {dval});\n            free(t);\n"
                 f"            return TemporalToBlobN(result, r, mask, idx);\n        }});\n}}\n")
     ctype, rett, _rx = scalar_emit3(f)
     ex, prm, ann, ret = scalar_exec(f, rett, _rx)
@@ -1379,7 +1385,9 @@ def shape_emittable(f):
     ins, out = classify(f)
     if out is not None or len(ins) != 1:
         return None
-    if base(ins[0]["canonical"]) != "Temporal" or not norm(ins[0]["canonical"]).endswith("*"):
+    # The operand is a temporal value of any subtype (TEMPORAL_CBASES): a TInstant/TSequence/
+    # TSequenceSet operand reads the same blob and is passed cast to its type (#emit_body).
+    if base(ins[0]["canonical"]) not in TEMPORAL_CBASES or not norm(ins[0]["canonical"]).endswith("*"):
         return None
     sc = reg_scope(f["name"])
     if sc is None:
@@ -1423,6 +1431,16 @@ def shape_emittable(f):
     return None
 
 def emit_body(f, kind):
+    """The unary body of #emit_body_binary's family, with a subtype operand (TInstant */TSequence */
+    TSequenceSet *) passed cast to its type -- the operand-side twin of the `subcast` a subtype
+    return takes below: the blob reads as a Temporal *, and the MEOS function checks the subtype."""
+    src = emit_body_unary(f, kind)
+    ob = base(f["params"][0]["canonical"]) if f.get("params") else "Temporal"
+    if ob != "Temporal" and ob in TEMPORAL_CBASES:
+        src = src.replace(f"{f['name']}(t)", f"{f['name']}(({ob} *) t)")
+    return src
+
+def emit_body_unary(f, kind):
     name, sqlfn = f["name"], f["sqlfn"]
     # A concrete subtype return (TInstant */TSequence */TSequenceSet *) upcasts to Temporal *
     # before the uniform temporal marshalling; a plain Temporal * return needs no cast.
@@ -1519,6 +1537,10 @@ def shape_arg(p):
         return VARCHAR_ARG[bb]
     if bb == "char" and nn.count("*") == 1:
         return VARCHAR_ARG[bb]
+    # A duration MEOS reads as `const Interval *`, passed in one expression as SCALAR_ARG's
+    # TimestampTz is: MeosIntervalArg converts the DuckDB interval for the length of the call.
+    if bb == "Interval" and nn.count("*") == 1:
+        return ("LogicalType::INTERVAL", "interval_t", "MeosIntervalArg(a2)")
     return None
 
 def scalar_arg_for(f, p):
@@ -1682,7 +1704,9 @@ def shape_ternary(f):
     if a2 is None or a3 is None: return None
     if reg_scope(f["name"]) is None: return None
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
-    if rb == "Temporal" and rn.endswith("*"):
+    # An owned temporal return of any subtype (TEMPORAL_PTR_RET: stops answers a TSequenceSet *),
+    # upcast in the body as #emit_body_unary upcasts a unary one
+    if rb in TEMPORAL_PTR_RET and rn.endswith("*") and "const" not in f["returnType"]["canonical"]:
         return ("temporal", "MD_TEMPORAL", a2, a3)
     if rb in BYVAL_RET and "*" not in rn:
         return ("scalar:" + rb, scalar_ret_duck(f), a2, a3)
@@ -1691,6 +1715,7 @@ def shape_ternary(f):
 def emit_body_ternary(f, kind, arg2, arg3):
     name = f["name"]; dt2, cpp2, _ = arg2; dt3, cpp3, _ = arg3
     e2 = arg2[2]; e3 = arg3[2].replace("a2", "a3")   # SCALAR_ARG marshal is templated on "a2"
+    subcast = "" if base(f["returnType"]["canonical"]) == "Temporal" else "(Temporal *) "
     if kind == "temporal":          # ternary -> Temporal (NULL-safe pointer return)
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
@@ -1698,7 +1723,7 @@ def emit_body_ternary(f, kind, arg2, arg3):
                 f"args.data[0], args.data[1], args.data[2], result, args.size(),\n"
                 f"        [&](string_t in, {cpp2} a2, {cpp3} a3, ValidityMask &mask, idx_t idx) -> string_t {{\n"
                 f"            Temporal *t = BlobToTemporal(in);\n"
-                f"            Temporal *r = {name}(t, {e2}, {e3});\n            free(t);\n"
+                f"            Temporal *r = {subcast}{name}(t, {e2}, {e3});\n            free(t);\n"
                 f"            return TemporalToBlobN(result, r, mask, idx);\n        }});\n}}\n")
     ctype, rett, _rx = scalar_emit3(f)
     ex, prm, ann, ret = scalar_exec(f, rett, _rx)
@@ -2456,10 +2481,16 @@ def sig_declared_ret(f, acc, arity):
     centroid(tgeometry) is tgeompoint, cellToBoundary(th3index) is tgeography,
     minDistSimplify(tgeography,float) is tgeometry, tDistance(tint,tint) is tint. Only an
     UNAMBIGUOUS match counts (one signature on that operand at that arity), so a shape the
-    catalog describes with several overloads keeps the heuristic."""
+    catalog describes with several overloads keeps the heuristic. A signature answers for a
+    shorter arity whose omitted trailing arguments all carry a default, read from argDefaults as
+    #trailing_arg_default reads them: the shorter form is the same SQL function,
+    tprecision(tint, interval) a tfloat as tprecision(tint, interval, timestamptz) is."""
+    def _callable_at(s):
+        args = s.get("args") or []
+        defs = s.get("argDefaults") or [None] * len(args)
+        return len(args) == arity or (len(args) > arity and all(d is not None for d in defs[arity:]))
     on = [s for s in (f.get("sqlSignatures") or [])
-          if (s.get("args") or [None])[0] == _acc_sqlname(acc)
-          and len(s.get("args") or []) == arity]
+          if (s.get("args") or [None])[0] == _acc_sqlname(acc) and _callable_at(s)]
     if len(on) == 1 and on[0].get("ret") in SIG_TEMPORAL_ACC:
         return SIG_TEMPORAL_ACC[on[0]["ret"]]
     return None
@@ -2806,8 +2837,13 @@ SQL_CONTAINER_ACC = {
     "tbox": "TboxType::tbox()", "stbox": "StboxType::stbox()",
     "tpcbox": "TpcboxType::tpcbox()",
 }
+# The set a temporal value answers its values as (getValues=temporal_valueset over every temporal
+# type, valueSet over the temporal numbers) resolves as #declared_element_pairs resolves a declared
+# set: through SET_SIG_ACC. geomset and geogset stay absent, their sets carrying a hand-written
+# surface.
+TEMPORAL_TO_CONTAINER_ACC = {**SQL_CONTAINER_ACC, **SET_SIG_ACC}
 def shape_temporal_to_container(f):
-    """(Temporal) -> Span/SpanSet/TBox/STBox conversion, registered per catalog sqlSignature.
+    """(Temporal) -> Set/Span/SpanSet/TBox/STBox conversion, registered per catalog sqlSignature.
     Returns (Cbase, [(arg_acc, ret_acc)...]) over the overloads whose BOTH types are registered,
     or None (no sqlSignatures / unmappable / not this shape) -> the fn is left to the hand layer."""
     if supported(f) is not None:
@@ -2818,15 +2854,19 @@ def shape_temporal_to_container(f):
     if base(ins[0]["canonical"]) != "Temporal" or not norm(ins[0]["canonical"]).endswith("*"):
         return None
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
-    if rb not in ("Span", "SpanSet", "TBox", "STBox") or not rn.endswith("*"):
+    if rb not in ("Set", "Span", "SpanSet", "TBox", "STBox") or not rn.endswith("*"):
         return None
+    # Each overload keeps the SQL name its signature states, as the temporal-by-span pairs do
+    # (#shape_temporal_span): temporal_valueset is getValues over most types and valueSet over
+    # the temporal numbers.
     pairs = []
     for s in (f.get("sqlSignatures") or []):
         if len(s["args"]) != 1:
             continue
-        aacc = SIG_TEMPORAL_ACC.get(s["args"][0]); racc = SQL_CONTAINER_ACC.get(s.get("ret"))
-        if aacc and racc and (aacc, racc) not in pairs:
-            pairs.append((aacc, racc))
+        aacc = SIG_TEMPORAL_ACC.get(s["args"][0]); racc = TEMPORAL_TO_CONTAINER_ACC.get(s.get("ret"))
+        trip = (aacc, racc, s.get("sqlName") or f["sqlfn"])
+        if aacc and racc and trip not in pairs:
+            pairs.append(trip)
     return (rb, pairs) if pairs else None
 
 def emit_temporal_to_container(f, rb):
@@ -4311,12 +4351,18 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         if t and trailing_arg_default(f):
             # The default reaches the kernel the way the argument it stands for does: a by-value
             # scalar as its C++ literal, a text argument through the marshalling its column takes
-            # (null_handle_type_from_string of 'raise_exception'), the literal as its string_t.
+            # (null_handle_type_from_string of 'raise_exception'), the literal as its string_t, a
+            # timestamptz or interval literal through the MEOS parser of its type, which reads it
+            # as the SQL default is read (a timestamptz in the session's zone).
             _raw = trailing_arg_default(f)
             _a3 = t[3]
             if _a3[1] == "string_t":
                 _lit = '"%s"' % _raw.strip().strip("'")
                 dflt = _a3[2].replace("a2", "string_t(%s)" % _lit)
+            elif _a3[1] == "timestamp_tz_t":
+                dflt = 'timestamptz_in("%s", -1)' % _raw.strip().strip("'")
+            elif _a3[1] == "interval_t":
+                dflt = 'MeosIntervalLiteral("%s")' % _raw.strip().strip("'")
             else:
                 dflt = sql_default_to_cpp(_raw)
             bodies.append(emit_defaulted_ternary(f, kind, arg2, dflt))
@@ -4788,8 +4834,8 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         fn, sqlfn = f["name"], f["sqlfn"]
         temporal_box_bodies.append(emit_temporal_to_container(f, rb))
         names = reg_names(f, sqlfn, aliases)
-        for aacc, racc in pairs:
-            for nm in names:
+        for aacc, racc, signame in pairs:
+            for nm in (names if signame == sqlfn else reg_names(f, signame, aliases)):
                 temporal_box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {{{aacc}}}, {racc}, Gen_{fn}));')
     # Include order mirrors the hand .cpp files (meos_wrapper + common FIRST, before

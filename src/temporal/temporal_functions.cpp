@@ -5401,45 +5401,6 @@ interpType ParseInterpString(const string_t &s) {
 
 } // namespace
 
-void TemporalFunctions::Temporal_tprecision(DataChunk &args, ExpressionState &state, Vector &result) {
-    const idx_t row_count = args.size();
-    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
-    auto in_data = FlatVector::GetData<string_t>(args.data[0]);
-    auto dur_data = FlatVector::GetData<interval_t>(args.data[1]);
-    auto &v0 = FlatVector::Validity(args.data[0]);
-    auto &v1 = FlatVector::Validity(args.data[1]);
-    const bool has_origin = args.ColumnCount() > 2;
-    auto out_data = FlatVector::GetData<string_t>(result);
-    auto &out_validity = FlatVector::Validity(result);
-
-    for (idx_t row = 0; row < row_count; row++) {
-        if (!v0.RowIsValid(row) || !v1.RowIsValid(row)) {
-            out_validity.SetInvalid(row);
-            continue;
-        }
-        TimestampTz origin = DEFAULT_TIME_ORIGIN_MEOS;
-        if (has_origin) {
-            auto &ov = args.data[2];
-            if (!FlatVector::Validity(ov).RowIsValid(row)) {
-                out_validity.SetInvalid(row);
-                continue;
-            }
-            timestamp_tz_t t = FlatVector::GetData<timestamp_tz_t>(ov)[row];
-            origin = (TimestampTz) DuckDBToMeosTimestamp(t).value;
-        }
-        Temporal *temp = BlobToTemporal(in_data[row]);
-        MeosInterval mi = IntervaltToInterval(dur_data[row]);
-        Temporal *r = temporal_tprecision(temp, &mi, origin);
-        free(temp);
-        if (!r) { out_validity.SetInvalid(row); continue; }
-        size_t sz = temporal_mem_size(r);
-        string_t blob(reinterpret_cast<const char *>(r), sz);
-        out_data[row] = StringVector::AddStringOrBlob(result, blob);
-        free(r);
-    }
-    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
-}
-
 void TemporalFunctions::Temporal_tsample(DataChunk &args, ExpressionState &state, Vector &result) {
     const idx_t row_count = args.size();
     for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);

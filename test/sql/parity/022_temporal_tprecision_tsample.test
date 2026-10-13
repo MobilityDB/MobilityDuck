@@ -24,6 +24,25 @@ SELECT tprecision(tfloat '[1@2000-01-01, 5@2000-01-05]', INTERVAL '1 day', TIMES
 ----
 [1.5@2000-01-01 00:00:00+00, 4.5@2000-01-04 00:00:00+00, 5@2000-01-05 00:00:00+00]
 
+# tprecision of a tint is a tfloat, the time-weighted mean of each bin, at
+# either arity (022_temporal.test.out)
+
+query II
+SELECT typeof(tprecision(tint '5@2001-01-01 10:00', INTERVAL '1 day')),
+  maxValue(tprecision(tint '5@2001-01-01 10:00', INTERVAL '1 day'));
+----
+tfloat	5.0
+
+query I
+SELECT maxValue(tprecision(tint '{1@2001-01-01 00:00, 2@2001-01-01 00:05}', INTERVAL '10 minutes'));
+----
+1.5
+
+query I
+SELECT typeof(tprecision(tint '5@2001-01-01 10:00', INTERVAL '1 day', TIMESTAMPTZ '2001-01-01'));
+----
+tfloat
+
 # tprecision and tsample default to MEOS's time origin, a Monday, so their
 # weekly bins start on Mondays
 

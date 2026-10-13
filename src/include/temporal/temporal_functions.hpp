@@ -109,7 +109,6 @@ struct TemporalFunctions {
     static void Temporal_shift_time(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_scale_time(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_shift_scale_time(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_tprecision(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_tsample(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
