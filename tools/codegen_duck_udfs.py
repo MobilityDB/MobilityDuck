@@ -721,6 +721,9 @@ def reg_scope(name):
     # so unlike trgeometry it rides the generic Temporal<T> surface rather than owning one.
     if name.startswith("tposechain_") or re.search(r'_tposechain(?=_|$)', name):
         return ("types", ["PosechainTypes::tposechain()"])
+    # the temporal network point (base value `npoint`), read as #tposechain_ reads its family
+    if name.startswith("tnpoint_") or re.search(r'_tnpoint(?=_|$)', name):
+        return ("types", ["NpointTypes::tnpoint()"])
     # temporal-type token ANYWHERE in the name (always_eq_tint_int, ever_lt_tfloat_tfloat,
     # tdistance_tfloat_tfloat, teq_temporal_temporal). Skip if >1 DISTINCT temporal type
     # appears (mixed/ambiguous) — geo tokens (tgeompoint/tgeo/th3index/tnpoint) aren't in
