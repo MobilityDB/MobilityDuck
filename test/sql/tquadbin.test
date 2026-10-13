@@ -71,16 +71,16 @@ SELECT valueN(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), 1)
 ----
 true
 
-# ── generated cell-id getValues → LIST(quadbin) ──────────────────────────────
+# ── getValues → quadbinset, the set of the values (temporal_valueset) ─────────
 query I
-SELECT typeof(getValues(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'))[1]);
+SELECT typeof(getValues(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01')));
 ----
-quadbin
+quadbinset
 
 query I
-SELECT getValues(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'))[1];
+SELECT asText(getValues(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01')));
 ----
-4817ffffffffffff
+{"4817ffffffffffff"}
 
 # ── the shared DGGS cell-index slots, answered from the tcellindex kernel ─────
 # The same kernel answers these for quadbin as for H3, under the bare slot names.

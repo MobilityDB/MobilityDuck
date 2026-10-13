@@ -60,7 +60,6 @@ struct TgeompointFunctions {
     /* ***************************************************
      * Stops function
      ****************************************************/
-    static void Tgeompoint_stops(DataChunk &args, ExpressionState &state, Vector &result);
     
     /* ***************************************************
     * TODO: Ever/Always Comparison functions
@@ -96,7 +95,6 @@ struct TgeompointFunctions {
     static void Tpoint_twcentroid(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tpoint_direction(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tpoint_azimuth(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tpoint_angular_difference(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tpoint_is_simple(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tpoint_make_simple(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tpoint_trajectory(DataChunk &args, ExpressionState &state, Vector &result);

@@ -607,101 +607,8 @@ inline void Temporal_merge(DataChunk &args, ExpressionState &state, Vector &resu
  * Accessor Functions
 */
 
-inline void Temporal_subtype(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &tgeom_vec = args.data[0];
-
-    tgeom_vec.Flatten(count);
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        tgeom_vec, result, count,
-        [&](string_t tgeom_str_t) -> string_t {
-            std::string input = tgeom_str_t.GetString();
-
-            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
-            if (!temp) {
-                throw InvalidInputException("Invalid tgeography data: null pointer");
-            }
-            
-            const char *subtype_str = temporal_subtype(temp);
-            if (!subtype_str) {
-                throw InvalidInputException("Failed to get temporal subtype");
-            }
-
-            std::string result_str(subtype_str);
-            string_t stored_result = StringVector::AddString(result, result_str);
-            
-            return stored_result;
-        });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
 
 
-
-
-inline void Temporal_interp(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &tgeom_vec = args.data[0];
-
-    tgeom_vec.Flatten(count);
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        tgeom_vec, result, count,
-        [&](string_t tgeom_str_t) -> string_t {
-
-            std::string input = tgeom_str_t.GetString();
-
-            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
-            if (!temp) {
-                throw InvalidInputException("Invalid tgeography data: null pointer");
-            }
-
-            
-            const char *interp_str = temporal_interp(temp);
-            if (!interp_str) {
-                throw InvalidInputException("Failed to get temporal interpolation");
-            }
-
-            std::string result_str(interp_str);
-            string_t stored_result = StringVector::AddString(result, result_str);
-            
-            return stored_result;
-        });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-inline void Temporal_mem_size(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &tgeom_vec = args.data[0];
-
-    tgeom_vec.Flatten(count);
-
-    UnaryExecutor::Execute<string_t, int32_t>(
-        tgeom_vec, result, count,
-        [&](string_t tgeom_str_t) -> int32_t {
-           std::string input = tgeom_str_t.GetString();
-
-            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
-            if (!temp) {
-                throw InvalidInputException("Invalid tgeography data: null pointer");
-            }
-            
-            size_t mem_size = temporal_mem_size(temp);
-            
-            
-            return static_cast<int32_t>(mem_size);
-        });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
 
 inline void Tinstant_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto count = args.size();
@@ -793,224 +700,9 @@ inline void Temporal_end_value(DataChunk &args, ExpressionState &state, Vector &
 }
 
 
-inline void Temporal_lower_inc(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_vec = args.data[0];
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, count,
-        [&](string_t input_str) -> string_t {
-            std::string input = input_str.GetString();
-
-            Temporal* temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
-
-            bool lower_inc = temporal_lower_inc(temp);
-
-            std::string result_str = lower_inc ? "true" : "false";
-            string_t stored_result = StringVector::AddString(result, result_str);
-            return stored_result;
-        });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-inline void Temporal_upper_inc(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_vec = args.data[0];
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, count,
-        [&](string_t input_str) -> string_t {
-            std::string input = input_str.GetString();
-
-            Temporal* temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
-
-            bool upper_inc = temporal_upper_inc(temp);
-
-            std::string result_str = upper_inc ? "true" : "false";
-            string_t stored_result = StringVector::AddString(result, result_str);
-            return stored_result;
-        });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-inline void Temporal_start_instant(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_vec = args.data[0];
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, count,
-        [&](string_t input_str) -> string_t {
-            std::string input = input_str.GetString();
-
-            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
-
-            TInstant *start_inst = temporal_start_instant(temp);
-
-            if (!start_inst) {
-                throw InvalidInputException("Failed to get start_inst from temporal object");
-            }
-
-            size_t result_size = temporal_mem_size((Temporal*)start_inst);
-            if (result_size == 0) {
-                throw InvalidInputException("Invalid result size from temporal object");
-            }
-
-            uint8_t *result_buffer = (uint8_t*)malloc(result_size);
-            if (!result_buffer) {
-                free(start_inst);
-                throw InvalidInputException("Failed to allocate memory for result");
-            }
-            
-            memcpy(result_buffer, start_inst, result_size);
-            string_t result_string_t(reinterpret_cast<const char*>(result_buffer), result_size);
-            string_t stored_result = StringVector::AddStringOrBlob(result, result_string_t);
-            
-            free(result_buffer);
-            free(start_inst);
-            return stored_result;
-        });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-inline void Temporal_end_instant(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_vec = args.data[0];
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, count,
-        [&](string_t input_str) -> string_t {
-            std::string input = input_str.GetString();
-
-            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
-
-            TInstant *end_inst = temporal_end_instant(temp);
-
-            if (!end_inst) {
-                throw InvalidInputException("Failed to get end_inst from temporal object");
-            }
-
-            size_t result_size = temporal_mem_size((Temporal*)end_inst);
-            if (result_size == 0) {
-                throw InvalidInputException("Invalid result size from temporal object");
-            }
-
-            uint8_t *result_buffer = (uint8_t*)malloc(result_size);
-            if (!result_buffer) {
-                free(end_inst);
-                throw InvalidInputException("Failed to allocate memory for result");
-            }
-            
-            memcpy(result_buffer, end_inst, result_size);
-            string_t result_string_t(reinterpret_cast<const char*>(result_buffer), result_size);
-            string_t stored_result = StringVector::AddStringOrBlob(result, result_string_t);
-            
-            free(result_buffer);
-            free(end_inst);
-            return stored_result;
-        });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
 
 
 
-
-inline void Temporal_instant_n(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &tgeom_vec = args.data[0];
-    auto &n_vec = args.data[1];
-    
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(
-        tgeom_vec, n_vec, result, count,
-        [&](string_t tgeom_str, int32_t n) -> string_t {
-            std::string tgeom = tgeom_str.GetString();
-            
-            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(tgeom.c_str()));
-            
-            TInstant *inst_n = temporal_instant_n(temp, n);
-            if (!inst_n) {
-                throw InvalidInputException("Failed to get instant n from temporal object");
-            }
-            
-            size_t result_size = temporal_mem_size((Temporal*)inst_n);
-            if (result_size == 0) {
-                throw InvalidInputException("Invalid result size from temporal object");
-            }
-            
-            uint8_t *result_buffer = (uint8_t*)malloc(result_size);
-            if (!result_buffer) {
-                free(inst_n);
-                throw InvalidInputException("Failed to allocate memory for result");
-            }
-            
-            memcpy(result_buffer, inst_n, result_size);
-            string_t result_string_t(reinterpret_cast<const char*>(result_buffer), result_size);
-            string_t stored_result = StringVector::AddStringOrBlob(result, result_string_t);
-            
-            free(result_buffer);
-            free(inst_n);
-            return stored_result;
-        });
-    
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-
-inline void Tinstant_timestamptz(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_geom_vec = args.data[0];
-
-    UnaryExecutor::Execute<string_t, timestamp_tz_t>(
-        input_geom_vec, result, count,
-        [&](string_t input_geom_str) -> timestamp_tz_t {
-            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_geom_str.GetData());
-            size_t data_size = input_geom_str.GetSize();
-
-            if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid tgeography data: insufficient size");
-            }
-
-            uint8_t *data_copy = (uint8_t*)malloc(data_size);
-            if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for tgeography deserialization");
-            }
-            memcpy(data_copy, data, data_size);
-
-            TInstant *temp = reinterpret_cast<TInstant*>(data_copy);
-            
-            if (!temp) {
-                free(data_copy);
-                throw InvalidInputException("Invalid tgeography data: null pointer");
-            }
-
-            TimestampTz meos_t = temp->t;
-            
-            timestamp_tz_t meos_timestamp{meos_t};
-            timestamp_tz_t duckdb_t = MeosToDuckDBTimestamp(meos_timestamp);
-            
-            free(data_copy);
-            
-            return duckdb_t;
-        }
-    );
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
 
 inline void ExecuteTGeometrySeq(DataChunk &args, ExpressionState &state, Vector &result) {
     const char* default_interp = "step";
@@ -1183,14 +875,6 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
 
 
-    auto memSize_function = ScalarFunction(
-        "memSize",
-        {TGeographyTypes::tgeography()},
-        LogicalType::INTEGER,
-        Temporal_mem_size
-    );
-    RegisterMeosFunction(loader, memSize_function);
-
     auto getValue_function = ScalarFunction(
         "getValue",
         {TGeographyTypes::tgeography()},
@@ -1220,13 +904,6 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
 
 
-    auto tgeography_gettimestamptz_function = ScalarFunction(
-        "getTimestamp",
-        {TGeographyTypes::tgeography()},
-        LogicalType::TIMESTAMP_TZ,
-        Tinstant_timestamptz);
-    RegisterMeosFunction(loader, tgeography_gettimestamptz_function);
-
     // ===================================================================
     // Foundational tgeography surface — accessors, time/value-restrict,
     // modifiers, and comparison. The MEOS C functions delegated to here
@@ -1242,67 +919,12 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     // ---- Accessors ----
     RegisterMeosFunction(loader, ScalarFunction(
-        "valueSet", {TGEOM}, SpatialSetType::geomset(),
-        TemporalFunctions::Temporal_valueset));
-    RegisterMeosFunction(loader, ScalarFunction(
         "valueN", {TGEOM, BIGI}, GEOM,
         TemporalFunctions::Temporal_value_n));
     RegisterMeosFunction(loader, ScalarFunction(
         "valueAtTimestamp", {TGEOM, TSTZ}, GEOM,
         TemporalFunctions::Temporal_value_at_timestamptz));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "getTime", {TGEOM}, SpansetTypes::tstzspanset(),
-        TemporalFunctions::Temporal_time));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "duration", {TGEOM}, IVAL,
-        TemporalFunctions::Temporal_duration));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "duration", {TGEOM, LogicalType::BOOLEAN}, IVAL,
-        TemporalFunctions::Temporal_duration));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "lowerInc", {TGEOM}, LogicalType::BOOLEAN,
-        TemporalFunctions::Temporal_lower_inc));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "upperInc", {TGEOM}, LogicalType::BOOLEAN,
-        TemporalFunctions::Temporal_upper_inc));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "numInstants", {TGEOM}, LogicalType::INTEGER,
-        TemporalFunctions::Temporal_num_instants));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "instants", {TGEOM}, LogicalType::LIST(TGEOM),
-        TemporalFunctions::Temporal_instants));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "numSequences", {TGEOM}, LogicalType::INTEGER,
-        TemporalFunctions::Temporal_num_sequences));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "sequences", {TGEOM}, LogicalType::LIST(TGEOM),
-        TemporalFunctions::Temporal_sequences));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "startSequence", {TGEOM}, TGEOM,
-        TemporalFunctions::Temporal_start_sequence));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "endSequence", {TGEOM}, TGEOM,
-        TemporalFunctions::Temporal_end_sequence));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "sequenceN", {TGEOM, LogicalType::INTEGER}, TGEOM,
-        TemporalFunctions::Temporal_sequence_n));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "numTimestamps", {TGEOM}, LogicalType::INTEGER,
-        TemporalFunctions::Temporal_num_timestamps));
     // timestamps(tgeography) is generated from the catalog (temporal_timestamps) in generated_temporal_udfs.cpp.
-    RegisterMeosFunction(loader, ScalarFunction(
-        "startTimestamp", {TGEOM}, TSTZ,
-        TemporalFunctions::Temporal_start_timestamptz));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "endTimestamp", {TGEOM}, TSTZ,
-        TemporalFunctions::Temporal_end_timestamptz));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "timestampN", {TGEOM, LogicalType::INTEGER}, TSTZ,
-        TemporalFunctions::Temporal_timestamptz_n));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "segments", {TGEOM}, LogicalType::LIST(TGEOM),
-        TemporalFunctions::Temporal_segments));
-
     // ---- Time-domain restrict / minus ----
     for (const auto &t : std::vector<std::pair<LogicalType, scalar_function_t>>{
              {TSTZ,                       TemporalFunctions::Temporal_at_timestamptz},

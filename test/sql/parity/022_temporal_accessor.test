@@ -1,0 +1,139 @@
+# name: test/sql/parity/022_temporal_accessor.test
+# description: The temporal accessors generated from the catalog (group
+#              meos_temporal_accessor), each at the signature and with the
+#              answer MobilityDB states (022_temporal.test.out).
+# group: [sql]
+
+require mobilityduck
+
+require icu
+
+statement ok
+SET TimeZone='UTC'
+
+# valueN and valueAtTimestamp answer the base type, a text for a ttext and an
+# integer for a tint; the position is an integer for every type
+
+query I
+SELECT valueN(ttext '{AAA@2001-01-01, BBB@2001-01-02, AAA@2001-01-03}', 1);
+----
+AAA
+
+query I
+SELECT valueAtTimestamp(ttext '{AAA@2001-01-01, BBB@2001-01-02, AAA@2001-01-03}', timestamptz '2001-01-01');
+----
+AAA
+
+query II
+SELECT typeof(valueAtTimestamp(tint '[1@2001-01-01, 2@2001-01-02]', timestamptz '2001-01-01 12:00')),
+  valueAtTimestamp(tint '[1@2001-01-01, 2@2001-01-02]', timestamptz '2001-01-01 12:00');
+----
+INTEGER	1
+
+query II
+SELECT typeof(valueN(tbigint '{1@2001-01-01, 7@2001-01-02}', 2::INTEGER)),
+  valueN(tbigint '{1@2001-01-01, 7@2001-01-02}', 2::INTEGER);
+----
+BIGINT	7
+
+# getValues answers the values of a tbool as an array, of a ttext as a set
+
+query I
+SELECT getValues(tbool '{t@2001-01-01, f@2001-01-02, t@2001-01-03}');
+----
+[false, true]
+
+query I
+SELECT typeof(getValues(ttext '{AAA@2001-01-01, BBB@2001-01-02}'));
+----
+textset
+
+# timestampN answers the n-th distinct timestamp, NULL past the last one
+
+query II
+SELECT timestampN(tint '{1@2001-01-01, 2@2001-01-02}', 2) = timestamptz '2001-01-02',
+  timestampN(tint '{1@2001-01-01, 2@2001-01-02}', 3) IS NULL;
+----
+true	true
+
+# instants, sequences and segments answer an array of the operand's type
+
+query II
+SELECT typeof(instants(tint '{1@2001-01-01, 2@2001-01-02, 1@2001-01-03}')),
+  len(instants(tint '{1@2001-01-01, 2@2001-01-02, 1@2001-01-03}'));
+----
+tint[]	3
+
+query I
+SELECT len(instants(tint '{[1@2001-01-01, 2@2001-01-02, 1@2001-01-03],[3@2001-01-04, 3@2001-01-05]}'));
+----
+5
+
+query II
+SELECT len(segments(tint '[1@2001-01-01, 2@2001-01-02, 1@2001-01-03]')),
+  segments(tint '[1@2001-01-01, 2@2001-01-02, 1@2001-01-03]')[3] = tint '[1@2001-01-03]';
+----
+3	true
+
+query I
+SELECT len(sequences(tfloat '{[1@2001-01-01, 2@2001-01-02],[3@2001-01-03, 3@2001-01-04]}'));
+----
+2
+
+# segmentMinDuration and segmentMaxDuration answer a tbool, whatever the
+# operand's type
+
+query III
+SELECT typeof(segmentMinDuration(tfloat '[1.5@2001-01-01, 2.5@2001-01-02, 1.5@2001-01-03]', interval '1 day')),
+  getValues(segmentMinDuration(tfloat '[1.5@2001-01-01, 2.5@2001-01-02, 1.5@2001-01-03]', interval '1 day')),
+  getTime(segmentMinDuration(tfloat '[1.5@2001-01-01, 2.5@2001-01-02, 1.5@2001-01-03]', interval '1 day'))
+    = getTime(tfloat '[1.5@2001-01-01, 1.5@2001-01-03)');
+----
+tbool	[false]	true
+
+query II
+SELECT typeof(segmentMaxDuration(tfloat '[1.5@2001-01-01, 2.5@2001-01-02, 1.5@2001-01-03]', interval '1 day')),
+  getValues(segmentMaxDuration(tfloat '[1.5@2001-01-01, 2.5@2001-01-02, 1.5@2001-01-03]', interval '1 day'));
+----
+tbool	[false]
+
+statement error
+SELECT segmentMinDuration(tfloat '1.5@2001-01-01', interval '1 day');
+----
+Input must be a temporal sequence (set) with continuous interpolation
+
+# stops takes maxdist DEFAULT 0.0 and minduration DEFAULT '0 minutes', and the
+# geodetic and float operands also take the minimum duration alone
+
+query II
+SELECT stops(tgeompoint '[Point(0 0)@2001-01-01, Point(0 0)@2001-01-02, Point(1 1)@2001-01-03]')
+    = stops(tgeompoint '[Point(0 0)@2001-01-01, Point(0 0)@2001-01-02, Point(1 1)@2001-01-03]', 0.0, interval '0 minutes'),
+  stops(tgeompoint '[Point(0 0)@2001-01-01, Point(0 0)@2001-01-02, Point(1 1)@2001-01-03]', interval '1 hour')
+    = stops(tgeompoint '[Point(0 0)@2001-01-01, Point(0 0)@2001-01-02, Point(1 1)@2001-01-03]', 0.0, interval '1 hour');
+----
+true	true
+
+# the temporal numbers include tbigint
+
+query II
+SELECT integral(tbigint '{1@2001-01-01, 2@2001-01-02, 1@2001-01-03}'),
+  twAvg(tbigint '[1@2001-01-01, 3@2001-01-03]');
+----
+0.0	1.0
+
+# angularDifference of a temporal point is a tfloat
+
+query I
+SELECT typeof(angularDifference(tgeompoint '[Point(0 0)@2001-01-01, Point(1 0)@2001-01-02, Point(1 1)@2001-01-03]'));
+----
+tfloat
+
+# a rigid geometry answers its instants with its reference geometry
+# (trgeometry_instants, as MobilityDB's Temporal_instants dispatches it)
+
+query II
+SELECT len(instants(trgeometry 'Polygon((0 0,1 0,1 1,0 0));[Pose(Point(1 1),0.5)@2001-01-01, Pose(Point(2 2),0.5)@2001-01-02]')),
+  startInstant(trgeometry 'Polygon((0 0,1 0,1 1,0 0));[Pose(Point(1 1),0.5)@2001-01-01, Pose(Point(2 2),0.5)@2001-01-02]')
+    = instants(trgeometry 'Polygon((0 0,1 0,1 1,0 0));[Pose(Point(1 1),0.5)@2001-01-01, Pose(Point(2 2),0.5)@2001-01-02]')[1];
+----
+2	true

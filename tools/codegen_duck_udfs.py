@@ -167,12 +167,19 @@ SQL_SCALAR_RET = {"integer": "LogicalType::INTEGER", "int": "LogicalType::INTEGE
                   "date": "LogicalType::DATE", "timestamptz": "LogicalType::TIMESTAMP_TZ"}
 OUTPRIM = {"int *": "LogicalType::INTEGER", "int64_t *": "LogicalType::BIGINT",
            "uint64_t *": "LogicalType::BIGINT",
-           "double *": "LogicalType::DOUBLE", "bool *": "LogicalType::BOOLEAN"}
+           "double *": "LogicalType::DOUBLE", "bool *": "LogicalType::BOOLEAN",
+           "TimestampTz *": "LogicalType::TIMESTAMP_TZ", "text **": "LogicalType::VARCHAR"}
 # Out-param C pointer -> (by-value local the folded MEOS call writes into, DuckDB executor cpp).
 # A uint64 cell id rides in an int64_t (bit-preserving) to match the BIGINT-backed cell type.
 OUTPARAM_LOCAL = {"int *": ("int", "int32_t"), "int64_t *": ("int64_t", "int64_t"),
                   "uint64_t *": ("uint64_t", "int64_t"), "double *": ("double", "double"),
-                  "bool *": ("bool", "bool")}
+                  "bool *": ("bool", "bool"), "TimestampTz *": ("TimestampTz", "timestamp_tz_t"),
+                  "text **": ("text *", "string_t")}
+# Out-param C pointer -> the conversion its local needs on return, where a cast would not do: a
+# MEOS timestamp counts from 2000, a DuckDB one from 1970 (TakeTimestamp, as #scalar_ret4 returns
+# a by-value TimestampTz), and an owned text is copied into the result vector and freed
+# (TakeText, as #scalar_ret4 returns a text *). The others are returned by the cast.
+OUTPARAM_TAKE = {"TimestampTz *": "TakeTimestamp(%s)", "text **": "TakeText(result, %s)"}
 
 # `base()` answers the sentinel for a DOUBLE pointer, so an out-param written `T **out` — the
 # shape MEOS uses to hand back an owned value beside a bool "was there one" — never resolves
@@ -599,6 +606,15 @@ def reg_scope(name):
         src = name.split("_to_")[0]
         if src in TO_TYPE:
             return ("types", [TO_TYPE[src]])
+    # The temporal numbers are tint, tbigint and tfloat; which of them a tnumber_* function is
+    # declared over is the catalog's to say, read as the tspatial_* prefix reads it below
+    # (#sig_declared_accs), keeping the CORE_TYPES list where the catalog declares none of them.
+    # A signature over another type is not this kernel's: tnumber_angular_difference carries the
+    # tgeompoint signatures of the SQL name it shares with tpoint_angular_difference.
+    if name.startswith("tnumber_"):
+        numbers = CORE_TYPES["tint"] + CORE_TYPES["tbigint"] + CORE_TYPES["tfloat"]
+        declared = [a for a in sig_declared_accs(FN_BY_NAME.get(name) or {}) or [] if a in numbers]
+        return ("types", declared or CORE_TYPES["tnumber"])
     for pre, accs in CORE_TYPES.items():
         if name.startswith(pre + "_"):
             return ("types", accs)
@@ -1029,6 +1045,119 @@ def project_bound_tail(f, fixed=()):
     FORWARDED.append("inline %s %s(%s) {\n    return ::%s(%s);\n}\n"
                      % (f["returnType"]["c"], f["name"], decl, f["name"], call))
     return g
+
+# A signature the generic kernel (temporal_*) and a type's own kernel both declare is answered by the
+# type's own, as the MobilityDB wrapper they share dispatches it: Temporal_instants calls
+# trgeometry_instants for a trgeometry and temporal_instants for every other type, and the generic
+# kernel cannot read a rigid geometry's reference geometry ("Cannot access geometry from temporal
+# rigid geometry"). The generic record keeps the other signatures, as #project_signature_forms
+# keeps the ones a form does not take.
+GENERIC_PREFIXES = ("temporal_", "tinstant_", "tsequence_", "tsequenceset_")
+def yield_to_type_kernels(fns):
+    """fns with every signature a non-generic public function also declares on a temporal operand
+    (the operand the wrapper dispatches on) removed from the generic records; a generic record
+    left with no signature is dropped."""
+    own = {(s.get("sqlName") or f["sqlfn"], tuple(s["args"]))
+           for f in fns if f.get("api") == "public" and f.get("sqlfn")
+           and not f["name"].startswith(GENERIC_PREFIXES)
+           for s in f.get("sqlSignatures") or []
+           if s["args"] and s["args"][0] in SIG_TEMPORAL_ACC}
+    out = []
+    for f in fns:
+        sigs = f.get("sqlSignatures") or []
+        if not f["name"].startswith(GENERIC_PREFIXES) or not sigs or not f.get("sqlfn"):
+            out.append(f); continue
+        keep = [s for s in sigs if (s.get("sqlName") or f["sqlfn"], tuple(s["args"])) not in own]
+        if len(keep) == len(sigs):
+            out.append(f)
+        elif keep:
+            out.append(dict(f, sqlSignatures=keep))
+    return out
+
+def forward_literal(p, raw):
+    """The C++ argument a SQL literal stands for in a call to a parameter of p's type, as the
+    defaulted-ternary branch of the registration loop passes a default (#emit_defaulted_ternary):
+    a duration or timestamp through the MEOS parser of its type, a by-value literal as itself
+    (#sql_default_to_cpp, a MEOS macro read through MACRO_VALUES); None for a type with no such
+    literal."""
+    b, n = base(p["canonical"]), norm(p["canonical"])
+    text = str(raw).strip().strip("'")
+    if b == "Interval" and n.count("*") == 1:
+        return 'MeosIntervalLiteral("%s")' % text
+    if b == "TimestampTz" and "*" not in n:
+        return 'timestamptz_in("%s", -1)' % text
+    if b in SCALAR_ARG and "*" not in n:
+        return sql_default_to_cpp(str(MACRO_VALUES.get(raw, raw)))
+    return None
+
+# A signature form the shapes cannot reach through the record they are given: a parameter one
+# signature binds and another does not (segmentMinDuration binds atleast to true where
+# segmentMaxDuration binds it to false, and stops(tgeompoint, interval) binds maxdist where
+# stops(tgeompoint, float, interval) takes it), or two or more trailing arguments a call omits
+# (stops(tgeompoint) takes the defaults of both). Each form is its own record without those
+# parameters, forwarded with their literals as #project_bound_tail forwards one, under a name the
+# generated units alone define; the function keeps the signatures that bind nothing. Gated on
+# retired(f), as #shape_outparam is: the forms appear where the hand registrations are deleted.
+def project_signature_forms(f):
+    """[records] standing for f: f itself (unless every signature binds a parameter) and one
+    record per distinct set of fixed parameters, or [f] when no signature needs one."""
+    if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
+        return [f]
+    sigs = f.get("sqlSignatures") or []
+    params = f.get("params") or []
+    shape = f.get("shape") or {}
+    outs = set(shape.get("outParams") or [])
+    inputs = [p for p in params if p.get("name") not in outs and p.get("name") not in
+              (shape.get("boundArgs") or {})]
+    forms, keep = {}, []
+    for s in sigs:
+        bound = s.get("boundArgs") or {}
+        sqlin = [p for p in inputs if p["name"] not in bound]
+        if len(sqlin) != len(s["args"]):
+            return [f]
+        defs = s.get("argDefaults") or [None] * len(s["args"])
+        tails = [0] if bound else []
+        k = 0
+        while k < len(defs) and defs[len(defs) - 1 - k] is not None:
+            k += 1
+            if k >= 2:
+                tails.append(k)
+        if not bound:
+            keep.append(s)
+        for k in tails:
+            fixed = dict(bound)
+            fixed.update({p["name"]: defs[len(defs) - k + i]
+                          for i, p in enumerate(sqlin[len(sqlin) - k:])})
+            key = tuple(sorted(fixed.items()))
+            ns = {kk: v for kk, v in s.items() if kk not in ("boundArgs", "argDefaults")}
+            ns["args"] = s["args"][:len(s["args"]) - k]
+            if not k and s.get("argDefaults"):
+                ns["argDefaults"] = s["argDefaults"]
+            ns.setdefault("sqlName", s.get("sqlName") or f["sqlfn"])
+            forms.setdefault(key, []).append(ns)
+    if not forms:
+        return [f]
+    out = [dict(f, sqlSignatures=keep)] if keep else []
+    names = Counter("_".join(k for k, _v in key) for key in forms)
+    for key, fsigs in forms.items():
+        fixed = dict(key)
+        lits = {p["name"]: forward_literal(p, fixed[p["name"]]) for p in params if p["name"] in fixed}
+        if None in lits.values() or len({s["sqlName"] for s in fsigs}) != 1:
+            return [f]
+        suffix = "_".join(k for k, _v in key)
+        if names[suffix] > 1:
+            suffix = "_".join("%s_%s" % (k, re.sub(r"\W", "", str(v)).lower()) for k, v in key)
+        g = dict(f, name="%s_%s" % (f["name"], suffix), sqlfn=fsigs[0]["sqlName"],
+                 params=[p for p in params if p["name"] not in fixed], sqlSignatures=fsigs)
+        # MEOS's Interval is MeosInterval inside namespace duckdb, as #scalar_ret4 spells it
+        decl = ", ".join("%s p%d" % (re.sub(r"\bInterval\b", "MeosInterval", p["cType"]), i)
+                         for i, p in enumerate(g["params"]))
+        call = ", ".join(lits[p["name"]] if p["name"] in lits else "p%d" % g["params"].index(p)
+                         for p in params)
+        FORWARDED.append("inline %s %s(%s) {\n    return ::%s(%s);\n}\n"
+                         % (f["returnType"]["c"], g["name"], decl, f["name"], call))
+        out.append(g)
+    return out
 
 # Macro name -> value, from the catalog's `macros`: a literal a PG wrapper binds is spelled as
 # the MEOS macro (OUT_DEFAULT_DECIMAL_DIGITS), whose value the catalog states. Filled in main().
@@ -1565,7 +1694,24 @@ def scalar_arg_for(f, p):
             # type UINT64, but found vector of type INT64"). The cell id keeps its bits
             # across the cast, which is what the return side already writes back with.
             return (CELL_BASEVAL[sc[1][0]], "int64_t", "(uint64_t) a2")
+    # A signed integer argument is registered as the SQL type every signature declares for it
+    # when that type is no wider than the C one, as #scalar_ret4 registers a numeric return:
+    # tbigint_value_n reads its position as an int64 where valueN(tbigint, integer) is declared,
+    # and the int32 the registration reads widens into it.
+    if base(p["canonical"]) in SQL_INT_WIDTH and "*" not in norm(p["canonical"]):
+        names = [q["name"] for q in f.get("params") or []]
+        k = names.index(p["name"]) if p["name"] in names else None
+        sigs = f.get("sqlSignatures") or []
+        decl = {s["args"][k] if k is not None and k < len(s["args"]) else None for s in sigs}
+        if len(decl) == 1:
+            d = decl.pop()
+            if d in SQL_INT_ARG and SQL_INT_WIDTH[d] < SQL_INT_WIDTH[base(p["canonical"])]:
+                return SQL_INT_ARG[d]
     return t
+# The signed integer widths, by C type and by SQL declaration, and the SCALAR_ARG triple each
+# declaration registers.
+SQL_INT_WIDTH = {"int": 32, "int32_t": 32, "int64_t": 64, "integer": 32, "bigint": 64}
+SQL_INT_ARG = {"integer": SCALAR_ARG["int"], "bigint": SCALAR_ARG["int64_t"]}
 
 def shape_binary(f):
     """Binary Temporal + by-value-scalar shape (BinaryExecutor). Same correctness
@@ -1577,7 +1723,11 @@ def shape_binary(f):
     b2 = base(ins[1]["canonical"]); n2 = norm(ins[1]["canonical"])
     is_text2 = (b2 == "text" and n2.endswith("*"))   # owned text* arg via MakeText
     is_baseptr2 = (b2 in BASEVAL_PTR_IN and n2.endswith("*"))  # base value by pointer (Cbuffer, ...)
-    if not is_text2 and not is_baseptr2 and (b2 not in SCALAR_ARG or "*" in n2): return None
+    # a duration, as #shape_arg passes it; gated on retired(f) as #shape_outparam is, so the
+    # generated form appears where the hand registration of the same signature is deleted
+    is_dur2 = (b2 == "Interval" and n2.count("*") == 1 and retired(f))
+    if not is_text2 and not is_baseptr2 and not is_dur2 and (b2 not in SCALAR_ARG or "*" in n2):
+        return None
     sc = reg_scope(f["name"])
     if sc is None: return None
     if is_text2:
@@ -1628,7 +1778,7 @@ def emit_body_binary(f, kind, arg2):
                 f"            {pre}{loc} v;\n"
                 f"            bool ok = {name}(t, {call2}, &v);\n            {post}free(t);\n"
                 f"            if (!ok) {{ mask.SetInvalid(idx); return {exec_cpp}(); }}\n"
-                f"            return ({exec_cpp}) v;\n"
+                f"            return {OUTPARAM_TAKE.get(kind.split(':', 1)[1], '(' + exec_cpp + ') %s') % 'v'};\n"
                 f"        }});\n}}\n")
     subcast = "" if base(f["returnType"]["canonical"]) == "Temporal" else "(Temporal *) "
     if kind == "temporal":          # pointer return -> NULL-safe (MEOS NULL -> SQL NULL)
@@ -2005,7 +2155,8 @@ def emit_body_outparam(f, dret, kind, vary, tail, sig, out_canon):
     else:
         _dt, cloc, cpp = outprim_ret3(f, out_canon)   # paired with ret_type by construction
         decl, rett = f"{cloc} o = ({cloc}) 0;", cpp
-        give, empty = f"return ({cpp}) o;", f"return ({cpp}) 0;"
+        give = "return %s;" % (OUTPARAM_TAKE.get(norm(out_canon), f"({cpp}) %s") % "o")
+        empty = f"return {cpp}();"
     if vary:
         _dt, cpp2, expr2, cleanup = vary
         lead = expr2 % "a2"
@@ -2324,6 +2475,13 @@ ARRAY_ELEM = {
               "cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox));"),
     "TBox":  ("LogicalType::BLOB", "string_t",
               "cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox));"),
+    # An owned temporal (the copies temporal_instants/temporal_sequences/temporal_segments hand
+    # back) is stored and freed as a temporal result is (TemporalToBlob); the LIST's logical
+    # element is the temporal type the signature declares (array_ret_duck).
+    "TInstant *":  ("LogicalType::BLOB", "string_t",
+                    "cd[off + j] = TemporalToBlob(child_vector, (Temporal *) arr[j]);"),
+    "TSequence *": ("LogicalType::BLOB", "string_t",
+                    "cd[off + j] = TemporalToBlob(child_vector, (Temporal *) arr[j]);"),
 }
 # container-input family (base of the single non-count param) -> (C container type, Blob->container fn)
 ARRAY_IN = {
@@ -2545,7 +2703,7 @@ def array_ret_duck(f, acc, tail=()):
     r = _sig_ret_for(f, _acc_sqlname(acc), tail) or ""
     if not r.endswith("[]"):
         return None
-    d = SQL_BASE_TO_DUCK.get(r[:-2])
+    d = SQL_BASE_TO_DUCK.get(r[:-2]) or SIG_TEMPORAL_ACC.get(r[:-2])
     return "LogicalType::LIST(%s)" % d if d else None
 
 def shape_array(f):
@@ -2839,9 +2997,12 @@ SQL_CONTAINER_ACC = {
 }
 # The set a temporal value answers its values as (getValues=temporal_valueset over every temporal
 # type, valueSet over the temporal numbers) resolves as #declared_element_pairs resolves a declared
-# set: through SET_SIG_ACC. geomset and geogset stay absent, their sets carrying a hand-written
-# surface.
-TEMPORAL_TO_CONTAINER_ACC = {**SQL_CONTAINER_ACC, **SET_SIG_ACC}
+# set: through SET_SIG_ACC, and the spatial sets through the types their own unit registers
+# (SpatialSetType, as SET_SIG_ACC names H3indexTypes::h3indexset). Only the result is named here:
+# the functions over geomset and geogset keep that unit's surface.
+TEMPORAL_TO_CONTAINER_ACC = {**SQL_CONTAINER_ACC, **SET_SIG_ACC,
+                             "geomset": "SpatialSetType::geomset()",
+                             "geogset": "SpatialSetType::geogset()"}
 def shape_temporal_to_container(f):
     """(Temporal) -> Set/Span/SpanSet/TBox/STBox conversion, registered per catalog sqlSignature.
     Returns (Cbase, [(arg_acc, ret_acc)...]) over the overloads whose BOTH types are registered,
@@ -3393,7 +3554,11 @@ RETIRED_GROUPS = {# The JSON value accessors: valueAtTimestamp reaches the out-p
                   # Set/span/spanset comparison (eq/ne/lt/le/gt/ge/cmp + = <> < <= > >=): the
                   # bare names and operators come from the set and span loops, cmp from
                   # shape_container_scalar; the hand set_eq/span_eq/spanset_eq... are deleted.
-                  "meos_setspan_comp"}
+                  "meos_setspan_comp",
+                  # The temporal accessors (getValue/getValues/valueSet/getTimestamp/instants/
+                  # segmentMinDuration...), one signature per type MobilityDB declares, the set
+                  # results from temporal_valueset; every hand accessor registration is deleted.
+                  "meos_temporal_accessor"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
@@ -4851,6 +5016,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            '#include "temporal/spanset.hpp"\n'
            '#include "temporal/tbox.hpp"\n'
            '#include "geo/stbox.hpp"\n'
+           '#include "geo/geoset.hpp"\n'              # SpatialSetType::geomset()/geogset()
            '#include "pointcloud/tpcbox.hpp"\n'
            '#include "geo/tgeompoint.hpp"\n'
            '#include "geo/tgeogpoint.hpp"\n'
@@ -5602,6 +5768,8 @@ def main():
     fixed = {p["name"] for f in fns if projected[f["name"]]
              for p in f["params"] if p not in projected[f["name"]]["params"]}
     fns = [projected[f["name"]] or project_bound_tail(f, fixed) or f for f in fns]
+    fns = [g for f in fns for g in project_signature_forms(f)]
+    fns = yield_to_type_kernels(fns)
     # name -> catalog entry, so the name-keyed scope rules can read the function's own
     # sqlSignatures (the tspatial_* surface asks which types MobilityDB declares it for).
     FN_BY_NAME.update({f["name"]: f for f in fns})

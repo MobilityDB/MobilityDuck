@@ -22,7 +22,6 @@
 #include "duckdb/common/types/data_chunk.hpp"
 
 #include "time_util.hpp"
-#include "mobilityduck/bindings.hpp"
 #include "mobilityduck/meos_exec_serial.hpp"
 
 namespace duckdb {
@@ -193,51 +192,7 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "tempSubtype",
-                {type},
-                LogicalType::VARCHAR,
-                TemporalFunctions::Temporal_subtype
-            )
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "interp",
-                {type},
-                LogicalType::VARCHAR,
-                TemporalFunctions::Temporal_interp
-            )
-        );
-
-        // getValue / startValue / endValue / minValue / maxValue on
-        // temporal types are now registered below via typed overloads
-        // (mobilityduck::RegisterTemporalDatumAccessor) so that each
-        // overload's result Vector type matches the base type of the
-        // incoming alias. See src/include/mobilityduck/bindings.hpp for
-        // the helper and the explanation of the 1.4 type-check bug it
-        // fixes.
-
         if (type.GetAlias() != "tbool") {
-            duckdb::RegisterSerializedScalarFunction(loader, 
-                ScalarFunction(
-                    "minInstant",
-                    {type},
-                    type,
-                    TemporalFunctions::Temporal_min_instant
-                )
-            );
-    
-            duckdb::RegisterSerializedScalarFunction(loader, 
-                ScalarFunction(
-                    "maxInstant",
-                    {type},
-                    type,
-                    TemporalFunctions::Temporal_max_instant
-                )
-            );
-
             duckdb::RegisterSerializedScalarFunction(loader, 
                 ScalarFunction(
                     "atMin",
@@ -274,50 +229,6 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 )
             );
         }
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "valueN",
-                {type, LogicalType::BIGINT},
-                TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()),
-                TemporalFunctions::Temporal_value_n
-            )
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "getTimestamp",
-                {type},
-                LogicalType::TIMESTAMP_TZ,
-                TemporalFunctions::Tinstant_timestamptz
-            )
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "getTime",
-                {type},
-                SpansetTypes::tstzspanset(),
-                TemporalFunctions::Temporal_time
-            )
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "duration",
-                {type},
-                LogicalType::INTERVAL,
-                TemporalFunctions::Temporal_duration
-            )
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "duration",
-                {type, LogicalType::BOOLEAN},
-                LogicalType::INTERVAL,
-                TemporalFunctions::Temporal_duration
-            )
-        );
 
         duckdb::RegisterSerializedScalarFunction(loader, 
             ScalarFunction(
@@ -376,72 +287,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         // timeSpan/valueSpan (temporal_to_tstzspan / tnumber_to_span, group
         // meos_temporal_conversion) are generated from the catalog sqlSignatures
         // in src/generated/generated_temporal_udfs.cpp (RETIRED_GROUPS).
-        if (type.GetAlias() == "tint") {
-            duckdb::RegisterSerializedScalarFunction(loader,
-                ScalarFunction(
-                    "valueSet",
-                    {type},
-                    SetTypes::intset(),
-                    TemporalFunctions::Temporal_valueset
-                )
-            );
-        } else if (type.GetAlias() == "tfloat") {
-            duckdb::RegisterSerializedScalarFunction(loader,
-                ScalarFunction(
-                    "valueSet",
-                    {type},
-                    SetTypes::floatset(),
-                    TemporalFunctions::Temporal_valueset
-                )
-            );
-        }
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "sequences",
-                {type},
-                LogicalType::LIST(type),
-                TemporalFunctions::Temporal_sequences
-            )
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "segments",
-                {type},
-                LogicalType::LIST(type),
-                TemporalFunctions::Temporal_segments
-            )
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "startTimestamp",
-                {type},
-                LogicalType::TIMESTAMP_TZ,
-                TemporalFunctions::Temporal_start_timestamptz
-            )
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "endTimestamp",
-                {type},
-                LogicalType::TIMESTAMP_TZ,
-                TemporalFunctions::Temporal_end_timestamptz
-            )
-        );
 
         // timestamps(<temporal_type>) is generated from the catalog (temporal_timestamps) in generated_temporal_udfs.cpp.
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "instants",
-                {type},
-                LogicalType::LIST(type),
-                TemporalFunctions::Temporal_instants
-            )
-        );
 
         duckdb::RegisterSerializedScalarFunction(loader, 
             ScalarFunction(
@@ -515,15 +362,6 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "valueAtTimestamp",
-                {type, LogicalType::TIMESTAMP_TZ},
-                TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()),
-                TemporalFunctions::Temporal_value_at_timestamptz
-            )
-        );
-
         if (type.GetAlias() == "tint" || type.GetAlias() == "tfloat") {
             duckdb::RegisterSerializedScalarFunction(loader, 
                 ScalarFunction(
@@ -552,23 +390,6 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 )
             );
 
-            duckdb::RegisterSerializedScalarFunction(loader, 
-                ScalarFunction(
-                    "integral",
-                    {type},
-                    LogicalType::DOUBLE,
-                    TemporalFunctions::Tnumber_integral
-                )
-            );
-
-            duckdb::RegisterSerializedScalarFunction(loader, 
-                ScalarFunction(
-                    "twAvg",
-                    {type},
-                    LogicalType::DOUBLE,
-                    TemporalFunctions::Tnumber_twavg
-                )
-            );
         }
         if (type.GetAlias() != "tbool") {
             duckdb::RegisterSerializedScalarFunction(loader, 
@@ -740,40 +561,6 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         );
         duckdb::RegisterSerializedScalarFunction(loader, 
             ScalarFunction(
-                "segmentMinDuration",
-                {type, LogicalType::INTERVAL},
-                type,
-                TemporalFunctions::Temporal_segm_min_duration
-            )
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "segmentMinDuration",
-                {type, LogicalType::INTERVAL, LogicalType::BOOLEAN},
-                type,
-                TemporalFunctions::Temporal_segm_min_duration
-            )
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "segmentMaxDuration",
-                {type, LogicalType::INTERVAL},
-                type,
-                TemporalFunctions::Temporal_segm_max_duration
-            )
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "segmentMaxDuration",
-                {type, LogicalType::INTERVAL, LogicalType::BOOLEAN},
-                type,
-                TemporalFunctions::Temporal_segm_max_duration
-            )
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
                 "temporal_eq",
                 {type, type},
                 LogicalType::BOOLEAN,
@@ -879,44 +666,10 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         );
     }
 
-    // Typed `getValue` / `startValue` / `endValue` / `minValue` / `maxValue`
-    // overloads for tint, tbool, tfloat. Each registration pairs the input
-    // temporal-type alias with the C++ scalar result type so the generated
-    // DuckDB result Vector type matches what the MEOS accessor actually
-    // writes, which DuckDB 1.4's UnaryExecutor asserts strictly. See the
-    // comment in src/include/mobilityduck/bindings.hpp for the full rationale.
-    auto tinstant_value_temporal = [](const Temporal *t) -> uintptr_t {
-        return tinstant_value(reinterpret_cast<const TInstant *>(t));
-    };
-
-    // getValue(tbool / tfloat) — instant-level accessor. The tint overload is owned by the
-    // generated surface (tint_value, canonical INTEGER return), as for startValue below.
-    mobilityduck::RegisterTemporalDatumAccessor<bool>(
-        loader, "getValue", TemporalTypes::tbool(),  LogicalType::BOOLEAN, tinstant_value_temporal);
-    mobilityduck::RegisterTemporalDatumAccessor<double>(
-        loader, "getValue", TemporalTypes::tfloat(), LogicalType::DOUBLE,  tinstant_value_temporal);
-
-    // startValue / endValue on tbool / tfloat. The tint overloads are now owned by
-    // the generated surface (canonical INTEGER return, per the catalog `int` — not
-    // the legacy hand BIGINT); kept here only for the types the generated marshalling
-    // matches identically (tbool->BOOLEAN, tfloat->DOUBLE).
-    mobilityduck::RegisterTemporalDatumAccessor<bool>(
-        loader, "startValue", TemporalTypes::tbool(),  LogicalType::BOOLEAN, temporal_start_value);
-    mobilityduck::RegisterTemporalDatumAccessor<double>(
-        loader, "startValue", TemporalTypes::tfloat(), LogicalType::DOUBLE,  temporal_start_value);
-
-    mobilityduck::RegisterTemporalDatumAccessor<bool>(
-        loader, "endValue", TemporalTypes::tbool(),  LogicalType::BOOLEAN, temporal_end_value);
-    mobilityduck::RegisterTemporalDatumAccessor<double>(
-        loader, "endValue", TemporalTypes::tfloat(), LogicalType::DOUBLE,  temporal_end_value);
-
-    // minValue / maxValue on tfloat (tint owned by the generated INTEGER surface;
-    // tbool omitted — min/max on a boolean is meaningless and the API omits it)
-    mobilityduck::RegisterTemporalDatumAccessor<double>(
-        loader, "minValue", TemporalTypes::tfloat(), LogicalType::DOUBLE, temporal_min_value);
-
-    mobilityduck::RegisterTemporalDatumAccessor<double>(
-        loader, "maxValue", TemporalTypes::tfloat(), LogicalType::DOUBLE, temporal_max_value);
+    // The temporal accessors (getValue/startValue/endValue/minValue/maxValue, getValues,
+    // valueSet, getTime, instants, segmentMinDuration...; group meos_temporal_accessor) are
+    // generated from the catalog sqlSignatures in src/generated/generated_temporal_udfs.cpp
+    // (RETIRED_GROUPS).
 
     // atValues / minusValues (Temporal<T>, set-of-T) are now generated from the catalog
     // (temporal_at_values / temporal_minus_values, sqlSignatures-driven) — see
@@ -1019,24 +772,6 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // meos_temporal_conversion) are generated from the catalog sqlSignatures in
     // src/generated/generated_temporal_udfs.cpp (RETIRED_GROUPS) — incl the tbigint
     // overloads the hand layer was missing.
-
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "getValues",
-            {TemporalTypes::tint()},
-            SpansetTypes::intspanset(),
-            TemporalFunctions::Tnumber_valuespans
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "getValues",
-            {TemporalTypes::tfloat()},
-            SpansetTypes::floatspanset(),
-            TemporalFunctions::Tnumber_valuespans
-        )
-    );
 
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(

@@ -70,24 +70,18 @@ SELECT valueN('{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell, 2)
 ----
 true
 
-# ── generated cell-id getValues → LIST(s2cell) ───────────────────────────────
+# ── getValues → s2cellset, the set of the values (temporal_valueset) ─────────
 query I
-SELECT typeof(getValues('{47c3c3@2000-01-01}'::ts2cell)[1]);
+SELECT typeof(getValues('{47c3c3@2000-01-01}'::ts2cell));
 ----
-s2cell
+s2cellset
 
 query I
-SELECT len(getValues('{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell));
+SELECT numValues(getValues('{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell));
 ----
 2
 
 query I
-SELECT getValues('{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell)[1]::VARCHAR;
+SELECT asText(getValues('{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell));
 ----
-47c3c3
-
-query I
-SELECT getValues('{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell)[2]
-     = endValue('{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell);
-----
-true
+{"47c3c3", "47c3c5"}
