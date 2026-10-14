@@ -372,60 +372,6 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
-            "atValues",
-            {tgeompoint(), MobilityDuckGeometryType()},
-            tgeompoint(),
-            TgeompointFunctions::Tgeompoint_at_value
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "minusValues",
-            {tgeompoint(), MobilityDuckGeometryType()},
-            tgeompoint(),
-            TemporalFunctions::Temporal_minus_value
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "atValues",
-            {tgeompoint(), SpatialSetType::geomset()},
-            tgeompoint(),
-            TemporalFunctions::Temporal_at_values
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "minusValues",
-            {tgeompoint(), SpatialSetType::geomset()},
-            tgeompoint(),
-            TemporalFunctions::Temporal_minus_value
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "atTime",
-            {tgeompoint(), LogicalType::TIMESTAMP_TZ},
-            tgeompoint(),
-            TemporalFunctions::Temporal_at_timestamptz
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "minusTime",
-            {tgeompoint(), LogicalType::TIMESTAMP_TZ},
-            tgeompoint(),
-            TemporalFunctions::Temporal_minus_timestamptz
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
             "valueAtTimestamp",
             {tgeompoint(), LogicalType::TIMESTAMP_TZ},
             MobilityDuckGeometryType(),
@@ -433,78 +379,6 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
     
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "atTime",
-            {tgeompoint(), SetTypes::tstzset()},
-            tgeompoint(),
-            TemporalFunctions::Temporal_at_tstzset
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "minusTime",
-            {tgeompoint(), SetTypes::tstzset()},
-            tgeompoint(),
-            TemporalFunctions::Temporal_minus_tstzset
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "atTime",
-            {tgeompoint(), SpanTypes::tstzspan()},
-            tgeompoint(),
-            TemporalFunctions::Temporal_at_tstzspan
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "minusTime",
-            {tgeompoint(), SpanTypes::tstzspan()},
-            tgeompoint(),
-            TemporalFunctions::Temporal_minus_tstzspan
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "atTime",
-            {tgeompoint(), SpansetTypes::tstzspanset()},
-            tgeompoint(),
-            TemporalFunctions::Temporal_at_tstzspanset
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "minusTime",
-            {tgeompoint(), SpansetTypes::tstzspanset()},
-            tgeompoint(),
-            TemporalFunctions::Temporal_minus_tstzspanset   
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "beforeTimestamp",
-            {tgeompoint(), LogicalType::TIMESTAMP_TZ},
-            tgeompoint(),
-            TemporalFunctions::Temporal_before_timestamptz
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "afterTimestamp",
-            {tgeompoint(), LogicalType::TIMESTAMP_TZ},
-            tgeompoint(),
-            TemporalFunctions::Temporal_after_timestamptz
-        )
-    );
-
     /* ***************************************************
      * Modification function
      ****************************************************/
@@ -856,69 +730,6 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             {tgeompoint()},
             LogicalType::BLOB,
             TgeompointFunctions::Tpoint_trajectory_gs
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "atGeometry",
-            {tgeompoint(), MobilityDuckGeometryType()},
-            tgeompoint(),
-            TgeompointFunctions::Tgeo_at_geom
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "minusGeometry",
-            {tgeompoint(), MobilityDuckGeometryType()},
-            tgeompoint(),
-            TgeompointFunctions::Tgeo_minus_geom
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "minusGeometry",
-            {tgeompoint(), MobilityDuckGeometryType(), SpanTypes::floatspan()},
-            tgeompoint(),
-            TgeompointFunctions::Tgeo_minus_geom
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "atStbox",
-            {tgeompoint(), StboxType::stbox()},
-            tgeompoint(),
-            TgeompointFunctions::Tgeo_at_stbox
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "atStbox",
-            {tgeompoint(), StboxType::stbox(), LogicalType::BOOLEAN},
-            tgeompoint(),
-            TgeompointFunctions::Tgeo_at_stbox
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "minusStbox",
-            {tgeompoint(), StboxType::stbox()},
-            tgeompoint(),
-            TgeompointFunctions::Tgeo_minus_stbox
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "minusStbox",
-            {tgeompoint(), StboxType::stbox(), LogicalType::BOOLEAN},
-            tgeompoint(),
-            TgeompointFunctions::Tgeo_minus_stbox
         )
     );
 

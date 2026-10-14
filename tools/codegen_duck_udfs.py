@@ -1228,7 +1228,7 @@ def emit_defaulted_ternary(f, kind, arg2, dval):
     body of #emit_body_ternary with the trailing default substituted, over a BinaryExecutor, as
     #emit_defaulted_unary_temporal is the shorter overload of a binary function."""
     name = f["name"]; dt2, cpp2, _ = arg2
-    e2 = arg2[2]
+    pre, e2, post = _arg2_marshal(arg2[2])
     subcast = "" if base(f["returnType"]["canonical"]) == "Temporal" else "(Temporal *) "
     if kind == "temporal":
         return (f"static void Gen_{name}_d(DataChunk &args, ExpressionState &, Vector &result) {{\n"
@@ -1237,7 +1237,7 @@ def emit_defaulted_ternary(f, kind, arg2, dval):
                 f"args.data[0], args.data[1], result, args.size(),\n"
                 f"        [&](string_t in, {cpp2} a2, ValidityMask &mask, idx_t idx) -> string_t {{\n"
                 f"            Temporal *t = BlobToTemporal(in);\n"
-                f"            Temporal *r = {subcast}{name}(t, {e2}, {dval});\n            free(t);\n"
+                f"            {pre}Temporal *r = {subcast}{name}(t, {e2}, {dval});\n            {post}free(t);\n"
                 f"            return TemporalToBlobN(result, r, mask, idx);\n        }});\n}}\n")
     ctype, rett, _rx = scalar_emit3(f)
     ex, prm, ann, ret = scalar_exec(f, rett, _rx)
@@ -1247,7 +1247,7 @@ def emit_defaulted_ternary(f, kind, arg2, dval):
             f"args.data[0], args.data[1], result, args.size(),\n"
             f"        [&](string_t in, {cpp2} a2{prm}){ann} {{\n"
             f"            Temporal *t = BlobToTemporal(in);\n"
-            f"            {ctype} r = {name}(t, {e2}, {dval});\n            free(t);\n"
+            f"            {pre}{ctype} r = {name}(t, {e2}, {dval});\n            {post}free(t);\n"
             f"            {ret}\n"
             f"        }});\n}}\n")
 
@@ -1854,6 +1854,12 @@ def shape_ternary(f):
     if out is not None or len(ins) != 3: return None
     if base(ins[0]["canonical"]) != "Temporal" or not norm(ins[0]["canonical"]).endswith("*"): return None
     a2 = shape_arg(ins[1]); a3 = shape_arg(ins[2])
+    # A box as the second argument (atStbox(tgeompoint, stbox, boolean DEFAULT TRUE)), registered
+    # as its own type and decoded and freed per row as #emit_body_binary decodes a base value;
+    # gated on retired(f) as #shape_binary gates a duration
+    b2 = base(ins[1]["canonical"]); n2 = norm(ins[1]["canonical"])
+    if a2 is None and b2 in BOX_MARSH and n2.count("*") == 1 and retired(f):
+        a2 = (BOX_MARSH[b2][1], "string_t", "__PTRFREE__:" + b2)
     if a2 is None or a3 is None: return None
     if reg_scope(f["name"]) is None: return None
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
@@ -1865,9 +1871,19 @@ def shape_ternary(f):
         return ("scalar:" + rb, scalar_ret_duck(f), a2, a3)
     return None
 
+def _arg2_marshal(marsh):
+    """(statement before the call, the call's argument, statement after it) for the second
+    argument: a pointer is decoded and freed around the call as #emit_body_binary does it,
+    any other argument is its marshal expression."""
+    if marsh.startswith("__PTRFREE__:"):
+        pb = marsh.split(":", 1)[1]
+        return (f"{pb} *a2p = {PTR_IN[pb][1] % 'a2'};\n            ", "a2p", "free(a2p); ")
+    return ("", marsh, "")
+
 def emit_body_ternary(f, kind, arg2, arg3):
     name = f["name"]; dt2, cpp2, _ = arg2; dt3, cpp3, _ = arg3
-    e2 = arg2[2]; e3 = arg3[2].replace("a2", "a3")   # SCALAR_ARG marshal is templated on "a2"
+    pre, e2, post = _arg2_marshal(arg2[2])
+    e3 = arg3[2].replace("a2", "a3")   # SCALAR_ARG marshal is templated on "a2"
     subcast = "" if base(f["returnType"]["canonical"]) == "Temporal" else "(Temporal *) "
     if kind == "temporal":          # ternary -> Temporal (NULL-safe pointer return)
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
@@ -1876,11 +1892,11 @@ def emit_body_ternary(f, kind, arg2, arg3):
                 f"args.data[0], args.data[1], args.data[2], result, args.size(),\n"
                 f"        [&](string_t in, {cpp2} a2, {cpp3} a3, ValidityMask &mask, idx_t idx) -> string_t {{\n"
                 f"            Temporal *t = BlobToTemporal(in);\n"
-                f"            Temporal *r = {subcast}{name}(t, {e2}, {e3});\n            free(t);\n"
+                f"            {pre}Temporal *r = {subcast}{name}(t, {e2}, {e3});\n            {post}free(t);\n"
                 f"            return TemporalToBlobN(result, r, mask, idx);\n        }});\n}}\n")
     ctype, rett, _rx = scalar_emit3(f)
     ex, prm, ann, ret = scalar_exec(f, rett, _rx)
-    inner = f"{ctype} r = {name}(t, {e2}, {e3});\n            free(t);\n            {ret}"
+    inner = f"{pre}{ctype} r = {name}(t, {e2}, {e3});\n            {post}free(t);\n            {ret}"
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
             f"    TernaryExecutor::{ex}<string_t, {cpp2}, {cpp3}, {rett}>("
@@ -3052,7 +3068,12 @@ def emit_temporal_to_container(f, rb):
 # 3-operand box restrictions (atStbox with a border bool) are a separate shape.
 RESTRICT_CONT_BLOB = {**CONT_BLOB, "TBox": "BlobToTbox", "STBox": "BlobToStbox",
                       "TPCBox": "BlobToTpcbox"}
-FINITE_SUBSET_ACC = {**SET_TYPES, **SQL_CONTAINER_ACC}
+# The spatial and h3 sets are operands too (atValues(tgeompoint, geomset)), under the types
+# #TEMPORAL_TO_CONTAINER_ACC answers them as.
+FINITE_SUBSET_ACC = {**SET_TYPES, **SQL_CONTAINER_ACC,
+                     "geomset": "SpatialSetType::geomset()",
+                     "geogset": "SpatialSetType::geogset()",
+                     "h3indexset": "H3indexTypes::h3indexset()"}
 
 def shape_scalar_first(f):
     """(by-value scalar, Temporal) — the mirror of shape_binary. Covers the scalar-first
@@ -3509,7 +3530,10 @@ def emit_container_scalar(f, ops, rev):
 # the retire-safety check below verifies the generator covers every @sqlfn of each
 # (dropping none). It gates SAFETY (per-family, suite-verified), not naming; naming is
 # always the canonical @sqlfn.
-RETIRED_GROUPS = {# The JSON value accessors: valueAtTimestamp reaches the out-parameter shape,
+RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points and the rigid
+                  # geometries: atStbox and minusStbox reach the ternary shape with a box argument.
+                  "meos_temporal_restrict", "meos_geo_restrict", "meos_rgeo_restrict",
+                  # The JSON value accessors: valueAtTimestamp reaches the out-parameter shape,
                   # and its SQL surface answers jsonb the way MobilityDB declares it.
                   "meos_json_accessor",
                   "meos_temporal_analytics_similarity", "meos_temporal_comp_temp",
@@ -4311,9 +4335,10 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         # CREATE FUNCTION'd over -> scope every relationship backing (both the Temporal x geometry and
         # the Temporal x Temporal shapes) by them. This stops the generic _tgeo_geo from shadowing the
         # point types, binds the point-specific _tpoint_geo to tgeompoint, and drops the fabricated
-        # geodetic/cross-type overloads MEOS never declares. Gated to the relationship groups so the
-        # gt-shaped restriction ops (atValue/atGeometry, group meos_geo_restrict) keep their name scope.
-        if re.search(r'_rel_(ever|temp)$', f.get("group") or ""):
+        # geodetic/cross-type overloads MEOS never declares. The restrictions read the same SoT: tgeo_at_geom
+        # and tpoint_at_geom both carry atGeometry, and only their declared types keep one of them per
+        # signature; atStbox is declared over neither tgeography nor the other geodetic forms.
+        if re.search(r'_(rel_(ever|temp)|restrict)$', f.get("group") or ""):
             _gaccs = sig_declared_accs(f)
             if _gaccs is not None:
                 scope, accs = "types", _gaccs

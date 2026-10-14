@@ -111,3 +111,13 @@ query I
 SELECT typeof(cellToBoundary(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5)));
 ----
 tgeography
+
+# atValues and minusValues over an h3indexset: restricted to all its cells the value keeps every
+# instant, to one cell it keeps that cell's instant, and minus all its cells it is empty
+query III
+WITH t AS (SELECT th3index('SRID=4326;{Point(1 1)@2000-01-01, Point(40 40)@2000-01-02}'::tgeompoint, 5) AS h)
+SELECT numInstants(atValues(h, getValues(h))),
+       numInstants(atValues(h, getValues(atTime(h, TIMESTAMPTZ '2000-01-01')))),
+       minusValues(h, getValues(h)) IS NULL FROM t;
+----
+2	1	true

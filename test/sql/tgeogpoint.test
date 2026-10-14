@@ -159,3 +159,14 @@ SELECT duration(tgeogpointSeq(ARRAY[
 ]))::VARCHAR;
 ----
 1 day
+
+# atValues and minusValues take a set of geographies, as MobilityDB declares them over a geogset
+query I
+SELECT asText(atValues(tgeogpoint '{Point(1 2)@2000-01-01, Point(3 4)@2000-01-02, Point(1 2)@2000-01-03}', geogset '{"Point(1 2)"}'));
+----
+{POINT(1 2)@2000-01-01 00:00:00+01, POINT(1 2)@2000-01-03 00:00:00+01}
+
+query I
+SELECT asText(minusValues(tgeogpoint '{Point(1 2)@2000-01-01, Point(3 4)@2000-01-02, Point(1 2)@2000-01-03}', geogset '{"Point(1 2)"}'));
+----
+{POINT(3 4)@2000-01-02 00:00:00+01}
