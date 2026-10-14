@@ -134,3 +134,9 @@ query I
 SELECT tEqual(tnpoint 'Npoint(1,0.5)@2000-01-01', npoint 'Npoint(1,0.5)');
 ----
 t@2000-01-01 00:00:00+01
+
+# merge over an array of temporal network points
+query I
+SELECT asText(merge([tnpoint '{Npoint(1,0.2)@2020-01-01}', tnpoint '{Npoint(1,0.5)@2020-01-02}']));
+----
+{NPoint(1,0.2)@2020-01-01 00:00:00+01, NPoint(1,0.5)@2020-01-02 00:00:00+01}

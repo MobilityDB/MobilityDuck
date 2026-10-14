@@ -380,9 +380,13 @@ def supported(f):
         # leaves the *_hash_extended seed: it has no cell scope, so it stays unmappable
         # here even though shape_binary marshals it via SCALAR_ARG. Accept it for those
         # functions alone.
+        # An enum MEOS reads from its name (interpType, through interptype_from_string) is a
+        # text in a retired group, as #shape_arg marshals it
         if arg_type(p["canonical"], f["name"]) is None and not (
                 base(p["canonical"]) in SCALAR_ARG and "*" not in norm(p["canonical"])
-                and name.endswith("_hash_extended")):
+                and name.endswith("_hash_extended")) and not (
+                retired(f) and base(p["canonical"]) in ENUM_READER
+                and "*" not in norm(p["canonical"])):
             return "arg:" + norm(p["canonical"])
     return None
 
@@ -810,6 +814,39 @@ def sig_declared_accs(f):
     have = {a for s in sigs for a in s["args"] if a in SIG_TEMPORAL_ACC}
     return [SIG_TEMPORAL_ACC[t] for t in SIG_TEMPORAL_ACC if t in have] or None
 
+def sig_tt_pairs(f):
+    """[(first accessor, second accessor, declared temporal return accessor or None, commuted)]
+    for each signature the catalog declares over two temporal operands, as #container_scalar_sigs
+    reads them for a container pair. A pair of two types (tDistance(trgeometry, tgeompoint))
+    cannot be read off one scope type, and both C parameters are `Temporal *`, so the commuted
+    pair (tDistance(tgeompoint, trgeometry)) states its order through sqlArgParams, the C
+    parameters in SQL order, reversed against the kernel's own."""
+    ins, _out = classify(f)
+    cnames = [p.get("name") for p in ins]
+    out = []
+    for s in f.get("sqlSignatures") or []:
+        a = s.get("args") or []
+        if len(a) != 2 or not all(x in SIG_TEMPORAL_ACC for x in a):
+            continue
+        rev = s.get("sqlArgParams") == cnames[::-1]
+        out.append((SIG_TEMPORAL_ACC[a[0]], SIG_TEMPORAL_ACC[a[1]],
+                    SIG_TEMPORAL_ACC.get(s.get("ret")), rev))
+    return out
+
+def sig_commuted_accs(f):
+    """The temporal operand types of the signatures the catalog declares in the commuted order
+    of a two-parameter kernel (nearestApproachDistance(stbox, trgeometry) over
+    nad_trgeometry_stbox(temp, box)): their sqlArgParams reverse the C parameters, as
+    #sig_tt_pairs reads them for a temporal pair."""
+    ins, _out = classify(f)
+    cnames = [p.get("name") for p in ins]
+    if len(cnames) != 2:
+        return []
+    have = {s["args"][1] for s in f.get("sqlSignatures") or []
+            if len(s.get("args") or []) == 2 and s.get("sqlArgParams") == cnames[::-1]
+            and s["args"][1] in SIG_TEMPORAL_ACC}
+    return [SIG_TEMPORAL_ACC[t] for t in SIG_TEMPORAL_ACC if t in have]
+
 def sig_geo_first(f):
     """Which operand a geometry-and-temporal function takes FIRST **in SQL**, read from the
     catalog's `sqlSignatures`: True geometry-first, False temporal-first, None when the declared
@@ -1085,6 +1122,12 @@ def forward_literal(p, raw):
     literal."""
     b, n = base(p["canonical"]), norm(p["canonical"])
     text = str(raw).strip().strip("'")
+    # an enum member and a null pointer are literals of their own, as JMEOS's _bound_literal
+    # passes them (tools/codegen_jvm.py): `interp` LINEAR, `maxt` NULL
+    if "*" not in n and text in ENUM_MEMBERS.get(b, ()):
+        return text
+    if "*" in n and text == "NULL":
+        return "NULL"
     if b == "Interval" and n.count("*") == 1:
         return 'MeosIntervalLiteral("%s")' % text
     if b == "TimestampTz" and "*" not in n:
@@ -1112,9 +1155,17 @@ def project_signature_forms(f):
     outs = set(shape.get("outParams") or [])
     inputs = [p for p in params if p.get("name") not in outs and p.get("name") not in
               (shape.get("boundArgs") or {})]
+    # The parameters the wrapper binds for the whole function join those a signature binds, as
+    # JMEOS merges them (#signatures in tools/codegen_jvm.py): appendSequence passes expand false
+    # and appendInstant maxdist 0.0, maxt NULL and expand false beside its interpolation. A
+    # function whose own shape reads the whole-function binding (#shape_bound_tail,
+    # #shape_text_array, #shape_outparam) keeps it there.
+    whole = shape.get("boundArgs") or {}
+    if whole and (shape_bound_tail(f) or shape_text_array(f) or shape_outparam(f)):
+        whole = {}
     forms, keep = {}, []
     for s in sigs:
-        bound = s.get("boundArgs") or {}
+        bound = {**whole, **(s.get("boundArgs") or {})}
         sqlin = [p for p in inputs if p["name"] not in bound]
         if len(sqlin) != len(s["args"]):
             return [f]
@@ -1150,12 +1201,24 @@ def project_signature_forms(f):
         suffix = "_".join(k for k, _v in key)
         if names[suffix] > 1:
             suffix = "_".join("%s_%s" % (k, re.sub(r"\W", "", str(v)).lower()) for k, v in key)
+        # A subtype operand (appendInstant's `const TInstant *inst`) is taken as the temporal
+        # value the shapes read and cast to its subtype in the forwarded call
+        kept = [p for p in params if p["name"] not in fixed]
+        sub = {p["name"] for p in kept if base(p["canonical"]) in TEMPORAL_CBASES - {"Temporal"}
+               and norm(p["canonical"]).endswith("*")}
         g = dict(f, name="%s_%s" % (f["name"], suffix), sqlfn=fsigs[0]["sqlName"],
-                 params=[p for p in params if p["name"] not in fixed], sqlSignatures=fsigs)
+                 params=[dict(p, canonical=re.sub(r"\bT(Instant|Sequence|SequenceSet)\b",
+                                                  "Temporal", p["canonical"]),
+                              cType=re.sub(r"\bT(Instant|Sequence|SequenceSet)\b", "Temporal",
+                                           p["cType"]))
+                         if p["name"] in sub else p for p in kept],
+                 sqlSignatures=fsigs)
         # MEOS's Interval is MeosInterval inside namespace duckdb, as #scalar_ret4 spells it
         decl = ", ".join("%s p%d" % (re.sub(r"\bInterval\b", "MeosInterval", p["cType"]), i)
                          for i, p in enumerate(g["params"]))
-        call = ", ".join(lits[p["name"]] if p["name"] in lits else "p%d" % g["params"].index(p)
+        call = ", ".join(lits[p["name"]] if p["name"] in lits
+                         else ("(%s) p%d" % (p["cType"], kept.index(p)) if p["name"] in sub
+                               else "p%d" % kept.index(p))
                          for p in params)
         FORWARDED.append("inline %s %s(%s) {\n    return ::%s(%s);\n}\n"
                          % (f["returnType"]["c"], g["name"], decl, f["name"], call))
@@ -1165,6 +1228,11 @@ def project_signature_forms(f):
 # Macro name -> value, from the catalog's `macros`: a literal a PG wrapper binds is spelled as
 # the MEOS macro (OUT_DEFAULT_DECIMAL_DIGITS), whose value the catalog states. Filled in main().
 MACRO_VALUES = {}
+# Enum name -> its members, and enum name -> the public MEOS function reading it from its name
+# (interptype_from_string), from the catalog's `enums` and `functions`, as JMEOS's _enum_parsers
+# reads them (tools/codegen_jvm.py). Filled in main().
+ENUM_MEMBERS = {}
+ENUM_READER = {}
 
 def declared_text_sigs(f):
     """[(set accessor, two, one)] for the text signatures the catalog declares for f over the set
@@ -1667,6 +1735,9 @@ def shape_arg(p):
         return SCALAR_ARG[bb]
     if bb == "nullHandleType" and "*" not in nn:
         return VARCHAR_ARG[bb]
+    # any other enum MEOS reads from its name, through the reader the catalog states
+    if bb in ENUM_READER and "*" not in nn:
+        return ("LogicalType::VARCHAR", "string_t", "%s(a2.GetString().c_str())" % ENUM_READER[bb])
     if bb == "char" and nn.count("*") == 1:
         return VARCHAR_ARG[bb]
     # A duration MEOS reads as `const Interval *`, passed in one expression as SCALAR_ARG's
@@ -1860,6 +1931,13 @@ def shape_ternary(f):
     b2 = base(ins[1]["canonical"]); n2 = norm(ins[1]["canonical"])
     if a2 is None and b2 in BOX_MARSH and n2.count("*") == 1 and retired(f):
         a2 = (BOX_MARSH[b2][1], "string_t", "__PTRFREE__:" + b2)
+    # A set, span or span set the same way (deleteTime(tint, tstzset, boolean DEFAULT TRUE)),
+    # registered as the SQL type every signature declares for it (#CONT_SQL_ACC)
+    if a2 is None and b2 in CONT_BLOBTO and n2.count("*") == 1 and retired(f):
+        t2 = {s["args"][1] for s in f.get("sqlSignatures") or [] if len(s.get("args") or []) > 1}
+        acc2 = CONT_SQL_ACC[b2].get(next(iter(t2))) if len(t2) == 1 else None
+        if acc2:
+            a2 = (acc2, "string_t", "__PTRFREE__:" + b2)
     if a2 is None or a3 is None: return None
     if reg_scope(f["name"]) is None: return None
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
@@ -2213,22 +2291,49 @@ def shape_binary_tt(f):
         return ("temporal", "MD_TEMPORAL")
     if rb in BYVAL_RET and "*" not in rn:
         return ("scalar:" + rb, scalar_ret_duck(f))
+    # A retired group's pair also answers an instant (nearestApproachInstant) and an owned
+    # geometry (shortestLine), as #emit_body answers them for one temporal operand
+    if retired(f) and rn.endswith("*") and "const" not in f["returnType"]["canonical"]:
+        if rb == "TInstant":
+            return ("temporal", "MD_TEMPORAL")
+        if rb == "GSERIALIZED":
+            return ("geo", "MobilityDuckGeometryType()")
     return None
 
-def emit_binary_tt(f, kind):
+def emit_binary_tt(f, kind, rev=False, dflt=None):
+    """The body of a temporal pair. `rev` reads the operands off the vectors in the commuted
+    order a declared signature states (its sqlArgParams reverse the C parameters), emitted as
+    `Gen_<fn>_rev` beside `Gen_<fn>`; both make the same call. `dflt` is the C++ literal of a
+    trailing SQL default, the shorter call of a pair with a third argument (insert(tint, tint)
+    for insert(tint, tint, connect boolean DEFAULT TRUE)), emitted as `Gen_<fn>_d` as
+    #emit_defaulted_ternary emits the shorter call of a ternary."""
     name = f["name"]
+    sfx = "_rev" if rev else ("_d" if dflt is not None else "")
+    tail = "" if dflt is None else ", " + dflt
+    call = f"{name}(t2, t1{tail})" if rev else f"{name}(t1, t2{tail})"
     if kind == "temporal":          # (Temporal,Temporal) -> Temporal (NULL-safe pointer return)
-        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+        return (f"static void Gen_{name}{sfx}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
                 f"    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),\n"
                 f"        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {{\n"
                 f"            Temporal *t1 = BlobToTemporal(in1);\n            Temporal *t2 = BlobToTemporal(in2);\n"
-                f"            Temporal *r = {name}(t1, t2);\n            free(t1); free(t2);\n"
+                f"            Temporal *r = (Temporal *) {call};\n            free(t1); free(t2);\n"
                 f"            return TemporalToBlobN(result, r, mask, idx);\n        }});\n}}\n")
+    if kind == "geo":               # (Temporal,Temporal) -> owned GSERIALIZED -> DuckDB GEOMETRY
+        return (f"static void Gen_{name}{sfx}(DataChunk &args, ExpressionState &state, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                f"            Temporal *t1 = BlobToTemporal(in1);\n            Temporal *t2 = BlobToTemporal(in2);\n"
+                f"            GSERIALIZED *r = {call};\n            free(t1); free(t2);\n"
+                f"            if (!r) {{ mask.SetInvalid(idx); return string_t(); }}\n"
+                f"            string_t out = GSerializedToGeometry(r, state, result);\n"
+                f"            free(r);\n"
+                f"            return out;\n        }});\n}}\n")
     ctype, rett, _rx = scalar_emit3(f)
     ex, prm, ann, ret = scalar_exec(f, rett, _rx)
-    inner = f"{ctype} r = {name}(t1, t2);\n            free(t1); free(t2);\n            {ret}"
-    return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+    inner = f"{ctype} r = {call};\n            free(t1); free(t2);\n            {ret}"
+    return (f"static void Gen_{name}{sfx}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
             f"    BinaryExecutor::{ex}<string_t, string_t, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
             f"        [&](string_t in1, string_t in2{prm}){ann} {{\n"
@@ -2248,13 +2353,16 @@ def shape_binary_tt_scalar(f):
                for i in (0, 1)):
         return None
     b3 = base(ins[2]["canonical"])
-    if b3 not in SCALAR_ARG or "*" in norm(ins[2]["canonical"]): return None
+    if "*" in norm(ins[2]["canonical"]): return None
+    # a retired group's third argument may also be an enum read from its name (#shape_arg)
+    a3 = SCALAR_ARG.get(b3) or (shape_arg(ins[2]) if retired(f) and b3 in ENUM_READER else None)
+    if a3 is None: return None
     if reg_scope(f["name"]) is None: return None
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
     if rb == "Temporal" and rn.endswith("*"):
-        return ("temporal", "MD_TEMPORAL", SCALAR_ARG[b3])
+        return ("temporal", "MD_TEMPORAL", a3)
     if rb in BYVAL_RET and "*" not in rn:
-        return ("scalar:" + rb, scalar_ret_duck(f), SCALAR_ARG[b3])
+        return ("scalar:" + rb, scalar_ret_duck(f), a3)
     return None
 
 def emit_binary_tt_scalar(f, kind, arg3):
@@ -2327,6 +2435,16 @@ def shape_geo_temporal(f):
         return ("temporal", "MD_TEMPORAL", geo_first, has_dbl)
     if rb in ("int", "int32_t") and "*" not in rn:      # ea tri-state -> nullable BOOLEAN
         return ("scalar", scalar_ret_duck(f), geo_first, has_dbl)
+    # A retired group's geometry pair also answers a distance (nearestApproachDistance), an
+    # instant (nearestApproachInstant) and an owned geometry (shortestLine)
+    if retired(f):
+        if rb == "double" and "*" not in rn:
+            return ("double", scalar_ret_duck(f), geo_first, has_dbl)
+        if rn.endswith("*") and "const" not in f["returnType"]["canonical"]:
+            if rb == "TInstant":
+                return ("temporal", "MD_TEMPORAL", geo_first, has_dbl)
+            if rb == "GSERIALIZED":
+                return ("geo", "MobilityDuckGeometryType()", geo_first, has_dbl)
     return None
 
 def emit_geo_temporal(f, kind, geo_first, has_dbl, suffix=""):
@@ -2361,16 +2479,31 @@ def emit_geo_temporal(f, kind, geo_first, has_dbl, suffix=""):
                      "args.data[0], args.data[1], result, args.size(),")
         lam_decl = decl + ", ValidityMask &mask, idx_t idx"
         call = f"{name}({call_args})"
+    state = ""
     if kind == "temporal":    # -> Temporal tbool (NULL-safe pointer return)
         head = exec_head.format(ret="string_t"); rett = "string_t"
-        body = (f"            Temporal *r = {call};\n{freeing}"
+        body = (f"            Temporal *r = (Temporal *) {call};\n{freeing}"
                 f"            return TemporalToBlobN(result, r, mask, idx);\n")
+    elif kind == "geo":       # -> owned GSERIALIZED -> DuckDB GEOMETRY, as #emit_body marshals it
+        head = exec_head.format(ret="string_t"); rett = "string_t"; state = "state"
+        body = (f"            GSERIALIZED *r = {call};\n{freeing}"
+                f"            if (!r) {{ mask.SetInvalid(idx); return string_t(); }}\n"
+                f"            string_t out = GSerializedToGeometry(r, state, result);\n"
+                f"            free(r);\n"
+                f"            return out;\n")
+    elif kind == "double":    # -> double, NULL on the guard the catalog states (#scalar_exec)
+        ctype, rett, rexpr = scalar_emit3(f)
+        head = exec_head.format(ret=rett)
+        guard = SCALAR_NULL_GUARD.get((f.get("shape") or {}).get("nullableResult"))
+        test = (f"            if ({guard}) {{ mask.SetInvalid(idx); return {rett}(); }}\n"
+                if guard else "")
+        body = f"            {ctype} r = {call};\n{freeing}{test}            return {rexpr};\n"
     else:                     # ea int -> nullable BOOLEAN (hand semantics: ret<0 -> SQL NULL)
         head = exec_head.format(ret="bool"); rett = "bool"
         body = (f"            int r = {call};\n{freeing}"
                 f"            if (r < 0) {{ mask.SetInvalid(idx); return false; }}\n"
                 f"            return r != 0;\n")
-    return (f"static void Gen_{name}{suffix}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+    return (f"static void Gen_{name}{suffix}(DataChunk &args, ExpressionState &{state}, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
             f"    {head}\n"
             f"        [&]({lam_decl}) -> {rett} {{\n{marshal}{body}        }});\n}}\n")
@@ -2563,6 +2696,56 @@ f"            const Temporal **a2 = ListToTemporalArr(child2, le2, &n2);\n"
 f"            double r = {name}(a1, n1, a2, n2);\n"
 f"            FreeTemporalArr(a1, n1); FreeTemporalArr(a2, n2);\n"
 f"            {ret}\n"
+f"        }});\n}}\n")
+
+def shape_temporal_array(f):
+    """The temporal types of the arrays MobilityDB declares for a retired group's
+    (Temporal **arr, int count) -> Temporal * function (merge(tint[]), the catalog's inputArrays
+    naming the array and its count), each a LIST of temporal blobs read as #emit_tgeoarr_scalar
+    reads its two; an element type a type's own kernel declares (trgeometry_merge_array) is left
+    to it, as #yield_to_type_kernels leaves a scalar signature. None when f is no such function."""
+    if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
+        return None
+    ins, out = classify(f)
+    ia = (f.get("shape") or {}).get("inputArrays") or []
+    if out is not None or len(ins) != 2 or len(ia) != 1:
+        return None
+    if norm(ins[0]["canonical"]) != "Temporal **" or ia[0].get("param") != ins[0]["name"]:
+        return None
+    if (ia[0].get("lengthFrom") or {}).get("name") != ins[1]["name"]:
+        return None
+    rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
+    if rb != "Temporal" or not rn.endswith("*") or reg_scope(f["name"]) is None:
+        return None
+    def elems(g):
+        return {a[:-2] for s in g.get("sqlSignatures") or [] for a in (s.get("args") or [])[:1]
+                if a.endswith("[]") and a[:-2] in SIG_TEMPORAL_ACC}
+    own = set()
+    if f["name"].startswith(GENERIC_PREFIXES):
+        for g in FN_BY_NAME.values():
+            if (g is not f and g.get("api") == "public" and g.get("sqlfn") == f["sqlfn"]
+                    and not g["name"].startswith(GENERIC_PREFIXES)):
+                own |= elems(g)
+    have = elems(f) - own
+    return [t for t in SIG_TEMPORAL_ACC if t in have] or None
+
+def emit_temporal_array(f):
+    """DuckDB scalar over one LIST(temporal-blob) -> a temporal value (merge(tint[])): the LIST row
+    is marshalled to a fresh array by ListToTemporalArr, as #emit_tgeoarr_scalar marshals its two,
+    the MEOS kernel called and the array freed."""
+    name = f["name"]
+    return (
+f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+f"    EnsureMeosThreadInitialized();\n"
+f"    auto &lv = args.data[0];\n"
+f"    auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));\n"
+f"    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),\n"
+f"        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+f"            int n;\n"
+f"            const Temporal **a = ListToTemporalArr(child, le, &n);\n"
+f"            Temporal *r = {name}((Temporal **) a, n);\n"
+f"            FreeTemporalArr(a, n);\n"
+f"            return TemporalToBlobN(result, r, mask, idx);\n"
 f"        }});\n}}\n")
 
 def emit_pairs_scalar(f, has_dist, has_periods):
@@ -2900,7 +3083,11 @@ def box_ret3(f, ret_key):
         return (sr, ccpp, NUMERIC_DUCK_CPP[sr])
     return (dflt, ccpp, ccpp)
 
-def emit_temporal_box(f, kind):
+def emit_temporal_box(f, kind, rev=False):
+    """The body of a temporal and a box. `rev` reads them off the vectors in the commuted order a
+    declared signature states (nearestApproachDistance(stbox, trgeometry) over
+    nad_trgeometry_stbox(temp, box)) and keeps the kernel's own call order, emitted as
+    `Gen_<fn>_rev` beside `Gen_<fn>` as #emit_container_scalar emits a commuted container pair."""
     name = f["name"]; parts = kind.split(":")
     side, box = parts[0], parts[1]
     sentinel = parts[2] == "sentinel"
@@ -2908,14 +3095,16 @@ def emit_temporal_box(f, kind):
     blobto = BOX_MARSH[box][0]
     _dt, cpp, ecpp = box_ret3(f, ret)   # paired with the registration by construction
     call = f"{name}(t, bx)" if side == "tb_r" else f"{name}(bx, t)"
+    read_tb = (side == "tb_r") != rev   # the temporal sits on the first vector
     marshal = (f"            Temporal *t = BlobToTemporal(a);\n            {box} *bx = {blobto}(b);\n"
-               if side == "tb_r" else
+               if read_tb else
                f"            {box} *bx = {blobto}(a);\n            Temporal *t = BlobToTemporal(b);\n")
-    frees = "free(t); free(bx);" if side == "tb_r" else "free(bx); free(t);"
+    frees = "free(t); free(bx);" if read_tb else "free(bx); free(t);"
+    sfx = "_rev" if rev else ""
     if not sentinel:
         body = (f"{marshal}            {cpp} r = {call};\n            {frees}\n"
                 f"            return ({ecpp}) r;")
-        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+        return (f"static void Gen_{name}{sfx}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
                 f"    BinaryExecutor::Execute<string_t, string_t, {ecpp}>(args.data[0], args.data[1], result, args.size(),\n"
                 f"        [&](string_t a, string_t b) {{\n{body}\n        }});\n}}\n")
@@ -2924,7 +3113,7 @@ def emit_temporal_box(f, kind):
     body = (f"{marshal}            {cpp} r = {call};\n            {frees}\n"
             f"            if (r == std::numeric_limits<{cpp}>::max()) {{ mask.SetInvalid(idx); return {ecpp}(); }}\n"
             f"            return ({ecpp}) r;")
-    return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+    return (f"static void Gen_{name}{sfx}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
             f"    BinaryExecutor::ExecuteWithNulls<string_t, string_t, {ecpp}>(args.data[0], args.data[1], result, args.size(),\n"
             f"        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> {ecpp} {{\n{body}\n        }});\n}}\n")
@@ -3533,6 +3722,11 @@ def emit_container_scalar(f, ops, rev):
 RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points and the rigid
                   # geometries: atStbox and minusStbox reach the ternary shape with a box argument.
                   "meos_temporal_restrict", "meos_geo_restrict", "meos_rgeo_restrict",
+                  # The distances of the rigid geometries: a pair of two temporal types registers
+                  # its declared signatures (#sig_tt_pairs), and a pair or a geometry pair answers
+                  # a distance, an instant and a geometry as well as a temporal value.
+                  "meos_rgeo_dist",
+                  "meos_temporal_modif", "meos_rgeo_modif",
                   # The JSON value accessors: valueAtTimestamp reaches the out-parameter shape,
                   # and its SQL surface answers jsonb the way MobilityDB declares it.
                   "meos_json_accessor",
@@ -4302,6 +4496,19 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                      f'"{reg_name(nm, f)}", {{{argt}}}, {dret_bv}, Gen_{fn}));')
             continue
+        # an array of temporal values (merge(tint[])), registered over the element types its
+        # signatures declare, as the NxN array shapes below register theirs
+        _arr = shape_temporal_array(f)
+        if _arr:
+            STATE["grp"] = f.get("group") or "meos_ungrouped"
+            bodies.append(emit_temporal_array(f)); n_un += 1
+            for t_ in _arr:
+                a_ = SIG_TEMPORAL_ACC[t_]
+                for nm in reg_names(f, f["sqlfn"], aliases):
+                    specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                         f'"{reg_name(nm, f)}", {{LogicalType::LIST({a_})}}, {a_}, '
+                                         f'Gen_{f["name"]}));')
+            continue
         u = shape_emittable(f); b = None if u else shape_binary(f); t = None if (u or b) else shape_ternary(f)
         tt = None if (u or b or t) else shape_binary_tt(f)
         tts = None if (u or b or t or tt) else shape_binary_tt_scalar(f)
@@ -4470,6 +4677,22 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         # Names to register: the native sqlfn + any portable bare-name alias the pin
         # assigns to this fn's operator (catalog portableAliases is the SoT — invent
         # nothing). The alias reuses the SAME backing body ([[aliases-reuse-backing]]).
+        # A retired group's temporal pair registers exactly the pairs MobilityDB declares, the
+        # commuted one through `Gen_<fn>_rev`: one scope type for both operands would put
+        # tdistance_trgeometry_tpoint over (trgeometry, trgeometry), the pair of
+        # tdistance_trgeometry_trgeometry
+        _ttpairs = sig_tt_pairs(f) if (tt and retired(f)) else None
+        if _ttpairs and any(p[0] != p[1] or p[3] for p in _ttpairs):
+            if any(p[3] for p in _ttpairs):
+                bodies.append(emit_binary_tt(f, kind, rev=True))
+            for a0, a1, ra, rv in _ttpairs:
+                _r = (ra or ret_temporal_type(fn, a0, f.get("group"), f.get("sqlReturnType"))
+                      if dret == "MD_TEMPORAL" else dret)
+                for nm in reg_names(f, sqlfn, aliases, argsig):
+                    specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                         f'"{reg_name(nm, f)}", {{{a0}, {a1}}}, {_r}, '
+                                         f'Gen_{fn}{"_rev" if rv else ""}));')
+            continue
         names = reg_names(f, sqlfn, aliases, argsig)
         if scope == "all":
             rett = (ret_temporal_type(fn, "type", f.get("group"), f.get("sqlReturnType")) if dret == "MD_TEMPORAL"
@@ -4574,6 +4797,20 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     for nm in names:
                         specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                              f'"{reg_name(nm, f)}", {{{a}, {arg2[0]}}}, {r2}, Gen_{fn}_d));')
+        # The shorter call of a retired group's temporal pair with a defaulted third argument
+        # (insert(tint, tint) for insert(tint, tint, connect boolean DEFAULT TRUE)), registered
+        # over the same pairs as the full call, as the ternary's above
+        if tts and retired(f) and trailing_arg_default(f) and arg3[1] not in ("string_t",):
+            dflt = sql_default_to_cpp(trailing_arg_default(f))
+            bodies.append(emit_binary_tt(f, kind, dflt=dflt))
+            for a in (accs if scope != "all" else []):
+                r2 = dret
+                if dret == "MD_TEMPORAL":
+                    r2 = (sig_declared_ret(f, a, 2)
+                          or ret_temporal_type(fn, a, f.get("group"), f.get("sqlReturnType")))
+                for nm in names:
+                    specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                         f'"{reg_name(nm, f)}", {{{a}, {a}}}, {r2}, Gen_{fn}_d));')
         # Same shorter-arity overload for a (Temporal, scalar-param DEFAULT)->SCALAR fn
         # (duration(temporal[,boolean]) DEFAULT FALSE; asText/asEWKT(tspatial[,int]) DEFAULT 15):
         # the 1-arg form is canonical SQL but geo-only-hand today — generate it for every type
@@ -4962,6 +5199,17 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             for nm in names:
                 temporal_box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {sig}, {dret}, Gen_{fn}));')
+        # A retired group's kernel declared in both orders (nearestApproachDistance over
+        # (trgeometry, stbox) and (stbox, trgeometry), one MEOS function) registers the commuted
+        # order through `Gen_<fn>_rev`, as the geometry pair does
+        _raccs = sig_commuted_accs(f) if retired(f) else []
+        if _raccs:
+            temporal_box_bodies.append(emit_temporal_box(f, kind, rev=True))
+            for a in _raccs:
+                sig = "{%s, %s}" % (box_acc, a) if kind.startswith("tb_r:") else "{%s, %s}" % (a, box_acc)
+                for nm in names:
+                    temporal_box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                             f'"{reg_name(nm, f)}", {sig}, {dret}, Gen_{fn}_rev));')
     # Temporal x span -> bool: numspan PAIRS to the tnumber value type (tint↔intspan,
     # tfloat↔floatspan); tstzspan is fixed and registered over every temporal type.
     for f in fns:
@@ -5776,6 +6024,14 @@ def main():
     STRUCTS.update({s["name"]: s for s in d.get("structs", [])})
     # macro values, so a literal a PG wrapper binds by macro name renders as its value.
     MACRO_VALUES.update({m["name"]: m["value"] for m in d.get("macros", []) if "value" in m})
+    ENUM_MEMBERS.update({e["name"]: {v["name"] for v in e.get("values") or []}
+                         for e in d.get("enums", [])})
+    for _f in fns:
+        _ps = _f.get("params") or []
+        _rt = norm(_f["returnType"]["canonical"])
+        if (_f.get("api") == "public" and len(_ps) == 1 and norm(_ps[0]["canonical"]) == "char *"
+                and _rt in ENUM_MEMBERS):
+            ENUM_READER.setdefault(_rt, _f["name"])
     # A typed text or binary output names two wrappers, its type's I/O function and its asText
     # (tint_out: `#Temporal_out(), #Temporal_as_text()`), so its first wrapper's SQL name is an
     # I/O name, which supported() drops as a cast, while one of its signatures carries the SQL name

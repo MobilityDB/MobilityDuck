@@ -651,3 +651,9 @@ SELECT afterTimestamp(tint '[1@2001-01-01, 2@2001-01-03]', timestamptz '2001-01-
   afterTimestamp(tint '[1@2001-01-01, 2@2001-01-03]', timestamptz '2001-01-02', true);
 ----
 true
+
+# appendInstant without an interpolation takes step for a tint
+query I
+SELECT interp(appendInstant(tint '[1@2020-01-01, 2@2020-01-02]', tint '3@2020-01-03'));
+----
+Step
