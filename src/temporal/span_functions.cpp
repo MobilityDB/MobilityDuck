@@ -1032,20 +1032,6 @@ void SpanFunctions::Numspan_expand(DataChunk &args, ExpressionState &state, Vect
     }
 }
 
-void SpanFunctions::Tstzspan_expand(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &span_vec = args.data[0];
-    auto out_type  = result.GetType();    
-    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
-    BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(
-        span_vec, args.data[1], result, args.size(),
-        [&](string_t blob, interval_t value, ValidityMask &mask, idx_t idx) -> string_t {
-            return Tstzspan_expand_common(blob, value, result, mask, idx);
-        });
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
 static inline string_t Numspan_shift_common(const string_t &blob, Datum shift_datum,
                                         MeosType validate_span_type, Vector &result) {
     const uint8_t *data = (const uint8_t *)blob.GetData();
@@ -1092,49 +1078,6 @@ static inline string_t Tstzspan_shift_common(const string_t &blob, interval_t du
     return out;
 }
 
-void SpanFunctions::Numspan_shift(DataChunk &args, ExpressionState &state, Vector &result) {    
-    auto &span_vec = args.data[0];
-    auto out_type  = result.GetType();    
-    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
-    
-    switch (span_type) {
-        case T_INTSPAN: { // shift(intspan, integer) -> intspan
-            BinaryExecutor::Execute<string_t, int32_t, string_t>(
-                span_vec, args.data[1], result, args.size(),
-                [&](string_t blob, int32_t shift) -> string_t {
-                    return Numspan_shift_common(blob, Datum(shift), span_type, result);
-                });
-            break;
-        }
-        case T_BIGINTSPAN: { // shift(bigintspan, bigint) -> bigintspan
-            BinaryExecutor::Execute<string_t, int64_t, string_t>(
-                span_vec, args.data[1], result, args.size(),
-                [&](string_t blob, int64_t shift) -> string_t {
-                    return Numspan_shift_common(blob, Datum(shift), span_type, result);
-                });
-            break;
-        }
-        case T_FLOATSPAN: { // shift(floatspan, double) -> floatspan
-            BinaryExecutor::Execute<string_t, double, string_t>(
-                span_vec, args.data[1], result, args.size(),
-                [&](string_t blob, double shift) -> string_t {                    
-                    return Numspan_shift_common(blob, Float8GetDatum(shift), span_type, result);
-                });
-            break;
-        }
-        case T_DATESPAN: { // shift(datespan, integer) -> datespan
-            BinaryExecutor::Execute<string_t, int32_t, string_t>(
-                span_vec, args.data[1], result, args.size(),
-                [&](string_t blob, int32_t shift_days) -> string_t {
-                    return Numspan_shift_common(blob, Datum(shift_days), span_type, result);
-                });
-            break;
-        }
-        default:
-            throw NotImplementedException("shift(<span>): unsupported span type");
-    }
-}
-
 void SpanFunctions::Tstzspan_shift(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &span_vec = args.data[0];
     auto out_type  = result.GetType();    
@@ -1174,49 +1117,6 @@ static inline string_t Numspan_scale_common(const string_t &blob, Datum scale_da
     return out;
 }
 
-void SpanFunctions::Numspan_scale(DataChunk &args, ExpressionState &state, Vector &result) {    
-    auto &span_vec = args.data[0];
-    auto out_type  = result.GetType();    
-    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
-    
-    switch (span_type) {
-        case T_INTSPAN: { // scale(intspan, integer) -> intspan
-            BinaryExecutor::Execute<string_t, int32_t, string_t>(
-                span_vec, args.data[1], result, args.size(),
-                [&](string_t blob, int32_t scale) -> string_t {
-                    return Numspan_scale_common(blob, Datum(scale), span_type, result);
-                });
-            break;
-        }
-        case T_BIGINTSPAN: { // scale(bigintspan, bigint) -> bigintspan
-            BinaryExecutor::Execute<string_t, int64_t, string_t>(
-                span_vec, args.data[1], result, args.size(),
-                [&](string_t blob, int64_t scale) -> string_t {
-                    return Numspan_scale_common(blob, Datum(scale), span_type, result);
-                });
-            break;
-        }
-        case T_FLOATSPAN: { // scale(floatspan, double) -> floatspan
-            BinaryExecutor::Execute<string_t, double, string_t>(
-                span_vec, args.data[1], result, args.size(),
-                [&](string_t blob, double scale) -> string_t {                    
-                    return Numspan_scale_common(blob, Float8GetDatum(scale), span_type, result);
-                });
-            break;
-        }
-        case T_DATESPAN: { // scale(datespan, integer) -> datespan
-            BinaryExecutor::Execute<string_t, int32_t, string_t>(
-                span_vec, args.data[1], result, args.size(),
-                [&](string_t blob, int32_t scale) -> string_t {
-                    return Numspan_scale_common(blob, Datum(scale), span_type, result);
-                });
-            break;
-        }
-        default:
-            throw NotImplementedException("scale(<span>): unsupported span type");
-    }
-}
-
 static inline string_t Tstzspan_scale_common(const string_t &blob, interval_t duckdb_scale, Vector &result) {
     const uint8_t *data = (const uint8_t *)blob.GetData();
     size_t size = blob.GetSize();
@@ -1235,20 +1135,6 @@ static inline string_t Tstzspan_scale_common(const string_t &blob, interval_t du
     free(s);
     free(r);
     return out;
-}
-
-void SpanFunctions::Tstzspan_scale(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &span_vec = args.data[0];
-    auto out_type  = result.GetType();    
-    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());    
-    BinaryExecutor::Execute<string_t, interval_t, string_t>(
-        span_vec, args.data[1], result, args.size(),
-        [&](string_t blob, interval_t scale_interval) -> string_t {
-            return Tstzspan_scale_common(blob, scale_interval, result);
-        });
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 static inline string_t Tstzspan_shift_scale_common(const string_t &blob, interval_t shift_iv, interval_t scale_iv,
@@ -1307,65 +1193,6 @@ static inline string_t Numspan_shift_scale_common(const string_t &blob, Datum sh
     string_t out = StringVector::AddStringOrBlob(result, (const char *)r, size);
     free(r);
     return out;
-}
-
-void SpanFunctions::Numspan_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &span_vec = args.data[0];
-    auto out_type = result.GetType();
-    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
-
-    switch (span_type) {
-        case T_INTSPAN: {
-            TernaryExecutor::Execute<string_t, int32_t, int32_t, string_t>(
-                span_vec, args.data[1], args.data[2], result, args.size(),
-                [&](string_t blob, int32_t shift, int32_t scale) -> string_t {
-                    return Numspan_shift_scale_common(blob, Datum(shift), Datum(scale), span_type, result);
-                });
-            break;
-        }
-        case T_BIGINTSPAN: {
-            TernaryExecutor::Execute<string_t, int64_t, int64_t, string_t>(
-                span_vec, args.data[1], args.data[2], result, args.size(),
-                [&](string_t blob, int64_t shift, int64_t scale) -> string_t {
-                    return Numspan_shift_scale_common(blob, Datum(shift), Datum(scale), span_type, result);
-                });
-            break;
-        }
-        case T_FLOATSPAN: {
-            TernaryExecutor::Execute<string_t, double, double, string_t>(
-                span_vec, args.data[1], args.data[2], result, args.size(),
-                [&](string_t blob, double shift, double scale) -> string_t {
-                    return Numspan_shift_scale_common(blob, Float8GetDatum(shift), Float8GetDatum(scale), span_type,
-                                                      result);
-                });
-            break;
-        }
-        case T_DATESPAN: {
-            TernaryExecutor::Execute<string_t, int32_t, int32_t, string_t>(
-                span_vec, args.data[1], args.data[2], result, args.size(),
-                [&](string_t blob, int32_t shift_days, int32_t scale_days) -> string_t {
-                    return Numspan_shift_scale_common(blob, Datum(shift_days), Datum(scale_days), span_type, result);
-                });
-            break;
-        }
-        default:
-            throw NotImplementedException("shiftScale(<span>): unsupported span type for this overload");
-    }
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-void SpanFunctions::Tstzspan_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &span_vec = args.data[0];
-    TernaryExecutor::Execute<string_t, interval_t, interval_t, string_t>(
-        span_vec, args.data[1], args.data[2], result, args.size(),
-        [&](string_t blob, interval_t shift, interval_t scale) -> string_t {
-            return Tstzspan_shift_scale_common(blob, shift, scale, result);
-        });
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 // floor/ceil/round/degrees/radians on floatspan are generated from the catalog

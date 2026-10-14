@@ -54,13 +54,7 @@ struct SpanFunctions {
     static void Tstzspan_duration(DataChunk &args, ExpressionState &state, Vector &result);
         //transformations
     static void Numspan_expand(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tstzspan_expand(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Numspan_shift(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tstzspan_shift(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Numspan_scale(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tstzspan_scale(DataChunk &args, ExpressionState &state, Vector &result);
-    static  void Numspan_shift_scale(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tstzspan_shift_scale(DataChunk &args, ExpressionState &state, Vector &result);
     // floor/ceil/round/degrees/radians on floatspan are generated (generated_temporal_udfs.cpp);
     // only round(DOUBLE), the scalar base helper, remains hand-written.
     static void Float_round(DataChunk &args, ExpressionState &state, Vector &result);

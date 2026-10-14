@@ -314,3 +314,23 @@ SELECT (intspan '[1,5)' + 7)::VARCHAR = spanUnion(intspan '[1,5)', 7)::VARCHAR,
        (intspan '[1,10)' * 5)::VARCHAR = spanIntersection(intspan '[1,10)', 5)::VARCHAR;
 ----
 true	true
+
+query I
+SELECT shiftScale(intspan '[1,2)', 4, 4);
+----
+[5, 10)
+
+query I
+SELECT shiftScale(tstzspan '[2001-01-01 00:00:00+01, 2001-01-02 00:00:00+01]', interval '5 min', interval '1 hour');
+----
+[2001-01-01 00:05:00+01, 2001-01-01 01:05:00+01]
+
+query I
+SELECT expand(tstzspan '[2001-01-01 00:00:00+01, 2001-01-02 00:00:00+01]', interval '1 day');
+----
+[2000-12-31 00:00:00+01, 2001-01-03 00:00:00+01]
+
+query I
+SELECT tprecision(tstzspan '[2001-01-01 08:07:00+01, 2001-01-01 08:22:00+01]', interval '1 hour', timestamptz '2001-01-01 00:30:00+01');
+----
+[2001-01-01 07:30:00+01, 2001-01-01 08:30:00+01)

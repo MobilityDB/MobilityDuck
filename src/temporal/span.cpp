@@ -154,57 +154,10 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("span", {SetTypes::dateset()},SpanTypes::datespan(), SpanFunctions::Set_to_span) 
         );
 
-        if (span_type == SpanTypes::intspan() ||span_type == SpanTypes::datespan()){
-
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("shift", {span_type, LogicalType::INTEGER}, span_type, SpanFunctions::Numspan_shift)
-            ); 
-            
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {span_type, LogicalType::INTEGER}, span_type, SpanFunctions::Numspan_scale)
-            );
-            duckdb::RegisterSerializedScalarFunction(loader,
-                ScalarFunction("shiftScale", {span_type, LogicalType::INTEGER, LogicalType::INTEGER}, span_type,
-                               SpanFunctions::Numspan_shift_scale));
-
-        }
-        else if( span_type == SpanTypes::bigintspan() ){
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("shift", {span_type, LogicalType::BIGINT}, span_type, SpanFunctions::Numspan_shift)
-            ); 
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("expand", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Numspan_expand)
-            );
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {span_type, LogicalType::BIGINT}, span_type, SpanFunctions::Numspan_scale)
-            );
-            duckdb::RegisterSerializedScalarFunction(loader,
-                ScalarFunction("shiftScale", {span_type, LogicalType::BIGINT, LogicalType::BIGINT}, span_type, SpanFunctions::Numspan_shift_scale)
-            );    
-        }
-        else if( span_type == SpanTypes::floatspan() ){
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("shift", {span_type, LogicalType::DOUBLE}, span_type, SpanFunctions::Numspan_shift)
-            ); 
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("expand", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Numspan_expand)
-            );
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {span_type, LogicalType::DOUBLE}, span_type, SpanFunctions::Numspan_scale)
-            );
-            duckdb::RegisterSerializedScalarFunction(loader,
-                ScalarFunction("shiftScale", {span_type, LogicalType::DOUBLE, LogicalType::DOUBLE}, span_type, SpanFunctions::Numspan_shift_scale)
-            );
-
-        }
-        else if( span_type == SpanTypes::tstzspan() ){
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("shift", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Tstzspan_shift)
-            );
+        if( span_type == SpanTypes::tstzspan() ){
             duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Tstzspan_shift)
             );
-
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("expand", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Tstzspan_expand)
-            );
-
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Tstzspan_scale)
-            );
-            duckdb::RegisterSerializedScalarFunction(loader, 
-                ScalarFunction("shiftScale", {span_type, LogicalType::INTERVAL, LogicalType::INTERVAL}, span_type, SpanFunctions::Tstzspan_shift_scale)
-            );
-
-        }      
+        }
         
         // lower / upper on span types are generated from the catalog
         // (meos_setspan_accessor) in generated_temporal_udfs.cpp.
@@ -216,14 +169,10 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         // catalog (meos_setspan_accessor) in generated_temporal_udfs.cpp.
         }
     
-    // expand(intspan/bigintspan/floatspan, <numeric>) is generated from the catalog
-    // (meos_setspan_transf) in generated_temporal_udfs.cpp. The datespan/tstzspan
-    // forms below are hand-only (not generated for these types).
+    // expand(intspan/bigintspan/floatspan/tstzspan, ...) is generated from the catalog
+    // (meos_setspan_transf) in generated_temporal_udfs.cpp; the datespan form is not.
     duckdb::RegisterSerializedScalarFunction(loader,
             ScalarFunction("expand", {SpanTypes::datespan(), LogicalType::INTEGER}, SpanTypes::datespan(), SpanFunctions::Numspan_expand)
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  
-            ScalarFunction("expand", {SpanTypes::tstzspan(), LogicalType::INTERVAL}, SpanTypes::tstzspan(), SpanFunctions::Tstzspan_expand)
     );
 
     // width(intspan/bigintspan/floatspan) and duration(datespan/tstzspan) are

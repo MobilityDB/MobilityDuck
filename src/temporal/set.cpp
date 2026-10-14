@@ -106,67 +106,22 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
         // getValues(<set_type>) is generated from the catalog (<elem>set_values) in generated_temporal_udfs.cpp.
 
-        duckdb::RegisterSerializedScalarFunction(loader,
-            ScalarFunction("shift", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), SetFunctions::Numset_shift)
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader,  
-            ScalarFunction("shift", {SetTypes::bigintset(), LogicalType::BIGINT}, SetTypes::bigintset(), SetFunctions::Numset_shift)
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader,  
-            ScalarFunction("shift", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), SetFunctions::Numset_shift)
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("shift", {SetTypes::dateset(), LogicalType::INTEGER}, SetTypes::dateset(), SetFunctions::Numset_shift)
-        );        
 
-        duckdb::RegisterSerializedScalarFunction(loader,
-            ScalarFunction("shift", {SetTypes::tstzset(), LogicalType::INTERVAL}, SetTypes::tstzset(), SetFunctions::Tstzset_shift)
-        );
         duckdb::RegisterSerializedScalarFunction(loader,
             ScalarFunction("+", {SetTypes::tstzset(), LogicalType::INTERVAL}, SetTypes::tstzset(), SetFunctions::Tstzset_shift)
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader,  
-            ScalarFunction("scale", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), SetFunctions::Numset_scale)
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader,  
-            ScalarFunction("scale", {SetTypes::bigintset(), LogicalType::BIGINT}, SetTypes::bigintset(), SetFunctions::Numset_scale)
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader,  
-            ScalarFunction("scale", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), SetFunctions::Numset_scale)
-        );
         
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("scale", {SetTypes::dateset(), LogicalType::INTEGER}, SetTypes::dateset(), SetFunctions::Numset_scale)
-        ); 
 
-        duckdb::RegisterSerializedScalarFunction(loader,  
-            ScalarFunction("scale", {SetTypes::tstzset(), LogicalType::INTERVAL}, SetTypes::tstzset(), SetFunctions::Tstzset_scale)
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader,  
-            ScalarFunction("shiftScale", {SetTypes::intset(), LogicalType::INTEGER, LogicalType::INTEGER}, SetTypes::intset(), SetFunctions::Numset_shift_scale)
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader,  
-            ScalarFunction("shiftScale", {SetTypes::bigintset(), LogicalType::BIGINT, LogicalType::BIGINT}, SetTypes::bigintset(), SetFunctions::Numset_shift_scale)
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader,  
-            ScalarFunction("shiftScale", {SetTypes::floatset(), LogicalType::DOUBLE, LogicalType::DOUBLE}, SetTypes::floatset(), SetFunctions::Numset_shift_scale)
-        );
         
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("shiftScale", {SetTypes::dateset(), LogicalType::INTEGER, LogicalType::INTEGER}, SetTypes::dateset(), SetFunctions::Numset_shift_scale)
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader,  
-            ScalarFunction("shiftScale", {SetTypes::tstzset(), LogicalType::INTERVAL, LogicalType::INTERVAL}, SetTypes::tstzset(), SetFunctions::Tstzset_shift_scale)
-        );
 
         // floor/ceil/round/degrees/radians on floatset are float-base scalar transforms
         // generated from the catalog (generated_temporal_udfs.cpp): both the full arity

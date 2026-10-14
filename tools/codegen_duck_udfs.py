@@ -2987,6 +2987,21 @@ def shape_nary_scalars(f):
     if out is not None or not ins:
         return None
     b0, n0 = base(ins[0]["canonical"]), norm(ins[0]["canonical"])
+    rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
+    # a set, span or span set followed by two arguments a value takes (shiftScale(intspan,
+    # integer, integer), shiftScale(tstzset, interval, interval)), answering its own container
+    # type, past the two operands #shape_set and #shape_span take
+    if b0 in CONT_BLOBTO and n0.endswith("*") and len(ins) in (2, 3):
+        tail = [shape_arg(p) for p in ins[1:]]
+        if None in tail or rb != b0 or not rn.endswith("*") \
+                or "const" in f["returnType"]["canonical"]:
+            return None
+        # one by-value scalar is #shape_set's and #shape_span's (shift(intspan, integer)); a
+        # duration is this shape's (shift(tstzspan, interval))
+        if len(ins) == 2 and base(ins[1]["canonical"]) in SCALAR_ARG \
+                and "*" not in norm(ins[1]["canonical"]):
+            return None
+        return ("cont:" + b0, tail, "cont:" + b0)
     if not n0.endswith("*") or b0 not in ("Temporal", "GSERIALIZED"):
         return None
     # a temporal value with fewer scalars is the unary, binary and ternary shapes'; a geometry,
@@ -2999,7 +3014,6 @@ def shape_nary_scalars(f):
         if "*" in nn or bb not in SCALAR_ARG:
             return None
         tail.append(SCALAR_ARG[bb])
-    rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
     if not rn.endswith("*") or "const" in f["returnType"]["canonical"]:
         return None
     if rb in TEMPORAL_PTR_RET:
@@ -3010,12 +3024,18 @@ def shape_nary_scalars(f):
         return None
     return ("temporal" if b0 == "Temporal" else "geo", tail, ret)
 
-def emit_nary_scalars(f, first, tail, ret):
+def emit_nary_scalars(f, first, tail, ret, dval=None):
     """The per-row body of #shape_nary_scalars: every operand flattened and read at the row, a
     temporal operand decoded by BlobToTemporal and a geometry by GeometryToGSerialized with SRID 0
-    as #emit_geo_pair_out reads one, the result marshalled as #emit_body returns it."""
-    name = f["name"]; n = 1 + len(tail)
-    L = [f"static void Gen_{name}(DataChunk &args, ExpressionState &state, Vector &result) {{",
+    as #emit_geo_pair_out reads one, the result marshalled as #emit_body returns it. With `dval`,
+    the shorter `Gen_<fn>_d` the trailing SQL default answers, that literal in the last
+    argument's place, as #emit_defaulted_ternary is the shorter body of a ternary one."""
+    name = f["name"]
+    sfx = "_d" if dval is not None else ""
+    if dval is not None:
+        tail = tail[:-1]
+    n = 1 + len(tail)
+    L = [f"static void Gen_{name}{sfx}(DataChunk &args, ExpressionState &state, Vector &result) {{",
          "    EnsureMeosThreadInitialized();",
          "    const idx_t rows = args.size();",
          f"    for (idx_t c = 0; c < {n}; c++) args.data[c].Flatten(rows);",
@@ -3031,10 +3051,20 @@ def emit_nary_scalars(f, first, tail, ret):
           "        if (!valid) { outv.SetInvalid(i); continue; }"]
     if first == "temporal":
         L.append("        Temporal *x0 = BlobToTemporal(in0[i]);")
+    elif first.startswith("cont:"):
+        cb = first.split(":", 1)[1]
+        L.append(f"        {cb} *x0 = {CONT_BLOBTO[cb]}(in0[i]);")
     else:
         L.append("        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);")
-    call = ", ".join(["x0"] + [m.replace("a2", f"in{k}[i]") for k, (_d, _c, m) in enumerate(tail, start=1)])
-    if ret == "temporal":
+    call = ", ".join(["x0"] + [m.replace("a2", f"in{k}[i]") for k, (_d, _c, m) in enumerate(tail, start=1)]
+                     + ([dval] if dval is not None else []))
+    if ret.startswith("cont:"):
+        cb = ret.split(":", 1)[1]
+        L += [f"        {cb} *r = {name}({call});",
+              "        free(x0);",
+              "        if (!r) { outv.SetInvalid(i); continue; }",
+              "        out[i] = %s;" % (PTR_RET[cb][1] % "r")]
+    elif ret == "temporal":
         L += [f"        Temporal *r = (Temporal *) {name}({call});",
               "        free(x0);",
               "        if (!r) { outv.SetInvalid(i); continue; }",
@@ -4070,6 +4100,9 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_temporal_transf", "meos_geo_base_transf", "meos_geo_transf",
                   "meos_rgeo_transf", "meos_cbuffer_transf", "meos_pose_transf",
                   "meos_posechain_transf",
+                  # the set and span transformations: shiftScale and the duration forms of shift,
+                  # scale, expand and tprecision reach #shape_nary_scalars' container arm
+                  "meos_setspan_transf",
                   # The JSON value accessors: valueAtTimestamp reaches the out-parameter shape,
                   # and its SQL surface answers jsonb the way MobilityDB declares it.
                   "meos_json_accessor",
@@ -4876,6 +4909,38 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             rest = "".join(", " + t[0] for t in tail)
             if first == "geo":
                 pairs = [("MobilityDuckGeometryType()", "MobilityDuckGeometryType()")]
+            elif first.startswith("cont:"):
+                # the container's own type per declared signature, as #container_scalar_sigs
+                # reads one (CONT_SQL_ACC), its return the same container type, under the
+                # signature's own name (shiftScale(tstzspan, interval, interval) beside the
+                # shift and scale its siblings bind); a trailing SQL default also registers the
+                # shorter form through Gen_<fn>_d (tprecision(tstzset, interval))
+                acc_ = CONT_SQL_ACC[first.split(":", 1)[1]]
+                short = "".join(", " + t[0] for t in tail[:-1])
+                dflt, seen = None, set()
+                for s in f.get("sqlSignatures") or []:
+                    if len(s.get("args") or []) != 1 + len(tail) or s["args"][0] not in acc_ \
+                            or s.get("ret") not in acc_:
+                        continue
+                    a, r = acc_[s["args"][0]], acc_[s["ret"]]
+                    nm0 = s.get("sqlName") or f["sqlfn"]
+                    defs = s.get("argDefaults") or []
+                    forms = [(rest, "")]
+                    if defs and defs[-1] is not None and not any(d is not None for d in defs[:-1]):
+                        lit = forward_literal(classify(f)[0][-1], defs[-1])
+                        if lit is not None:
+                            dflt = lit
+                            forms.append((short, "_d"))
+                    for rr, sfx in forms:
+                        for nm in reg_names(f, nm0, aliases, "{x%s}" % rr):
+                            reg = (f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                   f'"{reg_name(nm, f)}", {{{a}{rr}}}, {r}, Gen_{f["name"]}{sfx}));')
+                            if reg not in seen:
+                                seen.add(reg)
+                                specific_regs.append(reg)
+                if dflt is not None:
+                    bodies.append(emit_nary_scalars(f, first, tail, ret, dflt))
+                continue
             else:
                 _sc = reg_scope(f["name"])
                 accs_ = sig_declared_accs(f) or (_sc[1] if _sc and _sc[0] == "types" else None) or []

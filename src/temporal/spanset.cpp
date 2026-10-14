@@ -174,49 +174,21 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
         if (spanset_type == SpansetTypes::intspanset() ||spanset_type == SpansetTypes::datespanset()){
 
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("shift", {spanset_type, LogicalType::INTEGER}, spanset_type, SpansetFunctions::Numspanset_shift)
-            ); 
             
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {spanset_type, LogicalType::INTEGER}, spanset_type, SpansetFunctions::Numspanset_scale)
-            );
 
-            duckdb::RegisterSerializedScalarFunction(loader,
-                ScalarFunction("shiftScale", {spanset_type, LogicalType::INTEGER, LogicalType::INTEGER}, spanset_type,
-                               SpansetFunctions::Numspanset_shift_scale));
 
         }
         else if( spanset_type == SpansetTypes::bigintspanset() ){
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("shift", {spanset_type, LogicalType::BIGINT}, spanset_type, SpansetFunctions::Numspanset_shift)
-            ); 
 
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {spanset_type, LogicalType::BIGINT}, spanset_type, SpansetFunctions::Numspanset_scale)
-            );
-            duckdb::RegisterSerializedScalarFunction(loader,
-                ScalarFunction("shiftScale", {spanset_type, LogicalType::BIGINT, LogicalType::BIGINT}, spanset_type, SpansetFunctions::Numspanset_shift_scale)
-            );    
         }
         else if( spanset_type == SpansetTypes::floatspanset() ){
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("shift", {spanset_type, LogicalType::DOUBLE}, spanset_type, SpansetFunctions::Numspanset_shift)
-            ); 
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {spanset_type, LogicalType::DOUBLE}, spanset_type, SpansetFunctions::Numspanset_scale)
-            );
-            duckdb::RegisterSerializedScalarFunction(loader,
-                ScalarFunction("shiftScale", {spanset_type, LogicalType::DOUBLE, LogicalType::DOUBLE}, spanset_type, SpansetFunctions::Numspanset_shift_scale)
-            );
 
             // floor/ceil/round/degrees/radians on floatspanset are float-base scalar
             // transforms generated from the catalog (generated_temporal_udfs.cpp), full
             // arity plus the shorter DEFAULT-arg overload via sqlSignatures argDefaults.
         }
         else if( spanset_type == SpansetTypes::tstzspanset() ){
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("shift", {spanset_type, LogicalType::INTERVAL}, spanset_type, SpansetFunctions::Tstzspanset_shift)
-            ); 
 
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {spanset_type, LogicalType::INTERVAL}, spanset_type, SpansetFunctions::Tstzspanset_scale)
-            );
-            duckdb::RegisterSerializedScalarFunction(loader, 
-                ScalarFunction("shiftScale", {spanset_type, LogicalType::INTERVAL, LogicalType::INTERVAL}, spanset_type, SpansetFunctions::Tstzspanset_shift_scale)
-            );
 
         } 
         // spans(<spanset_type>) is generated from the catalog (spanset_spans) in generated_temporal_udfs.cpp.
