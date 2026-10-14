@@ -180,3 +180,8 @@ SELECT startValue(tEqual(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01
        startValue(tNotEqual(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), quadbinTileToCell(2,1,2)));
 ----
 false	true
+
+query II
+SELECT asText(valueAtTimestamp(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), TIMESTAMPTZ '2024-01-01')), typeof(valueAtTimestamp(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), TIMESTAMPTZ '2024-01-01'));
+----
+4817ffffffffffff	quadbin

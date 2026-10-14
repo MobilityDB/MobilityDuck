@@ -258,6 +258,12 @@ def outprim_ret3(f, out_canon):
     plain numeric cast, and not an unsigned C quantity PostgreSQL can only declare signed)."""
     n = norm(out_canon)
     cloc, cpp = OUTPARAM_LOCAL[n]
+    # a Tcell<T> cell id handed back (valueAtTimestamp(tquadbin, timestamptz)) is its cell type,
+    # BIGINT-backed, as the binary out-param fold types valueN (#shape_binary)
+    sc = reg_scope(f["name"])
+    if base(out_canon) in CELL_UINT and sc and sc[0] == "types" and sc[1] and len(sc[1]) == 1 \
+            and sc[1][0] in CELL_BASEVAL:
+        return (CELL_BASEVAL[sc[1][0]], cloc, cpp)
     sr = SQL_SCALAR_RET.get(f.get("sqlReturnType"))
     if sr and sr in NUMERIC_DUCK_CPP and base(out_canon) not in UNSIGNED_C_RET \
             and cpp in NUMERIC_DUCK_CPP.values():
@@ -4170,6 +4176,8 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   # the containers the group parses (#container_from_text, #container_wkb,
                   # #container_from_wkb)
                   "meos_setspan_inout",
+                  # the accessors of the rigid geometries and the quadbin cells
+                  "meos_rgeo_accessor", "meos_quadbin_accessor",
                   # The JSON value accessors: valueAtTimestamp reaches the out-parameter shape,
                   # and its SQL surface answers jsonb the way MobilityDB declares it.
                   "meos_json_accessor",

@@ -168,3 +168,13 @@ query I
 SELECT ST_AsText(shortestLine(tgeompoint '{Point(10 0)@2000-01-01, Point(10 0)@2000-01-02}', trgeometry 'Polygon((0 0,1 0,1 1,0 0));{Pose(Point(0 0),0)@2000-01-01, Pose(Point(5 0),0)@2000-01-02}'));
 ----
 LINESTRING (6 0, 10 0)
+
+query I
+SELECT asText(points(trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1), 0.2)@2001-01-01, Pose(Point(2 2), 0.4)@2001-01-02, Pose(Point(3 3), 0.5)@2001-01-03]'));
+----
+{"POINT(1 1)", "POINT(2 2)", "POINT(3 3)"}
+
+query I
+SELECT ST_Equals(valueN(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01', 1), traversedArea(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01'));
+----
+true

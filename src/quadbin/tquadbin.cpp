@@ -225,27 +225,6 @@ void QuadbinFunctions::Tquadbin_make(
 }
 
 /* =====================================================================
- * Accessors
- * ===================================================================== */
-
-void QuadbinFunctions::Tquadbin_value_at_timestamptz(
-    DataChunk &args, ExpressionState &state, Vector &result)
-{
-    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, int64_t>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t blob, timestamp_tz_t ts,
-            ValidityMask &mask, idx_t idx) -> int64_t {
-            Temporal *t = BlobToTemp(blob);
-            Quadbin v;
-            bool ok = tquadbin_value_at_timestamptz(
-                t, ToMeosTimestamp(ts), true, &v);
-            free(t);
-            if (!ok) { mask.SetInvalid(idx); return 0; }
-            return static_cast<int64_t>(v);
-        });
-}
-
-/* =====================================================================
  * Quadkey conversion — tquadbin → tvarchar (base-4 slippy-tile string)
  * ===================================================================== */
 
@@ -333,13 +312,8 @@ void QuadbinTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         "tquadbin", {QB, TS}, TQB,
         QuadbinFunctions::Tquadbin_make));
 
-    /* Accessors — startValue/endValue, valueN AND getValues are GENERATED (the Tcell cell-id
-     * base value out-param fold + LIST(cell) array-return, CELL_BASEVAL). Only valueAtTimestamp
-     * stays hand: its MEOS wrapper binds strict=true, a value the catalog does not yet carry
-     * for generation (a source gap tracked in the MEOS lane); generated once it lands. */
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "valueAtTimestamp", {TQB, TS}, QB,
-        QuadbinFunctions::Tquadbin_value_at_timestamptz));
+    /* Accessors — startValue/endValue, valueN, getValues and valueAtTimestamp are generated
+     * from the catalog (meos_quadbin_accessor). */
 
     /* Quadkey conversion */
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
