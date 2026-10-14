@@ -83,3 +83,54 @@ query I
 SELECT tnpoint 'Npoint(1,0.5)@2000-01-01' && tnpoint 'Npoint(1,0.5)@2000-01-01';
 ----
 true
+
+# ---------------------------------------------------------------------------
+# Catalog-generated network-point surface (functions named for tnpoint).
+# ---------------------------------------------------------------------------
+
+query I
+SELECT startValue(tnpoint '{Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)@2000-01-02}');
+----
+NPoint(1,0.2)
+
+query I
+SELECT endValue(tnpoint '{Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)@2000-01-02}');
+----
+NPoint(1,0.8)
+
+query I
+SELECT getValue(tnpoint 'Npoint(1,0.5)@2000-01-01');
+----
+NPoint(1,0.5)
+
+query I
+SELECT route(tnpoint '[Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)@2000-01-02]');
+----
+1
+
+query I
+SELECT atValue(tnpoint '{Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)@2000-01-02}', npoint 'Npoint(1,0.8)');
+----
+{NPoint(1,0.8)@2000-01-02 00:00:00+01}
+
+query I
+SELECT minusValue(tnpoint '{Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)@2000-01-02}', npoint 'Npoint(1,0.8)');
+----
+{NPoint(1,0.2)@2000-01-01 00:00:00+01}
+
+# the linear sequence passes through position 0.5 without staying there
+query II
+SELECT eEqual(tnpoint '[Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)@2000-01-02]', npoint 'Npoint(1,0.5)'),
+  aEqual(tnpoint '[Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)@2000-01-02]', npoint 'Npoint(1,0.5)');
+----
+true	false
+
+query I
+SELECT "?="(tnpoint '[Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)@2000-01-02]', npoint 'Npoint(1,0.5)');
+----
+true
+
+query I
+SELECT tEqual(tnpoint 'Npoint(1,0.5)@2000-01-01', npoint 'Npoint(1,0.5)');
+----
+t@2000-01-01 00:00:00+01
