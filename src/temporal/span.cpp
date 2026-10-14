@@ -101,19 +101,8 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     for (const auto &span_type : SpanTypes::AllTypes()) {
         auto base_type = SpanTypeMapping::GetChildType(span_type);         
 
-        // asBinary / asHexWKB and the *FromBinary / *FromHexWKB constructors.
-        // span_as_wkb / span_from_wkb are subtype-agnostic; the format
-        // encodes the span type, so each per-type FromBinary alias routes
-        // to the same executor.
-        const std::string sp_alias = StringUtil::Lower(span_type.ToString());
-        duckdb::RegisterSerializedScalarFunction(loader,
-            ScalarFunction("asBinary", {span_type}, LogicalType::BLOB,    SpanFunctions::Span_as_binary));
-        duckdb::RegisterSerializedScalarFunction(loader,
-            ScalarFunction("asHexWKB", {span_type}, LogicalType::VARCHAR, SpanFunctions::Span_as_hexwkb));
-        duckdb::RegisterSerializedScalarFunction(loader,
-            ScalarFunction(sp_alias + "FromBinary", {LogicalType::BLOB},    span_type, SpanFunctions::Span_from_binary));
-        duckdb::RegisterSerializedScalarFunction(loader,
-            ScalarFunction(sp_alias + "FromHexWKB", {LogicalType::VARCHAR}, span_type, SpanFunctions::Span_from_hexwkb));
+        // asBinary / asHexWKB and the <span>FromText / FromBinary / FromHexWKB constructors are
+        // generated from the catalog (meos_setspan_inout).
 
         // Register span constructor functions
         duckdb::RegisterSerializedScalarFunction(loader,

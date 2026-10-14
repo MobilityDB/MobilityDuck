@@ -4166,6 +4166,10 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_setspan_accessor",
                   # the set and span conversions: span over a set, spanset over a set or a span
                   "meos_setspan_conversion",
+                  # the set and span I/O: the typed text parsers and the WKB writers and reader of
+                  # the containers the group parses (#container_from_text, #container_wkb,
+                  # #container_from_wkb)
+                  "meos_setspan_inout",
                   # The JSON value accessors: valueAtTimestamp reaches the out-parameter shape,
                   # and its SQL surface answers jsonb the way MobilityDB declares it.
                   "meos_json_accessor",
@@ -4486,6 +4490,21 @@ _CFH_SERIALIZE = {
     "SpanSet": "            if (!r) { mask.SetInvalid(idx); return string_t(); }\n"
                "            return SpanSetToBlob(result, r);\n",
 }
+def container_from_text(f):
+    """The container a retired group's public parser answers from one C string, the shape the
+    names of #CONTAINER_FROM_HEXWKB share (set_from_hexwkb, intsetFromHexWKB), derived instead
+    of named, so the typed parsers (intset_in, intsetFromText) take #emit_container_from_hexwkb
+    too: Set, Span or SpanSet; None otherwise."""
+    if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
+        return None
+    ps = f.get("params") or []
+    if len(ps) != 1 or norm(ps[0]["canonical"]) != "char *":
+        return None
+    rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
+    if rb not in CONT_BLOBTO or not rn.endswith("*") or "const" in f["returnType"]["canonical"]:
+        return None
+    return rb
+
 def emit_container_from_hexwkb(f, cont):
     fn = f["name"]
     return ("static void Gen_{fn}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
@@ -4548,6 +4567,83 @@ def emit_output_hexwkb(f, cls, blobto):
             "            }});\n"
             "    }}\n"
             "}}\n").format(fn=fn, cls=cls, blobto=blobto)
+
+def container_wkb(f):
+    """(kind, container) for a retired group's container writer, (const <C> *, uint8_t variant,
+    size_t *size) answering WKB bytes (set_as_wkb, asBinary) or hex (set_as_hexwkb, asHexWKB),
+    kind "bin" or "hex"; the container counterpart of #OUTPUT_HEXWKB. None otherwise."""
+    if not retired(f) or f.get("api") != "public":
+        return None
+    ps = [p for p in f.get("params") or [] if norm(p["canonical"]) != "size_t *"]
+    if len(ps) != 2 or base(ps[0]["canonical"]) not in CONT_BLOBTO or norm(ps[1]["canonical"]) != "uint8_t":
+        return None
+    rn = norm(f["returnType"]["canonical"])
+    kind = {"uint8_t *": "bin", "char *": "hex"}.get(rn)
+    return (kind, base(ps[0]["canonical"])) if kind else None
+
+def emit_container_wkb(f, kind, cont):
+    """The writer of #container_wkb, after #emit_output_hexwkb: one body serves the call without
+    the endian and the call with it, the endian read by wkb_variant_from_endian (the reader of
+    the variant, ENUM_READER), the bytes or the hex copied out and freed."""
+    fn = f["name"]
+    blobto = CONT_BLOBTO[cont]
+    if kind == "bin":
+        rty, give = "uint8_t", "StringVector::AddStringOrBlob(result, (const char *) w, sz)"
+    else:
+        rty, give = "char", "StringVector::AddString(result, w)"
+    body = ("                {cont} *x = {blobto}(in);\n"
+            "                size_t sz = 0;\n"
+            "                {rty} *w = {fn}(x, {variant}, &sz);\n"
+            "                free(x);\n"
+            "                if (!w) {{ mask.SetInvalid(idx); return string_t(); }}\n"
+            "                string_t out = {give};\n"
+            "                free(w);\n"
+            "                return out;\n")
+    two = body.format(cont=cont, blobto=blobto, rty=rty, fn=fn, give=give,
+                      variant="wkb_variant_from_endian(endian.GetString().c_str())")
+    one = body.format(cont=cont, blobto=blobto, rty=rty, fn=fn, give=give,
+                      variant="wkb_variant_from_endian(\"\")")
+    return ("static void Gen_{fn}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+            "    EnsureMeosThreadInitialized();\n"
+            "    if (args.ColumnCount() > 1) {{\n"
+            "        BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+            "            [&](string_t in, string_t endian, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+            "{two}"
+            "            }});\n"
+            "    }} else {{\n"
+            "        UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
+            "            [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+            "{one}"
+            "            }});\n"
+            "    }}\n"
+            "}}\n").format(fn=fn, two=two, one=one)
+
+def container_from_wkb(f):
+    """The container a retired group's reader answers from WKB bytes, (const uint8_t *, size_t)
+    (set_from_wkb, intsetFromBinary), as #container_from_text answers one from a C string;
+    None otherwise."""
+    if not retired(f) or f.get("api") != "public":
+        return None
+    ps = f.get("params") or []
+    if len(ps) != 2 or norm(ps[0]["canonical"]) != "uint8_t *" or norm(ps[1]["canonical"]) != "size_t":
+        return None
+    rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
+    if rb not in CONT_BLOBTO or not rn.endswith("*") or "const" in f["returnType"]["canonical"]:
+        return None
+    return rb
+
+def emit_container_from_wkb(f, cont):
+    """The reader of #container_from_wkb, the bytes read as #emit_container_from_hexwkb reads its
+    string, the result serialized as it serializes one."""
+    fn = f["name"]
+    return ("static void Gen_{fn}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+            "    EnsureMeosThreadInitialized();\n"
+            "    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
+            "        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+            "            {cont} *r = {fn}((const uint8_t *) in.GetData(), (size_t) in.GetSize());\n"
+            "{ser}"
+            "        }});\n"
+            "}}\n").format(fn=fn, cont=cont, ser=_CFH_SERIALIZE[cont])
 
 def shape_h3_prefilter(f):
     """The static H3 cell shapes the generic paths miss (all family=H3; the Set
@@ -4861,7 +4957,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                         f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                         f'"{reg_name(nm, f)}", {{{slots}}}, {acc}, Gen_{fn}));')
             continue
-        cont = CONTAINER_FROM_HEXWKB.get(f["name"])
+        cont = CONTAINER_FROM_HEXWKB.get(f["name"]) or container_from_text(f)
         if cont:
             # Set/Span/SpanSet FromHexWKB NAME FAMILY: one Gen_<fn> body, registered per core
             # element-type sqlName over the single VARCHAR (hex) argument. Self-contained
@@ -4877,6 +4973,47 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 specific_regs.append(
                     f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                     f'"{reg_name(nm, f)}", {{LogicalType::VARCHAR}}, {acc}, Gen_{fn}));')
+            continue
+        # the WKB writers and reader of a set, span or span set (asBinary, asHexWKB,
+        # intsetFromBinary), registered per declared signature under its own name over the core
+        # container types, as the FromHexWKB family above; a type I/O name (intset_send) is
+        # PostgreSQL's type support and is not registered
+        cw, cr = container_wkb(f), container_from_wkb(f)
+        if cw or cr:
+            STATE["grp"] = f.get("group") or "meos_ungrouped"
+            fn = f["name"]
+            bodies.append(emit_container_wkb(f, *cw) if cw else emit_container_from_wkb(f, cr))
+            wseen = set()
+            for s in f.get("sqlSignatures", []):
+                nm = s.get("sqlName") or f["sqlfn"]
+                if re.search(r'_(out|in|send|recv)$', nm):
+                    continue
+                # the containers this group parses itself (a typed <type>_in beside the writer:
+                # intset_in .. tstzspanset_in); the sets of the other families (cbufferset,
+                # poseset, ...) keep the writers and readers their own files register
+                tname = (s.get("args") or [None])[0] if cw else s.get("ret")
+                own = FN_BY_NAME.get(f"{tname}_in")
+                if not own or own.get("group") != f.get("group"):
+                    continue
+                if cw:
+                    acc = CONTAINER_FROMHEX_ACC.get((s.get("args") or [None])[0])
+                    rty = "LogicalType::BLOB" if cw[0] == "bin" else "LogicalType::VARCHAR"
+                    defs = s.get("argDefaults") or []
+                    forms = [[acc]] + ([[acc, "LogicalType::VARCHAR"]]
+                                       if len(s.get("args") or []) == 2 else [])
+                    if len(s.get("args") or []) == 2 and not (defs and defs[-1] is not None):
+                        forms = forms[1:]
+                else:
+                    acc = CONTAINER_FROMHEX_ACC.get(s.get("ret"))
+                    rty, forms = acc, [["LogicalType::BLOB"]]
+                if not acc:
+                    continue    # spatial element (geo/cbuffer/npoint/...) -> its own family file
+                for args_ in forms:
+                    reg = (f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                           f'"{reg_name(nm, f)}", {{{", ".join(args_)}}}, {rty}, Gen_{fn}));')
+                    if reg not in wseen:
+                        wseen.add(reg)
+                        specific_regs.append(reg)
             continue
         oh = OUTPUT_HEXWKB.get(f["name"])
         if oh:
@@ -6591,12 +6728,20 @@ def main():
     MACRO_VALUES.update({m["name"]: m["value"] for m in d.get("macros", []) if "value" in m})
     ENUM_MEMBERS.update({e["name"]: {v["name"] for v in e.get("values") or []}
                          for e in d.get("enums", [])})
+    # An enum is read from its name; so is a by-value C type no SQL scalar carries and one public
+    # function reads from a string, which the SQL text stands for: the WKB variant every writer
+    # takes, read from its endian by wkb_variant_from_endian. The rule is JMEOS's
+    # (_enum_parsers in tools/codegen_jvm.py).
+    _readers = defaultdict(list)
     for _f in fns:
         _ps = _f.get("params") or []
         _rt = norm(_f["returnType"]["canonical"])
         if (_f.get("api") == "public" and len(_ps) == 1 and norm(_ps[0]["canonical"]) == "char *"
-                and _rt in ENUM_MEMBERS):
-            ENUM_READER.setdefault(_rt, _f["name"])
+                and "*" not in _rt):
+            _readers[_rt].append(_f["name"])
+    for _rt, _names in _readers.items():
+        if _rt in ENUM_MEMBERS or (len(_names) == 1 and _rt not in SCALAR_ARG):
+            ENUM_READER.setdefault(_rt, _names[0])
     # A typed text or binary output names two wrappers, its type's I/O function and its asText
     # (tint_out: `#Temporal_out(), #Temporal_as_text()`), so its first wrapper's SQL name is an
     # I/O name, which supported() drops as a cast, while one of its signatures carries the SQL name
@@ -6712,7 +6857,11 @@ def main():
             # contains_bbox tags) is NEVER a deployed SQL name — the generator emits its bare
             # publicSqlName (same/~=/contains/@>/...) instead. So it cannot be dropped by a retire;
             # exclude it from the coverage check (covered-by-construction, generalizes to any group).
-            if (f.get("group") in RETIRED_GROUPS) and f.get("sqlfn") and not f.get("sqlfnBackingOnly"):
+            # A type I/O name (intset_recv, intset_send) is PostgreSQL's type support, which this
+            # surface never registers, as #supported drops it; the function's other signatures
+            # (intsetFromBinary, asBinary) are what the shapes emit.
+            if (f.get("group") in RETIRED_GROUPS) and f.get("sqlfn") and not f.get("sqlfnBackingOnly") \
+                    and not re.search(r'_(out|in|send|recv)$', f["sqlfn"]):
                 retired_sqlfns[f["group"]].add(f["sqlfn"])
         uncovered = [(g, nm) for g, nms in retired_sqlfns.items() for nm in sorted(nms)
                      if emitted.get(nm, 0) == 0 and nm not in RETIRE_UNCOVERED_OK]

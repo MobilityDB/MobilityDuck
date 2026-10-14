@@ -454,3 +454,8 @@ query III
 SELECT valueN(intset '{3, 1, 2}', 2), valueN(textset '{"x", "y"}', 2), valueN(intset '{1}', 5);
 ----
 2	y	NULL
+
+query III
+SELECT asText(intsetFromText('{1, 2}')), asHexWKB(intset '{1, 2}', 'XDR'), asText(intsetFromBinary(asBinary(intset '{3, 4}')));
+----
+{1, 2}	00001201000000020000000100000002	{3, 4}
