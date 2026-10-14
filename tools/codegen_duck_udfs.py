@@ -168,18 +168,21 @@ SQL_SCALAR_RET = {"integer": "LogicalType::INTEGER", "int": "LogicalType::INTEGE
 OUTPRIM = {"int *": "LogicalType::INTEGER", "int64_t *": "LogicalType::BIGINT",
            "uint64_t *": "LogicalType::BIGINT",
            "double *": "LogicalType::DOUBLE", "bool *": "LogicalType::BOOLEAN",
-           "TimestampTz *": "LogicalType::TIMESTAMP_TZ", "text **": "LogicalType::VARCHAR"}
+           "TimestampTz *": "LogicalType::TIMESTAMP_TZ", "DateADT *": "LogicalType::DATE",
+           "text **": "LogicalType::VARCHAR"}
 # Out-param C pointer -> (by-value local the folded MEOS call writes into, DuckDB executor cpp).
 # A uint64 cell id rides in an int64_t (bit-preserving) to match the BIGINT-backed cell type.
 OUTPARAM_LOCAL = {"int *": ("int", "int32_t"), "int64_t *": ("int64_t", "int64_t"),
                   "uint64_t *": ("uint64_t", "int64_t"), "double *": ("double", "double"),
                   "bool *": ("bool", "bool"), "TimestampTz *": ("TimestampTz", "timestamp_tz_t"),
-                  "text **": ("text *", "string_t")}
+                  "DateADT *": ("DateADT", "date_t"), "text **": ("text *", "string_t")}
 # Out-param C pointer -> the conversion its local needs on return, where a cast would not do: a
 # MEOS timestamp counts from 2000, a DuckDB one from 1970 (TakeTimestamp, as #scalar_ret4 returns
 # a by-value TimestampTz), and an owned text is copied into the result vector and freed
-# (TakeText, as #scalar_ret4 returns a text *). The others are returned by the cast.
-OUTPARAM_TAKE = {"TimestampTz *": "TakeTimestamp(%s)", "text **": "TakeText(result, %s)"}
+# (TakeText, as #scalar_ret4 returns a text *). A MEOS date counts from 2000 too (FromMeosDate, as
+# #scalar_ret4 returns a by-value DateADT). The others are returned by the cast.
+OUTPARAM_TAKE = {"TimestampTz *": "TakeTimestamp(%s)", "DateADT *": "FromMeosDate((int32_t) %s)",
+                 "text **": "TakeText(result, %s)"}
 
 # `base()` answers the sentinel for a DOUBLE pointer, so an out-param written `T **out` — the
 # shape MEOS uses to hand back an owned value beside a bool "was there one" — never resolves
@@ -2350,6 +2353,59 @@ def shape_outparam(f):
     sig = ([v[0]] if v else []) + _tail_sig(tail)
     return ("outparam", dret, kind, v, tail, sig, out)
 
+def shape_cont_outparam(f):
+    """([argument marshals], registration type, out local, executor type) for a retired group's
+    set, span or span set followed by by-value arguments, handing its value back through a
+    trailing scalar out-parameter (valueN(intset, integer), dateN(datespanset, integer)): the
+    container counterpart of #shape_outparam, the false answer SQL NULL. None otherwise."""
+    if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
+        return None
+    if supported(f) is not None:
+        return None
+    ins, out = classify(f)
+    if out is None or not ins or norm(out) not in OUTPRIM:
+        return None
+    if base(ins[0]["canonical"]) not in CONT_BLOBTO or not norm(ins[0]["canonical"]).endswith("*"):
+        return None
+    tail = [shape_arg(p) for p in ins[1:]]
+    if None in tail:
+        return None
+    dt, cloc, cpp = outprim_ret3(f, out)
+    return (tail, dt, cloc, cpp, out)
+
+def emit_cont_outparam(f, tail, cloc, cpp, out):
+    """The per-row body of #shape_cont_outparam, read as #emit_nary_scalars reads its operands,
+    the value returned as #emit_body_outparam returns an out-parameter (OUTPARAM_TAKE)."""
+    name = f["name"]; n = 1 + len(tail)
+    cb = base(classify(f)[0][0]["canonical"])
+    give = OUTPARAM_TAKE.get(norm(out), f"({cpp}) %s") % "o"
+    L = [f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{",
+         "    EnsureMeosThreadInitialized();",
+         "    const idx_t rows = args.size();",
+         f"    for (idx_t c = 0; c < {n}; c++) args.data[c].Flatten(rows);",
+         "    auto in0 = FlatVector::GetData<string_t>(args.data[0]);"]
+    for k, (_dt, c, _m) in enumerate(tail, start=1):
+        L.append(f"    auto in{k} = FlatVector::GetData<{c}>(args.data[{k}]);")
+    L += [f"    auto out = FlatVector::GetData<{cpp}>(result);",
+          "    auto &outv = FlatVector::Validity(result);",
+          "    for (idx_t i = 0; i < rows; i++) {",
+          "        bool valid = true;",
+          f"        for (idx_t c = 0; c < {n}; c++)",
+          "            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }",
+          "        if (!valid) { outv.SetInvalid(i); continue; }",
+          f"        {cb} *x0 = {CONT_BLOBTO[cb]}(in0[i]);",
+          f"        {cloc} o = ({cloc}) 0;"]
+    call = ", ".join(["x0"] + [m.replace("a2", f"in{k}[i]") for k, (_d, _c, m) in enumerate(tail, start=1)]
+                     + ["&o"])
+    L += [f"        bool ok = {name}({call});",
+          "        free(x0);",
+          "        if (!ok) { outv.SetInvalid(i); continue; }",
+          f"        out[i] = {give};",
+          "    }",
+          "    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);",
+          "}", ""]
+    return "\n".join(L)
+
 def emit_body_outparam(f, dret, kind, vary, tail, sig, out_canon):
     name = f["name"]
     L = [f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{",
@@ -2987,6 +3043,23 @@ def shape_nary_scalars(f):
     if out is not None or not ins:
         return None
     b0, n0 = base(ins[0]["canonical"]), norm(ins[0]["canonical"])
+    rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
+    # a set, span or span set followed by up to two arguments a value takes, answering a set, span
+    # or span set: shiftScale(intspan, integer, integer), shiftScale(tstzset, interval, interval),
+    # and a container of another kind, span(intspanset) -> intspan, spanN(intspanset, integer),
+    # dates(datespanset) -> dateset
+    if b0 in CONT_BLOBTO and n0.endswith("*") and len(ins) <= 3:
+        tail = [shape_arg(p) for p in ins[1:]]
+        if None in tail or rb not in CONT_BLOBTO or not rn.endswith("*") \
+                or "const" in f["returnType"]["canonical"]:
+            return None
+        # its own kind back, from nothing or one by-value scalar, is #shape_set's and
+        # #shape_span's (shift(intspan, integer)); a duration is this shape's (shift(tstzspan,
+        # interval))
+        if rb == b0 and (len(ins) == 1 or (len(ins) == 2 and base(ins[1]["canonical"]) in SCALAR_ARG
+                                           and "*" not in norm(ins[1]["canonical"]))):
+            return None
+        return ("cont:" + b0, tail, "cont:" + rb)
     if not n0.endswith("*") or b0 not in ("Temporal", "GSERIALIZED"):
         return None
     # a temporal value with fewer scalars is the unary, binary and ternary shapes'; a geometry,
@@ -2999,7 +3072,6 @@ def shape_nary_scalars(f):
         if "*" in nn or bb not in SCALAR_ARG:
             return None
         tail.append(SCALAR_ARG[bb])
-    rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
     if not rn.endswith("*") or "const" in f["returnType"]["canonical"]:
         return None
     if rb in TEMPORAL_PTR_RET:
@@ -3010,12 +3082,18 @@ def shape_nary_scalars(f):
         return None
     return ("temporal" if b0 == "Temporal" else "geo", tail, ret)
 
-def emit_nary_scalars(f, first, tail, ret):
+def emit_nary_scalars(f, first, tail, ret, dval=None):
     """The per-row body of #shape_nary_scalars: every operand flattened and read at the row, a
     temporal operand decoded by BlobToTemporal and a geometry by GeometryToGSerialized with SRID 0
-    as #emit_geo_pair_out reads one, the result marshalled as #emit_body returns it."""
-    name = f["name"]; n = 1 + len(tail)
-    L = [f"static void Gen_{name}(DataChunk &args, ExpressionState &state, Vector &result) {{",
+    as #emit_geo_pair_out reads one, the result marshalled as #emit_body returns it. With `dval`,
+    the shorter `Gen_<fn>_d` the trailing SQL default answers, that literal in the last
+    argument's place, as #emit_defaulted_ternary is the shorter body of a ternary one."""
+    name = f["name"]
+    sfx = "_d" if dval is not None else ""
+    if dval is not None:
+        tail = tail[:-1]
+    n = 1 + len(tail)
+    L = [f"static void Gen_{name}{sfx}(DataChunk &args, ExpressionState &state, Vector &result) {{",
          "    EnsureMeosThreadInitialized();",
          "    const idx_t rows = args.size();",
          f"    for (idx_t c = 0; c < {n}; c++) args.data[c].Flatten(rows);",
@@ -3031,10 +3109,20 @@ def emit_nary_scalars(f, first, tail, ret):
           "        if (!valid) { outv.SetInvalid(i); continue; }"]
     if first == "temporal":
         L.append("        Temporal *x0 = BlobToTemporal(in0[i]);")
+    elif first.startswith("cont:"):
+        cb = first.split(":", 1)[1]
+        L.append(f"        {cb} *x0 = {CONT_BLOBTO[cb]}(in0[i]);")
     else:
         L.append("        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);")
-    call = ", ".join(["x0"] + [m.replace("a2", f"in{k}[i]") for k, (_d, _c, m) in enumerate(tail, start=1)])
-    if ret == "temporal":
+    call = ", ".join(["x0"] + [m.replace("a2", f"in{k}[i]") for k, (_d, _c, m) in enumerate(tail, start=1)]
+                     + ([dval] if dval is not None else []))
+    if ret.startswith("cont:"):
+        cb = ret.split(":", 1)[1]
+        L += [f"        {cb} *r = {name}({call});",
+              "        free(x0);",
+              "        if (!r) { outv.SetInvalid(i); continue; }",
+              "        out[i] = %s;" % (PTR_RET[cb][1] % "r")]
+    elif ret == "temporal":
         L += [f"        Temporal *r = (Temporal *) {name}({call});",
               "        free(x0);",
               "        if (!r) { outv.SetInvalid(i); continue; }",
@@ -4070,6 +4158,14 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_temporal_transf", "meos_geo_base_transf", "meos_geo_transf",
                   "meos_rgeo_transf", "meos_cbuffer_transf", "meos_pose_transf",
                   "meos_posechain_transf",
+                  # the set and span transformations: shiftScale and the duration forms of shift,
+                  # scale, expand and tprecision reach #shape_nary_scalars' container arm
+                  "meos_setspan_transf",
+                  # the set and span accessors: a span set's spans and dates reach the container
+                  # arm of #shape_nary_scalars, the N-th value #shape_cont_outparam
+                  "meos_setspan_accessor",
+                  # the set and span conversions: span over a set, spanset over a set or a span
+                  "meos_setspan_conversion",
                   # The JSON value accessors: valueAtTimestamp reaches the out-parameter shape,
                   # and its SQL surface answers jsonb the way MobilityDB declares it.
                   "meos_json_accessor",
@@ -4876,6 +4972,39 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             rest = "".join(", " + t[0] for t in tail)
             if first == "geo":
                 pairs = [("MobilityDuckGeometryType()", "MobilityDuckGeometryType()")]
+            elif first.startswith("cont:"):
+                # the operand's and the return's container types per declared signature, as
+                # #container_scalar_sigs reads one (CONT_SQL_ACC), under the signature's own name
+                # (shiftScale(tstzspan, interval, interval) beside the shift and scale its
+                # siblings bind; span(intspanset) answering intspan); a trailing SQL default also
+                # registers the shorter form through Gen_<fn>_d (tprecision(tstzset, interval))
+                acc_ = CONT_SQL_ACC[first.split(":", 1)[1]]
+                racc_ = CONT_SQL_ACC[ret.split(":", 1)[1]]
+                short = "".join(", " + t[0] for t in tail[:-1])
+                dflt, seen = None, set()
+                for s in f.get("sqlSignatures") or []:
+                    if len(s.get("args") or []) != 1 + len(tail) or s["args"][0] not in acc_ \
+                            or s.get("ret") not in racc_:
+                        continue
+                    a, r = acc_[s["args"][0]], racc_[s["ret"]]
+                    nm0 = s.get("sqlName") or f["sqlfn"]
+                    defs = s.get("argDefaults") or []
+                    forms = [(rest, "")]
+                    if defs and defs[-1] is not None and not any(d is not None for d in defs[:-1]):
+                        lit = forward_literal(classify(f)[0][-1], defs[-1])
+                        if lit is not None:
+                            dflt = lit
+                            forms.append((short, "_d"))
+                    for rr, sfx in forms:
+                        for nm in reg_names(f, nm0, aliases, "{x%s}" % rr):
+                            reg = (f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                   f'"{reg_name(nm, f)}", {{{a}{rr}}}, {r}, Gen_{f["name"]}{sfx}));')
+                            if reg not in seen:
+                                seen.add(reg)
+                                specific_regs.append(reg)
+                if dflt is not None:
+                    bodies.append(emit_nary_scalars(f, first, tail, ret, dflt))
+                continue
             else:
                 _sc = reg_scope(f["name"])
                 accs_ = sig_declared_accs(f) or (_sc[1] if _sc and _sc[0] == "types" else None) or []
@@ -4889,6 +5018,26 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 for nm in reg_names(f, f["sqlfn"], aliases, "{x%s}" % rest):
                     specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {{{a}{rest}}}, {r}, Gen_{f["name"]}));')
+            continue
+        # a set, span or span set handing its value back through an out-parameter
+        # (valueN(intset, integer)), registered over the container type each signature declares
+        _cop = shape_cont_outparam(f)
+        if _cop:
+            STATE["grp"] = f.get("group") or "meos_ungrouped"
+            ctail, cdt, ccloc, ccpp, cout = _cop
+            bodies.append(emit_cont_outparam(f, ctail, ccloc, ccpp, cout)); n_bin += 1
+            cacc = CONT_SQL_ACC[base(classify(f)[0][0]["canonical"])]
+            crest = "".join(", " + t[0] for t in ctail)
+            cseen = set()
+            for s in f.get("sqlSignatures") or []:
+                if len(s.get("args") or []) != 1 + len(ctail) or s["args"][0] not in cacc:
+                    continue
+                for nm in reg_names(f, s.get("sqlName") or f["sqlfn"], aliases, "{x%s}" % crest):
+                    reg = (f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                           f'"{reg_name(nm, f)}", {{{cacc[s["args"][0]]}{crest}}}, {cdt}, Gen_{f["name"]}));')
+                    if reg not in cseen:
+                        cseen.add(reg)
+                        specific_regs.append(reg)
             continue
         # two geometries handing back a by-value result (bearing(geometry, geometry))
         _gpo = shape_geo_pair_out(f)

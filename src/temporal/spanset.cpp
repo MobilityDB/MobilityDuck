@@ -116,17 +116,9 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("spanset", {base_type}, spanset_type, SpansetFunctions::Value_to_spanset)
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("spanset", {SpansetTypeMapping::GetSetType(spanset_type)}, spanset_type, SpansetFunctions::Set_to_spanset)
-        );
+        // spanset(<set>) and spanset(<span>) are generated from the catalog
+        // (meos_setspan_conversion).
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("spanset", {child_type}, spanset_type, SpansetFunctions::Span_to_spanset)
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("span", {spanset_type}, child_type, SpansetFunctions::Spanset_to_span)
-        );
         
 
 
@@ -160,63 +152,26 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         // numSpans on spanset types is generated from the catalog
         // (meos_setspan_accessor) in generated_temporal_udfs.cpp.
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("startSpan", {spanset_type}, child_type, SpansetFunctions::Spanset_start_span)
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("endSpan", {spanset_type}, child_type, SpansetFunctions::Spanset_end_span)
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("spanN", {spanset_type, LogicalType::INTEGER}, child_type, SpansetFunctions::Spanset_span_n)
-        );
 
         if (spanset_type == SpansetTypes::intspanset() ||spanset_type == SpansetTypes::datespanset()){
 
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("shift", {spanset_type, LogicalType::INTEGER}, spanset_type, SpansetFunctions::Numspanset_shift)
-            ); 
             
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {spanset_type, LogicalType::INTEGER}, spanset_type, SpansetFunctions::Numspanset_scale)
-            );
 
-            duckdb::RegisterSerializedScalarFunction(loader,
-                ScalarFunction("shiftScale", {spanset_type, LogicalType::INTEGER, LogicalType::INTEGER}, spanset_type,
-                               SpansetFunctions::Numspanset_shift_scale));
 
         }
         else if( spanset_type == SpansetTypes::bigintspanset() ){
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("shift", {spanset_type, LogicalType::BIGINT}, spanset_type, SpansetFunctions::Numspanset_shift)
-            ); 
 
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {spanset_type, LogicalType::BIGINT}, spanset_type, SpansetFunctions::Numspanset_scale)
-            );
-            duckdb::RegisterSerializedScalarFunction(loader,
-                ScalarFunction("shiftScale", {spanset_type, LogicalType::BIGINT, LogicalType::BIGINT}, spanset_type, SpansetFunctions::Numspanset_shift_scale)
-            );    
         }
         else if( spanset_type == SpansetTypes::floatspanset() ){
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("shift", {spanset_type, LogicalType::DOUBLE}, spanset_type, SpansetFunctions::Numspanset_shift)
-            ); 
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {spanset_type, LogicalType::DOUBLE}, spanset_type, SpansetFunctions::Numspanset_scale)
-            );
-            duckdb::RegisterSerializedScalarFunction(loader,
-                ScalarFunction("shiftScale", {spanset_type, LogicalType::DOUBLE, LogicalType::DOUBLE}, spanset_type, SpansetFunctions::Numspanset_shift_scale)
-            );
 
             // floor/ceil/round/degrees/radians on floatspanset are float-base scalar
             // transforms generated from the catalog (generated_temporal_udfs.cpp), full
             // arity plus the shorter DEFAULT-arg overload via sqlSignatures argDefaults.
         }
         else if( spanset_type == SpansetTypes::tstzspanset() ){
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("shift", {spanset_type, LogicalType::INTERVAL}, spanset_type, SpansetFunctions::Tstzspanset_shift)
-            ); 
 
-            duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("scale", {spanset_type, LogicalType::INTERVAL}, spanset_type, SpansetFunctions::Tstzspanset_scale)
-            );
-            duckdb::RegisterSerializedScalarFunction(loader, 
-                ScalarFunction("shiftScale", {spanset_type, LogicalType::INTERVAL, LogicalType::INTERVAL}, spanset_type, SpansetFunctions::Tstzspanset_shift_scale)
-            );
 
         } 
         // spans(<spanset_type>) is generated from the catalog (spanset_spans) in generated_temporal_udfs.cpp.
@@ -247,24 +202,12 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // numDates / startDate / endDate on datespanset are generated from the
     // catalog (meos_setspan_accessor) in generated_temporal_udfs.cpp.
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("dateN", {SpansetTypes::datespanset(), LogicalType::INTEGER}, LogicalType::DATE, SpansetFunctions::Datespanset_date_n)
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("dates", {SpansetTypes::datespanset()}, SetTypes::dateset(), SpansetFunctions::Datespanset_dates)
-    );
 
     // numTimestamps / startTimestamp / endTimestamp on tstzspanset are generated
     // from the catalog (meos_setspan_accessor) in generated_temporal_udfs.cpp.
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("timestampN", {SpansetTypes::tstzspanset(), LogicalType::INTEGER}, LogicalType::TIMESTAMP_TZ, SpansetFunctions::Tstzspanset_timestamptz_n)
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("timestamps", {SpansetTypes::tstzspanset()}, SetTypes::tstzset(), SpansetFunctions::Tstzspanset_timestamps)
-    );
 
 }
 
