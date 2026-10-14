@@ -28,10 +28,6 @@ struct SpansetFunctions{
     static bool Tstzspanset_to_datespanset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     // other    
-    static void Spanset_as_binary(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Spanset_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Spanset_from_binary(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Spanset_from_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
 
     static void Spanset_constructor(DataChunk &args, ExpressionState &state, Vector &result);
     static void Value_to_spanset(DataChunk &args, ExpressionState &state, Vector &result);

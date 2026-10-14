@@ -142,24 +142,25 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("+", {set_type, set_type}, set_type, SetFunctions::Union_set_set)
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader,
-            ScalarFunction("asBinary", {set_type}, LogicalType::BLOB, SetFunctions::Set_as_binary)
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader,
-            ScalarFunction("asHexWKB", {set_type}, LogicalType::VARCHAR, SetFunctions::Set_as_hexwkb)
-        );
-
-        // Per-type *FromBinary / *FromHexWKB constructors (e.g.
-        // intsetFromBinary, tstzsetFromHexWKB).  set_from_wkb /
-        // set_from_hexwkb are subtype-agnostic; the format encodes the
-        // target type, so we just route every per-type alias to the same
-        // executor.
-        const std::string alias = set_type.ToString();
-        duckdb::RegisterSerializedScalarFunction(loader,
-            ScalarFunction(alias + "FromBinary", {LogicalType::BLOB},    set_type, SetFunctions::Set_from_binary));
-        duckdb::RegisterSerializedScalarFunction(loader,
-            ScalarFunction(alias + "FromHexWKB", {LogicalType::VARCHAR}, set_type, SetFunctions::Set_from_hexwkb));
+        // asBinary / asHexWKB and the <set>FromText / FromBinary / FromHexWKB constructors over
+        // the number, text and time sets are generated (meos_setspan_inout); the sets of the
+        // other families keep these registrations. set_from_wkb / set_from_hexwkb are
+        // subtype-agnostic, so every per-type alias routes to the same executor.
+        if (set_type != SetTypes::intset() && set_type != SetTypes::bigintset() &&
+            set_type != SetTypes::floatset() && set_type != SetTypes::textset() &&
+            set_type != SetTypes::dateset() && set_type != SetTypes::tstzset()) {
+            duckdb::RegisterSerializedScalarFunction(loader,
+                ScalarFunction("asBinary", {set_type}, LogicalType::BLOB, SetFunctions::Set_as_binary)
+            );
+            duckdb::RegisterSerializedScalarFunction(loader,
+                ScalarFunction("asHexWKB", {set_type}, LogicalType::VARCHAR, SetFunctions::Set_as_hexwkb)
+            );
+            const std::string alias = set_type.ToString();
+            duckdb::RegisterSerializedScalarFunction(loader,
+                ScalarFunction(alias + "FromBinary", {LogicalType::BLOB},    set_type, SetFunctions::Set_from_binary));
+            duckdb::RegisterSerializedScalarFunction(loader,
+                ScalarFunction(alias + "FromHexWKB", {LogicalType::VARCHAR}, set_type, SetFunctions::Set_from_hexwkb));
+        }
     }
 
     duckdb::RegisterSerializedScalarFunction(loader, 

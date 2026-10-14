@@ -545,3 +545,8 @@ query II
 SELECT spanset(floatspan '[1, 2]'), spanset(intset '{1, 3}');
 ----
 {[1, 2]}	{[1, 2), [3, 4)}
+
+query I
+SELECT asText(floatspansetFromBinary(asBinary(floatspanset '{[1, 2], [3, 4]}', 'XDR')));
+----
+{[1, 2], [3, 4]}
