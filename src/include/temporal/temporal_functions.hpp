@@ -94,10 +94,6 @@ struct TemporalFunctions {
     static void Tnumber_shift_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_scale_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_shift_scale_value(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_append_tinstant(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_append_tsequence(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_merge(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_merge_array(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
      * Restriction functions
      ****************************************************/
@@ -105,14 +101,6 @@ struct TemporalFunctions {
     /* ***************************************************
      * Modification Functions
      ****************************************************/
-    static void Temporal_insert(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_update(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_delete_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_delete_tstzset(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_delete_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_delete_tstzspanset(DataChunk &args, ExpressionState &state, Vector &result);
-
-
     /* ***************************************************
      * Modification Functions
     ****************************************************/

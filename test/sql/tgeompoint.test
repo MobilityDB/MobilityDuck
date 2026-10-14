@@ -784,3 +784,9 @@ query I
 SELECT (geometry 'Point(0 0)' <-> tgeompoint '[Point(3 4)@2026-01-01, Point(6 8)@2026-01-02]')::VARCHAR;
 ----
 [5@2026-01-01 00:00:00+01, 10@2026-01-02 00:00:00+01]
+
+# deleteTime over a set of timestamps
+query I
+SELECT asText(deleteTime(tgeompoint '{Point(1 1)@2020-01-01, Point(2 2)@2020-01-02}', tstzset '{2020-01-01}'));
+----
+{POINT(2 2)@2020-01-02 00:00:00+01}

@@ -253,41 +253,9 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "appendInstant",
-            {tgeompoint(), tgeompoint()},
-            tgeompoint(),
-            TemporalFunctions::Temporal_append_tinstant
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "appendSequence",
-            {tgeompoint(), tgeompoint()},
-            tgeompoint(),
-            TemporalFunctions::Temporal_append_tsequence
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "merge",
-            {tgeompoint(), tgeompoint()},
-            tgeompoint(),
-            TemporalFunctions::Temporal_merge
-        )
-     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "merge",
-            {LogicalType::LIST(tgeompoint())},
-            tgeompoint(),
-            TemporalFunctions::Temporal_merge_array
-        )
-    );
 
     /* ***************************************************
     * Accessor functions
@@ -382,111 +350,15 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Modification function
      ****************************************************/
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "insert",
-            {tgeompoint(), tgeompoint()},
-            tgeompoint(),
-            TemporalFunctions::Temporal_update
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "insert",
-            {tgeompoint(), tgeompoint(), LogicalType::BOOLEAN},
-            tgeompoint(),
-            TemporalFunctions::Temporal_update
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "update",
-            {tgeompoint(), tgeompoint()},
-            tgeompoint(),
-            TemporalFunctions::Temporal_update
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "update",
-            {tgeompoint(), tgeompoint(), LogicalType::BOOLEAN},
-            tgeompoint(),
-            TemporalFunctions::Temporal_update
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "deleteTime",
-            {tgeompoint(), LogicalType::TIMESTAMP_TZ},
-            tgeompoint(),
-            TemporalFunctions::Temporal_delete_timestamptz
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "deleteTime",
-            {tgeompoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN},
-            tgeompoint(),
-            TemporalFunctions::Temporal_delete_timestamptz
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "deleteTime",
-            {tgeompoint(), SetTypes::tstzset()},
-            tgeompoint(),
-            TemporalFunctions::Temporal_delete_tstzset
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "deleteTime",
-            {tgeompoint(), SetTypes::tstzset(), LogicalType::BOOLEAN},
-            tgeompoint(),
-            TemporalFunctions::Temporal_delete_tstzset
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "deleteTime",
-            {tgeompoint(), SpanTypes::tstzspan()},
-            tgeompoint(),
-            TemporalFunctions::Temporal_delete_tstzspan
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "deleteTime",
-            {tgeompoint(), SpanTypes::tstzspan(), LogicalType::BOOLEAN},
-            tgeompoint(),
-            TemporalFunctions::Temporal_delete_tstzspan
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "deleteTime",
-            {tgeompoint(), SpansetTypes::tstzspanset()},
-            tgeompoint(),
-            TemporalFunctions::Temporal_delete_tstzspanset
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "deleteTime",
-            {tgeompoint(), SpansetTypes::tstzspanset(), LogicalType::BOOLEAN},
-            tgeompoint(),
-            TemporalFunctions::Temporal_delete_tstzspanset
-        )
-    );
 
 
     /* ***************************************************

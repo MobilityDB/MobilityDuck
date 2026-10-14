@@ -588,59 +588,6 @@ static void Temporal_set_interp(DataChunk &args, ExpressionState &state, Vector 
 }
 
 
-static void Temporal_merge(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &tgeom1_vec = args.data[0];
-    auto &tgeom2_vec = args.data[1];
-
-    tgeom1_vec.Flatten(count);
-    tgeom2_vec.Flatten(count);
-
-    BinaryExecutor::Execute<string_t, string_t, string_t>(
-        tgeom1_vec, tgeom2_vec, result, count,
-        [&](string_t tgeom1_str_t, string_t tgeom2_str_t) -> string_t {
-            std::string tgeom1 = tgeom1_str_t.GetString();
-
-            Temporal *temp1 = reinterpret_cast<Temporal*>(const_cast<char*>(tgeom1.c_str()));
-            if (!temp1) {
-                throw InvalidInputException("Invalid tpcpatch data: null pointer");
-            }
-
-            std::string tgeom2 = tgeom2_str_t.GetString();
-
-            Temporal *temp2 = reinterpret_cast<Temporal*>(const_cast<char*>(tgeom2.c_str()));
-            if (!temp2) {
-                throw InvalidInputException("Invalid tpcpatch data: null pointer");
-            }
-
-            Temporal *result_temp = temporal_merge(temp1, temp2);
-            if (!result_temp) {
-                throw InvalidInputException("Failed to merge temporal pgpointcloud points");
-            }
-
-            // Serialize result back to binary
-            size_t result_size = temporal_mem_size(result_temp);
-            uint8_t *result_buffer = (uint8_t*)malloc(result_size);
-            if (!result_buffer) {
-                free(result_temp);
-                throw InvalidInputException("Failed to allocate memory for result");
-            }
-
-            memcpy(result_buffer, result_temp, result_size);
-            string_t result_string_t(reinterpret_cast<const char*>(result_buffer), result_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, result_string_t);
-
-            free(result_buffer);
-            free(result_temp);
-
-            return stored_data;
-        });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
 
 /*
  * Accessor Functions
@@ -880,13 +827,6 @@ void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,  setInterp_function);
 
 
-    auto merge_function = ScalarFunction(
-        "merge",
-        {TPcpatchTypes::tpcpatch(), TPcpatchTypes::tpcpatch()},
-        TPcpatchTypes::tpcpatch(),
-        Temporal_merge
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  merge_function);
 
 
 
@@ -941,48 +881,6 @@ void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction(
         "shiftScaleTime", {TGEOM, IVAL, IVAL}, TGEOM,
         TemporalFunctions::Temporal_shift_scale_time));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "appendInstant", {TGEOM, TGEOM}, TGEOM,
-        TemporalFunctions::Temporal_append_tinstant));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "appendSequence", {TGEOM, TGEOM}, TGEOM,
-        TemporalFunctions::Temporal_append_tsequence));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "insert", {TGEOM, TGEOM}, TGEOM,
-        TemporalFunctions::Temporal_insert));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "insert", {TGEOM, TGEOM, LogicalType::BOOLEAN}, TGEOM,
-        TemporalFunctions::Temporal_insert));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "update", {TGEOM, TGEOM}, TGEOM,
-        TemporalFunctions::Temporal_update));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "update", {TGEOM, TGEOM, LogicalType::BOOLEAN}, TGEOM,
-        TemporalFunctions::Temporal_update));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "deleteTime", {TGEOM, TSTZ}, TGEOM,
-        TemporalFunctions::Temporal_delete_timestamptz));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "deleteTime", {TGEOM, TSTZ, LogicalType::BOOLEAN}, TGEOM,
-        TemporalFunctions::Temporal_delete_timestamptz));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "deleteTime", {TGEOM, SetTypes::tstzset()}, TGEOM,
-        TemporalFunctions::Temporal_delete_tstzset));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "deleteTime", {TGEOM, SetTypes::tstzset(), LogicalType::BOOLEAN}, TGEOM,
-        TemporalFunctions::Temporal_delete_tstzset));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "deleteTime", {TGEOM, SpanTypes::tstzspan()}, TGEOM,
-        TemporalFunctions::Temporal_delete_tstzspan));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "deleteTime", {TGEOM, SpanTypes::tstzspan(), LogicalType::BOOLEAN}, TGEOM,
-        TemporalFunctions::Temporal_delete_tstzspan));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "deleteTime", {TGEOM, SpansetTypes::tstzspanset()}, TGEOM,
-        TemporalFunctions::Temporal_delete_tstzspanset));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "deleteTime", {TGEOM, SpansetTypes::tstzspanset(), LogicalType::BOOLEAN}, TGEOM,
-        TemporalFunctions::Temporal_delete_tstzspanset));
 
     // ---- Comparison (named functions + operators) ----
     struct CmpEntry {

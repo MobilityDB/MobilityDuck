@@ -270,3 +270,18 @@ query I
 SELECT tfloatFromHexWKB(asHexWKB(tfloat '[1.5@2000-01-01, 2.5@2000-01-02]')) = tfloat '[1.5@2000-01-01, 2.5@2000-01-02]';
 ----
 true
+
+# appendInstant without an interpolation takes the one of the type, linear for a tfloat: an
+# instant on the line of its neighbours is dropped; the text names an interpolation
+query III
+SELECT interp(appendInstant(tfloat '[1@2020-01-01, 2@2020-01-02]', tfloat '5@2020-01-03')),
+       numInstants(appendInstant(tfloat '[1@2020-01-01, 2@2020-01-02]', tfloat '3@2020-01-03')),
+       asText(appendInstant(tfloat '1@2020-01-01', tfloat '2@2020-01-02', 'discrete'));
+----
+Linear	2	{1@2020-01-01 00:00:00+01, 2@2020-01-02 00:00:00+01}
+
+# insert without connect connects the sequences, its default
+query I
+SELECT asText(insert(tfloat '[1@2020-01-01, 2@2020-01-03]', tfloat '[5@2020-01-05, 6@2020-01-06]'));
+----
+[1@2020-01-01 00:00:00+01, 2@2020-01-03 00:00:00+01, 5@2020-01-05 00:00:00+01, 6@2020-01-06 00:00:00+01]
