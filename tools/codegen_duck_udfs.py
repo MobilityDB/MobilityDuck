@@ -15,7 +15,7 @@ polymorphism expansion are the documented next increments.
 Usage: python3 tools/codegen_duck_udfs.py <path-to-meos-idl.json> [out.cpp]
 """
 import collections
-import json, sys, re, os
+import json, sys, re, os, zlib
 from collections import defaultdict, Counter
 
 # Transparent MEOS typedefs the catalog leaves unresolved: a family names its own alias for
@@ -4292,7 +4292,7 @@ STATE = {"grp": "meos_ungrouped"}
 # How many translation units the UDF surface is emitted as. Fixed rather than derived so the
 # file list in CMakeLists.txt is stable across regenerations; raising it costs nothing but a
 # CMake line, and past the core count of the build machine it buys nothing.
-GENERATED_CHUNKS = 8
+GENERATED_CHUNKS = 16
 # The whole emitted surface, for the post-generation invariants -- which read what was WRITTEN
 # rather than what was intended, and so have to see every unit.
 GENERATED_TEXT = []
@@ -6368,14 +6368,14 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         if body_by_grp.get(g):
             text += "\n// ===== @ingroup %s =====\n" % g + "\n".join(body_by_grp[g]) + "\n"
         units.append((g, text, grp_fn.get(g, ""), grp_call.get(g)))
-    # Greedy longest-first packing, which keeps the largest group off the critical path and is a
-    # pure function of the catalog, so the same catalog writes the same files.
+    # A group's unit is a hash of its name alone, so a change to one group rewrites only the
+    # unit that group lands in and every other unit keeps its bytes: the compiler cache then
+    # serves them, where a packing by size moves groups between units whenever one grows and
+    # rewrites them all. Sixteen units hold the largest one near the size of the units a packing
+    # by size gives eight.
     bins = [[] for _ in range(GENERATED_CHUNKS)]
-    sizes = [0] * GENERATED_CHUNKS
-    for u in sorted(units, key=lambda u: -(len(u[1]) + len(u[2]))):
-        k = sizes.index(min(sizes))
-        bins[k].append(u)
-        sizes[k] += len(u[1]) + len(u[2])
+    for u in units:
+        bins[zlib.crc32(u[0].encode()) % GENERATED_CHUNKS].append(u)
 
     written, chunk_texts = [], []
     for k, unit_list in enumerate(bins):
