@@ -42,7 +42,6 @@ struct QuadbinFunctions {
     static void Tquadbin_make(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* Accessors (startValue/endValue/valueN/getValues are generated — see src/generated) */
-    static void Tquadbin_value_at_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* Quadkey conversion */
     static void Tquadbin_cell_to_quadkey(DataChunk &args, ExpressionState &state, Vector &result);
