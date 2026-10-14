@@ -121,3 +121,8 @@ SELECT numInstants(atValues(h, getValues(h))),
        minusValues(h, getValues(h)) IS NULL FROM t;
 ----
 2	1	true
+
+query II
+SELECT asText(value), time FROM temporalUnnest(th3index '{8528f003fffffff@2001-01-01, 8528f003fffffff@2001-01-02}');
+----
+8528f003fffffff	{[2001-01-01 00:00:00+01, 2001-01-01 00:00:00+01], [2001-01-02 00:00:00+01, 2001-01-02 00:00:00+01]}

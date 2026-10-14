@@ -818,13 +818,6 @@ void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpatch_to_tinstant_function);
 
 
-    auto setInterp_function = ScalarFunction(
-        "setInterp",
-        {TPcpatchTypes::tpcpatch(), LogicalType::VARCHAR},
-        TPcpatchTypes::tpcpatch(),
-        Temporal_set_interp
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  setInterp_function);
 
 
 
@@ -872,12 +865,6 @@ void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         Tinstant_value));
     // ---- Modifiers (shift / scale / shiftScale / append / insert / update /
     // delete) ----
-    RegisterMeosFunction(loader, ScalarFunction(
-        "shiftTime", {TGEOM, IVAL}, TGEOM,
-        TemporalFunctions::Temporal_shift_time));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "scaleTime", {TGEOM, IVAL}, TGEOM,
-        TemporalFunctions::Temporal_scale_time));
     RegisterMeosFunction(loader, ScalarFunction(
         "shiftScaleTime", {TGEOM, IVAL, IVAL}, TGEOM,
         TemporalFunctions::Temporal_shift_scale_time));

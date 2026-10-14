@@ -1863,7 +1863,12 @@ def shape_binary(f):
     # a duration, as #shape_arg passes it; gated on retired(f) as #shape_outparam is, so the
     # generated form appears where the hand registration of the same signature is deleted
     is_dur2 = (b2 == "Interval" and n2.count("*") == 1 and retired(f))
-    if not is_text2 and not is_baseptr2 and not is_dur2 and (b2 not in SCALAR_ARG or "*" in n2):
+    # an enum read from its name (setInterp's interpType) and a C string (trgeometrySeq's
+    # interpolation), as #shape_arg marshals them, likewise gated on retired(f)
+    is_named2 = retired(f) and ((b2 in ENUM_READER and "*" not in n2)
+                                or (b2 == "char" and n2.count("*") == 1))
+    if not is_text2 and not is_baseptr2 and not is_dur2 and not is_named2 and \
+            (b2 not in SCALAR_ARG or "*" in n2):
         return None
     sc = reg_scope(f["name"])
     if sc is None: return None
@@ -2741,6 +2746,9 @@ ARRAY_ELEM = {
                     "cd[off + j] = TemporalToBlob(child_vector, (Temporal *) arr[j]);"),
     "TSequence *": ("LogicalType::BLOB", "string_t",
                     "cd[off + j] = TemporalToBlob(child_vector, (Temporal *) arr[j]);"),
+    # and the temporal values makeSimple hands back, its pieces of any subtype
+    "Temporal *":  ("LogicalType::BLOB", "string_t",
+                    "cd[off + j] = TemporalToBlob(child_vector, arr[j]);"),
 }
 # container-input family (base of the single non-count param) -> (C container type, Blob->container fn)
 ARRAY_IN = {
@@ -2854,6 +2862,193 @@ f"            Temporal *r = {name}((Temporal **) a, n);\n"
 f"            FreeTemporalArr(a, n);\n"
 f"            return TemporalToBlobN(result, r, mask, idx);\n"
 f"        }});\n}}\n")
+
+def shape_unnest(f):
+    """(engine name, [temporal accessors], value DuckDB type, value writer, C element) for a
+    function the catalog declares set-returning under the name the other engines take
+    (`altSqlName`, the `@altsqlfn temporalUnnest` of Temporal_unnest):
+    `SpanSet **<t>_unnest(const Temporal *, <v> **values, int *count)`, one row per distinct value
+    with its time. The writer stores `values[k]` into the value column the way the scalar, text,
+    geometry and base-value returns store theirs (TakeText, GSerializedToGeometry,
+    <Base>ToBlob); a cell id as the cellscalar return writes it into its BIGINT-backed cell type.
+    None otherwise."""
+    if f.get("api") != "public":
+        return None
+    sigs = [s for s in f.get("sqlSignatures") or [] if s.get("retSet") and s.get("altSqlName")]
+    ps = f.get("params") or []
+    if not sigs or len(ps) != 3 or norm(f["returnType"]["canonical"]) != "SpanSet **":
+        return None
+    if base(ps[0]["canonical"]) != "Temporal" or norm(ps[2]["canonical"]) != "int *":
+        return None
+    names = {s["altSqlName"] for s in sigs}
+    if len(names) != 1:
+        return None
+    vt = re.sub(r"^struct\s+", "", norm(ps[1]["canonical"]))
+    if not vt.endswith("**"):
+        return None
+    elem = vt[:-1].strip()                        # what values points to: int *, text **, ...
+    eb = elem.rstrip(" *")                        # base() reads a `T **` as internal
+    accs = [SIG_TEMPORAL_ACC[s["args"][0]] for s in sigs if s["args"][0] in SIG_TEMPORAL_ACC]
+    if not accs:
+        return None
+    byval = {"int *": ("int32_t", "LogicalType::INTEGER"), "int64_t *": ("int64_t", "LogicalType::BIGINT"),
+             "double *": ("double", "LogicalType::DOUBLE"), "bool *": ("bool", "LogicalType::BOOLEAN")}
+    if elem == "uint64_t *":
+        if len(accs) != 1 or accs[0] not in CELL_BASEVAL:
+            return None
+        byval[elem] = ("int64_t", CELL_BASEVAL[accs[0]])
+    if elem in byval:
+        cpp, dt = byval[elem]
+        write = f"FlatVector::GetData<{cpp}>(v0)[i] = ({cpp}) x;"
+    elif elem == "text **":
+        dt, write = "LogicalType::VARCHAR", "FlatVector::GetData<string_t>(v0)[i] = TakeText(v0, x);"
+    elif eb == "GSERIALIZED" and elem.endswith("**"):
+        dt = "MobilityDuckGeometryType()"
+        write = "FlatVector::GetData<string_t>(v0)[i] = GSerializedToGeometry(x, arena, v0); free(x);"
+    elif eb in PTR_RET and elem.endswith("**"):
+        dt = PTR_RET[eb][0]
+        write = "FlatVector::GetData<string_t>(v0)[i] = %s;" % (PTR_RET[eb][1].replace("result", "v0") % "x")
+    else:
+        return None
+    return (next(iter(names)), accs, dt, write, elem[:-1].strip())
+
+def emit_unnest(f, dt, write, ctype):
+    """The bind, init and exec of #shape_unnest's table function, after #emit_path_table: the
+    bind keeps the operand, init makes the one MEOS call, exec hands the rows out a vector at a
+    time, freeing each value and time as it writes them; the state frees what was never read."""
+    n = f["name"]
+    S = f"Unnest_{n}"
+    geo = "GSerializedToGeometry" in write
+    lines = [
+        f"struct {S}Bind : public TableFunctionData {{ std::string blob; }};",
+        f"struct {S}State : public GlobalTableFunctionState {{",
+        f"    {ctype} *values = nullptr; SpanSet **times = nullptr; int count = 0; idx_t idx = 0;",
+        f"    ~{S}State() {{",
+        "        for (idx_t k = idx; k < (idx_t) count; k++) {",
+    ]
+    if ctype.endswith("*"):
+        lines.append("            free(values[k]);")
+    lines += [
+        "            free(times[k]);",
+        "        }",
+        "        free(values); free(times);",
+        "    }",
+        "};",
+        f"static unique_ptr<FunctionData> {S}BindFn(ClientContext &, TableFunctionBindInput &input,",
+        "                                          vector<LogicalType> &types, vector<string> &names) {",
+        "    if (input.inputs.size() != 1 || input.inputs[0].IsNull())",
+        "        throw BinderException(\"temporalUnnest: expects a non-null temporal value\");",
+        f"    auto b = make_uniq<{S}Bind>();",
+        "    b->blob = StringValue::Get(input.inputs[0]);",
+        f"    types = {{{dt}, SpansetTypes::tstzspanset()}};",
+        "    names = {\"value\", \"time\"};",
+        "    return std::move(b);",
+        "}",
+        f"static unique_ptr<GlobalTableFunctionState> {S}InitFn(ClientContext &, TableFunctionInitInput &input) {{",
+        "    EnsureMeosThreadInitialized();",
+        f"    auto &b = input.bind_data->Cast<{S}Bind>();",
+        f"    auto st = make_uniq<{S}State>();",
+        "    Temporal *t = BlobToTemporal(string_t(b.blob.data(), (uint32_t) b.blob.size()));",
+        f"    st->times = {n}(t, &st->values, &st->count);",
+        "    free(t);",
+        "    if (!st->times) st->count = 0;",
+        "    return std::move(st);",
+        "}",
+        f"static void {S}ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {{",
+        f"    auto &st = input.global_state->Cast<{S}State>();",
+        "    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);",
+        "    auto &v0 = output.data[0]; auto &v1 = output.data[1];",
+    ]
+    if geo:
+        lines.append("    ArenaAllocator arena(Allocator::DefaultAllocator());")
+    lines += [
+        "    for (idx_t i = 0; i < rows; i++, st.idx++) {",
+        f"        {ctype} x = st.values[st.idx];",
+        f"        {write}",
+        "        SpanSet *ss = st.times[st.idx];",
+        "        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) ss, spanset_mem_size(ss));",
+        "        free(ss);",
+        "    }",
+        "    output.SetCardinality(rows);",
+        "}",
+        "",
+    ]
+    return "\n".join(lines)
+
+def shape_nary_scalars(f):
+    """(first operand kind, [scalar marshals], return kind) for a retired group's function whose
+    first operand is a temporal value or a geometry, followed by three or more by-value scalars,
+    answering a temporal value or a geometry (rotate(tgeompoint, float, float, float), affine over
+    twelve), past the three operands DuckDB's executors take; None otherwise. The shape reads every
+    operand per row, as the hand Tgeo_affine_12 executor does, and answers NULL for any NULL one."""
+    if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
+        return None
+    ins, out = classify(f)
+    if out is not None or not ins:
+        return None
+    b0, n0 = base(ins[0]["canonical"]), norm(ins[0]["canonical"])
+    if not n0.endswith("*") or b0 not in ("Temporal", "GSERIALIZED"):
+        return None
+    # a temporal value with fewer scalars is the unary, binary and ternary shapes'; a geometry,
+    # which no other shape takes first, is this one's whatever its scalars (reverse(geometry))
+    if b0 == "Temporal" and len(ins) < 4:
+        return None
+    tail = []
+    for p in ins[1:]:
+        bb, nn = base(p["canonical"]), norm(p["canonical"])
+        if "*" in nn or bb not in SCALAR_ARG:
+            return None
+        tail.append(SCALAR_ARG[bb])
+    rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
+    if not rn.endswith("*") or "const" in f["returnType"]["canonical"]:
+        return None
+    if rb in TEMPORAL_PTR_RET:
+        ret = "temporal"
+    elif rb == "GSERIALIZED":
+        ret = "geo"
+    else:
+        return None
+    return ("temporal" if b0 == "Temporal" else "geo", tail, ret)
+
+def emit_nary_scalars(f, first, tail, ret):
+    """The per-row body of #shape_nary_scalars: every operand flattened and read at the row, a
+    temporal operand decoded by BlobToTemporal and a geometry by GeometryToGSerialized with SRID 0
+    as #emit_geo_pair_out reads one, the result marshalled as #emit_body returns it."""
+    name = f["name"]; n = 1 + len(tail)
+    L = [f"static void Gen_{name}(DataChunk &args, ExpressionState &state, Vector &result) {{",
+         "    EnsureMeosThreadInitialized();",
+         "    const idx_t rows = args.size();",
+         f"    for (idx_t c = 0; c < {n}; c++) args.data[c].Flatten(rows);",
+         "    auto in0 = FlatVector::GetData<string_t>(args.data[0]);"]
+    for k, (_dt, cpp, _m) in enumerate(tail, start=1):
+        L.append(f"    auto in{k} = FlatVector::GetData<{cpp}>(args.data[{k}]);")
+    L += ["    auto out = FlatVector::GetData<string_t>(result);",
+          "    auto &outv = FlatVector::Validity(result);",
+          "    for (idx_t i = 0; i < rows; i++) {",
+          "        bool valid = true;",
+          f"        for (idx_t c = 0; c < {n}; c++)",
+          "            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }",
+          "        if (!valid) { outv.SetInvalid(i); continue; }"]
+    if first == "temporal":
+        L.append("        Temporal *x0 = BlobToTemporal(in0[i]);")
+    else:
+        L.append("        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);")
+    call = ", ".join(["x0"] + [m.replace("a2", f"in{k}[i]") for k, (_d, _c, m) in enumerate(tail, start=1)])
+    if ret == "temporal":
+        L += [f"        Temporal *r = (Temporal *) {name}({call});",
+              "        free(x0);",
+              "        if (!r) { outv.SetInvalid(i); continue; }",
+              "        out[i] = TemporalToBlob(result, r);"]
+    else:
+        L += [f"        GSERIALIZED *r = {name}({call});",
+              "        free(x0);",
+              "        if (!r) { outv.SetInvalid(i); continue; }",
+              "        out[i] = GSerializedToGeometry(r, state, result);",
+              "        free(r);"]
+    L += ["    }",
+          "    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);",
+          "}", ""]
+    return "\n".join(L)
 
 def shape_geo_pair_out(f):
     """(DuckDB return, C local) for a retired group's (const GSERIALIZED *, const GSERIALIZED *,
@@ -3869,6 +4064,12 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_geo_accessor",
                   "meos_geo_dist", "meos_pose_dist", "meos_npoint_dist", "meos_cbuffer_dist",
                   "meos_temporal_dist",
+                  # The transformations of the temporal values and their families: rotate,
+                  # transscale and affine reach #shape_nary_scalars, setInterp its enum read from
+                  # its name, makeSimple the array return of temporal values.
+                  "meos_temporal_transf", "meos_geo_base_transf", "meos_geo_transf",
+                  "meos_rgeo_transf", "meos_cbuffer_transf", "meos_pose_transf",
+                  "meos_posechain_transf",
                   # The JSON value accessors: valueAtTimestamp reaches the out-parameter shape,
                   # and its SQL surface answers jsonb the way MobilityDB declares it.
                   "meos_json_accessor",
@@ -3929,7 +4130,9 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # are now GENERATED as scalar LIST(STRUCT) UDFs via shape_tgeoarr/emit_pairs_scalar (the 'pairs'
 # form), over exactly the catalog sqlSignature geo types, so they are covered by construction —
 # no longer listed here. Empty: every @sqlfn of a retired group is generated.
-RETIRE_UNCOVERED_OK = set()
+# unnest: DuckDB's own unnest cannot be overloaded, so the temporal unnest registers under the
+# name the catalog gives the other engines, temporalUnnest (#shape_unnest).
+RETIRE_UNCOVERED_OK = {"unnest"}
 def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
 TEMPORAL_CBASES = {"Temporal", "TInstant", "TSequence", "TSequenceSet"}
@@ -4650,6 +4853,42 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {{LogicalType::LIST({a_})}}, {a_}, '
                                          f'Gen_{f["name"]}));')
+            continue
+        # a set-returning function the other engines call by its `altSqlName` (temporalUnnest):
+        # a table function over the types its signatures declare, as the path tables are
+        _un = shape_unnest(f)
+        if _un:
+            STATE["grp"] = f.get("group") or "meos_ungrouped"
+            un_name, un_accs, un_dt, un_write, un_ctype = _un
+            bodies.append(emit_unnest(f, un_dt, un_write, un_ctype))
+            S_ = f"Unnest_{f['name']}"
+            for a in un_accs:
+                specific_regs.append(f'    loader.RegisterFunction(TableFunction("{un_name}", {{{a}}}, '
+                                     f'{S_}ExecFn, {S_}BindFn, {S_}InitFn));')
+            continue
+        # a temporal value or a geometry followed by three or more scalars (rotate, affine),
+        # registered over the types its signatures declare, as the restriction groups' are
+        _nary = shape_nary_scalars(f)
+        if _nary:
+            STATE["grp"] = f.get("group") or "meos_ungrouped"
+            first, tail, ret = _nary
+            bodies.append(emit_nary_scalars(f, first, tail, ret)); n_ter += 1
+            rest = "".join(", " + t[0] for t in tail)
+            if first == "geo":
+                pairs = [("MobilityDuckGeometryType()", "MobilityDuckGeometryType()")]
+            else:
+                _sc = reg_scope(f["name"])
+                accs_ = sig_declared_accs(f) or (_sc[1] if _sc and _sc[0] == "types" else None) or []
+                pairs = []
+                for a in accs_:
+                    r = ("MobilityDuckGeometryType()" if ret == "geo" else
+                         (sig_declared_ret(f, a, 1 + len(tail))
+                          or ret_temporal_type(f["name"], a, f.get("group"), f.get("sqlReturnType"))))
+                    pairs.append((a, r))
+            for a, r in pairs:
+                for nm in reg_names(f, f["sqlfn"], aliases, "{x%s}" % rest):
+                    specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                         f'"{reg_name(nm, f)}", {{{a}{rest}}}, {r}, Gen_{f["name"]}));')
             continue
         # two geometries handing back a by-value result (bearing(geometry, geometry))
         _gpo = shape_geo_pair_out(f)

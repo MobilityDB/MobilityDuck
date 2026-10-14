@@ -746,13 +746,6 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, tgeography_to_tinstant_function);
 
 
-    auto setInterp_function = ScalarFunction(
-        "setInterp",
-        {TGeographyTypes::tgeography(), LogicalType::VARCHAR},
-        TGeographyTypes::tgeography(),
-        Temporal_set_interp
-    );
-    RegisterMeosFunction(loader, setInterp_function);
 
 
 
@@ -783,12 +776,6 @@ void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // timestamps(tgeography) is generated from the catalog (temporal_timestamps) in generated_temporal_udfs.cpp.
     // ---- Modifiers (shift / scale / shiftScale / append / insert / update /
     // delete / round) ----
-    RegisterMeosFunction(loader, ScalarFunction(
-        "shiftTime", {TGEOM, IVAL}, TGEOM,
-        TemporalFunctions::Temporal_shift_time));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "scaleTime", {TGEOM, IVAL}, TGEOM,
-        TemporalFunctions::Temporal_scale_time));
     RegisterMeosFunction(loader, ScalarFunction(
         "shiftScaleTime", {TGEOM, IVAL, IVAL}, TGEOM,
         TemporalFunctions::Temporal_shift_scale_time));

@@ -221,14 +221,6 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
 
 
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "setInterp",
-            {tgeogpoint(), LogicalType::VARCHAR},
-            tgeogpoint(),
-            TemporalFunctions::Temporal_set_interp
-        )
-    );
 
 
 
@@ -246,23 +238,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Shift and Scale functions
      ****************************************************/
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "shiftTime",
-            {tgeogpoint(), LogicalType::INTERVAL},
-            tgeogpoint(),
-            TemporalFunctions::Temporal_shift_time
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "scaleTime",
-            {tgeogpoint(), LogicalType::INTERVAL},
-            tgeogpoint(),
-            TemporalFunctions::Temporal_scale_time
-        )
-    );
 
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
@@ -1427,13 +1403,6 @@ void TGeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, tgeogpoint_to_tinstant_function);
 
 
-    auto setInterp_function = ScalarFunction(
-        "setInterp",
-        {TGeogpointType::tgeogpoint(), LogicalType::VARCHAR},
-        TGeogpointType::tgeogpoint(),
-        Temporal_set_interp
-    );
-    RegisterMeosFunction(loader, setInterp_function);
 
 
 
@@ -1459,12 +1428,6 @@ void TGeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     // timestamps(tgeogpoint) is generated from the catalog (temporal_timestamps) in generated_temporal_udfs.cpp.
     // ---- Modifiers (shift / scale / shiftScale / append / insert / update /
     // delete / round) ----
-    RegisterMeosFunction(loader, ScalarFunction(
-        "shiftTime", {TGEOM, IVAL}, TGEOM,
-        TemporalFunctions::Temporal_shift_time));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "scaleTime", {TGEOM, IVAL}, TGEOM,
-        TemporalFunctions::Temporal_scale_time));
     RegisterMeosFunction(loader, ScalarFunction(
         "shiftScaleTime", {TGEOM, IVAL, IVAL}, TGEOM,
         TemporalFunctions::Temporal_shift_scale_time));

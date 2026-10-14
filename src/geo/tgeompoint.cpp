@@ -244,14 +244,6 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
 
 
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "setInterp",
-            {tgeompoint(), LogicalType::VARCHAR},
-            tgeompoint(),
-            TemporalFunctions::Temporal_set_interp
-        )
-    );
 
 
 
@@ -268,23 +260,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Shift and Scale functions
      ****************************************************/
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "shiftTime",
-            {tgeompoint(), LogicalType::INTERVAL},
-            tgeompoint(),
-            TemporalFunctions::Temporal_shift_time
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "scaleTime",
-            {tgeompoint(), LogicalType::INTERVAL},
-            tgeompoint(),
-            TemporalFunctions::Temporal_scale_time
-        )
-    );
 
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
@@ -453,15 +429,6 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
 
 
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "makeSimple",
-            {tgeompoint()},
-            LogicalType::LIST(tgeompoint()),
-            TgeompointFunctions::Tpoint_make_simple
-        )
-    );
-
 
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
@@ -595,35 +562,19 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nad", {TG, TG}, D, TgeompointFunctions::Nad_tgeo_tgeo));
 
         /* affine (12-arg and 6-arg) */
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("affine",
-            {TG, D, D, D, D, D, D, D, D, D, D, D, D}, TG,
-            TgeompointFunctions::Tgeo_affine_12));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("affine",
-            {TG, D, D, D, D, D, D}, TG,
-            TgeompointFunctions::Tgeo_affine_6));
 
         /* translate */
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("translate", {TG, D, D, D}, TG, TgeompointFunctions::Tgeo_translate_3d));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("translate", {TG, D, D},    TG, TgeompointFunctions::Tgeo_translate_2d));
 
         /* rotate */
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("rotate", {TG, D},       TG, TgeompointFunctions::Tgeo_rotate_angle));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("rotate", {TG, D, D, D}, TG, TgeompointFunctions::Tgeo_rotate_angle_cx_cy));
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("rotate", {TG, D, G},    TG, TgeompointFunctions::Tgeo_rotate_geom));
 
         /* rotateZ / rotateX / rotateY */
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("rotateZ", {TG, D}, TG, TgeompointFunctions::Tgeo_rotate_angle));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("rotateX", {TG, D}, TG, TgeompointFunctions::Tgeo_rotateX));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("rotateY", {TG, D}, TG, TgeompointFunctions::Tgeo_rotateY));
 
         /* transscale */
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("transscale", {TG, D, D, D, D}, TG, TgeompointFunctions::Tgeo_transscale));
 
         /* scale */
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("scale", {TG, G},    TG, TgeompointFunctions::Tgeo_scale_geom));
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("scale", {TG, G, G}, TG, TgeompointFunctions::Tgeo_scale_geom_origin));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("scale", {TG, D, D},    TG, TgeompointFunctions::Tgeo_scale_xy));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("scale", {TG, D, D, D}, TG, TgeompointFunctions::Tgeo_scale_xyz));
     }
 }
 

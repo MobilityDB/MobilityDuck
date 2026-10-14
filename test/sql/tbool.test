@@ -198,3 +198,9 @@ query I
 SELECT tboolFromHexWKB(asHexWKB(tbool 't@2000-01-01')) = tbool 't@2000-01-01';
 ----
 true
+
+query II
+SELECT * FROM temporalUnnest(tbool '[true@2001-01-01, false@2001-01-02]') ORDER BY value;
+----
+false	{[2001-01-02 00:00:00+01, 2001-01-02 00:00:00+01]}
+true	{[2001-01-01 00:00:00+01, 2001-01-02 00:00:00+01)}
