@@ -334,3 +334,8 @@ query I
 SELECT tprecision(tstzspan '[2001-01-01 08:07:00+01, 2001-01-01 08:22:00+01]', interval '1 hour', timestamptz '2001-01-01 00:30:00+01');
 ----
 [2001-01-01 07:30:00+01, 2001-01-01 08:30:00+01)
+
+query I
+SELECT span(intset '{3, 1, 7}');
+----
+[1, 8)

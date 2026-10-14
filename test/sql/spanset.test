@@ -540,3 +540,8 @@ query IIII
 SELECT span(intspanset '{[1,2), [5,8)}'), spanN(floatspanset '{[1,2], [5,8]}', 2), dateN(datespanset '{[2001-01-01, 2001-01-03), [2001-02-01, 2001-02-03)}', 3), dates(datespanset '{[2001-01-01, 2001-01-03)}');
 ----
 [1, 8)	[5, 8]	2001-02-01	{2001-01-01, 2001-01-03}
+
+query II
+SELECT spanset(floatspan '[1, 2]'), spanset(intset '{1, 3}');
+----
+{[1, 2]}	{[1, 2), [3, 4)}

@@ -442,12 +442,6 @@ static void Set_to_span_common(Vector &source, Vector &result, idx_t count) {
         }
     );
 }
-// --- SCALAR: set -> span ---
-
-void SpanFunctions::Set_to_span(DataChunk &args, ExpressionState &state, Vector &result) {
-    Set_to_span_common(args.data[0], result, args.size());
-}
-
 // --- CAST: set -> span ---
 
 bool SpanFunctions::Set_to_span_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {

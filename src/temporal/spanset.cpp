@@ -116,13 +116,8 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("spanset", {base_type}, spanset_type, SpansetFunctions::Value_to_spanset)
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("spanset", {SpansetTypeMapping::GetSetType(spanset_type)}, spanset_type, SpansetFunctions::Set_to_spanset)
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("spanset", {child_type}, spanset_type, SpansetFunctions::Span_to_spanset)
-        );
+        // spanset(<set>) and spanset(<span>) are generated from the catalog
+        // (meos_setspan_conversion).
 
         
 

@@ -137,22 +137,7 @@ void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
 
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("span", {SetTypes::intset()},SpanTypes::intspan(), SpanFunctions::Set_to_span)
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("span", {SetTypes::bigintset()},SpanTypes::bigintspan(), SpanFunctions::Set_to_span)
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("span", {SetTypes::floatset()},SpanTypes::floatspan(), SpanFunctions::Set_to_span)
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("span", {SetTypes::tstzset()},SpanTypes::tstzspan(), SpanFunctions::Set_to_span) 
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("span", {SetTypes::dateset()},SpanTypes::datespan(), SpanFunctions::Set_to_span) 
-        );
+        // span(<set>) is generated from the catalog (meos_setspan_conversion).
 
         if( span_type == SpanTypes::tstzspan() ){
             duckdb::RegisterSerializedScalarFunction(loader,  ScalarFunction("+", {span_type, LogicalType::INTERVAL}, span_type, SpanFunctions::Tstzspan_shift)

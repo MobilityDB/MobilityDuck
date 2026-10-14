@@ -305,11 +305,6 @@ bool SpansetFunctions::Set_to_spanset_cast(Vector &source, Vector &result, idx_t
     return true;
 }
 
-// --- SCALAR function (set -> spanset) ----
-void SpansetFunctions::Set_to_spanset(DataChunk &args, ExpressionState &state, Vector &result) {
-    Set_to_spanset_common(args.data[0], result, args.size());
-}
-
 
 // --- Conversion: span -> spanset ---
 static inline void Span_to_spanset_common (Vector &source, Vector &result, idx_t count){
@@ -340,11 +335,6 @@ static inline void Span_to_spanset_common (Vector &source, Vector &result, idx_t
 bool SpansetFunctions::Span_to_spanset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {    
     Span_to_spanset_common(source, result, count);
     return true;
-}
-
-// --- SCALAR function (span -> spanset) ----
-void SpansetFunctions::Span_to_spanset(DataChunk &args, ExpressionState &state, Vector &result) {
-    Span_to_spanset_common(args.data[0], result, args.size());
 }
 
 // --- Conversion: spanset -> span ---

@@ -4164,6 +4164,8 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   # the set and span accessors: a span set's spans and dates reach the container
                   # arm of #shape_nary_scalars, the N-th value #shape_cont_outparam
                   "meos_setspan_accessor",
+                  # the set and span conversions: span over a set, spanset over a set or a span
+                  "meos_setspan_conversion",
                   # The JSON value accessors: valueAtTimestamp reaches the out-parameter shape,
                   # and its SQL surface answers jsonb the way MobilityDB declares it.
                   "meos_json_accessor",
