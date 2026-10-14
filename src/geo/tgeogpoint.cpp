@@ -237,41 +237,9 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
     * Accessor functions
     ****************************************************/
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "getValue",
-            {tgeogpoint()},
-            MobilityDuckGeometryType(),
-            TgeompointFunctions::Tgeompoint_value
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "valueN",
-            {tgeogpoint(), LogicalType::BIGINT},
-            MobilityDuckGeometryType(),
-            TemporalFunctions::Temporal_value_n
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "startValue",
-            {tgeogpoint()},
-            MobilityDuckGeometryType(),
-            TgeompointFunctions::Tgeompoint_start_value
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "endValue",
-            {tgeogpoint()},
-            MobilityDuckGeometryType(),
-            TgeompointFunctions::Tgeompoint_end_value
-        )
-    );
 
     // timestamps(tgeogpoint) is generated from the catalog (temporal_timestamps) in generated_temporal_udfs.cpp.
 
@@ -309,14 +277,6 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
      * Restriction functions
      ****************************************************/
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "valueAtTimestamp",
-            {tgeogpoint(), LogicalType::TIMESTAMP_TZ},
-            MobilityDuckGeometryType(),
-            TemporalFunctions::Temporal_value_at_timestamptz
-        )
-    );
 
     /* ***************************************************
      * Modification function
@@ -460,95 +420,15 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Spatial functions
      ****************************************************/
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "getX",
-            {tgeogpoint()},
-            TemporalTypes::tfloat(),
-            TgeompointFunctions::Tpoint_get_x
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "getY",
-            {tgeogpoint()},
-            TemporalTypes::tfloat(),
-            TgeompointFunctions::Tpoint_get_y
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "getZ",
-            {tgeogpoint()},
-            TemporalTypes::tfloat(),
-            TgeompointFunctions::Tpoint_get_z
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "length",
-            {tgeogpoint()},
-            LogicalType::DOUBLE,
-            TgeompointFunctions::Tpoint_length
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "cumulativeLength",
-            {tgeogpoint()},
-            TemporalTypes::tfloat(),
-            TgeompointFunctions::Tpoint_cumulative_length
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "speed",
-            {tgeogpoint()},
-            TemporalTypes::tfloat(),
-            TemporalFunctions::Temporal_derivative
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "twCentroid",
-            {tgeogpoint()},
-            MobilityDuckGeometryType(),
-            TgeompointFunctions::Tpoint_twcentroid
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "direction",
-            {tgeogpoint()},
-            TemporalTypes::tfloat(),
-            TgeompointFunctions::Tpoint_direction
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "azimuth",
-            {tgeogpoint()},
-            TemporalTypes::tfloat(),
-            TgeompointFunctions::Tpoint_azimuth
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "isSimple",
-            {tgeogpoint()},
-            LogicalType::BOOLEAN,
-            TgeompointFunctions::Tpoint_is_simple
-        )
-    );
 
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
@@ -559,14 +439,6 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "trajectory",
-            {tgeogpoint()},
-            MobilityDuckGeometryType(),
-            TgeompointFunctions::Tpoint_trajectory
-        )
-    );
 
     duckdb::RegisterSerializedScalarFunction(loader,
         ScalarFunction(
@@ -1405,63 +1277,6 @@ inline void Tinstant_value(DataChunk &args, ExpressionState &state, Vector &resu
 
 
 
-inline void Temporal_start_value(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_vec = args.data[0];
-    
-    // Direct geometry to geometry conversion, no string conversion needed
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, count,
-        [&](string_t input_str) -> string_t {
-            std::string input = input_str.GetString();
-            
-            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
-            
-            Datum start_datum = temporal_start_value(temp);
-            
-            GSERIALIZED *start_geom = DatumGetGserializedP(start_datum);
-            string_t geometry_blob = GSerializedToGeometry(start_geom, state, result);
-            string_t stored_result = StringVector::AddStringOrBlob(result, geometry_blob);
-
-            free(start_geom);
-            
-            return stored_result;
-        });
-    
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-
-inline void Temporal_end_value(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_vec = args.data[0];
-    
-    // Direct geometry to geometry conversion, no string conversion needed
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, count,
-        [&](string_t input_str) -> string_t {
-            std::string input = input_str.GetString();
-            
-            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
-            
-            Datum start_datum = temporal_end_value(temp);
-            
-            GSERIALIZED *start_geom = DatumGetGserializedP(start_datum);
-            string_t geometry_blob = GSerializedToGeometry(start_geom, state, result);
-            size_t ewkb_size;
-            string_t stored_result = StringVector::AddStringOrBlob(result, geometry_blob);
-
-            free(start_geom);
-            
-            return stored_result;
-        });
-    
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
 
 
 
@@ -1630,30 +1445,9 @@ void TGeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
 
 
 
-    auto getValue_function = ScalarFunction(
-        "getValue",
-        {TGeogpointType::tgeogpoint()},
-        MobilityDuckGeometryType(),
-        Tinstant_value
-    );
-    RegisterMeosFunction(loader, getValue_function);
     
 
-    auto tgeogpoint_start_value_function = ScalarFunction(
-        "startValue", 
-        {TGeogpointType::tgeogpoint()},
-        MobilityDuckGeometryType(),
-        Temporal_start_value
-    );
-    RegisterMeosFunction(loader, tgeogpoint_start_value_function);
 
-    auto tgeogpoint_end_value_function = ScalarFunction(
-        "endValue", 
-        {TGeogpointType::tgeogpoint()},
-        MobilityDuckGeometryType(),
-        Temporal_end_value
-    );
-    RegisterMeosFunction(loader, tgeogpoint_end_value_function);
 
 
     // ===================================================================
@@ -1670,12 +1464,6 @@ void TGeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     const LogicalType BIGI  = LogicalType::BIGINT;
 
     // ---- Accessors ----
-    RegisterMeosFunction(loader, ScalarFunction(
-        "valueN", {TGEOM, BIGI}, GEOM,
-        TemporalFunctions::Temporal_value_n));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "valueAtTimestamp", {TGEOM, TSTZ}, GEOM,
-        TemporalFunctions::Temporal_value_at_timestamptz));
     // timestamps(tgeogpoint) is generated from the catalog (temporal_timestamps) in generated_temporal_udfs.cpp.
     // ---- Modifiers (shift / scale / shiftScale / append / insert / update /
     // delete / round) ----

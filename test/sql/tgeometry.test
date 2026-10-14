@@ -282,3 +282,9 @@ query I
 SELECT asText(atStbox(tgeometry '{Point(1 1)@2000-01-01, Point(5 5)@2000-01-02}', stbox 'STBOX X((0,0),(2,2))', false));
 ----
 {POINT(1 1)@2000-01-01 00:00:00+01}
+
+# traversedArea without its unary-union flag
+query I
+SELECT ST_AsText(traversedArea(tgeometry '[Point(0 0)@2000-01-01, Point(2 0)@2000-01-02]'));
+----
+MULTIPOINT (0 0, 2 0)

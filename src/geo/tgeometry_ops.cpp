@@ -495,40 +495,6 @@ void TgeoCentroidExec(DataChunk &args, ExpressionState &state, Vector &result) {
         });
 }
 
-void TgeoConvexHullExec(DataChunk &args, ExpressionState &state, Vector &result) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        args.data[0], result, args.size(),
-        [&](string_t blob) -> string_t {
-            Temporal *t = DecodeTemporalCopy(blob);
-            GSERIALIZED *gs = tgeo_convex_hull(t);
-            free(t);
-            return GeoToBlobAsHex(result, gs);
-        });
-}
-
-void TgeoTraversedAreaExec(DataChunk &args, ExpressionState &, Vector &result) {
-    const idx_t cnt = args.size();
-    if (args.ColumnCount() >= 2) {
-        BinaryExecutor::Execute<string_t, bool, string_t>(
-            args.data[0], args.data[1], result, cnt,
-            [&](string_t blob, bool unary_union) -> string_t {
-                Temporal *t = DecodeTemporalCopy(blob);
-                GSERIALIZED *gs = tgeo_traversed_area(t, unary_union);
-                free(t);
-                return GeoToBlobAsHex(result, gs);
-            });
-    } else {
-        UnaryExecutor::Execute<string_t, string_t>(
-            args.data[0], result, cnt,
-            [&](string_t blob) -> string_t {
-                Temporal *t = DecodeTemporalCopy(blob);
-                GSERIALIZED *gs = tgeo_traversed_area(t, false);
-                free(t);
-                return GeoToBlobAsHex(result, gs);
-            });
-    }
-}
-
 } // namespace
 
 void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
@@ -588,12 +554,6 @@ void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     // Centroid / convexHull / traversedArea — produce a non-temporal
     // geometry summary of the trajectory.
-    RegisterMeosFunction(loader, ScalarFunction(
-        "convexHull", {TGEOM}, GEOM, TgeoConvexHullExec));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "traversedArea", {TGEOM}, GEOM, TgeoTraversedAreaExec));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "traversedArea", {TGEOM, LogicalType::BOOLEAN}, GEOM, TgeoTraversedAreaExec));
 
     // -----------------------------------------------------------------
     // Tile / box emitters — spaceBoxes(tgeometry, x, y, z) and
