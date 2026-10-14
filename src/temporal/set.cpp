@@ -100,9 +100,15 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         // numValues / startValue / endValue on set types are generated from the
         // catalog (meos_setspan_accessor) in generated_temporal_udfs.cpp.
 
-        duckdb::RegisterSerializedScalarFunction(loader,
-            ScalarFunction("valueN", {set_type, LogicalType::INTEGER}, base_type, SetFunctions::Set_value_n)
-        );
+        // valueN over the number, text and time sets is generated (meos_setspan_accessor); the
+        // sets of the other families keep this registration
+        if (set_type != SetTypes::intset() && set_type != SetTypes::bigintset() &&
+            set_type != SetTypes::floatset() && set_type != SetTypes::textset() &&
+            set_type != SetTypes::dateset() && set_type != SetTypes::tstzset()) {
+            duckdb::RegisterSerializedScalarFunction(loader,
+                ScalarFunction("valueN", {set_type, LogicalType::INTEGER}, base_type, SetFunctions::Set_value_n)
+            );
+        }
 
         // getValues(<set_type>) is generated from the catalog (<elem>set_values) in generated_temporal_udfs.cpp.
 

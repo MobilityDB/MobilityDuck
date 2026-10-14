@@ -449,3 +449,8 @@ query I
 SELECT tprecision(tstzset '{2001-01-01 08:07:00+01, 2001-01-01 08:22:00+01}', interval '15 minutes');
 ----
 {"2001-01-01 08:00:00+01", "2001-01-01 08:15:00+01"}
+
+query III
+SELECT valueN(intset '{3, 1, 2}', 2), valueN(textset '{"x", "y"}', 2), valueN(intset '{1}', 5);
+----
+2	y	NULL

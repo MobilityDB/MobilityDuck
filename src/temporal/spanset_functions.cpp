@@ -379,10 +379,6 @@ bool SpansetFunctions::Spanset_to_span_cast(Vector &source, Vector &result, idx_
     return true;
 }
 
-// --- SCALAR function (spanset -> span) ----
-void SpansetFunctions::Spanset_to_span(DataChunk &args, ExpressionState &state, Vector &result) {
-    Spanset_to_span_common(args.data[0], result, args.size());
-}
 
 // --- Conversion: intspanset <-> floatspanset ---
 static inline void Intspanset_to_floatspanset_common(Vector &source, Vector &result, idx_t count) {
@@ -857,63 +853,8 @@ void SpansetFunctions::Spanset_num_spans(DataChunk &args, ExpressionState &state
         });
 }
 
-// --- startSpan ---
-void SpansetFunctions::Spanset_start_span(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t input_blob) -> string_t {                                 
-            const uint8_t *data = (const uint8_t *)input_blob.GetData();
-            size_t size = input_blob.GetSize();
-            SpanSet *s = (SpanSet*)malloc(size);
-            memcpy(s, data, size);            
-            Span *start_span = spanset_start_span(s);  
-            free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)start_span, sizeof(Span));
-            free(start_span);
-            return out;
-        });
-}
 
-// --- endSpan ---
-void SpansetFunctions::Spanset_end_span(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t input_blob) -> string_t {                                 
-            const uint8_t *data = (const uint8_t *)input_blob.GetData();
-            size_t size = input_blob.GetSize();
-            SpanSet *s = (SpanSet*)malloc(size);
-            memcpy(s, data, size);            
-            Span *end_span = spanset_end_span(s);  
-            free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)end_span, sizeof(Span));
-            free(end_span);
-            return out;
-        });
-}
 
-// --- spanN ---
-void SpansetFunctions::Spanset_span_n(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    auto &n = args.data[1];
-    BinaryExecutor::Execute<string_t, int32_t, string_t>(
-            input, n, result, args.size(),
-            [&](string_t blob, int32_t pos) -> string_t {
-            const uint8_t *data = (const uint8_t *)blob.GetData();
-            size_t size = blob.GetSize();
-            SpanSet *s = (SpanSet*)malloc(size);
-            memcpy(s, data, size);
-            // Use the int32_t `pos` the executor passes us; the previous
-            // `FlatVector::GetData<int64_t>(n)[0]` mis-typed the arg Vector
-            // and tripped DuckDB 1.4's "Expected INT64, found INT32" check.
-            Span *span_n = spanset_span_n(s, pos);
-            free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)span_n, sizeof(Span));
-            free(span_n);
-            return out;
-        });
-}
 
 // --- numDates ---
 void SpansetFunctions::Datespanset_num_dates(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -964,45 +905,7 @@ void SpansetFunctions::Datespanset_end_date(DataChunk &args, ExpressionState &st
         });
 }
 
-// --- dateN ---
-void SpansetFunctions::Datespanset_date_n(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0]; 
-    auto &n = args.data[1];
-    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, date_t>(
-        input, n, result, args.size(),
-        [&](string_t blob, int32_t pos, ValidityMask &mask, idx_t idx) -> date_t {
-            const uint8_t *data = (const uint8_t *)blob.GetData();
-            size_t size = blob.GetSize();
-            SpanSet *s = (SpanSet*)malloc(size);
-            memcpy(s, data, size);            
-            DateADT d;
-            bool found = datespanset_date_n(s, pos, &d);
-            free(s);
-            if (!found) {
-                mask.SetInvalid(idx);
-                return date_t();
-            }
-            return date_t(static_cast<int32_t>(FromMeosDate(d)));
-        });
-}
 
-// --- dates ---
-void SpansetFunctions::Datespanset_dates(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t input_blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)input_blob.GetData();
-            size_t size = input_blob.GetSize();
-            SpanSet *s = (SpanSet*)malloc(size);
-            memcpy(s, data, size);            
-            Set *dates = datespanset_dates(s);  
-            free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)dates, set_mem_size(dates));
-            free(dates);
-            return out;
-        });
-}
 
 // --- numTimestamps ---
 void SpansetFunctions::Tstzspanset_num_timestamps(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -1053,45 +956,7 @@ void SpansetFunctions::Tstzspanset_end_timestamptz(DataChunk &args, ExpressionSt
         });
 }
 
-// --- timestampN ---
-void SpansetFunctions::Tstzspanset_timestamptz_n(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    auto &n = args.data[1];
-    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, timestamp_t>(
-        input, n, result, args.size(),
-        [&](string_t blob, int32_t pos, ValidityMask &mask, idx_t idx) -> timestamp_t {
-            const uint8_t *data = (const uint8_t *)blob.GetData();
-            size_t size = blob.GetSize();
-            SpanSet *s = (SpanSet*)malloc(size);
-            memcpy(s, data, size);            
-            TimestampTz d;
-            bool found = tstzspanset_timestamptz_n(s, pos, &d);
-            free(s);
-            if (!found) {
-                mask.SetInvalid(idx);
-                return timestamp_t();
-            }
-            return timestamp_t((int64_t)FromMeosTimestamp(d));
-        });
-}
 
-// --- timestamps ---
-void SpansetFunctions::Tstzspanset_timestamps(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input = args.data[0];
-    UnaryExecutor::Execute<string_t, string_t>(
-        input, result, args.size(),
-        [&](string_t input_blob) -> string_t {
-            const uint8_t *data = (const uint8_t *)input_blob.GetData();
-            size_t size = input_blob.GetSize();
-            SpanSet *s = (SpanSet*)malloc(size);
-            memcpy(s, data, size);            
-            Set *timestamps = tstzspanset_timestamps(s);  
-            free(s);
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)timestamps, set_mem_size(timestamps));
-            free(timestamps);
-            return out;
-        });
-}
 
 static inline string_t Numspanset_shift_common(const string_t &blob, Datum shift_datum,
                                         MeosType validate_spanset_type, Vector &result) {

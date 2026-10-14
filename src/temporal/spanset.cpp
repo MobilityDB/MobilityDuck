@@ -124,9 +124,6 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             ScalarFunction("spanset", {child_type}, spanset_type, SpansetFunctions::Span_to_spanset)
         );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("span", {spanset_type}, child_type, SpansetFunctions::Spanset_to_span)
-        );
         
 
 
@@ -160,17 +157,8 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         // numSpans on spanset types is generated from the catalog
         // (meos_setspan_accessor) in generated_temporal_udfs.cpp.
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("startSpan", {spanset_type}, child_type, SpansetFunctions::Spanset_start_span)
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("endSpan", {spanset_type}, child_type, SpansetFunctions::Spanset_end_span)
-        );
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("spanN", {spanset_type, LogicalType::INTEGER}, child_type, SpansetFunctions::Spanset_span_n)
-        );
 
         if (spanset_type == SpansetTypes::intspanset() ||spanset_type == SpansetTypes::datespanset()){
 
@@ -219,24 +207,12 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // numDates / startDate / endDate on datespanset are generated from the
     // catalog (meos_setspan_accessor) in generated_temporal_udfs.cpp.
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("dateN", {SpansetTypes::datespanset(), LogicalType::INTEGER}, LogicalType::DATE, SpansetFunctions::Datespanset_date_n)
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("dates", {SpansetTypes::datespanset()}, SetTypes::dateset(), SpansetFunctions::Datespanset_dates)
-    );
 
     // numTimestamps / startTimestamp / endTimestamp on tstzspanset are generated
     // from the catalog (meos_setspan_accessor) in generated_temporal_udfs.cpp.
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("timestampN", {SpansetTypes::tstzspanset(), LogicalType::INTEGER}, LogicalType::TIMESTAMP_TZ, SpansetFunctions::Tstzspanset_timestamptz_n)
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("timestamps", {SpansetTypes::tstzspanset()}, SetTypes::tstzset(), SpansetFunctions::Tstzspanset_timestamps)
-    );
 
 }
 
