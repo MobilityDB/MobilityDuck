@@ -708,50 +708,6 @@ void TgeompointFunctions::Tspatial_transform(DataChunk &args, ExpressionState &s
     }
 }
 
-void TgeompointFunctions::ShortestLine_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
-    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t tgeom1_blob, string_t tgeom2_blob, ValidityMask &mask, idx_t idx) -> string_t {
-            const uint8_t *tgeom1_data = reinterpret_cast<const uint8_t*>(tgeom1_blob.GetData());
-            size_t tgeom1_data_size = tgeom1_blob.GetSize();
-            uint8_t *tgeom1_data_copy = (uint8_t*)malloc(tgeom1_data_size);
-            memcpy(tgeom1_data_copy, tgeom1_data, tgeom1_data_size);
-            Temporal *tgeom1 = reinterpret_cast<Temporal*>(tgeom1_data_copy);
-            if (!tgeom1) {
-                free(tgeom1_data_copy);
-                throw InvalidInputException("Invalid tgeompoint data: null pointer");
-            }
-
-            const uint8_t *tgeom2_data = reinterpret_cast<const uint8_t*>(tgeom2_blob.GetData());
-            size_t tgeom2_data_size = tgeom2_blob.GetSize();
-            uint8_t *tgeom2_data_copy = (uint8_t*)malloc(tgeom2_data_size);
-            memcpy(tgeom2_data_copy, tgeom2_data, tgeom2_data_size);
-            Temporal *tgeom2 = reinterpret_cast<Temporal*>(tgeom2_data_copy);
-            if (!tgeom2) {
-                free(tgeom1);
-                free(tgeom2_data_copy);
-                throw InvalidInputException("Invalid tgeompoint data: null pointer");
-            }
-            GSERIALIZED *ret = shortestline_tgeo_tgeo(tgeom1, tgeom2, true);
-            if (!ret) {
-                free(tgeom1);
-                free(tgeom2);
-                mask.SetInvalid(idx);
-                return string_t();
-            }
-            string_t geometry_blob = GSerializedToGeometry(ret, state, result);
-            string_t stored_data = StringVector::AddStringOrBlob(result, geometry_blob);
-            free(ret);
-            free(tgeom1);
-            free(tgeom2);
-            return stored_data;
-        }
-    );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
 /* ***************************************************
  * Operators (workaround as functions)
  ****************************************************/
@@ -1340,58 +1296,6 @@ string_t NaiToHex(Vector &result, TInstant *inst) {
 }
 
 } // anonymous namespace
-
-void TgeompointFunctions::Nai_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
-    const idx_t n = args.size();
-    args.data[0].Flatten(n); args.data[1].Flatten(n);
-    auto in_t  = FlatVector::GetData<string_t>(args.data[0]);
-    auto in_g  = FlatVector::GetData<string_t>(args.data[1]);
-    auto &v0 = FlatVector::Validity(args.data[0]);
-    auto &v1 = FlatVector::Validity(args.data[1]);
-    auto out   = FlatVector::GetData<string_t>(result);
-    auto &outv = FlatVector::Validity(result);
-
-    for (idx_t i = 0; i < n; i++) {
-        if (!v0.RowIsValid(i) || !v1.RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        size_t tsz = in_t[i].GetSize();
-        uint8_t *tcopy = (uint8_t *)malloc(tsz);
-        memcpy(tcopy, in_t[i].GetData(), tsz);
-        Temporal *temp = reinterpret_cast<Temporal *>(tcopy);
-        GSERIALIZED *gs = GeometryToGSerialized(in_g[i], 0);
-        if (!gs) { free(temp); outv.SetInvalid(i); continue; }
-        TInstant *inst = nai_tgeo_geo(temp, gs, true);
-        free(temp); free(gs);
-        if (!inst) { outv.SetInvalid(i); continue; }
-        out[i] = NaiToHex(result, inst);
-    }
-    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
-}
-
-void TgeompointFunctions::Nai_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result) {
-    const idx_t n = args.size();
-    args.data[0].Flatten(n); args.data[1].Flatten(n);
-    auto in_g  = FlatVector::GetData<string_t>(args.data[0]);
-    auto in_t  = FlatVector::GetData<string_t>(args.data[1]);
-    auto &v0 = FlatVector::Validity(args.data[0]);
-    auto &v1 = FlatVector::Validity(args.data[1]);
-    auto out   = FlatVector::GetData<string_t>(result);
-    auto &outv = FlatVector::Validity(result);
-
-    for (idx_t i = 0; i < n; i++) {
-        if (!v0.RowIsValid(i) || !v1.RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        size_t tsz = in_t[i].GetSize();
-        uint8_t *tcopy = (uint8_t *)malloc(tsz);
-        memcpy(tcopy, in_t[i].GetData(), tsz);
-        Temporal *temp = reinterpret_cast<Temporal *>(tcopy);
-        GSERIALIZED *gs = GeometryToGSerialized(in_g[i], 0);
-        if (!gs) { free(temp); outv.SetInvalid(i); continue; }
-        TInstant *inst = nai_tgeo_geo(temp, gs, true);
-        free(temp); free(gs);
-        if (!inst) { outv.SetInvalid(i); continue; }
-        out[i] = NaiToHex(result, inst);
-    }
-    if (n == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
-}
 
 void TgeompointFunctions::Nad_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(

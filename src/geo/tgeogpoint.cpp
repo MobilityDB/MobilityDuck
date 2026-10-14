@@ -506,14 +506,6 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "shortestLine",
-            {tgeogpoint(), tgeogpoint()},
-            MobilityDuckGeometryType(),
-            TgeompointFunctions::ShortestLine_tgeo_tgeo
-        )
-    );
 }
 
 /* ***************************************************

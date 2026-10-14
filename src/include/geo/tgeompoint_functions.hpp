@@ -85,7 +85,6 @@ struct TgeompointFunctions {
     static void Tpoint_trajectory_gs(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tspatial_transform(DataChunk &args, ExpressionState &state, Vector &result);
 
-    static void ShortestLine_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
      * Operators (workaround as functions)
      ****************************************************/
@@ -103,8 +102,6 @@ struct TgeompointFunctions {
     static void distance_geo_geo(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* nearestApproachInstant / nearestApproachDistance / nad */
-    static void Nai_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Nai_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Nad_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Nad_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Nad_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);

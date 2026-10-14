@@ -531,14 +531,6 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "shortestLine",
-            {tgeompoint(), tgeompoint()},
-            MobilityDuckGeometryType(),
-            TgeompointFunctions::ShortestLine_tgeo_tgeo
-        )
-    );
 
 
     // ExtensionUtil::RegisterFunction(
@@ -594,13 +586,8 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tdistance", {TG, TG}, TF, TgeompointFunctions::Tdistance_named));
 
         /* nearestApproachInstant */
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachInstant", {TG, G}, TG, TgeompointFunctions::Nai_tgeo_geo));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachInstant", {G, TG}, TG, TgeompointFunctions::Nai_geo_tgeo));
 
         /* nearestApproachDistance */
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {TG, G}, D, TgeompointFunctions::Nad_tgeo_geo));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {G, TG}, D, TgeompointFunctions::Nad_geo_tgeo));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {TG, TG}, D, TgeompointFunctions::Nad_tgeo_tgeo));
 
         /* nad — alias */
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("nad", {TG, G}, D, TgeompointFunctions::Nad_tgeo_geo));

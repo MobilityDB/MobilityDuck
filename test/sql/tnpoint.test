@@ -140,3 +140,10 @@ query I
 SELECT asText(merge([tnpoint '{Npoint(1,0.2)@2020-01-01}', tnpoint '{Npoint(1,0.5)@2020-01-02}']));
 ----
 {NPoint(1,0.2)@2020-01-01 00:00:00+01, NPoint(1,0.5)@2020-01-02 00:00:00+01}
+
+# nearestApproachDistance between a temporal network point and a network point, in both orders
+query II
+SELECT nearestApproachDistance(tnpoint '{Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)@2000-01-02}', npoint 'Npoint(1,0.5)'),
+       nearestApproachDistance(npoint 'Npoint(1,0.5)', tnpoint '{Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)@2000-01-02}');
+----
+21.39201569925701	21.39201569925701

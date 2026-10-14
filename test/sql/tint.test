@@ -657,3 +657,10 @@ query I
 SELECT interp(appendInstant(tint '[1@2020-01-01, 2@2020-01-02]', tint '3@2020-01-03'));
 ----
 Step
+
+# nearestApproachDistance with the value first answers what it answers with the value second
+query II
+SELECT nearestApproachDistance(tint '[1@2000-01-01, 5@2000-01-02]', 8),
+       nearestApproachDistance(8, tint '[1@2000-01-01, 5@2000-01-02]');
+----
+3.0	3.0

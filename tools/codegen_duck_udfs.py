@@ -1901,6 +1901,18 @@ def shape_binary(f):
         return ("geo", "MobilityDuckGeometryType()", arg2)
     return None
 
+def emit_body_binary_rev(f, kind, arg2):
+    """The body of #emit_body_binary in the commuted order a declared signature states
+    (nearestApproachDistance(cbuffer, tcbuffer) over nad_tcbuffer_cbuffer(temp, cb), its
+    sqlArgParams reversing the C parameters), as `Gen_<fn>_rev`, as #emit_temporal_box emits its
+    commuted body: the executor reads the second operand off the first vector and the temporal off
+    the second, and the call keeps the kernel's own order."""
+    name, cpp2 = f["name"], arg2[1]
+    body = emit_body_binary(f, kind, arg2)
+    return (body.replace(f"Gen_{name}(", f"Gen_{name}_rev(", 1)
+                .replace(f"<string_t, {cpp2},", f"<{cpp2}, string_t,", 1)
+                .replace(f"(string_t in, {cpp2} a2", f"({cpp2} a2, string_t in", 1))
+
 def emit_body_binary(f, kind, arg2):
     name = f["name"]; dt2, cpp2, marsh = arg2
     is_text = (marsh == "__TEXT__")
@@ -3855,6 +3867,8 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_rgeo_dist",
                   "meos_temporal_modif", "meos_rgeo_modif",
                   "meos_geo_accessor",
+                  "meos_geo_dist", "meos_pose_dist", "meos_npoint_dist", "meos_cbuffer_dist",
+                  "meos_temporal_dist",
                   # The JSON value accessors: valueAtTimestamp reaches the out-parameter shape,
                   # and its SQL surface answers jsonb the way MobilityDB declares it.
                   "meos_json_accessor",
@@ -4883,6 +4897,20 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                         specific_regs.append(
                             f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                             f'"{reg_name(nm, f)}", {_csig}, {_cr}, Gen_{fn}_rev));')
+        # A retired group's binary kernel declared in both orders (nearestApproachDistance over
+        # (tcbuffer, cbuffer) and (cbuffer, tcbuffer), one MEOS function) registers the commuted
+        # order through `Gen_<fn>_rev`, as the box and the geometry pairs do (#sig_commuted_accs)
+        if b and retired(f) and not kind.startswith("outval:") and kind != "outgeo":
+            _raccs = sig_commuted_accs(f)
+            if _raccs:
+                bodies.append(emit_body_binary_rev(f, kind, arg2))
+                for a in _raccs:
+                    _r = ((sig_declared_ret(f, a, 2)
+                           or ret_temporal_type(fn, a, f.get("group"), f.get("sqlReturnType")))
+                          if dret == "MD_TEMPORAL" else dret)
+                    for nm in reg_names(f, sqlfn, aliases, argsig):
+                        specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                             f'"{reg_name(nm, f)}", {{{arg2[0]}, {a}}}, {_r}, Gen_{fn}_rev));')
         # A (temporal, scalar-param DEFAULT)->temporal fn (round's precision integer DEFAULT 0)
         # is callable at the shorter arity; emit the (temporal)->temporal overload with the
         # catalog default substituted, over the same types.
