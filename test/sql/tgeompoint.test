@@ -790,3 +790,26 @@ query I
 SELECT asText(deleteTime(tgeompoint '{Point(1 1)@2020-01-01, Point(2 2)@2020-01-02}', tstzset '{2020-01-01}'));
 ----
 {POINT(2 2)@2020-01-02 00:00:00+01}
+
+# direction answers a float, as MobilityDB declares it, from the first point to the last
+query II
+SELECT direction(tgeompoint '[Point(0 0)@2000-01-01, Point(0 10)@2000-01-02, Point(10 10)@2000-01-03]')::VARCHAR,
+       typeof(direction(tgeompoint '[Point(0 0)@2000-01-01, Point(0 10)@2000-01-02, Point(10 10)@2000-01-03]'));
+----
+0.7853981633974483	DOUBLE
+
+# valueN takes an integer
+query I
+SELECT ST_AsText(valueN(tgeompoint '[Point(0 0)@2000-01-01, Point(0 10)@2000-01-02, Point(10 10)@2000-01-03]', 2::INTEGER));
+----
+POINT (0 10)
+
+# bearing between two points, from a temporal point to a point and back, and between two
+# temporal points
+query IIII
+SELECT bearing(ST_Point(0,0), ST_Point(0,10))::VARCHAR,
+       asText(bearing(tgeompoint '[Point(0 0)@2000-01-01, Point(0 10)@2000-01-02, Point(10 10)@2000-01-03]', ST_Point(10,0))),
+       asText(bearing(ST_Point(10,0), tgeompoint '[Point(0 0)@2000-01-01, Point(0 10)@2000-01-02, Point(10 10)@2000-01-03]')),
+       asText(bearing(tgeompoint '[Point(0 0)@2000-01-01, Point(0 10)@2000-01-02, Point(10 10)@2000-01-03]', tgeompoint '[Point(5 5)@2000-01-01, Point(5 5)@2000-01-03]'));
+----
+0.0	[1.570796326794897@2000-01-01 00:00:00+01, 3.141592653589793@2000-01-03 00:00:00+01]	[4.71238898038469@2000-01-01 00:00:00+01, 5.497787143782138@2000-01-02 00:00:00+01, 0@2000-01-03 00:00:00+01]	[0.785398163397448@2000-01-01 00:00:00+01, 3.926990816987241@2000-01-03 00:00:00+01]

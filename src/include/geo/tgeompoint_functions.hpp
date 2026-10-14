@@ -30,8 +30,6 @@ struct TgeompointFunctions {
     static void Tspatial_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static bool Tspatial_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     // getTime: Temporal_time
-    static void Tgeompoint_start_value(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tgeompoint_end_value(DataChunk &args, ExpressionState &state, Vector &result);
     // duration: Temporal_duration
     // startTimestamp: Temporal_start_timestamptz
     static void Tgeompoint_sequence_constructor(DataChunk &args, ExpressionState &state, Vector &result);
@@ -45,7 +43,6 @@ struct TgeompointFunctions {
     /* ***************************************************
      * Accessor functions
      ****************************************************/
-    static void Tgeompoint_value(DataChunk &args, ExpressionState &state, Vector &result);
     // timestamps: Temporal_timestamps
 
     /* ***************************************************
@@ -83,17 +80,8 @@ struct TgeompointFunctions {
     /* ***************************************************
      * Spatial functions
      ****************************************************/
-    static void Tpoint_get_x(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tpoint_get_y(DataChunk &args, ExpressionState &state, Vector &result);  
-    static void Tpoint_get_z(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tpoint_length(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tpoint_cumulative_length(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tpoint_twcentroid(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tpoint_direction(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tpoint_azimuth(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tpoint_is_simple(DataChunk &args, ExpressionState &state, Vector &result);
+
     static void Tpoint_make_simple(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tpoint_trajectory(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tpoint_trajectory_gs(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tspatial_transform(DataChunk &args, ExpressionState &state, Vector &result);
 

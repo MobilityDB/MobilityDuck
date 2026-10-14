@@ -260,46 +260,9 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
     * Accessor functions
     ****************************************************/
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "getValue",
-            {tgeompoint()},
-            MobilityDuckGeometryType(),
-            TgeompointFunctions::Tgeompoint_value
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "valueN",
-            // BIGINT to match the sibling `valueN(<other temporal>, BIGINT)`
-            // overload in temporal.cpp and the C function's int64_t template
-            // arg (BinaryExecutor<string_t,int64_t,string_t>). Registering
-            // INTEGER here made DuckDB 1.4 reject the bind with
-            // "Expected INT64, found INT32" (tgeompoint.test:482).
-            {tgeompoint(), LogicalType::BIGINT},
-            MobilityDuckGeometryType(),
-            TemporalFunctions::Temporal_value_n
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "startValue",
-            {tgeompoint()},
-            MobilityDuckGeometryType(),
-            TgeompointFunctions::Tgeompoint_start_value
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "endValue",
-            {tgeompoint()},
-            MobilityDuckGeometryType(),
-            TgeompointFunctions::Tgeompoint_end_value
-        )
-    );
     // timestamps(tgeompoint) is generated from the catalog (temporal_timestamps) in generated_temporal_udfs.cpp.
 
     /* ***************************************************
@@ -338,14 +301,6 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
      * Restriction functions
      ****************************************************/
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "valueAtTimestamp",
-            {tgeompoint(), LogicalType::TIMESTAMP_TZ},
-            MobilityDuckGeometryType(),
-            TemporalFunctions::Temporal_value_at_timestamptz
-        )
-    );
     
     /* ***************************************************
      * Modification function
@@ -488,95 +443,15 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* ***************************************************
      * Spatial functions
      ****************************************************/
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "getX",
-            {tgeompoint()},
-            TemporalTypes::tfloat(),
-            TgeompointFunctions::Tpoint_get_x
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "getY",
-            {tgeompoint()},
-            TemporalTypes::tfloat(),
-            TgeompointFunctions::Tpoint_get_y
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "getZ",
-            {tgeompoint()},
-            TemporalTypes::tfloat(),
-            TgeompointFunctions::Tpoint_get_z
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "length",
-            {tgeompoint()},
-            LogicalType::DOUBLE,
-            TgeompointFunctions::Tpoint_length
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "cumulativeLength",
-            {tgeompoint()},
-            TemporalTypes::tfloat(),
-            TgeompointFunctions::Tpoint_cumulative_length
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "speed",
-            {tgeompoint()},
-            TemporalTypes::tfloat(),
-            TemporalFunctions::Temporal_derivative
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "twCentroid",
-            {tgeompoint()},
-            MobilityDuckGeometryType(),
-            TgeompointFunctions::Tpoint_twcentroid
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "direction",
-            {tgeompoint()},
-            TemporalTypes::tfloat(),
-            TgeompointFunctions::Tpoint_direction
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "azimuth",
-            {tgeompoint()},
-            TemporalTypes::tfloat(),
-            TgeompointFunctions::Tpoint_azimuth
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "isSimple",
-            {tgeompoint()},
-            LogicalType::BOOLEAN,
-            TgeompointFunctions::Tpoint_is_simple
-        )
-    );
 
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
@@ -587,14 +462,6 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "trajectory",
-            {tgeompoint()},
-            MobilityDuckGeometryType(),
-            TgeompointFunctions::Tpoint_trajectory
-        )
-    );
 
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(

@@ -588,63 +588,6 @@ inline void Tinstant_value(DataChunk &args, ExpressionState &state, Vector &resu
 
 
 
-inline void Temporal_start_value(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_vec = args.data[0];
-    
-    // Direct geometry to geometry conversion, no string conversion needed
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, count,
-        [&](string_t input_str) -> string_t {
-            std::string input = input_str.GetString();
-            
-            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
-            
-            Datum start_datum = temporal_start_value(temp);
-            
-            GSERIALIZED *start_geom = DatumGetGserializedP(start_datum);
-            string_t geometry_blob = GSerializedToGeometry(start_geom, state, result);
-            string_t stored_result = StringVector::AddStringOrBlob(result, geometry_blob);
-
-            free(start_geom);
-            
-            return stored_result;
-        });
-    
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-
-inline void Temporal_end_value(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_vec = args.data[0];
-    
-    // Direct geometry to geometry conversion, no string conversion needed
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, count,
-        [&](string_t input_str) -> string_t {
-            std::string input = input_str.GetString();
-            
-            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
-            
-            Datum start_datum = temporal_end_value(temp);
-            
-            GSERIALIZED *start_geom = DatumGetGserializedP(start_datum);
-            string_t geometry_blob = GSerializedToGeometry(start_geom, state, result);
-            size_t ewkb_size;
-            string_t stored_result = StringVector::AddStringOrBlob(result, geometry_blob);
-
-            free(start_geom);
-            
-            return stored_result;
-        });
-    
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
 
 
 
@@ -815,30 +758,9 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
 
 
-    auto getValue_function = ScalarFunction(
-        "getValue",
-        {TGeometryTypes::tgeometry()},
-        MobilityDuckGeometryType(),
-        Tinstant_value
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  getValue_function);
     
 
-    auto tgeometry_start_value_function = ScalarFunction(
-        "startValue", 
-        {TGeometryTypes::tgeometry()},
-        MobilityDuckGeometryType(),
-        Temporal_start_value
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  tgeometry_start_value_function);
 
-    auto tgeometry_end_value_function = ScalarFunction(
-        "endValue", 
-        {TGeometryTypes::tgeometry()},
-        MobilityDuckGeometryType(),
-        Temporal_end_value
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  tgeometry_end_value_function);
 
 
 
@@ -859,12 +781,6 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     const LogicalType BIGI  = LogicalType::BIGINT;
 
     // ---- Accessors ----
-    RegisterMeosFunction(loader, ScalarFunction(
-        "valueN", {TGEOM, BIGI}, GEOM,
-        TemporalFunctions::Temporal_value_n));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "valueAtTimestamp", {TGEOM, TSTZ}, GEOM,
-        TemporalFunctions::Temporal_value_at_timestamptz));
     // timestamps(tgeometry) is generated from the catalog (temporal_timestamps) in generated_temporal_udfs.cpp.
     // ---- Modifiers (shift / scale / shiftScale / append / insert / update /
     // delete / round) ----

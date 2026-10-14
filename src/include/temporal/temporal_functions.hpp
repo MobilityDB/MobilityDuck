@@ -69,12 +69,9 @@ struct TemporalFunctions {
      * Accessor functions
      ****************************************************/
     static void Tinstant_value(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_start_value(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_end_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_min_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Temporal_max_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_avg_value(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_value_n(DataChunk &args, ExpressionState &state, Vector &result);
     // Temporal_timestamps retired: timestamps(<temporal>) is generated (temporal_timestamps) in generated_temporal_udfs.cpp.
     /* ***************************************************
      * Shift and scale 
@@ -97,7 +94,6 @@ struct TemporalFunctions {
     /* ***************************************************
      * Restriction functions
      ****************************************************/
-    static void Temporal_value_at_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
      * Modification Functions
      ****************************************************/
@@ -163,7 +159,6 @@ struct TemporalFunctions {
     static void Tfloat_exp(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tfloat_ln(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tfloat_log10(DataChunk &args, ExpressionState &state, Vector &result);
-    // Temporal_derivative declared in the math-functions block below.
     // floor/ceil/round/degrees/radians on tfloat are generated (generated_temporal_udfs.cpp).
 
     /* ***************************************************
@@ -486,8 +481,6 @@ struct TemporalFunctions {
      * Math functions
      ****************************************************/
     // round(tfloat/tgeompoint/tgeogpoint/...) is generated (generated_temporal_udfs.cpp).
-    static void Temporal_derivative(DataChunk &args, ExpressionState &state, Vector &result);
-
     /* ***************************************************
      * Analytics — trajectory/temporal simplification
      ****************************************************/

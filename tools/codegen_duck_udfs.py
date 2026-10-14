@@ -210,6 +210,10 @@ def classify(f):
         if writable and not others and (lastn in OUTPRIM or base(lastc) in PTR_RET
                                         or outptr_base(lastc)):
             return params[:-1], lastc
+        # an owned geometry handed back (tgeo_value_n's GSERIALIZED **result), in a retired
+        # group, where no hand registration of the same signature remains
+        if writable and not others and lastn == "GSERIALIZED **" and retired(f):
+            return params[:-1], lastc
     return params, None
 
 def arg_type(canon, fname=None):
@@ -265,6 +269,8 @@ def ret_type(f, out_canon):
         if base(out_canon) in PTR_RET:  return (PTR_RET[base(out_canon)][0], "outptr")
         ob = outptr_base(out_canon)
         if ob:                          return (PTR_RET[ob][0], "outptr")
+        # an owned geometry handed back, which #classify reads as an out-param in a retired group
+        if n == "GSERIALIZED **":       return ("MobilityDuckGeometryType()", "outgeo")
         return None
     rc = f["returnType"]["canonical"]; nc = norm(rc); b = base(rc)
     if b in PTR_RET and nc.endswith("*"):  return (PTR_RET[b][0], "ptr")
@@ -740,6 +746,14 @@ def reg_scope(name):
         if t1 == "temporal":
             return ("all", None)
         return ("types", CORE_TYPES[t1])
+    # A retired group's function no name rule scopes (bearing_tpoint_point names its point
+    # operands, not a family) takes the temporal types its signatures declare, as the
+    # restriction groups take theirs (#sig_declared_accs)
+    f = FN_BY_NAME.get(name)
+    if f is not None and retired(f):
+        accs = sig_declared_accs(f)
+        if accs:
+            return ("types", accs)
     return None  # tbigint_*/tgeompoint_*/etc. belong to their own (gated) family file
 
 # Output DuckDB type for a TEMPORAL-returning fn (the return-type-from-name lever):
@@ -1084,7 +1098,34 @@ def project_bound_tail(f, fixed=()):
     call = ", ".join(lit if p is last else "p%d" % g["params"].index(p) for p in params)
     FORWARDED.append("inline %s %s(%s) {\n    return ::%s(%s);\n}\n"
                      % (f["returnType"]["c"], f["name"], decl, f["name"], call))
+    PROJECTED_TAIL[f["name"]] = f      # the longer call, for #keep_declared_tail
     return g
+
+PROJECTED_TAIL = {}
+
+def keep_declared_tail(f):
+    """[record] for the longer call of a function #project_bound_tail shortened, when its group is
+    retired: the catalog's own record, its signatures those declaring the projected parameter
+    (with a default) stripped of the default, named `<fn>_full` and forwarded to the MEOS function
+    as #project_signature_forms forwards a form; [] otherwise."""
+    orig = PROJECTED_TAIL.get(f["name"])
+    # the spatial accessors, whose longer call the binary shape registers as declared; the
+    # similarity distances and the array relationships keep their shorter call alone, their
+    # shapes registering a signature of their own
+    if orig is None or not retired(orig) or orig.get("group") != "meos_geo_accessor":
+        return []
+    sigs = [{k: v for k, v in s.items() if k != "argDefaults"}
+            for s in orig.get("sqlSignatures") or [] if s.get("argDefaults")]
+    if not sigs:
+        return []
+    g = dict(orig, name=orig["name"] + "_full", sqlSignatures=sigs)
+    decl = ", ".join("%s p%d" % (re.sub(r"\bInterval\b", "MeosInterval", p["cType"]), i)
+                     for i, p in enumerate(orig["params"]))
+    call = ", ".join("p%d" % i for i in range(len(orig["params"])))
+    FORWARDED.append("inline %s %s(%s) {\n    return ::%s(%s);\n}\n"
+                     % (orig["returnType"]["c"], g["name"], decl, orig["name"], call))
+    FN_BY_NAME.setdefault(g["name"], g)
+    return [g]
 
 # A signature the generic kernel (temporal_*) and a type's own kernel both declare is answered by the
 # type's own, as the MobilityDB wrapper they share dispatches it: Temporal_instants calls
@@ -1222,6 +1263,8 @@ def project_signature_forms(f):
                          for p in params)
         FORWARDED.append("inline %s %s(%s) {\n    return ::%s(%s);\n}\n"
                          % (f["returnType"]["c"], g["name"], decl, f["name"], call))
+        # a form resolves by its own name as the function it stands for does (#reg_scope)
+        FN_BY_NAME.setdefault(g["name"], g)
         out.append(g)
     return out
 
@@ -1334,6 +1377,25 @@ def emit_defaulted_unary_temporal_scalar(f, dval):
             f"            Temporal *t = BlobToTemporal(in);\n"
             f"            {cct} r = {name}(t, {dval});\n            free(t);\n"
             f"            {ret}\n"
+            f"        }});\n}}\n")
+
+def emit_defaulted_unary_geo(f, dval):
+    """The shorter (Temporal)->geometry overload of a (Temporal, scalar-param DEFAULT)->geometry
+    function (traversedArea(tgeometry[, unary_union boolean DEFAULT FALSE])), as
+    #emit_defaulted_unary_temporal_scalar is the shorter overload of a scalar one: the owned
+    geometry marshalled and freed as #emit_body's geo branch marshals it."""
+    name = f["name"]
+    return (f"static void Gen_{name}_d(DataChunk &args, ExpressionState &state, Vector &result) {{\n"
+            f"    EnsureMeosThreadInitialized();\n"
+            f"    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
+            f"        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+            f"            Temporal *t = BlobToTemporal(in);\n"
+            f"            GSERIALIZED *r = {name}(t, {dval});\n"
+            f"            free(t);\n"
+            f"            if (!r) {{ mask.SetInvalid(idx); return string_t(); }}\n"
+            f"            string_t out = GSerializedToGeometry(r, state, result);\n"
+            f"            free(r);\n"
+            f"            return out;\n"
             f"        }});\n}}\n")
 
 # Element scalar type -> the Set type it implies (for contains/contained/left/...
@@ -1624,8 +1686,9 @@ def shape_emittable(f):
         # The geo temporal types carry a HAND geometry-accessor layer (twCentroid/convexHull on
         # tgeompoint/tgeogpoint/tgeometry/tgeography); a bare generated name double-registers
         # against it. Emit only for the non-geo spatial families (tcbuffer, …) whose geometry
-        # accessors have no hand reg, until the geo hand layer is retired.
-        if sc[0] == "types" and set(sc[1]).issubset(set(GEO_ALLTYPES)):
+        # accessors have no hand reg, until the geo hand layer is retired; a retired group's
+        # (meos_geo_accessor) is the geo hand layer's replacement.
+        if sc[0] == "types" and set(sc[1]).issubset(set(GEO_ALLTYPES)) and not retired(f):
             return None
         return ("geo", "MobilityDuckGeometryType()")
     return None
@@ -1816,6 +1879,8 @@ def shape_binary(f):
         # concrete scalar out-param is folded here; the generic `Datum *` overload (temporal_value_n)
         # drops out (varying per-type return) so exactly the per-type <t>_value_n emit, once each.
         no = norm(out)
+        if no == "GSERIALIZED **":                   # an owned geometry (#classify)
+            return ("outgeo", "MobilityDuckGeometryType()", arg2)
         if no not in OUTPARAM_LOCAL: return None
         if sc[0] == "types" and sc[1] and len(sc[1]) == 1 and sc[1][0] in CELL_BASEVAL:
             dret = CELL_BASEVAL[sc[1][0]]            # Tcell<T> cell-id base value (h3index/quadbin)
@@ -1829,6 +1894,11 @@ def shape_binary(f):
         return ("scalar:" + rb, scalar_ret_duck(f), arg2)
     if rb in ("Interval", "text", "char") and rn.endswith("*"):   # owned-pointer scalar return
         return ("scalar:" + rb, scalar_ret_duck(f), arg2)
+    # an owned geometry (traversedArea(tgeometry, boolean)) in a retired group, as #emit_body
+    # returns one for a single temporal operand
+    if (retired(f) and rb == "GSERIALIZED" and rn.endswith("*")
+            and "const" not in f["returnType"]["canonical"]):
+        return ("geo", "MobilityDuckGeometryType()", arg2)
     return None
 
 def emit_body_binary(f, kind, arg2):
@@ -1863,6 +1933,31 @@ def emit_body_binary(f, kind, arg2):
                 f"            Temporal *t = BlobToTemporal(in);\n"
                 f"            {pre}Temporal *r = {subcast}{name}(t, {call2});\n            {post}free(t);\n"
                 f"            return TemporalToBlobN(result, r, mask, idx);\n"
+                f"        }});\n}}\n")
+    if kind == "outgeo":            # bool <name>(t, a2, &gs) -> the owned geometry; false -> SQL NULL
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &state, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::ExecuteWithNulls<string_t, {cpp2}, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t in, {cpp2} a2, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                f"            Temporal *t = BlobToTemporal(in);\n"
+                f"            {pre}GSERIALIZED *v = NULL;\n"
+                f"            bool ok = {name}(t, {call2}, &v);\n            {post}free(t);\n"
+                f"            if (!ok || !v) {{ mask.SetInvalid(idx); return string_t(); }}\n"
+                f"            string_t out = GSerializedToGeometry(v, state, result);\n"
+                f"            free(v);\n"
+                f"            return out;\n"
+                f"        }});\n}}\n")
+    if kind == "geo":               # owned GSERIALIZED return -> DuckDB GEOMETRY, as #emit_body does
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &state, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::ExecuteWithNulls<string_t, {cpp2}, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t in, {cpp2} a2, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                f"            Temporal *t = BlobToTemporal(in);\n"
+                f"            {pre}GSERIALIZED *r = {name}(t, {call2});\n            {post}free(t);\n"
+                f"            if (!r) {{ mask.SetInvalid(idx); return string_t(); }}\n"
+                f"            string_t out = GSerializedToGeometry(r, state, result);\n"
+                f"            free(r);\n"
+                f"            return out;\n"
                 f"        }});\n}}\n")
     ctype, rett, _rx = scalar_emit3(f)
     ex, prm, ann, ret = scalar_exec(f, rett, _rx)
@@ -2746,6 +2841,38 @@ f"            const Temporal **a = ListToTemporalArr(child, le, &n);\n"
 f"            Temporal *r = {name}((Temporal **) a, n);\n"
 f"            FreeTemporalArr(a, n);\n"
 f"            return TemporalToBlobN(result, r, mask, idx);\n"
+f"        }});\n}}\n")
+
+def shape_geo_pair_out(f):
+    """(DuckDB return, C local) for a retired group's (const GSERIALIZED *, const GSERIALIZED *,
+    <scalar> *result) -> bool function (bearing(geometry, geometry) over bearing_point_point), the
+    by-value result the out-parameter hands back as #shape_binary folds one; None otherwise."""
+    if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
+        return None
+    ins, out = classify(f)
+    if out is None or len(ins) != 2 or norm(out) not in OUTPARAM_LOCAL:
+        return None
+    if not all(base(p["canonical"]) == "GSERIALIZED" and norm(p["canonical"]).endswith("*")
+               for p in ins):
+        return None
+    return (OUTPRIM[norm(out)], OUTPARAM_LOCAL[norm(out)])
+
+def emit_geo_pair_out(f, local):
+    """Two geometries, each read as #emit_geo_temporal reads one; with no temporal operand to
+    take an SRID from, both are read with SRID 0, the planar plane DuckDB's GEOMETRY stands for."""
+    name = f["name"]; ctype, ecpp = local
+    return (
+f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+f"    EnsureMeosThreadInitialized();\n"
+f"    BinaryExecutor::ExecuteWithNulls<string_t, string_t, {ecpp}>(args.data[0], args.data[1], result, args.size(),\n"
+f"        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> {ecpp} {{\n"
+f"            GSERIALIZED *g1 = GeometryToGSerialized(in1, 0);\n"
+f"            GSERIALIZED *g2 = GeometryToGSerialized(in2, 0);\n"
+f"            {ctype} v;\n"
+f"            bool ok = {name}(g1, g2, &v);\n"
+f"            free(g1); free(g2);\n"
+f"            if (!ok) {{ mask.SetInvalid(idx); return {ecpp}(); }}\n"
+f"            return ({ecpp}) v;\n"
 f"        }});\n}}\n")
 
 def emit_pairs_scalar(f, has_dist, has_periods):
@@ -3727,6 +3854,7 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   # a distance, an instant and a geometry as well as a temporal value.
                   "meos_rgeo_dist",
                   "meos_temporal_modif", "meos_rgeo_modif",
+                  "meos_geo_accessor",
                   # The JSON value accessors: valueAtTimestamp reaches the out-parameter shape,
                   # and its SQL surface answers jsonb the way MobilityDB declares it.
                   "meos_json_accessor",
@@ -4509,6 +4637,16 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                                          f'"{reg_name(nm, f)}", {{LogicalType::LIST({a_})}}, {a_}, '
                                          f'Gen_{f["name"]}));')
             continue
+        # two geometries handing back a by-value result (bearing(geometry, geometry))
+        _gpo = shape_geo_pair_out(f)
+        if _gpo:
+            STATE["grp"] = f.get("group") or "meos_ungrouped"
+            bodies.append(emit_geo_pair_out(f, _gpo[1])); n_bin += 1
+            for nm in reg_names(f, f["sqlfn"], aliases):
+                specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                     f'"{reg_name(nm, f)}", {{MobilityDuckGeometryType(), '
+                                     f'MobilityDuckGeometryType()}}, {_gpo[0]}, Gen_{f["name"]}));')
+            continue
         u = shape_emittable(f); b = None if u else shape_binary(f); t = None if (u or b) else shape_ternary(f)
         tt = None if (u or b or t) else shape_binary_tt(f)
         tts = None if (u or b or t or tt) else shape_binary_tt_scalar(f)
@@ -4545,7 +4683,10 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         # geodetic/cross-type overloads MEOS never declares. The restrictions read the same SoT: tgeo_at_geom
         # and tpoint_at_geom both carry atGeometry, and only their declared types keep one of them per
         # signature; atStbox is declared over neither tgeography nor the other geodetic forms.
-        if re.search(r'_(rel_(ever|temp)|restrict)$', f.get("group") or ""):
+        # The spatial accessors read it too: tgeo_traversed_area is named for every geo type and
+        # declared over tgeometry and tgeography alone.
+        if re.search(r'_(rel_(ever|temp)|restrict)$', f.get("group") or "") or \
+                (f.get("group") or "") == "meos_geo_accessor":
             _gaccs = sig_declared_accs(f)
             if _gaccs is not None:
                 scope, accs = "types", _gaccs
@@ -4827,6 +4968,14 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     for nm in names:
                         specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                              f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
+        # the same shorter overload of a geometry-returning one (traversedArea(tgeometry))
+        if b and kind == "geo" and trailing_arg_default(f) and scope != "all":
+            dflt = sql_default_to_cpp(trailing_arg_default(f))
+            bodies.append(emit_defaulted_unary_geo(f, dflt))
+            for a in accs:
+                for nm in names:
+                    specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                         f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
     # CONTAINER SCALARS — one registration per declared signature, over the body whose operand
     # order it spells (shape_container_scalar).
     for f in fns:
@@ -6052,6 +6201,11 @@ def main():
     fixed = {p["name"] for f in fns if projected[f["name"]]
              for p in f["params"] if p not in projected[f["name"]]["params"]}
     fns = [projected[f["name"]] or project_bound_tail(f, fixed) or f for f in fns]
+    # A retired group's projected function keeps the longer call too, over the signatures that
+    # declare the parameter (length(tgeogpoint, boolean DEFAULT true), where a false asks for the
+    # sphere): its own record #keep_declared_tail forwards under another name, without the
+    # default, so the shorter call stays the projected record's alone.
+    fns = fns + [k for f in fns for k in keep_declared_tail(f)]
     fns = [g for f in fns for g in project_signature_forms(f)]
     fns = yield_to_type_kernels(fns)
     # name -> catalog entry, so the name-keyed scope rules can read the function's own
