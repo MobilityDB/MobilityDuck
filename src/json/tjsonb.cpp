@@ -279,8 +279,6 @@ void TJsonbTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
      * registrations are retired here. memSize/setInterp stay hand (not generated yet);
      * tjsonbInst stays hand (subtype cast). */
     RegisterSerializedScalarFunction(loader,
-        ScalarFunction("setInterp", {T, V}, T, TemporalFunctions::Temporal_set_interp));
-    RegisterSerializedScalarFunction(loader,
         ScalarFunction("tjsonbInst", {T}, T, TemporalFunctions::Temporal_to_tinstant));
 
     /* Value accessors — startValue/endValue, valueAtTimestamp and valueN are all

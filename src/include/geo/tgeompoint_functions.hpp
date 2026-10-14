@@ -85,7 +85,6 @@ struct TgeompointFunctions {
     static void Tpoint_trajectory_gs(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tspatial_transform(DataChunk &args, ExpressionState &state, Vector &result);
 
-    static void ShortestLine_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
      * Operators (workaround as functions)
      ****************************************************/
@@ -103,8 +102,6 @@ struct TgeompointFunctions {
     static void distance_geo_geo(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* nearestApproachInstant / nearestApproachDistance / nad */
-    static void Nai_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Nai_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Nad_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Nad_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
     static void Nad_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
@@ -112,20 +109,9 @@ struct TgeompointFunctions {
     /* ***************************************************
      * Affine / translate / rotate / scale transforms
      ****************************************************/
-    static void Tgeo_affine_12(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tgeo_affine_6(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tgeo_translate_3d(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tgeo_translate_2d(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tgeo_rotate_angle(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tgeo_rotate_angle_cx_cy(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tgeo_rotate_geom(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tgeo_rotateX(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tgeo_rotateY(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tgeo_transscale(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tgeo_scale_geom(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tgeo_scale_geom_origin(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tgeo_scale_xy(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tgeo_scale_xyz(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

@@ -367,7 +367,6 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TemporalTypes::RegisterTypes(loader);
 	TemporalTypes::RegisterCastFunctions(loader);
 	TemporalTypes::RegisterScalarFunctions(loader);
-	TemporalTypes::RegisterTemporalUnnestFunction(loader);
 	TemporalTypes::RegisterWkbFunctions(loader);
 	TemporalTypes::RegisterTemporalTileSplit(loader);
 	TemporalTypes::RegisterTnumberValueSplit(loader);
