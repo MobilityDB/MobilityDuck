@@ -127,3 +127,15 @@ SELECT aDwithin(geometry 'Point(0 0)', trgeometry 'Polygon((0 0,1 0,1 1,0 0));{P
        aDwithin(trgeometry 'Polygon((0 0,1 0,1 1,0 0));{Pose(Point(1 0),0)@2026-01-01, Pose(Point(9 0),0)@2026-01-02}', geometry 'Point(0 0)', 2.0);
 ----
 false	false
+
+# atStbox and minusStbox restrict the rigid geometry by its placed extent, the border included
+# by default
+query I
+SELECT asText(atStbox(trgeometry 'Polygon((1 1,2 2,3 1,1 1));{Pose(Point(1 1), 0.5)@2000-01-01, Pose(Point(9 9), 0.5)@2000-01-02}', stbox 'STBOX X((0,0),(5,5))', true));
+----
+POLYGON((1 1,2 2,3 1,1 1));{Pose(POINT(1 1),0.5)@2000-01-01 00:00:00+01}
+
+query I
+SELECT asText(minusStbox(trgeometry 'Polygon((1 1,2 2,3 1,1 1));{Pose(Point(1 1), 0.5)@2000-01-01, Pose(Point(9 9), 0.5)@2000-01-02}', stbox 'STBOX X((0,0),(5,5))'));
+----
+POLYGON((1 1,2 2,3 1,1 1));{Pose(POINT(9 9),0.5)@2000-01-02 00:00:00+01}

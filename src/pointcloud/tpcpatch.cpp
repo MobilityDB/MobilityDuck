@@ -930,32 +930,6 @@ void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction(
         "valueAtTimestamp", {TGEOM, TSTZ}, LogicalType::VARCHAR,
         Tinstant_value));
-    // ---- Time-domain restrict / minus ----
-    for (const auto &t : std::vector<std::pair<LogicalType, scalar_function_t>>{
-             {TSTZ,                       TemporalFunctions::Temporal_at_timestamptz},
-             {SetTypes::tstzset(),        TemporalFunctions::Temporal_at_tstzset},
-             {SpanTypes::tstzspan(),      TemporalFunctions::Temporal_at_tstzspan},
-             {SpansetTypes::tstzspanset(), TemporalFunctions::Temporal_at_tstzspanset}}) {
-        RegisterMeosFunction(loader, ScalarFunction(
-            "atTime", {TGEOM, t.first}, TGEOM, t.second));
-    }
-    for (const auto &t : std::vector<std::pair<LogicalType, scalar_function_t>>{
-             {TSTZ,                       TemporalFunctions::Temporal_minus_timestamptz},
-             {SetTypes::tstzset(),        TemporalFunctions::Temporal_minus_tstzset},
-             {SpanTypes::tstzspan(),      TemporalFunctions::Temporal_minus_tstzspan},
-             {SpansetTypes::tstzspanset(), TemporalFunctions::Temporal_minus_tstzspanset}}) {
-        RegisterMeosFunction(loader, ScalarFunction(
-            "minusTime", {TGEOM, t.first}, TGEOM, t.second));
-    }
-
-    // beforeTimestamp / afterTimestamp accept timestamptz
-    RegisterMeosFunction(loader, ScalarFunction(
-        "beforeTimestamp", {TGEOM, TSTZ}, TGEOM,
-        TemporalFunctions::Temporal_before_timestamptz));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "afterTimestamp", {TGEOM, TSTZ}, TGEOM,
-        TemporalFunctions::Temporal_after_timestamptz));
-
     // ---- Modifiers (shift / scale / shiftScale / append / insert / update /
     // delete) ----
     RegisterMeosFunction(loader, ScalarFunction(

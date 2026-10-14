@@ -926,63 +926,6 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         "valueAtTimestamp", {TGEOM, TSTZ}, GEOM,
         TemporalFunctions::Temporal_value_at_timestamptz));
     // timestamps(tgeometry) is generated from the catalog (temporal_timestamps) in generated_temporal_udfs.cpp.
-    // ---- Time-domain restrict / minus ----
-    for (const auto &t : std::vector<std::pair<LogicalType, scalar_function_t>>{
-             {TSTZ,                       TemporalFunctions::Temporal_at_timestamptz},
-             {SetTypes::tstzset(),        TemporalFunctions::Temporal_at_tstzset},
-             {SpanTypes::tstzspan(),      TemporalFunctions::Temporal_at_tstzspan},
-             {SpansetTypes::tstzspanset(), TemporalFunctions::Temporal_at_tstzspanset}}) {
-        RegisterMeosFunction(loader, ScalarFunction(
-            "atTime", {TGEOM, t.first}, TGEOM, t.second));
-    }
-    for (const auto &t : std::vector<std::pair<LogicalType, scalar_function_t>>{
-             {TSTZ,                       TemporalFunctions::Temporal_minus_timestamptz},
-             {SetTypes::tstzset(),        TemporalFunctions::Temporal_minus_tstzset},
-             {SpanTypes::tstzspan(),      TemporalFunctions::Temporal_minus_tstzspan},
-             {SpansetTypes::tstzspanset(), TemporalFunctions::Temporal_minus_tstzspanset}}) {
-        RegisterMeosFunction(loader, ScalarFunction(
-            "minusTime", {TGEOM, t.first}, TGEOM, t.second));
-    }
-
-    // beforeTimestamp / afterTimestamp accept timestamptz and tstzspan
-    RegisterMeosFunction(loader, ScalarFunction(
-        "beforeTimestamp", {TGEOM, TSTZ}, TGEOM,
-        TemporalFunctions::Temporal_before_timestamptz));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "afterTimestamp", {TGEOM, TSTZ}, TGEOM,
-        TemporalFunctions::Temporal_after_timestamptz));
-
-    // ---- Value restrict ----
-    // atValues / minusValues over a single geometry funnel through
-    // tgeompoint-side handlers (subtype-agnostic — they call MEOS's
-    // tgeo_at_geom etc. under the hood) and over a geomset go through
-    // the temporal-functions multi-value handlers.
-    RegisterMeosFunction(loader, ScalarFunction(
-        "atValues", {TGEOM, GEOM}, TGEOM,
-        TgeompointFunctions::Tgeompoint_at_value));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "atValues", {TGEOM, SpatialSetType::geomset()}, TGEOM,
-        TemporalFunctions::Temporal_at_values));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "minusValues", {TGEOM, GEOM}, TGEOM,
-        TemporalFunctions::Temporal_minus_value));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "minusValues", {TGEOM, SpatialSetType::geomset()}, TGEOM,
-        TemporalFunctions::Temporal_minus_value));
-
-    // ---- Spatial restrict (atGeometry / minusGeometry / atStbox / minusStbox)
-    // Reuse tgeompoint's Tgeo_* handlers — they operate on Temporal * and
-    // delegate to the subtype-agnostic MEOS `tgeo_at_geom` etc.
-    RegisterMeosFunction(loader, ScalarFunction(
-        "atGeometry", {TGEOM, GEOM}, TGEOM,
-        TgeompointFunctions::Tgeo_at_geom));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "minusGeometry", {TGEOM, GEOM}, TGEOM,
-        TgeompointFunctions::Tgeo_minus_geom));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "minusStbox", {TGEOM, StboxType::stbox()}, TGEOM,
-        TgeompointFunctions::Tgeo_minus_stbox));
-
     // ---- Modifiers (shift / scale / shiftScale / append / insert / update /
     // delete / round) ----
     RegisterMeosFunction(loader, ScalarFunction(

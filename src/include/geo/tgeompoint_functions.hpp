@@ -51,10 +51,6 @@ struct TgeompointFunctions {
     /* ***************************************************
      * Restriction functions
      ****************************************************/
-    static void Tgeompoint_at_value(DataChunk &args, ExpressionState &state, Vector &result);
-    // atTime(tgeompoint, timestamptz): Temporal_at_timestamptz
-    // atTime(tgeompoint, tstzspan): Temporal_at_tstzspan
-    // atTime(tgeompoint, tstzspanset): Temporal_at_tstzspanset
     static void Tgeompoint_value_at_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
@@ -99,10 +95,6 @@ struct TgeompointFunctions {
     static void Tpoint_make_simple(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tpoint_trajectory(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tpoint_trajectory_gs(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tgeo_at_geom(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tgeo_minus_geom(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tgeo_at_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tgeo_minus_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tspatial_transform(DataChunk &args, ExpressionState &state, Vector &result);
 
     static void ShortestLine_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);

@@ -271,3 +271,14 @@ SELECT getTimestamp(tgeometry 'Point(1 1)@2023-01-01 10:00:00+00');
 2023-01-01 11:00:00+01
 
 
+
+# atStbox keeps the instants inside the box, with or without its border
+query I
+SELECT asText(atStbox(tgeometry '{Point(1 1)@2000-01-01, Point(5 5)@2000-01-02}', stbox 'STBOX X((0,0),(2,2))'));
+----
+{POINT(1 1)@2000-01-01 00:00:00+01}
+
+query I
+SELECT asText(atStbox(tgeometry '{Point(1 1)@2000-01-01, Point(5 5)@2000-01-02}', stbox 'STBOX X((0,0),(2,2))', false));
+----
+{POINT(1 1)@2000-01-01 00:00:00+01}

@@ -192,45 +192,7 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             )
         );
 
-        if (type.GetAlias() != "tbool") {
-            duckdb::RegisterSerializedScalarFunction(loader, 
-                ScalarFunction(
-                    "atMin",
-                    {type},
-                    type,
-                    TemporalFunctions::Temporal_at_min
-                )
-            );
-
-            duckdb::RegisterSerializedScalarFunction(loader, 
-                ScalarFunction(
-                    "minusMin",
-                    {type},
-                    type,
-                    TemporalFunctions::Temporal_minus_min
-                )
-            );
-
-            duckdb::RegisterSerializedScalarFunction(loader, 
-                ScalarFunction(
-                    "atMax",
-                    {type},
-                    type,
-                    TemporalFunctions::Temporal_at_max
-                )
-            );
-
-            duckdb::RegisterSerializedScalarFunction(loader, 
-                ScalarFunction(
-                    "minusMax",
-                    {type},
-                    type,
-                    TemporalFunctions::Temporal_minus_max
-                )
-            );
-        }
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
+        duckdb::RegisterSerializedScalarFunction(loader,
             ScalarFunction(
                 "setInterp",
                 {type, LogicalType::VARCHAR},
@@ -290,78 +252,6 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
         // timestamps(<temporal_type>) is generated from the catalog (temporal_timestamps) in generated_temporal_udfs.cpp.
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "atTime",
-                {type, LogicalType::TIMESTAMP_TZ},
-                type,
-                TemporalFunctions::Temporal_at_timestamptz
-            )
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "atTime",
-                {type, SpanTypes::tstzspan()},
-                type,
-                TemporalFunctions::Temporal_at_tstzspan
-            )
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "atTime",
-                {type, SpansetTypes::tstzspanset()},
-                type,
-                TemporalFunctions::Temporal_at_tstzspanset
-            )
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "minusTime",
-                {type, LogicalType::TIMESTAMP_TZ},
-                type,
-                TemporalFunctions::Temporal_minus_timestamptz
-            )
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "atTime",
-                {type, SetTypes::tstzset()},
-                type,
-                TemporalFunctions::Temporal_at_tstzset
-            )
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "minusTime",
-                {type, SetTypes::tstzset()},
-                type,
-                TemporalFunctions::Temporal_minus_tstzset
-            )
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "minusTime",
-                {type, SpanTypes::tstzspan()},
-                type,
-                TemporalFunctions::Temporal_minus_tstzspan
-            )
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "minusTime",
-                {type, SpansetTypes::tstzspanset()},
-                type,
-                TemporalFunctions::Temporal_minus_tstzspanset
-            )
-        );
-
         if (type.GetAlias() == "tint" || type.GetAlias() == "tfloat") {
             duckdb::RegisterSerializedScalarFunction(loader, 
                 ScalarFunction(
@@ -407,57 +297,6 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             );
         }
         
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "atValues",
-                {type, TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str())},
-                type,
-                TemporalFunctions::Temporal_at_value
-            )
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "minusValues",
-                {type, TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str())},
-                type,
-                TemporalFunctions::Temporal_minus_value
-            )
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "beforeTimestamp",
-                {type, LogicalType::TIMESTAMP_TZ},
-                type,
-                TemporalFunctions::Temporal_before_timestamptz
-            )
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "beforeTimestamp",
-                {type, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN},
-                type,
-                TemporalFunctions::Temporal_before_timestamptz
-            )
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "afterTimestamp",
-                {type, LogicalType::TIMESTAMP_TZ},
-                type,
-                TemporalFunctions::Temporal_after_timestamptz
-            )
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "afterTimestamp",
-                {type, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN},
-                type,
-                TemporalFunctions::Temporal_after_timestamptz
-            )
-        );
-
         duckdb::RegisterSerializedScalarFunction(loader, 
             ScalarFunction(
                 "insert",
@@ -682,78 +521,6 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
             {TemporalTypes::tbool()},
             SpansetTypes::tstzspanset(),
             TemporalFunctions::Tbool_when_true
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "atValues",
-            {TemporalTypes::tint(), SpanTypes::intspan()},
-            TemporalTypes::tint(),
-            TemporalFunctions::Tnumber_at_span
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "atValues",
-            {TemporalTypes::tfloat(), SpanTypes::floatspan()},
-            TemporalTypes::tfloat(),
-            TemporalFunctions::Tnumber_at_span
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "minusValues",
-            {TemporalTypes::tint(), SpanTypes::intspan()},
-            TemporalTypes::tint(),
-            TemporalFunctions::Tnumber_minus_span
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "minusValues",
-            {TemporalTypes::tfloat(), SpanTypes::floatspan()},
-            TemporalTypes::tfloat(),
-            TemporalFunctions::Tnumber_minus_span
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "atValues",
-            {TemporalTypes::tint(), SpansetTypes::intspanset()},
-            TemporalTypes::tint(),
-            TemporalFunctions::Tnumber_at_spanset
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "atValues",
-            {TemporalTypes::tfloat(), SpansetTypes::floatspanset()},
-            TemporalTypes::tfloat(),
-            TemporalFunctions::Tnumber_at_spanset
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "minusValues",
-            {TemporalTypes::tint(), SpansetTypes::intspanset()},
-            TemporalTypes::tint(),
-            TemporalFunctions::Tnumber_minus_spanset
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "minusValues",
-            {TemporalTypes::tfloat(), SpansetTypes::floatspanset()},
-            TemporalTypes::tfloat(),
-            TemporalFunctions::Tnumber_minus_spanset
         )
     );
 
