@@ -742,6 +742,58 @@ static void Gen_tcbuffer_value(DataChunk &args, ExpressionState &, Vector &resul
         });
 }
 
+static void Gen_tcbuffer_value_at_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto rc = args.size();
+    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, rc,
+        [&](string_t in, timestamp_tz_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Cbuffer *o = NULL;
+            bool ok = tcbuffer_value_at_timestamptz(t, DuckDBToMeosTimestamp(a2).value, true, &o);
+            free(t);
+            if (! ok) { mask.SetInvalid(idx); return string_t(); }
+            return CbufferToBlob(result, o);
+        });
+}
+
+static void Gen_tcbuffer_value_n(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto rc = args.size();
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, rc,
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Cbuffer *o = NULL;
+            bool ok = tcbuffer_value_n(t, a2, &o);
+            free(t);
+            if (! ok) { mask.SetInvalid(idx); return string_t(); }
+            return CbufferToBlob(result, o);
+        });
+}
+
+static void Gen_tcbuffer_points(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Set *r = tcbuffer_points(t);
+            free(t);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SetToBlob(result, r);
+        });
+}
+
+static void Gen_tcbuffer_radius(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Set *r = tcbuffer_radius(t);
+            free(t);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SetToBlob(result, r);
+        });
+}
+
 
 // ===== @ingroup meos_cbuffer_conversion =====
 static void Gen_tcbuffer_to_tfloat(DataChunk &args, ExpressionState &, Vector &result) {
@@ -1597,6 +1649,46 @@ static void Gen_tpose_value(DataChunk &args, ExpressionState &, Vector &result) 
             Pose * r = tpose_value(t);
             free(t);
             return PoseToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tpose_value_at_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto rc = args.size();
+    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, rc,
+        [&](string_t in, timestamp_tz_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Pose *o = NULL;
+            bool ok = tpose_value_at_timestamptz(t, DuckDBToMeosTimestamp(a2).value, true, &o);
+            free(t);
+            if (! ok) { mask.SetInvalid(idx); return string_t(); }
+            return PoseToBlob(result, o);
+        });
+}
+
+static void Gen_tpose_value_n(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto rc = args.size();
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, rc,
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Pose *o = NULL;
+            bool ok = tpose_value_n(t, a2, &o);
+            free(t);
+            if (! ok) { mask.SetInvalid(idx); return string_t(); }
+            return PoseToBlob(result, o);
+        });
+}
+
+static void Gen_tpose_points(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Set *r = tpose_points(t);
+            free(t);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SetToBlob(result, r);
         });
 }
 
@@ -2846,6 +2938,10 @@ void RegisterGenerated_meos_cbuffer_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("convexHull", {CbufferTypes::tcbuffer()}, MobilityDuckGeometryType(), Gen_tcbuffer_convex_hull));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {CbufferTypes::tcbuffer()}, CbufferTypes::cbuffer(), Gen_tcbuffer_start_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValue", {CbufferTypes::tcbuffer()}, CbufferTypes::cbuffer(), Gen_tcbuffer_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueAtTimestamp", {CbufferTypes::tcbuffer(), LogicalType::TIMESTAMP_TZ}, CbufferTypes::cbuffer(), Gen_tcbuffer_value_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueN", {CbufferTypes::tcbuffer(), LogicalType::INTEGER}, CbufferTypes::cbuffer(), Gen_tcbuffer_value_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("points", {CbufferTypes::tcbuffer()}, SpatialSetType::geomset(), Gen_tcbuffer_points));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("radius", {CbufferTypes::tcbuffer()}, SetTypes::floatset(), Gen_tcbuffer_radius));
 }
 
 void RegisterGenerated_meos_cbuffer_conversion(ExtensionLoader &loader) {
@@ -3010,6 +3106,9 @@ void RegisterGenerated_meos_pose_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {PoseTypes::tpose()}, PoseTypes::pose(), Gen_tpose_start_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("trajectory", {PoseTypes::tpose()}, MobilityDuckGeometryType(), Gen_tpose_trajectory));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValue", {PoseTypes::tpose()}, PoseTypes::pose(), Gen_tpose_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueAtTimestamp", {PoseTypes::tpose(), LogicalType::TIMESTAMP_TZ}, PoseTypes::pose(), Gen_tpose_value_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueN", {PoseTypes::tpose(), LogicalType::INTEGER}, PoseTypes::pose(), Gen_tpose_value_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("points", {PoseTypes::tpose()}, SpatialSetType::geomset(), Gen_tpose_points));
 }
 
 void RegisterGenerated_meos_posechain_comp_temp(ExtensionLoader &loader) {

@@ -85,3 +85,10 @@ query I
 SELECT asText(getValues('{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell));
 ----
 {"47c3c3", "47c3c5"}
+
+# valueAtTimestamp answers the cell a step sequence holds at that time
+
+query I
+SELECT valueAtTimestamp(ts2cell '[89c25a3@2000-01-01, 89c25a3@2000-01-02]', TIMESTAMPTZ '2000-01-01 12:00:00')::VARCHAR;
+----
+89c25a3
