@@ -2926,6 +2926,133 @@ f"            FreeTemporalArr(a, n);\n"
 f"            return TemporalToBlobN(result, r, mask, idx);\n"
 f"        }});\n}}\n")
 
+def ctor_duck_type(sqlt):
+    """The DuckDB type of an argument or the return of a container constructor: a base value or a
+    span (SQL_BASE_TO_DUCK), a set or a span set, or a LIST of one."""
+    if sqlt.endswith("[]"):
+        inner = ctor_duck_type(sqlt[:-2])
+        return "LogicalType::LIST(%s)" % inner if inner else None
+    return SQL_BASE_TO_DUCK.get(sqlt) or SET_TYPES.get(sqlt) or SPANSET_TYPES.get(sqlt)
+
+def shape_container_make(f):
+    """A retired group's public constructor of a set, a span or a span set: ('scalars', [the
+    SCALAR_ARG triple of each parameter], None, ret) for one taking by-value values only (intspan_make),
+    ('basearr', C element, (DuckDB type, C++ element, marshal), ret) for one taking the base values
+    of a SQL array with their count (intset_make, textset_make), ('spanarr', 'Span', None, ret) for
+    one taking spans (spanset_make). The array is the catalog's `inputArrays`, read from a LIST as
+    #shape_temporal_array reads one; None otherwise."""
+    if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
+        return None
+    rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
+    if rb not in ("Set", "Span", "SpanSet") or not rn.endswith("*") \
+            or "const" in f["returnType"]["canonical"]:
+        return None
+    ps = f.get("params") or []
+    ia = (f.get("shape") or {}).get("inputArrays") or []
+    if not ia:
+        if not ps or any(base(p["canonical"]) not in SCALAR_ARG or "*" in norm(p["canonical"])
+                         for p in ps):
+            return None
+        return ("scalars", [SCALAR_ARG[base(p["canonical"])] for p in ps], None, rb)
+    if len(ia) != 1 or len(ps) != 2 or ia[0].get("param") != ps[0]["name"] \
+            or (ia[0].get("lengthFrom") or {}).get("name") != ps[1]["name"]:
+        return None
+    n0 = norm(ps[0]["canonical"]).replace("const ", "").strip()
+    if n0 == "text **":
+        return ("basearr", "text *", ("LogicalType::VARCHAR", "string_t", "MakeText(a2)"), rb)
+    b0 = base(ps[0]["canonical"])
+    if n0.count("*") != 1:
+        return None
+    if b0 == "Span":
+        return ("spanarr", "Span", None, rb)
+    if b0 in SCALAR_ARG:
+        return ("basearr", b0, SCALAR_ARG[b0], rb)
+    return None
+
+def ctor_forms(f, s, kind):
+    """The (number of SQL arguments read, body suffix) forms a signature registers: the full one and,
+    for by-value values whose last argument carries a SQL default, the form without it
+    (span(integer, integer, boolean) beside the four-argument form). A defaulted tail of two or more
+    arguments is a function of its own, which #project_signature_forms derives
+    (intspan_make_lower_inc_upper_inc for span(integer, integer)), so it is not repeated here."""
+    n = len(s.get("args") or [])
+    forms = [(n, "")]
+    defs = s.get("argDefaults") or []
+    if kind == "scalars" and len(defs) == n and n and defs[n - 1] is not None:
+        forms.append((n - 1, "_a%d" % (n - 1)))
+    return forms
+
+def emit_container_make(f, kind, info, rb, k=None):
+    """The body of #shape_container_make. The by-value form reads every argument per row as
+    #emit_nary_scalars does, and passes the SQL default of each argument past the first `k`. The
+    array forms read a LIST as #emit_temporal_array does into an array of the C element: a base
+    value through its SCALAR_ARG marshal or MakeText, a span copied from its blob as the hand
+    constructor copied one. A NULL element raises PostgreSQL's own message for it
+    (deconstruct_array); MEOS refuses an empty array (ensure_positive)."""
+    name = f["name"]
+    writer = PTR_RET[rb][1] % "r"
+    if kind == "scalars":
+        ps = f["params"]
+        n = len(ps)
+        k = n if k is None else k
+        sfx = "" if k == n else "_a%d" % k
+        defs = next((s.get("argDefaults") for s in f.get("sqlSignatures") or []
+                     if s.get("argDefaults")), None) or [None] * n
+        L = [f"static void Gen_{name}{sfx}(DataChunk &args, ExpressionState &, Vector &result) {{",
+             "    EnsureMeosThreadInitialized();",
+             "    const idx_t rows = args.size();",
+             f"    for (idx_t c = 0; c < {k}; c++) args.data[c].Flatten(rows);"]
+        for c in range(k):
+            L.append(f"    auto in{c} = FlatVector::GetData<{info[c][1]}>(args.data[{c}]);")
+        L += ["    auto out = FlatVector::GetData<string_t>(result);",
+              "    auto &outv = FlatVector::Validity(result);",
+              "    for (idx_t i = 0; i < rows; i++) {",
+              "        bool valid = true;",
+              f"        for (idx_t c = 0; c < {k}; c++)",
+              "            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }",
+              "        if (!valid) { outv.SetInvalid(i); continue; }"]
+        call = [info[c][2].replace("a2", f"in{c}[i]") for c in range(k)]
+        call += [forward_literal(ps[c], defs[c]) for c in range(k, n)]
+        L += [f"        {rb} *r = {name}({', '.join(call)});",
+              "        if (!r) { outv.SetInvalid(i); continue; }",
+              f"        out[i] = {writer};",
+              "    }",
+              "}"]
+        return "\n".join(L) + "\n"
+    elem, conv = info if kind == "basearr" else ("Span", None)
+    cpp = "string_t" if kind == "spanarr" else conv[1]
+    if kind == "spanarr":
+        put = ("if (a2.GetSize() != sizeof(Span)) { free(arr); "
+               "throw InvalidInputException(\"Invalid span in the input array\"); }\n"
+               "                memcpy(&arr[j], a2.GetData(), sizeof(Span));")
+    else:
+        put = f"arr[j] = {conv[2]};"
+    free_elems = ("for (int j = 0; j < got; j++) free(arr[j]); " if elem == "text *" else "")
+    return (
+f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+f"    EnsureMeosThreadInitialized();\n"
+f"    auto &lv = args.data[0];\n"
+f"    auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));\n"
+f"    auto cd = FlatVector::GetData<{cpp}>(child);\n"
+f"    auto &cv = FlatVector::Validity(child);\n"
+f"    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),\n"
+f"        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+f"            int n = (int) le.length, got = 0;\n"
+f"            {elem} *arr = ({elem} *) malloc(sizeof({elem}) * (n > 0 ? n : 1));\n"
+f"            for (int j = 0; j < n; j++, got++) {{\n"
+f"                if (!cv.RowIsValid(le.offset + j)) {{\n"
+f"                    {free_elems}free(arr);\n"
+f"                    throw InvalidInputException(\"null array element not allowed in this context\");\n"
+f"                }}\n"
+f"                auto a2 = cd[le.offset + j];\n"
+f"                {put}\n"
+f"            }}\n"
+f"            {rb} *r = {name}(arr, n);\n"
+f"            {free_elems}free(arr);\n"
+f"            if (!r) {{ mask.SetInvalid(idx); return string_t(); }}\n"
+f"            return {writer};\n"
+f"        }});\n}}\n")
+
 def shape_unnest(f):
     """(engine name, [temporal accessors], value DuckDB type, value writer, C element) for a
     function the catalog declares set-returning under the name the other engines take
@@ -4196,6 +4323,8 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   # the accessors of the circular buffers, poses, point clouds and H3 and S2 cells
                   "meos_cbuffer_accessor", "meos_pose_accessor", "meos_pointcloud_accessor",
                   "meos_h3_accessor", "meos_s2cell_accessor",
+                  # the constructors of the sets, spans and span sets (#shape_container_make)
+                  "meos_setspan_constructor",
                   # the simplifications: minTimeDeltaSimplify's duration reaches #shape_arg
                   "meos_temporal_analytics_simplify",
                   # the splits of a set, a span set and a temporal value into N spans or boxes
@@ -5116,6 +5245,28 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {{LogicalType::LIST({a_})}}, {a_}, '
                                          f'Gen_{f["name"]}));')
+            continue
+        # a set, span or span set built from its values: one registration per declared signature,
+        # and per shorter form its trailing SQL defaults allow (#ctor_forms)
+        _mk = shape_container_make(f)
+        if _mk:
+            STATE["grp"] = f.get("group") or "meos_ungrouped"
+            kind, el, conv, rb_ = _mk
+            info = el if kind == "scalars" else (el, conv)
+            emitted = set()
+            for s in f.get("sqlSignatures") or []:
+                ret_ = ctor_duck_type(s.get("ret") or "")
+                argt = [ctor_duck_type(a) for a in s.get("args") or []]
+                if ret_ is None or None in argt:
+                    continue
+                for k, sfx in ctor_forms(f, s, kind):
+                    if sfx not in emitted:
+                        emitted.add(sfx)
+                        bodies.append(emit_container_make(f, kind, info, rb_, k)); n_un += 1
+                    for nm in reg_names(f, s.get("sqlName") or f["sqlfn"], aliases):
+                        specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                             f'"{reg_name(nm, f)}", {{{", ".join(argt[:k])}}}, {ret_}, '
+                                             f'Gen_{f["name"]}{sfx}));')
             continue
         # a set-returning function the other engines call by its `altSqlName` (temporalUnnest):
         # a table function over the types its signatures declare, as the path tables are

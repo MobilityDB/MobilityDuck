@@ -92,19 +92,9 @@ void SpansetTypes::RegisterCastFunctions(ExtensionLoader &loader) {
 // --- Register Scalar Functions ---
 void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {    
     for (const auto &spanset_type : SpansetTypes::AllTypes()) {
-        auto child_type = SpansetTypeMapping::GetChildType(spanset_type);    // span     
         auto base_type = SpansetTypeMapping::GetBaseType(spanset_type); 
-        auto set_type = SpansetTypeMapping::GetSetType(spanset_type);       // set
         // asBinary / asHexWKB and the <spanset>FromText / FromBinary / FromHexWKB constructors
         // are generated from the catalog (meos_setspan_inout).
-
-        duckdb::RegisterSerializedScalarFunction(loader,
-            ScalarFunction("spanset", {LogicalType::LIST(child_type)}, spanset_type, SpansetFunctions::Spanset_constructor)
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("spanset", {base_type}, spanset_type, SpansetFunctions::Value_to_spanset)
-        );
 
         // spanset(<set>) and spanset(<span>) are generated from the catalog
         // (meos_setspan_conversion).

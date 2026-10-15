@@ -344,3 +344,24 @@ query I
 SELECT asText(tstzspanFromText('[2001-01-01 00:00:00+01, 2001-01-02 00:00:00+01]'));
 ----
 [2001-01-01 00:00:00+01, 2001-01-02 00:00:00+01]
+
+# span(lower, upper [, lower_inc [, upper_inc]]): the bounds default to lower_inc true and
+# upper_inc false, as MobilityDB declares
+
+query IIII
+SELECT span(1, 5) = intspan '[1, 5)', span(1, 5, false) = intspan '(1, 5)',
+       span(1, 5, true, true) = intspan '[1, 6)', span(1.5, 2.5, false, true) = floatspan '(1.5, 2.5]';
+----
+true	true	true	true
+
+query III
+SELECT span(DATE '2001-01-01', DATE '2001-01-03') = datespan '[2001-01-01, 2001-01-03)',
+       span(TIMESTAMPTZ '2001-01-01', TIMESTAMPTZ '2001-01-02', true, true) = tstzspan '[2001-01-01, 2001-01-02]',
+       span(5) = 5::intspan;
+----
+true	true	true
+
+statement error
+SELECT span(5, 1);
+----
+Span lower bound must be less than or equal to span upper bound

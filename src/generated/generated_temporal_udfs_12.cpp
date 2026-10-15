@@ -497,6 +497,21 @@ inline double tpoint_length_full(const Temporal * p0, bool p1) {
 inline Temporal * tpoint_speed_full(const Temporal * p0, bool p1) {
     return ::tpoint_speed(p0, p1);
 }
+inline Span * bigintspan_make_lower_inc_upper_inc(int64_t p0, int64_t p1) {
+    return ::bigintspan_make(p0, p1, true, false);
+}
+inline Span * datespan_make_lower_inc_upper_inc(DateADT p0, DateADT p1) {
+    return ::datespan_make(p0, p1, true, false);
+}
+inline Span * floatspan_make_lower_inc_upper_inc(double p0, double p1) {
+    return ::floatspan_make(p0, p1, true, false);
+}
+inline Span * intspan_make_lower_inc_upper_inc(int p0, int p1) {
+    return ::intspan_make(p0, p1, true, false);
+}
+inline Span * tstzspan_make_lower_inc_upper_inc(TimestampTz p0, TimestampTz p1) {
+    return ::tstzspan_make(p0, p1, true, false);
+}
 inline Set * bigintset_shift_scale_hasshift_haswidth_width(const Set * p0, int64_t p1) {
     return ::bigintset_shift_scale(p0, p1, 0, true, false);
 }
@@ -1984,6 +1999,484 @@ static void Gen_union_set_s2cell(DataChunk &args, ExpressionState &, Vector &res
 }
 
 
+// ===== @ingroup meos_setspan_constructor =====
+static void Gen_bigintset_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &lv = args.data[0];
+    auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));
+    auto cd = FlatVector::GetData<int64_t>(child);
+    auto &cv = FlatVector::Validity(child);
+    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),
+        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
+            int n = (int) le.length, got = 0;
+            int64_t *arr = (int64_t *) malloc(sizeof(int64_t) * (n > 0 ? n : 1));
+            for (int j = 0; j < n; j++, got++) {
+                if (!cv.RowIsValid(le.offset + j)) {
+                    free(arr);
+                    throw InvalidInputException("null array element not allowed in this context");
+                }
+                auto a2 = cd[le.offset + j];
+                arr[j] = a2;
+            }
+            Set *r = bigintset_make(arr, n);
+            free(arr);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SetToBlob(result, r);
+        });
+}
+
+static void Gen_bigintspan_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int64_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    auto in3 = FlatVector::GetData<bool>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 4; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Span *r = bigintspan_make(in0[i], in1[i], in2[i], in3[i]);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SpanToBlob(result, r);
+    }
+}
+
+static void Gen_bigintspan_make_a3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int64_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Span *r = bigintspan_make(in0[i], in1[i], in2[i], false);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SpanToBlob(result, r);
+    }
+}
+
+static void Gen_bigintspan_make_lower_inc_upper_inc(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int64_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Span *r = bigintspan_make_lower_inc_upper_inc(in0[i], in1[i]);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SpanToBlob(result, r);
+    }
+}
+
+static void Gen_dateset_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &lv = args.data[0];
+    auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));
+    auto cd = FlatVector::GetData<date_t>(child);
+    auto &cv = FlatVector::Validity(child);
+    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),
+        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
+            int n = (int) le.length, got = 0;
+            DateADT *arr = (DateADT *) malloc(sizeof(DateADT) * (n > 0 ? n : 1));
+            for (int j = 0; j < n; j++, got++) {
+                if (!cv.RowIsValid(le.offset + j)) {
+                    free(arr);
+                    throw InvalidInputException("null array element not allowed in this context");
+                }
+                auto a2 = cd[le.offset + j];
+                arr[j] = ToMeosDate(a2);
+            }
+            Set *r = dateset_make(arr, n);
+            free(arr);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SetToBlob(result, r);
+        });
+}
+
+static void Gen_datespan_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<date_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<date_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    auto in3 = FlatVector::GetData<bool>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 4; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Span *r = datespan_make(ToMeosDate(in0[i]), ToMeosDate(in1[i]), in2[i], in3[i]);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SpanToBlob(result, r);
+    }
+}
+
+static void Gen_datespan_make_a3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<date_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<date_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Span *r = datespan_make(ToMeosDate(in0[i]), ToMeosDate(in1[i]), in2[i], false);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SpanToBlob(result, r);
+    }
+}
+
+static void Gen_datespan_make_lower_inc_upper_inc(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<date_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<date_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Span *r = datespan_make_lower_inc_upper_inc(ToMeosDate(in0[i]), ToMeosDate(in1[i]));
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SpanToBlob(result, r);
+    }
+}
+
+static void Gen_floatset_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &lv = args.data[0];
+    auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));
+    auto cd = FlatVector::GetData<double>(child);
+    auto &cv = FlatVector::Validity(child);
+    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),
+        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
+            int n = (int) le.length, got = 0;
+            double *arr = (double *) malloc(sizeof(double) * (n > 0 ? n : 1));
+            for (int j = 0; j < n; j++, got++) {
+                if (!cv.RowIsValid(le.offset + j)) {
+                    free(arr);
+                    throw InvalidInputException("null array element not allowed in this context");
+                }
+                auto a2 = cd[le.offset + j];
+                arr[j] = a2;
+            }
+            Set *r = floatset_make(arr, n);
+            free(arr);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SetToBlob(result, r);
+        });
+}
+
+static void Gen_floatspan_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<double>(args.data[0]);
+    auto in1 = FlatVector::GetData<double>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    auto in3 = FlatVector::GetData<bool>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 4; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Span *r = floatspan_make(in0[i], in1[i], in2[i], in3[i]);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SpanToBlob(result, r);
+    }
+}
+
+static void Gen_floatspan_make_a3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<double>(args.data[0]);
+    auto in1 = FlatVector::GetData<double>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Span *r = floatspan_make(in0[i], in1[i], in2[i], false);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SpanToBlob(result, r);
+    }
+}
+
+static void Gen_floatspan_make_lower_inc_upper_inc(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<double>(args.data[0]);
+    auto in1 = FlatVector::GetData<double>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Span *r = floatspan_make_lower_inc_upper_inc(in0[i], in1[i]);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SpanToBlob(result, r);
+    }
+}
+
+static void Gen_intset_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &lv = args.data[0];
+    auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));
+    auto cd = FlatVector::GetData<int32_t>(child);
+    auto &cv = FlatVector::Validity(child);
+    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),
+        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
+            int n = (int) le.length, got = 0;
+            int *arr = (int *) malloc(sizeof(int) * (n > 0 ? n : 1));
+            for (int j = 0; j < n; j++, got++) {
+                if (!cv.RowIsValid(le.offset + j)) {
+                    free(arr);
+                    throw InvalidInputException("null array element not allowed in this context");
+                }
+                auto a2 = cd[le.offset + j];
+                arr[j] = a2;
+            }
+            Set *r = intset_make(arr, n);
+            free(arr);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SetToBlob(result, r);
+        });
+}
+
+static void Gen_intspan_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int32_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    auto in3 = FlatVector::GetData<bool>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 4; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Span *r = intspan_make(in0[i], in1[i], in2[i], in3[i]);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SpanToBlob(result, r);
+    }
+}
+
+static void Gen_intspan_make_a3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int32_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Span *r = intspan_make(in0[i], in1[i], in2[i], false);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SpanToBlob(result, r);
+    }
+}
+
+static void Gen_intspan_make_lower_inc_upper_inc(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int32_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Span *r = intspan_make_lower_inc_upper_inc(in0[i], in1[i]);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SpanToBlob(result, r);
+    }
+}
+
+static void Gen_spanset_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &lv = args.data[0];
+    auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));
+    auto cd = FlatVector::GetData<string_t>(child);
+    auto &cv = FlatVector::Validity(child);
+    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),
+        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
+            int n = (int) le.length, got = 0;
+            Span *arr = (Span *) malloc(sizeof(Span) * (n > 0 ? n : 1));
+            for (int j = 0; j < n; j++, got++) {
+                if (!cv.RowIsValid(le.offset + j)) {
+                    free(arr);
+                    throw InvalidInputException("null array element not allowed in this context");
+                }
+                auto a2 = cd[le.offset + j];
+                if (a2.GetSize() != sizeof(Span)) { free(arr); throw InvalidInputException("Invalid span in the input array"); }
+                memcpy(&arr[j], a2.GetData(), sizeof(Span));
+            }
+            SpanSet *r = spanset_make(arr, n);
+            free(arr);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
+        });
+}
+
+static void Gen_textset_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &lv = args.data[0];
+    auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));
+    auto cd = FlatVector::GetData<string_t>(child);
+    auto &cv = FlatVector::Validity(child);
+    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),
+        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
+            int n = (int) le.length, got = 0;
+            text * *arr = (text * *) malloc(sizeof(text *) * (n > 0 ? n : 1));
+            for (int j = 0; j < n; j++, got++) {
+                if (!cv.RowIsValid(le.offset + j)) {
+                    for (int j = 0; j < got; j++) free(arr[j]); free(arr);
+                    throw InvalidInputException("null array element not allowed in this context");
+                }
+                auto a2 = cd[le.offset + j];
+                arr[j] = MakeText(a2);
+            }
+            Set *r = textset_make(arr, n);
+            for (int j = 0; j < got; j++) free(arr[j]); free(arr);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SetToBlob(result, r);
+        });
+}
+
+static void Gen_tstzset_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &lv = args.data[0];
+    auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));
+    auto cd = FlatVector::GetData<timestamp_tz_t>(child);
+    auto &cv = FlatVector::Validity(child);
+    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),
+        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
+            int n = (int) le.length, got = 0;
+            TimestampTz *arr = (TimestampTz *) malloc(sizeof(TimestampTz) * (n > 0 ? n : 1));
+            for (int j = 0; j < n; j++, got++) {
+                if (!cv.RowIsValid(le.offset + j)) {
+                    free(arr);
+                    throw InvalidInputException("null array element not allowed in this context");
+                }
+                auto a2 = cd[le.offset + j];
+                arr[j] = DuckDBToMeosTimestamp(a2).value;
+            }
+            Set *r = tstzset_make(arr, n);
+            free(arr);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SetToBlob(result, r);
+        });
+}
+
+static void Gen_tstzspan_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<timestamp_tz_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    auto in3 = FlatVector::GetData<bool>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 4; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Span *r = tstzspan_make(DuckDBToMeosTimestamp(in0[i]).value, DuckDBToMeosTimestamp(in1[i]).value, in2[i], in3[i]);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SpanToBlob(result, r);
+    }
+}
+
+static void Gen_tstzspan_make_a3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<timestamp_tz_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Span *r = tstzspan_make(DuckDBToMeosTimestamp(in0[i]).value, DuckDBToMeosTimestamp(in1[i]).value, in2[i], false);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SpanToBlob(result, r);
+    }
+}
+
+static void Gen_tstzspan_make_lower_inc_upper_inc(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<timestamp_tz_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Span *r = tstzspan_make_lower_inc_upper_inc(DuckDBToMeosTimestamp(in0[i]).value, DuckDBToMeosTimestamp(in1[i]).value);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SpanToBlob(result, r);
+    }
+}
+
+
 // ===== @ingroup meos_temporal_bbox_pos =====
 static void Gen_after_temporal_temporal(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -3148,6 +3641,35 @@ void RegisterGenerated_meos_s2cell_set_setops(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("+", {S2cellTypes::s2cell(), SetTypes::s2cellset()}, SetTypes::s2cellset(), Gen_union_s2cell_set));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setUnion", {SetTypes::s2cellset(), S2cellTypes::s2cell()}, SetTypes::s2cellset(), Gen_union_set_s2cell));
     RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SetTypes::s2cellset(), S2cellTypes::s2cell()}, SetTypes::s2cellset(), Gen_union_set_s2cell));
+}
+
+void RegisterGenerated_meos_setspan_constructor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::LIST(LogicalType::BIGINT)}, SetTypes::bigintset(), Gen_bigintset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, SpanTypes::bigintspan(), Gen_bigintspan_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BOOLEAN}, SpanTypes::bigintspan(), Gen_bigintspan_make_a3));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::BIGINT, LogicalType::BIGINT}, SpanTypes::bigintspan(), Gen_bigintspan_make_lower_inc_upper_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::LIST(LogicalType::DATE)}, SetTypes::dateset(), Gen_dateset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::DATE, LogicalType::DATE, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, SpanTypes::datespan(), Gen_datespan_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::DATE, LogicalType::DATE, LogicalType::BOOLEAN}, SpanTypes::datespan(), Gen_datespan_make_a3));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::DATE, LogicalType::DATE}, SpanTypes::datespan(), Gen_datespan_make_lower_inc_upper_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::LIST(LogicalType::DOUBLE)}, SetTypes::floatset(), Gen_floatset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, SpanTypes::floatspan(), Gen_floatspan_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::BOOLEAN}, SpanTypes::floatspan(), Gen_floatspan_make_a3));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::DOUBLE, LogicalType::DOUBLE}, SpanTypes::floatspan(), Gen_floatspan_make_lower_inc_upper_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::LIST(LogicalType::INTEGER)}, SetTypes::intset(), Gen_intset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, SpanTypes::intspan(), Gen_intspan_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::BOOLEAN}, SpanTypes::intspan(), Gen_intspan_make_a3));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::INTEGER, LogicalType::INTEGER}, SpanTypes::intspan(), Gen_intspan_make_lower_inc_upper_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanset", {LogicalType::LIST(SpanTypes::intspan())}, SpansetTypes::intspanset(), Gen_spanset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanset", {LogicalType::LIST(SpanTypes::bigintspan())}, SpansetTypes::bigintspanset(), Gen_spanset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanset", {LogicalType::LIST(SpanTypes::floatspan())}, SpansetTypes::floatspanset(), Gen_spanset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanset", {LogicalType::LIST(SpanTypes::datespan())}, SpansetTypes::datespanset(), Gen_spanset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanset", {LogicalType::LIST(SpanTypes::tstzspan())}, SpansetTypes::tstzspanset(), Gen_spanset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::LIST(LogicalType::VARCHAR)}, SetTypes::textset(), Gen_textset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::LIST(LogicalType::TIMESTAMP_TZ)}, SetTypes::tstzset(), Gen_tstzset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, SpanTypes::tstzspan(), Gen_tstzspan_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, SpanTypes::tstzspan(), Gen_tstzspan_make_a3));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, SpanTypes::tstzspan(), Gen_tstzspan_make_lower_inc_upper_inc));
 }
 
 void RegisterGenerated_meos_temporal_bbox_pos(ExtensionLoader &loader) {

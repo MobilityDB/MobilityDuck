@@ -29,8 +29,6 @@ struct SpansetFunctions{
 
     // other    
 
-    static void Spanset_constructor(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Value_to_spanset(DataChunk &args, ExpressionState &state, Vector &result);
     static void Intspanset_to_floatspanset(DataChunk &args, ExpressionState &state, Vector &result);
     static void Floatspanset_to_intspanset(DataChunk &args, ExpressionState &state, Vector &result);
     static void Datespanset_to_tstzspanset(DataChunk &args, ExpressionState &state, Vector &result);

@@ -217,6 +217,7 @@ void RegisterGenerated_meos_s2cell_transf(ExtensionLoader &loader);
 void RegisterGenerated_meos_setspan_accessor(ExtensionLoader &loader);
 void RegisterGenerated_meos_setspan_bbox_split(ExtensionLoader &loader);
 void RegisterGenerated_meos_setspan_comp(ExtensionLoader &loader);
+void RegisterGenerated_meos_setspan_constructor(ExtensionLoader &loader);
 void RegisterGenerated_meos_setspan_conversion(ExtensionLoader &loader);
 void RegisterGenerated_meos_setspan_dist(ExtensionLoader &loader);
 void RegisterGenerated_meos_setspan_inout(ExtensionLoader &loader);
@@ -418,6 +419,7 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_setspan_accessor(loader);
     RegisterGenerated_meos_setspan_bbox_split(loader);
     RegisterGenerated_meos_setspan_comp(loader);
+    RegisterGenerated_meos_setspan_constructor(loader);
     RegisterGenerated_meos_setspan_conversion(loader);
     RegisterGenerated_meos_setspan_dist(loader);
     RegisterGenerated_meos_setspan_inout(loader);
