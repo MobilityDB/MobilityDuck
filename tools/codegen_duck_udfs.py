@@ -1487,6 +1487,11 @@ def shape_set(f):
         if rb == "Set" and rn.endswith("*"):       return ("u_set", "LogicalType::BLOB")
         if rb in BYVAL_RET and "*" not in rn: return ("u_scalar:" + rb, byval_ret_duck(rb))
         if rb in ("text", "char") and rn.endswith("*"): return ("u_scalar:" + rb, "LogicalType::VARCHAR")
+        # (Set) -> the family base value a set of it holds (cbufferset_start_value -> Cbuffer *),
+        # the set twin of #shape_emittable's baseval arm; `const` returns are borrowed peeks.
+        if (rb in BASEVAL_PTR_RET and rn.endswith("*")
+                and "const" not in f["returnType"]["canonical"]):
+            return ("u_baseval:" + rb, PTR_RET[rb][0])
         return None
     return None
 
@@ -1613,6 +1618,16 @@ def emit_set(f, kind):
                 f"        [&](string_t in) {{\n"
                 f"            Set *s = BlobToSet(in);\n            {cct} r = {name}(s);\n            free(s);\n"
                 f"            return {rexpr};\n        }});\n}}\n")
+    if kind.startswith("u_baseval:"):   # (Set) -> base value ptr, as emit_body_unary's baseval
+        rb = kind.split(":", 1)[1]
+        rb = PTR_RET[rb][1].split("(", 1)[0][:-len("ToBlob")]
+        cct = norm(f["returnType"]["canonical"])
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
+                f"        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                f"            Set *s = BlobToSet(in);\n            {cct} r = {name}(s);\n            free(s);\n"
+                f"            return {rb}ToBlobN(result, r, mask, idx);\n        }});\n}}\n")
     if kind == "b_set":             # (Set,Set) -> Set (pointer return; MEOS NULL -> SQL NULL)
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
@@ -2369,22 +2384,37 @@ def shape_cont_outparam(f):
     if supported(f) is not None:
         return None
     ins, out = classify(f)
-    if out is None or not ins or norm(out) not in OUTPRIM:
+    if out is None or not ins or cont_out_ret4(f, out) is None:
         return None
     if base(ins[0]["canonical"]) not in CONT_BLOBTO or not norm(ins[0]["canonical"]).endswith("*"):
         return None
     tail = [shape_arg(p) for p in ins[1:]]
     if None in tail:
         return None
-    dt, cloc, cpp = outprim_ret3(f, out)
+    dt, cloc, cpp, _give = cont_out_ret4(f, out)
     return (tail, dt, cloc, cpp, out)
+
+def cont_out_ret4(f, out):
+    """(registration LogicalType, out local C type, executor type, C++ expression giving the value
+    in `o`) for the out-parameter of #shape_cont_outparam, or None: ONE decision both the shape and
+    #emit_cont_outparam read, as #outprim_ret3 is for a scalar. A scalar is its #outprim_ret3
+    triple; the base value of another family (valueN(cbufferset, integer) -> Cbuffer **) is the
+    pointer #emit_body_outparam's outptr arm hands back, marshalled and freed by PTR_RET."""
+    n = norm(out)
+    if n in OUTPRIM:
+        dt, cloc, cpp = outprim_ret3(f, out)
+        return (dt, cloc, cpp, OUTPARAM_TAKE.get(n, f"({cpp}) %s") % "o")
+    ob = outptr_base(out)
+    if ob in BASEVAL_PTR_RET:
+        return (PTR_RET[ob][0], f"{ob} *", "string_t", PTR_RET[ob][1] % "o")
+    return None
 
 def emit_cont_outparam(f, tail, cloc, cpp, out):
     """The per-row body of #shape_cont_outparam, read as #emit_nary_scalars reads its operands,
     the value returned as #emit_body_outparam returns an out-parameter (OUTPARAM_TAKE)."""
     name = f["name"]; n = 1 + len(tail)
     cb = base(classify(f)[0][0]["canonical"])
-    give = OUTPARAM_TAKE.get(norm(out), f"({cpp}) %s") % "o"
+    give = cont_out_ret4(f, out)[3]
     L = [f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{",
          "    EnsureMeosThreadInitialized();",
          "    const idx_t rows = args.size();",
@@ -2812,6 +2842,13 @@ ARRAY_ELEM = {
     "Temporal *":  ("LogicalType::BLOB", "string_t",
                     "cd[off + j] = TemporalToBlob(child_vector, arr[j]);"),
 }
+# and the base values of the other families a set of them hands back (getValues(cbufferset) ->
+# Cbuffer **), each stored and freed by the marshaller PTR_RET states for it, as the owned
+# temporal elements above are by TemporalToBlob
+ARRAY_ELEM.update({
+    f"{b} *": ("LogicalType::BLOB", "string_t",
+               f"cd[off + j] = {PTR_RET[b][1].split('(', 1)[0]}(child_vector, arr[j]);")
+    for b in sorted(BASEVAL_PTR_RET)})
 # container-input family (base of the single non-count param) -> (C container type, Blob->container fn)
 ARRAY_IN = {
     "Set":          ("Set",      "BlobToSet"),
@@ -3463,7 +3500,8 @@ def array_ret_duck(f, acc, tail=()):
     r = _sig_ret_for(f, _acc_sqlname(acc), tail) or ""
     if not r.endswith("[]"):
         return None
-    d = SQL_BASE_TO_DUCK.get(r[:-2]) or SIG_TEMPORAL_ACC.get(r[:-2])
+    # the base value of another family is its registered type (cbuffer[] -> LIST(cbuffer))
+    d = SQL_BASE_TO_DUCK.get(r[:-2]) or SIG_TEMPORAL_ACC.get(r[:-2]) or BASE_LOGICAL.get(r[:-2])
     return "LogicalType::LIST(%s)" % d if d else None
 
 def shape_array(f):
@@ -4323,6 +4361,11 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   # the accessors of the circular buffers, poses, point clouds and H3 and S2 cells
                   "meos_cbuffer_accessor", "meos_pose_accessor", "meos_pointcloud_accessor",
                   "meos_h3_accessor", "meos_s2cell_accessor",
+                  # the accessors of the sets of those families: startValue, endValue and valueN
+                  # (#shape_set's u_baseval, #shape_cont_outparam's base value out-parameter)
+                  "meos_cbuffer_set_accessor", "meos_json_set_accessor", "meos_npoint_set_accessor",
+                  "meos_pointcloud_set_accessor", "meos_pose_set_accessor",
+                  "meos_posechain_set_accessor",
                   # the constructors of the sets, spans and span sets (#shape_container_make)
                   "meos_setspan_constructor",
                   # the simplifications: minTimeDeltaSimplify's duration reaches #shape_arg

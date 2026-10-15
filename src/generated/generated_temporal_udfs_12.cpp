@@ -1708,6 +1708,84 @@ static void Gen_tpose_points(DataChunk &args, ExpressionState &, Vector &result)
 }
 
 
+// ===== @ingroup meos_pose_set_accessor =====
+static void Gen_poseset_value_n(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Set *x0 = BlobToSet(in0[i]);
+        Pose * o = (Pose *) 0;
+        bool ok = poseset_value_n(x0, in1[i], &o);
+        free(x0);
+        if (!ok) { outv.SetInvalid(i); continue; }
+        out[i] = PoseToBlob(result, o);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_poseset_end_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *s = BlobToSet(in);
+            Pose * r = poseset_end_value(s);
+            free(s);
+            return PoseToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_poseset_start_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *s = BlobToSet(in);
+            Pose * r = poseset_start_value(s);
+            free(s);
+            return PoseToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_poseset_values(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Set *in = BlobToSet(blob);
+        int count = 0;
+        Pose ** arr = poseset_values(in, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = PoseToBlob(child_vector, arr[j]); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+
 // ===== @ingroup meos_posechain_comp_temp =====
 static void Gen_teq_tposechain_posechain(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -3602,6 +3680,13 @@ void RegisterGenerated_meos_pose_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("valueAtTimestamp", {PoseTypes::tpose(), LogicalType::TIMESTAMP_TZ}, PoseTypes::pose(), Gen_tpose_value_at_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("valueN", {PoseTypes::tpose(), LogicalType::INTEGER}, PoseTypes::pose(), Gen_tpose_value_n));
     RegisterSerializedScalarFunction(loader, ScalarFunction("points", {PoseTypes::tpose()}, SpatialSetType::geomset(), Gen_tpose_points));
+}
+
+void RegisterGenerated_meos_pose_set_accessor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueN", {SetTypes::poseset(), LogicalType::INTEGER}, PoseTypes::pose(), Gen_poseset_value_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {SetTypes::poseset()}, PoseTypes::pose(), Gen_poseset_end_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {SetTypes::poseset()}, PoseTypes::pose(), Gen_poseset_start_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("getValues", {SetTypes::poseset()}, LogicalType::LIST(PoseTypes::pose()), Gen_poseset_values));
 }
 
 void RegisterGenerated_meos_posechain_comp_temp(ExtensionLoader &loader) {
