@@ -550,3 +550,32 @@ query I
 SELECT asText(floatspansetFromBinary(asBinary(floatspanset '{[1, 2], [3, 4]}', 'XDR')));
 ----
 {[1, 2], [3, 4]}
+
+# spanset(<span>[]) builds the span set its literal writes, the spans normalized, and
+# spanset(<base>) the singleton the cast builds
+
+query III
+SELECT eq(spanset([intspan '[1, 3)', intspan '[5, 7)']), intspanset '{[1, 3), [5, 7)}'),
+       eq(spanset([floatspan '[1, 2)', floatspan '[2, 3]']), floatspanset '{[1, 3]}'),
+       eq(spanset(5), 5::intspanset);
+----
+true	true	true
+
+# The spans of a span set are increasing and disjoint, as MobilityDB's spanset(span[]) states: two
+# spans sharing a bound both include overlap, and spans out of order are refused
+
+statement error
+SELECT spanset([floatspan '[1, 2]', floatspan '[2, 3]']);
+----
+The spans composing a span set must be increasing
+
+statement error
+SELECT spanset([intspan '[5, 7)', intspan '[1, 3)']);
+----
+The spans composing a span set must be increasing
+
+query I
+SELECT eq(spanset([tstzspan '[2001-01-01, 2001-01-02)', tstzspan '[2001-01-03, 2001-01-04)']),
+          tstzspanset '{[2001-01-01, 2001-01-02), [2001-01-03, 2001-01-04)}');
+----
+true

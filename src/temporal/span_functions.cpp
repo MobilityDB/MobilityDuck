@@ -146,114 +146,6 @@ static string_t Span_make_blob(Datum lower_dat, Datum upper_dat, bool lower_inc,
     return out;
 }
 
-void SpanFunctions::Span_binary_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
-    D_ASSERT(args.ColumnCount() == 2 || args.ColumnCount() == 4);
-    auto &args0 = args.data[0];
-    auto &args1 = args.data[1];
-    Vector *args2 = args.ColumnCount() == 4 ? &args.data[2] : nullptr;
-    Vector *args3 = args.ColumnCount() == 4 ? &args.data[3] : nullptr;
-
-    auto out_type = result.GetType();
-    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
-    const idx_t count = args.size();
-
-    switch (span_type) {
-        case T_INTSPAN:
-            if (args.ColumnCount() == 2) {
-                BinaryExecutor::Execute<int32_t, int32_t, string_t>(
-                    args0, args1, result, count, [&](int32_t lo, int32_t hi) {
-                        return Span_make_blob(Datum(lo), Datum(hi), true, false, span_type, result);
-                    });
-            } else {
-                GenericExecutor::ExecuteQuaternary<PrimitiveType<int32_t>, PrimitiveType<int32_t>, PrimitiveType<bool>,
-                                                   PrimitiveType<bool>, PrimitiveType<string_t>>(
-                    args0, args1, *args2, *args3, result, count,
-                    [&](PrimitiveType<int32_t> lo, PrimitiveType<int32_t> hi, PrimitiveType<bool> li,
-                        PrimitiveType<bool> ui) {
-                        return Span_make_blob(Datum(lo.val), Datum(hi.val), li.val, ui.val, span_type, result);
-                    });
-            }
-            break;
-        case T_BIGINTSPAN:
-            if (args.ColumnCount() == 2) {
-                BinaryExecutor::Execute<int64_t, int64_t, string_t>(
-                    args0, args1, result, count, [&](int64_t lo, int64_t hi) {
-                        return Span_make_blob(Datum(lo), Datum(hi), true, false, span_type, result);
-                    });
-            } else {
-                GenericExecutor::ExecuteQuaternary<PrimitiveType<int64_t>, PrimitiveType<int64_t>, PrimitiveType<bool>,
-                                                   PrimitiveType<bool>, PrimitiveType<string_t>>(
-                    args0, args1, *args2, *args3, result, count,
-                    [&](PrimitiveType<int64_t> lo, PrimitiveType<int64_t> hi, PrimitiveType<bool> li,
-                        PrimitiveType<bool> ui) {
-                        return Span_make_blob(Datum(lo.val), Datum(hi.val), li.val, ui.val, span_type, result);
-                    });
-            }
-            break;
-        case T_FLOATSPAN:
-            if (args.ColumnCount() == 2) {
-                BinaryExecutor::Execute<double, double, string_t>(
-                    args0, args1, result, count, [&](double lo, double hi) {
-                        return Span_make_blob(Float8GetDatum(lo), Float8GetDatum(hi), true, false, span_type, result);
-                    });
-            } else {
-                GenericExecutor::ExecuteQuaternary<PrimitiveType<double>, PrimitiveType<double>, PrimitiveType<bool>,
-                                                   PrimitiveType<bool>, PrimitiveType<string_t>>(
-                    args0, args1, *args2, *args3, result, count,
-                    [&](PrimitiveType<double> lo, PrimitiveType<double> hi, PrimitiveType<bool> li,
-                        PrimitiveType<bool> ui) {
-                        return Span_make_blob(Float8GetDatum(lo.val), Float8GetDatum(hi.val), li.val, ui.val, span_type,
-                                              result);
-                    });
-            }
-            break;
-        case T_DATESPAN:
-            if (args.ColumnCount() == 2) {
-                BinaryExecutor::Execute<date_t, date_t, string_t>(
-                    args0, args1, result, count, [&](date_t lo, date_t hi) {
-                        return Span_make_blob(Datum(ToMeosDate(lo)), Datum(ToMeosDate(hi)), true, false, span_type,
-                                              result);
-                    });
-            } else {
-                GenericExecutor::ExecuteQuaternary<PrimitiveType<date_t>, PrimitiveType<date_t>, PrimitiveType<bool>,
-                                                   PrimitiveType<bool>, PrimitiveType<string_t>>(
-                    args0, args1, *args2, *args3, result, count,
-                    [&](PrimitiveType<date_t> lo, PrimitiveType<date_t> hi, PrimitiveType<bool> li,
-                        PrimitiveType<bool> ui) {
-                        return Span_make_blob(Datum(ToMeosDate(lo.val)), Datum(ToMeosDate(hi.val)), li.val, ui.val,
-                                              span_type, result);
-                    });
-            }
-            break;
-        case T_TSTZSPAN:
-            if (args.ColumnCount() == 2) {
-                BinaryExecutor::Execute<timestamp_tz_t, timestamp_tz_t, string_t>(
-                    args0, args1, result, count, [&](timestamp_tz_t lo_duck, timestamp_tz_t hi_duck) {
-                        timestamp_tz_t lo_meos = DuckDBToMeosTimestamp(lo_duck);
-                        timestamp_tz_t hi_meos = DuckDBToMeosTimestamp(hi_duck);
-                        Datum lo_dat = (Datum) static_cast<TimestampTz>(lo_meos.value);
-                        Datum hi_dat = (Datum) static_cast<TimestampTz>(hi_meos.value);
-                        return Span_make_blob(lo_dat, hi_dat, true, false, span_type, result);
-                    });
-            } else {
-                GenericExecutor::ExecuteQuaternary<PrimitiveType<timestamp_tz_t>, PrimitiveType<timestamp_tz_t>,
-                                                   PrimitiveType<bool>, PrimitiveType<bool>, PrimitiveType<string_t>>(
-                    args0, args1, *args2, *args3, result, count,
-                    [&](PrimitiveType<timestamp_tz_t> lo, PrimitiveType<timestamp_tz_t> hi, PrimitiveType<bool> li,
-                        PrimitiveType<bool> ui) {
-                        timestamp_tz_t lo_meos = DuckDBToMeosTimestamp(lo.val);
-                        timestamp_tz_t hi_meos = DuckDBToMeosTimestamp(hi.val);
-                        Datum lo_dat = (Datum) static_cast<TimestampTz>(lo_meos.value);
-                        Datum hi_dat = (Datum) static_cast<TimestampTz>(hi_meos.value);
-                        return Span_make_blob(lo_dat, hi_dat, li.val, ui.val, span_type, result);
-                    });
-            }
-            break;
-        default:
-            throw NotImplementedException("span(<type>, <type>) not yet implemented for type: " + out_type.GetAlias());
-    }
-}
-
 
 
 static inline void Write_span(Vector &result, idx_t row, Span *s) {
@@ -329,16 +221,6 @@ static void Value_to_span_core(Vector &source, Vector &result, idx_t count, Meos
         default:
             throw NotImplementedException("value_to_span not implemented for type: " + source.GetType().GetAlias());
     }
-}
-
-void SpanFunctions::Value_to_span(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &source = args.data[0];
-    auto out_type = result.GetType();
-    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
-    MeosType base_type = spantype_basetype(span_type);
-
-    Value_to_span_core(source, result, args.size(), base_type);
-
 }
 
 bool SpanFunctions::Value_to_span_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {

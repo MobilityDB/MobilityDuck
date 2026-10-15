@@ -29,8 +29,6 @@ struct SpanFunctions {
     // TODO (Type Range): static bool Span_to_range_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     // scalar functions
     static void Span_constructor(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Span_binary_constructor(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Value_to_span(DataChunk &args, ExpressionState &state, Vector &result);
     static void Intspan_to_floatspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Floatspan_to_intspan(DataChunk &args, ExpressionState &state, Vector &result);
     static void Datespan_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);

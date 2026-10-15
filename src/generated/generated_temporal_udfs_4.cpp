@@ -497,6 +497,21 @@ inline double tpoint_length_full(const Temporal * p0, bool p1) {
 inline Temporal * tpoint_speed_full(const Temporal * p0, bool p1) {
     return ::tpoint_speed(p0, p1);
 }
+inline Span * bigintspan_make_lower_inc_upper_inc(int64_t p0, int64_t p1) {
+    return ::bigintspan_make(p0, p1, true, false);
+}
+inline Span * datespan_make_lower_inc_upper_inc(DateADT p0, DateADT p1) {
+    return ::datespan_make(p0, p1, true, false);
+}
+inline Span * floatspan_make_lower_inc_upper_inc(double p0, double p1) {
+    return ::floatspan_make(p0, p1, true, false);
+}
+inline Span * intspan_make_lower_inc_upper_inc(int p0, int p1) {
+    return ::intspan_make(p0, p1, true, false);
+}
+inline Span * tstzspan_make_lower_inc_upper_inc(TimestampTz p0, TimestampTz p1) {
+    return ::tstzspan_make(p0, p1, true, false);
+}
 inline Set * bigintset_shift_scale_hasshift_haswidth_width(const Set * p0, int64_t p1) {
     return ::bigintset_shift_scale(p0, p1, 0, true, false);
 }

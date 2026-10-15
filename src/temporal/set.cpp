@@ -78,13 +78,21 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     for (const auto &set_type : SetTypes::AllTypes()) {
         auto base_type = SetTypeMapping::GetChildType(set_type);
 
-        duckdb::RegisterSerializedScalarFunction(loader,
-            ScalarFunction("set", {LogicalType::LIST(base_type)}, set_type, SetFunctions::Set_constructor)                 
-        );        
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("set", {base_type}, set_type, SetFunctions::Value_to_set)                 
-        );
+        // set(<base>[]) over the number, text and time sets and set(<base>) over the number and
+        // time sets are generated (meos_setspan_constructor, meos_setspan_conversion); the sets of
+        // the other families keep these registrations, as valueN below, and the text set its
+        // set(text), which text_to_set reaches through no generator shape
+        const bool core = set_type == SetTypes::intset() || set_type == SetTypes::bigintset() ||
+            set_type == SetTypes::floatset() || set_type == SetTypes::textset() ||
+            set_type == SetTypes::dateset() || set_type == SetTypes::tstzset();
+        if (!core) {
+            duckdb::RegisterSerializedScalarFunction(loader,
+                ScalarFunction("set", {LogicalType::LIST(base_type)}, set_type, SetFunctions::Set_constructor));
+        }
+        if (!core || set_type == SetTypes::textset()) {
+            duckdb::RegisterSerializedScalarFunction(loader,
+                ScalarFunction("set", {base_type}, set_type, SetFunctions::Value_to_set));
+        }
 
 
 

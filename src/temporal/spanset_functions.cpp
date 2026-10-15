@@ -73,45 +73,6 @@ bool SpansetFunctions::Text_to_spanset(Vector &source, Vector &result, idx_t cou
 }
 
 
-// --- Constructor ---
-void SpansetFunctions::Spanset_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &list_input = args.data[0];
-    auto meos_type = SpansetTypeMapping::GetMeosTypeFromAlias(result.GetType().ToString());
-    UnaryExecutor::Execute<list_entry_t, string_t>(
-        list_input, result, args.size(),
-        [&](list_entry_t list_entry) -> string_t {
-            auto &child = ListVector::GetEntry(list_input);
-            child.Flatten(args.size());
-
-            idx_t offset = list_entry.offset;
-            idx_t length = list_entry.length;
-
-            if (length == 0) {
-                throw InvalidInputException("The input array cannot be empty");
-            }
-
-            Span *spans = (Span *)malloc(sizeof(Span) * length);
-            if (!spans) throw std::bad_alloc();
-
-            for (idx_t i = 0; i < length; ++i) {
-                idx_t idx = offset + i;
-                auto blob_val = child.GetValue(idx);
-                auto blob_str = blob_val.GetValueUnsafe<string_t>(); 
-                auto *bytes = (const uint8_t *)blob_str.GetData();
-                auto size = blob_str.GetSize();                
-                memcpy(&spans[i], bytes, size);
-            }
-
-            SpanSet *sset = spanset_make_free(spans, (int)length, true, false);
-            size_t size = spanset_mem_size(sset);
-            string_t blob = StringVector::AddStringOrBlob(result, (const char *)sset, size);
-
-            free(sset);
-            return blob;
-        }
-    );
-}
-
 // --- Conversion: base type -> spanset ---
 
 static inline void Write_spanset(Vector &result, idx_t row, SpanSet *s) {
@@ -188,17 +149,6 @@ bool SpansetFunctions::Value_to_spanset_cast(Vector &source, Vector &result, idx
 
     Value_to_spanset_core(source, result, count, base_t);
     return true;
-}
-
-// --- SCALAR function (conversion: base -> spanset) ----
-void SpansetFunctions::Value_to_spanset(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &source      = args.data[0];
-    auto out_type     = result.GetType();
-    MeosType spanset_t= SpansetTypeMapping::GetMeosTypeFromAlias(out_type.GetAlias());
-    MeosType span_t   = spansettype_spantype(spanset_t);
-    MeosType base_t   = spantype_basetype(span_t);
-
-    Value_to_spanset_core(source, result, args.size(), base_t);
 }
 
 // --- Conversion: set -> spanset ---
