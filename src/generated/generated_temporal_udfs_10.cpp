@@ -4270,6 +4270,66 @@ static void Gen_temporal_simplify_min_dist(DataChunk &args, ExpressionState &, V
         });
 }
 
+static void Gen_temporal_simplify_min_tdelta(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, interval_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = temporal_simplify_min_tdelta(t, MeosIntervalArg(a2));
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_temporal_ext_kalman_filter(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<double>(args.data[1]);
+    auto in2 = FlatVector::GetData<double>(args.data[2]);
+    auto in3 = FlatVector::GetData<double>(args.data[3]);
+    auto in4 = FlatVector::GetData<bool>(args.data[4]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 5; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Temporal *x0 = BlobToTemporal(in0[i]);
+        Temporal *r = (Temporal *) temporal_ext_kalman_filter(x0, in1[i], in2[i], in3[i], in4[i]);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temporal_ext_kalman_filter_d(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<double>(args.data[1]);
+    auto in2 = FlatVector::GetData<double>(args.data[2]);
+    auto in3 = FlatVector::GetData<double>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 4; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Temporal *x0 = BlobToTemporal(in0[i]);
+        Temporal *r = (Temporal *) temporal_ext_kalman_filter(x0, in1[i], in2[i], in3[i], true);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 
 // ===== @ingroup meos_temporal_comp_ever =====
 static void Gen_always_eq_bool_tbool(DataChunk &args, ExpressionState &, Vector &result) {
@@ -6503,6 +6563,18 @@ void RegisterGenerated_meos_temporal_analytics_simplify(ExtensionLoader &loader)
     RegisterSerializedScalarFunction(loader, ScalarFunction("minDistSimplify", {CbufferTypes::tcbuffer(), LogicalType::DOUBLE}, CbufferTypes::tcbuffer(), Gen_temporal_simplify_min_dist));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minDistSimplify", {TPcpointTypes::tpcpoint(), LogicalType::DOUBLE}, TPcpointTypes::tpcpoint(), Gen_temporal_simplify_min_dist));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minDistSimplify", {PoseTypes::tpose(), LogicalType::DOUBLE}, PoseTypes::tpose(), Gen_temporal_simplify_min_dist));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minTimeDeltaSimplify", {TemporalTypes::tfloat(), LogicalType::INTERVAL}, TemporalTypes::tfloat(), Gen_temporal_simplify_min_tdelta));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minTimeDeltaSimplify", {TgeompointType::tgeompoint(), LogicalType::INTERVAL}, TgeompointType::tgeompoint(), Gen_temporal_simplify_min_tdelta));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minTimeDeltaSimplify", {TgeogpointType::tgeogpoint(), LogicalType::INTERVAL}, TgeogpointType::tgeogpoint(), Gen_temporal_simplify_min_tdelta));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minTimeDeltaSimplify", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL}, TGeometryTypes::tgeometry(), Gen_temporal_simplify_min_tdelta));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minTimeDeltaSimplify", {TGeographyTypes::tgeography(), LogicalType::INTERVAL}, TGeographyTypes::tgeography(), Gen_temporal_simplify_min_tdelta));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minTimeDeltaSimplify", {CbufferTypes::tcbuffer(), LogicalType::INTERVAL}, CbufferTypes::tcbuffer(), Gen_temporal_simplify_min_tdelta));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minTimeDeltaSimplify", {TPcpointTypes::tpcpoint(), LogicalType::INTERVAL}, TPcpointTypes::tpcpoint(), Gen_temporal_simplify_min_tdelta));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minTimeDeltaSimplify", {PoseTypes::tpose(), LogicalType::INTERVAL}, PoseTypes::tpose(), Gen_temporal_simplify_min_tdelta));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("extendedKalmanFilter", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_temporal_ext_kalman_filter));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("extendedKalmanFilter", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_temporal_ext_kalman_filter_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("extendedKalmanFilter", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::BOOLEAN}, TgeompointType::tgeompoint(), Gen_temporal_ext_kalman_filter));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("extendedKalmanFilter", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, TgeompointType::tgeompoint(), Gen_temporal_ext_kalman_filter_d));
 }
 
 void RegisterGenerated_meos_temporal_comp_ever(ExtensionLoader &loader) {

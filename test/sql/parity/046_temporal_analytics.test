@@ -60,3 +60,37 @@ query I
 SELECT asEWKT(douglasPeuckerSimplify(tgeompoint '[POINT(0 0)@2000-01-01, POINT(1 0)@2000-01-02, POINT(2 0)@2000-01-03]', 0.1, TRUE));
 ----
 [POINT(0 0)@2000-01-01 00:00:00+01, POINT(2 0)@2000-01-03 00:00:00+01]
+
+# minTimeDeltaSimplify reads only the timestamps, so over a circular buffer and a pose it keeps the
+# instants it keeps over tfloat above
+
+query I
+SELECT numInstants(minTimeDeltaSimplify(tcbuffer '[Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-01 12:00:00, Cbuffer(Point(3 3),1.0)@2000-01-02]', INTERVAL '6 hours'));
+----
+2
+
+query I
+SELECT numInstants(minTimeDeltaSimplify(tpose '[Pose(Point(1 1),0.1)@2000-01-01, Pose(Point(2 2),0.2)@2000-01-01 12:00:00, Pose(Point(3 3),0.3)@2000-01-02]', INTERVAL '6 hours'));
+----
+2
+
+# extendedKalmanFilter(tfloat, gate, q, variance) — the outlier past the gate is dropped, as with
+# to_drop TRUE, the default MobilityDB declares; to_drop FALSE keeps its predicted value
+
+query III
+WITH s AS (SELECT tfloat '[1@2000-01-01 00:00:00, 1@2000-01-01 00:19:00, 100@2000-01-01 00:20:00, 1@2000-01-01 00:21:00, 1@2000-01-01 00:25:00]' AS t)
+SELECT numInstants(extendedKalmanFilter(t, 1.0, 0.001, 0.1)),
+       numInstants(extendedKalmanFilter(t, 1.0, 0.001, 0.1, TRUE)),
+       numInstants(extendedKalmanFilter(t, 1.0, 0.001, 0.1, FALSE)) FROM s;
+----
+4	4	5
+
+# extendedKalmanFilter(tgeompoint, gate, q, variance)
+
+query III
+WITH s AS (SELECT tgeompoint '[POINT(1 1)@2000-01-01 00:00:00, POINT(1 1)@2000-01-01 00:19:00, POINT(100 100)@2000-01-01 00:20:00, POINT(1 1)@2000-01-01 00:21:00, POINT(1 1)@2000-01-01 00:25:00]' AS t)
+SELECT numInstants(extendedKalmanFilter(t, 1.0, 0.001, 0.1)),
+       numInstants(extendedKalmanFilter(t, 1.0, 0.001, 0.1, TRUE)),
+       numInstants(extendedKalmanFilter(t, 1.0, 0.001, 0.1, FALSE)) FROM s;
+----
+4	4	5

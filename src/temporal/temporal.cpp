@@ -547,26 +547,6 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // from the catalog now. The non-canonical discreteFrechet/dynTimeWarp hand aliases were
     // retired (MobilityDB canonical = frechetDistance/dynTimeWarpDistance).
 
-    // simplify family (subtype-agnostic but only meaningful on linear temporal types)
-    for (const auto &t : {TemporalTypes::tfloat(), TgeompointType::tgeompoint(),
-                          TGeometryTypes::tgeometry()}) {
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("douglasPeuckerSimplify",
-            {t, LogicalType::DOUBLE}, t, TemporalFunctions::Temporal_simplify_dp));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("douglasPeuckerSimplify",
-            {t, LogicalType::DOUBLE, LogicalType::BOOLEAN}, t,
-            TemporalFunctions::Temporal_simplify_dp));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("maxDistSimplify",
-            {t, LogicalType::DOUBLE}, t, TemporalFunctions::Temporal_simplify_max_dist));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("maxDistSimplify",
-            {t, LogicalType::DOUBLE, LogicalType::BOOLEAN}, t,
-            TemporalFunctions::Temporal_simplify_max_dist));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("minDistSimplify",
-            {t, LogicalType::DOUBLE}, t, TemporalFunctions::Temporal_simplify_min_dist));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("minTimeDeltaSimplify",
-            {t, LogicalType::INTERVAL}, t,
-            TemporalFunctions::Temporal_simplify_min_tdelta));
-    }
-
     // tnumber × {numspan, tbox} topological predicates (contains/contained/overlaps/
     // same/adjacent + @>/<@/&&/~=/-|-, both directions) are generated from the catalog
     // sqlSignatures (@ingroup meos_temporal_bbox_topo); the temporal_* snake aliases

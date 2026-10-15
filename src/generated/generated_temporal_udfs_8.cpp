@@ -1312,6 +1312,29 @@ static void Gen_tpose_translate(DataChunk &args, ExpressionState &state, Vector 
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
+static void Gen_tpose_translate_d(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<double>(args.data[1]);
+    auto in2 = FlatVector::GetData<double>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Temporal *x0 = BlobToTemporal(in0[i]);
+        Temporal *r = (Temporal *) tpose_translate(x0, in1[i], in2[i], 0.0);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 struct Unnest_tpose_unnestBind : public TableFunctionData { std::string blob; };
 struct Unnest_tpose_unnestState : public GlobalTableFunctionState {
     Pose * *values = nullptr; SpanSet **times = nullptr; int count = 0; idx_t idx = 0;
@@ -2081,6 +2104,7 @@ void RegisterGenerated_meos_pose_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("rotateY", {PoseTypes::tpose(), LogicalType::DOUBLE}, PoseTypes::tpose(), Gen_tpose_rotate_y));
     RegisterSerializedScalarFunction(loader, ScalarFunction("rotateZ", {PoseTypes::tpose(), LogicalType::DOUBLE}, PoseTypes::tpose(), Gen_tpose_rotate_z));
     RegisterSerializedScalarFunction(loader, ScalarFunction("translate", {PoseTypes::tpose(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, PoseTypes::tpose(), Gen_tpose_translate));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("translate", {PoseTypes::tpose(), LogicalType::DOUBLE, LogicalType::DOUBLE}, PoseTypes::tpose(), Gen_tpose_translate_d));
     loader.RegisterFunction(TableFunction("temporalUnnest", {PoseTypes::tpose()}, Unnest_tpose_unnestExecFn, Unnest_tpose_unnestBindFn, Unnest_tpose_unnestInitFn));
 }
 
