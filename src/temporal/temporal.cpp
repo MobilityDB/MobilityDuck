@@ -561,16 +561,6 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tsample",    {t, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::VARCHAR}, t, TemporalFunctions::Temporal_tsample));
     }
 
-    // tboxes / splitNTboxes / splitEachNTboxes — tnumber → LIST(tbox)
-    {
-        auto tbox_list = LogicalType::LIST(TboxType::tbox());
-        // tboxes(<tnumber>) is generated from the catalog (tnumber_tboxes) in generated_temporal_udfs.cpp.
-        for (auto &t : {TemporalTypes::tint(), TemporalTypes::tfloat()}) {
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("splitNTboxes",     {t, LogicalType::INTEGER}, tbox_list, TemporalFunctions::Tnumber_split_n_tboxes));
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("splitEachNTboxes", {t, LogicalType::INTEGER}, tbox_list, TemporalFunctions::Tnumber_split_each_n_tboxes));
-        }
-    }
-
     // tspatial × {stbox, tspatial} position predicates (spatial axes
     // left/right/below/above/front/back + over*, and the time axis before/after/
     // overbefore/overafter; @ingroup meos_geo_box_pos / meos_geo_bbox_pos) — bare
