@@ -104,3 +104,17 @@ query I
 SELECT asText(applyPose(geometry 'Point(1 0)', tpose '[Pose(Point(10 20), 0)@2026-01-01, Pose(Point(30 40), 0)@2026-01-02]'));
 ----
 [POINT(11 20)@2026-01-01 00:00:00+01, POINT(31 40)@2026-01-02 00:00:00+01]
+
+# valueAtTimestamp at the first instant and valueN(t, 1) are startValue; points are the positions
+
+query II
+SELECT asText(valueAtTimestamp(tpose '[Pose(Point(1 1),0.1)@2000-01-01, Pose(Point(2 2),0.2)@2000-01-02]', TIMESTAMPTZ '2000-01-01'))
+     = asText(startValue(tpose '[Pose(Point(1 1),0.1)@2000-01-01, Pose(Point(2 2),0.2)@2000-01-02]')),
+       asText(valueN(tpose '{Pose(Point(1 1),0.1)@2000-01-01, Pose(Point(2 2),0.2)@2000-01-02}', 1));
+----
+true	Pose(POINT(1 1),0.1)
+
+query I
+SELECT asText(points(tpose '{Pose(Point(1 1),0.1)@2000-01-01, Pose(Point(2 2),0.2)@2000-01-02}'));
+----
+{"POINT(1 1)", "POINT(2 2)"}

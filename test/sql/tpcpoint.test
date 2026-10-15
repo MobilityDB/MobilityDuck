@@ -187,3 +187,18 @@ statement error
 SELECT tpcpoint('not-a-valid-tpcpoint');
 ----
 Missing delimeter character
+
+# valueAtTimestamp and valueN answer a pcpoint, the startValue of an instant
+
+query II
+SELECT valueAtTimestamp(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01', TIMESTAMPTZ '2024-01-01')
+     = startValue(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01'),
+       valueN(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01', 1)
+     = startValue(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01');
+----
+true	true
+
+query I
+SELECT typeof(valueAtTimestamp(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01', TIMESTAMPTZ '2024-01-01'));
+----
+pcpoint

@@ -126,3 +126,10 @@ query II
 SELECT asText(value), time FROM temporalUnnest(th3index '{8528f003fffffff@2001-01-01, 8528f003fffffff@2001-01-02}');
 ----
 8528f003fffffff	{[2001-01-01 00:00:00+01, 2001-01-01 00:00:00+01], [2001-01-02 00:00:00+01, 2001-01-02 00:00:00+01]}
+
+# valueAtTimestamp answers the cell a step sequence holds at that time
+
+query I
+SELECT valueAtTimestamp(th3index '[8928308280fffff@2000-01-01, 8928308280fffff@2000-01-02]', TIMESTAMPTZ '2000-01-01 12:00:00')::VARCHAR;
+----
+8928308280fffff

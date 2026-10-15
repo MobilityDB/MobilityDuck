@@ -4193,6 +4193,9 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_rgeo_accessor", "meos_quadbin_accessor",
                   # the boxes of a geometry: a geometry first operand reaches #shape_array
                   "meos_geo_base_bbox",
+                  # the accessors of the circular buffers, poses, point clouds and H3 and S2 cells
+                  "meos_cbuffer_accessor", "meos_pose_accessor", "meos_pointcloud_accessor",
+                  "meos_h3_accessor", "meos_s2cell_accessor",
                   # the simplifications: minTimeDeltaSimplify's duration reaches #shape_arg
                   "meos_temporal_analytics_simplify",
                   # the splits of a set, a span set and a temporal value into N spans or boxes

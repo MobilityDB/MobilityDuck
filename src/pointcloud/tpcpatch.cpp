@@ -613,40 +613,6 @@ static Pcpatch *pcpatch_from_instant_value(const TInstant *inst) {
     return reinterpret_cast<Pcpatch*>(d);
 }
 
-static void Tinstant_value(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_vec = args.data[0];
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, count,
-        [&](string_t input_str) -> string_t {
-            std::string input = input_str.GetString();
-
-            TInstant *tinst = reinterpret_cast<TInstant*>(const_cast<char*>(input.c_str()));
-
-            // tinstant_value returns a freshly allocated copy of the
-            // pcpatch value (datum_copy), which the caller owns.
-            Pcpatch *pt = pcpatch_from_instant_value(tinst);
-
-            char *str = pcpatch_hex_out(pt, 15);
-            if (!str) {
-                free(pt);
-                throw InvalidInputException("Failed to convert pcpatch value to text");
-            }
-            std::string output(str);
-            string_t stored_result = StringVector::AddString(result, output);
-
-            free(str);
-            free(pt);
-
-            return stored_result;
-        });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
 
 
 /* Temporal_start_value/Temporal_end_value retired: startValue/endValue are now
@@ -859,10 +825,6 @@ void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     const LogicalType TSTZ  = LogicalType::TIMESTAMP_TZ;
     const LogicalType IVAL  = LogicalType::INTERVAL;
 
-    // ---- Accessors ----
-    RegisterMeosFunction(loader, ScalarFunction(
-        "valueAtTimestamp", {TGEOM, TSTZ}, LogicalType::VARCHAR,
-        Tinstant_value));
     // ---- Modifiers (shift / scale / shiftScale / append / insert / update /
     // delete) ----
     RegisterMeosFunction(loader, ScalarFunction(

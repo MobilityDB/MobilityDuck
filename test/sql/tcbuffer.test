@@ -165,3 +165,26 @@ query II
 SELECT asText(value), time FROM temporalUnnest(tcbuffer '{Cbuffer(Point(1 1), 0.5)@2001-01-01}');
 ----
 Cbuffer(POINT(1 1),0.5)	{[2001-01-01 00:00:00+01, 2001-01-01 00:00:00+01]}
+
+# The accessors #tcbuffer_value_at_timestamptz, #tcbuffer_value_n, #tcbuffer_points and
+# #tcbuffer_radius: valueAtTimestamp interpolates a linear sequence (halfway, the centre and the
+# radius halfway) and answers NULL outside its time; valueN(t, n) is the last value, endValue;
+# points and radius are the centres and the radii of the buffers
+
+query II
+SELECT asText(valueAtTimestamp(tcbuffer '[Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(3 3),1.5)@2000-01-03]', TIMESTAMPTZ '2000-01-02')),
+       valueAtTimestamp(tcbuffer '[Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(3 3),1.5)@2000-01-03]', TIMESTAMPTZ '2001-01-01') IS NULL;
+----
+Cbuffer(POINT(2 2),1)	true
+
+query I
+SELECT asText(valueN(tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02}', 2))
+     = asText(endValue(tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02}'));
+----
+true
+
+query II
+SELECT asText(points(tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02}')),
+       radius(tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02}')::VARCHAR;
+----
+{"POINT(1 1)", "POINT(2 2)"}	{0.5, 1}
