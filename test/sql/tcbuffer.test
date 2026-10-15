@@ -188,3 +188,14 @@ SELECT asText(points(tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Poin
        radius(tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02}')::VARCHAR;
 ----
 {"POINT(1 1)", "POINT(2 2)"}	{0.5, 1}
+
+# The restriction to and outside a spatiotemporal box, as MobilityDB's atStbox and minusStbox
+# answer it: the buffer of radius 1.5 at (3 3) reaches the box, so nothing is left outside.
+
+query II
+SELECT asText(atStbox(tcbuffer '[Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(3 3),1.5)@2000-01-03]',
+                      stbox 'STBOX XT(((0,0),(2,2)),[2000-01-01,2000-01-03])')),
+       minusStbox(tcbuffer '[Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(3 3),1.5)@2000-01-03]',
+                  stbox 'STBOX XT(((0,0),(2,2)),[2000-01-01,2000-01-03])') IS NULL;
+----
+{[Cbuffer(POINT(1 1),0.5)@2000-01-01 00:00:00+01, Cbuffer(POINT(3 3),1.5)@2000-01-03 00:00:00+01]}	true
