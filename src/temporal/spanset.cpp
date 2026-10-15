@@ -165,12 +165,6 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
         } 
         // spans(<spanset_type>) is generated from the catalog (spanset_spans) in generated_temporal_udfs.cpp.
-        duckdb::RegisterSerializedScalarFunction(loader,
-            ScalarFunction("splitNSpans", {spanset_type, LogicalType::INTEGER}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_split_n_spans)
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction("splitEachNSpans", {spanset_type, LogicalType::INTEGER}, LogicalType::LIST(child_type), SpansetFunctions::Spanset_split_each_n_spans)
-        );
 
         // Lowercase aliases matching MobilityDB's SQL surface
 

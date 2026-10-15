@@ -152,8 +152,6 @@ struct TemporalFunctions {
      ****************************************************/
     static void Tnumber_abs(DataChunk &args, ExpressionState &state, Vector &result);
     // Tnumber_tboxes retired: tboxes(<tnumber>) is generated (tnumber_tboxes) in generated_temporal_udfs.cpp.
-    static void Tnumber_split_n_tboxes(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tnumber_split_each_n_tboxes(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_delta_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tnumber_trend(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tfloat_exp(DataChunk &args, ExpressionState &state, Vector &result);

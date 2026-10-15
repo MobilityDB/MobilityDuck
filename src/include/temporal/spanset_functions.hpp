@@ -56,8 +56,6 @@ struct SpansetFunctions{
 
     // Transformations functions
     // floor/ceil/round/degrees/radians on floatspanset are generated (generated_temporal_udfs.cpp).
-    static void Spanset_split_n_spans(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Spanset_split_each_n_spans(DataChunk &args, ExpressionState &state, Vector &result);
     
 };
 

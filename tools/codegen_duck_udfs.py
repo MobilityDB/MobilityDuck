@@ -4180,6 +4180,8 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_rgeo_accessor", "meos_quadbin_accessor",
                   # the simplifications: minTimeDeltaSimplify's duration reaches #shape_arg
                   "meos_temporal_analytics_simplify",
+                  # the splits of a set, a span set and a temporal value into N spans or boxes
+                  "meos_setspan_bbox_split", "meos_temporal_bbox_split",
                   # The JSON value accessors: valueAtTimestamp reaches the out-parameter shape,
                   # and its SQL surface answers jsonb the way MobilityDB declares it.
                   "meos_json_accessor",
