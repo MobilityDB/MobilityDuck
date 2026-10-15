@@ -184,3 +184,55 @@ query I
 SELECT asText(jsonbsetFromHexWKB(asHexWKB(set([jsonb '{"a":1}']))));
 ----
 {"{\"a\": 1}"}
+
+# The first, last and n-th value of a set of another family's values, and all of them, as
+# MobilityDB answers startValue, endValue, valueN and getValues over it; valueN past the last
+# value answers NULL.
+
+query IIII
+WITH s AS (SELECT set([CAST('Cbuffer(Point(1 1),0.5)' AS cbuffer),
+                       CAST('Cbuffer(Point(3 3),2)' AS cbuffer)]) AS cb)
+SELECT asText(startValue(cb)), asText(endValue(cb)), asText(valueN(cb, 2)), valueN(cb, 3) IS NULL
+FROM s;
+----
+Cbuffer(POINT(1 1),0.5)	Cbuffer(POINT(3 3),2)	Cbuffer(POINT(3 3),2)	true
+
+query IIII
+WITH s AS (SELECT set([CAST('POSE(Point(1 1),0.5)' AS pose), CAST('POSE(Point(2 2),1)' AS pose)]) AS po)
+SELECT asText(startValue(po)), asText(endValue(po)), asText(valueN(po, 1)),
+       [asText(x) FOR x IN getValues(po)]
+FROM s;
+----
+Pose(POINT(1 1),0.5)	Pose(POINT(2 2),1)	Pose(POINT(1 1),0.5)	['Pose(POINT(1 1),0.5)', 'Pose(POINT(2 2),1)']
+
+query III
+WITH s AS (SELECT set([CAST('NPoint(1,0.5)' AS npoint), CAST('NPoint(2,0.25)' AS npoint)]) AS np)
+SELECT asText(startValue(np)), asText(endValue(np)), len(getValues(np))
+FROM s;
+----
+NPoint(1,0.5)	NPoint(2,0.25)	2
+
+query IIII
+WITH s AS (SELECT set([jsonb '{"a":1}', jsonb '{"b":2}']) AS js)
+SELECT startValue(js)::VARCHAR, valueN(js, 2)::VARCHAR, valueN(js, 5) IS NULL, getValues(js)::VARCHAR
+FROM s;
+----
+{"a": 1}	{"b": 2}	true	['{"a": 1}', '{"b": 2}']
+
+# The values of a cell set are a list of its cells, the first one the first value of the temporal
+# cell the set is the values of.
+
+query III
+WITH t AS (SELECT '{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell AS c)
+SELECT typeof(getValues(getValues(c))), len(getValues(getValues(c))),
+       getValues(getValues(c))[1] = startValue(c)
+FROM t;
+----
+s2cell[]	2	true
+
+query II
+WITH t AS (SELECT tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01') AS c)
+SELECT typeof(getValues(getValues(c))), getValues(getValues(c))[1] = startValue(c)
+FROM t;
+----
+quadbin[]	true
