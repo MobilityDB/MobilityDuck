@@ -67,6 +67,7 @@ void RegisterGenerated_meos_cbuffer_restrict(ExtensionLoader &loader);
 void RegisterGenerated_meos_cbuffer_transf(ExtensionLoader &loader);
 void RegisterGenerated_meos_cellindex(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_accessor(ExtensionLoader &loader);
+void RegisterGenerated_meos_geo_base_bbox(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_base_transf(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_bbox_split(ExtensionLoader &loader);
@@ -267,6 +268,7 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_cbuffer_transf(loader);
     RegisterGenerated_meos_cellindex(loader);
     RegisterGenerated_meos_geo_accessor(loader);
+    RegisterGenerated_meos_geo_base_bbox(loader);
     RegisterGenerated_meos_geo_base_transf(loader);
     RegisterGenerated_meos_geo_bbox_pos(loader);
     RegisterGenerated_meos_geo_bbox_split(loader);

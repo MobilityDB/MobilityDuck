@@ -2820,6 +2820,7 @@ ARRAY_IN = {
     "TInstant":     ("Temporal", "BlobToTemporal"),
     "TSequence":    ("Temporal", "BlobToTemporal"),
     "TSequenceSet": ("Temporal", "BlobToTemporal"),
+    "GSERIALIZED":  ("GSERIALIZED", "GeometryToGSerialized"),     # read with SRID 0 (#emit_array)
 }
 
 def shape_tgeoarr(f):
@@ -3247,6 +3248,8 @@ f"}}\n")
 def _acc_sqlname(acc):
     """The canonical SQL type name inside an accessor string, e.g. SetTypes::intset() -> intset,
     TemporalTypes::tbool() -> tbool (the meos_catalog.c lowercase name the sqlSignatures key on)."""
+    if acc == "MobilityDuckGeometryType()":
+        return "geometry"
     m = re.search(r'::(\w+)\(\)', acc)
     return m.group(1) if m else acc
 
@@ -3383,6 +3386,15 @@ def shape_array(f):
         return None
     tail = ("integer",) * len(tailp)
     ib = base(ins[0]["canonical"])
+    # A geometry first, in a retired group: DuckDB's one GEOMETRY type stands for the geometry and
+    # geography signatures alike, read with SRID 0 as #emit_nary_scalars reads one
+    # (stboxes(geometry), splitNStboxes(geometry, integer))
+    if ib == "GSERIALIZED" and retired(f) and norm(ins[0]["canonical"]).endswith("*"):
+        want = [*tail]
+        if any((s.get("args") or [None])[0] in ("geometry", "geography")
+               and list((s.get("args") or [])[1:]) == want for s in f.get("sqlSignatures") or []):
+            return ("array", ec, ib, ["MobilityDuckGeometryType()"], tail)
+        return None
     if ib not in ARRAY_IN or not norm(ins[0]["canonical"]).endswith("*"):
         return None
     sc = set_reg_scope(name) if ib == "Set" else spanset_reg_scope(name) if ib == "SpanSet" else reg_scope(name)
@@ -3414,6 +3426,7 @@ def emit_array(f, ec, ib, tail=()):
     passed through to the accessor, NULL in either argument yielding a NULL list."""
     name = f["name"]
     cbase, blobto = ARRAY_IN[ib]
+    decode = f"{blobto}(blob, 0)" if ib == "GSERIALIZED" else f"{blobto}(blob)"
     _lt, ccpp, marsh = ARRAY_ELEM[ec]
     retc = norm(f["returnType"]["canonical"])          # e.g. "TimestampTz *", "text **", "Span *"
     n_vec = ("    auto &n_vec = args.data[1];\n"
@@ -3435,7 +3448,7 @@ f"    for (idx_t i = 0; i < row_count; ++i) {{\n"
 f"        if (in_vec.GetValue(i).IsNull(){n_null}) {{ result_validity.SetInvalid(i); continue; }}\n"
 f"        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];\n"
 f"{n_read}"
-f"        {cbase} *in = {blobto}(blob);\n"
+f"        {cbase} *in = {decode};\n"
 f"        int count = 0;\n"
 f"        {retc} arr = {name}({call_args});\n"
 f"        free(in);\n"
@@ -4178,6 +4191,8 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_setspan_inout",
                   # the accessors of the rigid geometries and the quadbin cells
                   "meos_rgeo_accessor", "meos_quadbin_accessor",
+                  # the boxes of a geometry: a geometry first operand reaches #shape_array
+                  "meos_geo_base_bbox",
                   # the simplifications: minTimeDeltaSimplify's duration reaches #shape_arg
                   "meos_temporal_analytics_simplify",
                   # the splits of a set, a span set and a temporal value into N spans or boxes
