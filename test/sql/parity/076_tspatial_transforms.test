@@ -88,3 +88,26 @@ query I
 SELECT asEWKT(scale(tgeompoint '[POINT(2 3)@2000-01-01]', ST_GeomFromText('POINT(2 2)'), ST_GeomFromText('POINT(1 1)')));
 ----
 [POINT(3 5)@2000-01-01 00:00:00+01]
+
+# translate without deltaz moves a pose, a pose chain and a rigid geometry as deltaz 0 does, the
+# default MobilityDB declares
+
+query I
+SELECT asText(translate(tpose '[Pose(Point(1 1),0.1)@2000-01-01, Pose(Point(2 2),0.2)@2000-01-02]', 10, 20));
+----
+[Pose(POINT(11 21),0.1)@2000-01-01 00:00:00+01, Pose(POINT(12 22),0.2)@2000-01-02 00:00:00+01]
+
+query II
+SELECT asText(translate(tposechain 'PoseChain(Pose(Point(0 0), 0), Pose(Point(10 0), 0))@2000-01-01', 10, 20))
+     = asText(translate(tposechain 'PoseChain(Pose(Point(0 0), 0), Pose(Point(10 0), 0))@2000-01-01', 10, 20, 0.0)),
+       asText(translate(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01', 10, 20))
+     = asText(translate(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01', 10, 20, 0.0));
+----
+true	true
+
+# round(geometry) rounds to 0 decimal digits, the default MobilityDB declares
+
+query I
+SELECT ST_AsText(round(ST_GeomFromText('POINT(1.4 2.6)')));
+----
+POINT (1 3)

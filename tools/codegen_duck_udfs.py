@@ -4178,6 +4178,8 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_setspan_inout",
                   # the accessors of the rigid geometries and the quadbin cells
                   "meos_rgeo_accessor", "meos_quadbin_accessor",
+                  # the simplifications: minTimeDeltaSimplify's duration reaches #shape_arg
+                  "meos_temporal_analytics_simplify",
                   # The JSON value accessors: valueAtTimestamp reaches the out-parameter shape,
                   # and its SQL surface answers jsonb the way MobilityDB declares it.
                   "meos_json_accessor",
@@ -5159,10 +5161,23 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                          (sig_declared_ret(f, a, 1 + len(tail))
                           or ret_temporal_type(f["name"], a, f.get("group"), f.get("sqlReturnType"))))
                     pairs.append((a, r))
+            # a trailing SQL default also registers the shorter form through Gen_<fn>_d, as the
+            # container arm above does (extendedKalmanFilter(tfloat, float, float, float))
+            forms, dflt = [(rest, "")], None
+            for s in f.get("sqlSignatures") or []:
+                defs = s.get("argDefaults") or []
+                if len(s.get("args") or []) == 1 + len(tail) and defs and defs[-1] is not None \
+                        and not any(d is not None for d in defs[:-1]):
+                    dflt = forward_literal(classify(f)[0][-1], defs[-1])
+                    break
+            if dflt is not None:
+                forms.append(("".join(", " + t[0] for t in tail[:-1]), "_d"))
+                bodies.append(emit_nary_scalars(f, first, tail, ret, dflt))
             for a, r in pairs:
-                for nm in reg_names(f, f["sqlfn"], aliases, "{x%s}" % rest):
-                    specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
-                                         f'"{reg_name(nm, f)}", {{{a}{rest}}}, {r}, Gen_{f["name"]}));')
+                for rr, sfx in forms:
+                    for nm in reg_names(f, f["sqlfn"], aliases, "{x%s}" % rr):
+                        specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                             f'"{reg_name(nm, f)}", {{{a}{rr}}}, {r}, Gen_{f["name"]}{sfx}));')
             continue
         # a set, span or span set handing its value back through an out-parameter
         # (valueN(intset, integer)), registered over the container type each signature declares

@@ -481,13 +481,6 @@ struct TemporalFunctions {
      * Math functions
      ****************************************************/
     // round(tfloat/tgeompoint/tgeogpoint/...) is generated (generated_temporal_udfs.cpp).
-    /* ***************************************************
-     * Analytics — trajectory/temporal simplification
-     ****************************************************/
-    static void Temporal_simplify_min_dist(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_simplify_min_tdelta(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_simplify_max_dist(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_simplify_dp(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Serialization

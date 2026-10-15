@@ -910,6 +910,28 @@ static void Gen_geo_round(DataChunk &args, ExpressionState &state, Vector &resul
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
+static void Gen_geo_round_d(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 1; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *r = geo_round(x0, 0);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = GSerializedToGeometry(r, state, result);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_geo_scale(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
@@ -2355,6 +2377,7 @@ void RegisterGenerated_meos_geo_base_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("rotateY", {MobilityDuckGeometryType(), LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_geo_rotate_y));
     RegisterSerializedScalarFunction(loader, ScalarFunction("rotateZ", {MobilityDuckGeometryType(), LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_geo_rotate_z));
     RegisterSerializedScalarFunction(loader, ScalarFunction("round", {MobilityDuckGeometryType(), LogicalType::INTEGER}, MobilityDuckGeometryType(), Gen_geo_round));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {MobilityDuckGeometryType()}, MobilityDuckGeometryType(), Gen_geo_round_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("scale", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_geo_scale));
     RegisterSerializedScalarFunction(loader, ScalarFunction("scale", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_geo_scale_zfactor));
     RegisterSerializedScalarFunction(loader, ScalarFunction("translate", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_geo_translate));
