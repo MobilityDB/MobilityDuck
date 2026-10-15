@@ -117,13 +117,13 @@ NULL
 # SetUnionAgg / SpanUnionAgg — accumulator aggregates returning set / span
 
 query I
-SELECT SetUnionAgg(t::tstzset)::VARCHAR FROM (VALUES
+SELECT setUnionAgg(t::tstzset)::VARCHAR FROM (VALUES
 ('{2000-01-01}'::tstzset)) t(t);
 ----
 {"2000-01-01 00:00:00+01"}
 
 query I
-SELECT SpanUnionAgg(t::tstzspan)::VARCHAR FROM (VALUES
+SELECT spanUnionAgg(t::tstzspan)::VARCHAR FROM (VALUES
 ('[2000-01-01, 2000-01-02]'::tstzspan)) t(t);
 ----
 {[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01]}

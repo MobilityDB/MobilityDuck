@@ -377,48 +377,8 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_contains",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Contains_stbox_stbox
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_contained",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Contained_stbox_stbox
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_overlaps",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Overlaps_stbox_stbox
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_same",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Same_stbox_stbox
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_adjacent",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Adjacent_stbox_stbox
-        )
-    );
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
             "@>",
@@ -468,145 +428,17 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
      * catalog-only *_bbox @sqlfn backing tag as an alias; that is internal, not a
      * user-facing canonical name.) */
 
-        duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "stbox_left",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Left_stbox_stbox
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_overleft",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Overleft_stbox_stbox
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_right",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Right_stbox_stbox
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_overright",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Overright_stbox_stbox
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_below",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Below_stbox_stbox
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_overbelow",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Overbelow_stbox_stbox
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_above",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Above_stbox_stbox
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_overabove",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Overabove_stbox_stbox
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_before",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Before_stbox_stbox
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_overbefore",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Overbefore_stbox_stbox
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_after",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::After_stbox_stbox
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_overafter",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Overafter_stbox_stbox
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_front",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Front_stbox_stbox
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_overfront",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Overfront_stbox_stbox
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_back",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Back_stbox_stbox
-        )
-    );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_overback",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Overback_stbox_stbox
-        )
-    );
 
         duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
@@ -750,21 +582,13 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
-            "stbox_union",
+            "stboxUnion",
             {stbox(), stbox()},
             stbox(),
             StboxFunctions::Union_stbox_stbox
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_intersection",
-            {stbox(), stbox()},
-            stbox(),
-            StboxFunctions::Intersection_stbox_stbox
-        )
-    );
 
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
@@ -786,58 +610,10 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
-            "stbox_cmp",
+            "cmp",
             {stbox(), stbox()},
             LogicalType::INTEGER,
             StboxFunctions::Stbox_cmp
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_eq",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Stbox_eq
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_ne",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Stbox_ne
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_lt",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Stbox_lt
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_le",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Stbox_le
-        )
-    );
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_ge",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Stbox_ge
-        )
-    );  
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox_gt",
-            {stbox(), stbox()},
-            LogicalType::BOOLEAN,
-            StboxFunctions::Stbox_gt
         )
     );
 

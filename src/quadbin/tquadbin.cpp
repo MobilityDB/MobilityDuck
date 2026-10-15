@@ -300,12 +300,6 @@ void QuadbinTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
         "quadbinCellToTileZ", {QB}, I32,
         QuadbinFunctions::Quadbin_cell_to_tile_z));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "quadbinGetResolution", {QB}, I32,
-        QuadbinFunctions::Quadbin_get_resolution));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "quadbinIsValidCell", {QB}, B,
-        QuadbinFunctions::Quadbin_is_valid_cell));
 
     /* Constructor */
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
@@ -316,9 +310,6 @@ void QuadbinTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
      * from the catalog (meos_quadbin_accessor). */
 
     /* Quadkey conversion */
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "cellToQuadkey", {TQB}, V,
-        QuadbinFunctions::Tquadbin_cell_to_quadkey));
 
     /* tbigint ↔ tquadbin: deferred until TemporalTypes::TBIGINT() is published,
      * same as the th3index binding. */

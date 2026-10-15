@@ -781,26 +781,11 @@ void TGeometryTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         "shiftScaleTime", {TGEOM, IVAL, IVAL}, TGEOM,
         TemporalFunctions::Temporal_shift_scale_time));
 
-    // ---- Comparison (named functions + operators) ----
+    // ---- Comparison operators (eq, ne, lt, le, gt and ge are generated) ----
     struct CmpEntry {
         const char *name;
         scalar_function_t fn;
     };
-    const std::vector<CmpEntry> named_cmps = {
-        {"temporal_eq", TemporalFunctions::Temporal_eq},
-        {"temporal_ne", TemporalFunctions::Temporal_ne},
-        {"temporal_lt", TemporalFunctions::Temporal_lt},
-        {"temporal_le", TemporalFunctions::Temporal_le},
-        {"temporal_gt", TemporalFunctions::Temporal_gt},
-        {"temporal_ge", TemporalFunctions::Temporal_ge},
-    };
-    for (const auto &c : named_cmps) {
-        RegisterMeosFunction(loader, ScalarFunction(
-            c.name, {TGEOM, TGEOM}, LogicalType::BOOLEAN, c.fn));
-    }
-    RegisterMeosFunction(loader, ScalarFunction(
-        "temporal_cmp", {TGEOM, TGEOM}, LogicalType::INTEGER,
-        TemporalFunctions::Temporal_cmp));
 
     // Operator forms — mirror the registrations tgeompoint.cpp does.
     const std::vector<CmpEntry> op_cmps = {

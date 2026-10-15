@@ -201,7 +201,7 @@ SELECT tint '1@2001-01-01' <> tint '2@2001-01-01';
 true
 
 query I
-SELECT temporal_cmp(tint '1@2001-01-01', tint '2@2001-01-01') < 0;
+SELECT cmp(tint '1@2001-01-01', tint '2@2001-01-01') < 0;
 ----
 true
 

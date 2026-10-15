@@ -45,34 +45,34 @@ SELECT trend(tfloat '[1@2000-01-01, 5@2000-01-02, 3@2000-01-03]');
 # Named aliases for the arithmetic operators
 
 query I
-SELECT tnumber_add(tint '[1@2000-01-01]', 10);
+SELECT tAdd(tint '[1@2000-01-01]', 10);
 ----
 [11@2000-01-01 00:00:00+01]
 
 query I
-SELECT tnumber_sub(tfloat '[10@2000-01-01]', 5.0);
+SELECT tSub(tfloat '[10@2000-01-01]', 5.0);
 ----
 [5@2000-01-01 00:00:00+01]
 
 query I
-SELECT tnumber_mult(2.0, tfloat '[3@2000-01-01]');
+SELECT tMul(2.0, tfloat '[3@2000-01-01]');
 ----
 [6@2000-01-01 00:00:00+01]
 
 query I
-SELECT tnumber_div(tfloat '[10@2000-01-01]', 5.0);
+SELECT tDiv(tfloat '[10@2000-01-01]', 5.0);
 ----
 [2@2000-01-01 00:00:00+01]
 
 # Aliases agree with the operator forms
 
 query I
-SELECT tnumber_add(tfloat '[3@2000-01-01]', 4.0) = (tfloat '[3@2000-01-01]' + 4.0);
+SELECT tAdd(tfloat '[3@2000-01-01]', 4.0) = (tfloat '[3@2000-01-01]' + 4.0);
 ----
 true
 
 query I
-SELECT tnumber_mult(tint '[5@2000-01-01]', tint '[2@2000-01-01]')
+SELECT tMul(tint '[5@2000-01-01]', tint '[2@2000-01-01]')
      = (tint '[5@2000-01-01]' * tint '[2@2000-01-01]');
 ----
 true

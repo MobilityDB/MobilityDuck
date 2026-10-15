@@ -332,12 +332,12 @@ ok
 
 
 query I
-SELECT asText(textset_cat('pre_', textset '{"highway","car"}'));
+SELECT asText(setConcat('pre_', textset '{"highway","car"}'));
 ----
 {"pre_car", "pre_highway"}
 
 query I
-SELECT asText(textset_cat(textset '{"highway","car"}', '_suf'));
+SELECT asText(setConcat(textset '{"highway","car"}', '_suf'));
 ----
 {"car_suf", "highway_suf"}
 

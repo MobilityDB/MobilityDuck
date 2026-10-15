@@ -7,12 +7,12 @@ SELECT quadbinTileToCell(1, 0, 1);
 4817ffffffffffff
 
 query I
-SELECT quadbinGetResolution(quadbinTileToCell(2, 1, 2));
+SELECT getResolution(quadbinTileToCell(2, 1, 2));
 ----
 2
 
 query I
-SELECT quadbinIsValidCell(quadbinTileToCell(5, 3, 3));
+SELECT isValidCell(quadbinTileToCell(5, 3, 3));
 ----
 true
 
