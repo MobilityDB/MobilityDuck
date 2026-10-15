@@ -117,6 +117,14 @@ set(EXTENSION_SOURCES
     src/generated/generated_temporal_udfs_5.cpp
     src/generated/generated_temporal_udfs_6.cpp
     src/generated/generated_temporal_udfs_7.cpp
+    src/generated/generated_temporal_udfs_8.cpp
+    src/generated/generated_temporal_udfs_9.cpp
+    src/generated/generated_temporal_udfs_10.cpp
+    src/generated/generated_temporal_udfs_11.cpp
+    src/generated/generated_temporal_udfs_12.cpp
+    src/generated/generated_temporal_udfs_13.cpp
+    src/generated/generated_temporal_udfs_14.cpp
+    src/generated/generated_temporal_udfs_15.cpp
     src/generated/generated_type_registration.cpp
     src/generated/generated_temporal_covering.cpp
     src/temporal/temporal.cpp
