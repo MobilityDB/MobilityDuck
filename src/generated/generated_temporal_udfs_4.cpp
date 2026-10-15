@@ -701,6 +701,24 @@ inline Temporal * tgeo_scale_geo_sorigin(const Temporal * p0, const GSERIALIZED 
 inline Temporal * tgeo_translate_deltaz(const Temporal * p0, double p1, double p2) {
     return ::tgeo_translate(p0, p1, p2, 0);
 }
+inline char * cbufferset_out_maxdd(const Set * p0) {
+    return ::cbufferset_out(p0, 15);
+}
+inline char * npointset_out_maxdd(const Set * p0) {
+    return ::npointset_out(p0, 15);
+}
+inline char * pcpointset_out_maxdd(const Set * p0) {
+    return ::pcpointset_out(p0, 15);
+}
+inline char * pcpatchset_out_maxdd(const Set * p0) {
+    return ::pcpatchset_out(p0, 15);
+}
+inline char * poseset_out_maxdd(const Set * p0) {
+    return ::poseset_out(p0, 15);
+}
+inline char * posechainset_out_maxdd(const Set * p0) {
+    return ::posechainset_out(p0, 15);
+}
 inline Temporal * trgeometry_append_tinstant_expand_interp_maxdist_maxt(Temporal * p0, const Temporal * p1) {
     return ::trgeometry_append_tinstant(p0, (const TInstant *) p1, LINEAR, 0.0, NULL, false);
 }
@@ -1406,6 +1424,26 @@ static void Gen_npoint_as_text_d(DataChunk &args, ExpressionState &, Vector &res
             char *r = npoint_as_text(s, 15);
             free(s);
             return TakeCString(result, r);
+        });
+}
+
+
+// ===== @ingroup meos_pointcloud_set_inout =====
+static void Gen_pcpointset_in(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *r = pcpointset_in(in.GetString().c_str());
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_pcpatchset_in(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *r = pcpatchset_in(in.GetString().c_str());
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
@@ -2455,6 +2493,13 @@ void RegisterGenerated_meos_npoint_base_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {NpointTypes::npoint()}, LogicalType::VARCHAR, Gen_npoint_as_ewkt_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {NpointTypes::npoint(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_npoint_as_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {NpointTypes::npoint()}, LogicalType::VARCHAR, Gen_npoint_as_text_d));
+}
+
+void RegisterGenerated_meos_pointcloud_set_inout(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("pcpointsetFromText", {LogicalType::VARCHAR}, SetTypes::pcpointset(), Gen_pcpointset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("pcpointsetFromEWKT", {LogicalType::VARCHAR}, SetTypes::pcpointset(), Gen_pcpointset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("pcpatchsetFromText", {LogicalType::VARCHAR}, SetTypes::pcpatchset(), Gen_pcpatchset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("pcpatchsetFromEWKT", {LogicalType::VARCHAR}, SetTypes::pcpatchset(), Gen_pcpatchset_in));
 }
 
 void RegisterGenerated_meos_pose_base_transf(ExtensionLoader &loader) {

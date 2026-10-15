@@ -236,3 +236,25 @@ SELECT typeof(getValues(getValues(c))), getValues(getValues(c))[1] = startValue(
 FROM t;
 ----
 quadbin[]	true
+
+# A set of another family's values read from its text and its extended text, as MobilityDB's
+# <type>FromText and <type>FromEWKT read it; the extended text keeps its SRID.
+
+query III
+SELECT asText(cbuffersetFromText('{"Cbuffer(Point(1 1),0.5)", "Cbuffer(Point(3 3),2)"}')),
+       asText(npointsetFromText('{"NPoint(1,0.5)"}')),
+       asText(posesetFromText('{"Pose(Point(1 1),0.5)"}'));
+----
+{"Cbuffer(POINT(1 1),0.5)", "Cbuffer(POINT(3 3),2)"}	{"NPoint(1,0.5)"}	{"Pose(POINT(1 1),0.5)"}
+
+query II
+SELECT asEWKT(cbuffersetFromEWKT('SRID=3857;{"Cbuffer(Point(1 1),0.5)"}')),
+       asEWKT(posesetFromEWKT('SRID=4326;{"Pose(Point(1 1),0.5)"}'));
+----
+SRID=3857;{"Cbuffer(POINT(1 1),0.5)"}	SRID=4326;{"Pose(POINT(1 1),0.5)"}
+
+query II
+SELECT numValues(jsonbsetFromText(asText(set([jsonb '{"a":1}', jsonb '{"b":2}'])))),
+       numValues(s2cellsetFromText('{47c3c3, 47c3c5}'));
+----
+2	2
