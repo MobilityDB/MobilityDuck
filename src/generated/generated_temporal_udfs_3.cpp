@@ -1318,8 +1318,8 @@ static void Gen_set_split_each_n_spans(DataChunk &args, ExpressionState &, Vecto
     for (idx_t i = 0; i < row_count; ++i) {
         if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
         string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
-        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         Set *in = BlobToSet(blob);
+        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         int count = 0;
         Span * arr = set_split_each_n_spans(in, n_arg, &count);
         free(in);
@@ -1352,8 +1352,8 @@ static void Gen_set_split_n_spans(DataChunk &args, ExpressionState &, Vector &re
     for (idx_t i = 0; i < row_count; ++i) {
         if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
         string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
-        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         Set *in = BlobToSet(blob);
+        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         int count = 0;
         Span * arr = set_split_n_spans(in, n_arg, &count);
         free(in);
@@ -1417,8 +1417,8 @@ static void Gen_spanset_split_each_n_spans(DataChunk &args, ExpressionState &, V
     for (idx_t i = 0; i < row_count; ++i) {
         if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
         string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
-        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         SpanSet *in = BlobToSpanSet(blob);
+        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         int count = 0;
         Span * arr = spanset_split_each_n_spans(in, n_arg, &count);
         free(in);
@@ -1451,8 +1451,8 @@ static void Gen_spanset_split_n_spans(DataChunk &args, ExpressionState &, Vector
     for (idx_t i = 0; i < row_count; ++i) {
         if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
         string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
-        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         SpanSet *in = BlobToSpanSet(blob);
+        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         int count = 0;
         Span * arr = spanset_split_n_spans(in, n_arg, &count);
         free(in);

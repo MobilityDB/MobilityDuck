@@ -3559,6 +3559,13 @@ def shape_array(f):
         return None
     tail = ("integer",) * len(tailp)
     ib = base(ins[0]["canonical"])
+    # A cell id first, by value: the array a static cell function answers over the cell types its
+    # signatures declare with an array return (quadbinCellToTile(quadbin) -> integer[])
+    if ib in CELL_UINT and "*" not in norm(ins[0]["canonical"]) and not tail:
+        accs = [CELL_SQL[s["args"][0]] for s in f.get("sqlSignatures") or []
+                if len(s.get("args") or []) == 1 and s["args"][0] in CELL_SQL
+                and (s.get("ret") or "").endswith("[]")]
+        return ("array", ec, "cell", accs, tail) if accs else None
     # A geometry first, in a retired group: DuckDB's one GEOMETRY type stands for the geometry and
     # geography signatures alike, read with SRID 0 as #emit_nary_scalars reads one
     # (stboxes(geometry), splitNStboxes(geometry, integer))
@@ -3598,8 +3605,17 @@ def emit_array(f, ec, ib, tail=()):
     A non-empty `tail` adds the split-into-N argument: a second INTEGER vector read per row and
     passed through to the accessor, NULL in either argument yielding a NULL list."""
     name = f["name"]
-    cbase, blobto = ARRAY_IN[ib]
-    decode = f"{blobto}(blob, 0)" if ib == "GSERIALIZED" else f"{blobto}(blob)"
+    if ib == "cell":
+        # a by-value cell id, read as the int64 a cell type carries in DuckDB
+        read_in = ("        uint64_t in = static_cast<uint64_t>("
+                   "FlatVector::GetData<int64_t>(in_vec)[i]);\n")
+        free_in = ""
+    else:
+        cbase, blobto = ARRAY_IN[ib]
+        decode = f"{blobto}(blob, 0)" if ib == "GSERIALIZED" else f"{blobto}(blob)"
+        read_in = (f"        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];\n"
+                   f"        {cbase} *in = {decode};\n")
+        free_in = "        free(in);\n"
     _lt, ccpp, marsh = ARRAY_ELEM[ec]
     retc = norm(f["returnType"]["canonical"])          # e.g. "TimestampTz *", "text **", "Span *"
     n_vec = ("    auto &n_vec = args.data[1];\n"
@@ -3619,12 +3635,11 @@ f"    auto list_entries = FlatVector::GetData<list_entry_t>(result);\n"
 f"    idx_t off = 0;\n"
 f"    for (idx_t i = 0; i < row_count; ++i) {{\n"
 f"        if (in_vec.GetValue(i).IsNull(){n_null}) {{ result_validity.SetInvalid(i); continue; }}\n"
-f"        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];\n"
+f"{read_in}"
 f"{n_read}"
-f"        {cbase} *in = {decode};\n"
 f"        int count = 0;\n"
 f"        {retc} arr = {name}({call_args});\n"
-f"        free(in);\n"
+f"{free_in}"
 f"        int n = (arr && count > 0) ? count : 0;\n"
 f"        ListVector::Reserve(result, off + n);\n"
 f"        ListVector::SetListSize(result, off + n);\n"

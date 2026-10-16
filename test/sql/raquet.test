@@ -218,11 +218,11 @@ SELECT numValues(getValues(tquadbin(tgeompoint 'SRID=4326;POINT(0 0)@2024-01-01'
 1
 
 # The cell covering the origin at zoom 0 is the world tile.
-query III
-SELECT quadbinCellToTileX(c), quadbinCellToTileY(c), quadbinCellToTileZ(c)
+query I
+SELECT quadbinCellToTile(c)
 FROM (SELECT startValue(tquadbin(tgeompoint 'SRID=4326;POINT(0 0)@2024-01-01', 0)) AS c);
 ----
-0	0	0
+[0, 0, 0]
 
 # The cover is the tiles the path enters. A QUADBIN tile holds its west and
 # north boundaries, so the corner where four zoom-1 tiles meet at (0 0) belongs

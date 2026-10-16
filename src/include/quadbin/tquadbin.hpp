@@ -32,9 +32,6 @@ struct QuadbinFunctions {
     static bool Tquadbin_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* Static cell helpers (quadbinTileToCell is generated) */
-    static void Quadbin_cell_to_tile_x(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Quadbin_cell_to_tile_y(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Quadbin_cell_to_tile_z(DataChunk &args, ExpressionState &state, Vector &result);
     static void Quadbin_get_resolution(DataChunk &args, ExpressionState &state, Vector &result);
     static void Quadbin_is_valid_cell(DataChunk &args, ExpressionState &state, Vector &result);
 

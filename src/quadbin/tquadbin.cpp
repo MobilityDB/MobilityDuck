@@ -148,45 +148,6 @@ bool QuadbinFunctions::Tquadbin_out_cast(
  * Static cell helpers
  * ===================================================================== */
 
-/* quadbinCellToTileX/Y/Z: expose each tile coordinate as a separate scalar.
- * DuckDB has no STRUCT type in the current MobilityDuck surface; three
- * functions mirror the (x,y,z) MobilityDB SQL pattern. */
-void QuadbinFunctions::Quadbin_cell_to_tile_x(
-    DataChunk &args, ExpressionState &state, Vector &result)
-{
-    UnaryExecutor::Execute<int64_t, int32_t>(
-        args.data[0], result, args.size(),
-        [](int64_t v) -> int32_t {
-            uint32_t x, y, z;
-            quadbin_cell_to_tile(static_cast<Quadbin>(v), &x, &y, &z);
-            return static_cast<int32_t>(x);
-        });
-}
-
-void QuadbinFunctions::Quadbin_cell_to_tile_y(
-    DataChunk &args, ExpressionState &state, Vector &result)
-{
-    UnaryExecutor::Execute<int64_t, int32_t>(
-        args.data[0], result, args.size(),
-        [](int64_t v) -> int32_t {
-            uint32_t x, y, z;
-            quadbin_cell_to_tile(static_cast<Quadbin>(v), &x, &y, &z);
-            return static_cast<int32_t>(y);
-        });
-}
-
-void QuadbinFunctions::Quadbin_cell_to_tile_z(
-    DataChunk &args, ExpressionState &state, Vector &result)
-{
-    UnaryExecutor::Execute<int64_t, int32_t>(
-        args.data[0], result, args.size(),
-        [](int64_t v) -> int32_t {
-            uint32_t x, y, z;
-            quadbin_cell_to_tile(static_cast<Quadbin>(v), &x, &y, &z);
-            return static_cast<int32_t>(z);
-        });
-}
-
 void QuadbinFunctions::Quadbin_get_resolution(
     DataChunk &args, ExpressionState &state, Vector &result)
 {
@@ -285,21 +246,9 @@ void QuadbinFunctions::Tquadbin_to_tbigint(
 void QuadbinTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     const auto QB  = QuadbinTypes::quadbin();
     const auto TQB = QuadbinTypes::tquadbin();
-    const auto I32 = LogicalType::INTEGER;
     const auto B   = LogicalType::BOOLEAN;
     const auto V   = LogicalType::VARCHAR;
     const auto TS  = LogicalType::TIMESTAMP_TZ;
-
-    /* Static cell helpers (quadbinTileToCell and the catalog's static cell surface are generated) */
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "quadbinCellToTileX", {QB}, I32,
-        QuadbinFunctions::Quadbin_cell_to_tile_x));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "quadbinCellToTileY", {QB}, I32,
-        QuadbinFunctions::Quadbin_cell_to_tile_y));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "quadbinCellToTileZ", {QB}, I32,
-        QuadbinFunctions::Quadbin_cell_to_tile_z));
 
     /* Constructor */
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(

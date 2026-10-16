@@ -16,12 +16,10 @@ SELECT isValidCell(quadbinTileToCell(5, 3, 3));
 ----
 true
 
-query III
-SELECT quadbinCellToTileX(quadbinTileToCell(2, 1, 2)),
-       quadbinCellToTileY(quadbinTileToCell(2, 1, 2)),
-       quadbinCellToTileZ(quadbinTileToCell(2, 1, 2));
+query I
+SELECT quadbinCellToTile(quadbinTileToCell(2, 1, 2));
 ----
-2	1	2
+[2, 1, 2]
 
 # ── the temporal cell index reports the canonical lowercase type name ────────
 query I
