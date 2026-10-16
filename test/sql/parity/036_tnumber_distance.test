@@ -41,7 +41,7 @@ SELECT nearestApproachDistance(tint '[1@2000-01-01, 5@2000-01-05]', 3);
 0
 
 query I
-SELECT nad(tfloat '[1@2000-01-01, 5@2000-01-05]', tfloat '[3@2000-01-01, 3@2000-01-05]');
+SELECT nearestApproachDistance(tfloat '[1@2000-01-01, 5@2000-01-05]', tfloat '[3@2000-01-01, 3@2000-01-05]');
 ----
 0.0
 

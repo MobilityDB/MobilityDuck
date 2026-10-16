@@ -18,16 +18,16 @@
 require mobilityduck
 
 query I
-SELECT WminAgg(temp::tint, INTERVAL '1 day')::VARCHAR FROM (VALUES ('[1@2000-01-01, 5@2000-01-05]')) t(temp);
+SELECT wMin(temp::tint, INTERVAL '1 day')::VARCHAR FROM (VALUES ('[1@2000-01-01, 5@2000-01-05]')) t(temp);
 ----
 {[1@2000-01-01 00:00:00+01, 1@2000-01-06 00:00:00+01]}
 
 query I
-SELECT WmaxAgg(temp::tint, INTERVAL '1 day')::VARCHAR FROM (VALUES ('[1@2000-01-01, 5@2000-01-05]')) t(temp);
+SELECT wMax(temp::tint, INTERVAL '1 day')::VARCHAR FROM (VALUES ('[1@2000-01-01, 5@2000-01-05]')) t(temp);
 ----
 {[1@2000-01-01 00:00:00+01, 1@2000-01-06 00:00:00+01]}
 
 query I
-SELECT WsumAgg(temp::tint, INTERVAL '1 day')::VARCHAR FROM (VALUES ('[1@2000-01-01, 5@2000-01-05]')) t(temp);
+SELECT wSum(temp::tint, INTERVAL '1 day')::VARCHAR FROM (VALUES ('[1@2000-01-01, 5@2000-01-05]')) t(temp);
 ----
 {[1@2000-01-01 00:00:00+01, 1@2000-01-06 00:00:00+01]}

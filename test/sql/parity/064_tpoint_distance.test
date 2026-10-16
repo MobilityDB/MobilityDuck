@@ -51,7 +51,7 @@ SELECT round(nearestApproachDistance(tgeompoint '[POINT(0 0)@2000-01-01, POINT(2
 
 # nad alias parity
 query I
-SELECT round(nad(tgeompoint '[POINT(0 0)@2000-01-01, POINT(2 2)@2000-01-02]', tgeompoint '[POINT(3 3)@2000-01-01, POINT(5 5)@2000-01-02]')::numeric, 6);
+SELECT round(nearestApproachDistance(tgeompoint '[POINT(0 0)@2000-01-01, POINT(2 2)@2000-01-02]', tgeompoint '[POINT(3 3)@2000-01-01, POINT(5 5)@2000-01-02]')::numeric, 6);
 ----
 4.242641
 

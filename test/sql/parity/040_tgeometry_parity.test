@@ -122,7 +122,7 @@ FROM (VALUES ('Point(0.5 0.5)@2000-01-01')) t(t);
 # =============================================================================
 
 query I
-SELECT temporal_eq(t::tgeometry, t::tgeometry) FROM (VALUES ('Point(0 0)@2000-01-01')) t(t);
+SELECT eq(t::tgeometry, t::tgeometry) FROM (VALUES ('Point(0 0)@2000-01-01')) t(t);
 ----
 true
 
@@ -139,7 +139,7 @@ SELECT t1::tgeometry <> t2::tgeometry FROM (VALUES
 true
 
 query I
-SELECT temporal_cmp(t::tgeometry, t::tgeometry) FROM (VALUES
+SELECT cmp(t::tgeometry, t::tgeometry) FROM (VALUES
   ('Point(0 0)@2000-01-01')) t(t);
 ----
 0
@@ -323,19 +323,19 @@ SELECT extent(t::tgeometry)::VARCHAR FROM (VALUES
 STBOX XT(((0,0),(2,2)),[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01])
 
 query I
-SELECT TcountAgg(t::tgeometry)::VARCHAR FROM (VALUES
+SELECT tCount(t::tgeometry)::VARCHAR FROM (VALUES
   ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
 ----
 {1@2000-01-01 00:00:00+01, 1@2000-01-02 00:00:00+01}
 
 query I
-SELECT (MergeAgg(t::tgeometry) IS NOT NULL) FROM (VALUES
+SELECT (mergeAgg(t::tgeometry) IS NOT NULL) FROM (VALUES
   ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
 ----
 true
 
 query I
-SELECT (AppendInstantAgg(t::tgeometry) IS NOT NULL) FROM (VALUES
+SELECT (appendInstantAgg(t::tgeometry) IS NOT NULL) FROM (VALUES
   ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
 ----
 true

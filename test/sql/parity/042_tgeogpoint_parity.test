@@ -137,25 +137,25 @@ SELECT extent(t::tgeogpoint)::VARCHAR FROM (VALUES
 SRID=4326;GEODSTBOX XT(((0,0),(2,2)),[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01])
 
 query I
-SELECT TcountAgg(t::tgeogpoint)::VARCHAR FROM (VALUES
+SELECT tCount(t::tgeogpoint)::VARCHAR FROM (VALUES
   ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
 ----
 {1@2000-01-01 00:00:00+01, 1@2000-01-02 00:00:00+01}
 
 query I
-SELECT (MergeAgg(t::tgeogpoint) IS NOT NULL) FROM (VALUES
+SELECT (mergeAgg(t::tgeogpoint) IS NOT NULL) FROM (VALUES
   ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
 ----
 true
 
 query I
-SELECT (AppendInstantAgg(t::tgeogpoint) IS NOT NULL) FROM (VALUES
+SELECT (appendInstantAgg(t::tgeogpoint) IS NOT NULL) FROM (VALUES
   ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
 ----
 true
 
 query I
-SELECT (TcentroidAgg(t::tgeogpoint) IS NOT NULL) FROM (VALUES
+SELECT (tCentroid(t::tgeogpoint) IS NOT NULL) FROM (VALUES
   ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
 ----
 true

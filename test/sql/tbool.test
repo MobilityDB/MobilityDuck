@@ -166,7 +166,7 @@ SELECT afterTimestamp(tbool '{[t@2000-01-02, f@2000-01-04, t@2000-01-05],[t@2000
 {[t@2000-01-08 00:00:00+01]}
 
 query I 
-SELECT temporal_cmp(tbool 't@2000-01-01', tbool 't@2000-01-01');
+SELECT cmp(tbool 't@2000-01-01', tbool 't@2000-01-01');
 ----
 0
 
