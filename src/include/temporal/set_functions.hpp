@@ -39,9 +39,6 @@ struct SetFunctions {
     static void Tstzset_to_dateset(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_mem_size(DataChunk &args, ExpressionState &state, Vector &result);
     static void Set_num_values(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Set_start_value(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Set_end_value(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Set_value_n(DataChunk &args, ExpressionState &state, Vector &result_vec);
     // Set_values retired: getValues(<set>) is generated (set_values) in generated_temporal_udfs.cpp.
     static void Tstzset_shift(DataChunk &args, ExpressionState &state, Vector &result);
     // floor/ceil/round/degrees/radians on floatset are generated (generated_temporal_udfs.cpp).

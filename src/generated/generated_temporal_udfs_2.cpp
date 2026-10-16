@@ -2398,6 +2398,51 @@ static void Gen_posechainset_values(DataChunk &args, ExpressionState &, Vector &
 
 
 // ===== @ingroup meos_quadbin_set_accessor =====
+static void Gen_quadbinset_end_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
+        [&](string_t a0) -> int64_t {
+            Set *p0 = BlobToSet(a0);
+            uint64_t r = quadbinset_end_value(p0);
+            free(p0); 
+            return static_cast<int64_t>(r);
+        });
+}
+
+static void Gen_quadbinset_start_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
+        [&](string_t a0) -> int64_t {
+            Set *p0 = BlobToSet(a0);
+            uint64_t r = quadbinset_start_value(p0);
+            free(p0); 
+            return static_cast<int64_t>(r);
+        });
+}
+
+static void Gen_quadbinset_value_n(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<int64_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Set *x0 = BlobToSet(in0[i]);
+        uint64_t o = (uint64_t) 0;
+        bool ok = quadbinset_value_n(x0, in1[i], &o);
+        free(x0);
+        if (!ok) { outv.SetInvalid(i); continue; }
+        out[i] = (int64_t) o;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_quadbinset_values(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     auto &in_vec = args.data[0];
@@ -2562,6 +2607,51 @@ static void Gen_s2cell_out(DataChunk &args, ExpressionState &, Vector &result) {
 
 
 // ===== @ingroup meos_s2cell_set_accessor =====
+static void Gen_s2cellset_end_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
+        [&](string_t a0) -> int64_t {
+            Set *p0 = BlobToSet(a0);
+            uint64_t r = s2cellset_end_value(p0);
+            free(p0); 
+            return static_cast<int64_t>(r);
+        });
+}
+
+static void Gen_s2cellset_start_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
+        [&](string_t a0) -> int64_t {
+            Set *p0 = BlobToSet(a0);
+            uint64_t r = s2cellset_start_value(p0);
+            free(p0); 
+            return static_cast<int64_t>(r);
+        });
+}
+
+static void Gen_s2cellset_value_n(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<int64_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Set *x0 = BlobToSet(in0[i]);
+        uint64_t o = (uint64_t) 0;
+        bool ok = s2cellset_value_n(x0, in1[i], &o);
+        free(x0);
+        if (!ok) { outv.SetInvalid(i); continue; }
+        out[i] = (int64_t) o;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_s2cellset_values(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     auto &in_vec = args.data[0];
@@ -5104,6 +5194,9 @@ void RegisterGenerated_meos_posechain_set_accessor(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_quadbin_set_accessor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {SetTypes::quadbinset()}, QuadbinTypes::quadbin(), Gen_quadbinset_end_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {SetTypes::quadbinset()}, QuadbinTypes::quadbin(), Gen_quadbinset_start_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueN", {SetTypes::quadbinset(), LogicalType::INTEGER}, QuadbinTypes::quadbin(), Gen_quadbinset_value_n));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValues", {SetTypes::quadbinset()}, LogicalType::LIST(QuadbinTypes::quadbin()), Gen_quadbinset_values));
 }
 
@@ -5120,6 +5213,9 @@ void RegisterGenerated_meos_s2cell_base_inout(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_s2cell_set_accessor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {SetTypes::s2cellset()}, S2cellTypes::s2cell(), Gen_s2cellset_end_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {SetTypes::s2cellset()}, S2cellTypes::s2cell(), Gen_s2cellset_start_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueN", {SetTypes::s2cellset(), LogicalType::INTEGER}, S2cellTypes::s2cell(), Gen_s2cellset_value_n));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValues", {SetTypes::s2cellset()}, LogicalType::LIST(S2cellTypes::s2cell()), Gen_s2cellset_values));
 }
 
