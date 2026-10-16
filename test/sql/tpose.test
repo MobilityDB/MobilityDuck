@@ -118,3 +118,11 @@ query I
 SELECT asText(points(tpose '{Pose(Point(1 1),0.1)@2000-01-01, Pose(Point(2 2),0.2)@2000-01-02}'));
 ----
 {"POINT(1 1)", "POINT(2 2)"}
+
+# The restriction to a spatiotemporal box with its border excluded (atStbox's third argument)
+
+query I
+SELECT asText(atStbox(tpose '[Pose(Point(1 1),0.5)@2000-01-01, Pose(Point(3 3),1)@2000-01-03]',
+                      stbox 'STBOX XT(((0,0),(2,2)),[2000-01-01,2000-01-03])', false));
+----
+{[Pose(POINT(1 1),0.5)@2000-01-01 00:00:00+01, Pose(POINT(2 2),0.75)@2000-01-02 00:00:00+01)}

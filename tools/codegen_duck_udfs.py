@@ -4372,6 +4372,9 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_quadbin_set_inout", "meos_s2cell_set_inout",
                   # the constructors of the sets, spans and span sets (#shape_container_make)
                   "meos_setspan_constructor",
+                  # the restrictions of a temporal circular buffer, network point and pose to and
+                  # outside a spatiotemporal box (atStbox, minusStbox)
+                  "meos_cbuffer_restrict", "meos_npoint_restrict", "meos_pose_restrict",
                   # the simplifications: minTimeDeltaSimplify's duration reaches #shape_arg
                   "meos_temporal_analytics_simplify",
                   # the splits of a set, a span set and a temporal value into N spans or boxes

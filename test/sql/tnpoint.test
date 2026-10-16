@@ -147,3 +147,13 @@ SELECT nearestApproachDistance(tnpoint '{Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)
        nearestApproachDistance(npoint 'Npoint(1,0.5)', tnpoint '{Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)@2000-01-02}');
 ----
 21.39201569925701	21.39201569925701
+
+# The restriction to and outside a time box, which carries no SRID
+
+query II
+SELECT asText(atStbox(tnpoint '[NPoint(1, 0.2)@2000-01-01, NPoint(1, 0.8)@2000-01-03]',
+                      stbox 'STBOX T([2000-01-01,2000-01-02])')),
+       asText(minusStbox(tnpoint '[NPoint(1, 0.2)@2000-01-01, NPoint(1, 0.8)@2000-01-03]',
+                         stbox 'STBOX T([2000-01-01,2000-01-02])'));
+----
+{[NPoint(1,0.2)@2000-01-01 00:00:00+01, NPoint(1,0.5)@2000-01-02 00:00:00+01]}	{(NPoint(1,0.5)@2000-01-02 00:00:00+01, NPoint(1,0.8)@2000-01-03 00:00:00+01]}
