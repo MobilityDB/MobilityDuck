@@ -1587,6 +1587,35 @@ static void Gen_quadbin_cell_to_quadkey(DataChunk &args, ExpressionState &, Vect
         });
 }
 
+static void Gen_quadbin_cell_to_tile(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        uint64_t in = static_cast<uint64_t>(FlatVector::GetData<int64_t>(in_vec)[i]);
+        int count = 0;
+        int * arr = quadbin_cell_to_tile(in, &count);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<int32_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = arr[j]; }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
 
 // ===== @ingroup meos_quadbin_inout =====
 static void Gen_tquadbin_out(DataChunk &args, ExpressionState &, Vector &result) {
@@ -3785,6 +3814,7 @@ void RegisterGenerated_meos_quadbin(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("stbox", {QuadbinTypes::quadbin(), SpanTypes::tstzspan()}, StboxType::stbox(), Gen_quadbin_tstzspan_to_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("cellArea", {QuadbinTypes::quadbin()}, LogicalType::DOUBLE, Gen_quadbin_cell_area));
     RegisterSerializedScalarFunction(loader, ScalarFunction("quadbinCellToQuadkey", {QuadbinTypes::quadbin()}, LogicalType::VARCHAR, Gen_quadbin_cell_to_quadkey));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("quadbinCellToTile", {QuadbinTypes::quadbin()}, LogicalType::LIST(LogicalType::INTEGER), Gen_quadbin_cell_to_tile));
 }
 
 void RegisterGenerated_meos_quadbin_inout(ExtensionLoader &loader) {

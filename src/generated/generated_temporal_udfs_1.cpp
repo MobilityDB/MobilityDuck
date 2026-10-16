@@ -991,8 +991,8 @@ static void Gen_tgeo_split_each_n_stboxes(DataChunk &args, ExpressionState &, Ve
     for (idx_t i = 0; i < row_count; ++i) {
         if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
         string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
-        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         Temporal *in = BlobToTemporal(blob);
+        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         int count = 0;
         STBox * arr = tgeo_split_each_n_stboxes(in, n_arg, &count);
         free(in);
@@ -1025,8 +1025,8 @@ static void Gen_tgeo_split_n_stboxes(DataChunk &args, ExpressionState &, Vector 
     for (idx_t i = 0; i < row_count; ++i) {
         if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
         string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
-        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         Temporal *in = BlobToTemporal(blob);
+        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         int count = 0;
         STBox * arr = tgeo_split_n_stboxes(in, n_arg, &count);
         free(in);

@@ -3298,8 +3298,8 @@ static void Gen_temporal_split_each_n_spans(DataChunk &args, ExpressionState &, 
     for (idx_t i = 0; i < row_count; ++i) {
         if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
         string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
-        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         Temporal *in = BlobToTemporal(blob);
+        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         int count = 0;
         Span * arr = temporal_split_each_n_spans(in, n_arg, &count);
         free(in);
@@ -3332,8 +3332,8 @@ static void Gen_temporal_split_n_spans(DataChunk &args, ExpressionState &, Vecto
     for (idx_t i = 0; i < row_count; ++i) {
         if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
         string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
-        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         Temporal *in = BlobToTemporal(blob);
+        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         int count = 0;
         Span * arr = temporal_split_n_spans(in, n_arg, &count);
         free(in);
@@ -3366,8 +3366,8 @@ static void Gen_tnumber_split_each_n_tboxes(DataChunk &args, ExpressionState &, 
     for (idx_t i = 0; i < row_count; ++i) {
         if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
         string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
-        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         Temporal *in = BlobToTemporal(blob);
+        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         int count = 0;
         TBox * arr = tnumber_split_each_n_tboxes(in, n_arg, &count);
         free(in);
@@ -3400,8 +3400,8 @@ static void Gen_tnumber_split_n_tboxes(DataChunk &args, ExpressionState &, Vecto
     for (idx_t i = 0; i < row_count; ++i) {
         if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
         string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
-        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         Temporal *in = BlobToTemporal(blob);
+        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         int count = 0;
         TBox * arr = tnumber_split_n_tboxes(in, n_arg, &count);
         free(in);
