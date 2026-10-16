@@ -1182,6 +1182,8 @@ def forward_literal(p, raw):
         return 'MeosIntervalLiteral("%s")' % text
     if b == "TimestampTz" and "*" not in n:
         return 'timestamptz_in("%s", -1)' % text
+    if b == "DateADT" and "*" not in n:
+        return 'date_in("%s")' % text
     if b in SCALAR_ARG and "*" not in n:
         return sql_default_to_cpp(str(MACRO_VALUES.get(raw, raw)))
     return None
@@ -2972,8 +2974,9 @@ def ctor_duck_type(sqlt):
     return SQL_BASE_TO_DUCK.get(sqlt) or SET_TYPES.get(sqlt) or SPANSET_TYPES.get(sqlt)
 
 def shape_container_make(f):
-    """A retired group's public constructor of a set, a span or a span set: ('scalars', [the
-    SCALAR_ARG triple of each parameter], None, ret) for one taking by-value values only (intspan_make),
+    """A retired group's public constructor of a set, a span, a span set or a box: ('scalars', [the
+    #shape_arg triple of each parameter], None, ret) for one taking by-value values and durations
+    only (intspan_make, the bin of a value tstzspan_get_bin, the tile of a value tbox_get_value_tile),
     ('basearr', C element, (DuckDB type, C++ element, marshal), ret) for one taking the base values
     of a SQL array with their count (intset_make, textset_make), ('spanarr', 'Span', None, ret) for
     one taking spans (spanset_make). The array is the catalog's `inputArrays`, read from a LIST as
@@ -2981,16 +2984,21 @@ def shape_container_make(f):
     if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
         return None
     rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
-    if rb not in ("Set", "Span", "SpanSet") or not rn.endswith("*") \
+    if rb not in ("Set", "Span", "SpanSet", "TBox", "STBox") or not rn.endswith("*") \
             or "const" in f["returnType"]["canonical"]:
         return None
     ps = f.get("params") or []
     ia = (f.get("shape") or {}).get("inputArrays") or []
     if not ia:
-        if not ps or any(base(p["canonical"]) not in SCALAR_ARG or "*" in norm(p["canonical"])
-                         for p in ps):
+        # a by-value value, or a duration read as #shape_arg reads one
+        def _value(p):
+            b, n = base(p["canonical"]), norm(p["canonical"])
+            return (b in SCALAR_ARG and "*" not in n) or (b == "Interval" and n.count("*") == 1)
+        if not ps or not all(_value(p) for p in ps):
             return None
-        return ("scalars", [SCALAR_ARG[base(p["canonical"])] for p in ps], None, rb)
+        return ("scalars", [shape_arg(p) for p in ps], None, rb)
+    if rb in ("TBox", "STBox"):
+        return None
     if len(ia) != 1 or len(ps) != 2 or ia[0].get("param") != ps[0]["name"] \
             or (ia[0].get("lengthFrom") or {}).get("name") != ps[1]["name"]:
         return None
@@ -3477,7 +3485,7 @@ def array_declared_accs(f, tail=()):
 SQL_BASE_TO_DUCK = {
     "integer": "LogicalType::INTEGER", "bigint": "LogicalType::BIGINT", "float": "LogicalType::DOUBLE",
     "boolean": "LogicalType::BOOLEAN", "text": "LogicalType::VARCHAR", "date": "LogicalType::DATE",
-    "timestamptz": "LogicalType::TIMESTAMP_TZ",
+    "timestamptz": "LogicalType::TIMESTAMP_TZ", "interval": "LogicalType::INTERVAL",
     "intspan": "SpanTypes::intspan()", "bigintspan": "SpanTypes::bigintspan()",
     "floatspan": "SpanTypes::floatspan()", "datespan": "SpanTypes::datespan()",
     "tstzspan": "SpanTypes::tstzspan()", "tbox": "TboxType::tbox()", "stbox": "StboxType::stbox()",
@@ -4342,6 +4350,10 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_temporal_transf", "meos_geo_base_transf", "meos_geo_transf",
                   "meos_rgeo_transf", "meos_cbuffer_transf", "meos_pose_transf",
                   "meos_posechain_transf",
+                  # The bin and the tile that contain a value: getBin over the five span types,
+                  # getValueTile, getTBoxTimeTile, getValueTimeTile and getStboxTimeTile, by
+                  # #shape_container_make from their values and durations.
+                  "meos_setspan_bin", "meos_temporal_analytics_tile", "meos_geo_tile",
                   # the set and span transformations: shiftScale and the duration forms of shift,
                   # scale, expand and tprecision reach #shape_nary_scalars' container arm
                   "meos_setspan_transf",
@@ -4441,7 +4453,17 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # no longer listed here. Empty: every @sqlfn of a retired group is generated.
 # unnest: DuckDB's own unnest cannot be overloaded, so the temporal unnest registers under the
 # name the catalog gives the other engines, temporalUnnest (#shape_unnest).
-RETIRE_UNCOVERED_OK = {"unnest"}
+# The tile and bin groups: the tiles of a geometry (getSpaceTile, getSpaceTimeTile) read a
+# geometry and a point origin no container shape takes, and the tiles, boxes, bins and splits of a
+# box or a temporal value return a set of rows or an array of boxes the generator does not yet
+# register; src/single_tile_getters.cpp, src/geo and src/temporal/temporal.cpp keep them, and
+# timeBins, timeBoxes and valueTimeBoxes are not registered by either.
+RETIRE_UNCOVERED_OK = {"unnest",
+                       "getSpaceTile", "getSpaceTimeTile",
+                       "spaceBoxes", "spaceSplit", "spaceTiles", "spaceTimeSplit", "spaceTimeTiles",
+                       "timeBins", "timeBoxes", "timeSplit", "timeTiles",
+                       "valueSplit", "valueTiles", "valueTimeBoxes", "valueTimeSplit",
+                       "valueTimeTiles"}
 def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
 TEMPORAL_CBASES = {"Temporal", "TInstant", "TSequence", "TSequenceSet"}

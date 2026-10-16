@@ -586,67 +586,6 @@ inline string_t SpanToBlob(Vector &result, Span *span) {
     return out;
 }
 
-void GetBinIntExec(DataChunk &args, ExpressionState &, Vector &result) {
-    TernaryExecutor::Execute<int32_t, int32_t, int32_t, string_t>(
-        args.data[0], args.data[1], args.data[2], result, args.size(),
-        [&](int32_t v, int32_t vsize, int32_t vorigin) {
-            int lower = int_get_bin(v, vsize, vorigin);
-            Span *span = intspan_make(lower, lower + vsize, true, false);
-            return SpanToBlob(result, span);
-        });
-}
-
-void GetBinBigintExec(DataChunk &args, ExpressionState &, Vector &result) {
-    TernaryExecutor::Execute<int64_t, int64_t, int64_t, string_t>(
-        args.data[0], args.data[1], args.data[2], result, args.size(),
-        [&](int64_t v, int64_t vsize, int64_t vorigin) {
-            int64_t lower = bigint_get_bin(v, vsize, vorigin);
-            Span *span = bigintspan_make(lower, lower + vsize, true, false);
-            return SpanToBlob(result, span);
-        });
-}
-
-void GetBinFloatExec(DataChunk &args, ExpressionState &, Vector &result) {
-    TernaryExecutor::Execute<double, double, double, string_t>(
-        args.data[0], args.data[1], args.data[2], result, args.size(),
-        [&](double v, double vsize, double vorigin) {
-            double lower = float_get_bin(v, vsize, vorigin);
-            Span *span = floatspan_make(lower, lower + vsize, true, false);
-            return SpanToBlob(result, span);
-        });
-}
-
-void GetBinTstzExec(DataChunk &args, ExpressionState &, Vector &result) {
-    TernaryExecutor::Execute<timestamp_tz_t, interval_t, timestamp_tz_t, string_t>(
-        args.data[0], args.data[1], args.data[2], result, args.size(),
-        [&](timestamp_tz_t t, interval_t duration, timestamp_tz_t torigin) {
-            timestamp_tz_t meos_t = DuckDBToMeosTimestamp(t);
-            timestamp_tz_t meos_torigin = DuckDBToMeosTimestamp(torigin);
-            MeosInterval iv = IntervaltToInterval(duration);
-            TimestampTz lower_meos = timestamptz_get_bin(
-                (TimestampTz) meos_t.value, &iv, (TimestampTz) meos_torigin.value);
-            TimestampTz upper_meos = add_timestamptz_interval(lower_meos, &iv);
-            Span *span = tstzspan_make(lower_meos, upper_meos, true, false);
-            return SpanToBlob(result, span);
-        });
-}
-
-void GetBinDateExec(DataChunk &args, ExpressionState &, Vector &result) {
-    TernaryExecutor::Execute<date_t, interval_t, date_t, string_t>(
-        args.data[0], args.data[1], args.data[2], result, args.size(),
-        [&](date_t d, interval_t duration, date_t origin) {
-            int32_t meos_d = ToMeosDate(d);
-            int32_t meos_origin = ToMeosDate(origin);
-            MeosInterval iv = IntervaltToInterval(duration);
-            DateADT lower = date_get_bin((DateADT) meos_d, &iv, (DateADT) meos_origin);
-            // Date bins use duration.day; months/micros are not meaningful
-            // for date-aligned bins (MobilityDB rejects them upstream).
-            DateADT upper = add_date_int(lower, (int32) iv.day);
-            Span *span = datespan_make(lower, upper, true, false);
-            return SpanToBlob(result, span);
-        });
-}
-
 // ----- tbox tile emitters: LIST(tbox) outputs -----
 
 inline void EmitTboxList(Vector &result, idx_t row_idx, TBox *tiles, int count,
@@ -849,21 +788,6 @@ void TboxValueTimeTilesExec(DataChunk &args, ExpressionState &, Vector &result) 
 
 void TemporalTypes::RegisterTileGetters(ExtensionLoader &loader) {
     // Single-bin getters — getBin(value, size, origin) -> <type>span
-    RegisterMeosFunction(loader, ScalarFunction(
-        "getBin", {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::INTEGER},
-        SpanTypes::intspan(), GetBinIntExec));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "getBin", {LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
-        SpanTypes::bigintspan(), GetBinBigintExec));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "getBin", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
-        SpanTypes::floatspan(), GetBinFloatExec));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "getBin", {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ},
-        SpanTypes::tstzspan(), GetBinTstzExec));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "getBin", {LogicalType::DATE, LogicalType::INTERVAL, LogicalType::DATE},
-        SpanTypes::datespan(), GetBinDateExec));
 
     LogicalType list_tbox = LogicalType::LIST(TboxType::tbox());
 

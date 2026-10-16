@@ -53,6 +53,25 @@ SELECT getBin(TIMESTAMPTZ '2001-01-04', INTERVAL '1 day', TIMESTAMPTZ '2000-01-0
 [2001-01-04 00:00:00+01, 2001-01-05 00:00:00+01)
 
 # =============================================================================
+# getBin — the default origin, 0 or '2000-01-03' read in the session time zone
+# =============================================================================
+
+query I
+SELECT getBin(3, 2)::VARCHAR;
+----
+[2, 4)
+
+query I
+SELECT getBin(DATE '2001-01-01', INTERVAL '1 week')::VARCHAR;
+----
+[2001-01-01, 2001-01-08)
+
+query I
+SELECT getBin(TIMESTAMPTZ '2001-01-04 00:30', INTERVAL '1 day')::VARCHAR;
+----
+[2001-01-04 00:00:00+01, 2001-01-05 00:00:00+01)
+
+# =============================================================================
 # valueTiles — int / float dispatch via tbox->span.spantype
 # =============================================================================
 

@@ -1,8 +1,8 @@
-// Single-tile getter functions: given an input point in the (value, time,
-// space) domain and a tile grid configuration, return the single tile that
-// contains the input. Mirrors MobilityDB's `getValueTile` / `getTBoxTimeTile`
-// / `getValueTimeTile` (tbox-shaped) and `getSpaceTile` / `getStboxTimeTile`
-// / `getSpaceTimeTile` (stbox-shaped).
+// Single-tile getter functions over a geometry: given a point and a tile grid
+// configuration, return the single tile that contains it, as MobilityDB's
+// `getSpaceTile` and `getSpaceTimeTile`. The tiles of a value and of a
+// timestamp alone (`getValueTile`, `getTBoxTimeTile`, `getValueTimeTile`,
+// `getStboxTimeTile`) are generated from the catalog.
 
 #include "meos_wrapper_simple.hpp"
 #include "duckdb_version_compat.hpp"
@@ -49,141 +49,14 @@ inline string_t StboxToBlob(Vector &result, STBox *stbox) {
 // getValueTile(double, double [, double=0.0]) -> tbox
 // =====================================================================
 
-void GetValueTileExec(DataChunk &args, ExpressionState &, Vector &result) {
-    const idx_t count = args.size();
-    args.data[0].Flatten(count);
-    args.data[1].Flatten(count);
-    Vector *vorigin_vec = args.ColumnCount() >= 3 ? &args.data[2] : nullptr;
-    if (vorigin_vec) vorigin_vec->Flatten(count);
-
-    auto v_data = FlatVector::GetData<double>(args.data[0]);
-    auto vsize_data = FlatVector::GetData<double>(args.data[1]);
-    auto &result_validity = FlatVector::Validity(result);
-
-    for (idx_t i = 0; i < count; ++i) {
-        if (FlatVector::IsNull(args.data[0], i) || FlatVector::IsNull(args.data[1], i) ||
-            (vorigin_vec && FlatVector::IsNull(*vorigin_vec, i))) {
-            result_validity.SetInvalid(i);
-            continue;
-        }
-        double v = v_data[i];
-        double vsize = vsize_data[i];
-        double vorigin = vorigin_vec ? FlatVector::GetData<double>(*vorigin_vec)[i] : 0.0;
-
-        TBox *tbox = tbox_get_value_time_tile(
-            Float8GetDatum(v), 0,
-            Float8GetDatum(vsize), nullptr,
-            Float8GetDatum(vorigin), 0,
-            T_FLOAT8, T_FLOATSPAN);
-        if (!tbox) {
-            result_validity.SetInvalid(i);
-            continue;
-        }
-        FlatVector::GetData<string_t>(result)[i] = StringVector::AddStringOrBlob(
-            result, reinterpret_cast<const char *>(tbox), sizeof(TBox));
-        free(tbox);
-    }
-    if (count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
-}
-
 // =====================================================================
 // getTBoxTimeTile(timestamptz, interval [, timestamptz='2000-01-03']) -> tbox
 // =====================================================================
-
-void GetTBoxTimeTileExec(DataChunk &args, ExpressionState &, Vector &result) {
-    const idx_t count = args.size();
-    args.data[0].Flatten(count);
-    args.data[1].Flatten(count);
-    Vector *torigin_vec = args.ColumnCount() >= 3 ? &args.data[2] : nullptr;
-    if (torigin_vec) torigin_vec->Flatten(count);
-
-    auto t_data = FlatVector::GetData<timestamp_tz_t>(args.data[0]);
-    auto dur_data = FlatVector::GetData<interval_t>(args.data[1]);
-    auto &result_validity = FlatVector::Validity(result);
-
-    for (idx_t i = 0; i < count; ++i) {
-        if (FlatVector::IsNull(args.data[0], i) || FlatVector::IsNull(args.data[1], i) ||
-            (torigin_vec && FlatVector::IsNull(*torigin_vec, i))) {
-            result_validity.SetInvalid(i);
-            continue;
-        }
-        timestamp_tz_t meos_t = DuckDBToMeosTimestamp(t_data[i]);
-        MeosInterval iv = IntervaltToInterval(dur_data[i]);
-        TimestampTz torigin = (TimestampTz) DEFAULT_TIME_ORIGIN_MEOS;
-        if (torigin_vec) {
-            timestamp_tz_t in = FlatVector::GetData<timestamp_tz_t>(*torigin_vec)[i];
-            torigin = (TimestampTz) DuckDBToMeosTimestamp(in).value;
-        }
-
-        TBox *tbox = tbox_get_value_time_tile(
-            (Datum) 0, (TimestampTz) meos_t.value,
-            (Datum) 0, &iv,
-            (Datum) 0, torigin,
-            T_TIMESTAMPTZ, T_TSTZSPAN);
-        if (!tbox) {
-            result_validity.SetInvalid(i);
-            continue;
-        }
-        FlatVector::GetData<string_t>(result)[i] = StringVector::AddStringOrBlob(
-            result, reinterpret_cast<const char *>(tbox), sizeof(TBox));
-        free(tbox);
-    }
-    if (count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
-}
 
 // =====================================================================
 // getValueTimeTile(double, timestamptz, double, interval
 //                  [, double=0.0, timestamptz='2000-01-03']) -> tbox
 // =====================================================================
-
-void GetValueTimeTileExec(DataChunk &args, ExpressionState &, Vector &result) {
-    const idx_t count = args.size();
-    for (idx_t c = 0; c < args.ColumnCount(); ++c) {
-        args.data[c].Flatten(count);
-    }
-    Vector *vorigin_vec = args.ColumnCount() >= 5 ? &args.data[4] : nullptr;
-    Vector *torigin_vec = args.ColumnCount() >= 6 ? &args.data[5] : nullptr;
-
-    auto v_data = FlatVector::GetData<double>(args.data[0]);
-    auto t_data = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
-    auto vsize_data = FlatVector::GetData<double>(args.data[2]);
-    auto dur_data = FlatVector::GetData<interval_t>(args.data[3]);
-    auto &result_validity = FlatVector::Validity(result);
-
-    for (idx_t i = 0; i < count; ++i) {
-        if (FlatVector::IsNull(args.data[0], i) || FlatVector::IsNull(args.data[1], i) ||
-            FlatVector::IsNull(args.data[2], i) || FlatVector::IsNull(args.data[3], i) ||
-            (vorigin_vec && FlatVector::IsNull(*vorigin_vec, i)) ||
-            (torigin_vec && FlatVector::IsNull(*torigin_vec, i))) {
-            result_validity.SetInvalid(i);
-            continue;
-        }
-        double v = v_data[i];
-        timestamp_tz_t meos_t = DuckDBToMeosTimestamp(t_data[i]);
-        double vsize = vsize_data[i];
-        MeosInterval iv = IntervaltToInterval(dur_data[i]);
-        double vorigin = vorigin_vec ? FlatVector::GetData<double>(*vorigin_vec)[i] : 0.0;
-        TimestampTz torigin = (TimestampTz) DEFAULT_TIME_ORIGIN_MEOS;
-        if (torigin_vec) {
-            timestamp_tz_t in = FlatVector::GetData<timestamp_tz_t>(*torigin_vec)[i];
-            torigin = (TimestampTz) DuckDBToMeosTimestamp(in).value;
-        }
-
-        TBox *tbox = tbox_get_value_time_tile(
-            Float8GetDatum(v), (TimestampTz) meos_t.value,
-            Float8GetDatum(vsize), &iv,
-            Float8GetDatum(vorigin), torigin,
-            T_FLOAT8, T_FLOATSPAN);
-        if (!tbox) {
-            result_validity.SetInvalid(i);
-            continue;
-        }
-        FlatVector::GetData<string_t>(result)[i] = StringVector::AddStringOrBlob(
-            result, reinterpret_cast<const char *>(tbox), sizeof(TBox));
-        free(tbox);
-    }
-    if (count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
-}
 
 // =====================================================================
 // getSpaceTile / getSpaceTimeTile / getStboxTimeTile
@@ -234,43 +107,6 @@ void GetSpaceTileExec(DataChunk &args, ExpressionState &, Vector &result) {
             gs, xsize_data[i], ysize_data[i], zsize_data[i], origin);
         free(gs);
         if (free_origin) free(origin);
-        if (!stbox) {
-            result_validity.SetInvalid(i);
-            continue;
-        }
-        FlatVector::GetData<string_t>(result)[i] = StringVector::AddStringOrBlob(
-            result, reinterpret_cast<const char *>(stbox), sizeof(STBox));
-        free(stbox);
-    }
-    if (count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
-}
-
-// getStboxTimeTile(timestamptz, interval [, timestamptz='2000-01-03']) -> stbox
-void GetStboxTimeTileExec(DataChunk &args, ExpressionState &, Vector &result) {
-    const idx_t count = args.size();
-    args.data[0].Flatten(count);
-    args.data[1].Flatten(count);
-    Vector *torigin_vec = args.ColumnCount() >= 3 ? &args.data[2] : nullptr;
-    if (torigin_vec) torigin_vec->Flatten(count);
-
-    auto t_data = FlatVector::GetData<timestamp_tz_t>(args.data[0]);
-    auto dur_data = FlatVector::GetData<interval_t>(args.data[1]);
-    auto &result_validity = FlatVector::Validity(result);
-
-    for (idx_t i = 0; i < count; ++i) {
-        if (FlatVector::IsNull(args.data[0], i) || FlatVector::IsNull(args.data[1], i) ||
-            (torigin_vec && FlatVector::IsNull(*torigin_vec, i))) {
-            result_validity.SetInvalid(i);
-            continue;
-        }
-        timestamp_tz_t meos_t = DuckDBToMeosTimestamp(t_data[i]);
-        MeosInterval iv = IntervaltToInterval(dur_data[i]);
-        TimestampTz torigin = (TimestampTz) DEFAULT_TIME_ORIGIN_MEOS;
-        if (torigin_vec) {
-            timestamp_tz_t in = FlatVector::GetData<timestamp_tz_t>(*torigin_vec)[i];
-            torigin = (TimestampTz) DuckDBToMeosTimestamp(in).value;
-        }
-        STBox *stbox = stbox_get_time_tile((TimestampTz) meos_t.value, &iv, torigin);
         if (!stbox) {
             result_validity.SetInvalid(i);
             continue;
@@ -360,35 +196,8 @@ void SingleTileGetters::RegisterScalarFunctions(ExtensionLoader &loader) {
     LogicalType geometry = MobilityDuckGeometryType();
 
     // ---- tbox getters ----
-    RegisterMeosFunction(loader, ScalarFunction(
-        "getValueTile",
-        {LogicalType::DOUBLE, LogicalType::DOUBLE},
-        TboxType::tbox(), GetValueTileExec));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "getValueTile",
-        {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
-        TboxType::tbox(), GetValueTileExec));
 
-    RegisterMeosFunction(loader, ScalarFunction(
-        "getTBoxTimeTile",
-        {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL},
-        TboxType::tbox(), GetTBoxTimeTileExec));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "getTBoxTimeTile",
-        {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ},
-        TboxType::tbox(), GetTBoxTimeTileExec));
 
-    RegisterMeosFunction(loader, ScalarFunction(
-        "getValueTimeTile",
-        {LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ,
-         LogicalType::DOUBLE, LogicalType::INTERVAL},
-        TboxType::tbox(), GetValueTimeTileExec));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "getValueTimeTile",
-        {LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ,
-         LogicalType::DOUBLE, LogicalType::INTERVAL,
-         LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ},
-        TboxType::tbox(), GetValueTimeTileExec));
 
     // ---- stbox getters ----
     // 4-arg: full xyz sizes, default sorigin
@@ -407,14 +216,6 @@ void SingleTileGetters::RegisterScalarFunctions(ExtensionLoader &loader) {
         {geometry, LogicalType::DOUBLE},
         StboxType::stbox(), GetSpaceTileUniformExec));
 
-    RegisterMeosFunction(loader, ScalarFunction(
-        "getStboxTimeTile",
-        {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL},
-        StboxType::stbox(), GetStboxTimeTileExec));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "getStboxTimeTile",
-        {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ},
-        StboxType::stbox(), GetStboxTimeTileExec));
 
     RegisterMeosFunction(loader, ScalarFunction(
         "getSpaceTimeTile",
