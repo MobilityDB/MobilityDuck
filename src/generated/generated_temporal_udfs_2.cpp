@@ -701,6 +701,24 @@ inline Temporal * tgeo_scale_geo_sorigin(const Temporal * p0, const GSERIALIZED 
 inline Temporal * tgeo_translate_deltaz(const Temporal * p0, double p1, double p2) {
     return ::tgeo_translate(p0, p1, p2, 0);
 }
+inline char * cbufferset_out_maxdd(const Set * p0) {
+    return ::cbufferset_out(p0, 15);
+}
+inline char * npointset_out_maxdd(const Set * p0) {
+    return ::npointset_out(p0, 15);
+}
+inline char * pcpointset_out_maxdd(const Set * p0) {
+    return ::pcpointset_out(p0, 15);
+}
+inline char * pcpatchset_out_maxdd(const Set * p0) {
+    return ::pcpatchset_out(p0, 15);
+}
+inline char * poseset_out_maxdd(const Set * p0) {
+    return ::poseset_out(p0, 15);
+}
+inline char * posechainset_out_maxdd(const Set * p0) {
+    return ::posechainset_out(p0, 15);
+}
 inline Temporal * trgeometry_append_tinstant_expand_interp_maxdist_maxt(Temporal * p0, const Temporal * p1) {
     return ::trgeometry_append_tinstant(p0, (const TInstant *) p1, LINEAR, 0.0, NULL, false);
 }
@@ -2436,6 +2454,15 @@ static void Gen_s2cellset_values(DataChunk &args, ExpressionState &, Vector &res
 
 
 // ===== @ingroup meos_s2cell_set_inout =====
+static void Gen_s2cellset_in(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *r = s2cellset_in(in.GetString().c_str());
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
 static void Gen_s2cellset_out(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
@@ -4956,6 +4983,8 @@ void RegisterGenerated_meos_s2cell_set_accessor(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_s2cell_set_inout(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("s2cellsetFromText", {LogicalType::VARCHAR}, SetTypes::s2cellset(), Gen_s2cellset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("s2cellsetFromEWKT", {LogicalType::VARCHAR}, SetTypes::s2cellset(), Gen_s2cellset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::s2cellset()}, LogicalType::VARCHAR, Gen_s2cellset_out));
 }
 

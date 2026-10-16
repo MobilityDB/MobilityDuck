@@ -701,6 +701,24 @@ inline Temporal * tgeo_scale_geo_sorigin(const Temporal * p0, const GSERIALIZED 
 inline Temporal * tgeo_translate_deltaz(const Temporal * p0, double p1, double p2) {
     return ::tgeo_translate(p0, p1, p2, 0);
 }
+inline char * cbufferset_out_maxdd(const Set * p0) {
+    return ::cbufferset_out(p0, 15);
+}
+inline char * npointset_out_maxdd(const Set * p0) {
+    return ::npointset_out(p0, 15);
+}
+inline char * pcpointset_out_maxdd(const Set * p0) {
+    return ::pcpointset_out(p0, 15);
+}
+inline char * pcpatchset_out_maxdd(const Set * p0) {
+    return ::pcpatchset_out(p0, 15);
+}
+inline char * poseset_out_maxdd(const Set * p0) {
+    return ::poseset_out(p0, 15);
+}
+inline char * posechainset_out_maxdd(const Set * p0) {
+    return ::posechainset_out(p0, 15);
+}
 inline Temporal * trgeometry_append_tinstant_expand_interp_maxdist_maxt(Temporal * p0, const Temporal * p1) {
     return ::trgeometry_append_tinstant(p0, (const TInstant *) p1, LINEAR, 0.0, NULL, false);
 }

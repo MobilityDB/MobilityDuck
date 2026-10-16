@@ -4366,6 +4366,10 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_cbuffer_set_accessor", "meos_json_set_accessor", "meos_npoint_set_accessor",
                   "meos_pointcloud_set_accessor", "meos_pose_set_accessor",
                   "meos_posechain_set_accessor",
+                  # and their text input: <family>setFromText and FromEWKT (#container_from_text)
+                  "meos_cbuffer_set_inout", "meos_json_set_inout", "meos_npoint_set_inout",
+                  "meos_pointcloud_set_inout", "meos_pose_set_inout", "meos_posechain_set_inout",
+                  "meos_quadbin_set_inout", "meos_s2cell_set_inout",
                   # the constructors of the sets, spans and span sets (#shape_container_make)
                   "meos_setspan_constructor",
                   # the simplifications: minTimeDeltaSimplify's duration reaches #shape_arg
@@ -5171,7 +5175,11 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 acc = CONTAINER_FROMHEX_ACC.get(s["ret"])
                 if not acc:
                     continue    # spatial element (geo/cbuffer/npoint/...) -> its own family file
-                nm = s.get("sqlName", f["sqlfn"])
+                nm = s.get("sqlName") or f["sqlfn"]
+                # a type I/O name (cbufferset_in over cstring) is PostgreSQL's type support and is
+                # not registered, as the WKB family below skips intset_send
+                if re.search(r'_(out|in|send|recv)$', nm):
+                    continue
                 specific_regs.append(
                     f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                     f'"{reg_name(nm, f)}", {{LogicalType::VARCHAR}}, {acc}, Gen_{fn}));')

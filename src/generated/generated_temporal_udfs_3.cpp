@@ -701,6 +701,24 @@ inline Temporal * tgeo_scale_geo_sorigin(const Temporal * p0, const GSERIALIZED 
 inline Temporal * tgeo_translate_deltaz(const Temporal * p0, double p1, double p2) {
     return ::tgeo_translate(p0, p1, p2, 0);
 }
+inline char * cbufferset_out_maxdd(const Set * p0) {
+    return ::cbufferset_out(p0, 15);
+}
+inline char * npointset_out_maxdd(const Set * p0) {
+    return ::npointset_out(p0, 15);
+}
+inline char * pcpointset_out_maxdd(const Set * p0) {
+    return ::pcpointset_out(p0, 15);
+}
+inline char * pcpatchset_out_maxdd(const Set * p0) {
+    return ::pcpatchset_out(p0, 15);
+}
+inline char * poseset_out_maxdd(const Set * p0) {
+    return ::poseset_out(p0, 15);
+}
+inline char * posechainset_out_maxdd(const Set * p0) {
+    return ::posechainset_out(p0, 15);
+}
 inline Temporal * trgeometry_append_tinstant_expand_interp_maxdist_maxt(Temporal * p0, const Temporal * p1) {
     return ::trgeometry_append_tinstant(p0, (const TInstant *) p1, LINEAR, 0.0, NULL, false);
 }
@@ -720,6 +738,17 @@ static void Gen_intersection_tbox_tbox(DataChunk &args, ExpressionState &, Vecto
             free(s1); free(s2);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return TboxToBlob(result, r);
+        });
+}
+
+
+// ===== @ingroup meos_cbuffer_set_inout =====
+static void Gen_cbufferset_in(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *r = cbufferset_in(in.GetString().c_str());
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
@@ -937,6 +966,17 @@ static void Gen_th3index_directed_edge_to_boundary(DataChunk &args, ExpressionSt
             Temporal *r = th3index_directed_edge_to_boundary(t);
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+
+// ===== @ingroup meos_pose_set_inout =====
+static void Gen_poseset_in(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *r = poseset_in(in.GetString().c_str());
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
@@ -1601,6 +1641,11 @@ void RegisterGenerated_meos_box_set(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("*", {TboxType::tbox(), TboxType::tbox()}, TboxType::tbox(), Gen_intersection_tbox_tbox));
 }
 
+void RegisterGenerated_meos_cbuffer_set_inout(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("cbuffersetFromText", {LogicalType::VARCHAR}, SetTypes::cbufferset(), Gen_cbufferset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("cbuffersetFromEWKT", {LogicalType::VARCHAR}, SetTypes::cbufferset(), Gen_cbufferset_in));
+}
+
 void RegisterGenerated_meos_h3_comp_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("eEqual", {H3indexTypes::h3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_ever_eq_h3index_th3index));
     RegisterSerializedScalarFunction(loader, ScalarFunction("?=", {H3indexTypes::h3index(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_ever_eq_h3index_th3index));
@@ -1636,6 +1681,11 @@ void RegisterGenerated_meos_h3_edges(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("th3GetDirectedEdgeOrigin", {H3indexTypes::th3index()}, H3indexTypes::th3index(), Gen_th3index_get_directed_edge_origin));
     RegisterSerializedScalarFunction(loader, ScalarFunction("th3GetDirectedEdgeDestination", {H3indexTypes::th3index()}, H3indexTypes::th3index(), Gen_th3index_get_directed_edge_destination));
     RegisterSerializedScalarFunction(loader, ScalarFunction("th3DirectedEdgeToBoundary", {H3indexTypes::th3index()}, TGeographyTypes::tgeography(), Gen_th3index_directed_edge_to_boundary));
+}
+
+void RegisterGenerated_meos_pose_set_inout(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("posesetFromText", {LogicalType::VARCHAR}, SetTypes::poseset(), Gen_poseset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("posesetFromEWKT", {LogicalType::VARCHAR}, SetTypes::poseset(), Gen_poseset_in));
 }
 
 void RegisterGenerated_meos_posechain_base_srid(ExtensionLoader &loader) {

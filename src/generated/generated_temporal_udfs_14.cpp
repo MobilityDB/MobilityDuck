@@ -701,6 +701,24 @@ inline Temporal * tgeo_scale_geo_sorigin(const Temporal * p0, const GSERIALIZED 
 inline Temporal * tgeo_translate_deltaz(const Temporal * p0, double p1, double p2) {
     return ::tgeo_translate(p0, p1, p2, 0);
 }
+inline char * cbufferset_out_maxdd(const Set * p0) {
+    return ::cbufferset_out(p0, 15);
+}
+inline char * npointset_out_maxdd(const Set * p0) {
+    return ::npointset_out(p0, 15);
+}
+inline char * pcpointset_out_maxdd(const Set * p0) {
+    return ::pcpointset_out(p0, 15);
+}
+inline char * pcpatchset_out_maxdd(const Set * p0) {
+    return ::pcpatchset_out(p0, 15);
+}
+inline char * poseset_out_maxdd(const Set * p0) {
+    return ::poseset_out(p0, 15);
+}
+inline char * posechainset_out_maxdd(const Set * p0) {
+    return ::posechainset_out(p0, 15);
+}
 inline Temporal * trgeometry_append_tinstant_expand_interp_maxdist_maxt(Temporal * p0, const Temporal * p1) {
     return ::trgeometry_append_tinstant(p0, (const TInstant *) p1, LINEAR, 0.0, NULL, false);
 }
@@ -1294,6 +1312,17 @@ static void Gen_h3index_cmp(DataChunk &args, ExpressionState &, Vector &result) 
         [&](int64_t a0, int64_t a1) -> int32_t {
             int32_t r = h3index_cmp(static_cast<uint64_t>(a0), static_cast<uint64_t>(a1));
             return (int32_t) r;
+        });
+}
+
+
+// ===== @ingroup meos_npoint_set_inout =====
+static void Gen_npointset_in(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *r = npointset_in(in.GetString().c_str());
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
@@ -2005,6 +2034,11 @@ void RegisterGenerated_meos_h3_base_comp(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {H3indexTypes::h3index(), H3indexTypes::h3index()}, LogicalType::BOOLEAN, Gen_h3index_gt));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {H3indexTypes::h3index(), H3indexTypes::h3index()}, LogicalType::BOOLEAN, Gen_h3index_ge));
     RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {H3indexTypes::h3index(), H3indexTypes::h3index()}, LogicalType::INTEGER, Gen_h3index_cmp));
+}
+
+void RegisterGenerated_meos_npoint_set_inout(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("npointsetFromText", {LogicalType::VARCHAR}, SetTypes::npointset(), Gen_npointset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("npointsetFromEWKT", {LogicalType::VARCHAR}, SetTypes::npointset(), Gen_npointset_in));
 }
 
 void RegisterGenerated_meos_quadbin_base_comp(ExtensionLoader &loader) {
