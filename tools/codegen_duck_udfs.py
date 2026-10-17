@@ -4392,9 +4392,10 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_rgeo_accessor", "meos_quadbin_accessor",
                   # the boxes of a geometry: a geometry first operand reaches #shape_array
                   "meos_geo_base_bbox",
-                  # the accessors of the circular buffers, poses, point clouds and H3 and S2 cells
-                  "meos_cbuffer_accessor", "meos_pose_accessor", "meos_pointcloud_accessor",
-                  "meos_h3_accessor", "meos_s2cell_accessor",
+                  # the accessors of the circular buffers, poses, pose chains, point clouds and H3
+                  # and S2 cells
+                  "meos_cbuffer_accessor", "meos_pose_accessor", "meos_posechain_accessor",
+                  "meos_pointcloud_accessor", "meos_h3_accessor", "meos_s2cell_accessor",
                   # the accessors of the sets of those families: startValue, endValue and valueN
                   # (#shape_set's u_baseval, #shape_cont_outparam's base value out-parameter)
                   "meos_cbuffer_set_accessor", "meos_json_set_accessor", "meos_npoint_set_accessor",

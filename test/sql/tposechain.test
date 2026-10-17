@@ -39,6 +39,15 @@ SELECT numPoses(tposechain 'PoseChain(Pose(Point(0 0), 0), Pose(Point(10 0), 0))
 ----
 2
 
+# The first, last and n-th chain of a sequence, as MobilityDB answers startValue, endValue
+# and valueN over it; valueN past the last chain answers NULL.
+query IIII
+WITH t AS (SELECT tposechain '{PoseChain(Pose(Point(0 0), 0))@2000-01-01, PoseChain(Pose(Point(1 0), 0))@2000-01-02}' AS c)
+SELECT asText(startValue(c)), asText(endValue(c)), asText(valueN(c, 2)), valueN(c, 3) IS NULL
+FROM t;
+----
+PoseChain(Pose(POINT(0 0),0))	PoseChain(Pose(POINT(1 0),0))	PoseChain(Pose(POINT(1 0),0))	true
+
 # SRID: the outer link carries the frame, so the chain has one
 query I
 SELECT SRID(tposechain 'SRID=3812;PoseChain(Pose(Point(1 2), 0))@2000-01-01');
