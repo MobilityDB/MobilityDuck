@@ -1433,6 +1433,9 @@ def shape_set(f):
     if supported(f) is not None: return None
     # aggregate transition/final/combine internals are NOT scalar UDFs (separate shape)
     if re.search(r'_(transfn|finalfn|combinefn)$', f["name"]): return None
+    # a cell id a set answers (startValue(quadbinset)) is the static cell surface's, which types
+    # it as its cell; claiming it here as well would emit its body twice
+    if shape_static_cell(f): return None
     ins, out = classify(f)
     if out is not None: return None
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
@@ -2405,6 +2408,10 @@ def cont_out_ret4(f, out):
     n = norm(out)
     if n in OUTPRIM:
         dt, cloc, cpp = outprim_ret3(f, out)
+        # a cell id handed back (valueN(quadbinset, integer)) is the cell type its signature
+        # declares, BIGINT-backed, as #shape_static_cell types the start and end values
+        if base(out) in CELL_UINT and f.get("sqlReturnType") in CELL_SQL:
+            dt = CELL_SQL[f["sqlReturnType"]]
         return (dt, cloc, cpp, OUTPARAM_TAKE.get(n, f"({cpp}) %s") % "o")
     ob = outptr_base(out)
     if ob in BASEVAL_PTR_RET:
@@ -4393,6 +4400,9 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_cbuffer_set_accessor", "meos_json_set_accessor", "meos_npoint_set_accessor",
                   "meos_pointcloud_set_accessor", "meos_pose_set_accessor",
                   "meos_posechain_set_accessor",
+                  # and of the cell sets, whose valueN hands its cell back through an out-parameter
+                  # (#shape_cont_outparam), the start and end values reaching #shape_static_cell
+                  "meos_quadbin_set_accessor", "meos_h3_set_accessor", "meos_s2cell_set_accessor",
                   # and their text input: <family>setFromText and FromEWKT (#container_from_text)
                   "meos_cbuffer_set_inout", "meos_json_set_inout", "meos_npoint_set_inout",
                   "meos_pointcloud_set_inout", "meos_pose_set_inout", "meos_posechain_set_inout",

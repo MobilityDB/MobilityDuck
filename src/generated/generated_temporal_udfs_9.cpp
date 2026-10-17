@@ -1406,6 +1406,53 @@ static void Gen_ever_eq_h3indexset_th3index(DataChunk &args, ExpressionState &, 
 }
 
 
+// ===== @ingroup meos_h3_set_accessor =====
+static void Gen_h3indexset_end_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
+        [&](string_t a0) -> int64_t {
+            Set *p0 = BlobToSet(a0);
+            uint64_t r = h3indexset_end_value(p0);
+            free(p0); 
+            return static_cast<int64_t>(r);
+        });
+}
+
+static void Gen_h3indexset_start_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
+        [&](string_t a0) -> int64_t {
+            Set *p0 = BlobToSet(a0);
+            uint64_t r = h3indexset_start_value(p0);
+            free(p0); 
+            return static_cast<int64_t>(r);
+        });
+}
+
+static void Gen_h3indexset_value_n(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<int64_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Set *x0 = BlobToSet(in0[i]);
+        uint64_t o = (uint64_t) 0;
+        bool ok = h3indexset_value_n(x0, in1[i], &o);
+        free(x0);
+        if (!ok) { outv.SetInvalid(i); continue; }
+        out[i] = (int64_t) o;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+
 // ===== @ingroup meos_pointcloud_box_accessor =====
 static void Gen_tpcbox_hasx(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -2567,6 +2614,12 @@ void RegisterGenerated_meos_h3_base_metrics(ExtensionLoader &loader) {
 void RegisterGenerated_meos_h3_comp(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("eEqual", {H3indexTypes::h3indexset(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_ever_eq_h3indexset_th3index));
     RegisterSerializedScalarFunction(loader, ScalarFunction("?=", {H3indexTypes::h3indexset(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_ever_eq_h3indexset_th3index));
+}
+
+void RegisterGenerated_meos_h3_set_accessor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {H3indexTypes::h3indexset()}, H3indexTypes::h3index(), Gen_h3indexset_end_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {H3indexTypes::h3indexset()}, H3indexTypes::h3index(), Gen_h3indexset_start_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueN", {H3indexTypes::h3indexset(), LogicalType::INTEGER}, H3indexTypes::h3index(), Gen_h3indexset_value_n));
 }
 
 void RegisterGenerated_meos_pointcloud_box_accessor(ExtensionLoader &loader) {

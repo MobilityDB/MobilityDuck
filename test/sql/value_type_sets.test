@@ -237,6 +237,33 @@ FROM t;
 ----
 quadbin[]	true
 
+# The first, last and n-th cell of a cell set, as MobilityDB answers startValue, endValue and
+# valueN over it, each of the cell type of the set; valueN past the last cell answers NULL.
+
+query IIIIII
+WITH t AS (SELECT getValues('{480fffffffffffff@2000-01-01, 48427fffffffffff@2000-01-02}'::tquadbin) AS s)
+SELECT typeof(startValue(s)), startValue(s)::VARCHAR, endValue(s)::VARCHAR,
+       valueN(s, 1)::VARCHAR, valueN(s, 2) = endValue(s), valueN(s, 3) IS NULL
+FROM t;
+----
+quadbin	480fffffffffffff	48427fffffffffff	480fffffffffffff	true	true
+
+query IIIIII
+WITH t AS (SELECT getValues('{880326b885fffff@2000-01-01, 880326b88dfffff@2000-01-02}'::th3index) AS s)
+SELECT typeof(startValue(s)), startValue(s)::VARCHAR, endValue(s)::VARCHAR,
+       valueN(s, 1)::VARCHAR, valueN(s, 2) = endValue(s), valueN(s, 3) IS NULL
+FROM t;
+----
+h3index	880326b885fffff	880326b88dfffff	880326b885fffff	true	true
+
+query IIIIII
+WITH t AS (SELECT getValues('{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell) AS s)
+SELECT typeof(startValue(s)), startValue(s)::VARCHAR, endValue(s)::VARCHAR,
+       valueN(s, 1)::VARCHAR, valueN(s, 2) = endValue(s), valueN(s, 3) IS NULL
+FROM t;
+----
+s2cell	47c3c3	47c3c5	47c3c3	true	true
+
 # A set of another family's values read from its text and its extended text, as MobilityDB's
 # <type>FromText and <type>FromEWKT read it; the extended text keeps its SRID.
 

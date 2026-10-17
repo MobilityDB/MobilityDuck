@@ -109,13 +109,7 @@ void SetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         // catalog (meos_setspan_accessor) in generated_temporal_udfs.cpp.
 
         // valueN is generated over the number, text and time sets (meos_setspan_accessor) and the
-        // sets of the other families (<family>set_value_n); the cell sets, for which MEOS has no
-        // valueN, keep this registration
-        if (set_type == SetTypes::quadbinset() || set_type == SetTypes::s2cellset()) {
-            duckdb::RegisterSerializedScalarFunction(loader,
-                ScalarFunction("valueN", {set_type, LogicalType::INTEGER}, base_type, SetFunctions::Set_value_n)
-            );
-        }
+        // sets of the other families (<family>set_value_n), the cell sets among them.
 
         // getValues(<set_type>) is generated from the catalog (<elem>set_values) in generated_temporal_udfs.cpp.
 
