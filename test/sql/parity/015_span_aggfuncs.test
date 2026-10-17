@@ -127,3 +127,31 @@ SELECT spanUnionAgg(t::tstzspan)::VARCHAR FROM (VALUES
 ('[2000-01-01, 2000-01-02]'::tstzspan)) t(t);
 ----
 {[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01]}
+
+# spansetUnion of MobilityDB, which DuckDB calls spansetUnionAgg: the queries of
+# mobilitydb/test/temporal/queries/015_span_aggfuncs.test.sql, answering the instants its
+# expected output states
+query I
+SELECT spansetUnionAgg(temp)::VARCHAR FROM (VALUES
+(NULL::tstzspanset),(NULL::tstzspanset)) t(temp);
+----
+NULL
+
+query I
+SELECT spansetUnionAgg(temp)::VARCHAR FROM (VALUES
+(NULL::tstzspanset),('{[2001-01-01, 2001-01-02]}'::tstzspanset)) t(temp);
+----
+{[2001-01-01 00:00:00+01, 2001-01-02 00:00:00+01]}
+
+query I
+SELECT spansetUnionAgg(temp)::VARCHAR FROM (VALUES
+('{[2001-01-01, 2001-01-02]}'::tstzspanset),(NULL::tstzspanset)) t(temp);
+----
+{[2001-01-01 00:00:00+01, 2001-01-02 00:00:00+01]}
+
+query I
+SELECT spansetUnionAgg(temp)::VARCHAR FROM (VALUES
+('{[2001-01-01, 2001-01-03]}'::tstzspanset),
+('{[2001-01-02, 2001-01-06]}'::tstzspanset)) t(temp);
+----
+{[2001-01-01 00:00:00+01, 2001-01-06 00:00:00+01]}

@@ -33,9 +33,6 @@
 #include "rgeo/trgeometry.hpp"
 #include "posechain/tposechain.hpp"
 #include "temporal/span.hpp"
-#include "temporal/span_aggregates.hpp"
-#include "temporal/temporal_aggregates.hpp"
-#include "geo/spatial_aggregates.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
@@ -292,6 +289,8 @@ extern "C" void MobilityduckMeosErrorHandler(int errlevel, int errcode, const ch
 
 // Defined in the catalog-generated src/generated/generated_temporal_udfs.cpp.
 void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader);
+// Defined in the catalog-generated src/generated/generated_aggregates.cpp.
+void RegisterGeneratedAggregates(ExtensionLoader &loader);
 
 static void LoadInternal(ExtensionLoader &loader) {
 	// Configure MEOS SRID CSV once (env / embedded)
@@ -382,8 +381,6 @@ static void LoadInternal(ExtensionLoader &loader) {
 	SpanTypes::RegisterScalarFunctions(loader);
 	SpanTypes::RegisterTypes(loader);
 	SpanTypes::RegisterCastFunctions(loader);
-	SpanAggregates::RegisterAggregateFunctions(loader);
-	TemporalAggregates::RegisterAggregateFunctions(loader);
 
 	// Tile getters return SpanTypes blobs and consume tbox, so all those
 	// types must already be registered.
@@ -505,6 +502,8 @@ static void LoadInternal(ExtensionLoader &loader) {
 	// Catalog-driven scalar UDFs generated from the MEOS-API catalog, organized by
 	// doxygen @ingroup group. Registered last, after every type accessor exists.
 	RegisterGeneratedTemporalUdfs(loader);
+	// The aggregates of the MEOS catalog, over the same types.
+	RegisterGeneratedAggregates(loader);
 	// TemporalParquet footer helper for COPY ... TO '*.parquet' KV_METADATA.
 	TemporalParquetFunctions::Register(loader);
 }
