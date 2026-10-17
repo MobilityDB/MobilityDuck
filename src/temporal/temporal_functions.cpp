@@ -2003,95 +2003,9 @@ inline text *TextFromBlob(string_t s) {
 
 } // namespace
 
-void TemporalFunctions::Tand_tbool_bool(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV<bool>(args, result, [](Temporal *t, bool b) { return tand_tbool_bool(t, b); });
-}
-void TemporalFunctions::Tand_bool_tbool(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV1<bool>(args, result, [](bool b, Temporal *t) { return tand_tbool_bool(t, b); });
-}
-void TemporalFunctions::Tand_tbool_tbool(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryTT(args, result, [](Temporal *a, Temporal *b) { return tand_tbool_tbool(a, b); });
-}
-void TemporalFunctions::Tor_tbool_bool(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV<bool>(args, result, [](Temporal *t, bool b) { return tor_tbool_bool(t, b); });
-}
-void TemporalFunctions::Tor_bool_tbool(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV1<bool>(args, result, [](bool b, Temporal *t) { return tor_tbool_bool(t, b); });
-}
-void TemporalFunctions::Tor_tbool_tbool(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryTT(args, result, [](Temporal *a, Temporal *b) { return tor_tbool_tbool(a, b); });
-}
-void TemporalFunctions::Tnot_tbool(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalUnary(args, result, [](Temporal *t) { return tnot_tbool(t); });
-}
-
 /* ***************************************************
  * Arithmetic operators on tnumber
  ****************************************************/
-
-void TemporalFunctions::Add_int_tint(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV1<int32_t>(args, result, [](int32_t i, Temporal *t) { return add_int_tint(i, t); });
-}
-void TemporalFunctions::Add_tint_int(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV<int32_t>(args, result, [](Temporal *t, int32_t i) { return add_tint_int(t, i); });
-}
-void TemporalFunctions::Add_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV1<double>(args, result, [](double d, Temporal *t) { return add_float_tfloat(d, t); });
-}
-void TemporalFunctions::Add_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV<double>(args, result, [](Temporal *t, double d) { return add_tfloat_float(t, d); });
-}
-void TemporalFunctions::Add_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryTT(args, result, [](Temporal *a, Temporal *b) { return add_tnumber_tnumber(a, b); });
-}
-
-void TemporalFunctions::Sub_int_tint(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV1<int32_t>(args, result, [](int32_t i, Temporal *t) { return sub_int_tint(i, t); });
-}
-void TemporalFunctions::Sub_tint_int(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV<int32_t>(args, result, [](Temporal *t, int32_t i) { return sub_tint_int(t, i); });
-}
-void TemporalFunctions::Sub_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV1<double>(args, result, [](double d, Temporal *t) { return sub_float_tfloat(d, t); });
-}
-void TemporalFunctions::Sub_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV<double>(args, result, [](Temporal *t, double d) { return sub_tfloat_float(t, d); });
-}
-void TemporalFunctions::Sub_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryTT(args, result, [](Temporal *a, Temporal *b) { return sub_tnumber_tnumber(a, b); });
-}
-
-void TemporalFunctions::Mult_int_tint(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV1<int32_t>(args, result, [](int32_t i, Temporal *t) { return mul_int_tint(i, t); });
-}
-void TemporalFunctions::Mult_tint_int(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV<int32_t>(args, result, [](Temporal *t, int32_t i) { return mul_tint_int(t, i); });
-}
-void TemporalFunctions::Mult_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV1<double>(args, result, [](double d, Temporal *t) { return mul_float_tfloat(d, t); });
-}
-void TemporalFunctions::Mult_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV<double>(args, result, [](Temporal *t, double d) { return mul_tfloat_float(t, d); });
-}
-void TemporalFunctions::Mult_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryTT(args, result, [](Temporal *a, Temporal *b) { return mul_tnumber_tnumber(a, b); });
-}
-
-void TemporalFunctions::Div_int_tint(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV1<int32_t>(args, result, [](int32_t i, Temporal *t) { return div_int_tint(i, t); });
-}
-void TemporalFunctions::Div_tint_int(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV<int32_t>(args, result, [](Temporal *t, int32_t i) { return div_tint_int(t, i); });
-}
-void TemporalFunctions::Div_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV1<double>(args, result, [](double d, Temporal *t) { return div_float_tfloat(d, t); });
-}
-void TemporalFunctions::Div_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryV<double>(args, result, [](Temporal *t, double d) { return div_tfloat_float(t, d); });
-}
-void TemporalFunctions::Div_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryTT(args, result, [](Temporal *a, Temporal *b) { return div_tnumber_tnumber(a, b); });
-}
 
 /* ***************************************************
  * Unary tnumber functions
@@ -2140,10 +2054,6 @@ void TemporalFunctions::Tdistance_tfloat_float(DataChunk &args, ExpressionState 
 void TemporalFunctions::Tdistance_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result) {
     TemporalBinaryV1<double>(args, result, [](double d, Temporal *t) { return tdistance_tfloat_float(t, d); });
 }
-void TemporalFunctions::Tdistance_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryTT(args, result, [](Temporal *a, Temporal *b) { return tdistance_tnumber_tnumber(a, b); });
-}
-
 void TemporalFunctions::Nad_tint_int(DataChunk &args, ExpressionState &state, Vector &result) {
     BinaryExecutor::Execute<string_t, int32_t, int32_t>(
         args.data[0], args.data[1], result, args.size(),
@@ -2732,36 +2642,6 @@ void TemporalFunctions::Ttext_upper(DataChunk &args, ExpressionState &state, Vec
 }
 void TemporalFunctions::Ttext_initcap(DataChunk &args, ExpressionState &state, Vector &result) {
     TemporalUnary(args, result, [](Temporal *t) { return ttext_initcap(t); });
-}
-
-void TemporalFunctions::Textcat_text_ttext(DataChunk &args, ExpressionState &state, Vector &result) {
-    BinaryExecutor::Execute<string_t, string_t, string_t>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t txt_str, string_t blob) -> string_t {
-            text *txt = TextFromBlob(txt_str);
-            Temporal *t = BlobToTemporal(blob);
-            Temporal *r = textcat_text_ttext(txt, t);
-            free(txt);
-            free(t);
-            if (!r) throw InvalidInputException("MEOS returned null");
-            return TemporalToBlob(result, r);
-        });
-}
-void TemporalFunctions::Textcat_ttext_text(DataChunk &args, ExpressionState &state, Vector &result) {
-    BinaryExecutor::Execute<string_t, string_t, string_t>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t blob, string_t txt_str) -> string_t {
-            Temporal *t = BlobToTemporal(blob);
-            text *txt = TextFromBlob(txt_str);
-            Temporal *r = textcat_ttext_text(t, txt);
-            free(t);
-            free(txt);
-            if (!r) throw InvalidInputException("MEOS returned null");
-            return TemporalToBlob(result, r);
-        });
-}
-void TemporalFunctions::Textcat_ttext_ttext(DataChunk &args, ExpressionState &state, Vector &result) {
-    TemporalBinaryTT(args, result, [](Temporal *a, Temporal *b) { return textcat_ttext_ttext(a, b); });
 }
 
 /* ***************************************************

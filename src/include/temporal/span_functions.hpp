@@ -73,14 +73,9 @@ struct SpanFunctions {
     static void Overright_span_value(DataChunk &args, ExpressionState &state, Vector &result);
         // Set operators
     static void Union_span_span(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Union_value_span(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Union_span_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Intersection_span_span(DataChunk &args, ExpressionState &state, Vector &result);
     static void Intersection_value_span(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Intersection_span_value(DataChunk &args, ExpressionState &state, Vector &result);
     static void Minus_span_span(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Minus_value_span(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Minus_span_value(DataChunk &args, ExpressionState &state, Vector &result);
     
 };
 

@@ -254,54 +254,6 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
 
 
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "=",
-                {type, type},
-                LogicalType::BOOLEAN,
-                TemporalFunctions::Temporal_eq
-            )
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "<>",
-                {type, type},
-                LogicalType::BOOLEAN,
-                TemporalFunctions::Temporal_ne
-            )
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "<=",
-                {type, type},
-                LogicalType::BOOLEAN,
-                TemporalFunctions::Temporal_le
-            )
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                "<",
-                {type, type},
-                LogicalType::BOOLEAN,
-                TemporalFunctions::Temporal_lt
-            )
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                ">=",
-                {type, type},
-                LogicalType::BOOLEAN,
-                TemporalFunctions::Temporal_ge
-            )
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                ">",
-                {type, type},
-                LogicalType::BOOLEAN,
-                TemporalFunctions::Temporal_gt
-            )
-        );
 
     }
 
@@ -358,44 +310,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    // tbool boolean operators
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, TemporalTypes::tbool(), TemporalFunctions::Tand_tbool_bool));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&", {LogicalType::BOOLEAN, TemporalTypes::tbool()}, TemporalTypes::tbool(), TemporalFunctions::Tand_bool_tbool));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("&", {TemporalTypes::tbool(), TemporalTypes::tbool()}, TemporalTypes::tbool(), TemporalFunctions::Tand_tbool_tbool));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("|", {TemporalTypes::tbool(), LogicalType::BOOLEAN}, TemporalTypes::tbool(), TemporalFunctions::Tor_tbool_bool));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("|", {LogicalType::BOOLEAN, TemporalTypes::tbool()}, TemporalTypes::tbool(), TemporalFunctions::Tor_bool_tbool));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("|", {TemporalTypes::tbool(), TemporalTypes::tbool()}, TemporalTypes::tbool(), TemporalFunctions::Tor_tbool_tbool));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("~", {TemporalTypes::tbool()}, TemporalTypes::tbool(), TemporalFunctions::Tnot_tbool));
-    // Portable-SQL aliases (MobilityDB names): tbool_and / tbool_or / tbool_not
-
-    // tnumber arithmetic operators
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("+", {LogicalType::INTEGER, TemporalTypes::tint()}, TemporalTypes::tint(), TemporalFunctions::Add_int_tint));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("+", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tint(), TemporalFunctions::Add_tint_int));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("+", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Add_float_tfloat));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("+", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), TemporalFunctions::Add_tfloat_float));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("+", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tint(), TemporalFunctions::Add_tnumber_tnumber));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("+", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Add_tnumber_tnumber));
-
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-", {LogicalType::INTEGER, TemporalTypes::tint()}, TemporalTypes::tint(), TemporalFunctions::Sub_int_tint));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tint(), TemporalFunctions::Sub_tint_int));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Sub_float_tfloat));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), TemporalFunctions::Sub_tfloat_float));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tint(), TemporalFunctions::Sub_tnumber_tnumber));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("-", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Sub_tnumber_tnumber));
-
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("*", {LogicalType::INTEGER, TemporalTypes::tint()}, TemporalTypes::tint(), TemporalFunctions::Mult_int_tint));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("*", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tint(), TemporalFunctions::Mult_tint_int));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("*", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Mult_float_tfloat));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("*", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), TemporalFunctions::Mult_tfloat_float));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("*", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tint(), TemporalFunctions::Mult_tnumber_tnumber));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("*", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Mult_tnumber_tnumber));
-
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("/", {LogicalType::INTEGER, TemporalTypes::tint()}, TemporalTypes::tint(), TemporalFunctions::Div_int_tint));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("/", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tint(), TemporalFunctions::Div_tint_int));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("/", {LogicalType::DOUBLE, TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Div_float_tfloat));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("/", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), TemporalFunctions::Div_tfloat_float));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("/", {TemporalTypes::tint(), TemporalTypes::tint()}, TemporalTypes::tint(), TemporalFunctions::Div_tnumber_tnumber));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("/", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Div_tnumber_tnumber));
+    // The boolean, arithmetic, text and distance operators over the temporal types are
+    // generated from the catalog (src/generated).
 
     // Unary tfloat transforms floor/ceil/round/degrees/radians are float-base scalar
     // transforms generated from the catalog (generated_temporal_udfs.cpp), full arity
@@ -403,30 +319,6 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // The meos_temporal_math group (abs/derivative/exp/ln/log10/deltaValue/trend) is
     // supplied by the generated surface (RETIRED_GROUPS in the codegen).
 
-    // Named-function aliases for the arithmetic operators (MobilityDB exposes
-    // both `+`/`-`/`*`/`/` and `tnumber_add`/`sub`/`mult`/`div`).
-
-
-
-
-    // tnumber distance and nearest-approach-distance.
-    //
-    // Value-distance variants `<-> ` for (tint, INTEGER), (INTEGER, tint),
-    // (tfloat, DOUBLE), (DOUBLE, tfloat) are intentionally NOT registered
-    // here: in the installed MEOS library, tdistance_tfloat_float / tint_int
-    // return the temporal's own value at each instant rather than the
-    // |t.value - v| absolute difference. Verified by smoke test:
-    //   SELECT 5.0::DOUBLE <-> tfloat '5.0@2000-01-01';   -- returns 5.0, expected 0.0
-    //   SELECT 100.0::DOUBLE <-> tfloat '2.5@2000-01-01'; -- returns 2.5, expected 97.5
-    // The temporal-temporal variant DOES work correctly, and so does nad_*.
-    // Restore the value-distance registrations once the MEOS issue is resolved.
-    // The (tint,tint) temporal distance is owned by the generated surface, which
-    // returns a tfloat (the temporal distance is always a tfloat — the hand line
-    // wrongly typed the result BLOB as tint). The tfloat,tfloat variant matches the
-    // generated return and is kept.
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("<->", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Tdistance_tnumber_tnumber));
-    // Named form of the same function for SQL portability.
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tdistance", {TemporalTypes::tfloat(), TemporalTypes::tfloat()}, TemporalTypes::tfloat(), TemporalFunctions::Tdistance_tnumber_tnumber));
 
     // nearestApproachDistance / nad — scalar return
 
@@ -478,9 +370,6 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // temporal_* aliases are dropped (bare names supersede them).
 
     // ttext text functions
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("||", {LogicalType::VARCHAR, TemporalTypes::ttext()}, TemporalTypes::ttext(), TemporalFunctions::Textcat_text_ttext));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("||", {TemporalTypes::ttext(), LogicalType::VARCHAR}, TemporalTypes::ttext(), TemporalFunctions::Textcat_ttext_text));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("||", {TemporalTypes::ttext(), TemporalTypes::ttext()}, TemporalTypes::ttext(), TemporalFunctions::Textcat_ttext_ttext));
     // Portable-SQL alias (MobilityDB name): ttext_cat
 }
 

@@ -655,32 +655,6 @@ void SetFunctions::Textcat_text_textset(DataChunk &args, ExpressionState &state,
     );
 }
 
-// --- textset_cat: textset || text (MEOS textcat_textset_text) ---
-void SetFunctions::Textcat_textset_text(DataChunk &args, ExpressionState &state, Vector &result) {
-    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t set_blob, string_t txt_str, ValidityMask &mask, idx_t idx) -> string_t {
-            Set *s = (Set *)malloc(set_blob.GetSize());
-            memcpy(s, set_blob.GetData(), set_blob.GetSize());
-
-            text *txt = (text *)malloc(VARHDRSZ + txt_str.GetSize());
-            SET_VARSIZE(txt, VARHDRSZ + txt_str.GetSize());
-            memcpy(VARDATA(txt), txt_str.GetData(), txt_str.GetSize());
-
-            Set *r = textcat_textset_text(s, txt);
-            free(txt);
-            free(s);
-            if (!r) {
-                mask.SetInvalid(idx);
-                return string_t();
-            }
-            string_t out = StringVector::AddStringOrBlob(result, (const char *)r, set_mem_size(r));
-            free(r);
-            return out;
-        }
-    );
-}
-
 // --- set_contains (set @> value) ---
 void SetFunctions::Contains_set_value(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &set_vec = args.data[0];
