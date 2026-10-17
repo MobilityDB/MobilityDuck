@@ -34,9 +34,14 @@ MobilityDuck needs some dependencies(including MEOS) which can be installed thro
 ```sh
 cd <your-working-dir-not-the-plugin-repo>
 git clone https://github.com/Microsoft/vcpkg.git
+git -C vcpkg checkout c27eeddba73f608f10605d80bc0144c1166f8fb7
 sh ./vcpkg/scripts/bootstrap.sh -disableMetrics
 export VCPKG_TOOLCHAIN_PATH=`pwd`/vcpkg/scripts/buildsystems/vcpkg.cmake
 ```
+
+The commit checked out is the one the CI builds with (`vcpkg_commit` in
+`.github/workflows/MainDistributionPipeline.yml`). A newer vcpkg can fail at the
+CMake step, so keep the two the same.
 
 ---
 ## 2. Building MobilityDuck
@@ -59,20 +64,12 @@ GEN=ninja make
 ```
 
 > [!IMPORTANT]
-> If the ```make``` command produces CMake error, go to the vcpkg repository and reset to an earlier commit:
+> If the ```make``` command produces a CMake error, check that vcpkg is at the
+> commit given in the requirements above, then clear the last build and try again:
 > ```bash
-> cd ..
-> cd vcpkg
-> git reset --hard 50c0cb48a0
-> ```
-> Then in the MobilityDuck repository, clear the last build and try again:
-> ```bash
-> cd ..
-> cd MobilityDuck
 > make clean
 > GEN=ninja make
 > ```
-> This error is due to new changes in vcpkg, and this is a temporary fix.
 
 The main binaries that will be built are:
 ```sh
@@ -109,14 +106,30 @@ If DuckDB is available on your machine ([installed independently](https://duckdb
 
 If you build MobilityDuck from source code, the loadable extension binary is available at ```./build/release/extension/mobilityduck/mobilityduck.duckdb_extension```.
 
-Alternatively, you can download a pre-build extension binary from the list below:
+Alternatively, you can download a pre-built extension binary. Every push to `main` builds one
+per platform as an artifact of the
+[Main Extension Distribution Pipeline](https://github.com/MobilityDB/MobilityDuck/actions/workflows/MainDistributionPipeline.yml?query=branch%3Amain+is%3Asuccess);
+open its latest successful run and download the artifact of your platform from the
+*Artifacts* section at the bottom of the page. Downloading an artifact requires being signed in
+to GitHub, and GitHub deletes it 90 days after its run, so always take it from the latest run.
 
-|   Platform   | Download |
-|:------------:|:--------:|
-|  Linux amd64 |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/20683220519/artifacts/5015025521)   |
-|  Linux arm64 |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/20683220519/artifacts/5015017114)   |
-|  macOS amd64 |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/20683220519/artifacts/5015011297)   |
-|  macOS arm64 |   [link](https://github.com/MobilityDB/MobilityDuck/actions/runs/20683220519/artifacts/5015015385)   |
+| Platform | Artifact |
+|:--------:|:--------:|
+| Linux amd64 | `mobilityduck-v1.5.5-extension-linux_amd64` |
+| Linux arm64 | `mobilityduck-v1.5.5-extension-linux_arm64` |
+| macOS amd64 | `mobilityduck-v1.5.5-extension-osx_amd64` |
+| macOS arm64 | `mobilityduck-v1.5.5-extension-osx_arm64` |
+| Windows amd64 (MinGW) | `mobilityduck-v1.5.5-extension-windows_amd64_mingw` |
+
+With the [GitHub CLI](https://cli.github.com/), the following commands download the binary of
+the latest successful run, here for macOS arm64, into `mobilityduck/mobilityduck.duckdb_extension`:
+
+```bash
+RUN=$(gh run list --repo MobilityDB/MobilityDuck --workflow MainDistributionPipeline.yml \
+  --branch main --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+gh run download "$RUN" --repo MobilityDB/MobilityDuck \
+  --name mobilityduck-v1.5.5-extension-osx_arm64 --dir mobilityduck
+```
 
 To use your independent DuckDB shell, first, run the shell with an additional flag:
 ```bash
@@ -162,6 +175,9 @@ result.fetchall()
 
 ### 3.4. Sample queries
 
+When it is loaded, the extension sets the time zone of the session to Europe/Brussels,
+so the timestamps below are written in that time zone.
+
 - Return the time interval of a temporal type:
     ```sql
     SELECT duration('{1@2025-01-01, 2@2025-01-02, 1@2025-01-03}'::TINT, true);
@@ -170,7 +186,7 @@ result.fetchall()
 - Shift and scale a ```timestamptz``` set by specific time intervals:
     ```sql
     SELECT shiftScale(tstzset '{2025-01-01, 2025-01-02, 2025-01-03}', '1 day', '1 hour');
-    -- {"2025-01-02 00:00:00+00", "2025-01-02 00:30:00+00", "2025-01-02 01:00:00+00"}
+    -- {"2025-01-02 00:00:00+01", "2025-01-02 00:30:00+01", "2025-01-02 01:00:00+01"}
     ```
 - Transform a geometry set to a different spatial reference identifier:
     ```sql
@@ -180,17 +196,17 @@ result.fetchall()
 - Expand the spatial dimension of a spatiotemporal bounding box by a value:
     ```sql
     SELECT expandSpace(stbox 'STBOX XT(((1.0,2.0), (1.0,2.0)),[2025-01-01,2025-01-01])', 2.0);
-    -- STBOX XT(((-1,0),(3,4)),[2025-01-01 00:00:00+00, 2025-01-01 00:00:00+00])
+    -- STBOX XT(((-1,0),(3,4)),[2025-01-01 00:00:00+01, 2025-01-01 00:00:00+01])
     ```
 - Expand the temporal dimension of a bounding box by an interval:
     ```sql
     SELECT expandTime(tbox 'TBOXFLOAT XT([1.0,2.0], [2025-01-01,2025-01-02])', interval '1 day');
-    -- TBOXFLOAT XT([1, 2],[2024-12-31 00:00:00+00, 2025-01-03 00:00:00+00])
+    -- TBOXFLOAT XT([1, 2],[2024-12-31 00:00:00+01, 2025-01-03 00:00:00+01])
     ```
 - Create a temporal geometry with a point, time span, and step interpolation:
     ```sql
     SELECT asEWKT(tgeometry('Point(1 1)', tstzspan '[2025-01-01, 2025-01-02]', 'step'));
-    -- [POINT(1 1)@2025-01-01 00:00:00+00, POINT(1 1)@2025-01-02 00:00:00+00]
+    -- [POINT(1 1)@2025-01-01 00:00:00+01, POINT(1 1)@2025-01-02 00:00:00+01]
     ```
 - Check if a temporal point geometry overlaps with a spatiotemporal bounding box:
     ```sql
@@ -200,7 +216,7 @@ result.fetchall()
 - Restrict a temporal point geometry to a ```timestamptz``` span:
     ```sql
     SELECT asText(atTime(tgeompoint '{[Point(1 1)@2025-01-01, Point(2 2)@2025-01-02, Point(1 1)@2025-01-03],[Point(3 3)@2025-01-04, Point(3 3)@2025-01-05]}', tstzspan '[2025-01-01,2025-01-02]'));
-    -- {[POINT(1 1)@2025-01-01 00:00:00+00, POINT(2 2)@2025-01-02 00:00:00+00]}
+    -- {[POINT(1 1)@2025-01-01 00:00:00+01, POINT(2 2)@2025-01-02 00:00:00+01]}
     ```
 
 ## 4. Running the tests
