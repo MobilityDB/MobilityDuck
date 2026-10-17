@@ -46,7 +46,6 @@ struct SetFunctions {
     static void Textset_upper(DataChunk &args, ExpressionState &state, Vector &result);
     static void Textset_initcap(DataChunk &args, ExpressionState &state, Vector &result);
     static void Textcat_text_textset(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Textcat_textset_text(DataChunk &args, ExpressionState &state, Vector &result);
 
     // operators 
     static void Contains_set_value(DataChunk &args, ExpressionState &state, Vector &result);

@@ -552,9 +552,6 @@ void TGeographyOps::RegisterScalarFunctions(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction(
         "tgeometry", {TGEOM}, TGeometryTypes::tgeometry(),
         TgeographyToTgeometryExec));
-    RegisterMeosFunction(loader, ScalarFunction(
-        "tgeography", {TGeometryTypes::tgeometry()}, TGEOM,
-        TgeometryToTgeographyExec));
 
     // Centroid / convexHull / traversedArea — produce a non-temporal
     // geometry summary of the trajectory.

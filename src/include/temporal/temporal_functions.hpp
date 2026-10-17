@@ -115,37 +115,10 @@ struct TemporalFunctions {
     /* ***************************************************
      * Boolean operators on tbool
      ****************************************************/
-    static void Tand_tbool_bool(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tand_bool_tbool(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tand_tbool_tbool(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tor_tbool_bool(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tor_bool_tbool(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tor_tbool_tbool(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tnot_tbool(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Arithmetic operators on tnumber
      ****************************************************/
-    static void Add_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Add_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Add_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Add_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Add_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Sub_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Sub_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Sub_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Sub_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Sub_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Mult_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Mult_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Mult_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Mult_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Mult_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Div_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Div_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Div_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Div_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Div_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Unary tnumber functions
@@ -200,7 +173,6 @@ struct TemporalFunctions {
     static void Tdistance_int_tint(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tdistance_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tdistance_float_tfloat(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tdistance_tnumber_tnumber(DataChunk &args, ExpressionState &state, Vector &result);
     static void Nad_tint_int(DataChunk &args, ExpressionState &state, Vector &result);
     static void Nad_tint_tint(DataChunk &args, ExpressionState &state, Vector &result);
     static void Nad_tfloat_float(DataChunk &args, ExpressionState &state, Vector &result);
@@ -453,9 +425,6 @@ struct TemporalFunctions {
     static void Ttext_lower(DataChunk &args, ExpressionState &state, Vector &result);
     static void Ttext_upper(DataChunk &args, ExpressionState &state, Vector &result);
     static void Ttext_initcap(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Textcat_text_ttext(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Textcat_ttext_text(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Textcat_ttext_ttext(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Comparison operators
