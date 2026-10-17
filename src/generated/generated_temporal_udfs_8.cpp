@@ -1678,6 +1678,20 @@ static void Gen_tposechain_value(DataChunk &args, ExpressionState &, Vector &res
         });
 }
 
+static void Gen_tposechain_value_n(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto rc = args.size();
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, rc,
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            PoseChain *o = NULL;
+            bool ok = tposechain_value_n(t, a2, &o);
+            free(t);
+            if (! ok) { mask.SetInvalid(idx); return string_t(); }
+            return PosechainToBlob(result, o);
+        });
+}
+
 
 // ===== @ingroup meos_quadbin_base_inout =====
 static void Gen_quadbin_from_hexwkb(DataChunk &args, ExpressionState &, Vector &result) {
@@ -2403,6 +2417,7 @@ void RegisterGenerated_meos_posechain_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("numPoses", {PosechainTypes::tposechain()}, LogicalType::INTEGER, Gen_tposechain_num_poses));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {PosechainTypes::tposechain()}, PosechainTypes::posechain(), Gen_tposechain_start_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValue", {PosechainTypes::tposechain()}, PosechainTypes::posechain(), Gen_tposechain_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueN", {PosechainTypes::tposechain(), LogicalType::INTEGER}, PosechainTypes::posechain(), Gen_tposechain_value_n));
 }
 
 void RegisterGenerated_meos_quadbin_base_inout(ExtensionLoader &loader) {
