@@ -9,6 +9,7 @@ static LogicalType tstzset();
 static LogicalType jsonbset();
 static LogicalType cbufferset();
 static LogicalType npointset();
+static LogicalType h3indexset();
 static LogicalType quadbinset();
 static LogicalType s2cellset();
 static LogicalType poseset();

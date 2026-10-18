@@ -3264,7 +3264,7 @@ void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {TGeographyTypes::tgeography(), SpatialSetType::geogset()}, TGeographyTypes::tgeography(), Gen_temporal_at_values));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {TgeompointType::tgeompoint(), SpatialSetType::geomset()}, TgeompointType::tgeompoint(), Gen_temporal_at_values));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {TgeogpointType::tgeogpoint(), SpatialSetType::geogset()}, TgeogpointType::tgeogpoint(), Gen_temporal_at_values));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {H3indexTypes::th3index(), H3indexTypes::h3indexset()}, H3indexTypes::th3index(), Gen_temporal_at_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {H3indexTypes::th3index(), SetTypes::h3indexset()}, H3indexTypes::th3index(), Gen_temporal_at_values));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {TJsonbTypes::tjsonb(), SetTypes::jsonbset()}, TJsonbTypes::tjsonb(), Gen_temporal_at_values));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {TPcpointTypes::tpcpoint(), SetTypes::pcpointset()}, TPcpointTypes::tpcpoint(), Gen_temporal_at_values));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atValues", {TPcpatchTypes::tpcpatch(), SetTypes::pcpatchset()}, TPcpatchTypes::tpcpatch(), Gen_temporal_at_values));
@@ -3338,7 +3338,7 @@ void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {TGeographyTypes::tgeography(), SpatialSetType::geogset()}, TGeographyTypes::tgeography(), Gen_temporal_minus_values));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {TgeompointType::tgeompoint(), SpatialSetType::geomset()}, TgeompointType::tgeompoint(), Gen_temporal_minus_values));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {TgeogpointType::tgeogpoint(), SpatialSetType::geogset()}, TgeogpointType::tgeogpoint(), Gen_temporal_minus_values));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {H3indexTypes::th3index(), H3indexTypes::h3indexset()}, H3indexTypes::th3index(), Gen_temporal_minus_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {H3indexTypes::th3index(), SetTypes::h3indexset()}, H3indexTypes::th3index(), Gen_temporal_minus_values));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {TJsonbTypes::tjsonb(), SetTypes::jsonbset()}, TJsonbTypes::tjsonb(), Gen_temporal_minus_values));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {TPcpointTypes::tpcpoint(), SetTypes::pcpointset()}, TPcpointTypes::tpcpoint(), Gen_temporal_minus_values));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusValues", {TPcpatchTypes::tpcpatch(), SetTypes::pcpatchset()}, TPcpatchTypes::tpcpatch(), Gen_temporal_minus_values));

@@ -11172,8 +11172,8 @@ void RegisterGeneratedAggregates(ExtensionLoader &loader) {
         set.AddFunction(MeosAggregate<AggOps_10>::Function({MobilityDuckGeometryType()}, SpatialSetType::geomset()));
         set.AddFunction(MeosAggregate<AggOps_11>::Function({SpatialSetType::geomset()}, SpatialSetType::geomset()));
         set.AddFunction(MeosAggregate<AggOps_12>::Function({SpatialSetType::geogset()}, SpatialSetType::geogset()));
-        set.AddFunction(MeosAggregate<AggOps_47>::Function({H3indexTypes::h3index()}, H3indexTypes::h3indexset()));
-        set.AddFunction(MeosAggregate<AggOps_48>::Function({H3indexTypes::h3indexset()}, H3indexTypes::h3indexset()));
+        set.AddFunction(MeosAggregate<AggOps_47>::Function({H3indexTypes::h3index()}, SetTypes::h3indexset()));
+        set.AddFunction(MeosAggregate<AggOps_48>::Function({SetTypes::h3indexset()}, SetTypes::h3indexset()));
         set.AddFunction(MeosAggregate<AggOps_57>::Function({TJsonbTypes::jsonb()}, SetTypes::jsonbset()));
         set.AddFunction(MeosAggregate<AggOps_58>::Function({SetTypes::jsonbset()}, SetTypes::jsonbset()));
         set.AddFunction(MeosAggregate<AggOps_67>::Function({NpointTypes::npoint()}, SetTypes::npointset()));

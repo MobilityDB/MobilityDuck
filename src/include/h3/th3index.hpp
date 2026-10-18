@@ -19,7 +19,6 @@ namespace duckdb {
 struct H3indexTypes {
     static LogicalType h3index();
     static LogicalType th3index();
-    static LogicalType h3indexset();
 
     static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);

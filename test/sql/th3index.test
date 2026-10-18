@@ -79,6 +79,27 @@ SELECT asEWKT(getValues(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint
 ----
 true
 
+# ── h3indexset as text, the text MobilityDB answers for the same values ──────
+query I
+SELECT (h3indexset '{8a2a1072b59ffff, 8a2a1072b597fff}')::VARCHAR;
+----
+{"8a2a1072b597fff", "8a2a1072b59ffff"}
+
+query I
+SELECT asText(h3indexset '{8a2a1072b59ffff, 8a2a1072b597fff}');
+----
+{"8a2a1072b597fff", "8a2a1072b59ffff"}
+
+query I
+SELECT getValues(th3index '{8a2a1072b59ffff@2001-01-01, 8a2a1072b597fff@2001-01-02}')::VARCHAR;
+----
+{"8a2a1072b597fff", "8a2a1072b59ffff"}
+
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('8a2a1072b59ffff'::h3index), ('8a2a1072b597fff'::h3index)) t(v);
+----
+{"8a2a1072b597fff", "8a2a1072b59ffff"}
+
 # ── the shared DGGS cell-index slots, answered from the tcellindex kernel ─────
 # MobilityDB backs getResolution/cellArea/cellToParent/isValidCell for every cell
 # index from one kernel, under the bare slot names. cellToPoint is NOT among them

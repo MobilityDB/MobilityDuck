@@ -923,10 +923,10 @@ def sig_geo_accs(f, geo_first):
 # The base values whose collection types the binding registers, in canonical order. ONE list
 # serves both the type registration below (SetTypes/SpanTypes/SpansetTypes, filtered per family by
 # T_<BASE><SUFFIX> membership in the catalog MeosType enum) and the name-scoping maps here, so a
-# base can never be registered as a type while its family functions stay unscoped. geom, geog and
-# h3index are absent on purpose: their set types carry a hand-written function surface of their own.
+# base can never be registered as a type while its family functions stay unscoped. geom and geog
+# are absent on purpose: their set types carry a hand-written function surface of their own.
 BASE_ORDER = ["int", "bigint", "float", "text", "date", "tstz",
-              "jsonb", "cbuffer", "npoint", "quadbin", "s2cell", "pose", "posechain",
+              "jsonb", "cbuffer", "npoint", "h3index", "quadbin", "s2cell", "pose", "posechain",
               "pcpoint", "pcpatch"]
 SET_TYPES = {b + "set": "SetTypes::%sset()" % b for b in BASE_ORDER}
 
@@ -934,14 +934,15 @@ SET_TYPES = {b + "set": "SetTypes::%sset()" % b for b in BASE_ORDER}
 # registers itself names that type's accessor, and BASE_HEADER states the header declaring it so the
 # generated file includes exactly the ones the admitted bases need. A base absent from this map has
 # no element type the binding can name, so the derivation below does not admit it — which is how
-# geom, geog and h3index, whose set types carry a hand-written function surface of their own, stay
+# geom and geog, whose set types carry a hand-written function surface of their own, stay
 # out of the generated registration and register exactly once.
 BASE_LOGICAL = {
     "int": "LogicalType::INTEGER", "bigint": "LogicalType::BIGINT",
     "float": "LogicalType::DOUBLE", "text": "LogicalType::VARCHAR",
     "date": "LogicalType::DATE", "tstz": "LogicalType::TIMESTAMP_TZ",
     "jsonb": "TJsonbTypes::jsonb()", "cbuffer": "CbufferTypes::cbuffer()",
-    "npoint": "NpointTypes::npoint()", "quadbin": "QuadbinTypes::quadbin()",
+    "npoint": "NpointTypes::npoint()", "h3index": "H3indexTypes::h3index()",
+    "quadbin": "QuadbinTypes::quadbin()",
     "s2cell": "S2cellTypes::s2cell()",
     "pose": "PoseTypes::pose()", "posechain": "PosechainTypes::posechain()",
     "pcpoint": "TPcpointTypes::pcpoint()", "pcpatch": "TPcpatchTypes::pcpatch()",
@@ -974,9 +975,8 @@ def ret_set_type(name, arg_acc):
 # registers nothing here (they are gated to their own family files).
 SET_SQL_TO_ACC = dict(SET_TYPES)
 
-# The set type a declared (set, scalar) -> set signature names: the registered set types plus
-# h3indexset, which carries its own hand-registered type (see BASE_ORDER).
-SET_SIG_ACC = {**SET_TYPES, "h3indexset": "H3indexTypes::h3indexset()"}
+# The set type a declared (set, scalar) -> set signature names: the registered set types.
+SET_SIG_ACC = dict(SET_TYPES)
 
 def declared_element_pairs(f, setfirst):
     """[(set accessor, result accessor, None)] for the two-argument signatures the catalog declares
@@ -3843,7 +3843,7 @@ SQL_CONTAINER_ACC = {
 # The set a temporal value answers its values as (getValues=temporal_valueset over every temporal
 # type, valueSet over the temporal numbers) resolves as #declared_element_pairs resolves a declared
 # set: through SET_SIG_ACC, and the spatial sets through the types their own unit registers
-# (SpatialSetType, as SET_SIG_ACC names H3indexTypes::h3indexset). Only the result is named here:
+# (SpatialSetType). Only the result is named here:
 # the functions over geomset and geogset keep that unit's surface.
 TEMPORAL_TO_CONTAINER_ACC = {**SQL_CONTAINER_ACC, **SET_SIG_ACC,
                              "geomset": "SpatialSetType::geomset()",
@@ -3898,8 +3898,7 @@ RESTRICT_CONT_BLOB = {**CONT_BLOB, "TBox": "BlobToTbox", "STBox": "BlobToStbox",
 # #TEMPORAL_TO_CONTAINER_ACC answers them as.
 FINITE_SUBSET_ACC = {**SET_TYPES, **SQL_CONTAINER_ACC,
                      "geomset": "SpatialSetType::geomset()",
-                     "geogset": "SpatialSetType::geogset()",
-                     "h3indexset": "H3indexTypes::h3indexset()"}
+                     "geogset": "SpatialSetType::geogset()"}
 
 def shape_scalar_first(f):
     """(by-value scalar, Temporal) — the mirror of shape_binary. Covers the scalar-first
@@ -6584,7 +6583,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         fn = f["name"]
         names = reg_names(f, f["sqlfn"], aliases)
         if hpk == "geo2set":
-            sig, rett = "{MobilityDuckGeometryType(), LogicalType::INTEGER}", "H3indexTypes::h3indexset()"
+            sig, rett = "{MobilityDuckGeometryType(), LogicalType::INTEGER}", "SetTypes::h3indexset()"
         elif hpk == "geo2scalar":
             sig, rett = "{MobilityDuckGeometryType(), LogicalType::INTEGER}", "H3indexTypes::h3index()"
         elif hpk.startswith("cell_l:"):
@@ -6594,7 +6593,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             temp_acc = hpk.split(":", 1)[1]
             sig, rett = "{%s, %s}" % (temp_acc, CELL_BASEVAL[temp_acc]), "LogicalType::BOOLEAN"
         else:   # settemp_ebool
-            sig, rett = "{H3indexTypes::h3indexset(), H3indexTypes::th3index()}", "LogicalType::BOOLEAN"
+            sig, rett = "{SetTypes::h3indexset(), H3indexTypes::th3index()}", "LogicalType::BOOLEAN"
         for nm in names:
             set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                      f'"{reg_name(nm, f)}", {sig}, {rett}, Gen_{fn}));')
@@ -6716,7 +6715,8 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
 # map the hand code used.
 BASE_HEADER = {
     "jsonb": "json/tjsonb.hpp", "cbuffer": "cbuffer/tcbuffer.hpp",
-    "npoint": "npoint/tnpoint.hpp", "quadbin": "quadbin/tquadbin.hpp",
+    "npoint": "npoint/tnpoint.hpp", "h3index": "h3/th3index.hpp",
+    "quadbin": "quadbin/tquadbin.hpp",
     "s2cell": "s2cell/ts2cell.hpp",
     "pose": "pose/tpose.hpp", "posechain": "posechain/tposechain.hpp",
     "pcpoint": "pointcloud/tpcpoint.hpp", "pcpatch": "pointcloud/tpcpatch.hpp",
