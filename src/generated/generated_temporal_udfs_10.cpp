@@ -5882,13 +5882,13 @@ void RegisterGenerated_meos_box_inout(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_h3_hierarchy(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("cellToChildren", {H3indexTypes::h3index(), LogicalType::INTEGER}, H3indexTypes::h3indexset(), Gen_h3_cell_to_children));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("cellToChildren", {H3indexTypes::h3index(), LogicalType::INTEGER}, SetTypes::h3indexset(), Gen_h3_cell_to_children));
     RegisterSerializedScalarFunction(loader, ScalarFunction("cellToParent", {H3indexTypes::th3index()}, H3indexTypes::th3index(), Gen_th3index_cell_to_parent_next));
     RegisterSerializedScalarFunction(loader, ScalarFunction("th3CellToCenterChild", {H3indexTypes::th3index(), LogicalType::INTEGER}, H3indexTypes::th3index(), Gen_th3index_cell_to_center_child));
     RegisterSerializedScalarFunction(loader, ScalarFunction("th3CellToCenterChild", {H3indexTypes::th3index()}, H3indexTypes::th3index(), Gen_th3index_cell_to_center_child_next));
     RegisterSerializedScalarFunction(loader, ScalarFunction("th3CellToChildPos", {H3indexTypes::th3index(), LogicalType::INTEGER}, TemporalTypes::tbigint(), Gen_th3index_cell_to_child_pos));
     RegisterSerializedScalarFunction(loader, ScalarFunction("th3ChildPosToCell", {H3indexTypes::th3index(), H3indexTypes::th3index(), LogicalType::INTEGER}, H3indexTypes::th3index(), Gen_th3index_child_pos_to_cell));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("uncompactCells", {H3indexTypes::h3indexset(), LogicalType::INTEGER}, H3indexTypes::h3indexset(), Gen_h3_uncompact_cells));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("uncompactCells", {SetTypes::h3indexset(), LogicalType::INTEGER}, SetTypes::h3indexset(), Gen_h3_uncompact_cells));
 }
 
 void RegisterGenerated_meos_internal_temporal_inout(ExtensionLoader &loader) {
@@ -6733,7 +6733,7 @@ void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValues", {TGeographyTypes::tgeography()}, SpatialSetType::geogset(), Gen_temporal_valueset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValues", {TgeompointType::tgeompoint()}, SpatialSetType::geomset(), Gen_temporal_valueset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValues", {TgeogpointType::tgeogpoint()}, SpatialSetType::geogset(), Gen_temporal_valueset));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("getValues", {H3indexTypes::th3index()}, H3indexTypes::h3indexset(), Gen_temporal_valueset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("getValues", {H3indexTypes::th3index()}, SetTypes::h3indexset(), Gen_temporal_valueset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValues", {TJsonbTypes::tjsonb()}, SetTypes::jsonbset(), Gen_temporal_valueset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValues", {NpointTypes::tnpoint()}, SetTypes::npointset(), Gen_temporal_valueset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValues", {TPcpointTypes::tpcpoint()}, SetTypes::pcpointset(), Gen_temporal_valueset));

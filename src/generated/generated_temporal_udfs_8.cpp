@@ -1021,6 +1021,19 @@ static void Gen_h3index_hash_extended(DataChunk &args, ExpressionState &, Vector
 }
 
 
+// ===== @ingroup meos_h3_set_inout =====
+static void Gen_h3indexset_out(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Set *s = BlobToSet(in);
+            char * r = h3indexset_out(s);
+            free(s);
+            return TakeCString(result, r);
+        });
+}
+
+
 // ===== @ingroup meos_json_set_accessor =====
 static void Gen_jsonbset_value_n(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -2330,6 +2343,10 @@ void RegisterGenerated_meos_h3_base_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("isValidVertex", {H3indexTypes::h3index()}, LogicalType::BOOLEAN, Gen_h3_is_valid_vertex));
     RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {H3indexTypes::h3index()}, LogicalType::UINTEGER, Gen_h3index_hash));
     RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {H3indexTypes::h3index(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_h3index_hash_extended));
+}
+
+void RegisterGenerated_meos_h3_set_inout(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::h3indexset()}, LogicalType::VARCHAR, Gen_h3indexset_out));
 }
 
 void RegisterGenerated_meos_json_set_accessor(ExtensionLoader &loader) {

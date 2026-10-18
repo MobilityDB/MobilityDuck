@@ -112,7 +112,7 @@ void RegisterGenerated_meos_h3_latlng(ExtensionLoader &loader);
 void RegisterGenerated_meos_h3_metrics(ExtensionLoader &loader);
 void RegisterGenerated_meos_h3_restrict(ExtensionLoader &loader);
 void RegisterGenerated_meos_h3_set_accessor(ExtensionLoader &loader);
-void RegisterGenerated_meos_h3_set_conversion(ExtensionLoader &loader);
+void RegisterGenerated_meos_h3_set_inout(ExtensionLoader &loader);
 void RegisterGenerated_meos_h3_set_setops(ExtensionLoader &loader);
 void RegisterGenerated_meos_h3_transf(ExtensionLoader &loader);
 void RegisterGenerated_meos_h3_traversal(ExtensionLoader &loader);
@@ -330,7 +330,7 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_h3_metrics(loader);
     RegisterGenerated_meos_h3_restrict(loader);
     RegisterGenerated_meos_h3_set_accessor(loader);
-    RegisterGenerated_meos_h3_set_conversion(loader);
+    RegisterGenerated_meos_h3_set_inout(loader);
     RegisterGenerated_meos_h3_set_setops(loader);
     RegisterGenerated_meos_h3_transf(loader);
     RegisterGenerated_meos_h3_traversal(loader);
