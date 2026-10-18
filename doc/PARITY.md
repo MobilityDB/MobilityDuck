@@ -80,7 +80,7 @@ A few feature areas where MobilityDuck is on parity:
 - **Aggregates**: every aggregate of the MEOS catalog over a type
   MobilityDuck registers, generated from the catalog: `tCount`,
   `tAvg`, `tSum`, `tCentroid`, `tAndAgg` / `tOrAgg`, `tMinAgg` /
-  `tMaxAgg`, the windowed `wCount` / `wAvg` / `wMin` / `wMax` /
+  `tMaxAgg`, the windowed `wCount` / `wAvgAgg` / `wMin` / `wMax` /
   `wSum`, `extent`, `mergeAgg`, `appendInstantAgg`,
   `appendSequenceAgg`, `setUnionAgg`, `spanUnionAgg`,
   `spansetUnionAgg`, `tdensity` and `tnpoints`. (See
@@ -170,9 +170,12 @@ called by the name the MEOS catalog states for it, its name with an
 | `merge(...)`, `appendInstant(...)`, `appendSequence(...)` | `mergeAgg(...)`, `appendInstantAgg(...)`, `appendSequenceAgg(...)` |
 | `setUnion(...)`, `spanUnion(...)`, `spansetUnion(...)` | `setUnionAgg(...)`, `spanUnionAgg(...)`, `spansetUnionAgg(...)` |
 
+The window average `wAvg(...)` is called `wAvgAgg(...)`: DuckDB names
+its weighted average `wavg` and compares function names without case.
+
 Every other aggregate keeps its MobilityDB name: `tCount`, `tAvg`,
-`tSum`, `tCentroid`, `wCount`, `wAvg`, `wMin`, `wMax`, `wSum`,
-`extent`, `tdensity` and `tnpoints`.
+`tSum`, `tCentroid`, `wCount`, `wMin`, `wMax`, `wSum`, `extent`,
+`tdensity` and `tnpoints`.
 
 The reason: DuckDB keeps a scalar function and an aggregate of one
 name, compared without case, in one catalog slot, so the MobilityDB
