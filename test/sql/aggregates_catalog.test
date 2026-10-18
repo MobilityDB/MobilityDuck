@@ -1705,7 +1705,11 @@ SELECT tnpoints(v)::VARCHAR FROM (VALUES ('0101000000000000000200000000000000000
 ----
 {2@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
 
-# wAvgAgg(tbigint, INTERVAL): MobilityDB answers the bits of its values read as a double (5e-324 for 1), the defect AG16 fixes in MEOS
+# wAvgAgg(tbigint, INTERVAL)
+query I
+SELECT asText(wAvgAgg(v, interval '2 days'), 6) FROM (VALUES ('1@2020-01-01'::tbigint), ('2@2020-01-02'::tbigint)) t(v);
+----
+Interp=Step;{[1@2020-01-01 00:00:00+00, 1.5@2020-01-02 00:00:00+00, 1.5@2020-01-03 00:00:00+00], (2@2020-01-03 00:00:00+00, 2@2020-01-04 00:00:00+00]}
 
 # wAvgAgg(tfloat, INTERVAL)
 query I
