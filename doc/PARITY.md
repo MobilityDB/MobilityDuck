@@ -21,10 +21,11 @@ actually run into:
   - DuckDB has no separate `geography` SQL type. Geographic *temporal*
     values (`tgeography`, `tgeogpoint`) work the same way; geographic
     *static* values are stored as `geometry` with the geodetic flag.
-  - Aggregate functions are spelled with an `Agg` suffix
-    (`tcountAgg`, `tavgAgg`, `tcentroidAgg`, …) to avoid name collisions
-    with same-named scalar functions in DuckDB. The semantics are the
-    same.
+  - An aggregate whose name a scalar function also holds is spelled
+    with an `Agg` suffix (`tMinAgg`, `mergeAgg`, `setUnionAgg`, …),
+    since DuckDB keeps a scalar and an aggregate of one name in one
+    catalog slot; every other aggregate keeps its MobilityDB name
+    (`tCount`, `tAvg`, `extent`, …). The semantics are the same.
   - Indexes are R-tree (`TRTREE`) rather than SP-GiST / GiST. The
     `WHERE col && q` predicate still gets pushed into an index scan;
     the index name and definition syntax are different.
@@ -76,12 +77,14 @@ A few feature areas where MobilityDuck is on parity:
   `transformPipeline(temp|stbox, pipeline, srid, is_forward)`
   (PROJ pipeline strings) for all 4 spatio-temporal types and
   `stbox`.
-- **Aggregates**: `tcountAgg`, `tavgAgg`, `tcentroidAgg`,
-  `tminAgg` / `tmaxAgg` / `tsumAgg`, the windowed
-  `wavgAgg` / `wcountAgg` / `wmin` / `wmax` / `wsumAgg`,
-  `extent`, `mergeAgg`, `appendInstantAgg`, `appendSequenceAgg`,
-  `spanUnionAgg`, `setUnionAgg`. (See
-  [Aggregate naming](#aggregate-naming) for why `Agg` is suffixed.)
+- **Aggregates**: every aggregate of the MEOS catalog over a type
+  MobilityDuck registers, generated from the catalog: `tCount`,
+  `tAvg`, `tSum`, `tCentroid`, `tAndAgg` / `tOrAgg`, `tMinAgg` /
+  `tMaxAgg`, the windowed `wCount` / `wAvg` / `wMin` / `wMax` /
+  `wSum`, `extent`, `mergeAgg`, `appendInstantAgg`,
+  `appendSequenceAgg`, `setUnionAgg`, `spanUnionAgg`,
+  `spansetUnionAgg`, `tdensity` and `tnpoints`. (See
+  [Aggregate naming](#aggregate-naming) for which carry `Agg`.)
 - **Misc**: `geoMeasure(tgeompoint, tfloat)`,
   `time_distance(tstzspan/spanset/timestamptz pair)`,
   `trend(tnumber)`.
@@ -156,25 +159,30 @@ on MobilityDuck; you need the right-hand spelling.
 
 ### Aggregate naming
 
-MobilityDB's aggregate functions get an `Agg` suffix in MobilityDuck:
+An aggregate whose name MobilityDB also gives a scalar function is
+called by the name the MEOS catalog states for it, its name with an
+`Agg` suffix:
 
 | MobilityDB aggregate | MobilityDuck name |
 |---|---|
-| `tand(tbool)` | `tandAgg(tbool)` |
-| `tor(tbool)` | `torAgg(tbool)` |
-| `tmin(tfloat)`, `tmin(tint)`, `tmin(ttext)` | `tminAgg(...)` |
-| `tmax(...)`, `tsum(...)`, `tavg(...)`, `tcount(...)` | `*Agg(...)` |
-| `tcentroid(tgeompoint)`, `tcentroid(tgeogpoint)` | `tcentroidAgg(...)` |
-| `wavg`, `wcount`, `wmin`, `wmax`, `wsum` | `*Agg` |
-| `merge(...)`, `appendInstant(...)`, `appendSequence(...)` | `*Agg(...)` |
-| `setUnion(...)`, `spanUnion(...)` | `setUnionAgg(...)`, `spanUnionAgg(...)` |
-| `extent(...)` | `extent(...)` *(unchanged — no scalar collision)* |
+| `tAnd(tbool)`, `tOr(tbool)` | `tAndAgg(tbool)`, `tOrAgg(tbool)` |
+| `tMin(...)`, `tMax(...)` | `tMinAgg(...)`, `tMaxAgg(...)` |
+| `merge(...)`, `appendInstant(...)`, `appendSequence(...)` | `mergeAgg(...)`, `appendInstantAgg(...)`, `appendSequenceAgg(...)` |
+| `setUnion(...)`, `spanUnion(...)`, `spansetUnion(...)` | `setUnionAgg(...)`, `spanUnionAgg(...)`, `spansetUnionAgg(...)` |
 
-The reason: DuckDB function name resolution is case-insensitive, so
-the MobilityDB scalar `Tmin(tbox) → tbox` and the MobilityDB aggregate
-`tmin(tfloat) → tfloat` would collide on the same name in DuckDB. The
-`Agg` suffix breaks the tie. The semantics are identical — internally
-the aggregate calls the same MEOS C functions MobilityDB uses.
+Every other aggregate keeps its MobilityDB name: `tCount`, `tAvg`,
+`tSum`, `tCentroid`, `wCount`, `wAvg`, `wMin`, `wMax`, `wSum`,
+`extent`, `tdensity` and `tnpoints`.
+
+The reason: DuckDB keeps a scalar function and an aggregate of one
+name, compared without case, in one catalog slot, so the MobilityDB
+scalar `tMin(tbox) → tbox` and the MobilityDB aggregate
+`tMin(tfloat) → tfloat` cannot both be registered as `tMin`. The
+semantics are identical: each aggregate calls the transition, combine
+and final MEOS functions the catalog names for it, the ones MobilityDB
+calls. `appendInstantAgg` and `appendSequenceAgg` fold the rows of a
+group in the order of their timestamps, as MobilityDB does over the
+same rows ordered by time.
 
 ### Version stamps
 
@@ -207,8 +215,9 @@ value. In practice:
   the type-system level.
 
 The only aggregate signature this materially affects is
-`setUnion(geography) → geogset` (the geometry-scalar input variant);
-`setUnionAgg(geomset)` and `setUnionAgg(geogset)` both work.
+`setUnion(geography) → geogset` (the geography-scalar input variant);
+`setUnionAgg(geometry)`, `setUnionAgg(geomset)` and
+`setUnionAgg(geogset)` all work.
 
 ### Composite-row return types
 

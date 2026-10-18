@@ -8,9 +8,10 @@ instead of Java, and marshals via the in-process BLOB path (BlobToTemporal /
 TemporalToBlob) instead of hex-WKB, since MobilityDuck links MEOS in-process.
 
 North star: bindings are GENERATED from the catalog; this replaces hand-written
-UDFs (generate-then-retire). POC scope = scalar functions with the tractable
-arg/return shapes; table functions, casts, aggregates, and full per-type
-polymorphism expansion are the documented next increments.
+UDFs (generate-then-retire). Scope = scalar functions with the tractable
+arg/return shapes and the aggregates of the catalog's `aggregates` section
+(#gen_aggregates); table functions, casts and full per-type polymorphism
+expansion are the documented next increments.
 
 Usage: python3 tools/codegen_duck_udfs.py <path-to-meos-idl.json> [out.cpp]
 """
@@ -4545,6 +4546,9 @@ GENERATED_CHUNKS = 16
 # The whole emitted surface, for the post-generation invariants -- which read what was WRITTEN
 # rather than what was intended, and so have to see every unit.
 GENERATED_TEXT = []
+# The text every unit opens with, up to its anonymous namespace: the includes and the marshalling
+# helpers, which #gen_aggregates opens its own unit with as well.
+PREAMBLE = []
 class GReg:
     """A list whose .append() also records the current @ingroup group (STATE['grp'])."""
     def __init__(self): self.items = []          # list of (group, line)
@@ -6533,6 +6537,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         src += ("// The functions whose last parameter every SQL signature fixes to one literal, at the\n"
                 "// arity the SQL surface calls them (project_bound_tail).\n"
                 + "".join(FORWARDED) + "\n")
+    PREAMBLE[:] = [src]
 
     # ---- ARRAY-RETURN family: <elem>* + int* count -> LIST(<elem>) (getValues/timestamps/
     # spans/tboxes). Standalone pass because these span Set/Temporal/SpanSet inputs and because
@@ -6990,6 +6995,246 @@ def gen_index_search_ops(catalog, out_path):
     open(out_path, "w").write("\n".join(lines))
     return len(routes)
 
+# ── aggregates: the catalog's `aggregates` section ──
+# An aggregate of the catalog states, per CREATE AGGREGATE of MobilityDB, its argument and result
+# types, the type of its state, and the public MEOS function of each role it defines: transition,
+# combine and final. Each one registers as a #MeosAggregate (src/include/mobilityduck/
+# meos_aggregate.hpp) over an operations struct written here, which decodes the arguments of a
+# row, calls the roles and encodes the result; the template holds what is common to every one,
+# the release of the states and the gathering of the rows of an aggregate stating no combine.
+# The rules are JMEOS's (#_catalog_aggregates of tools/codegen_jvm.py): the SQL arguments after
+# the first pair with the transition's parameters after its state in the order of the signature
+# the aggregate names (its sqlArgParams), a parameter that signature binds takes its literal, an
+# aggregate is registered under its `altSqlName` where it has one, since DuckDB holds a scalar
+# and an aggregate of one name in one catalog slot, and under its own name otherwise.
+
+# The DuckDB type of each SQL type an aggregate takes or answers. A SQL type absent from it is one
+# the binding registers no type for (raster, geography, summarystats), and an aggregate over it is
+# left out.
+AGG_SQL_TYPE = {**SIG_TEMPORAL_ACC, **SET_SIG_ACC, **SQL_CONTAINER_ACC, **SQL_BASE_TO_DUCK, **CELL_SQL,
+                **{b: acc for b, acc in BASE_LOGICAL.items() if not acc.startswith("LogicalType::")},
+                "geometry": "MobilityDuckGeometryType()",
+                "geomset": "SpatialSetType::geomset()", "geogset": "SpatialSetType::geogset()"}
+# The C++ type a column of each SQL scalar type holds; every other type is a blob (string_t).
+AGG_SQL_PHYSICAL = {"integer": "int32_t", "bigint": "int64_t", "float": "double", "boolean": "bool",
+                    "date": "date_t", "timestamptz": "timestamp_tz_t", "interval": "interval_t",
+                    **{c: "int64_t" for c in CELL_SQL}}
+# The C value of a by-value parameter from the column value `v`: (field type, expression).
+AGG_BYVALUE = {"int": ("int32_t", "v"), "int32": ("int32_t", "v"), "int32_t": ("int32_t", "v"),
+               "int64": ("int64_t", "v"), "int64_t": ("int64_t", "v"),
+               "double": ("double", "v"), "float8": ("double", "v"), "bool": ("bool", "v"),
+               "uint64_t": ("uint64_t", "(uint64_t) v"),
+               "TimestampTz": ("TimestampTz", "(TimestampTz) DuckDBToMeosTimestamp(v).value"),
+               "DateADT": ("DateADT", "ToMeosDate(v)")}
+# The encoder of a result of each C type into a DuckDB blob, releasing it.
+AGG_WRITE = {**{b: e for b, (_, e) in PTR_RET.items()}, "TPCBox": "TpcboxToBlob(result, %s)"}
+# The MEOS function answering the start timestamp of a temporal value, the order an aggregate with
+# no combine folds its rows in.
+AGG_ORDER_KEY = "temporal_start_timestamptz"
+
+
+def _agg_literal(p, lit):
+    """The C++ literal of a bound or defaulted parameter, or None."""
+    b = base(p["canonical"])
+    if lit.strip().upper() == "NULL":
+        return "nullptr" if "*" in norm(p["canonical"]) else None
+    if b in ENUM_MEMBERS:
+        return lit if lit in ENUM_MEMBERS[b] else None
+    if b in AGG_BYVALUE:
+        return sql_default_to_cpp(lit)
+    return None
+
+
+def _agg_input(p, sql, k):
+    """How SQL argument k of type `sql` reaches the C parameter p: (fields, decode, call, free)
+    with `v` the column value in decode, or None."""
+    canon, b = norm(p["canonical"]), base(p["canonical"])
+    a = "row.a%d" % k
+    if "*" in canon:
+        if b in PTR_IN and AGG_SQL_PHYSICAL.get(sql) is None:
+            dec = PTR_IN[b][1] % "v"
+            ft = "Temporal" if PTR_IN[b][0] == "MD_TEMPORAL" else b
+            call = a if ft == b else "(const %s *) %s" % (b, a)
+            return ["%s *a%d;" % (ft, k)], "%s = %s;" % (a, dec), call, "free(%s);" % a
+        if b == "GSERIALIZED" and sql == "geometry":
+            return (["GSERIALIZED *a%d;" % k], "%s = GeometryToGSerialized(v, 0);" % a, a,
+                    "free(%s);" % a)
+        if b == "text" and sql == "text":
+            return ["text *a%d;" % k], "%s = MakeText(v);" % a, a, "free(%s);" % a
+        if b == "Interval" and sql == "interval":
+            return (["MeosInterval a%d;" % k, "bool a%d_set;" % k],
+                    "%s = IntervaltToInterval(v); %s_set = true;" % (a, a),
+                    "(%s_set ? &%s : nullptr)" % (a, a), "")
+        return None
+    if b in ENUM_READER and sql == "text":
+        return (["%s a%d;" % (b, k)], "%s = %s(v.GetString().c_str());" % (a, ENUM_READER[b]),
+                a, "")
+    if b in AGG_BYVALUE and sql in AGG_SQL_PHYSICAL:
+        ft, e = AGG_BYVALUE[b]
+        return ["%s a%d;" % (ft, k)], "%s = %s;" % (a, e), a, ""
+    return None
+
+
+def _agg_ops(n, a, fns_by_name):
+    """The operations struct of catalog aggregate `a`, numbered n, or (None, reason)."""
+    roles = {r: (a.get(r) or {}).get("meos") for r in ("transition", "combine", "final")}
+    args, ret, stype = a.get("args") or [], a["ret"], a["stype"]
+    if not args:
+        return None, "no argument"
+    for t in args + [ret]:
+        if t not in AGG_SQL_TYPE:
+            return None, "type %s" % t
+    if any(r and r not in fns_by_name for r in roles.values()):
+        return None, "role not in the catalog"
+    tf = fns_by_name[roles["transition"]]
+    gathers = not roles["combine"]
+    if gathers and AGG_ORDER_KEY not in fns_by_name:
+        return None, "no combine and no %s" % AGG_ORDER_KEY
+    params = tf.get("params") or []
+    state_c = base(params[0]["canonical"])
+    vis = params[1:]
+    sig = next((s for s in tf.get("sqlSignatures") or [] if s.get("args") == [stype] + args), {})
+    bound = {**((tf.get("shape") or {}).get("boundArgs") or {}), **(sig.get("boundArgs") or {})}
+    bound = {n: v for n, v in bound.items() if n in {p["name"] for p in vis}}
+    walk = [i for i, p in enumerate(vis) if p["name"] not in bound]
+    order = sig.get("sqlArgParams") or (tf.get("shape") or {}).get("sqlArgParams")
+    if order:
+        at = {p["name"]: i for i, p in enumerate(vis)}
+        if set(order) <= set(at) and sorted(at[n] for n in order) == walk:
+            walk = [at[n] for n in order]
+    if len(walk) != len(args):
+        return None, "arity"
+    call = [None] * len(vis)
+    for i, p in enumerate(vis):
+        if p["name"] in bound:
+            call[i] = _agg_literal(p, bound[p["name"]])
+            if call[i] is None:
+                return None, "bound %s" % bound[p["name"]]
+    nullable = set((tf.get("shape") or {}).get("nullable") or [])
+    null_binds = sig.get("nullDefaultBinds") or {}
+    fields, checks, decodes, frees = [], [], [], []
+    for k, (i, sql) in enumerate(zip(walk, args)):
+        p = vis[i]
+        got = _agg_input(p, sql, k)
+        if got is None:
+            return None, "argument %s/%s" % (sql, norm(p["canonical"]))
+        fl, dec, c, fr = got
+        fields += fl
+        call[i] = c
+        if fr:
+            frees.append(fr)
+        phys = AGG_SQL_PHYSICAL.get(sql, "string_t")
+        checks.append("        idx_t j%d = fmt[%d].sel->get_index(i);\n"
+                      "        bool n%d = !fmt[%d].validity.RowIsValid(j%d);" % (k, k, k, k, k))
+        get = "UnifiedVectorFormat::GetData<%s>(fmt[%d])[j%d]" % (phys, k, k)
+        # A NULL argument: the first skips the row, as a strict transition does; another takes
+        # the value the wrapper binds for it (nullDefaultBinds), or a NULL pointer where the
+        # parameter admits one, and otherwise skips the row
+        if k == 0:
+            null = "return false;"
+        else:
+            lit = (null_binds.get(str(k + 1)) or {}).get(p["name"])
+            lit = _agg_literal(p, lit) if lit is not None else None
+            if lit is not None and fl[0].startswith("MeosInterval"):
+                null = "row.a%d_set = false;" % k
+            elif lit is not None:
+                null = "row.a%d = %s;" % (k, lit)
+            elif p["name"] in nullable and "*" in norm(p["canonical"]):
+                null = ("row.a%d_set = false;" % k if fl[0].startswith("MeosInterval")
+                        else "row.a%d = nullptr;" % k)
+            else:
+                null = "return false;"
+        # Every skip is decided before anything is decoded, so a skipped row allocates nothing
+        if null == "return false;":
+            checks.append("        if (n%d) return false;" % k)
+            decodes.append("        { auto &v = %s; %s }" % (get, dec))
+        else:
+            decodes.append("        if (n%d) { %s } else { auto &v = %s; %s }" % (k, null, get, dec))
+    ff = fns_by_name.get(roles["final"]) if roles["final"] else None
+    keeps = bool(ff and ff.get("params") and norm(ff["params"][0]["canonical"]).startswith("const "))
+    res_c = base((ff or tf)["returnType"]["canonical"])
+    if res_c not in AGG_WRITE:
+        return None, "result %s" % res_c
+    cast = lambda fn, i: "static_cast<%s>" % norm(fn["params"][i]["canonical"])  # noqa: E731
+    name = "AggOps_%d" % n
+    L = ["struct %s {" % name,
+         "    struct Row {", *("        %s" % f for f in fields), "    };",
+         "    static constexpr idx_t ARITY = %d;" % len(args),
+         "    static constexpr bool GATHERS = %s;" % ("true" if gathers else "false"),
+         "    static constexpr bool HAS_FINAL = %s;" % ("true" if ff else "false"),
+         "    static constexpr bool KEEPS = %s;" % ("true" if keeps else "false"),
+         "    static bool Read(UnifiedVectorFormat fmt[], idx_t i, Row &row) {",
+         *checks, *decodes, "        return true;", "    }",
+         "    static void *Transition(void *s, Row &row) {",
+         "        return %s(%s(s)%s);" % (tf["name"], cast(tf, 0), "".join(", " + c for c in call)),
+         "    }",
+         "    static void Free(Row &row) {",
+         *("        %s" % fr for fr in frees),
+         "        (void) row;", "    }"]
+    if roles["combine"]:
+        cf = fns_by_name[roles["combine"]]
+        L += ["    static void *Combine(void *a, void *b) {",
+              "        return %s(%s(a), %s(b));" % (cf["name"], cast(cf, 0), cast(cf, 1)), "    }"]
+    else:
+        L += ["    static void *Combine(void *, void *) {", "        return nullptr;", "    }"]
+    if ff:
+        L += ["    static void *Final(void *s) {",
+              "        return %s(%s(s));" % (ff["name"], cast(ff, 0)), "    }"]
+    else:
+        L += ["    static void *Final(void *s) {", "        return s;", "    }"]
+    L += ["    static void Write(Vector &result, idx_t i, void *r) {",
+          "        FlatVector::GetData<string_t>(result)[i] = %s;"
+          % (AGG_WRITE[res_c] % ("static_cast<%s *>(r)" % res_c)), "    }",
+          "    static TimestampTz Order(const Row &row) {",
+          ("        return %s(row.a0);" % AGG_ORDER_KEY) if gathers else
+          "        (void) row;\n        return 0;", "    }",
+          "};", ""]
+    reg = "MeosAggregate<%s>::Function({%s}, %s)" % (
+        name, ", ".join(AGG_SQL_TYPE[t] for t in args), AGG_SQL_TYPE[ret])
+    return ("\n".join(L), reg, state_c), None
+
+
+def gen_aggregates(d, out_path, scalars):
+    """Write one unit registering every aggregate of the catalog's `aggregates` section that the
+    binding's types reach, grouped into one function set per name, and answer
+    (registered, {reason: count}) for what is left out. `scalars` holds the folded names of the
+    scalar functions the surface registers: an aggregate sharing one is a load failure, so it
+    stops the generation."""
+    fns_by_name = {f["name"]: f for f in d["functions"]}
+    sets, left, seen, bodies = defaultdict(list), Counter(), set(), []
+    for a in d.get("aggregates") or []:
+        name = a.get("altSqlName") or a["sqlName"]
+        key = (name.lower(), tuple(a.get("args") or []))
+        if key in seen:
+            continue
+        got, why = _agg_ops(len(bodies), a, fns_by_name)
+        if got is None:
+            left[why] += 1
+            continue
+        seen.add(key)
+        body, reg, _ = got
+        bodies.append(body)
+        sets[name].append(reg)
+    clash = sorted(n for n in sets if n.lower() in scalars)
+    if clash:
+        raise SystemExit("an aggregate and a scalar share a name, which DuckDB keeps in one "
+                         "catalog slot: %s" % ", ".join(clash))
+    regs = []
+    for name in sorted(sets, key=str.lower):
+        regs.append("    {\n        AggregateFunctionSet set(\"%s\");" % name)
+        regs += ["        set.AddFunction(%s);" % r for r in sets[name]]
+        regs.append("        RegisterMeosFunction(loader, std::move(set));\n    }")
+    text = (PREAMBLE[0].replace('#include "mobilityduck/meos_exec_serial.hpp"\n',
+                                '#include "mobilityduck/meos_exec_serial.hpp"\n'
+                                '#include "mobilityduck/meos_aggregate.hpp"\n', 1)
+            + "\n".join(bodies) + "} // anonymous\n\n"
+            + "// The aggregates of the MEOS catalog, one function set per name.\n"
+            + "void RegisterGeneratedAggregates(ExtensionLoader &loader) {\n"
+            + "\n".join(regs) + "\n}\n\n} // namespace duckdb\n")
+    open(out_path, "w").write(text)
+    return sum(len(v) for v in sets.values()), len(sets), left
+
+
 def main():
     global RETIRED_GROUPS
     pos = [a for a in sys.argv[1:] if not a.startswith("--")]
@@ -7112,6 +7357,11 @@ def main():
                                "index_search_ops.hpp")
         nis = gen_index_search_ops(d, isearch)
         print(f"wrote the index search of {nis} operator names -> {isearch}")
+        # The aggregates of the catalog, emitted as a sibling unit.
+        agg = os.path.join(os.path.dirname(out), "generated_aggregates.cpp")
+        scalars = {n.lower() for n in re.findall(r'ScalarFunction\("([^"]+)"', GENERATED_TEXT[0])}
+        na, nn, agg_left = gen_aggregates(d, agg, scalars)
+        print(f"wrote {na} aggregates under {nn} names -> {agg}; left out: {dict(agg_left)}")
         # Regularity invariant (build-failing): MEOS keeps locale/collation, session
         # timezone, PROJ context and RNGs in thread-local storage, so every UDF body
         # must run EnsureMeosThreadInitialized() before any MEOS call. Verify it for

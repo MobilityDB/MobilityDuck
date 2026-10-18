@@ -154,8 +154,9 @@ SELECT (appendInstantAgg(t::tgeogpoint) IS NOT NULL) FROM (VALUES
 ----
 true
 
-query I
-SELECT (tCentroid(t::tgeogpoint) IS NOT NULL) FROM (VALUES
+# MobilityDB declares tCentroid over tgeompoint and tnpoint alone
+statement error
+SELECT tCentroid(t::tgeogpoint) FROM (VALUES
   ('Point(0 0)@2000-01-01'), ('Point(2 2)@2000-01-02')) t(t);
 ----
-true
+No function matches the given name and argument types 'tCentroid(tgeogpoint)'
