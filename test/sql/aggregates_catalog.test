@@ -1,0 +1,1883 @@
+# name: test/sql/aggregates_catalog.test
+# description: Every aggregate MobilityDuck registers, over two rows of sample values, against the
+#              answer MobilityDB gives over the same rows in the time zone UTC; and the set of
+#              aggregate signatures it registers, which is the catalog's but for the entries over
+#              raster and geography, types MobilityDuck does not have.
+#              A value whose text carries a coordinate or a float is written with six decimals in
+#              both engines.
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+SET TimeZone = 'UTC';
+
+# The point cloud values name pcid 1, whose schema holds three dimensions of type double, as
+# test/sql/tpcpatch.test registers it.
+statement ok
+CREATE TABLE pointcloud_schemas (pcid integer PRIMARY KEY, srid integer NOT NULL,
+  compression text NOT NULL DEFAULT 'none', description text);
+
+statement ok
+CREATE TABLE pointcloud_dimensions (pcid integer NOT NULL, dim_no integer NOT NULL,
+  dim_name text NOT NULL, interpretation text NOT NULL, dim_scale double NOT NULL DEFAULT 1,
+  dim_offset double NOT NULL DEFAULT 0, active boolean NOT NULL DEFAULT true, description text,
+  PRIMARY KEY (pcid, dim_no));
+
+statement ok
+INSERT INTO pointcloud_schemas VALUES (1, 0, 'none', 'Three dimensions of type double');
+
+statement ok
+INSERT INTO pointcloud_dimensions VALUES
+  (1, 1, 'X', 'double', 1, 0, true, NULL),
+  (1, 2, 'Y', 'double', 1, 0, true, NULL),
+  (1, 3, 'Z', 'double', 1, 0, true, NULL);
+
+query I
+SELECT pointCloudSchemaRegister(s.pcid, s.srid, s.compression,
+         list({'dim_no': d.dim_no, 'dim_name': d.dim_name,
+               'interpretation': d.interpretation, 'dim_scale': d.dim_scale,
+               'dim_offset': d.dim_offset, 'active': d.active,
+               'description': d.description} ORDER BY d.dim_no))
+FROM pointcloud_schemas s JOIN pointcloud_dimensions d USING (pcid)
+GROUP BY s.pcid, s.srid, s.compression;
+----
+true
+
+# The aggregate signatures registered under the names of the catalog
+query I
+SELECT function_name || '(' || array_to_string(parameter_types, ',') || ')' FROM duckdb_functions()
+WHERE function_type = 'aggregate' AND function_name IN ('appendInstantAgg', 'appendSequenceAgg', 'extent', 'mergeAgg', 'rasterUnion', 'sameAlignmentAgg', 'setUnionAgg', 'spanUnionAgg', 'spansetUnionAgg', 'summaryStatsAgg', 'tAndAgg', 'tAvg', 'tCentroid', 'tCount', 'tMaxAgg', 'tMinAgg', 'tOrAgg', 'tSum', 'tdensity', 'tnpoints', 'wAvgAgg', 'wCount', 'wMax', 'wMin', 'wSum')
+ORDER BY 1;
+----
+appendInstantAgg(tbigint)
+appendInstantAgg(tbigint,VARCHAR)
+appendInstantAgg(tbigint,VARCHAR,DOUBLE,INTERVAL)
+appendInstantAgg(tbool)
+appendInstantAgg(tbool,VARCHAR)
+appendInstantAgg(tbool,VARCHAR,INTERVAL)
+appendInstantAgg(tcbuffer)
+appendInstantAgg(tcbuffer,VARCHAR)
+appendInstantAgg(tcbuffer,VARCHAR,DOUBLE,INTERVAL)
+appendInstantAgg(tfloat)
+appendInstantAgg(tfloat,VARCHAR)
+appendInstantAgg(tfloat,VARCHAR,DOUBLE,INTERVAL)
+appendInstantAgg(tgeogpoint)
+appendInstantAgg(tgeogpoint,VARCHAR)
+appendInstantAgg(tgeogpoint,VARCHAR,DOUBLE,INTERVAL)
+appendInstantAgg(tgeography)
+appendInstantAgg(tgeography,VARCHAR)
+appendInstantAgg(tgeography,VARCHAR,DOUBLE,INTERVAL)
+appendInstantAgg(tgeometry)
+appendInstantAgg(tgeometry,VARCHAR)
+appendInstantAgg(tgeometry,VARCHAR,DOUBLE,INTERVAL)
+appendInstantAgg(tgeompoint)
+appendInstantAgg(tgeompoint,VARCHAR)
+appendInstantAgg(tgeompoint,VARCHAR,DOUBLE,INTERVAL)
+appendInstantAgg(th3index)
+appendInstantAgg(th3index,VARCHAR)
+appendInstantAgg(th3index,VARCHAR,INTERVAL)
+appendInstantAgg(tint)
+appendInstantAgg(tint,VARCHAR)
+appendInstantAgg(tint,VARCHAR,DOUBLE,INTERVAL)
+appendInstantAgg(tjsonb)
+appendInstantAgg(tjsonb,VARCHAR)
+appendInstantAgg(tjsonb,VARCHAR,INTERVAL)
+appendInstantAgg(tnpoint)
+appendInstantAgg(tnpoint,VARCHAR)
+appendInstantAgg(tnpoint,VARCHAR,DOUBLE,INTERVAL)
+appendInstantAgg(tpcpatch)
+appendInstantAgg(tpcpatch,VARCHAR)
+appendInstantAgg(tpcpatch,VARCHAR,INTERVAL)
+appendInstantAgg(tpcpoint)
+appendInstantAgg(tpcpoint,VARCHAR)
+appendInstantAgg(tpcpoint,VARCHAR,INTERVAL)
+appendInstantAgg(tpose)
+appendInstantAgg(tpose,VARCHAR)
+appendInstantAgg(tpose,VARCHAR,DOUBLE,INTERVAL)
+appendInstantAgg(tposechain)
+appendInstantAgg(tposechain,VARCHAR)
+appendInstantAgg(tposechain,VARCHAR,INTERVAL)
+appendInstantAgg(tquadbin)
+appendInstantAgg(tquadbin,VARCHAR)
+appendInstantAgg(tquadbin,VARCHAR,INTERVAL)
+appendInstantAgg(trgeometry)
+appendInstantAgg(trgeometry,VARCHAR)
+appendInstantAgg(trgeometry,VARCHAR,DOUBLE,INTERVAL)
+appendInstantAgg(ts2cell)
+appendInstantAgg(ts2cell,VARCHAR)
+appendInstantAgg(ts2cell,VARCHAR,INTERVAL)
+appendInstantAgg(ttext)
+appendInstantAgg(ttext,VARCHAR)
+appendInstantAgg(ttext,VARCHAR,INTERVAL)
+appendSequenceAgg(tbigint)
+appendSequenceAgg(tbool)
+appendSequenceAgg(tcbuffer)
+appendSequenceAgg(tfloat)
+appendSequenceAgg(tgeogpoint)
+appendSequenceAgg(tgeography)
+appendSequenceAgg(tgeometry)
+appendSequenceAgg(tgeompoint)
+appendSequenceAgg(th3index)
+appendSequenceAgg(tint)
+appendSequenceAgg(tjsonb)
+appendSequenceAgg(tnpoint)
+appendSequenceAgg(tpcpatch)
+appendSequenceAgg(tpcpoint)
+appendSequenceAgg(tpose)
+appendSequenceAgg(tposechain)
+appendSequenceAgg(tquadbin)
+appendSequenceAgg(trgeometry)
+appendSequenceAgg(ts2cell)
+appendSequenceAgg(ttext)
+extent(BIGINT)
+extent(DATE)
+extent(DOUBLE)
+extent(INTEGER)
+extent(TIMESTAMP WITH TIME ZONE)
+extent(bigintset)
+extent(bigintspan)
+extent(bigintspanset)
+extent(dateset)
+extent(datespan)
+extent(datespanset)
+extent(floatset)
+extent(floatspan)
+extent(floatspanset)
+extent(intset)
+extent(intspan)
+extent(intspanset)
+extent(stbox)
+extent(tbigint)
+extent(tbool)
+extent(tbox)
+extent(tcbuffer)
+extent(tfloat)
+extent(tgeogpoint)
+extent(tgeography)
+extent(tgeometry)
+extent(tgeompoint)
+extent(th3index)
+extent(tint)
+extent(tjsonb)
+extent(tnpoint)
+extent(tpcbox)
+extent(tpcpatch)
+extent(tpcpoint)
+extent(tpose)
+extent(tposechain)
+extent(tquadbin)
+extent(trgeometry)
+extent(ts2cell)
+extent(tstzset)
+extent(tstzspan)
+extent(tstzspanset)
+extent(ttext)
+mergeAgg(tbigint)
+mergeAgg(tbool)
+mergeAgg(tcbuffer)
+mergeAgg(tfloat)
+mergeAgg(tgeogpoint)
+mergeAgg(tgeography)
+mergeAgg(tgeometry)
+mergeAgg(tgeompoint)
+mergeAgg(th3index)
+mergeAgg(tint)
+mergeAgg(tjsonb)
+mergeAgg(tnpoint)
+mergeAgg(tpcpatch)
+mergeAgg(tpcpoint)
+mergeAgg(tpose)
+mergeAgg(tposechain)
+mergeAgg(tquadbin)
+mergeAgg(trgeometry)
+mergeAgg(ts2cell)
+mergeAgg(ttext)
+setUnionAgg(BIGINT)
+setUnionAgg(DATE)
+setUnionAgg(DOUBLE)
+setUnionAgg(GEOMETRY)
+setUnionAgg(INTEGER)
+setUnionAgg(TIMESTAMP WITH TIME ZONE)
+setUnionAgg(VARCHAR)
+setUnionAgg(bigintset)
+setUnionAgg(cbuffer)
+setUnionAgg(cbufferset)
+setUnionAgg(dateset)
+setUnionAgg(floatset)
+setUnionAgg(geogset)
+setUnionAgg(geomset)
+setUnionAgg(h3index)
+setUnionAgg(h3indexset)
+setUnionAgg(intset)
+setUnionAgg(jsonb)
+setUnionAgg(jsonbset)
+setUnionAgg(npoint)
+setUnionAgg(npointset)
+setUnionAgg(pcpatch)
+setUnionAgg(pcpatchset)
+setUnionAgg(pcpoint)
+setUnionAgg(pcpointset)
+setUnionAgg(pose)
+setUnionAgg(posechain)
+setUnionAgg(posechainset)
+setUnionAgg(poseset)
+setUnionAgg(quadbin)
+setUnionAgg(quadbinset)
+setUnionAgg(s2cell)
+setUnionAgg(s2cellset)
+setUnionAgg(textset)
+setUnionAgg(tstzset)
+spanUnionAgg(bigintspan)
+spanUnionAgg(datespan)
+spanUnionAgg(floatspan)
+spanUnionAgg(intspan)
+spanUnionAgg(tstzspan)
+spansetUnionAgg(bigintspanset)
+spansetUnionAgg(datespanset)
+spansetUnionAgg(floatspanset)
+spansetUnionAgg(intspanset)
+spansetUnionAgg(tstzspanset)
+tAndAgg(tbool)
+tAvg(tbigint)
+tAvg(tfloat)
+tAvg(tint)
+tCentroid(tgeompoint)
+tCentroid(tnpoint)
+tCount(TIMESTAMP WITH TIME ZONE)
+tCount(tbigint)
+tCount(tbool)
+tCount(tcbuffer)
+tCount(tfloat)
+tCount(tgeogpoint)
+tCount(tgeography)
+tCount(tgeometry)
+tCount(tgeompoint)
+tCount(th3index)
+tCount(tint)
+tCount(tjsonb)
+tCount(tnpoint)
+tCount(tpcpatch)
+tCount(tpcpoint)
+tCount(tpose)
+tCount(tposechain)
+tCount(tquadbin)
+tCount(trgeometry)
+tCount(ts2cell)
+tCount(tstzset)
+tCount(tstzspan)
+tCount(tstzspanset)
+tCount(ttext)
+tMaxAgg(tbigint)
+tMaxAgg(tfloat)
+tMaxAgg(tint)
+tMaxAgg(ttext)
+tMinAgg(tbigint)
+tMinAgg(tfloat)
+tMinAgg(tint)
+tMinAgg(ttext)
+tOrAgg(tbool)
+tSum(tbigint)
+tSum(tfloat)
+tSum(tint)
+tdensity(tpcpatch)
+tnpoints(tpcpatch)
+wAvgAgg(tbigint,INTERVAL)
+wAvgAgg(tfloat,INTERVAL)
+wAvgAgg(tint,INTERVAL)
+wCount(tbigint,INTERVAL)
+wCount(tcbuffer,INTERVAL)
+wCount(tfloat,INTERVAL)
+wCount(tgeogpoint,INTERVAL)
+wCount(tgeography,INTERVAL)
+wCount(tgeometry,INTERVAL)
+wCount(tgeompoint,INTERVAL)
+wCount(th3index,INTERVAL)
+wCount(tint,INTERVAL)
+wCount(tjsonb,INTERVAL)
+wCount(tnpoint,INTERVAL)
+wCount(tpcpatch,INTERVAL)
+wCount(tpcpoint,INTERVAL)
+wCount(tpose,INTERVAL)
+wCount(tposechain,INTERVAL)
+wCount(tquadbin,INTERVAL)
+wCount(trgeometry,INTERVAL)
+wCount(ts2cell,INTERVAL)
+wMax(tbigint,INTERVAL)
+wMax(tfloat,INTERVAL)
+wMax(tint,INTERVAL)
+wMin(tbigint,INTERVAL)
+wMin(tfloat,INTERVAL)
+wMin(tint,INTERVAL)
+wSum(tbigint,INTERVAL)
+wSum(tfloat,INTERVAL)
+wSum(tint,INTERVAL)
+
+# appendInstantAgg(tbigint)
+query I
+SELECT appendInstantAgg(v)::VARCHAR FROM (VALUES ('1@2020-01-01'::tbigint), ('2@2020-01-02'::tbigint)) t(v);
+----
+[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tbigint, VARCHAR)
+query I
+SELECT appendInstantAgg(v, 'step')::VARCHAR FROM (VALUES ('1@2020-01-01'::tbigint), ('2@2020-01-02'::tbigint)) t(v);
+----
+[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tbigint, VARCHAR, DOUBLE, INTERVAL)
+query I
+SELECT appendInstantAgg(v, 'step', 10.0, interval '2 days')::VARCHAR FROM (VALUES ('1@2020-01-01'::tbigint), ('2@2020-01-02'::tbigint)) t(v);
+----
+[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tbool)
+query I
+SELECT appendInstantAgg(v)::VARCHAR FROM (VALUES ('t@2020-01-01'::tbool), ('f@2020-01-02'::tbool)) t(v);
+----
+[t@2020-01-01 00:00:00+00, f@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tbool, VARCHAR)
+query I
+SELECT appendInstantAgg(v, 'step')::VARCHAR FROM (VALUES ('t@2020-01-01'::tbool), ('f@2020-01-02'::tbool)) t(v);
+----
+[t@2020-01-01 00:00:00+00, f@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tbool, VARCHAR, INTERVAL)
+query I
+SELECT appendInstantAgg(v, 'step', interval '2 days')::VARCHAR FROM (VALUES ('t@2020-01-01'::tbool), ('f@2020-01-02'::tbool)) t(v);
+----
+[t@2020-01-01 00:00:00+00, f@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tcbuffer)
+query I
+SELECT asText(appendInstantAgg(v), 6) FROM (VALUES ('Cbuffer(Point(1 1),0.5)@2020-01-01'::tcbuffer), ('Cbuffer(Point(2 2),0.5)@2020-01-02'::tcbuffer)) t(v);
+----
+[Cbuffer(POINT(1 1),0.5)@2020-01-01 00:00:00+00, Cbuffer(POINT(2 2),0.5)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tcbuffer, VARCHAR)
+query I
+SELECT asText(appendInstantAgg(v, 'step'), 6) FROM (VALUES ('Cbuffer(Point(1 1),0.5)@2020-01-01'::tcbuffer), ('Cbuffer(Point(2 2),0.5)@2020-01-02'::tcbuffer)) t(v);
+----
+Interp=Step;[Cbuffer(POINT(1 1),0.5)@2020-01-01 00:00:00+00, Cbuffer(POINT(2 2),0.5)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tcbuffer, VARCHAR, DOUBLE, INTERVAL)
+query I
+SELECT asText(appendInstantAgg(v, 'step', 10.0, interval '2 days'), 6) FROM (VALUES ('Cbuffer(Point(1 1),0.5)@2020-01-01'::tcbuffer), ('Cbuffer(Point(2 2),0.5)@2020-01-02'::tcbuffer)) t(v);
+----
+Interp=Step;[Cbuffer(POINT(1 1),0.5)@2020-01-01 00:00:00+00, Cbuffer(POINT(2 2),0.5)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tfloat)
+query I
+SELECT asText(appendInstantAgg(v), 6) FROM (VALUES ('1.5@2020-01-01'::tfloat), ('2.5@2020-01-02'::tfloat)) t(v);
+----
+[1.5@2020-01-01 00:00:00+00, 2.5@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tfloat, VARCHAR)
+query I
+SELECT asText(appendInstantAgg(v, 'step'), 6) FROM (VALUES ('1.5@2020-01-01'::tfloat), ('2.5@2020-01-02'::tfloat)) t(v);
+----
+Interp=Step;[1.5@2020-01-01 00:00:00+00, 2.5@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tfloat, VARCHAR, DOUBLE, INTERVAL)
+query I
+SELECT asText(appendInstantAgg(v, 'step', 10.0, interval '2 days'), 6) FROM (VALUES ('1.5@2020-01-01'::tfloat), ('2.5@2020-01-02'::tfloat)) t(v);
+----
+Interp=Step;[1.5@2020-01-01 00:00:00+00, 2.5@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tgeogpoint)
+query I
+SELECT asText(appendInstantAgg(v), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeogpoint), ('Point(2 2)@2020-01-02'::tgeogpoint)) t(v);
+----
+[POINT(1 1)@2020-01-01 00:00:00+00, POINT(2 2)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tgeogpoint, VARCHAR)
+query I
+SELECT asText(appendInstantAgg(v, 'step'), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeogpoint), ('Point(2 2)@2020-01-02'::tgeogpoint)) t(v);
+----
+Interp=Step;[POINT(1 1)@2020-01-01 00:00:00+00, POINT(2 2)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tgeogpoint, VARCHAR, DOUBLE, INTERVAL)
+query I
+SELECT asText(appendInstantAgg(v, 'step', 10.0, interval '2 days'), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeogpoint), ('Point(2 2)@2020-01-02'::tgeogpoint)) t(v);
+----
+Interp=Step;{[POINT(1 1)@2020-01-01 00:00:00+00], [POINT(2 2)@2020-01-02 00:00:00+00]}
+
+# appendInstantAgg(tgeography)
+query I
+SELECT asText(appendInstantAgg(v), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeography), ('Point(2 2)@2020-01-02'::tgeography)) t(v);
+----
+[POINT(1 1)@2020-01-01 00:00:00+00, POINT(2 2)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tgeography, VARCHAR)
+query I
+SELECT asText(appendInstantAgg(v, 'step'), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeography), ('Point(2 2)@2020-01-02'::tgeography)) t(v);
+----
+[POINT(1 1)@2020-01-01 00:00:00+00, POINT(2 2)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tgeography, VARCHAR, DOUBLE, INTERVAL)
+query I
+SELECT asText(appendInstantAgg(v, 'step', 10.0, interval '2 days'), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeography), ('Point(2 2)@2020-01-02'::tgeography)) t(v);
+----
+{[POINT(1 1)@2020-01-01 00:00:00+00], [POINT(2 2)@2020-01-02 00:00:00+00]}
+
+# appendInstantAgg(tgeometry)
+query I
+SELECT asText(appendInstantAgg(v), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeometry), ('Point(2 2)@2020-01-02'::tgeometry)) t(v);
+----
+[POINT(1 1)@2020-01-01 00:00:00+00, POINT(2 2)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tgeometry, VARCHAR)
+query I
+SELECT asText(appendInstantAgg(v, 'step'), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeometry), ('Point(2 2)@2020-01-02'::tgeometry)) t(v);
+----
+[POINT(1 1)@2020-01-01 00:00:00+00, POINT(2 2)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tgeometry, VARCHAR, DOUBLE, INTERVAL)
+query I
+SELECT asText(appendInstantAgg(v, 'step', 10.0, interval '2 days'), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeometry), ('Point(2 2)@2020-01-02'::tgeometry)) t(v);
+----
+[POINT(1 1)@2020-01-01 00:00:00+00, POINT(2 2)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tgeompoint)
+query I
+SELECT asText(appendInstantAgg(v), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeompoint), ('Point(2 2)@2020-01-02'::tgeompoint)) t(v);
+----
+[POINT(1 1)@2020-01-01 00:00:00+00, POINT(2 2)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tgeompoint, VARCHAR)
+query I
+SELECT asText(appendInstantAgg(v, 'step'), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeompoint), ('Point(2 2)@2020-01-02'::tgeompoint)) t(v);
+----
+Interp=Step;[POINT(1 1)@2020-01-01 00:00:00+00, POINT(2 2)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tgeompoint, VARCHAR, DOUBLE, INTERVAL)
+query I
+SELECT asText(appendInstantAgg(v, 'step', 10.0, interval '2 days'), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeompoint), ('Point(2 2)@2020-01-02'::tgeompoint)) t(v);
+----
+Interp=Step;[POINT(1 1)@2020-01-01 00:00:00+00, POINT(2 2)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(th3index)
+query I
+SELECT appendInstantAgg(v)::VARCHAR FROM (VALUES ('8a2a1072b59ffff@2020-01-01'::th3index), ('8a2a1072b597fff@2020-01-02'::th3index)) t(v);
+----
+[8a2a1072b59ffff@2020-01-01 00:00:00+00, 8a2a1072b597fff@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(th3index, VARCHAR)
+query I
+SELECT appendInstantAgg(v, 'step')::VARCHAR FROM (VALUES ('8a2a1072b59ffff@2020-01-01'::th3index), ('8a2a1072b597fff@2020-01-02'::th3index)) t(v);
+----
+[8a2a1072b59ffff@2020-01-01 00:00:00+00, 8a2a1072b597fff@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(th3index, VARCHAR, INTERVAL)
+query I
+SELECT appendInstantAgg(v, 'step', interval '2 days')::VARCHAR FROM (VALUES ('8a2a1072b59ffff@2020-01-01'::th3index), ('8a2a1072b597fff@2020-01-02'::th3index)) t(v);
+----
+[8a2a1072b59ffff@2020-01-01 00:00:00+00, 8a2a1072b597fff@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tint)
+query I
+SELECT appendInstantAgg(v)::VARCHAR FROM (VALUES ('1@2020-01-01'::tint), ('2@2020-01-02'::tint)) t(v);
+----
+[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tint, VARCHAR)
+query I
+SELECT appendInstantAgg(v, 'step')::VARCHAR FROM (VALUES ('1@2020-01-01'::tint), ('2@2020-01-02'::tint)) t(v);
+----
+[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tint, VARCHAR, DOUBLE, INTERVAL)
+query I
+SELECT appendInstantAgg(v, 'step', 10.0, interval '2 days')::VARCHAR FROM (VALUES ('1@2020-01-01'::tint), ('2@2020-01-02'::tint)) t(v);
+----
+[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tjsonb)
+query I
+SELECT appendInstantAgg(v)::VARCHAR FROM (VALUES ('"{\"a\": 1}"@2020-01-01'::tjsonb), ('"{\"a\": 2}"@2020-01-02'::tjsonb)) t(v);
+----
+["{\"a\": 1}"@2020-01-01 00:00:00+00, "{\"a\": 2}"@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tjsonb, VARCHAR)
+query I
+SELECT appendInstantAgg(v, 'step')::VARCHAR FROM (VALUES ('"{\"a\": 1}"@2020-01-01'::tjsonb), ('"{\"a\": 2}"@2020-01-02'::tjsonb)) t(v);
+----
+["{\"a\": 1}"@2020-01-01 00:00:00+00, "{\"a\": 2}"@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tjsonb, VARCHAR, INTERVAL)
+query I
+SELECT appendInstantAgg(v, 'step', interval '2 days')::VARCHAR FROM (VALUES ('"{\"a\": 1}"@2020-01-01'::tjsonb), ('"{\"a\": 2}"@2020-01-02'::tjsonb)) t(v);
+----
+["{\"a\": 1}"@2020-01-01 00:00:00+00, "{\"a\": 2}"@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tnpoint)
+query I
+SELECT asText(appendInstantAgg(v), 6) FROM (VALUES ('Npoint(1,0.5)@2020-01-01'::tnpoint), ('Npoint(1,0.7)@2020-01-02'::tnpoint)) t(v);
+----
+[NPoint(1,0.5)@2020-01-01 00:00:00+00, NPoint(1,0.7)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tnpoint, VARCHAR)
+query I
+SELECT asText(appendInstantAgg(v, 'step'), 6) FROM (VALUES ('Npoint(1,0.5)@2020-01-01'::tnpoint), ('Npoint(1,0.7)@2020-01-02'::tnpoint)) t(v);
+----
+Interp=Step;[NPoint(1,0.5)@2020-01-01 00:00:00+00, NPoint(1,0.7)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tnpoint, VARCHAR, DOUBLE, INTERVAL)
+query I
+SELECT asText(appendInstantAgg(v, 'step', 10.0, interval '2 days'), 6) FROM (VALUES ('Npoint(1,0.5)@2020-01-01'::tnpoint), ('Npoint(1,0.7)@2020-01-02'::tnpoint)) t(v);
+----
+Interp=Step;{[NPoint(1,0.5)@2020-01-01 00:00:00+00], [NPoint(1,0.7)@2020-01-02 00:00:00+00]}
+
+# appendInstantAgg(tpcpatch)
+query I
+SELECT appendInstantAgg(v)::VARCHAR FROM (VALUES ('01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040@2020-01-01'::tpcpatch), ('01010000000000000001000000000000000000084000000000000008400000000000000840@2020-01-02'::tpcpatch)) t(v);
+----
+[01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040@2020-01-01 00:00:00+00, 01010000000000000001000000000000000000084000000000000008400000000000000840@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tpcpatch, VARCHAR)
+query I
+SELECT appendInstantAgg(v, 'step')::VARCHAR FROM (VALUES ('01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040@2020-01-01'::tpcpatch), ('01010000000000000001000000000000000000084000000000000008400000000000000840@2020-01-02'::tpcpatch)) t(v);
+----
+[01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040@2020-01-01 00:00:00+00, 01010000000000000001000000000000000000084000000000000008400000000000000840@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tpcpatch, VARCHAR, INTERVAL)
+query I
+SELECT appendInstantAgg(v, 'step', interval '2 days')::VARCHAR FROM (VALUES ('01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040@2020-01-01'::tpcpatch), ('01010000000000000001000000000000000000084000000000000008400000000000000840@2020-01-02'::tpcpatch)) t(v);
+----
+[01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040@2020-01-01 00:00:00+00, 01010000000000000001000000000000000000084000000000000008400000000000000840@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tpcpoint)
+query I
+SELECT appendInstantAgg(v)::VARCHAR FROM (VALUES ('0101000000000000000000F03F000000000000F03F000000000000F03F@2020-01-01'::tpcpoint), ('0101000000000000000000004000000000000000400000000000000040@2020-01-02'::tpcpoint)) t(v);
+----
+[0101000000000000000000F03F000000000000F03F000000000000F03F@2020-01-01 00:00:00+00, 0101000000000000000000004000000000000000400000000000000040@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tpcpoint, VARCHAR)
+query I
+SELECT appendInstantAgg(v, 'step')::VARCHAR FROM (VALUES ('0101000000000000000000F03F000000000000F03F000000000000F03F@2020-01-01'::tpcpoint), ('0101000000000000000000004000000000000000400000000000000040@2020-01-02'::tpcpoint)) t(v);
+----
+[0101000000000000000000F03F000000000000F03F000000000000F03F@2020-01-01 00:00:00+00, 0101000000000000000000004000000000000000400000000000000040@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tpcpoint, VARCHAR, INTERVAL)
+query I
+SELECT appendInstantAgg(v, 'step', interval '2 days')::VARCHAR FROM (VALUES ('0101000000000000000000F03F000000000000F03F000000000000F03F@2020-01-01'::tpcpoint), ('0101000000000000000000004000000000000000400000000000000040@2020-01-02'::tpcpoint)) t(v);
+----
+[0101000000000000000000F03F000000000000F03F000000000000F03F@2020-01-01 00:00:00+00, 0101000000000000000000004000000000000000400000000000000040@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tpose)
+query I
+SELECT asText(appendInstantAgg(v), 6) FROM (VALUES ('Pose(Point(1 1),0.5)@2020-01-01'::tpose), ('Pose(Point(2 2),0.5)@2020-01-02'::tpose)) t(v);
+----
+[Pose(POINT(1 1),0.5)@2020-01-01 00:00:00+00, Pose(POINT(2 2),0.5)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tpose, VARCHAR)
+query I
+SELECT asText(appendInstantAgg(v, 'step'), 6) FROM (VALUES ('Pose(Point(1 1),0.5)@2020-01-01'::tpose), ('Pose(Point(2 2),0.5)@2020-01-02'::tpose)) t(v);
+----
+Interp=Step;[Pose(POINT(1 1),0.5)@2020-01-01 00:00:00+00, Pose(POINT(2 2),0.5)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tpose, VARCHAR, DOUBLE, INTERVAL)
+query I
+SELECT asText(appendInstantAgg(v, 'step', 10.0, interval '2 days'), 6) FROM (VALUES ('Pose(Point(1 1),0.5)@2020-01-01'::tpose), ('Pose(Point(2 2),0.5)@2020-01-02'::tpose)) t(v);
+----
+Interp=Step;[Pose(POINT(1 1),0.5)@2020-01-01 00:00:00+00, Pose(POINT(2 2),0.5)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tposechain)
+query I
+SELECT asText(appendInstantAgg(v), 6) FROM (VALUES ('PoseChain(Pose(Point(0 0),0),Pose(Point(10 0),0))@2020-01-01'::tposechain), ('PoseChain(Pose(Point(1 2),0.1),Pose(Point(11 2),0.1))@2020-01-02'::tposechain)) t(v);
+----
+[PoseChain(Pose(POINT(0 0),0),Pose(POINT(10 0),0))@2020-01-01 00:00:00+00, PoseChain(Pose(POINT(1 2),0.1),Pose(POINT(11 2),0.1))@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tposechain, VARCHAR)
+query I
+SELECT asText(appendInstantAgg(v, 'step'), 6) FROM (VALUES ('PoseChain(Pose(Point(0 0),0),Pose(Point(10 0),0))@2020-01-01'::tposechain), ('PoseChain(Pose(Point(1 2),0.1),Pose(Point(11 2),0.1))@2020-01-02'::tposechain)) t(v);
+----
+Interp=Step;[PoseChain(Pose(POINT(0 0),0),Pose(POINT(10 0),0))@2020-01-01 00:00:00+00, PoseChain(Pose(POINT(1 2),0.1),Pose(POINT(11 2),0.1))@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tposechain, VARCHAR, INTERVAL)
+query I
+SELECT asText(appendInstantAgg(v, 'step', interval '2 days'), 6) FROM (VALUES ('PoseChain(Pose(Point(0 0),0),Pose(Point(10 0),0))@2020-01-01'::tposechain), ('PoseChain(Pose(Point(1 2),0.1),Pose(Point(11 2),0.1))@2020-01-02'::tposechain)) t(v);
+----
+Interp=Step;[PoseChain(Pose(POINT(0 0),0),Pose(POINT(10 0),0))@2020-01-01 00:00:00+00, PoseChain(Pose(POINT(1 2),0.1),Pose(POINT(11 2),0.1))@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tquadbin)
+query I
+SELECT appendInstantAgg(v)::VARCHAR FROM (VALUES ('4813ffffffffffff@2020-01-01'::tquadbin), ('4817ffffffffffff@2020-01-02'::tquadbin)) t(v);
+----
+[4813ffffffffffff@2020-01-01 00:00:00+00, 4817ffffffffffff@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tquadbin, VARCHAR)
+query I
+SELECT appendInstantAgg(v, 'step')::VARCHAR FROM (VALUES ('4813ffffffffffff@2020-01-01'::tquadbin), ('4817ffffffffffff@2020-01-02'::tquadbin)) t(v);
+----
+[4813ffffffffffff@2020-01-01 00:00:00+00, 4817ffffffffffff@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tquadbin, VARCHAR, INTERVAL)
+query I
+SELECT appendInstantAgg(v, 'step', interval '2 days')::VARCHAR FROM (VALUES ('4813ffffffffffff@2020-01-01'::tquadbin), ('4817ffffffffffff@2020-01-02'::tquadbin)) t(v);
+----
+[4813ffffffffffff@2020-01-01 00:00:00+00, 4817ffffffffffff@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(trgeometry)
+query I
+SELECT asText(appendInstantAgg(v), 6) FROM (VALUES ('Polygon((0 0,1 0,1 1,0 1,0 0));Pose(Point(5 5),0)@2020-01-01'::trgeometry), ('Polygon((0 0,1 0,1 1,0 1,0 0));Pose(Point(6 6),0)@2020-01-02'::trgeometry)) t(v);
+----
+POLYGON((0 0,1 0,1 1,0 1,0 0));[Pose(POINT(5 5),0)@2020-01-01 00:00:00+00, Pose(POINT(6 6),0)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(trgeometry, VARCHAR)
+query I
+SELECT asText(appendInstantAgg(v, 'step'), 6) FROM (VALUES ('Polygon((0 0,1 0,1 1,0 1,0 0));Pose(Point(5 5),0)@2020-01-01'::trgeometry), ('Polygon((0 0,1 0,1 1,0 1,0 0));Pose(Point(6 6),0)@2020-01-02'::trgeometry)) t(v);
+----
+POLYGON((0 0,1 0,1 1,0 1,0 0));Interp=Step;[Pose(POINT(5 5),0)@2020-01-01 00:00:00+00, Pose(POINT(6 6),0)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(trgeometry, VARCHAR, DOUBLE, INTERVAL)
+query I
+SELECT asText(appendInstantAgg(v, 'step', 10.0, interval '2 days'), 6) FROM (VALUES ('Polygon((0 0,1 0,1 1,0 1,0 0));Pose(Point(5 5),0)@2020-01-01'::trgeometry), ('Polygon((0 0,1 0,1 1,0 1,0 0));Pose(Point(6 6),0)@2020-01-02'::trgeometry)) t(v);
+----
+POLYGON((0 0,1 0,1 1,0 1,0 0));Interp=Step;[Pose(POINT(5 5),0)@2020-01-01 00:00:00+00, Pose(POINT(6 6),0)@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(ts2cell)
+query I
+SELECT appendInstantAgg(v)::VARCHAR FROM (VALUES ('47c3c444c000000c@2020-01-01'::ts2cell), ('47c3c444c0000004@2020-01-02'::ts2cell)) t(v);
+----
+[47c3c444c000000c@2020-01-01 00:00:00+00, 47c3c444c0000004@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(ts2cell, VARCHAR)
+query I
+SELECT appendInstantAgg(v, 'step')::VARCHAR FROM (VALUES ('47c3c444c000000c@2020-01-01'::ts2cell), ('47c3c444c0000004@2020-01-02'::ts2cell)) t(v);
+----
+[47c3c444c000000c@2020-01-01 00:00:00+00, 47c3c444c0000004@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(ts2cell, VARCHAR, INTERVAL)
+query I
+SELECT appendInstantAgg(v, 'step', interval '2 days')::VARCHAR FROM (VALUES ('47c3c444c000000c@2020-01-01'::ts2cell), ('47c3c444c0000004@2020-01-02'::ts2cell)) t(v);
+----
+[47c3c444c000000c@2020-01-01 00:00:00+00, 47c3c444c0000004@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(ttext)
+query I
+SELECT appendInstantAgg(v)::VARCHAR FROM (VALUES ('"a"@2020-01-01'::ttext), ('"b"@2020-01-02'::ttext)) t(v);
+----
+["a"@2020-01-01 00:00:00+00, "b"@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(ttext, VARCHAR)
+query I
+SELECT appendInstantAgg(v, 'step')::VARCHAR FROM (VALUES ('"a"@2020-01-01'::ttext), ('"b"@2020-01-02'::ttext)) t(v);
+----
+["a"@2020-01-01 00:00:00+00, "b"@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(ttext, VARCHAR, INTERVAL)
+query I
+SELECT appendInstantAgg(v, 'step', interval '2 days')::VARCHAR FROM (VALUES ('"a"@2020-01-01'::ttext), ('"b"@2020-01-02'::ttext)) t(v);
+----
+["a"@2020-01-01 00:00:00+00, "b"@2020-01-02 00:00:00+00]
+
+# appendSequenceAgg(tbigint)
+query I
+SELECT appendSequenceAgg(v)::VARCHAR FROM (VALUES ('[1@2020-01-01, 1@2020-01-02]'::tbigint), ('[2@2020-01-03, 2@2020-01-04]'::tbigint)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00], [2@2020-01-03 00:00:00+00, 2@2020-01-04 00:00:00+00]}
+
+# appendSequenceAgg(tbool)
+query I
+SELECT appendSequenceAgg(v)::VARCHAR FROM (VALUES ('[t@2020-01-01, t@2020-01-02]'::tbool), ('[f@2020-01-03, f@2020-01-04]'::tbool)) t(v);
+----
+{[t@2020-01-01 00:00:00+00, t@2020-01-02 00:00:00+00], [f@2020-01-03 00:00:00+00, f@2020-01-04 00:00:00+00]}
+
+# appendSequenceAgg(tcbuffer)
+query I
+SELECT asText(appendSequenceAgg(v), 6) FROM (VALUES ('[Cbuffer(Point(1 1),0.5)@2020-01-01, Cbuffer(Point(1 1),0.5)@2020-01-02]'::tcbuffer), ('[Cbuffer(Point(2 2),0.5)@2020-01-03, Cbuffer(Point(2 2),0.5)@2020-01-04]'::tcbuffer)) t(v);
+----
+{[Cbuffer(POINT(1 1),0.5)@2020-01-01 00:00:00+00, Cbuffer(POINT(1 1),0.5)@2020-01-02 00:00:00+00], [Cbuffer(POINT(2 2),0.5)@2020-01-03 00:00:00+00, Cbuffer(POINT(2 2),0.5)@2020-01-04 00:00:00+00]}
+
+# appendSequenceAgg(tfloat)
+query I
+SELECT asText(appendSequenceAgg(v), 6) FROM (VALUES ('[1.5@2020-01-01, 1.5@2020-01-02]'::tfloat), ('[2.5@2020-01-03, 2.5@2020-01-04]'::tfloat)) t(v);
+----
+{[1.5@2020-01-01 00:00:00+00, 1.5@2020-01-02 00:00:00+00], [2.5@2020-01-03 00:00:00+00, 2.5@2020-01-04 00:00:00+00]}
+
+# appendSequenceAgg(tgeogpoint)
+query I
+SELECT asText(appendSequenceAgg(v), 6) FROM (VALUES ('[Point(1 1)@2020-01-01, Point(1 1)@2020-01-02]'::tgeogpoint), ('[Point(2 2)@2020-01-03, Point(2 2)@2020-01-04]'::tgeogpoint)) t(v);
+----
+{[POINT(1 1)@2020-01-01 00:00:00+00, POINT(1 1)@2020-01-02 00:00:00+00], [POINT(2 2)@2020-01-03 00:00:00+00, POINT(2 2)@2020-01-04 00:00:00+00]}
+
+# appendSequenceAgg(tgeography)
+query I
+SELECT asText(appendSequenceAgg(v), 6) FROM (VALUES ('[Point(1 1)@2020-01-01, Point(1 1)@2020-01-02]'::tgeography), ('[Point(2 2)@2020-01-03, Point(2 2)@2020-01-04]'::tgeography)) t(v);
+----
+{[POINT(1 1)@2020-01-01 00:00:00+00, POINT(1 1)@2020-01-02 00:00:00+00], [POINT(2 2)@2020-01-03 00:00:00+00, POINT(2 2)@2020-01-04 00:00:00+00]}
+
+# appendSequenceAgg(tgeometry)
+query I
+SELECT asText(appendSequenceAgg(v), 6) FROM (VALUES ('[Point(1 1)@2020-01-01, Point(1 1)@2020-01-02]'::tgeometry), ('[Point(2 2)@2020-01-03, Point(2 2)@2020-01-04]'::tgeometry)) t(v);
+----
+{[POINT(1 1)@2020-01-01 00:00:00+00, POINT(1 1)@2020-01-02 00:00:00+00], [POINT(2 2)@2020-01-03 00:00:00+00, POINT(2 2)@2020-01-04 00:00:00+00]}
+
+# appendSequenceAgg(tgeompoint)
+query I
+SELECT asText(appendSequenceAgg(v), 6) FROM (VALUES ('[Point(1 1)@2020-01-01, Point(1 1)@2020-01-02]'::tgeompoint), ('[Point(2 2)@2020-01-03, Point(2 2)@2020-01-04]'::tgeompoint)) t(v);
+----
+{[POINT(1 1)@2020-01-01 00:00:00+00, POINT(1 1)@2020-01-02 00:00:00+00], [POINT(2 2)@2020-01-03 00:00:00+00, POINT(2 2)@2020-01-04 00:00:00+00]}
+
+# appendSequenceAgg(th3index)
+query I
+SELECT appendSequenceAgg(v)::VARCHAR FROM (VALUES ('[8a2a1072b59ffff@2020-01-01, 8a2a1072b59ffff@2020-01-02]'::th3index), ('[8a2a1072b597fff@2020-01-03, 8a2a1072b597fff@2020-01-04]'::th3index)) t(v);
+----
+{[8a2a1072b59ffff@2020-01-01 00:00:00+00, 8a2a1072b59ffff@2020-01-02 00:00:00+00], [8a2a1072b597fff@2020-01-03 00:00:00+00, 8a2a1072b597fff@2020-01-04 00:00:00+00]}
+
+# appendSequenceAgg(tint)
+query I
+SELECT appendSequenceAgg(v)::VARCHAR FROM (VALUES ('[1@2020-01-01, 1@2020-01-02]'::tint), ('[2@2020-01-03, 2@2020-01-04]'::tint)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00], [2@2020-01-03 00:00:00+00, 2@2020-01-04 00:00:00+00]}
+
+# appendSequenceAgg(tjsonb)
+query I
+SELECT appendSequenceAgg(v)::VARCHAR FROM (VALUES ('["{\"a\": 1}"@2020-01-01, "{\"a\": 1}"@2020-01-02]'::tjsonb), ('["{\"a\": 2}"@2020-01-03, "{\"a\": 2}"@2020-01-04]'::tjsonb)) t(v);
+----
+{["{\"a\": 1}"@2020-01-01 00:00:00+00, "{\"a\": 1}"@2020-01-02 00:00:00+00], ["{\"a\": 2}"@2020-01-03 00:00:00+00, "{\"a\": 2}"@2020-01-04 00:00:00+00]}
+
+# appendSequenceAgg(tnpoint)
+query I
+SELECT asText(appendSequenceAgg(v), 6) FROM (VALUES ('[Npoint(1,0.5)@2020-01-01, Npoint(1,0.5)@2020-01-02]'::tnpoint), ('[Npoint(1,0.7)@2020-01-03, Npoint(1,0.7)@2020-01-04]'::tnpoint)) t(v);
+----
+{[NPoint(1,0.5)@2020-01-01 00:00:00+00, NPoint(1,0.5)@2020-01-02 00:00:00+00], [NPoint(1,0.7)@2020-01-03 00:00:00+00, NPoint(1,0.7)@2020-01-04 00:00:00+00]}
+
+# appendSequenceAgg(tpcpatch)
+query I
+SELECT appendSequenceAgg(v)::VARCHAR FROM (VALUES ('[01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040@2020-01-01, 01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040@2020-01-02]'::tpcpatch), ('[01010000000000000001000000000000000000084000000000000008400000000000000840@2020-01-03, 01010000000000000001000000000000000000084000000000000008400000000000000840@2020-01-04]'::tpcpatch)) t(v);
+----
+{[01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040@2020-01-01 00:00:00+00, 01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040@2020-01-02 00:00:00+00], [01010000000000000001000000000000000000084000000000000008400000000000000840@2020-01-03 00:00:00+00, 01010000000000000001000000000000000000084000000000000008400000000000000840@2020-01-04 00:00:00+00]}
+
+# appendSequenceAgg(tpcpoint)
+query I
+SELECT appendSequenceAgg(v)::VARCHAR FROM (VALUES ('[0101000000000000000000F03F000000000000F03F000000000000F03F@2020-01-01, 0101000000000000000000F03F000000000000F03F000000000000F03F@2020-01-02]'::tpcpoint), ('[0101000000000000000000004000000000000000400000000000000040@2020-01-03, 0101000000000000000000004000000000000000400000000000000040@2020-01-04]'::tpcpoint)) t(v);
+----
+{[0101000000000000000000F03F000000000000F03F000000000000F03F@2020-01-01 00:00:00+00, 0101000000000000000000F03F000000000000F03F000000000000F03F@2020-01-02 00:00:00+00], [0101000000000000000000004000000000000000400000000000000040@2020-01-03 00:00:00+00, 0101000000000000000000004000000000000000400000000000000040@2020-01-04 00:00:00+00]}
+
+# appendSequenceAgg(tpose)
+query I
+SELECT asText(appendSequenceAgg(v), 6) FROM (VALUES ('[Pose(Point(1 1),0.5)@2020-01-01, Pose(Point(1 1),0.5)@2020-01-02]'::tpose), ('[Pose(Point(2 2),0.5)@2020-01-03, Pose(Point(2 2),0.5)@2020-01-04]'::tpose)) t(v);
+----
+{[Pose(POINT(1 1),0.5)@2020-01-01 00:00:00+00, Pose(POINT(1 1),0.5)@2020-01-02 00:00:00+00], [Pose(POINT(2 2),0.5)@2020-01-03 00:00:00+00, Pose(POINT(2 2),0.5)@2020-01-04 00:00:00+00]}
+
+# appendSequenceAgg(tposechain)
+query I
+SELECT asText(appendSequenceAgg(v), 6) FROM (VALUES ('[PoseChain(Pose(Point(0 0),0),Pose(Point(10 0),0))@2020-01-01, PoseChain(Pose(Point(0 0),0),Pose(Point(10 0),0))@2020-01-02]'::tposechain), ('[PoseChain(Pose(Point(1 2),0.1),Pose(Point(11 2),0.1))@2020-01-03, PoseChain(Pose(Point(1 2),0.1),Pose(Point(11 2),0.1))@2020-01-04]'::tposechain)) t(v);
+----
+{[PoseChain(Pose(POINT(0 0),0),Pose(POINT(10 0),0))@2020-01-01 00:00:00+00, PoseChain(Pose(POINT(0 0),0),Pose(POINT(10 0),0))@2020-01-02 00:00:00+00], [PoseChain(Pose(POINT(1 2),0.1),Pose(POINT(11 2),0.1))@2020-01-03 00:00:00+00, PoseChain(Pose(POINT(1 2),0.1),Pose(POINT(11 2),0.1))@2020-01-04 00:00:00+00]}
+
+# appendSequenceAgg(tquadbin)
+query I
+SELECT appendSequenceAgg(v)::VARCHAR FROM (VALUES ('[4813ffffffffffff@2020-01-01, 4813ffffffffffff@2020-01-02]'::tquadbin), ('[4817ffffffffffff@2020-01-03, 4817ffffffffffff@2020-01-04]'::tquadbin)) t(v);
+----
+{[4813ffffffffffff@2020-01-01 00:00:00+00, 4813ffffffffffff@2020-01-02 00:00:00+00], [4817ffffffffffff@2020-01-03 00:00:00+00, 4817ffffffffffff@2020-01-04 00:00:00+00]}
+
+# appendSequenceAgg(trgeometry)
+query I
+SELECT asText(appendSequenceAgg(v), 6) FROM (VALUES ('Polygon((0 0,1 0,1 1,0 1,0 0));[Pose(Point(5 5),0)@2020-01-01, Pose(Point(5 5),0)@2020-01-02]'::trgeometry), ('Polygon((0 0,1 0,1 1,0 1,0 0));[Pose(Point(6 6),0)@2020-01-03, Pose(Point(6 6),0)@2020-01-04]'::trgeometry)) t(v);
+----
+POLYGON((0 0,1 0,1 1,0 1,0 0));{[Pose(POINT(5 5),0)@2020-01-01 00:00:00+00, Pose(POINT(5 5),0)@2020-01-02 00:00:00+00], [Pose(POINT(6 6),0)@2020-01-03 00:00:00+00, Pose(POINT(6 6),0)@2020-01-04 00:00:00+00]}
+
+# appendSequenceAgg(ts2cell)
+query I
+SELECT appendSequenceAgg(v)::VARCHAR FROM (VALUES ('[47c3c444c000000c@2020-01-01, 47c3c444c000000c@2020-01-02]'::ts2cell), ('[47c3c444c0000004@2020-01-03, 47c3c444c0000004@2020-01-04]'::ts2cell)) t(v);
+----
+{[47c3c444c000000c@2020-01-01 00:00:00+00, 47c3c444c000000c@2020-01-02 00:00:00+00], [47c3c444c0000004@2020-01-03 00:00:00+00, 47c3c444c0000004@2020-01-04 00:00:00+00]}
+
+# appendSequenceAgg(ttext)
+query I
+SELECT appendSequenceAgg(v)::VARCHAR FROM (VALUES ('["a"@2020-01-01, "a"@2020-01-02]'::ttext), ('["b"@2020-01-03, "b"@2020-01-04]'::ttext)) t(v);
+----
+{["a"@2020-01-01 00:00:00+00, "a"@2020-01-02 00:00:00+00], ["b"@2020-01-03 00:00:00+00, "b"@2020-01-04 00:00:00+00]}
+
+# extent(BIGINT)
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES ('1'::BIGINT), ('2'::BIGINT)) t(v);
+----
+[1, 3)
+
+# extent(DATE)
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES ('2020-01-01'::DATE), ('2020-01-02'::DATE)) t(v);
+----
+[2020-01-01, 2020-01-03)
+
+# extent(DOUBLE)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('1.5'::DOUBLE), ('2.5'::DOUBLE)) t(v);
+----
+[1.5, 2.5]
+
+# extent(INTEGER)
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES ('1'::INTEGER), ('2'::INTEGER)) t(v);
+----
+[1, 3)
+
+# extent(TIMESTAMP WITH TIME ZONE)
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES ('2020-01-01 00:00:00+00'::TIMESTAMP WITH TIME ZONE), ('2020-01-02 00:00:00+00'::TIMESTAMP WITH TIME ZONE)) t(v);
+----
+[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00]
+
+# extent(bigintset)
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES ('{1}'::bigintset), ('{1, 2}'::bigintset)) t(v);
+----
+[1, 3)
+
+# extent(bigintspan)
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES ('[1, 3]'::bigintspan), ('[2, 5]'::bigintspan)) t(v);
+----
+[1, 6)
+
+# extent(bigintspanset)
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES ('{[1, 3]}'::bigintspanset), ('{[2, 5]}'::bigintspanset)) t(v);
+----
+[1, 6)
+
+# extent(dateset)
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES ('{2020-01-01}'::dateset), ('{2020-01-01, 2020-01-02}'::dateset)) t(v);
+----
+[2020-01-01, 2020-01-03)
+
+# extent(datespan)
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES ('[2020-01-01, 2020-01-03]'::datespan), ('[2020-01-02, 2020-01-05]'::datespan)) t(v);
+----
+[2020-01-01, 2020-01-06)
+
+# extent(datespanset)
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES ('{[2020-01-01, 2020-01-03]}'::datespanset), ('{[2020-01-02, 2020-01-05]}'::datespanset)) t(v);
+----
+[2020-01-01, 2020-01-06)
+
+# extent(floatset)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('{1.5}'::floatset), ('{1.5, 2.5}'::floatset)) t(v);
+----
+[1.5, 2.5]
+
+# extent(floatspan)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('[1.5, 3.5]'::floatspan), ('[2.5, 5.5]'::floatspan)) t(v);
+----
+[1.5, 5.5]
+
+# extent(floatspanset)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('{[1.5, 3.5]}'::floatspanset), ('{[2.5, 5.5]}'::floatspanset)) t(v);
+----
+[1.5, 5.5]
+
+# extent(intset)
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES ('{1}'::intset), ('{1, 2}'::intset)) t(v);
+----
+[1, 3)
+
+# extent(intspan)
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES ('[1, 3]'::intspan), ('[2, 5]'::intspan)) t(v);
+----
+[1, 6)
+
+# extent(intspanset)
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES ('{[1, 3]}'::intspanset), ('{[2, 5]}'::intspanset)) t(v);
+----
+[1, 6)
+
+# extent(stbox)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('STBOX XT(((1,1),(3,3)),[2020-01-01, 2020-01-03])'::stbox), ('STBOX XT(((2,2),(5,5)),[2020-01-02, 2020-01-05])'::stbox)) t(v);
+----
+STBOX XT(((1,1),(5,5)),[2020-01-01 00:00:00+00, 2020-01-05 00:00:00+00])
+
+# extent(tbigint)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('1@2020-01-01'::tbigint), ('2@2020-01-02'::tbigint)) t(v);
+----
+TBOXBIGINT XT([1, 3),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
+
+# extent(tbool)
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES ('t@2020-01-01'::tbool), ('f@2020-01-02'::tbool)) t(v);
+----
+[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00]
+
+# extent(tbox)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('TBOXFLOAT XT([1, 3],[2020-01-01, 2020-01-03])'::tbox), ('TBOXFLOAT XT([2, 5],[2020-01-02, 2020-01-05])'::tbox)) t(v);
+----
+TBOXFLOAT XT([1, 5],[2020-01-01 00:00:00+00, 2020-01-05 00:00:00+00])
+
+# extent(tcbuffer)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('Cbuffer(Point(1 1),0.5)@2020-01-01'::tcbuffer), ('Cbuffer(Point(2 2),0.5)@2020-01-02'::tcbuffer)) t(v);
+----
+STBOX XT(((0.5,0.5),(2.5,2.5)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
+
+# extent(tfloat)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('1.5@2020-01-01'::tfloat), ('2.5@2020-01-02'::tfloat)) t(v);
+----
+TBOXFLOAT XT([1.5, 2.5],[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
+
+# extent(tgeogpoint)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeogpoint), ('Point(2 2)@2020-01-02'::tgeogpoint)) t(v);
+----
+SRID=4326;GEODSTBOX XT(((1,1),(2,2)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
+
+# extent(tgeography)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeography), ('Point(2 2)@2020-01-02'::tgeography)) t(v);
+----
+SRID=4326;GEODSTBOX XT(((1,1),(2,2)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
+
+# extent(tgeometry)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeometry), ('Point(2 2)@2020-01-02'::tgeometry)) t(v);
+----
+STBOX XT(((1,1),(2,2)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
+
+# extent(tgeompoint)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeompoint), ('Point(2 2)@2020-01-02'::tgeompoint)) t(v);
+----
+STBOX XT(((1,1),(2,2)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
+
+# extent(th3index)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('8a2a1072b59ffff@2020-01-01'::th3index), ('8a2a1072b597fff@2020-01-02'::th3index)) t(v);
+----
+SRID=4326;GEODSTBOX XT(((-74.045692,40.688785),(-74.043521,40.691181)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
+
+# extent(tint)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('1@2020-01-01'::tint), ('2@2020-01-02'::tint)) t(v);
+----
+TBOXINT XT([1, 3),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
+
+# extent(tjsonb)
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES ('"{\"a\": 1}"@2020-01-01'::tjsonb), ('"{\"a\": 2}"@2020-01-02'::tjsonb)) t(v);
+----
+[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00]
+
+# extent(tnpoint)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('Npoint(1,0.5)@2020-01-01'::tnpoint), ('Npoint(1,0.7)@2020-01-02'::tnpoint)) t(v);
+----
+SRID=5676;STBOX XT(((34.650693,75.384585),(48.718663,77.764071)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
+
+# extent(tpcbox)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('TPCBOX(XT(((0,0),(10,10)),[2020-01-01, 2020-01-31]), 1)'::tpcbox), ('TPCBOX(XT(((5,5),(20,20)),[2020-01-15, 2020-02-15]), 1)'::tpcbox)) t(v);
+----
+TPCBOX(XT(((0,0),(20,20)),[2020-01-01 00:00:00+00, 2020-02-15 00:00:00+00]), 1)
+
+# extent(tpcpatch)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040@2020-01-01'::tpcpatch), ('01010000000000000001000000000000000000084000000000000008400000000000000840@2020-01-02'::tpcpatch)) t(v);
+----
+TPCBOX(ZT(((1,1,1),(3,3,3)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00]), 1)
+
+# extent(tpcpoint)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('0101000000000000000000F03F000000000000F03F000000000000F03F@2020-01-01'::tpcpoint), ('0101000000000000000000004000000000000000400000000000000040@2020-01-02'::tpcpoint)) t(v);
+----
+TPCBOX(ZT(((1,1,1),(2,2,2)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00]), 1)
+
+# extent(tpose)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('Pose(Point(1 1),0.5)@2020-01-01'::tpose), ('Pose(Point(2 2),0.5)@2020-01-02'::tpose)) t(v);
+----
+STBOX XT(((1,1),(2,2)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
+
+# extent(tposechain)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('PoseChain(Pose(Point(0 0),0),Pose(Point(10 0),0))@2020-01-01'::tposechain), ('PoseChain(Pose(Point(1 2),0.1),Pose(Point(11 2),0.1))@2020-01-02'::tposechain)) t(v);
+----
+STBOX XT(((0,0),(11.745379,5.088176)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
+
+# extent(tquadbin)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('4813ffffffffffff@2020-01-01'::tquadbin), ('4817ffffffffffff@2020-01-02'::tquadbin)) t(v);
+----
+SRID=4326;STBOX XT(((-180,0),(180,85.051129)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
+
+# extent(trgeometry)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('Polygon((0 0,1 0,1 1,0 1,0 0));Pose(Point(5 5),0)@2020-01-01'::trgeometry), ('Polygon((0 0,1 0,1 1,0 1,0 0));Pose(Point(6 6),0)@2020-01-02'::trgeometry)) t(v);
+----
+STBOX XT(((5,5),(7,7)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
+
+# extent(ts2cell)
+query I
+SELECT asText(extent(v), 6) FROM (VALUES ('47c3c444c000000c@2020-01-01'::ts2cell), ('47c3c444c0000004@2020-01-02'::ts2cell)) t(v);
+----
+SRID=4326;GEODSTBOX XT(((4.340366,50.82102),(4.340366,50.82102)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
+
+# extent(tstzset)
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES ('{2020-01-01 00:00:00+00}'::tstzset), ('{2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00}'::tstzset)) t(v);
+----
+[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00]
+
+# extent(tstzspan)
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES ('[2020-01-01, 2020-01-03]'::tstzspan), ('[2020-01-02, 2020-01-05]'::tstzspan)) t(v);
+----
+[2020-01-01 00:00:00+00, 2020-01-05 00:00:00+00]
+
+# extent(tstzspanset)
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES ('{[2020-01-01, 2020-01-03]}'::tstzspanset), ('{[2020-01-02, 2020-01-05]}'::tstzspanset)) t(v);
+----
+[2020-01-01 00:00:00+00, 2020-01-05 00:00:00+00]
+
+# extent(ttext)
+query I
+SELECT extent(v)::VARCHAR FROM (VALUES ('"a"@2020-01-01'::ttext), ('"b"@2020-01-02'::ttext)) t(v);
+----
+[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00]
+
+# mergeAgg(tbigint)
+query I
+SELECT mergeAgg(v)::VARCHAR FROM (VALUES ('1@2020-01-01'::tbigint), ('2@2020-01-02'::tbigint)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00}
+
+# mergeAgg(tbool)
+query I
+SELECT mergeAgg(v)::VARCHAR FROM (VALUES ('t@2020-01-01'::tbool), ('f@2020-01-02'::tbool)) t(v);
+----
+{t@2020-01-01 00:00:00+00, f@2020-01-02 00:00:00+00}
+
+# mergeAgg(tcbuffer)
+query I
+SELECT asText(mergeAgg(v), 6) FROM (VALUES ('Cbuffer(Point(1 1),0.5)@2020-01-01'::tcbuffer), ('Cbuffer(Point(2 2),0.5)@2020-01-02'::tcbuffer)) t(v);
+----
+{Cbuffer(POINT(1 1),0.5)@2020-01-01 00:00:00+00, Cbuffer(POINT(2 2),0.5)@2020-01-02 00:00:00+00}
+
+# mergeAgg(tfloat)
+query I
+SELECT asText(mergeAgg(v), 6) FROM (VALUES ('1.5@2020-01-01'::tfloat), ('2.5@2020-01-02'::tfloat)) t(v);
+----
+{1.5@2020-01-01 00:00:00+00, 2.5@2020-01-02 00:00:00+00}
+
+# mergeAgg(tgeogpoint)
+query I
+SELECT asText(mergeAgg(v), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeogpoint), ('Point(2 2)@2020-01-02'::tgeogpoint)) t(v);
+----
+{POINT(1 1)@2020-01-01 00:00:00+00, POINT(2 2)@2020-01-02 00:00:00+00}
+
+# mergeAgg(tgeography)
+query I
+SELECT asText(mergeAgg(v), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeography), ('Point(2 2)@2020-01-02'::tgeography)) t(v);
+----
+{POINT(1 1)@2020-01-01 00:00:00+00, POINT(2 2)@2020-01-02 00:00:00+00}
+
+# mergeAgg(tgeometry)
+query I
+SELECT asText(mergeAgg(v), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeometry), ('Point(2 2)@2020-01-02'::tgeometry)) t(v);
+----
+{POINT(1 1)@2020-01-01 00:00:00+00, POINT(2 2)@2020-01-02 00:00:00+00}
+
+# mergeAgg(tgeompoint)
+query I
+SELECT asText(mergeAgg(v), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeompoint), ('Point(2 2)@2020-01-02'::tgeompoint)) t(v);
+----
+{POINT(1 1)@2020-01-01 00:00:00+00, POINT(2 2)@2020-01-02 00:00:00+00}
+
+# mergeAgg(th3index)
+query I
+SELECT mergeAgg(v)::VARCHAR FROM (VALUES ('8a2a1072b59ffff@2020-01-01'::th3index), ('8a2a1072b597fff@2020-01-02'::th3index)) t(v);
+----
+{8a2a1072b59ffff@2020-01-01 00:00:00+00, 8a2a1072b597fff@2020-01-02 00:00:00+00}
+
+# mergeAgg(tint)
+query I
+SELECT mergeAgg(v)::VARCHAR FROM (VALUES ('1@2020-01-01'::tint), ('2@2020-01-02'::tint)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00}
+
+# mergeAgg(tjsonb)
+query I
+SELECT mergeAgg(v)::VARCHAR FROM (VALUES ('"{\"a\": 1}"@2020-01-01'::tjsonb), ('"{\"a\": 2}"@2020-01-02'::tjsonb)) t(v);
+----
+{"{\"a\": 1}"@2020-01-01 00:00:00+00, "{\"a\": 2}"@2020-01-02 00:00:00+00}
+
+# mergeAgg(tnpoint)
+query I
+SELECT asText(mergeAgg(v), 6) FROM (VALUES ('Npoint(1,0.5)@2020-01-01'::tnpoint), ('Npoint(1,0.7)@2020-01-02'::tnpoint)) t(v);
+----
+{NPoint(1,0.5)@2020-01-01 00:00:00+00, NPoint(1,0.7)@2020-01-02 00:00:00+00}
+
+# mergeAgg(tpcpatch)
+query I
+SELECT mergeAgg(v)::VARCHAR FROM (VALUES ('01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040@2020-01-01'::tpcpatch), ('01010000000000000001000000000000000000084000000000000008400000000000000840@2020-01-02'::tpcpatch)) t(v);
+----
+{01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040@2020-01-01 00:00:00+00, 01010000000000000001000000000000000000084000000000000008400000000000000840@2020-01-02 00:00:00+00}
+
+# mergeAgg(tpcpoint)
+query I
+SELECT mergeAgg(v)::VARCHAR FROM (VALUES ('0101000000000000000000F03F000000000000F03F000000000000F03F@2020-01-01'::tpcpoint), ('0101000000000000000000004000000000000000400000000000000040@2020-01-02'::tpcpoint)) t(v);
+----
+{0101000000000000000000F03F000000000000F03F000000000000F03F@2020-01-01 00:00:00+00, 0101000000000000000000004000000000000000400000000000000040@2020-01-02 00:00:00+00}
+
+# mergeAgg(tpose)
+query I
+SELECT asText(mergeAgg(v), 6) FROM (VALUES ('Pose(Point(1 1),0.5)@2020-01-01'::tpose), ('Pose(Point(2 2),0.5)@2020-01-02'::tpose)) t(v);
+----
+{Pose(POINT(1 1),0.5)@2020-01-01 00:00:00+00, Pose(POINT(2 2),0.5)@2020-01-02 00:00:00+00}
+
+# mergeAgg(tposechain)
+query I
+SELECT asText(mergeAgg(v), 6) FROM (VALUES ('PoseChain(Pose(Point(0 0),0),Pose(Point(10 0),0))@2020-01-01'::tposechain), ('PoseChain(Pose(Point(1 2),0.1),Pose(Point(11 2),0.1))@2020-01-02'::tposechain)) t(v);
+----
+{PoseChain(Pose(POINT(0 0),0),Pose(POINT(10 0),0))@2020-01-01 00:00:00+00, PoseChain(Pose(POINT(1 2),0.1),Pose(POINT(11 2),0.1))@2020-01-02 00:00:00+00}
+
+# mergeAgg(tquadbin)
+query I
+SELECT mergeAgg(v)::VARCHAR FROM (VALUES ('4813ffffffffffff@2020-01-01'::tquadbin), ('4817ffffffffffff@2020-01-02'::tquadbin)) t(v);
+----
+{4813ffffffffffff@2020-01-01 00:00:00+00, 4817ffffffffffff@2020-01-02 00:00:00+00}
+
+# mergeAgg(trgeometry)
+query I
+SELECT asText(mergeAgg(v), 6) FROM (VALUES ('Polygon((0 0,1 0,1 1,0 1,0 0));Pose(Point(5 5),0)@2020-01-01'::trgeometry), ('Polygon((0 0,1 0,1 1,0 1,0 0));Pose(Point(6 6),0)@2020-01-02'::trgeometry)) t(v);
+----
+POLYGON((0 0,1 0,1 1,0 1,0 0));{Pose(POINT(5 5),0)@2020-01-01 00:00:00+00, Pose(POINT(6 6),0)@2020-01-02 00:00:00+00}
+
+# mergeAgg(ts2cell)
+query I
+SELECT mergeAgg(v)::VARCHAR FROM (VALUES ('47c3c444c000000c@2020-01-01'::ts2cell), ('47c3c444c0000004@2020-01-02'::ts2cell)) t(v);
+----
+{47c3c444c000000c@2020-01-01 00:00:00+00, 47c3c444c0000004@2020-01-02 00:00:00+00}
+
+# mergeAgg(ttext)
+query I
+SELECT mergeAgg(v)::VARCHAR FROM (VALUES ('"a"@2020-01-01'::ttext), ('"b"@2020-01-02'::ttext)) t(v);
+----
+{"a"@2020-01-01 00:00:00+00, "b"@2020-01-02 00:00:00+00}
+
+# setUnionAgg(BIGINT)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('1'::BIGINT), ('2'::BIGINT)) t(v);
+----
+{1, 2}
+
+# setUnionAgg(DATE)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('2020-01-01'::DATE), ('2020-01-02'::DATE)) t(v);
+----
+{2020-01-01, 2020-01-02}
+
+# setUnionAgg(DOUBLE)
+query I
+SELECT asText(setUnionAgg(v), 6) FROM (VALUES ('1.5'::DOUBLE), ('2.5'::DOUBLE)) t(v);
+----
+{1.5, 2.5}
+
+# setUnionAgg(GEOMETRY)
+query I
+SELECT asText(setUnionAgg(v), 6) FROM (VALUES ('Point(1 1)'::GEOMETRY), ('Point(2 2)'::GEOMETRY)) t(v);
+----
+{"POINT(1 1)", "POINT(2 2)"}
+
+# setUnionAgg(INTEGER)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('1'::INTEGER), ('2'::INTEGER)) t(v);
+----
+{1, 2}
+
+# setUnionAgg(TIMESTAMP WITH TIME ZONE)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('2020-01-01 00:00:00+00'::TIMESTAMP WITH TIME ZONE), ('2020-01-02 00:00:00+00'::TIMESTAMP WITH TIME ZONE)) t(v);
+----
+{"2020-01-01 00:00:00+00", "2020-01-02 00:00:00+00"}
+
+# setUnionAgg(VARCHAR)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('a'::VARCHAR), ('b'::VARCHAR)) t(v);
+----
+{"a", "b"}
+
+# setUnionAgg(bigintset)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('{1}'::bigintset), ('{1, 2}'::bigintset)) t(v);
+----
+{1, 2}
+
+# setUnionAgg(cbuffer)
+query I
+SELECT asText(setUnionAgg(v), 6) FROM (VALUES ('Cbuffer(Point(1 1),0.5)'::cbuffer), ('Cbuffer(Point(2 2),0.5)'::cbuffer)) t(v);
+----
+{"Cbuffer(POINT(1 1),0.5)", "Cbuffer(POINT(2 2),0.5)"}
+
+# setUnionAgg(cbufferset)
+query I
+SELECT asText(setUnionAgg(v), 6) FROM (VALUES ('{"Cbuffer(Point(1 1),0.5)"}'::cbufferset), ('{"Cbuffer(Point(1 1),0.5)", "Cbuffer(Point(2 2),0.5)"}'::cbufferset)) t(v);
+----
+{"Cbuffer(POINT(1 1),0.5)", "Cbuffer(POINT(2 2),0.5)"}
+
+# setUnionAgg(dateset)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('{2020-01-01}'::dateset), ('{2020-01-01, 2020-01-02}'::dateset)) t(v);
+----
+{2020-01-01, 2020-01-02}
+
+# setUnionAgg(floatset)
+query I
+SELECT asText(setUnionAgg(v), 6) FROM (VALUES ('{1.5}'::floatset), ('{1.5, 2.5}'::floatset)) t(v);
+----
+{1.5, 2.5}
+
+# setUnionAgg(geogset)
+query I
+SELECT asText(setUnionAgg(v), 6) FROM (VALUES ('{"Point(1 1)"}'::geogset), ('{"Point(1 1)", "Point(2 2)"}'::geogset)) t(v);
+----
+{"POINT(1 1)", "POINT(2 2)"}
+
+# setUnionAgg(geomset)
+query I
+SELECT asText(setUnionAgg(v), 6) FROM (VALUES ('{"Point(1 1)"}'::geomset), ('{"Point(1 1)", "Point(2 2)"}'::geomset)) t(v);
+----
+{"POINT(1 1)", "POINT(2 2)"}
+
+# setUnionAgg(h3index)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('8a2a1072b59ffff'::h3index), ('8a2a1072b597fff'::h3index)) t(v);
+----
+{"8a2a1072b597fff", "8a2a1072b59ffff"}
+
+# setUnionAgg(h3indexset)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('{8a2a1072b59ffff}'::h3indexset), ('{8a2a1072b59ffff, 8a2a1072b597fff}'::h3indexset)) t(v);
+----
+{"8a2a1072b597fff", "8a2a1072b59ffff"}
+
+# setUnionAgg(intset)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('{1}'::intset), ('{1, 2}'::intset)) t(v);
+----
+{1, 2}
+
+# setUnionAgg(jsonb)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('{"a": 1}'::jsonb), ('{"a": 2}'::jsonb)) t(v);
+----
+{"{\"a\": 1}", "{\"a\": 2}"}
+
+# setUnionAgg(jsonbset)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('{"{\"a\": 1}"}'::jsonbset), ('{"{\"a\": 1}", "{\"a\": 2}"}'::jsonbset)) t(v);
+----
+{"{\"a\": 1}", "{\"a\": 2}"}
+
+# setUnionAgg(npoint)
+query I
+SELECT asText(setUnionAgg(v), 6) FROM (VALUES ('Npoint(1,0.5)'::npoint), ('Npoint(1,0.7)'::npoint)) t(v);
+----
+{"NPoint(1,0.5)", "NPoint(1,0.7)"}
+
+# setUnionAgg(npointset)
+query I
+SELECT asText(setUnionAgg(v), 6) FROM (VALUES ('{"Npoint(1,0.5)"}'::npointset), ('{"Npoint(1,0.5)", "Npoint(1,0.7)"}'::npointset)) t(v);
+----
+{"NPoint(1,0.5)", "NPoint(1,0.7)"}
+
+# setUnionAgg(pcpatch)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040'::pcpatch), ('01010000000000000001000000000000000000084000000000000008400000000000000840'::pcpatch)) t(v);
+----
+{"01010000000000000001000000000000000000084000000000000008400000000000000840", "01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040"}
+
+# setUnionAgg(pcpatchset)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('{"01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040"}'::pcpatchset), ('{"01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040", "01010000000000000001000000000000000000084000000000000008400000000000000840"}'::pcpatchset)) t(v);
+----
+{"01010000000000000001000000000000000000084000000000000008400000000000000840", "01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040"}
+
+# setUnionAgg(pcpoint)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('0101000000000000000000F03F000000000000F03F000000000000F03F'::pcpoint), ('0101000000000000000000004000000000000000400000000000000040'::pcpoint)) t(v);
+----
+{"0101000000000000000000004000000000000000400000000000000040", "0101000000000000000000F03F000000000000F03F000000000000F03F"}
+
+# setUnionAgg(pcpointset)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('{"0101000000000000000000F03F000000000000F03F000000000000F03F"}'::pcpointset), ('{"0101000000000000000000F03F000000000000F03F000000000000F03F", "0101000000000000000000004000000000000000400000000000000040"}'::pcpointset)) t(v);
+----
+{"0101000000000000000000004000000000000000400000000000000040", "0101000000000000000000F03F000000000000F03F000000000000F03F"}
+
+# setUnionAgg(pose)
+query I
+SELECT asText(setUnionAgg(v), 6) FROM (VALUES ('Pose(Point(1 1),0.5)'::pose), ('Pose(Point(2 2),0.5)'::pose)) t(v);
+----
+{"Pose(POINT(1 1),0.5)", "Pose(POINT(2 2),0.5)"}
+
+# setUnionAgg(posechain)
+query I
+SELECT asText(setUnionAgg(v), 6) FROM (VALUES ('PoseChain(Pose(Point(0 0),0),Pose(Point(10 0),0))'::posechain), ('PoseChain(Pose(Point(1 2),0.1),Pose(Point(11 2),0.1))'::posechain)) t(v);
+----
+{"PoseChain(Pose(POINT(0 0),0),Pose(POINT(10 0),0))", "PoseChain(Pose(POINT(1 2),0.1),Pose(POINT(11 2),0.1))"}
+
+# setUnionAgg(posechainset)
+query I
+SELECT asText(setUnionAgg(v), 6) FROM (VALUES ('{"PoseChain(Pose(Point(0 0),0),Pose(Point(10 0),0))"}'::posechainset), ('{"PoseChain(Pose(Point(0 0),0),Pose(Point(10 0),0))", "PoseChain(Pose(Point(1 2),0.1),Pose(Point(11 2),0.1))"}'::posechainset)) t(v);
+----
+{"PoseChain(Pose(POINT(0 0),0),Pose(POINT(10 0),0))", "PoseChain(Pose(POINT(1 2),0.1),Pose(POINT(11 2),0.1))"}
+
+# setUnionAgg(poseset)
+query I
+SELECT asText(setUnionAgg(v), 6) FROM (VALUES ('{"Pose(Point(1 1),0.5)"}'::poseset), ('{"Pose(Point(1 1),0.5)", "Pose(Point(2 2),0.5)"}'::poseset)) t(v);
+----
+{"Pose(POINT(1 1),0.5)", "Pose(POINT(2 2),0.5)"}
+
+# setUnionAgg(quadbin)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('4813ffffffffffff'::quadbin), ('4817ffffffffffff'::quadbin)) t(v);
+----
+{"4813ffffffffffff", "4817ffffffffffff"}
+
+# setUnionAgg(quadbinset)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('{4813ffffffffffff}'::quadbinset), ('{4813ffffffffffff, 4817ffffffffffff}'::quadbinset)) t(v);
+----
+{"4813ffffffffffff", "4817ffffffffffff"}
+
+# setUnionAgg(s2cell)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('47c3c444c000000c'::s2cell), ('47c3c444c0000004'::s2cell)) t(v);
+----
+{"47c3c444c0000004", "47c3c444c000000c"}
+
+# setUnionAgg(s2cellset)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('{47c3c444c000000c}'::s2cellset), ('{47c3c444c000000c, 47c3c444c0000004}'::s2cellset)) t(v);
+----
+{"47c3c444c0000004", "47c3c444c000000c"}
+
+# setUnionAgg(textset)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('{"a"}'::textset), ('{"a", "b"}'::textset)) t(v);
+----
+{"a", "b"}
+
+# setUnionAgg(tstzset)
+query I
+SELECT setUnionAgg(v)::VARCHAR FROM (VALUES ('{2020-01-01 00:00:00+00}'::tstzset), ('{2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00}'::tstzset)) t(v);
+----
+{"2020-01-01 00:00:00+00", "2020-01-02 00:00:00+00"}
+
+# spanUnionAgg(bigintspan)
+query I
+SELECT spanUnionAgg(v)::VARCHAR FROM (VALUES ('[1, 3]'::bigintspan), ('[2, 5]'::bigintspan)) t(v);
+----
+{[1, 6)}
+
+# spanUnionAgg(datespan)
+query I
+SELECT spanUnionAgg(v)::VARCHAR FROM (VALUES ('[2020-01-01, 2020-01-03]'::datespan), ('[2020-01-02, 2020-01-05]'::datespan)) t(v);
+----
+{[2020-01-01, 2020-01-06)}
+
+# spanUnionAgg(floatspan)
+query I
+SELECT asText(spanUnionAgg(v), 6) FROM (VALUES ('[1.5, 3.5]'::floatspan), ('[2.5, 5.5]'::floatspan)) t(v);
+----
+{[1.5, 5.5]}
+
+# spanUnionAgg(intspan)
+query I
+SELECT spanUnionAgg(v)::VARCHAR FROM (VALUES ('[1, 3]'::intspan), ('[2, 5]'::intspan)) t(v);
+----
+{[1, 6)}
+
+# spanUnionAgg(tstzspan)
+query I
+SELECT spanUnionAgg(v)::VARCHAR FROM (VALUES ('[2020-01-01, 2020-01-03]'::tstzspan), ('[2020-01-02, 2020-01-05]'::tstzspan)) t(v);
+----
+{[2020-01-01 00:00:00+00, 2020-01-05 00:00:00+00]}
+
+# spansetUnionAgg(bigintspanset)
+query I
+SELECT spansetUnionAgg(v)::VARCHAR FROM (VALUES ('{[1, 3]}'::bigintspanset), ('{[2, 5]}'::bigintspanset)) t(v);
+----
+{[1, 6)}
+
+# spansetUnionAgg(datespanset)
+query I
+SELECT spansetUnionAgg(v)::VARCHAR FROM (VALUES ('{[2020-01-01, 2020-01-03]}'::datespanset), ('{[2020-01-02, 2020-01-05]}'::datespanset)) t(v);
+----
+{[2020-01-01, 2020-01-06)}
+
+# spansetUnionAgg(floatspanset)
+query I
+SELECT asText(spansetUnionAgg(v), 6) FROM (VALUES ('{[1.5, 3.5]}'::floatspanset), ('{[2.5, 5.5]}'::floatspanset)) t(v);
+----
+{[1.5, 5.5]}
+
+# spansetUnionAgg(intspanset)
+query I
+SELECT spansetUnionAgg(v)::VARCHAR FROM (VALUES ('{[1, 3]}'::intspanset), ('{[2, 5]}'::intspanset)) t(v);
+----
+{[1, 6)}
+
+# spansetUnionAgg(tstzspanset)
+query I
+SELECT spansetUnionAgg(v)::VARCHAR FROM (VALUES ('{[2020-01-01, 2020-01-03]}'::tstzspanset), ('{[2020-01-02, 2020-01-05]}'::tstzspanset)) t(v);
+----
+{[2020-01-01 00:00:00+00, 2020-01-05 00:00:00+00]}
+
+# tAndAgg(tbool)
+query I
+SELECT tAndAgg(v)::VARCHAR FROM (VALUES ('t@2020-01-01'::tbool), ('f@2020-01-02'::tbool)) t(v);
+----
+{t@2020-01-01 00:00:00+00, f@2020-01-02 00:00:00+00}
+
+# tAvg(tbigint)
+query I
+SELECT asText(tAvg(v), 6) FROM (VALUES ('1@2020-01-01'::tbigint), ('2@2020-01-02'::tbigint)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00}
+
+# tAvg(tfloat)
+query I
+SELECT asText(tAvg(v), 6) FROM (VALUES ('1.5@2020-01-01'::tfloat), ('2.5@2020-01-02'::tfloat)) t(v);
+----
+{1.5@2020-01-01 00:00:00+00, 2.5@2020-01-02 00:00:00+00}
+
+# tAvg(tint)
+query I
+SELECT asText(tAvg(v), 6) FROM (VALUES ('1@2020-01-01'::tint), ('2@2020-01-02'::tint)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00}
+
+# tCentroid(tgeompoint)
+query I
+SELECT asText(tCentroid(v), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeompoint), ('Point(2 2)@2020-01-02'::tgeompoint)) t(v);
+----
+{POINT(1 1)@2020-01-01 00:00:00+00, POINT(2 2)@2020-01-02 00:00:00+00}
+
+# tCentroid(tnpoint)
+query I
+SELECT asText(tCentroid(v), 6) FROM (VALUES ('Npoint(1,0.5)@2020-01-01'::tnpoint), ('Npoint(1,0.7)@2020-01-02'::tnpoint)) t(v);
+----
+{POINT(48.718663 77.764071)@2020-01-01 00:00:00+00, POINT(34.650693 75.384585)@2020-01-02 00:00:00+00}
+
+# tCount(TIMESTAMP WITH TIME ZONE)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('2020-01-01 00:00:00+00'::TIMESTAMP WITH TIME ZONE), ('2020-01-02 00:00:00+00'::TIMESTAMP WITH TIME ZONE)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(tbigint)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('1@2020-01-01'::tbigint), ('2@2020-01-02'::tbigint)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(tbool)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('t@2020-01-01'::tbool), ('f@2020-01-02'::tbool)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(tcbuffer)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('Cbuffer(Point(1 1),0.5)@2020-01-01'::tcbuffer), ('Cbuffer(Point(2 2),0.5)@2020-01-02'::tcbuffer)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(tfloat)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('1.5@2020-01-01'::tfloat), ('2.5@2020-01-02'::tfloat)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(tgeogpoint)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('Point(1 1)@2020-01-01'::tgeogpoint), ('Point(2 2)@2020-01-02'::tgeogpoint)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(tgeography)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('Point(1 1)@2020-01-01'::tgeography), ('Point(2 2)@2020-01-02'::tgeography)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(tgeometry)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('Point(1 1)@2020-01-01'::tgeometry), ('Point(2 2)@2020-01-02'::tgeometry)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(tgeompoint)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('Point(1 1)@2020-01-01'::tgeompoint), ('Point(2 2)@2020-01-02'::tgeompoint)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(th3index)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('8a2a1072b59ffff@2020-01-01'::th3index), ('8a2a1072b597fff@2020-01-02'::th3index)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(tint)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('1@2020-01-01'::tint), ('2@2020-01-02'::tint)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(tjsonb)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('"{\"a\": 1}"@2020-01-01'::tjsonb), ('"{\"a\": 2}"@2020-01-02'::tjsonb)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(tnpoint)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('Npoint(1,0.5)@2020-01-01'::tnpoint), ('Npoint(1,0.7)@2020-01-02'::tnpoint)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(tpcpatch)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040@2020-01-01'::tpcpatch), ('01010000000000000001000000000000000000084000000000000008400000000000000840@2020-01-02'::tpcpatch)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(tpcpoint)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('0101000000000000000000F03F000000000000F03F000000000000F03F@2020-01-01'::tpcpoint), ('0101000000000000000000004000000000000000400000000000000040@2020-01-02'::tpcpoint)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(tpose)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('Pose(Point(1 1),0.5)@2020-01-01'::tpose), ('Pose(Point(2 2),0.5)@2020-01-02'::tpose)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(tposechain)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('PoseChain(Pose(Point(0 0),0),Pose(Point(10 0),0))@2020-01-01'::tposechain), ('PoseChain(Pose(Point(1 2),0.1),Pose(Point(11 2),0.1))@2020-01-02'::tposechain)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(tquadbin)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('4813ffffffffffff@2020-01-01'::tquadbin), ('4817ffffffffffff@2020-01-02'::tquadbin)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(trgeometry)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('Polygon((0 0,1 0,1 1,0 1,0 0));Pose(Point(5 5),0)@2020-01-01'::trgeometry), ('Polygon((0 0,1 0,1 1,0 1,0 0));Pose(Point(6 6),0)@2020-01-02'::trgeometry)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(ts2cell)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('47c3c444c000000c@2020-01-01'::ts2cell), ('47c3c444c0000004@2020-01-02'::ts2cell)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(tstzset)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('{2020-01-01 00:00:00+00}'::tstzset), ('{2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00}'::tstzset)) t(v);
+----
+{2@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tCount(tstzspan)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('[2020-01-01, 2020-01-03]'::tstzspan), ('[2020-01-02, 2020-01-05]'::tstzspan)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (1@2020-01-03 00:00:00+00, 1@2020-01-05 00:00:00+00]}
+
+# tCount(tstzspanset)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('{[2020-01-01, 2020-01-03]}'::tstzspanset), ('{[2020-01-02, 2020-01-05]}'::tstzspanset)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (1@2020-01-03 00:00:00+00, 1@2020-01-05 00:00:00+00]}
+
+# tCount(ttext)
+query I
+SELECT tCount(v)::VARCHAR FROM (VALUES ('"a"@2020-01-01'::ttext), ('"b"@2020-01-02'::ttext)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# tMaxAgg(tbigint)
+query I
+SELECT tMaxAgg(v)::VARCHAR FROM (VALUES ('1@2020-01-01'::tbigint), ('2@2020-01-02'::tbigint)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00}
+
+# tMaxAgg(tfloat)
+query I
+SELECT asText(tMaxAgg(v), 6) FROM (VALUES ('1.5@2020-01-01'::tfloat), ('2.5@2020-01-02'::tfloat)) t(v);
+----
+{1.5@2020-01-01 00:00:00+00, 2.5@2020-01-02 00:00:00+00}
+
+# tMaxAgg(tint)
+query I
+SELECT tMaxAgg(v)::VARCHAR FROM (VALUES ('1@2020-01-01'::tint), ('2@2020-01-02'::tint)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00}
+
+# tMaxAgg(ttext)
+query I
+SELECT tMaxAgg(v)::VARCHAR FROM (VALUES ('"a"@2020-01-01'::ttext), ('"b"@2020-01-02'::ttext)) t(v);
+----
+{"a"@2020-01-01 00:00:00+00, "b"@2020-01-02 00:00:00+00}
+
+# tMinAgg(tbigint)
+query I
+SELECT tMinAgg(v)::VARCHAR FROM (VALUES ('1@2020-01-01'::tbigint), ('2@2020-01-02'::tbigint)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00}
+
+# tMinAgg(tfloat)
+query I
+SELECT asText(tMinAgg(v), 6) FROM (VALUES ('1.5@2020-01-01'::tfloat), ('2.5@2020-01-02'::tfloat)) t(v);
+----
+{1.5@2020-01-01 00:00:00+00, 2.5@2020-01-02 00:00:00+00}
+
+# tMinAgg(tint)
+query I
+SELECT tMinAgg(v)::VARCHAR FROM (VALUES ('1@2020-01-01'::tint), ('2@2020-01-02'::tint)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00}
+
+# tMinAgg(ttext)
+query I
+SELECT tMinAgg(v)::VARCHAR FROM (VALUES ('"a"@2020-01-01'::ttext), ('"b"@2020-01-02'::ttext)) t(v);
+----
+{"a"@2020-01-01 00:00:00+00, "b"@2020-01-02 00:00:00+00}
+
+# tOrAgg(tbool)
+query I
+SELECT tOrAgg(v)::VARCHAR FROM (VALUES ('t@2020-01-01'::tbool), ('f@2020-01-02'::tbool)) t(v);
+----
+{t@2020-01-01 00:00:00+00, f@2020-01-02 00:00:00+00}
+
+# tSum(tbigint)
+query I
+SELECT tSum(v)::VARCHAR FROM (VALUES ('1@2020-01-01'::tbigint), ('2@2020-01-02'::tbigint)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00}
+
+# tSum(tfloat)
+query I
+SELECT asText(tSum(v), 6) FROM (VALUES ('1.5@2020-01-01'::tfloat), ('2.5@2020-01-02'::tfloat)) t(v);
+----
+{1.5@2020-01-01 00:00:00+00, 2.5@2020-01-02 00:00:00+00}
+
+# tSum(tint)
+query I
+SELECT tSum(v)::VARCHAR FROM (VALUES ('1@2020-01-01'::tint), ('2@2020-01-02'::tint)) t(v);
+----
+{1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00}
+
+# tdensity(tpcpatch)
+query I
+SELECT asText(tdensity(v), 6) FROM (VALUES ('01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040@2020-01-01'::tpcpatch), ('01010000000000000001000000000000000000084000000000000008400000000000000840@2020-01-02'::tpcpatch)) t(v);
+----
+{2@2020-01-01 00:00:00+00, Infinity@2020-01-02 00:00:00+00}
+
+# tnpoints(tpcpatch)
+query I
+SELECT tnpoints(v)::VARCHAR FROM (VALUES ('01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040@2020-01-01'::tpcpatch), ('01010000000000000001000000000000000000084000000000000008400000000000000840@2020-01-02'::tpcpatch)) t(v);
+----
+{2@2020-01-01 00:00:00+00, 1@2020-01-02 00:00:00+00}
+
+# wAvgAgg(tbigint, INTERVAL): MobilityDB answers the bits of its values read as a double (5e-324 for 1), the defect AG16 fixes in MEOS
+
+# wAvgAgg(tfloat, INTERVAL)
+query I
+SELECT asText(wAvgAgg(v, interval '2 days'), 6) FROM (VALUES ('1.5@2020-01-01'::tfloat), ('2.5@2020-01-02'::tfloat)) t(v);
+----
+{[1.5@2020-01-01 00:00:00+00, 1.5@2020-01-02 00:00:00+00), [2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (2.5@2020-01-03 00:00:00+00, 2.5@2020-01-04 00:00:00+00]}
+
+# wAvgAgg(tint, INTERVAL)
+query I
+SELECT asText(wAvgAgg(v, interval '2 days'), 6) FROM (VALUES ('1@2020-01-01'::tint), ('2@2020-01-02'::tint)) t(v);
+----
+Interp=Step;{[1@2020-01-01 00:00:00+00, 1.5@2020-01-02 00:00:00+00, 1.5@2020-01-03 00:00:00+00], (2@2020-01-03 00:00:00+00, 2@2020-01-04 00:00:00+00]}
+
+# wCount(tbigint, INTERVAL)
+query I
+SELECT wCount(v, interval '2 days')::VARCHAR FROM (VALUES ('1@2020-01-01'::tbigint), ('2@2020-01-02'::tbigint)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (1@2020-01-03 00:00:00+00, 1@2020-01-04 00:00:00+00]}
+
+# wCount(tcbuffer, INTERVAL)
+query I
+SELECT wCount(v, interval '2 days')::VARCHAR FROM (VALUES ('Cbuffer(Point(1 1),0.5)@2020-01-01'::tcbuffer), ('Cbuffer(Point(2 2),0.5)@2020-01-02'::tcbuffer)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (1@2020-01-03 00:00:00+00, 1@2020-01-04 00:00:00+00]}
+
+# wCount(tfloat, INTERVAL)
+query I
+SELECT wCount(v, interval '2 days')::VARCHAR FROM (VALUES ('1.5@2020-01-01'::tfloat), ('2.5@2020-01-02'::tfloat)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (1@2020-01-03 00:00:00+00, 1@2020-01-04 00:00:00+00]}
+
+# wCount(tgeogpoint, INTERVAL)
+query I
+SELECT wCount(v, interval '2 days')::VARCHAR FROM (VALUES ('Point(1 1)@2020-01-01'::tgeogpoint), ('Point(2 2)@2020-01-02'::tgeogpoint)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (1@2020-01-03 00:00:00+00, 1@2020-01-04 00:00:00+00]}
+
+# wCount(tgeography, INTERVAL)
+query I
+SELECT wCount(v, interval '2 days')::VARCHAR FROM (VALUES ('Point(1 1)@2020-01-01'::tgeography), ('Point(2 2)@2020-01-02'::tgeography)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (1@2020-01-03 00:00:00+00, 1@2020-01-04 00:00:00+00]}
+
+# wCount(tgeometry, INTERVAL)
+query I
+SELECT wCount(v, interval '2 days')::VARCHAR FROM (VALUES ('Point(1 1)@2020-01-01'::tgeometry), ('Point(2 2)@2020-01-02'::tgeometry)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (1@2020-01-03 00:00:00+00, 1@2020-01-04 00:00:00+00]}
+
+# wCount(tgeompoint, INTERVAL)
+query I
+SELECT wCount(v, interval '2 days')::VARCHAR FROM (VALUES ('Point(1 1)@2020-01-01'::tgeompoint), ('Point(2 2)@2020-01-02'::tgeompoint)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (1@2020-01-03 00:00:00+00, 1@2020-01-04 00:00:00+00]}
+
+# wCount(th3index, INTERVAL)
+query I
+SELECT wCount(v, interval '2 days')::VARCHAR FROM (VALUES ('8a2a1072b59ffff@2020-01-01'::th3index), ('8a2a1072b597fff@2020-01-02'::th3index)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (1@2020-01-03 00:00:00+00, 1@2020-01-04 00:00:00+00]}
+
+# wCount(tint, INTERVAL)
+query I
+SELECT wCount(v, interval '2 days')::VARCHAR FROM (VALUES ('1@2020-01-01'::tint), ('2@2020-01-02'::tint)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (1@2020-01-03 00:00:00+00, 1@2020-01-04 00:00:00+00]}
+
+# wCount(tjsonb, INTERVAL)
+query I
+SELECT wCount(v, interval '2 days')::VARCHAR FROM (VALUES ('"{\"a\": 1}"@2020-01-01'::tjsonb), ('"{\"a\": 2}"@2020-01-02'::tjsonb)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (1@2020-01-03 00:00:00+00, 1@2020-01-04 00:00:00+00]}
+
+# wCount(tnpoint, INTERVAL)
+query I
+SELECT wCount(v, interval '2 days')::VARCHAR FROM (VALUES ('Npoint(1,0.5)@2020-01-01'::tnpoint), ('Npoint(1,0.7)@2020-01-02'::tnpoint)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (1@2020-01-03 00:00:00+00, 1@2020-01-04 00:00:00+00]}
+
+# wCount(tpcpatch, INTERVAL)
+query I
+SELECT wCount(v, interval '2 days')::VARCHAR FROM (VALUES ('01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040@2020-01-01'::tpcpatch), ('01010000000000000001000000000000000000084000000000000008400000000000000840@2020-01-02'::tpcpatch)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (1@2020-01-03 00:00:00+00, 1@2020-01-04 00:00:00+00]}
+
+# wCount(tpcpoint, INTERVAL)
+query I
+SELECT wCount(v, interval '2 days')::VARCHAR FROM (VALUES ('0101000000000000000000F03F000000000000F03F000000000000F03F@2020-01-01'::tpcpoint), ('0101000000000000000000004000000000000000400000000000000040@2020-01-02'::tpcpoint)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (1@2020-01-03 00:00:00+00, 1@2020-01-04 00:00:00+00]}
+
+# wCount(tpose, INTERVAL)
+query I
+SELECT wCount(v, interval '2 days')::VARCHAR FROM (VALUES ('Pose(Point(1 1),0.5)@2020-01-01'::tpose), ('Pose(Point(2 2),0.5)@2020-01-02'::tpose)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (1@2020-01-03 00:00:00+00, 1@2020-01-04 00:00:00+00]}
+
+# wCount(tposechain, INTERVAL)
+query I
+SELECT wCount(v, interval '2 days')::VARCHAR FROM (VALUES ('PoseChain(Pose(Point(0 0),0),Pose(Point(10 0),0))@2020-01-01'::tposechain), ('PoseChain(Pose(Point(1 2),0.1),Pose(Point(11 2),0.1))@2020-01-02'::tposechain)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (1@2020-01-03 00:00:00+00, 1@2020-01-04 00:00:00+00]}
+
+# wCount(tquadbin, INTERVAL)
+query I
+SELECT wCount(v, interval '2 days')::VARCHAR FROM (VALUES ('4813ffffffffffff@2020-01-01'::tquadbin), ('4817ffffffffffff@2020-01-02'::tquadbin)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (1@2020-01-03 00:00:00+00, 1@2020-01-04 00:00:00+00]}
+
+# wCount(trgeometry, INTERVAL)
+query I
+SELECT wCount(v, interval '2 days')::VARCHAR FROM (VALUES ('Polygon((0 0,1 0,1 1,0 1,0 0));Pose(Point(5 5),0)@2020-01-01'::trgeometry), ('Polygon((0 0,1 0,1 1,0 1,0 0));Pose(Point(6 6),0)@2020-01-02'::trgeometry)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (1@2020-01-03 00:00:00+00, 1@2020-01-04 00:00:00+00]}
+
+# wCount(ts2cell, INTERVAL)
+query I
+SELECT wCount(v, interval '2 days')::VARCHAR FROM (VALUES ('47c3c444c000000c@2020-01-01'::ts2cell), ('47c3c444c0000004@2020-01-02'::ts2cell)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-03 00:00:00+00], (1@2020-01-03 00:00:00+00, 1@2020-01-04 00:00:00+00]}
+
+# wMax(tbigint, INTERVAL)
+query I
+SELECT wMax(v, interval '2 days')::VARCHAR FROM (VALUES ('1@2020-01-01'::tbigint), ('2@2020-01-02'::tbigint)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-04 00:00:00+00]}
+
+# wMax(tfloat, INTERVAL)
+query I
+SELECT asText(wMax(v, interval '2 days'), 6) FROM (VALUES ('1.5@2020-01-01'::tfloat), ('2.5@2020-01-02'::tfloat)) t(v);
+----
+{[1.5@2020-01-01 00:00:00+00, 1.5@2020-01-02 00:00:00+00), [2.5@2020-01-02 00:00:00+00, 2.5@2020-01-04 00:00:00+00]}
+
+# wMax(tint, INTERVAL)
+query I
+SELECT wMax(v, interval '2 days')::VARCHAR FROM (VALUES ('1@2020-01-01'::tint), ('2@2020-01-02'::tint)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 2@2020-01-02 00:00:00+00, 2@2020-01-04 00:00:00+00]}
+
+# wMin(tbigint, INTERVAL)
+query I
+SELECT wMin(v, interval '2 days')::VARCHAR FROM (VALUES ('1@2020-01-01'::tbigint), ('2@2020-01-02'::tbigint)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 1@2020-01-03 00:00:00+00], (2@2020-01-03 00:00:00+00, 2@2020-01-04 00:00:00+00]}
+
+# wMin(tfloat, INTERVAL)
+query I
+SELECT asText(wMin(v, interval '2 days'), 6) FROM (VALUES ('1.5@2020-01-01'::tfloat), ('2.5@2020-01-02'::tfloat)) t(v);
+----
+{[1.5@2020-01-01 00:00:00+00, 1.5@2020-01-03 00:00:00+00], (2.5@2020-01-03 00:00:00+00, 2.5@2020-01-04 00:00:00+00]}
+
+# wMin(tint, INTERVAL)
+query I
+SELECT wMin(v, interval '2 days')::VARCHAR FROM (VALUES ('1@2020-01-01'::tint), ('2@2020-01-02'::tint)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 1@2020-01-03 00:00:00+00], (2@2020-01-03 00:00:00+00, 2@2020-01-04 00:00:00+00]}
+
+# wSum(tbigint, INTERVAL)
+query I
+SELECT wSum(v, interval '2 days')::VARCHAR FROM (VALUES ('1@2020-01-01'::tbigint), ('2@2020-01-02'::tbigint)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 3@2020-01-02 00:00:00+00, 3@2020-01-03 00:00:00+00], (2@2020-01-03 00:00:00+00, 2@2020-01-04 00:00:00+00]}
+
+# wSum(tfloat, INTERVAL)
+query I
+SELECT asText(wSum(v, interval '2 days'), 6) FROM (VALUES ('1.5@2020-01-01'::tfloat), ('2.5@2020-01-02'::tfloat)) t(v);
+----
+{[1.5@2020-01-01 00:00:00+00, 1.5@2020-01-02 00:00:00+00), [4@2020-01-02 00:00:00+00, 4@2020-01-03 00:00:00+00], (2.5@2020-01-03 00:00:00+00, 2.5@2020-01-04 00:00:00+00]}
+
+# wSum(tint, INTERVAL)
+query I
+SELECT wSum(v, interval '2 days')::VARCHAR FROM (VALUES ('1@2020-01-01'::tint), ('2@2020-01-02'::tint)) t(v);
+----
+{[1@2020-01-01 00:00:00+00, 3@2020-01-02 00:00:00+00, 3@2020-01-03 00:00:00+00], (2@2020-01-03 00:00:00+00, 2@2020-01-04 00:00:00+00]}
+
