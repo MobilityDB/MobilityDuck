@@ -9,6 +9,7 @@
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "spatial/spatial_types.hpp"
 #include "mobilityduck/meos_exec_serial.hpp"
+#include "temporal/set_functions.hpp"
 
 extern "C" {    
     #include "meos.h"    
@@ -47,7 +48,17 @@ void SpatialSetType::RegisterCastFunctions(ExtensionLoader &loader) {
         SpatialSetType::geogset(),                                    
         SpatialSetFunctions::Text_to_geoset   
     ); 
- 
+    // A geometry set reads as text as every set does, through set_out
+    RegisterMeosCastFunction(loader,
+        SpatialSetType::geomset(),
+        LogicalType::VARCHAR,
+        SetFunctions::Set_to_text
+    );
+    RegisterMeosCastFunction(loader,
+        SpatialSetType::geogset(),
+        LogicalType::VARCHAR,
+        SetFunctions::Set_to_text
+    );
 }
 
 void SpatialSetType::RegisterScalarFunctions(ExtensionLoader &loader) {	    
