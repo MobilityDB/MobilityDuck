@@ -259,6 +259,7 @@ void TPcpatchTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     // Base pcpatch value render cast: generated startValue/endValue return the pcpatch
     // base value, rendered as hex-WKB text via pcpatch_hex_out (cbuffer sibling pattern).
     RegisterMeosCastFunction(loader, TPcpatchTypes::pcpatch(), LogicalType::VARCHAR, TpcpatchFunctions::Pcpatch_out_cast);
+    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, TPcpatchTypes::pcpatch(), TpcpatchFunctions::Pcpatch_in_cast);
 }
 
 }
