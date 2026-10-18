@@ -261,6 +261,7 @@ void TPcpointTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     // Base pcpoint value render cast: generated startValue/endValue return the pcpoint
     // base value, rendered as hex-WKB text via pcpoint_hex_out (cbuffer sibling pattern).
     RegisterMeosCastFunction(loader, TPcpointTypes::pcpoint(), LogicalType::VARCHAR, TpcpointFunctions::Pcpoint_out_cast);
+    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, TPcpointTypes::pcpoint(), TpcpointFunctions::Pcpoint_in_cast);
 }
 
 }

@@ -14,6 +14,7 @@
 #include "geo_util.hpp"
 #include "spatial/spatial_types.hpp"
 #include "mobilityduck/meos_exec_serial.hpp"
+#include "tydef.hpp"
 
 extern "C" {
     #include <meos.h>
@@ -617,6 +618,23 @@ static Pcpoint *pcpoint_from_instant_value(const TInstant *inst) {
  * sibling's Cbuffer_out_cast. The generated startValue/endValue return the pcpoint
  * base value; DuckDB renders it through this cast via the schema-free pcpoint_hex_out
  * (hex-WKB text), the same form the retired hand accessors produced. */
+bool TpcpointFunctions::Pcpoint_in_cast(
+    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
+{
+    UnaryExecutor::Execute<string_t, string_t>(
+        source, result, count,
+        [&](string_t s) -> string_t {
+            std::string str(s.GetData(), s.GetSize());
+            Pcpoint *pt = pcpoint_hex_in(str.c_str());
+            if (!pt)
+                throw InvalidInputException("Failed to read a pcpoint from text");
+            string_t out = StringVector::AddStringOrBlob(result, (const char *)pt, VARSIZE(pt));
+            free(pt);
+            return out;
+        });
+    return true;
+}
+
 bool TpcpointFunctions::Pcpoint_out_cast(
     Vector &source, Vector &result, idx_t count, CastParameters &parameters)
 {

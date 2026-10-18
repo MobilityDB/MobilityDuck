@@ -202,3 +202,15 @@ query I
 SELECT typeof(valueAtTimestamp(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01', TIMESTAMPTZ '2024-01-01'));
 ----
 pcpoint
+
+# A pcpoint read from its text, the hex of its pgPointCloud WKB, as MobilityDB reads it, and
+# the text MobilityDB answers for the same value
+query I
+SELECT ('0101000000000000000000F03F000000000000F03F000000000000F03F'::pcpoint)::VARCHAR;
+----
+0101000000000000000000F03F000000000000F03F000000000000F03F
+
+statement error
+SELECT 'Point(1 1)'::pcpoint;
+----
+empty or odd-length hex
