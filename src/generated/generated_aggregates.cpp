@@ -11331,7 +11331,7 @@ void RegisterGeneratedAggregates(ExtensionLoader &loader) {
         set.AddFunction(MeosAggregate<AggOps_132>::Function({TrgeometryTypes::trgeometry(), LogicalType::INTERVAL}, TemporalTypes::tint()));
         set.AddFunction(MeosAggregate<AggOps_143>::Function({S2cellTypes::ts2cell(), LogicalType::INTERVAL}, TemporalTypes::tint()));
         set.AddFunction(MeosAggregate<AggOps_250>::Function({TemporalTypes::tint(), LogicalType::INTERVAL}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_255>::Function({TemporalTypes::tbigint(), LogicalType::INTERVAL}, TemporalTypes::tbigint()));
+        set.AddFunction(MeosAggregate<AggOps_255>::Function({TemporalTypes::tbigint(), LogicalType::INTERVAL}, TemporalTypes::tint()));
         set.AddFunction(MeosAggregate<AggOps_260>::Function({TemporalTypes::tfloat(), LogicalType::INTERVAL}, TemporalTypes::tint()));
         RegisterMeosFunction(loader, std::move(set));
     }
