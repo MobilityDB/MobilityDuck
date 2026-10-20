@@ -44,11 +44,6 @@ struct StboxFunctions {
     /* ***************************************************
      * Topological operators
      ****************************************************/
-    static void Contains_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Contained_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Overlaps_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Same_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Adjacent_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
 
 #define DECL_TSPATIAL_TOPO(OP)                                                                                  \
     static void OP##_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);                   \
@@ -63,42 +58,11 @@ struct StboxFunctions {
 #undef DECL_TSPATIAL_TOPO
 
     /* ***************************************************
-     * Position operators
-     ****************************************************/
-    static void Left_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Overleft_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Right_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Overright_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Below_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Overbelow_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Above_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Overabove_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Before_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Overbefore_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void After_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Overafter_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Front_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Overfront_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Back_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Overback_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /* ***************************************************
      * Set operators
      ****************************************************/
     static void Intersection_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
      // TODO: Split functions + Extent aggregation 
     
-    /* ***************************************************
-     * Comparison operators
-     ****************************************************/
-    static void Stbox_eq(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Stbox_ne(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Stbox_lt(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Stbox_le(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Stbox_ge(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Stbox_gt(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Stbox_cmp(DataChunk &args, ExpressionState &state, Vector &result);
-
     /* ***************************************************
      * Tile / box emitters and single-tile getters
      ****************************************************/

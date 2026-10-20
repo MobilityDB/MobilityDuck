@@ -4116,11 +4116,11 @@ def shape_span(f, C=SPAN_C):
     # unary (X)->X | scalar  (lower/upper/width, ceil/floor; name-scoped; boxes have no scope)
     if len(ins) == 1 and contp(ins[0]):
         if C["scope"] is None or C["scope"](f["name"]) is None:
-            # Boxes (STBOX_C/TBOX_C, scope=None) have no name-scoped accessor map, so a bare
-            # relax here would also pull in the whole box scalar-accessor group (hasX/hasT/
-            # volume/...), which is a SEPARATE hand-registered surface (own generate-then-retire
-            # wave). Carve out ONLY the bare unary `hash` -> uint32 accessor by sqlfn, gated on
-            # C.get("single") so this never fires for Span/SpanSet (which reach hash via their
+            # A single-type container out of scope (tpcbox, a base value: scope=None, or a box
+            # function whose group is not retired) has no name-scoped accessor map, so a bare
+            # relax here would pull in its whole scalar-accessor group, which the hand layer
+            # registers. Carve out ONLY the bare unary `hash` -> uint32 accessor by sqlfn, gated
+            # on C.get("single") so this never fires for Span/SpanSet (which reach hash via their
             # own scope above).
             if (C.get("single") and f.get("sqlfn") == "hash"
                     and rb in BYVAL_RET and "*" not in rn):
@@ -4151,8 +4151,8 @@ def shape_span(f, C=SPAN_C):
             and rb != "bool" and C["scope"] is not None and C["scope"](f["name"]) is not None):
         return ("u2sc:%s:%s" % (base(ins[1]["canonical"]), rb), byval_ret_duck(rb))
     # (X, by-value uint64 seed) -> uint64 hash (span_hash_extended/spanset_hash_extended);
-    # scope-gated like u2iv. Boxes (STBOX_C/TBOX_C, scope=None) carve out ONLY hashExtended
-    # by sqlfn below (mirrors the unary hash carve-out above) so the rest of the box
+    # scope-gated like u2iv. A single-type container out of scope carves out ONLY hashExtended
+    # by sqlfn below (mirrors the unary hash carve-out above) so the rest of its
     # scalar-accessor group stays out of scope.
     if (contp(ins[0]) and base(ins[1]["canonical"]) in SCALAR_ARG
             and "*" not in norm(ins[1]["canonical"]) and rb == "uint64_t" and "*" not in rn
@@ -4380,8 +4380,9 @@ def emit_span(f, kind, C=SPAN_C):
 # neither order reaches no surface. The return is the declared one (scalar_ret4), so the bigint set
 # distance MobilityDB declares `float` registers DOUBLE while the kernel keeps its int64.
 # Admitted by @ingroup: the distances, and the comparators' `cmp`, whose eq/ne/lt/le/gt/ge
-# siblings the set and span loops already register over every type.
-CONTAINER_SCALAR_GROUPS = {"meos_setspan_dist", "meos_setspan_comp"}
+# siblings the set, span and box loops already register over every type.
+CONTAINER_SCALAR_GROUPS = {"meos_setspan_dist", "meos_setspan_comp",
+                           "meos_box_comp", "meos_geo_box_comp"}
 # The boxes are containers of one type each: the out-parameter accessors (xMin(tbox)), the
 # conversions to and from a span or a set (intspan(tbox), tbox(intset)) and the duration
 # transformations (shiftTime(stbox, interval, interval)) of a retired box group reach the
@@ -4599,7 +4600,14 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_box_inout", "meos_geo_box_inout",
                   # The box constructors: tbox and stbox from a value, a span, a timestamp, a
                   # period, a geometry and their pairs
-                  "meos_box_constructor", "meos_geo_box_constructor"}
+                  "meos_box_constructor", "meos_geo_box_constructor",
+                  # The box comparisons (cmp, = <> < <= > >=, eq .. ge, hash, hashExtended) and
+                  # the topological and position operators of tbox and stbox: the bare names and
+                  # the operators from the (X,X)->bool arm of the box loops, cmp from
+                  # shape_container_scalar
+                  "meos_box_comp", "meos_geo_box_comp",
+                  "meos_box_bbox_topo", "meos_geo_box_topo",
+                  "meos_box_bbox_pos", "meos_geo_box_pos"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).

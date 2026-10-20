@@ -914,6 +914,18 @@ inline Temporal * trgeometry_append_tsequence_expand(Temporal * p0, const Tempor
 
 
 // ===== @ingroup meos_box_comp =====
+static void Gen_tbox_cmp(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, int32_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a0, string_t a1) {
+            TBox *x0 = BlobToTbox(a0);
+            TBox *x1 = BlobToTbox(a1);
+            int32_t r = tbox_cmp(x0, x1);
+            free(x0); free(x1);
+            return (int32_t) r;
+        });
+}
+
 static void Gen_tbox_hash(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, uint32_t>(args.data[0], result, args.size(),
@@ -4091,8 +4103,9 @@ static void Gen_temporal_lcss_distance(DataChunk &args, ExpressionState &, Vecto
 } // anonymous
 
 void RegisterGenerated_meos_box_comp(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {TboxType::tbox()}, LogicalType::UINTEGER, Gen_tbox_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {TboxType::tbox(), TboxType::tbox()}, LogicalType::INTEGER, Gen_tbox_cmp));
     RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {TboxType::tbox(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_tbox_hash_extended));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {TboxType::tbox()}, LogicalType::UINTEGER, Gen_tbox_hash));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {TboxType::tbox(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_tbox_eq));
     RegisterSerializedScalarFunction(loader, ScalarFunction("=", {TboxType::tbox(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_tbox_eq));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {TboxType::tbox(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_tbox_ge));
