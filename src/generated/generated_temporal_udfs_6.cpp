@@ -309,6 +309,14 @@ inline text *MakeText(string_t s) {
     memcpy(VARDATA(t), s.GetData(), len);
     return t;
 }
+// A geography from a DuckDB GEOMETRY, read as geodetic in the default SRID as MobilityDB
+// reads a geography literal; caller frees.
+inline GSERIALIZED *GeogFromGeometry(string_t blob) {
+    GSERIALIZED *gs = GeometryToGSerialized(blob, 0);
+    GSERIALIZED *geog = geom_to_geog(gs);
+    free(gs);
+    return geog;
+}
 // text** from a DuckDB LIST(VARCHAR); the caller frees via FreeTextArr.
 inline text **ListToTextArr(Vector &child, list_entry_t le, int *count) {
     auto data = FlatVector::GetData<string_t>(child);

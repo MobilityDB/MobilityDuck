@@ -1,0 +1,343 @@
+# name: test/sql/parity/100_temporal_constructors.test
+# description: The constructors of the temporal values from a base value and a timestamp, a set,
+#             a span or a span set, and the sequence constructors over an array, generated from
+#             the catalog. The expected values are MobilityDB's own answers:
+#             mobilitydb/test/temporal/expected/022_temporal.test.out for the alphanumeric types,
+#             mobilitydb/test/geo/expected/052_tpoint.test.out and 052_tgeo.test.out for the
+#             geometries, mobilitydb/test/json/expected/452_tjsonb.test.out for the JSON values and
+#             mobilitydb/test/pointcloud/expected/420_tpcpoint.test.out and 430_tpcpatch.test.out
+#             for the point clouds. A value is compared through its text with the text of the value
+#             MobilityDB answers, so the session time zone enters both sides alike.
+# group: [parity]
+
+require mobilityduck
+
+# ---------------------------------------------------------------------------
+# An alphanumeric temporal value from a value and a timestamp, a set, a span or a span set
+# ---------------------------------------------------------------------------
+
+query IIIII
+SELECT
+  asText(tbool(true, timestamptz '2012-01-01 08:00:00'))
+    = asText(tbool 't@2012-01-01 08:00:00'),
+  asText(tint(1, timestamptz '2012-01-01 08:00:00'))
+    = asText(tint '1@2012-01-01 08:00:00'),
+  asText(tbigint(1::BIGINT, timestamptz '2012-01-01 08:00:00'))
+    = asText(tbigint '1@2012-01-01 08:00:00'),
+  asText(tfloat(1, timestamptz '2012-01-01 08:00:00'))
+    = asText(tfloat '1@2012-01-01 08:00:00'),
+  asText(ttext('AAA', timestamptz '2001-01-01 08:00:00'))
+    = asText(ttext '"AAA"@2001-01-01 08:00:00');
+----
+true	true	true	true	true
+
+query IIIII
+SELECT
+  asText(tbool(true, tstzset '{2012-01-01, 2012-01-02, 2012-01-03}'))
+    = asText(tbool '{t@2012-01-01, t@2012-01-02, t@2012-01-03}'),
+  asText(tint(1, tstzset '{2012-01-01, 2012-01-02, 2012-01-03}'))
+    = asText(tint '{1@2012-01-01, 1@2012-01-02, 1@2012-01-03}'),
+  asText(tbigint(1::BIGINT, tstzset '{2012-01-01, 2012-01-02, 2012-01-03}'))
+    = asText(tbigint '{1@2012-01-01, 1@2012-01-02, 1@2012-01-03}'),
+  asText(tfloat(1.5, tstzset '{2012-01-01, 2012-01-02, 2012-01-03}'))
+    = asText(tfloat '{1.5@2012-01-01, 1.5@2012-01-02, 1.5@2012-01-03}'),
+  asText(ttext('AAA', tstzset '{2012-01-01, 2012-01-02, 2012-01-03}'))
+    = asText(ttext '{"AAA"@2012-01-01, "AAA"@2012-01-02, "AAA"@2012-01-03}');
+----
+true	true	true	true	true
+
+query IIIIIII
+SELECT
+  asText(tbool(true, tstzspan '[2012-01-01, 2012-01-03]'))
+    = asText(tbool '[t@2012-01-01, t@2012-01-03]'),
+  asText(tint(1, tstzspan '[2012-01-01, 2012-01-03]'))
+    = asText(tint '[1@2012-01-01, 1@2012-01-03]'),
+  asText(tbigint(1::BIGINT, tstzspan '[2012-01-01, 2012-01-03]'))
+    = asText(tbigint '[1@2012-01-01, 1@2012-01-03]'),
+  asText(tfloat(1.5, tstzspan '[2012-01-01, 2012-01-01]'))
+    = asText(tfloat '[1.5@2012-01-01]'),
+  asText(tfloat(1.5, tstzspan '[2012-01-01, 2012-01-03]'))
+    = asText(tfloat '[1.5@2012-01-01, 1.5@2012-01-03]'),
+  asText(tfloat(1.5, tstzspan '[2012-01-01, 2012-01-03]', 'step'))
+    = asText(tfloat 'Interp=Step;[1.5@2012-01-01, 1.5@2012-01-03]'),
+  asText(ttext('AAA', tstzspan '[2012-01-01, 2012-01-03]'))
+    = asText(ttext '["AAA"@2012-01-01, "AAA"@2012-01-03]');
+----
+true	true	true	true	true	true	true
+
+query IIIIII
+SELECT
+  asText(tbool(true, tstzspanset '{[2012-01-01, 2012-01-03]}'))
+    = asText(tbool '{[t@2012-01-01, t@2012-01-03]}'),
+  asText(tint(1, tstzspanset '{[2012-01-01, 2012-01-03]}'))
+    = asText(tint '{[1@2012-01-01, 1@2012-01-03]}'),
+  asText(tbigint(1::BIGINT, tstzspanset '{[2012-01-01, 2012-01-03]}'))
+    = asText(tbigint '{[1@2012-01-01, 1@2012-01-03]}'),
+  asText(tfloat(1.5, tstzspanset '{[2012-01-01, 2012-01-03]}'))
+    = asText(tfloat '{[1.5@2012-01-01, 1.5@2012-01-03]}'),
+  asText(tfloat(1.5, tstzspanset '{[2012-01-01, 2012-01-03]}', 'step'))
+    = asText(tfloat 'Interp=Step;{[1.5@2012-01-01, 1.5@2012-01-03]}'),
+  asText(ttext('AAA', tstzspanset '{[2012-01-01, 2012-01-03]}'))
+    = asText(ttext '{["AAA"@2012-01-01, "AAA"@2012-01-03]}');
+----
+true	true	true	true	true	true
+
+# A NULL argument answers NULL, as the strict SQL function does
+query II
+SELECT tint(NULL::INTEGER, timestamptz '2012-01-01') IS NULL,
+  tfloat(1.5, NULL::tstzspan) IS NULL;
+----
+true	true
+
+# ---------------------------------------------------------------------------
+# A temporal point and a temporal geometry from a geometry and a time value
+# ---------------------------------------------------------------------------
+
+query IIII
+SELECT
+  asEWKT(tgeompoint(ST_Point(1,1), timestamptz '2012-01-01 08:00:00'))
+    = asEWKT(tgeompoint 'POINT(1 1)@2012-01-01 08:00:00'),
+  asEWKT(tgeogpoint(ST_Point(1,1), timestamptz '2012-01-01 08:00:00'))
+    = asEWKT(tgeogpoint 'SRID=4326;POINT(1 1)@2012-01-01 08:00:00'),
+  asEWKT(tgeometry(ST_Point(1,1), timestamptz '2012-01-01 08:00:00'))
+    = asEWKT(tgeometry 'POINT(1 1)@2012-01-01 08:00:00'),
+  asEWKT(tgeography(ST_Point(1,1), timestamptz '2012-01-01 08:00:00'))
+    = asEWKT(tgeography 'SRID=4326;POINT(1 1)@2012-01-01 08:00:00');
+----
+true	true	true	true
+
+query IIII
+SELECT
+  asEWKT(tgeompoint(ST_Point(1,1), tstzset '{2012-01-01, 2012-01-02, 2012-01-03}'))
+    = asEWKT(tgeompoint '{POINT(1 1)@2012-01-01, POINT(1 1)@2012-01-02, POINT(1 1)@2012-01-03}'),
+  asEWKT(tgeogpoint(ST_Point(1,1), tstzset '{2012-01-01, 2012-01-02, 2012-01-03}'))
+    = asEWKT(tgeogpoint 'SRID=4326;{POINT(1 1)@2012-01-01, POINT(1 1)@2012-01-02, POINT(1 1)@2012-01-03}'),
+  asEWKT(tgeometry(ST_Point(1,1), tstzset '{2012-01-01, 2012-01-02, 2012-01-03}'))
+    = asEWKT(tgeometry '{POINT(1 1)@2012-01-01, POINT(1 1)@2012-01-02, POINT(1 1)@2012-01-03}'),
+  asEWKT(tgeography(ST_Point(1,1), tstzset '{2012-01-01, 2012-01-02, 2012-01-03}'))
+    = asEWKT(tgeography 'SRID=4326;{POINT(1 1)@2012-01-01, POINT(1 1)@2012-01-02, POINT(1 1)@2012-01-03}');
+----
+true	true	true	true
+
+query IIIIII
+SELECT
+  asEWKT(tgeompoint(ST_Point(1,1), tstzspan '[2012-01-01, 2012-01-03]'))
+    = asEWKT(tgeompoint '[POINT(1 1)@2012-01-01, POINT(1 1)@2012-01-03]'),
+  asEWKT(tgeogpoint(ST_Point(1,1), tstzspan '[2012-01-01, 2012-01-03]'))
+    = asEWKT(tgeogpoint 'SRID=4326;[POINT(1 1)@2012-01-01, POINT(1 1)@2012-01-03]'),
+  asEWKT(tgeometry(ST_Point(1,1), tstzspan '[2012-01-01, 2012-01-03]'))
+    = asEWKT(tgeometry '[POINT(1 1)@2012-01-01, POINT(1 1)@2012-01-03]'),
+  asEWKT(tgeography(ST_Point(1,1), tstzspan '[2012-01-01, 2012-01-03]'))
+    = asEWKT(tgeography 'SRID=4326;[POINT(1 1)@2012-01-01, POINT(1 1)@2012-01-03]'),
+  asEWKT(tgeometry(ST_Point(1,1), tstzspan '[2012-01-01, 2012-01-03]', 'step'))
+    = asEWKT(tgeometry '[POINT(1 1)@2012-01-01, POINT(1 1)@2012-01-03]'),
+  asEWKT(tgeography(ST_Point(1,1), tstzspan '[2012-01-01, 2012-01-03]', 'step'))
+    = asEWKT(tgeography 'SRID=4326;[POINT(1 1)@2012-01-01, POINT(1 1)@2012-01-03]');
+----
+true	true	true	true	true	true
+
+query IIIIII
+SELECT
+  asEWKT(tgeompoint(ST_Point(1,1), tstzspanset '{[2012-01-01, 2012-01-03]}'))
+    = asEWKT(tgeompoint '{[POINT(1 1)@2012-01-01, POINT(1 1)@2012-01-03]}'),
+  asEWKT(tgeogpoint(ST_Point(1,1), tstzspanset '{[2012-01-01, 2012-01-03]}'))
+    = asEWKT(tgeogpoint 'SRID=4326;{[POINT(1 1)@2012-01-01, POINT(1 1)@2012-01-03]}'),
+  asEWKT(tgeometry(ST_Point(1,1), tstzspanset '{[2012-01-01, 2012-01-03]}'))
+    = asEWKT(tgeometry '{[POINT(1 1)@2012-01-01, POINT(1 1)@2012-01-03]}'),
+  asEWKT(tgeography(ST_Point(1,1), tstzspanset '{[2012-01-01, 2012-01-03]}'))
+    = asEWKT(tgeography 'SRID=4326;{[POINT(1 1)@2012-01-01, POINT(1 1)@2012-01-03]}'),
+  asEWKT(tgeometry(ST_Point(1,1), tstzspanset '{[2012-01-01, 2012-01-03]}', 'step'))
+    = asEWKT(tgeometry '{[POINT(1 1)@2012-01-01, POINT(1 1)@2012-01-03]}'),
+  asEWKT(tgeography(ST_Point(1,1), tstzspanset '{[2012-01-01, 2012-01-03]}', 'step'))
+    = asEWKT(tgeography 'SRID=4326;{[POINT(1 1)@2012-01-01, POINT(1 1)@2012-01-03]}');
+----
+true	true	true	true	true	true
+
+# MobilityDB refuses an empty geometry
+statement error
+SELECT tgeometry(ST_GeomFromText('POINT EMPTY'), timestamptz '2001-01-01');
+----
+Only non-empty geometries accepted
+
+# ---------------------------------------------------------------------------
+# The sequence constructors over an array, with the default interpolation of each type
+# ---------------------------------------------------------------------------
+
+query IIII
+SELECT
+  asEWKT(tgeometrySeq([
+    tgeometry(ST_Point(1,1), timestamptz '2012-01-01 08:00:00'),
+    tgeometry(ST_Point(2,2), timestamptz '2012-01-01 08:10:00'),
+    tgeometry(ST_Point(1,1), timestamptz '2012-01-01 08:20:00')], 'discrete'))
+    = asEWKT(tgeometry '{POINT(1 1)@2012-01-01 08:00:00, POINT(2 2)@2012-01-01 08:10:00, POINT(1 1)@2012-01-01 08:20:00}'),
+  asEWKT(tgeographySeq([
+    tgeography(ST_Point(1,1), timestamptz '2012-01-01 08:00:00'),
+    tgeography(ST_Point(2,2), timestamptz '2012-01-01 08:10:00'),
+    tgeography(ST_Point(1,1), timestamptz '2012-01-01 08:20:00')], 'discrete'))
+    = asEWKT(tgeography 'SRID=4326;{POINT(1 1)@2012-01-01 08:00:00, POINT(2 2)@2012-01-01 08:10:00, POINT(1 1)@2012-01-01 08:20:00}'),
+  asEWKT(tgeometrySeq([
+    tgeometry(ST_Point(1,1), timestamptz '2012-01-01 08:00:00'),
+    tgeometry(ST_Point(2,2), timestamptz '2012-01-01 08:10:00'),
+    tgeometry(ST_Point(1,1), timestamptz '2012-01-01 08:20:00')]))
+    = asEWKT(tgeometry '[POINT(1 1)@2012-01-01 08:00:00, POINT(2 2)@2012-01-01 08:10:00, POINT(1 1)@2012-01-01 08:20:00]'),
+  asEWKT(tgeographySeq([
+    tgeography(ST_Point(1,1), timestamptz '2012-01-01 08:00:00'),
+    tgeography(ST_Point(2,2), timestamptz '2012-01-01 08:10:00'),
+    tgeography(ST_Point(1,1), timestamptz '2012-01-01 08:20:00')]))
+    = asEWKT(tgeography 'SRID=4326;[POINT(1 1)@2012-01-01 08:00:00, POINT(2 2)@2012-01-01 08:10:00, POINT(1 1)@2012-01-01 08:20:00]');
+----
+true	true	true	true
+
+query II
+SELECT
+  asEWKT(tgeometrySeqSet([
+    tgeometrySeq([
+      tgeometry(ST_Point(1,1), timestamptz '2012-01-01 08:00:00'),
+      tgeometry(ST_Point(2,2), timestamptz '2012-01-01 08:10:00'),
+      tgeometry(ST_Point(1,1), timestamptz '2012-01-01 08:20:00')]),
+    tgeometrySeq([
+      tgeometry(ST_Point(1,1), timestamptz '2012-01-01 09:00:00'),
+      tgeometry(ST_Point(2,2), timestamptz '2012-01-01 09:10:00'),
+      tgeometry(ST_Point(1,1), timestamptz '2012-01-01 09:20:00')])]))
+    = asEWKT(tgeometry '{[POINT(1 1)@2012-01-01 08:00:00, POINT(2 2)@2012-01-01 08:10:00, POINT(1 1)@2012-01-01 08:20:00], [POINT(1 1)@2012-01-01 09:00:00, POINT(2 2)@2012-01-01 09:10:00, POINT(1 1)@2012-01-01 09:20:00]}'),
+  asEWKT(tgeographySeqSet([
+    tgeographySeq([
+      tgeography(ST_Point(1,1), timestamptz '2012-01-01 08:00:00'),
+      tgeography(ST_Point(2,2), timestamptz '2012-01-01 08:10:00'),
+      tgeography(ST_Point(3,3), timestamptz '2012-01-01 08:20:00')]),
+    tgeographySeq([
+      tgeography(ST_Point(1,1), timestamptz '2012-01-01 09:00:00'),
+      tgeography(ST_Point(2,2), timestamptz '2012-01-01 09:10:00'),
+      tgeography(ST_Point(1,1), timestamptz '2012-01-01 09:20:00')])]))
+    = asEWKT(tgeography 'SRID=4326;{[POINT(1 1)@2012-01-01 08:00:00, POINT(2 2)@2012-01-01 08:10:00, POINT(3 3)@2012-01-01 08:20:00], [POINT(1 1)@2012-01-01 09:00:00, POINT(2 2)@2012-01-01 09:10:00, POINT(1 1)@2012-01-01 09:20:00]}');
+----
+true	true
+
+# A temporal float sequence is linear by default and a temporal integer sequence step
+query II
+SELECT
+  asText(tfloatSeq([tfloat '1@2001-01-01', tfloat '2@2001-01-02']))
+    = asText(tfloat '[1@2001-01-01, 2@2001-01-02]'),
+  asText(tintSeq([tint '1@2001-01-01', tint '2@2001-01-02']))
+    = asText(tint '[1@2001-01-01, 2@2001-01-02]');
+----
+true	true
+
+# ---------------------------------------------------------------------------
+# A temporal JSON value from a JSON value and a time value
+# ---------------------------------------------------------------------------
+
+query II
+SELECT
+  asText(tjsonb('{"geom": "Point(1 1)"}'::jsonb, timestamptz '2012-01-01'))
+    = asText(tjsonb '"{\"geom\": \"Point(1 1)\"}"@2012-01-01'),
+  asText(tjsonbSeq([tjsonb '"{\"geom\": \"Point(1 1)\"}"@2012-01-01',
+                    tjsonb '"{\"geom\": \"Point(2 2)\"}"@2012-02-01'], 'step', false, true))
+    = asText(tjsonb '("{\"geom\": \"Point(1 1)\"}"@2012-01-01, "{\"geom\": \"Point(2 2)\"}"@2012-02-01]');
+----
+true	true
+
+# The discrete sequence, read through its text in the session time zone the extension sets
+query I
+SELECT asText(tjsonbSeq([tjsonb '"{\"geom\": \"Point(1 1)\"}"@2012-01-01',
+                         tjsonb '"{\"geom\": \"Point(2 2)\"}"@2012-02-01'], 'discrete'));
+----
+{"{\"geom\": \"Point(1 1)\"}"@2012-01-01 00:00:00+01, "{\"geom\": \"Point(2 2)\"}"@2012-02-01 00:00:00+01}
+
+# ---------------------------------------------------------------------------
+# A temporal value from its base value written as a literal: DuckDB reads the literal as the
+# base type the constructor declares, as PostgreSQL reads an unknown literal
+# ---------------------------------------------------------------------------
+
+query IIIIII
+SELECT
+  asEWKT(tgeogpoint('Point(1 1)', timestamptz '2012-01-01 08:00:00'))
+    = asEWKT(tgeogpoint 'SRID=4326;POINT(1 1)@2012-01-01 08:00:00'),
+  asEWKT(tgeogpoint('Point(1 1)', tstzspan '[2012-01-01, 2012-01-03]', 'step'))
+    = asEWKT(tgeogpoint 'SRID=4326;Interp=Step;[POINT(1 1)@2012-01-01, POINT(1 1)@2012-01-03]'),
+  asEWKT(tgeometry('Point(1 1)', tstzspan '[2012-01-01, 2012-01-03]'))
+    = asEWKT(tgeometry '[POINT(1 1)@2012-01-01, POINT(1 1)@2012-01-03]'),
+  asEWKT(tgeography('Point(1 1)', timestamptz '2012-01-01 08:00:00'))
+    = asEWKT(tgeography 'SRID=4326;POINT(1 1)@2012-01-01 08:00:00'),
+  asText(tjsonb('{"a": 1}', tstzspan '[2012-01-01, 2012-01-03]'))
+    = asText(tjsonb '["{\"a\": 1}"@2012-01-01, "{\"a\": 1}"@2012-01-03]'),
+  asText(tint(5, timestamptz '2001-01-01')) = asText(tint '5@2001-01-01');
+----
+true	true	true	true	true	true
+
+# ---------------------------------------------------------------------------
+# A temporal point cloud point and patch from a value and a time value, compared with the text
+# of the same value as 420_tpcpoint.test and 430_tpcpatch.test compare them. The text of a
+# pcpoint is the hex of its WKB, read through the schema of its pcid, registered first.
+# ---------------------------------------------------------------------------
+
+statement ok
+CREATE TABLE pointcloud_schemas (
+  pcid         integer PRIMARY KEY,
+  srid         integer NOT NULL,
+  compression  text    NOT NULL DEFAULT 'none',
+  description  text
+);
+
+statement ok
+CREATE TABLE pointcloud_dimensions (
+  pcid            integer NOT NULL,
+  dim_no          integer NOT NULL,
+  dim_name        text    NOT NULL,
+  interpretation  text    NOT NULL,
+  dim_scale       double  NOT NULL DEFAULT 1,
+  dim_offset      double  NOT NULL DEFAULT 0,
+  active          boolean NOT NULL DEFAULT true,
+  description     text,
+  PRIMARY KEY (pcid, dim_no)
+);
+
+statement ok
+INSERT INTO pointcloud_schemas VALUES (1, 0, 'none', 'Three dimensions of type double');
+
+statement ok
+INSERT INTO pointcloud_dimensions VALUES
+  (1, 1, 'X', 'double', 1, 0, true, NULL),
+  (1, 2, 'Y', 'double', 1, 0, true, NULL),
+  (1, 3, 'Z', 'double', 1, 0, true, NULL);
+
+query I
+SELECT pointCloudSchemaRegister(s.pcid, s.srid, s.compression,
+         list({'dim_no': d.dim_no, 'dim_name': d.dim_name,
+               'interpretation': d.interpretation, 'dim_scale': d.dim_scale,
+               'dim_offset': d.dim_offset, 'active': d.active,
+               'description': d.description} ORDER BY d.dim_no))
+FROM pointcloud_schemas s JOIN pointcloud_dimensions d USING (pcid)
+GROUP BY s.pcid, s.srid, s.compression;
+----
+true
+
+query IIIII
+SELECT
+  asText(tpcpoint('0101000000000000000000F03F00000000000000400000000000000840', timestamptz '2024-01-01'))
+    = asText(tpcpoint '0101000000000000000000F03F00000000000000400000000000000840@2024-01-01'),
+  asText(tpcpoint('0101000000000000000000F03F00000000000000400000000000000840', tstzset '{2024-01-01, 2024-01-03}'))
+    = asText(tpcpoint '{0101000000000000000000F03F00000000000000400000000000000840@2024-01-01, 0101000000000000000000F03F00000000000000400000000000000840@2024-01-03}'),
+  asText(tpcpoint('0101000000000000000000F03F00000000000000400000000000000840', tstzspan '[2024-01-01, 2024-01-03]', 'step'))
+    = asText(tpcpoint '[0101000000000000000000F03F00000000000000400000000000000840@2024-01-01, 0101000000000000000000F03F00000000000000400000000000000840@2024-01-03]'),
+  asText(tpcpoint('0101000000000000000000F03F00000000000000400000000000000840', tstzspanset '{[2024-01-01, 2024-01-03]}'))
+    = asText(tpcpoint '{[0101000000000000000000F03F00000000000000400000000000000840@2024-01-01, 0101000000000000000000F03F00000000000000400000000000000840@2024-01-03]}'),
+  asText(tpcpatch('01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040', timestamptz '2024-01-01'))
+    = asText(tpcpatch '01010000000000000002000000000000000000F03F000000000000F03F000000000000F03F000000000000004000000000000000400000000000000040@2024-01-01');
+----
+true	true	true	true	true
+
+query I
+SELECT asText(tpcpointSeq([
+    tpcpoint('0101000000000000000000F03F00000000000000400000000000000840', timestamptz '2024-01-01'),
+    tpcpoint('0101000000000000000000F03F00000000000000400000000000000840', timestamptz '2024-01-02')]))
+  = asText(tpcpoint '[0101000000000000000000F03F00000000000000400000000000000840@2024-01-01, 0101000000000000000000F03F00000000000000400000000000000840@2024-01-02]');
+----
+true
+
+# tpcpointseq_from_base_tstzspan constructs the step sequence, the default MobilityDB declares;
+# any other interpolation is refused
+statement error
+SELECT tpcpoint('0101000000000000000000F03F00000000000000400000000000000840', tstzspan '[2024-01-01, 2024-01-03]', 'linear');
+----
+tpcpoint constructs the step interpolation only

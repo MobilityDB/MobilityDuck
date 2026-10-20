@@ -255,53 +255,6 @@ void TgeompointFunctions::Spatialarr_as_ewkt(DataChunk &args, ExpressionState &s
 	spatialarr_wkt_array(args, state, result, true, OUT_DEFAULT_DECIMAL_DIGITS);
 }
 
-/* ***************************************************
-* Constructor functions
-****************************************************/
-
-void TgeompointFunctions::Tpointinst_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto row_count = args.size();
-    auto arg_count = args.ColumnCount();
-    int32_t srid = 0;
-    if (arg_count > 2) {
-        auto &srid_child = args.data[2];
-        srid_child.Flatten(row_count);
-        srid = srid_child.GetValue(0).GetValue<int32_t>();
-    }
-
-    BinaryExecutor::Execute<string_t, timestamp_tz_t, string_t>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t geometry_blob, timestamp_tz_t ts_duckdb) -> string_t {
-            GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
-            timestamp_tz_t ts_meos = DuckDBToMeosTimestamp(ts_duckdb);
-            Temporal *ret = (Temporal *) tpointinst_make(gs, static_cast<TimestampTz>(ts_meos.value));
-            if (ret == NULL) {
-                free(gs);
-                throw InvalidInputException("Failed to create tgeompoint from geometry and timestamp");
-            }
-
-            size_t ret_size = temporal_mem_size(ret);
-            char *ret_data = (char *)malloc(ret_size);
-            if (!ret_data) {
-                free(ret);
-                free(gs);
-                throw InvalidInputException("Failed to allocate memory for tgeompoint");
-            }
-            memcpy(ret_data, ret, ret_size);
-
-            string_t temp_str(ret_data, ret_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, temp_str);
-
-            free(ret);
-            free(gs);
-            free(ret_data);
-            return stored_data;
-        });
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
 inline void Tspatial_to_stbox_common(Vector &source, Vector &result, idx_t count) {
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,

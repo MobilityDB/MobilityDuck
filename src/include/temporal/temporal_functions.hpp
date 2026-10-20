@@ -34,16 +34,9 @@ struct TemporalFunctions {
     /* ***************************************************
      * Constructor functions
      ****************************************************/
-    template <typename T>
-    static void Tinstant_constructor_common(Vector &value, Vector &ts, Vector &result, idx_t count);
-    static void Tinstant_constructor_text(Vector &value, Vector &ts, Vector &result, idx_t count);
-    static void Tinstant_constructor(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tsequence_constructor(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tsequenceset_constructor(DataChunk &args, ExpressionState &state, Vector &result);
 
-    static void Tsequence_from_base_tstzset(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tsequence_from_base_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tsequenceset_from_base_tstzspanset(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tsequenceset_constructor_gaps(DataChunk &args, ExpressionState &state, Vector &result);
     /***************************************************** 
      * Special cast 
