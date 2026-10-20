@@ -2940,7 +2940,6 @@ void RegisterGenerated_meos_h3_latlng(ExtensionLoader &loader) {
 void RegisterGenerated_meos_pose_conversion(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tpose", {PoseTypes::tpose(), PoseTypes::tpose()}, PoseTypes::tpose(), Gen_tpose_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompoint", {PoseTypes::tpose()}, PoseTypes::tpose(), Gen_tpose_to_tpoint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {PoseTypes::tpose()}, PoseTypes::tpose(), Gen_tpose_to_tpoint));
 }
 
 void RegisterGenerated_meos_posechain_comp_ever(ExtensionLoader &loader) {
@@ -3002,19 +3001,15 @@ void RegisterGenerated_meos_rgeo_dist(ExtensionLoader &loader) {
 void RegisterGenerated_meos_setspan_conversion(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::BIGINT}, SetTypes::bigintset(), Gen_bigint_to_set));
     RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::BIGINT}, SpanTypes::bigintspan(), Gen_bigint_to_span));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {LogicalType::BIGINT}, SpanTypes::bigintspan(), Gen_bigint_to_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanset", {LogicalType::BIGINT}, SpansetTypes::bigintspanset(), Gen_bigint_to_spanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::DATE}, SetTypes::dateset(), Gen_date_to_set));
     RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::DATE}, SpanTypes::datespan(), Gen_date_to_span));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {LogicalType::DATE}, SpanTypes::datespan(), Gen_date_to_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanset", {LogicalType::DATE}, SpansetTypes::datespanset(), Gen_date_to_spanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::DOUBLE}, SetTypes::floatset(), Gen_float_to_set));
     RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::DOUBLE}, SpanTypes::floatspan(), Gen_float_to_span));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {LogicalType::DOUBLE}, SpanTypes::floatspan(), Gen_float_to_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanset", {LogicalType::DOUBLE}, SpansetTypes::floatspanset(), Gen_float_to_spanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::INTEGER}, SetTypes::intset(), Gen_int_to_set));
     RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::INTEGER}, SpanTypes::intspan(), Gen_int_to_span));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {LogicalType::INTEGER}, SpanTypes::intspan(), Gen_int_to_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanset", {LogicalType::INTEGER}, SpansetTypes::intspanset(), Gen_int_to_spanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("span", {SetTypes::intset()}, SpanTypes::intspan(), Gen_set_to_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("span", {SetTypes::bigintset()}, SpanTypes::bigintspan(), Gen_set_to_span));
@@ -3033,32 +3028,19 @@ void RegisterGenerated_meos_setspan_conversion(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanset", {SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), Gen_span_to_spanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::TIMESTAMP_TZ}, SetTypes::tstzset(), Gen_timestamptz_to_set));
     RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::TIMESTAMP_TZ}, SpanTypes::tstzspan(), Gen_timestamptz_to_span));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {LogicalType::TIMESTAMP_TZ}, SpanTypes::tstzspan(), Gen_timestamptz_to_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanset", {LogicalType::TIMESTAMP_TZ}, SpansetTypes::tstzspanset(), Gen_timestamptz_to_spanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tstzset", {SetTypes::dateset()}, SetTypes::tstzset(), Gen_dateset_to_tstzset));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {SetTypes::dateset()}, SetTypes::tstzset(), Gen_dateset_to_tstzset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("intset", {SetTypes::floatset()}, SetTypes::intset(), Gen_floatset_to_intset));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {SetTypes::floatset()}, SetTypes::intset(), Gen_floatset_to_intset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("floatset", {SetTypes::intset()}, SetTypes::floatset(), Gen_intset_to_floatset));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {SetTypes::intset()}, SetTypes::floatset(), Gen_intset_to_floatset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("dateset", {SetTypes::tstzset()}, SetTypes::dateset(), Gen_tstzset_to_dateset));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {SetTypes::tstzset()}, SetTypes::dateset(), Gen_tstzset_to_dateset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tstzspan", {SpanTypes::datespan()}, SpanTypes::tstzspan(), Gen_datespan_to_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {SpanTypes::datespan()}, SpanTypes::tstzspan(), Gen_datespan_to_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("intspan", {SpanTypes::floatspan()}, SpanTypes::intspan(), Gen_floatspan_to_intspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {SpanTypes::floatspan()}, SpanTypes::intspan(), Gen_floatspan_to_intspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("floatspan", {SpanTypes::intspan()}, SpanTypes::floatspan(), Gen_intspan_to_floatspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {SpanTypes::intspan()}, SpanTypes::floatspan(), Gen_intspan_to_floatspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("datespan", {SpanTypes::tstzspan()}, SpanTypes::datespan(), Gen_tstzspan_to_datespan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {SpanTypes::tstzspan()}, SpanTypes::datespan(), Gen_tstzspan_to_datespan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tstzspanset", {SpansetTypes::datespanset()}, SpansetTypes::tstzspanset(), Gen_datespanset_to_tstzspanset));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {SpansetTypes::datespanset()}, SpansetTypes::tstzspanset(), Gen_datespanset_to_tstzspanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("intspanset", {SpansetTypes::floatspanset()}, SpansetTypes::intspanset(), Gen_floatspanset_to_intspanset));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {SpansetTypes::floatspanset()}, SpansetTypes::intspanset(), Gen_floatspanset_to_intspanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("floatspanset", {SpansetTypes::intspanset()}, SpansetTypes::floatspanset(), Gen_intspanset_to_floatspanset));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {SpansetTypes::intspanset()}, SpansetTypes::floatspanset(), Gen_intspanset_to_floatspanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("datespanset", {SpansetTypes::tstzspanset()}, SpansetTypes::datespanset(), Gen_tstzspanset_to_datespanset));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {SpansetTypes::tstzspanset()}, SpansetTypes::datespanset(), Gen_tstzspanset_to_datespanset));
 }
 
 void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {

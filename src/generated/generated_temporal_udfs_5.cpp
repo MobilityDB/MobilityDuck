@@ -4926,7 +4926,6 @@ void RegisterGenerated_meos_pose_base_comp(ExtensionLoader &loader) {
 
 void RegisterGenerated_meos_posechain_conversion(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tpose", {PosechainTypes::tposechain()}, PoseTypes::tpose(), Gen_tposechain_to_tpose));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {PosechainTypes::tposechain()}, PoseTypes::tpose(), Gen_tposechain_to_tpose));
 }
 
 void RegisterGenerated_meos_rgeo_spatialfuncs(ExtensionLoader &loader) {

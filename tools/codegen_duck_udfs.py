@@ -4518,7 +4518,9 @@ def reg_names(f, sqlfn, aliases, argsig=None):
     if bare and bare not in names:
         names.append(bare)
     # The operator symbol is registered only when DuckDB can parse it in an operator
-    # position. Two things put it out of reach:
+    # position. Three things put it out of reach:
+    #   - `::`, the cast syntax, which the parser reads as a cast to a type and never as a
+    #     call; a function under that name is one no query reaches;
     #   - a name containing '#', which the lexer rejects in any operator position;
     #   - an arity past 2, since operator syntax is unary or binary. MobilityDB binds
     #     such an operator to its OWN 2-argument wrapper (`->` is `tjsonbObjectFieldOpr`,
@@ -4526,7 +4528,7 @@ def reg_names(f, sqlfn, aliases, argsig=None):
     #     function would publish a name no operator syntax reaches.
     # Either way the function stays reachable through its bare name.
     wide = argsig is not None and len([x for x in argsig.strip("{}").split(",") if x.strip()]) > 2
-    if op and "#" not in op and not wide and op not in names:
+    if op and op != "::" and "#" not in op and not wide and op not in names:
         names.append(op)
     return names
 
