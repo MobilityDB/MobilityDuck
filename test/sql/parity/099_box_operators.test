@@ -1,0 +1,272 @@
+# name: test/sql/parity/099_box_operators.test
+# description: The comparisons and the topological and position operators of tbox and stbox,
+#             generated from the catalog. The expected values are MobilityDB's own answers in
+#             mobilitydb/test/temporal/expected/021_tbox.test.out and
+#             mobilitydb/test/geo/expected/051_stbox.test.out. The time position operators
+#             <<#, &<#, #>> and #&> carry a '#', which DuckDB's lexer rejects in an operator
+#             position, so they are read through their function names (tboxBefore ..
+#             stboxOverafter). The comparisons answer the order cmp states: a box is less than
+#             another where cmp answers -1. They are read through their function names eq .. ge:
+#             DuckDB binds the comparison syntax a < b to its own comparison of the BLOB the box
+#             is stored in, which never reaches the registered function "<".
+
+require mobilityduck
+
+# ---------------------------------------------------------------------------
+# cmp over two tbox
+# ---------------------------------------------------------------------------
+
+query IIIIII
+SELECT cmp(tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-02, 2001-01-02])'),
+  cmp(tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-02, 2001-01-02])', tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])'),
+  cmp(tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-03])'),
+  cmp(tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])'),
+  cmp(tbox 'TBOXFLOAT X([1,2])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])'),
+  cmp(tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])', tbox 'TBOXFLOAT X([1,2])');
+----
+-1	1	-1	0	-1	1
+
+# ---------------------------------------------------------------------------
+# The comparisons over two tbox, in the order cmp states
+# ---------------------------------------------------------------------------
+
+query IIIIII
+SELECT eq(tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-02, 2001-01-02])'),
+  ne(tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-02, 2001-01-02])'),
+  lt(tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-02, 2001-01-02])'),
+  le(tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-02, 2001-01-02])'),
+  gt(tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-02, 2001-01-02])'),
+  ge(tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-02, 2001-01-02])');
+----
+false	true	true	true	false	false
+
+query IIIIII
+SELECT eq(tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])'),
+  ne(tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])'),
+  lt(tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])'),
+  le(tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])'),
+  gt(tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])'),
+  ge(tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])');
+----
+true	false	false	true	false	true
+
+query IIIIII
+SELECT eq(tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-02, 2001-01-02])', tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])'),
+  ne(tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-02, 2001-01-02])', tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])'),
+  lt(tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-02, 2001-01-02])', tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])'),
+  le(tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-02, 2001-01-02])', tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])'),
+  gt(tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-02, 2001-01-02])', tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])'),
+  ge(tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-02, 2001-01-02])', tbox 'TBOXFLOAT XT([1.0,1.0],[2001-01-02,2001-01-02])');
+----
+false	true	false	false	true	true
+
+# ---------------------------------------------------------------------------
+# The topological operators over two tbox
+# ---------------------------------------------------------------------------
+
+query IIIII
+SELECT tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])' && tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])',
+  tbox 'TBOXFLOAT XT([1.0, 2.0],[2001-01-02, 2001-02-01])' @> tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])',
+  tbox 'TBOXFLOAT XT([1.0, 2.0],[2001-01-02, 2001-02-01])' <@ tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])',
+  tbox 'TBOXFLOAT XT([1.0, 2.0],[2001-01-02, 2001-02-01])' -|- tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])',
+  tbox 'TBOXFLOAT XT([1.0, 2.0],[2001-01-02, 2001-02-01])' ~= tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])';
+----
+true	false	false	true	false
+
+query IIIII
+SELECT tbox 'TBOXFLOAT XT([1,5],[2001-01-01,2001-01-05])' -|- tbox 'TBOXFLOAT XT([5,9],[2001-06-01,2001-06-05])',
+  tbox 'TBOXFLOAT XT([1,5],[2001-01-01,2001-01-05])' -|- tbox 'TBOXFLOAT XT([5,9],[2001-01-05,2001-01-09])',
+  tbox 'TBOXFLOAT XT([1,5],[2001-01-01,2001-01-09])' -|- tbox 'TBOXFLOAT XT([5,9],[2001-01-05,2001-01-12])',
+  tbox 'TBOXFLOAT X([1,5])' -|- tbox 'TBOXFLOAT X([5,9])',
+  tbox 'TBOXFLOAT X([1,5])' -|- tbox 'TBOXFLOAT X([3,9])';
+----
+false	true	true	true	false
+
+query IIIII
+SELECT tboxOverlaps(tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])'),
+  tboxContains(tbox 'TBOXFLOAT XT([1.0, 2.0],[2001-01-02, 2001-02-01])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])'),
+  tboxContained(tbox 'TBOXFLOAT XT([1.0, 2.0],[2001-01-02, 2001-02-01])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])'),
+  tboxAdjacent(tbox 'TBOXFLOAT XT([1.0, 2.0],[2001-01-02, 2001-02-01])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])'),
+  tboxSame(tbox 'TBOXFLOAT XT([1.0, 2.0],[2001-01-02, 2001-02-01])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])');
+----
+true	false	false	true	false
+
+statement error
+SELECT tbox 'TBOXFLOAT X([1,2])' && tbox 'TBOX T([2001-01-01,2001-01-02])';
+----
+The temporal values must have at least one common dimension
+
+statement error
+SELECT tbox 'TBOXFLOAT X([1,2])' -|- tbox 'TBOX T([2001-01-01,2001-01-02])';
+----
+The temporal values must have at least one common dimension
+
+# ---------------------------------------------------------------------------
+# The position operators over two tbox
+# ---------------------------------------------------------------------------
+
+query IIII
+SELECT tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])' << tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])',
+  tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])' &< tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])',
+  tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])' >> tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])',
+  tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])' &> tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])';
+----
+false	true	false	true
+
+query IIIIIIII
+SELECT tboxLeft(tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])'),
+  tboxOverleft(tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])'),
+  tboxRight(tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])'),
+  tboxOverright(tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])'),
+  tboxBefore(tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])'),
+  tboxOverbefore(tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])'),
+  tboxAfter(tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])'),
+  tboxOverafter(tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])', tbox 'TBOXFLOAT XT([1.0,2.0],[2001-01-01,2001-01-02])');
+----
+false	true	false	true	false	true	false	true
+
+statement error
+SELECT tbox 'TBOXFLOAT X([1,2])' << tbox 'TBOX T([2001-01-01,2001-01-02])';
+----
+The tbox must have X dimension
+
+statement error
+SELECT tboxBefore(tbox 'TBOXFLOAT X([1,2])', tbox 'TBOX T([2001-01-01,2001-01-02])');
+----
+The tbox must have T dimension
+
+statement error
+SELECT tboxOverafter(tbox 'TBOXFLOAT X([1,2])', tbox 'TBOX T([2001-01-01,2001-01-02])');
+----
+The tbox must have T dimension
+
+# ---------------------------------------------------------------------------
+# cmp and the comparisons over two stbox
+# ---------------------------------------------------------------------------
+
+query IIIIII
+SELECT cmp(stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-04,2001-01-04])', stbox 'STBOX ZT(((2,2,3),(2,2,3)),[2001-01-04,2001-01-04])'),
+  cmp(stbox 'STBOX ZT(((2,2,3),(2,2,3)),[2001-01-04,2001-01-04])', stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-04,2001-01-04])'),
+  cmp(stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-04,2001-01-04])', stbox 'STBOX ZT(((1,2,4),(1,2,4)),[2001-01-04,2001-01-04])'),
+  cmp(stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-05,2001-01-05])', stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-04,2001-01-04])'),
+  cmp(stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-04,2001-01-04])', stbox 'STBOX ZT(((1,2,3),(2,2,3)),[2001-01-04,2001-01-04])'),
+  cmp(stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-04,2001-01-04])', stbox 'STBOX ZT(((1,2,3),(1,3,3)),[2001-01-04,2001-01-04])');
+----
+-1	1	-1	1	-1	-1
+
+query IIIIII
+SELECT eq(stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-04,2001-01-04])', stbox 'STBOX ZT(((2,2,3),(2,2,3)),[2001-01-04,2001-01-04])'),
+  ne(stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-04,2001-01-04])', stbox 'STBOX ZT(((2,2,3),(2,2,3)),[2001-01-04,2001-01-04])'),
+  lt(stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-04,2001-01-04])', stbox 'STBOX ZT(((2,2,3),(2,2,3)),[2001-01-04,2001-01-04])'),
+  le(stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-04,2001-01-04])', stbox 'STBOX ZT(((2,2,3),(2,2,3)),[2001-01-04,2001-01-04])'),
+  gt(stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-04,2001-01-04])', stbox 'STBOX ZT(((2,2,3),(2,2,3)),[2001-01-04,2001-01-04])'),
+  ge(stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-04,2001-01-04])', stbox 'STBOX ZT(((2,2,3),(2,2,3)),[2001-01-04,2001-01-04])');
+----
+false	true	true	true	false	false
+
+query IIIIII
+SELECT eq(stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-05,2001-01-05])', stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-04,2001-01-04])'),
+  ne(stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-05,2001-01-05])', stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-04,2001-01-04])'),
+  lt(stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-05,2001-01-05])', stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-04,2001-01-04])'),
+  le(stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-05,2001-01-05])', stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-04,2001-01-04])'),
+  gt(stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-05,2001-01-05])', stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-04,2001-01-04])'),
+  ge(stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-05,2001-01-05])', stbox 'STBOX ZT(((1,2,3),(1,2,3)),[2001-01-04,2001-01-04])');
+----
+false	true	false	false	true	true
+
+# ---------------------------------------------------------------------------
+# The topological operators over two stbox
+# ---------------------------------------------------------------------------
+
+query IIIII
+SELECT stbox 'STBOX X((1.0,1.0),(2.0,2.0))' && stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-01,2001-01-01])',
+  stbox 'STBOX X((1.0,1.0),(2.0,2.0))' @> stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-01,2001-01-01])',
+  stbox 'STBOX X((1.0,1.0),(2.0,2.0))' <@ stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-01,2001-01-01])',
+  stbox 'STBOX X((1.0,1.0),(2.0,2.0))' -|- stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-01,2001-01-01])',
+  stbox 'STBOX X((1.0,1.0),(2.0,2.0))' ~= stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-01,2001-01-01])';
+----
+true	true	false	true	false
+
+query IIIII
+SELECT stboxOverlaps(stbox 'STBOX X((1.0,1.0),(2.0,2.0))', stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-01,2001-01-01])'),
+  stboxContains(stbox 'STBOX X((1.0,1.0),(2.0,2.0))', stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-01,2001-01-01])'),
+  stboxContained(stbox 'STBOX X((1.0,1.0),(2.0,2.0))', stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-01,2001-01-01])'),
+  stboxAdjacent(stbox 'STBOX X((1.0,1.0),(2.0,2.0))', stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-01,2001-01-01])'),
+  stboxSame(stbox 'STBOX Z((1.0,1.0,1.0),(2.0,2.0,2.0))', stbox 'STBOX Z((1.0,1.0,1.0),(2.0,2.0,3.0))');
+----
+true	true	false	true	false
+
+query IIII
+SELECT stbox 'STBOX XT(((1,1),(5,5)),[2001-01-01,2001-01-05))' -|- stbox 'STBOX XT(((1,1),(5,5)),[2001-01-05,2001-01-09])',
+  stbox 'STBOX XT(((1,1),(5,5)),[2001-01-01,2001-01-05])' -|- stbox 'STBOX XT(((5,1),(9,5)),[2001-06-01,2001-06-05])',
+  stbox 'STBOX X((1,1),(5,5))' -|- stbox 'STBOX X((3,3),(3,3))',
+  stbox 'STBOX X((1,1),(5,5))' -|- stbox 'STBOX X((5,5),(9,9))';
+----
+true	false	false	true
+
+statement error
+SELECT stbox 'STBOX X((1.0,1.0),(2.0,2.0))' && stbox 'GEODSTBOX Z((1.0,2.0,3.0),(1.0,2.0,3.0))';
+----
+Operation on mixed SRID
+
+statement error
+SELECT stbox 'STBOX X((1.0,1.0),(2.0,2.0))' @> stbox 'STBOX T([2001-01-01, 2001-01-02])';
+----
+The temporal values must have at least one common dimension
+
+# ---------------------------------------------------------------------------
+# The position operators over two stbox
+# ---------------------------------------------------------------------------
+
+query IIIIIIII
+SELECT stbox 'STBOX X((1.0,1.0),(2.0,2.0))' << stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-01,2001-01-01])',
+  stbox 'STBOX X((1.0,1.0),(2.0,2.0))' &< stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-01,2001-01-01])',
+  stbox 'STBOX X((1.0,1.0),(2.0,2.0))' >> stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-01,2001-01-01])',
+  stbox 'STBOX X((1.0,1.0),(2.0,2.0))' &> stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-01,2001-01-01])',
+  stbox 'STBOX X((1.0,1.0),(2.0,2.0))' <<| stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-03,2001-01-03])',
+  stbox 'STBOX X((1.0,1.0),(2.0,2.0))' &<| stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-03,2001-01-03])',
+  stbox 'STBOX X((1.0,1.0),(2.0,2.0))' |>> stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-03,2001-01-03])',
+  stbox 'STBOX X((1.0,1.0),(2.0,2.0))' |&> stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-03,2001-01-03])';
+----
+false	false	false	true	false	true	false	false
+
+query IIII
+SELECT stbox 'STBOX Z((1.0,1.0,1.0),(2.0,2.0,2.0))' <</ stbox 'STBOX Z((1.0,2.0,3.0),(1.0,2.0,3.0))',
+  stbox 'STBOX Z((1.0,1.0,1.0),(2.0,2.0,2.0))' &</ stbox 'STBOX Z((1.0,2.0,3.0),(1.0,2.0,3.0))',
+  stbox 'STBOX Z((1.0,1.0,1.0),(2.0,2.0,2.0))' />> stbox 'STBOX Z((1.0,2.0,3.0),(1.0,2.0,3.0))',
+  stbox 'STBOX Z((1.0,1.0,1.0),(2.0,2.0,2.0))' /&> stbox 'STBOX Z((1.0,2.0,3.0),(1.0,2.0,3.0))';
+----
+true	true	false	false
+
+query IIIIIIII
+SELECT stboxLeft(stbox 'STBOX X((1.0,1.0),(2.0,2.0))', stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-01,2001-01-01])'),
+  stboxOverright(stbox 'STBOX X((1.0,1.0),(2.0,2.0))', stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-01,2001-01-01])'),
+  stboxBelow(stbox 'STBOX X((1.0,1.0),(2.0,2.0))', stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-03,2001-01-03])'),
+  stboxOverbelow(stbox 'STBOX X((1.0,1.0),(2.0,2.0))', stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-03,2001-01-03])'),
+  stboxAbove(stbox 'STBOX X((1.0,1.0),(2.0,2.0))', stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-03,2001-01-03])'),
+  stboxFront(stbox 'STBOX Z((1.0,1.0,1.0),(2.0,2.0,2.0))', stbox 'STBOX Z((1.0,2.0,3.0),(1.0,2.0,3.0))'),
+  stboxBack(stbox 'STBOX Z((1.0,1.0,1.0),(2.0,2.0,2.0))', stbox 'STBOX Z((1.0,2.0,3.0),(1.0,2.0,3.0))'),
+  stboxOverback(stbox 'STBOX Z((1.0,1.0,1.0),(2.0,2.0,2.0))', stbox 'STBOX Z((1.0,2.0,3.0),(1.0,2.0,3.0))');
+----
+false	true	false	true	false	true	false	false
+
+query IIII
+SELECT stboxBefore(stbox 'STBOX XT(((1.0,1.0),(2.0,2.0)),[2001-01-01,2001-01-02])', stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-01,2001-01-01])'),
+  stboxOverbefore(stbox 'STBOX XT(((1.0,1.0),(2.0,2.0)),[2001-01-01,2001-01-02])', stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-01,2001-01-01])'),
+  stboxAfter(stbox 'STBOX XT(((1.0,1.0),(2.0,2.0)),[2001-01-01,2001-01-02])', stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-01,2001-01-01])'),
+  stboxOverafter(stbox 'STBOX XT(((1.0,1.0),(2.0,2.0)),[2001-01-01,2001-01-02])', stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-01,2001-01-01])');
+----
+false	false	false	true
+
+query IIII
+SELECT stboxBefore(stbox 'STBOX ZT(((1.0,1.0,1.0),(2.0,2.0,2.0)),[2001-01-01,2001-01-02])', stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-03,2001-01-03])'),
+  stboxOverbefore(stbox 'STBOX ZT(((1.0,1.0,1.0),(2.0,2.0,2.0)),[2001-01-01,2001-01-02])', stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-03,2001-01-03])'),
+  stboxAfter(stbox 'STBOX ZT(((1.0,1.0,1.0),(2.0,2.0,2.0)),[2001-01-01,2001-01-02])', stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-03,2001-01-03])'),
+  stboxOverafter(stbox 'STBOX ZT(((1.0,1.0,1.0),(2.0,2.0,2.0)),[2001-01-01,2001-01-02])', stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-03,2001-01-03])');
+----
+true	true	false	false
+
+statement error
+SELECT stbox 'STBOX Z((1.0,1.0,1.0),(2.0,2.0,2.0))' <</ stbox 'GEODSTBOX Z((1.0,2.0,3.0),(1.0,2.0,3.0))';
+----
+Operation on mixed SRID

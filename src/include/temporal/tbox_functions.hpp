@@ -58,39 +58,10 @@ struct TboxFunctions {
     // TODO: Selectivity functions
     
     /********************************************************
-    * Topological operators 
-    ********************************************************/
-    static void Contains_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Contained_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Overlaps_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);    
-    static void Same_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Adjacent_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /********************************************************
-    * Position operators
-    ********************************************************/
-    static void Left_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Overleft_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Right_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Overright_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Before_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Overbefore_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void After_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Overafter_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /********************************************************
     * set operators
     ********************************************************/
     static void Intersection_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     // TODO: extend aggregation
-    // TODO: Comparison
-    static void Tbox_eq(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tbox_ne(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tbox_lt(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tbox_le(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tbox_ge(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tbox_gt(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tbox_cmp(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * WKB / hex-WKB serialization + hashing
