@@ -80,16 +80,16 @@ SELECT tgeompointFromEWKT(asEWKT(tgeompoint '[POINT(0 0)@2000-01-01]'))
 ----
 true
 
-# asMFJSON with bbox flag
+# asMFJSON with the bounding box (option 1)
 
 query I
-SELECT length(asMFJSON(tgeompoint '[POINT(0 0)@2000-01-01]', TRUE)) >= length(asMFJSON(tgeompoint '[POINT(0 0)@2000-01-01]', FALSE));
+SELECT length(asMFJSON(tgeompoint '[POINT(0 0)@2000-01-01]', 1)) >= length(asMFJSON(tgeompoint '[POINT(0 0)@2000-01-01]', 0));
 ----
 true
 
-# asMFJSON with full options (bbox, flags, precision, srs)
+# asMFJSON with its options, flags and maximum decimal digits
 
 query I
-SELECT length(asMFJSON(tgeompoint '[POINT(0 0)@2000-01-01]', FALSE, 0, 6, 'EPSG:4326')) > 0;
+SELECT length(asMFJSON(tgeompoint '[POINT(0 0)@2000-01-01]', 0, 0, 6)) > 0;
 ----
 true

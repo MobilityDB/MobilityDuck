@@ -682,6 +682,21 @@ inline TBox * tbigintbox_shift_scale_hasshift_haswidth(const TBox * p0, int64_t 
 inline TBox * union_tbox_tbox_strict(const TBox * p0, const TBox * p1) {
     return ::union_tbox_tbox(p0, p1, true);
 }
+inline char * temporal_as_mfjson_srs(const Temporal * p0, int p1, int p2, int p3) {
+    return ::temporal_as_mfjson(p0, p1, p2, p3, NULL);
+}
+inline char * temporal_as_mfjson_flags_precision_srs(const Temporal * p0, int p1) {
+    return ::temporal_as_mfjson(p0, p1, 0, 15, NULL);
+}
+inline char * temporal_as_mfjson_flags_0_option_0_precision_15_srs_null(const Temporal * p0) {
+    return ::temporal_as_mfjson(p0, 0, 0, 15, NULL);
+}
+inline char * temporal_as_mfjson_precision_srs(const Temporal * p0, int p1, int p2) {
+    return ::temporal_as_mfjson(p0, p1, p2, 15, NULL);
+}
+inline char * temporal_as_mfjson_flags_0_option_0_precision_out_default_decimal_digits_srs_null(const Temporal * p0) {
+    return ::temporal_as_mfjson(p0, 0, 0, 15, NULL);
+}
 inline TSequenceSet * temporal_segm_duration_atleast_true(const Temporal * p0, const MeosInterval * p1, bool p2) {
     return ::temporal_segm_duration(p0, p1, true, p2);
 }
@@ -849,6 +864,9 @@ inline STBox * stbox_shift_scale_time_shift(const STBox * p0, const MeosInterval
 }
 inline STBox * union_stbox_stbox_strict(const STBox * p0, const STBox * p1) {
     return ::union_stbox_stbox(p0, p1, true);
+}
+inline char * tspatial_as_ewkt_maxdd(const Temporal * p0) {
+    return ::tspatial_as_ewkt(p0, 15);
 }
 inline Temporal * bearing_tpoint_point_invert_invert_no(const Temporal * p0, const GSERIALIZED * p1) {
     return ::bearing_tpoint_point(p0, p1, false);
@@ -1075,6 +1093,15 @@ static void Gen_h3index_hash_extended(DataChunk &args, ExpressionState &, Vector
 
 
 // ===== @ingroup meos_h3_set_inout =====
+static void Gen_h3indexset_in(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *r = h3indexset_in(in.GetString().c_str());
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
 static void Gen_h3indexset_out(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
@@ -1509,6 +1536,17 @@ static void Gen_ever_ne_tpose_tpose(DataChunk &args, ExpressionState &, Vector &
             free(t1); free(t2);
             if (r < 0) { mask.SetInvalid(idx); return bool(); }
             return (r != 0);
+        });
+}
+
+
+// ===== @ingroup meos_pose_inout =====
+static void Gen_tpose_in(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *r = tpose_in(in.GetString().c_str());
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -2399,6 +2437,7 @@ void RegisterGenerated_meos_h3_base_accessor(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_h3_set_inout(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("h3indexset", {LogicalType::VARCHAR}, SetTypes::h3indexset(), Gen_h3indexset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::h3indexset()}, LogicalType::VARCHAR, Gen_h3indexset_out));
 }
 
@@ -2467,6 +2506,10 @@ void RegisterGenerated_meos_pose_comp_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {PoseTypes::tpose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_ever_ne_tpose_tpose));
 }
 
+void RegisterGenerated_meos_pose_inout(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpose", {LogicalType::VARCHAR}, PoseTypes::tpose(), Gen_tpose_in));
+}
+
 void RegisterGenerated_meos_pose_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("applyPose", {PoseTypes::tpose(), PoseTypes::pose()}, PoseTypes::tpose(), Gen_tpose_compose_pose));
     RegisterSerializedScalarFunction(loader, ScalarFunction("applyPose", {PoseTypes::tpose(), PoseTypes::tpose()}, PoseTypes::tpose(), Gen_tpose_compose_tpose));
@@ -2491,12 +2534,14 @@ void RegisterGenerated_meos_posechain_accessor(ExtensionLoader &loader) {
 void RegisterGenerated_meos_quadbin_base_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("quadbinFromHexWKB", {LogicalType::VARCHAR}, QuadbinTypes::quadbin(), Gen_quadbin_from_hexwkb));
     RegisterSerializedScalarFunction(loader, ScalarFunction("quadbinFromText", {LogicalType::VARCHAR}, QuadbinTypes::quadbin(), Gen_quadbin_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("quadbin", {LogicalType::VARCHAR}, QuadbinTypes::quadbin(), Gen_quadbin_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {QuadbinTypes::quadbin()}, LogicalType::VARCHAR, Gen_quadbin_out));
 }
 
 void RegisterGenerated_meos_quadbin_set_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("quadbinsetFromText", {LogicalType::VARCHAR}, SetTypes::quadbinset(), Gen_quadbinset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("quadbinsetFromEWKT", {LogicalType::VARCHAR}, SetTypes::quadbinset(), Gen_quadbinset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("quadbinset", {LogicalType::VARCHAR}, SetTypes::quadbinset(), Gen_quadbinset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::quadbinset()}, LogicalType::VARCHAR, Gen_quadbinset_out));
 }
 

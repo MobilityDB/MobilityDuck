@@ -23,7 +23,6 @@ struct TgeogpointType {
     static void RegisterType(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
     static void RegisterScalarFunctions(ExtensionLoader &loader);
-    static void RegisterRoundtripIO(ExtensionLoader &loader);
 };
 
 // Temporal geographies — the geographic-coordinate-system counterpart to
@@ -36,7 +35,6 @@ struct TGeogpointType {
     static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterScalarFunctions(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
-    static void RegisterScalarInOutFunctions(ExtensionLoader &loader);
 };
 
 } // namespace duckdb

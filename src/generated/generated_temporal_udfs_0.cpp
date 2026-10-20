@@ -682,6 +682,21 @@ inline TBox * tbigintbox_shift_scale_hasshift_haswidth(const TBox * p0, int64_t 
 inline TBox * union_tbox_tbox_strict(const TBox * p0, const TBox * p1) {
     return ::union_tbox_tbox(p0, p1, true);
 }
+inline char * temporal_as_mfjson_srs(const Temporal * p0, int p1, int p2, int p3) {
+    return ::temporal_as_mfjson(p0, p1, p2, p3, NULL);
+}
+inline char * temporal_as_mfjson_flags_precision_srs(const Temporal * p0, int p1) {
+    return ::temporal_as_mfjson(p0, p1, 0, 15, NULL);
+}
+inline char * temporal_as_mfjson_flags_0_option_0_precision_15_srs_null(const Temporal * p0) {
+    return ::temporal_as_mfjson(p0, 0, 0, 15, NULL);
+}
+inline char * temporal_as_mfjson_precision_srs(const Temporal * p0, int p1, int p2) {
+    return ::temporal_as_mfjson(p0, p1, p2, 15, NULL);
+}
+inline char * temporal_as_mfjson_flags_0_option_0_precision_out_default_decimal_digits_srs_null(const Temporal * p0) {
+    return ::temporal_as_mfjson(p0, 0, 0, 15, NULL);
+}
 inline TSequenceSet * temporal_segm_duration_atleast_true(const Temporal * p0, const MeosInterval * p1, bool p2) {
     return ::temporal_segm_duration(p0, p1, true, p2);
 }
@@ -850,6 +865,9 @@ inline STBox * stbox_shift_scale_time_shift(const STBox * p0, const MeosInterval
 inline STBox * union_stbox_stbox_strict(const STBox * p0, const STBox * p1) {
     return ::union_stbox_stbox(p0, p1, true);
 }
+inline char * tspatial_as_ewkt_maxdd(const Temporal * p0) {
+    return ::tspatial_as_ewkt(p0, 15);
+}
 inline Temporal * bearing_tpoint_point_invert_invert_no(const Temporal * p0, const GSERIALIZED * p1) {
     return ::bearing_tpoint_point(p0, p1, false);
 }
@@ -922,6 +940,16 @@ inline Temporal * trgeometry_append_tsequence_expand(Temporal * p0, const Tempor
 
 
 // ===== @ingroup meos_cbuffer_base_inout =====
+static void Gen_cbuffer_in(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Cbuffer *r = cbuffer_in(in.GetString().c_str());
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return CbufferToBlob(result, r);
+        });
+}
+
 static void Gen_cbuffer_as_ewkt(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
@@ -976,6 +1004,17 @@ static void Gen_cbuffer_srid(DataChunk &args, ExpressionState &, Vector &result)
             int32_t r = cbuffer_srid(v);
             free(v);
             return r;
+        });
+}
+
+
+// ===== @ingroup meos_cbuffer_inout =====
+static void Gen_tcbuffer_in(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *r = tcbuffer_in(in.GetString().c_str());
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -2840,6 +2879,7 @@ static void Gen_tint_value_boxes_border_inc_vorigin(DataChunk &args, ExpressionS
 } // anonymous
 
 void RegisterGenerated_meos_cbuffer_base_inout(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("cbuffer", {LogicalType::VARCHAR}, CbufferTypes::cbuffer(), Gen_cbuffer_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {CbufferTypes::cbuffer(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_cbuffer_as_ewkt));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {CbufferTypes::cbuffer()}, LogicalType::VARCHAR, Gen_cbuffer_as_ewkt_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {CbufferTypes::cbuffer(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_cbuffer_as_text));
@@ -2848,6 +2888,10 @@ void RegisterGenerated_meos_cbuffer_base_inout(ExtensionLoader &loader) {
 
 void RegisterGenerated_meos_cbuffer_base_srid(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {CbufferTypes::cbuffer()}, LogicalType::INTEGER, Gen_cbuffer_srid));
+}
+
+void RegisterGenerated_meos_cbuffer_inout(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tcbuffer", {LogicalType::VARCHAR}, CbufferTypes::tcbuffer(), Gen_tcbuffer_in));
 }
 
 void RegisterGenerated_meos_geo_base_bbox(ExtensionLoader &loader) {
@@ -2944,6 +2988,7 @@ void RegisterGenerated_meos_pose_base_srid(ExtensionLoader &loader) {
 void RegisterGenerated_meos_posechain_set_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("posechainsetFromText", {LogicalType::VARCHAR}, SetTypes::posechainset(), Gen_posechainset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("posechainsetFromEWKT", {LogicalType::VARCHAR}, SetTypes::posechainset(), Gen_posechainset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("posechainset", {LogicalType::VARCHAR}, SetTypes::posechainset(), Gen_posechainset_in));
 }
 
 void RegisterGenerated_meos_rgeo_comp_ever(ExtensionLoader &loader) {

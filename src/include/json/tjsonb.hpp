@@ -18,7 +18,6 @@ struct TJsonbTypes {
     static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterScalarFunctions(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
-    static void RegisterScalarInOutFunctions(ExtensionLoader &loader);
 };
 
 struct TjsonbFunctions {

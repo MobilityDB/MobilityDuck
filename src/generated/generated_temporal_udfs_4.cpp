@@ -682,6 +682,21 @@ inline TBox * tbigintbox_shift_scale_hasshift_haswidth(const TBox * p0, int64_t 
 inline TBox * union_tbox_tbox_strict(const TBox * p0, const TBox * p1) {
     return ::union_tbox_tbox(p0, p1, true);
 }
+inline char * temporal_as_mfjson_srs(const Temporal * p0, int p1, int p2, int p3) {
+    return ::temporal_as_mfjson(p0, p1, p2, p3, NULL);
+}
+inline char * temporal_as_mfjson_flags_precision_srs(const Temporal * p0, int p1) {
+    return ::temporal_as_mfjson(p0, p1, 0, 15, NULL);
+}
+inline char * temporal_as_mfjson_flags_0_option_0_precision_15_srs_null(const Temporal * p0) {
+    return ::temporal_as_mfjson(p0, 0, 0, 15, NULL);
+}
+inline char * temporal_as_mfjson_precision_srs(const Temporal * p0, int p1, int p2) {
+    return ::temporal_as_mfjson(p0, p1, p2, 15, NULL);
+}
+inline char * temporal_as_mfjson_flags_0_option_0_precision_out_default_decimal_digits_srs_null(const Temporal * p0) {
+    return ::temporal_as_mfjson(p0, 0, 0, 15, NULL);
+}
 inline TSequenceSet * temporal_segm_duration_atleast_true(const Temporal * p0, const MeosInterval * p1, bool p2) {
     return ::temporal_segm_duration(p0, p1, true, p2);
 }
@@ -849,6 +864,9 @@ inline STBox * stbox_shift_scale_time_shift(const STBox * p0, const MeosInterval
 }
 inline STBox * union_stbox_stbox_strict(const STBox * p0, const STBox * p1) {
     return ::union_stbox_stbox(p0, p1, true);
+}
+inline char * tspatial_as_ewkt_maxdd(const Temporal * p0) {
+    return ::tspatial_as_ewkt(p0, 15);
 }
 inline Temporal * bearing_tpoint_point_invert_invert_no(const Temporal * p0, const GSERIALIZED * p1) {
     return ::bearing_tpoint_point(p0, p1, false);
@@ -2175,6 +2193,26 @@ static void Gen_jsonbset_pretty(DataChunk &args, ExpressionState &, Vector &resu
 
 
 // ===== @ingroup meos_npoint_base_inout =====
+static void Gen_npoint_in(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Npoint *r = npoint_in(in.GetString().c_str());
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return NpointToBlob(result, r);
+        });
+}
+
+static void Gen_nsegment_in(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Nsegment *r = nsegment_in(in.GetString().c_str());
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return NsegmentToBlob(result, r);
+        });
+}
+
 static void Gen_npoint_as_ewkt(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
@@ -4000,6 +4038,8 @@ void RegisterGenerated_meos_json_set_json(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_npoint_base_inout(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("npoint", {LogicalType::VARCHAR}, NpointTypes::npoint(), Gen_npoint_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("nsegment", {LogicalType::VARCHAR}, NpointTypes::nsegment(), Gen_nsegment_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {NpointTypes::npoint(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_npoint_as_ewkt));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {NpointTypes::npoint()}, LogicalType::VARCHAR, Gen_npoint_as_ewkt_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {NpointTypes::npoint(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_npoint_as_text));
@@ -4009,8 +4049,10 @@ void RegisterGenerated_meos_npoint_base_inout(ExtensionLoader &loader) {
 void RegisterGenerated_meos_pointcloud_set_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("pcpointsetFromText", {LogicalType::VARCHAR}, SetTypes::pcpointset(), Gen_pcpointset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("pcpointsetFromEWKT", {LogicalType::VARCHAR}, SetTypes::pcpointset(), Gen_pcpointset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("pcpointset", {LogicalType::VARCHAR}, SetTypes::pcpointset(), Gen_pcpointset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("pcpatchsetFromText", {LogicalType::VARCHAR}, SetTypes::pcpatchset(), Gen_pcpatchset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("pcpatchsetFromEWKT", {LogicalType::VARCHAR}, SetTypes::pcpatchset(), Gen_pcpatchset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("pcpatchset", {LogicalType::VARCHAR}, SetTypes::pcpatchset(), Gen_pcpatchset_in));
 }
 
 void RegisterGenerated_meos_pose_base_transf(ExtensionLoader &loader) {

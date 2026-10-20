@@ -682,6 +682,21 @@ inline TBox * tbigintbox_shift_scale_hasshift_haswidth(const TBox * p0, int64_t 
 inline TBox * union_tbox_tbox_strict(const TBox * p0, const TBox * p1) {
     return ::union_tbox_tbox(p0, p1, true);
 }
+inline char * temporal_as_mfjson_srs(const Temporal * p0, int p1, int p2, int p3) {
+    return ::temporal_as_mfjson(p0, p1, p2, p3, NULL);
+}
+inline char * temporal_as_mfjson_flags_precision_srs(const Temporal * p0, int p1) {
+    return ::temporal_as_mfjson(p0, p1, 0, 15, NULL);
+}
+inline char * temporal_as_mfjson_flags_0_option_0_precision_15_srs_null(const Temporal * p0) {
+    return ::temporal_as_mfjson(p0, 0, 0, 15, NULL);
+}
+inline char * temporal_as_mfjson_precision_srs(const Temporal * p0, int p1, int p2) {
+    return ::temporal_as_mfjson(p0, p1, p2, 15, NULL);
+}
+inline char * temporal_as_mfjson_flags_0_option_0_precision_out_default_decimal_digits_srs_null(const Temporal * p0) {
+    return ::temporal_as_mfjson(p0, 0, 0, 15, NULL);
+}
 inline TSequenceSet * temporal_segm_duration_atleast_true(const Temporal * p0, const MeosInterval * p1, bool p2) {
     return ::temporal_segm_duration(p0, p1, true, p2);
 }
@@ -849,6 +864,9 @@ inline STBox * stbox_shift_scale_time_shift(const STBox * p0, const MeosInterval
 }
 inline STBox * union_stbox_stbox_strict(const STBox * p0, const STBox * p1) {
     return ::union_stbox_stbox(p0, p1, true);
+}
+inline char * tspatial_as_ewkt_maxdd(const Temporal * p0) {
+    return ::tspatial_as_ewkt(p0, 15);
 }
 inline Temporal * bearing_tpoint_point_invert_invert_no(const Temporal * p0, const GSERIALIZED * p1) {
     return ::bearing_tpoint_point(p0, p1, false);
@@ -6025,6 +6043,7 @@ void RegisterGenerated_meos_box_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tboxFromHexWKB", {LogicalType::VARCHAR}, TboxType::tbox(), Gen_tbox_from_hexwkb));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tboxFromBinary", {LogicalType::BLOB}, TboxType::tbox(), Gen_tbox_from_wkb));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tboxFromText", {LogicalType::VARCHAR}, TboxType::tbox(), Gen_tbox_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbox", {LogicalType::VARCHAR}, TboxType::tbox(), Gen_tbox_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {TboxType::tbox(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_tbox_out));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {TboxType::tbox()}, LogicalType::VARCHAR, Gen_tbox_out_d));
 }
@@ -6037,16 +6056,6 @@ void RegisterGenerated_meos_h3_hierarchy(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("th3CellToChildPos", {H3indexTypes::th3index(), LogicalType::INTEGER}, TemporalTypes::tbigint(), Gen_th3index_cell_to_child_pos));
     RegisterSerializedScalarFunction(loader, ScalarFunction("th3ChildPosToCell", {H3indexTypes::th3index(), H3indexTypes::th3index(), LogicalType::INTEGER}, H3indexTypes::th3index(), Gen_th3index_child_pos_to_cell));
     RegisterSerializedScalarFunction(loader, ScalarFunction("uncompactCells", {SetTypes::h3indexset(), LogicalType::INTEGER}, SetTypes::h3indexset(), Gen_h3_uncompact_cells));
-}
-
-void RegisterGenerated_meos_internal_temporal_inout(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompointFromMFJSON", {LogicalType::VARCHAR}, TgeompointType::tgeompoint(), Gen_temporal_from_mfjson));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeogpointFromMFJSON", {LogicalType::VARCHAR}, TgeogpointType::tgeogpoint(), Gen_temporal_from_mfjson));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tboolFromMFJSON", {LogicalType::VARCHAR}, TemporalTypes::tbool(), Gen_temporal_from_mfjson));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tintFromMFJSON", {LogicalType::VARCHAR}, TemporalTypes::tint(), Gen_temporal_from_mfjson));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tbigintFromMFJSON", {LogicalType::VARCHAR}, TemporalTypes::tbigint(), Gen_temporal_from_mfjson));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tfloatFromMFJSON", {LogicalType::VARCHAR}, TemporalTypes::tfloat(), Gen_temporal_from_mfjson));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("ttextFromMFJSON", {LogicalType::VARCHAR}, TemporalTypes::ttext(), Gen_temporal_from_mfjson));
 }
 
 void RegisterGenerated_meos_json_base_comp(ExtensionLoader &loader) {

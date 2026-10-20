@@ -1148,17 +1148,26 @@ def yield_to_type_kernels(fns):
     """fns with every signature a non-generic public function also declares on a temporal operand
     (the operand the wrapper dispatches on) removed from the generic records; a generic record
     left with no signature is dropped."""
+    # A reader of a retired I/O group answers the temporal type it reads the same way
+    # (tintFromMFJSON is tint_from_mfjson's, the generic temporal_from_mfjson reading the type
+    # from its result): its signature (text) -> tint is keyed by its result
     own = {(s.get("sqlName") or f["sqlfn"], tuple(s["args"]))
            for f in fns if f.get("api") == "public" and f.get("sqlfn")
            and not f["name"].startswith(GENERIC_PREFIXES)
            for s in f.get("sqlSignatures") or []
            if s["args"] and s["args"][0] in SIG_TEMPORAL_ACC}
+    own |= {(s.get("sqlName") or f["sqlfn"], tuple(s["args"]), s["ret"])
+            for f in fns if f.get("api") == "public" and f.get("sqlfn") and retired(f)
+            and not f["name"].startswith(GENERIC_PREFIXES)
+            for s in f.get("sqlSignatures") or []
+            if s.get("ret") in SIG_TEMPORAL_ACC and s["args"] in (["text"], ["bytea"])}
     out = []
     for f in fns:
         sigs = f.get("sqlSignatures") or []
         if not f["name"].startswith(GENERIC_PREFIXES) or not sigs or not f.get("sqlfn"):
             out.append(f); continue
-        keep = [s for s in sigs if (s.get("sqlName") or f["sqlfn"], tuple(s["args"])) not in own]
+        keep = [s for s in sigs if (s.get("sqlName") or f["sqlfn"], tuple(s["args"])) not in own
+                and (s.get("sqlName") or f["sqlfn"], tuple(s["args"]), s.get("ret")) not in own]
         if len(keep) == len(sigs):
             out.append(f)
         elif keep:
@@ -2088,6 +2097,9 @@ def shape_ternary(f):
     if rb in TEMPORAL_PTR_RET and rn.endswith("*") and "const" not in f["returnType"]["canonical"]:
         return ("temporal", "MD_TEMPORAL", a2, a3)
     if rb in BYVAL_RET and "*" not in rn:
+        return ("scalar:" + rb, scalar_ret_duck(f), a2, a3)
+    # an owned text (asMFJSON(tint, integer, integer)), as #shape_binary answers one
+    if retired(f) and rb in ("text", "char") and rn.endswith("*"):
         return ("scalar:" + rb, scalar_ret_duck(f), a2, a3)
     return None
 
@@ -3321,6 +3333,9 @@ def shape_nary_scalars(f):
     elif rb in CONT_BLOBTO and b0 == "GSERIALIZED":
         # the box of a geometry (stbox(geometry)), typed by the signature as a container is
         ret = "cont:" + rb
+    elif rb == "char" and b0 == "Temporal":
+        # the text of a temporal value (asMFJSON(tfloat, integer, integer, integer))
+        ret = "text"
     else:
         return None
     return ("temporal" if b0 == "Temporal" else "geo", tail, ret)
@@ -3373,6 +3388,12 @@ def emit_nary_scalars(f, first, tail, ret, dval=None):
               "        free(x0);",
               "        if (!r) { outv.SetInvalid(i); continue; }",
               "        out[i] = TemporalToBlob(result, r);"]
+    elif ret == "text":
+        L += [f"        char *r = {name}({call});",
+              "        free(x0);",
+              "        if (!r) { outv.SetInvalid(i); continue; }",
+              "        out[i] = StringVector::AddString(result, r);",
+              "        free(r);"]
     else:
         L += [f"        GSERIALIZED *r = {name}({call});",
               "        free(x0);",
@@ -4611,7 +4632,12 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   # The temporal constructors: a temporal value from a value and a timestamp, a
                   # set, a span or a span set, and the sequence constructors over an array
                   "meos_temporal_constructor", "meos_geo_constructor",
-                  "meos_json_constructor", "meos_pointcloud_constructor"}
+                  "meos_json_constructor", "meos_pointcloud_constructor",
+                  # The temporal I/O: <type>FromText, FromEWKT, FromMFJSON, FromBinary, FromEWKB,
+                  # FromHexEWKB, FromHexWKB and asText, asEWKT, asMFJSON, asBinary, asEWKB,
+                  # asHexEWKB, asHexWKB, one signature per type MobilityDB declares
+                  "meos_temporal_inout", "meos_geo_inout", "meos_json_inout",
+                  "meos_pointcloud_inout"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
@@ -5038,24 +5064,68 @@ _CFH_SERIALIZE = {
                "            return TboxToBlob(result, r);\n",
     "STBox":   "            if (!r) { mask.SetInvalid(idx); return string_t(); }\n"
                "            return StboxToBlob(result, r);\n",
+    "Temporal": "            return TemporalToBlobN(result, r, mask, idx);\n",
 }
-def container_from_text(f):
-    """The container a retired group's public parser answers from one C string, the shape the
-    names of #CONTAINER_FROM_HEXWKB share (set_from_hexwkb, intsetFromHexWKB), derived instead
-    of named, so the typed parsers (intset_in, intsetFromText) take #emit_container_from_hexwkb
-    too: Set, Span or SpanSet; None otherwise."""
-    if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
+# The readers and writers of a temporal value take the arms of the containers: its text, MF-JSON
+# and WKB readers (tint_in, tgeompoint_from_mfjson, temporal_from_wkb) answer it from a C string
+# or from bytes, its WKB writers (temporal_as_wkb, tspatial_as_ewkb, tspatial_as_hexewkb) write it
+# with the variant its endian names, registered over the temporal types each signature declares.
+# The decoder extends #CONT_BLOBTO and the accessors #CONTAINER_FROMHEX_ACC with the temporal
+# entries of #SIG_TEMPORAL_ACC.
+IO_BLOBTO = {**CONT_BLOBTO, "Temporal": "BlobToTemporal"}
+def io_acc(cont):
+    """The SQL type -> DuckDB accessor map a reader or writer of `cont` registers over: the one of
+    #CONTAINER_FROMHEX_ACC, or #SIG_TEMPORAL_ACC for a temporal value."""
+    return SIG_TEMPORAL_ACC if cont == "Temporal" else CONTAINER_FROMHEX_ACC
+def type_input(f):
+    """(type, DuckDB accessor) when f is the input function of a type this surface registers, the
+    public `<type>_in` reading it from one C string (intspan_in, tgeompoint_in, cbuffer_in), else
+    None. A container or a temporal value is typed through #io_acc, a base value through the
+    accessor its #PTR_RET entry names, which names the type itself (CbufferTypes::cbuffer())."""
+    fn = f["name"]
+    if f.get("api") != "public" or not fn.endswith("_in"):
         return None
     ps = f.get("params") or []
     if len(ps) != 1 or norm(ps[0]["canonical"]) != "char *":
         return None
     rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
-    if rb not in CONT_BLOBTO or not rn.endswith("*") or "const" in f["returnType"]["canonical"]:
+    if not rn.endswith("*") or "const" in f["returnType"]["canonical"]:
+        return None
+    t = fn[:-len("_in")]
+    if rb in IO_BLOBTO:
+        acc = io_acc(rb).get(t)
+    else:
+        acc = (PTR_RET.get(rb) or (None,))[0]
+        if not acc or not re.search(r'::%s\(\)$' % re.escape(t), acc):
+            acc = None
+    return (t, acc) if acc else None
+
+def container_from_text(f):
+    """The container a retired group's public parser answers from one C string, the shape the
+    names of #CONTAINER_FROM_HEXWKB share (set_from_hexwkb, intsetFromHexWKB), derived instead
+    of named, so the typed parsers (intset_in, intsetFromText) take #emit_container_from_hexwkb
+    too: Set, Span, SpanSet, a box or a temporal value; and the input function of every type
+    (#type_input), retired or not, which answers the function form of its cast; None
+    otherwise."""
+    if f.get("api") != "public" or not f.get("sqlfn"):
+        return None
+    ps = f.get("params") or []
+    if len(ps) != 1 or norm(ps[0]["canonical"]) != "char *":
+        return None
+    rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
+    if type_input(f):
+        return rb
+    if not retired(f) or rb not in IO_BLOBTO or not rn.endswith("*") \
+            or "const" in f["returnType"]["canonical"]:
         return None
     return rb
 
 def emit_container_from_hexwkb(f, cont):
     fn = f["name"]
+    # a base value (cbuffer_in) serialized as #PTR_RET states it, NULL for no value
+    ser = _CFH_SERIALIZE.get(cont) or (
+        "            if (!r) { mask.SetInvalid(idx); return string_t(); }\n"
+        "            return %s;\n" % (PTR_RET[cont][1] % "r"))
     return ("static void Gen_{fn}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             "    EnsureMeosThreadInitialized();\n"
             "    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
@@ -5063,79 +5133,27 @@ def emit_container_from_hexwkb(f, cont):
             "            {cont} *r = {fn}(in.GetString().c_str());\n"
             "{ser}"
             "        }});\n"
-            "}}\n").format(fn=fn, cont=cont, ser=_CFH_SERIALIZE[cont])
-
-# ---- asHexWKB serializer (Temporal<T> INHERITED output surface) ----
-# The mirror of the FromHexWKB input family: one base-type-generic MEOS wrapper
-# (temporal_as_hexwkb) backs the SQL asHexWKB over EVERY temporal subtype via late binding — the
-# Temporal<T> "Input and Output" <sect1> (023_temporal_inout.in.sql / geo/053_tpoint_inout.in.sql /
-# tools/codegen/inherited/INHERITANCE_MAP.md §4). Canonical surface: a single name with an optional
-# `endianenconding text DEFAULT ''` arg; asHexWKB is the BASE hex-WKB — Temporal_as_hexwkb calls
-# Datum_as_hexwkb(extended=false) (mobilitydb type_out.c:296), variant = endian only, no SRID flag.
-# (The extended asHexEWKB is a SEPARATE spatial wrapper Tspatial_as_hexewkb — its own follow-on.)
-# This REPLACES the per-family hand asHexWKB (the geo files register it by hand) with the ONE
-# inherited generation, and ADDS the base temporals (tint/tbigint/tfloat/tbool/ttext) that had no
-# asHexWKB at all. The registered type set is the catalog sqlSignatures (sqlName == asHexWKB)
-# intersected with the types the binding has (SIG_TEMPORAL_ACC) — subtypes whose Duck type is not
-# yet wired (tjsonb/th3index/tnpoint/tpc*) auto-drop and land in their own family file later. The
-# bare canonical name collides with the retired hand asHexWKB (deleted in the same wave).
-OUTPUT_HEXWKB = {
-    "temporal_as_hexwkb": ("Temporal", "BlobToTemporal"),
-}
-OUTPUT_HEXWKB_ACC = {**SIG_TEMPORAL_ACC}
-def emit_output_hexwkb(f, cls, blobto):
-    fn = f["name"]
-    # asHexWKB is the base variant; the optional endian text selects NDR/XDR/machine
-    # (wkb_variant_from_endian("") == 0). One Gen body serves both the 1-arg and 2-arg overloads.
-    return ("static void Gen_{fn}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
-            "    EnsureMeosThreadInitialized();\n"
-            "    if (args.ColumnCount() > 1) {{\n"
-            "        BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),\n"
-            "            [&](string_t in, string_t endian, ValidityMask &mask, idx_t idx) -> string_t {{\n"
-            "                {cls} *x = {blobto}(in);\n"
-            "                uint8_t variant = wkb_variant_from_endian(endian.GetString().c_str());\n"
-            "                size_t sz = 0;\n"
-            "                char *hex = {fn}(x, variant, &sz);\n"
-            "                free(x);\n"
-            "                if (!hex) {{ mask.SetInvalid(idx); return string_t(); }}\n"
-            "                string_t out = StringVector::AddString(result, hex);\n"
-            "                free(hex);\n"
-            "                return out;\n"
-            "            }});\n"
-            "    }} else {{\n"
-            "        UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
-            "            [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
-            "                {cls} *x = {blobto}(in);\n"
-            "                size_t sz = 0;\n"
-            "                char *hex = {fn}(x, (uint8_t) 0, &sz);\n"
-            "                free(x);\n"
-            "                if (!hex) {{ mask.SetInvalid(idx); return string_t(); }}\n"
-            "                string_t out = StringVector::AddString(result, hex);\n"
-            "                free(hex);\n"
-            "                return out;\n"
-            "            }});\n"
-            "    }}\n"
-            "}}\n").format(fn=fn, cls=cls, blobto=blobto)
+            "}}\n").format(fn=fn, cont=cont, ser=ser)
 
 def container_wkb(f):
     """(kind, container) for a retired group's container writer, (const <C> *, uint8_t variant,
     size_t *size) answering WKB bytes (set_as_wkb, asBinary) or hex (set_as_hexwkb, asHexWKB),
-    kind "bin" or "hex"; the container counterpart of #OUTPUT_HEXWKB. None otherwise."""
+    kind "bin" or "hex"; None otherwise."""
     if not retired(f) or f.get("api") != "public":
         return None
     ps = [p for p in f.get("params") or [] if norm(p["canonical"]) != "size_t *"]
-    if len(ps) != 2 or base(ps[0]["canonical"]) not in CONT_BLOBTO or norm(ps[1]["canonical"]) != "uint8_t":
+    if len(ps) != 2 or base(ps[0]["canonical"]) not in IO_BLOBTO or norm(ps[1]["canonical"]) != "uint8_t":
         return None
     rn = norm(f["returnType"]["canonical"])
     kind = {"uint8_t *": "bin", "char *": "hex"}.get(rn)
     return (kind, base(ps[0]["canonical"])) if kind else None
 
 def emit_container_wkb(f, kind, cont):
-    """The writer of #container_wkb, after #emit_output_hexwkb: one body serves the call without
+    """The writer of #container_wkb: one body serves the call without
     the endian and the call with it, the endian read by wkb_variant_from_endian (the reader of
     the variant, ENUM_READER), the bytes or the hex copied out and freed."""
     fn = f["name"]
-    blobto = CONT_BLOBTO[cont]
+    blobto = IO_BLOBTO[cont]
     if kind == "bin":
         rty, give = "uint8_t", "StringVector::AddStringOrBlob(result, (const char *) w, sz)"
     else:
@@ -5177,7 +5195,7 @@ def container_from_wkb(f):
     if len(ps) != 2 or norm(ps[0]["canonical"]) != "uint8_t *" or norm(ps[1]["canonical"]) != "size_t":
         return None
     rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
-    if rb not in CONT_BLOBTO or not rn.endswith("*") or "const" in f["returnType"]["canonical"]:
+    if rb not in IO_BLOBTO or not rn.endswith("*") or "const" in f["returnType"]["canonical"]:
         return None
     return rb
 
@@ -5507,14 +5525,18 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             STATE["grp"] = f.get("group") or "meos_ungrouped"
             fn = f["name"]
             bodies.append(emit_temporal_ctor(f, tc))
+            # a reader of a retired I/O group (tcbufferFromHexWKB) reads every temporal type its
+            # signatures declare, the transforms and constructors the core types
+            ctor_acc = (SIG_TEMPORAL_ACC if tc in ("from_hexwkb", "from_mfjson") and retired(f)
+                        else CORE_CTOR_ACC)
             for s in f.get("sqlSignatures", []):
                 # The registered SQL/return type is the RESULT temporal type (the parsers
                 # take a text/blob arg, the constructors an operand of the same type).
                 # The constructors over an array of a retired group register for every temporal
                 # type the signatures declare (tgeometrySeq, tpcpointSeq, tcbufferSeqSet); the
-                # transforms and parsers stay on the core types their own groups register.
+                # transforms and parsers stay on the types ctor_acc names.
                 arr = (s.get("args") or [""])[0].endswith("[]")
-                acc = (SIG_TEMPORAL_ACC if retired(f) and arr else CORE_CTOR_ACC).get(s["ret"])
+                acc = (SIG_TEMPORAL_ACC if retired(f) and arr else ctor_acc).get(s["ret"])
                 if not acc:
                     continue    # non-core (geo/cbuffer) -> registered in its own family file
                 nm = s.get("sqlName", f["sqlfn"])
@@ -5534,8 +5556,9 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             STATE["grp"] = f.get("group") or "meos_ungrouped"
             fn = f["name"]
             bodies.append(emit_container_from_hexwkb(f, cont))
-            for s in f.get("sqlSignatures", []):
-                acc = CONTAINER_FROMHEX_ACC.get(s["ret"])
+            # the names the signatures declare (intsetFromText), where the group is retired
+            for s in (f.get("sqlSignatures", []) if retired(f) else []):
+                acc = io_acc(cont).get(s["ret"]) if cont in IO_BLOBTO else None
                 if not acc:
                     continue    # spatial element (geo/cbuffer/npoint/...) -> its own family file
                 nm = s.get("sqlName") or f["sqlfn"]
@@ -5546,6 +5569,15 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 specific_regs.append(
                     f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                     f'"{reg_name(nm, f)}", {{LogicalType::VARCHAR}}, {acc}, Gen_{fn}));')
+            # The input function of a type (#type_input) also answers the function form of its
+            # cast, T(text), which MobilityDB answers for every type as PostgreSQL does
+            # (stbox('STBOX X((1,2),(3,4))') beside 'STBOX X((1,2),(3,4))'::stbox), named by the
+            # type it reads
+            tin = type_input(f)
+            if tin:
+                specific_regs.append(
+                    f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    f'"{tin[0]}", {{LogicalType::VARCHAR}}, {tin[1]}, Gen_{fn}));')
             continue
         # the WKB writers and reader of a set, span or span set (asBinary, asHexWKB,
         # intsetFromBinary), registered per declared signature under its own name over the core
@@ -5564,12 +5596,15 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 # the containers this group parses itself (a typed <type>_in beside the writer:
                 # intset_in .. tstzspanset_in); the sets of the other families (cbufferset,
                 # poseset, ...) keep the writers and readers their own files register
+                # and every temporal value, whose readers and writers the temporal, spatial, JSON
+                # and point cloud I/O groups retire together, over each type declared
+                cio = cw[1] if cw else cr
                 tname = (s.get("args") or [None])[0] if cw else s.get("ret")
                 own = FN_BY_NAME.get(f"{tname}_in")
-                if not own or own.get("group") != f.get("group"):
+                if cio != "Temporal" and (not own or own.get("group") != f.get("group")):
                     continue
                 if cw:
-                    acc = CONTAINER_FROMHEX_ACC.get((s.get("args") or [None])[0])
+                    acc = io_acc(cio).get((s.get("args") or [None])[0])
                     rty = "LogicalType::BLOB" if cw[0] == "bin" else "LogicalType::VARCHAR"
                     defs = s.get("argDefaults") or []
                     forms = [[acc]] + ([[acc, "LogicalType::VARCHAR"]]
@@ -5577,7 +5612,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     if len(s.get("args") or []) == 2 and not (defs and defs[-1] is not None):
                         forms = forms[1:]
                 else:
-                    acc = CONTAINER_FROMHEX_ACC.get(s.get("ret"))
+                    acc = io_acc(cio).get(s.get("ret"))
                     rty, forms = acc, [["LogicalType::BLOB"]]
                 if not acc:
                     continue    # spatial element (geo/cbuffer/npoint/...) -> its own family file
@@ -5587,31 +5622,6 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     if reg not in wseen:
                         wseen.add(reg)
                         specific_regs.append(reg)
-            continue
-        oh = OUTPUT_HEXWKB.get(f["name"])
-        if oh:
-            # asHexWKB (Temporal<T> inherited output surface): one Gen_<fn> body, registered per
-            # catalog sqlSignature over the input type for the 1-arg and 2-arg (endian text)
-            # arities. Only the base-WKB sqlName asHexWKB is emitted here (the extended asHexEWKB
-            # is a distinct spatial wrapper). Self-contained (own body + regs + continue); the bare
-            # name replaces the retired hand asHexWKB registrations deleted in the same wave.
-            cls, blobto = oh
-            STATE["grp"] = f.get("group") or "meos_ungrouped"
-            fn = f["name"]
-            bodies.append(emit_output_hexwkb(f, cls, blobto))
-            for s in f.get("sqlSignatures", []):
-                nm = s.get("sqlName", f["sqlfn"])
-                if nm != "asHexWKB":
-                    continue    # asHexEWKB = extended/spatial wrapper (Tspatial_as_hexewkb), own PR
-                acc = OUTPUT_HEXWKB_ACC.get(s["args"][0])
-                if not acc:
-                    continue    # subtype whose Duck type isn't wired yet -> its own family file
-                specific_regs.append(
-                    f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
-                    f'"{reg_name(nm, f)}", {{{acc}}}, LogicalType::VARCHAR, Gen_{fn}));')
-                specific_regs.append(
-                    f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
-                    f'"{reg_name(nm, f)}", {{{acc}, LogicalType::VARCHAR}}, LogicalType::VARCHAR, Gen_{fn}));')
             continue
         # STATIC cell functions (h3index/quadbin/s2cell with no temporal operand): one Gen_<fn>
         # body, registered over every declared signature whose marshalling matches the body's.
@@ -5631,6 +5641,11 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 for nm in reg_names(f, s.get("sqlName", f["sqlfn"]), aliases, "{%s}" % slots):
                     specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {{{slots}}}, {sret[0]}, Gen_{fn}));')
+                # the input function of a cell (quadbin_in) answers the function form of its
+                # cast, quadbin(text), as #type_input's types do
+                if fn == s.get("ret", "") + "_in" and slots == "LogicalType::VARCHAR":
+                    specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                         f'"{s["ret"]}", {{{slots}}}, {sret[0]}, Gen_{fn}));')
             continue
         # Base-value UNARY scalar accessors (Cbuffer/Npoint/Nsegment radius/route/
         # position/SRID/hash/...): a base value in, a scalar out. Self-contained (own
@@ -5750,16 +5765,18 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 pairs = []
                 for a in accs_:
                     r = ("MobilityDuckGeometryType()" if ret == "geo" else
+                         "LogicalType::VARCHAR" if ret == "text" else
                          (sig_declared_ret(f, a, 1 + len(tail))
                           or ret_temporal_type(f["name"], a, f.get("group"), f.get("sqlReturnType"))))
                     pairs.append((a, r))
             # a trailing SQL default also registers the shorter form through Gen_<fn>_d, as the
-            # container arm above does (extendedKalmanFilter(tfloat, float, float, float))
+            # container arm above does (extendedKalmanFilter(tfloat, float, float, float)); the
+            # defaults before it are the shorter records #project_signature_forms forwards
+            # (asMFJSON(tfloat, integer, integer) here, asMFJSON(tfloat, integer) there)
             forms, dflt = [(rest, "")], None
             for s in f.get("sqlSignatures") or []:
                 defs = s.get("argDefaults") or []
-                if len(s.get("args") or []) == 1 + len(tail) and defs and defs[-1] is not None \
-                        and not any(d is not None for d in defs[:-1]):
+                if len(s.get("args") or []) == 1 + len(tail) and defs and defs[-1] is not None:
                     dflt = forward_literal(classify(f)[0][-1], defs[-1])
                     break
             if dflt is not None:

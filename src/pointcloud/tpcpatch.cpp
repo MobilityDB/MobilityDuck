@@ -65,47 +65,6 @@ LogicalType TPcpatchTypes::tpcpatch() {
  * Constructors
 */
 
-static void Tpcpatch_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_geom_vec = args.data[0];
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_geom_vec, result, count,
-        [&](string_t input_geom_str) -> string_t {
-            std::string input = input_geom_str.GetString();
-
-            // No tpcpatch_in exists; the canonical SQL binds tpcpatch_in
-            // to the generic Temporal_in, i.e. temporal_in(str,
-            // T_TPCPATCH).
-            Temporal *tinst = temporal_in(input.c_str(), T_TPCPATCH);
-            if (!tinst) {
-                throw InvalidInputException("Invalid tpcpatch input: " + input);
-            }
-
-            size_t data_size = temporal_mem_size(tinst);
-
-            uint8_t *data_buffer = (uint8_t*)malloc(data_size);
-            if (!data_buffer) {
-                free(tinst);
-                throw InvalidInputException("Failed to allocate memory for tpcpatch data");
-            }
-
-            memcpy(data_buffer, tinst, data_size);
-
-            string_t data_string_t(reinterpret_cast<const char*>(data_buffer), data_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, data_string_t);
-
-            free(data_buffer);
-            free(tinst);
-
-            return stored_data;
-        });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
 
 
 
@@ -283,14 +242,6 @@ static void Tpcpatch_numpoints(DataChunk &args, ExpressionState &state, Vector &
 
 
 void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
-
-    auto tpcpatch_function = ScalarFunction(
-        "tpcpatch",
-        {LogicalType::VARCHAR},
-        TPcpatchTypes::tpcpatch(),
-        Tpcpatch_constructor
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  tpcpatch_function);
 
     auto tpcpatch_to_tinstant_function = ScalarFunction(
         "tpcpatchInst",

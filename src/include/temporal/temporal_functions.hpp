@@ -106,12 +106,6 @@ struct TemporalFunctions {
      * Math functions
      ****************************************************/
     // round(tfloat/tgeompoint/tgeogpoint/...) is generated (generated_temporal_udfs.cpp).
-
-    /* ***************************************************
-     * Serialization
-     ****************************************************/
-    static void Temporal_as_wkb(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

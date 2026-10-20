@@ -36,44 +36,6 @@ LogicalType TGeographyTypes::tgeography() {
  * Constructors
 */
 
-inline void Tgeog_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_geom_vec = args.data[0];
-    
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_geom_vec, result, count, 
-        [&](string_t input_geom_str) -> string_t {
-            std::string input = input_geom_str.GetString();
-            
-            Temporal *tinst = tgeography_in(input.c_str());
-            if (!tinst) {
-                throw InvalidInputException("Invalid tgeography input: " + input);
-            }
-            
-            size_t data_size = temporal_mem_size(tinst);
-            
-            uint8_t *data_buffer = (uint8_t*)malloc(data_size);
-            if (!data_buffer) {
-                free(tinst);  
-                throw InvalidInputException("Failed to allocate memory for tgeography data");
-            }
-            
-            memcpy(data_buffer, tinst, data_size);
-            
-            string_t data_string_t(reinterpret_cast<const char*>(data_buffer), data_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, data_string_t);
-            
-            free(data_buffer);
-            free(tinst);  
-            
-            return stored_data;
-        });
-    
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
 
 
 
@@ -149,14 +111,6 @@ inline void Temporal_to_tinstant(DataChunk &args, ExpressionState &state, Vector
 
 void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
-    auto tgeography_function = ScalarFunction(
-        "tgeography", 
-        {LogicalType::VARCHAR}, 
-        TGeographyTypes::tgeography(),
-        Tgeog_constructor
-    );
-    RegisterMeosFunction(loader, tgeography_function);
-        
     // timeSpan(tgeography) is generated (meos_temporal_conversion, RETIRED_GROUPS).
 
     auto tgeography_to_tinstant_function = ScalarFunction(
