@@ -2868,6 +2868,9 @@ ARRAY_IN = {
     "TSequence":    ("Temporal", "BlobToTemporal"),
     "TSequenceSet": ("Temporal", "BlobToTemporal"),
     "GSERIALIZED":  ("GSERIALIZED", "GeometryToGSerialized"),     # read with SRID 0 (#emit_array)
+    # a box of a retired group (quadSplit(stbox) -> stbox[]), scoped by #box_reg_scope
+    "STBox":        ("STBox",    "BlobToStbox"),
+    "TBox":         ("TBox",     "BlobToTbox"),
 }
 
 def shape_tgeoarr(f):
@@ -3265,6 +3268,9 @@ def shape_nary_scalars(f):
         ret = "temporal"
     elif rb == "GSERIALIZED":
         ret = "geo"
+    elif rb in CONT_BLOBTO and b0 == "GSERIALIZED":
+        # the box of a geometry (stbox(geometry)), typed by the signature as a container is
+        ret = "cont:" + rb
     else:
         return None
     return ("temporal" if b0 == "Temporal" else "geo", tail, ret)
@@ -3472,7 +3478,8 @@ def array_declared_accs(f, tail=()):
     no accessor and drop out. This is the SoT for a generic (scope='all') array-return's type set,
     excluding types whose canonical return is NOT an array (e.g. set_spans over textset: no sig).
     `tail` matches the fixed scalar arguments after the container, as in _sig_ret_for."""
-    m = {**SET_TYPES, **SPANSET_TYPES, **SIG_TEMPORAL_ACC}
+    m = {**SET_TYPES, **SPANSET_TYPES, **SIG_TEMPORAL_ACC,
+         **CONT_SQL_ACC["TBox"], **CONT_SQL_ACC["STBox"]}
     out = []
     want_len = 1 + len(tail)
     for s in (f.get("sqlSignatures") or []):
@@ -3585,7 +3592,9 @@ def shape_array(f):
         return None
     if ib not in ARRAY_IN or not norm(ins[0]["canonical"]).endswith("*"):
         return None
-    sc = set_reg_scope(name) if ib == "Set" else spanset_reg_scope(name) if ib == "SpanSet" else reg_scope(name)
+    sc = (set_reg_scope(name) if ib == "Set" else spanset_reg_scope(name) if ib == "SpanSet"
+          else box_reg_scope(CONT_SQL_ACC[ib][ib.lower()])(name) if ib in ("STBox", "TBox")
+          else reg_scope(name))
     if sc is None:
         return None
     scope, accs = sc
@@ -4012,10 +4021,20 @@ SPANSET_C = dict(cbase="SpanSet", blobto="BlobToSpanSet", toblob="SpanSetToBlob"
 # Box families: SINGLE type each (no AllTypes loop, no element predicates). Fixed-size
 # struct -> sizeof(STBox)/sizeof(TBox) (verified single_tile_getters.cpp). Reuse the same
 # (X,X)->bool|X shape machinery via the descriptor; the loop registers the concrete accessor.
+def box_reg_scope(single):
+    """The scope of a box function, the counterpart of #span_reg_scope for a container of one
+    type: a box function names no type the way intspan_lower does, so it is scoped to its box when
+    its group is retired. The accessors and transformations of tbox and stbox (hasX, getSpace,
+    round, expandValue) then reach the arms a span reaches through its name, and the box groups
+    the hand layer still registers stay out."""
+    return lambda n: (("types", [single]) if n in FN_BY_NAME and retired(FN_BY_NAME[n])
+                      else None)
 STBOX_C = dict(cbase="STBox", blobto="BlobToStbox", toblob="StboxToBlob",
-               elem={}, scope=None, ret=lambda n, a: a, single="StboxType::stbox()")
+               elem={}, scope=box_reg_scope("StboxType::stbox()"), ret=lambda n, a: a,
+               single="StboxType::stbox()")
 TBOX_C  = dict(cbase="TBox",  blobto="BlobToTbox",  toblob="TboxToBlob",
-               elem={}, scope=None, ret=lambda n, a: a, single="TboxType::tbox()")
+               elem={}, scope=box_reg_scope("TboxType::tbox()"), ret=lambda n, a: a,
+               single="TboxType::tbox()")
 TPCBOX_C = dict(cbase="TPCBox", blobto="BlobToTpcbox", toblob="TpcboxToBlob",
                 elem={}, scope=None, ret=lambda n, a: a, single="TpcboxType::tpcbox()")
 
@@ -4060,6 +4079,8 @@ def shape_span(f, C=SPAN_C):
         # (X) -> owned C string: the text rendering a span or span set publishes (asText), as
         # shape_set's unary arm renders a set.
         if rb in ("text", "char") and rn.endswith("*"): return ("u_scalar:" + rb, "LogicalType::VARCHAR")
+        # (X) -> owned geometry: the geometry a box spans (geometry(stbox))
+        if rb == "GSERIALIZED" and rn.endswith("*"):  return ("u_geo", "MobilityDuckGeometryType()")
         return None
     if len(ins) != 2: return None
     # element predicates: (X, scalar)->bool / (scalar, X)->bool (contains/left/...)
@@ -4071,6 +4092,11 @@ def shape_span(f, C=SPAN_C):
             and "*" not in norm(ins[1]["canonical"]) and rb == "Interval" and rn.endswith("*")
             and C["scope"] is not None and C["scope"](f["name"]) is not None):
         return ("u2iv:" + base(ins[1]["canonical"]), "LogicalType::INTERVAL")
+    # (X, by-value scalar) -> by-value scalar (area(stbox, boolean) -> float); scope-gated as u2iv
+    if (contp(ins[0]) and base(ins[1]["canonical"]) in SCALAR_ARG
+            and "*" not in norm(ins[1]["canonical"]) and rb in BYVAL_RET and "*" not in rn
+            and rb != "bool" and C["scope"] is not None and C["scope"](f["name"]) is not None):
+        return ("u2sc:%s:%s" % (base(ins[1]["canonical"]), rb), byval_ret_duck(rb))
     # (X, by-value uint64 seed) -> uint64 hash (span_hash_extended/spanset_hash_extended);
     # scope-gated like u2iv. Boxes (STBOX_C/TBOX_C, scope=None) carve out ONLY hashExtended
     # by sqlfn below (mirrors the unary hash carve-out above) so the rest of the box
@@ -4170,13 +4196,48 @@ def emit_span(f, kind, C=SPAN_C):
                 f"            if (!r) {{ mask.SetInvalid(idx); return string_t(); }}\n"
                 f"            return {tb}(result, r);\n        }});\n}}\n")
     if kind.startswith("u_scalar:"):  # (X) -> scalar (by-value, time-converted, or owned Interval*)
+        # NULL on the guard the catalog states (volume(stbox) answers DBL_MAX for no extent),
+        # through #scalar_exec as the temporal shapes read it
         cct, rett, rexpr = byval_ret3(kind.split(':')[1])
+        meth, extra, ann, ret_stmt = scalar_exec(f, rett, rexpr)
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
-                f"    UnaryExecutor::Execute<string_t, {rett}>(args.data[0], result, args.size(),\n"
-                f"        [&](string_t in) {{\n"
+                f"    UnaryExecutor::{meth}<string_t, {rett}>(args.data[0], result, args.size(),\n"
+                f"        [&](string_t in{extra}){ann} {{\n"
                 f"            {cb} *s = {bt}(in);\n            {cct} r = {name}(s);\n            free(s);\n"
-                f"            return {rexpr};\n        }});\n}}\n")
+                f"            {ret_stmt}\n        }});\n}}\n")
+    if kind.startswith("u2sc:") or kind.startswith("u2sc_d:"):
+        # (X, by-value scalar) -> by-value scalar (area(stbox, boolean)), the counterpart of the
+        # u2iv arm for a by-value answer, NULL on the catalog's guard (#scalar_exec); the _d form
+        # passes the SQL default of the trailing argument, as the u2text_d arm passes its digits
+        _k, ab, rb_ = kind.split(':')[:3]
+        cct, rett, rexpr = byval_ret3(rb_)
+        meth, extra, ann, ret_stmt = scalar_exec(f, rett, rexpr)
+        if _k == "u2sc_d":
+            dflt = kind.split(':', 3)[3]
+            return (f"static void Gen_{name}_d(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                    f"    EnsureMeosThreadInitialized();\n"
+                    f"    UnaryExecutor::{meth}<string_t, {rett}>(args.data[0], result, args.size(),\n"
+                    f"        [&](string_t in{extra}){ann} {{\n"
+                    f"            {cb} *s = {bt}(in);\n            {cct} r = {name}(s, {dflt});\n"
+                    f"            free(s);\n            {ret_stmt}\n        }});\n}}\n")
+        _dt, cpp2, marsh = SCALAR_ARG[ab]
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::{meth}<string_t, {cpp2}, {rett}>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t in, {cpp2} a2{extra}){ann} {{\n"
+                f"            {cb} *s = {bt}(in);\n            {cct} r = {name}(s, {marsh});\n"
+                f"            free(s);\n            {ret_stmt}\n        }});\n}}\n")
+    if kind == "u_geo":             # (X) -> owned geometry (geometry(stbox)), as #emit_body_unary
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &state, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
+                f"        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                f"            {cb} *s = {bt}(in);\n            GSERIALIZED *r = {name}(s);\n            free(s);\n"
+                f"            if (!r) {{ mask.SetInvalid(idx); return string_t(); }}\n"
+                f"            string_t out = GSerializedToGeometry(r, state, result);\n"
+                f"            free(r);\n"
+                f"            return out;\n        }});\n}}\n")
     if kind.startswith("cval:") or kind.startswith("valc:"):
         # (X, base value) / (base value, X) -> a container. MEOS answers NULL where the operation
         # leaves nothing (a span minus a value it does not hold), which is SQL NULL, so this reads
@@ -4268,8 +4329,14 @@ def emit_span(f, kind, C=SPAN_C):
 # Admitted by @ingroup: the distances, and the comparators' `cmp`, whose eq/ne/lt/le/gt/ge
 # siblings the set and span loops already register over every type.
 CONTAINER_SCALAR_GROUPS = {"meos_setspan_dist", "meos_setspan_comp"}
-CONT_BLOBTO = {"Set": "BlobToSet", "Span": "BlobToSpan", "SpanSet": "BlobToSpanSet"}
-CONT_SQL_ACC = {"Set": SET_SIG_ACC, "Span": SPAN_TYPES, "SpanSet": SPANSET_TYPES}
+# The boxes are containers of one type each: the out-parameter accessors (xMin(tbox)), the
+# conversions to and from a span or a set (intspan(tbox), tbox(intset)) and the duration
+# transformations (shiftTime(stbox, interval, interval)) of a retired box group reach the
+# container arms, typed by the signatures MobilityDB declares.
+CONT_BLOBTO = {"Set": "BlobToSet", "Span": "BlobToSpan", "SpanSet": "BlobToSpanSet",
+               "TBox": "BlobToTbox", "STBox": "BlobToStbox"}
+CONT_SQL_ACC = {"Set": SET_SIG_ACC, "Span": SPAN_TYPES, "SpanSet": SPANSET_TYPES,
+                "TBox": {"tbox": "TboxType::tbox()"}, "STBox": {"stbox": "StboxType::stbox()"}}
 def shape_container_scalar(f):
     """The C operands as [("C", Set|Span|SpanSet) | ("E", base)] for a by-value number between two
     containers or a container and one base value, else None. The distance between two time
@@ -4469,7 +4536,14 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   # The temporal accessors (getValue/getValues/valueSet/getTimestamp/instants/
                   # segmentMinDuration...), one signature per type MobilityDB declares, the set
                   # results from temporal_valueset; every hand accessor registration is deleted.
-                  "meos_temporal_accessor"}
+                  "meos_temporal_accessor",
+                  # The box accessors, transformations, conversions, set operations and I/O of
+                  # tbox and stbox
+                  "meos_box_accessor", "meos_geo_box_accessor",
+                  "meos_box_transf", "meos_geo_box_transf",
+                  "meos_box_conversion", "meos_geo_box_conversion",
+                  "meos_box_set", "meos_geo_box_set",
+                  "meos_box_inout", "meos_geo_box_inout"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
@@ -4484,7 +4558,9 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # box or a temporal value return a set of rows or an array of boxes the generator does not yet
 # register; src/single_tile_getters.cpp, src/geo and src/temporal/temporal.cpp keep them, and
 # timeBins, timeBoxes and valueTimeBoxes are not registered by either.
-RETIRE_UNCOVERED_OK = {"unnest",
+# box2d and box3d: PostGIS's box types, which DuckDB does not have, so box2d(stbox) and
+# box3d(stbox) answer no type this surface registers; no hand registration answers them either.
+RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d",
                        "getSpaceTile", "getSpaceTimeTile",
                        "spaceBoxes", "spaceSplit", "spaceTiles", "spaceTimeSplit", "spaceTimeTiles",
                        "timeBins", "timeBoxes", "timeSplit", "timeTiles",
@@ -4743,14 +4819,17 @@ CONTAINER_FROM_HEXWKB = {
     "span_from_hexwkb":    "Span",
     "spanset_from_hexwkb": "SpanSet",
 }
-CONTAINER_FROMHEX_ACC = {**SET_TYPES,
-                         **{k: v for k, v in SQL_CONTAINER_ACC.items() if k not in ("tbox", "stbox")}}
+CONTAINER_FROMHEX_ACC = {**SET_TYPES, **SQL_CONTAINER_ACC}
 _CFH_SERIALIZE = {
     "Set":     "            return SetToBlobN(result, r, mask, idx);\n",
     "Span":    "            if (!r) { mask.SetInvalid(idx); return string_t(); }\n"
                "            return SpanToBlob(result, r);\n",
     "SpanSet": "            if (!r) { mask.SetInvalid(idx); return string_t(); }\n"
                "            return SpanSetToBlob(result, r);\n",
+    "TBox":    "            if (!r) { mask.SetInvalid(idx); return string_t(); }\n"
+               "            return TboxToBlob(result, r);\n",
+    "STBox":   "            if (!r) { mask.SetInvalid(idx); return string_t(); }\n"
+               "            return StboxToBlob(result, r);\n",
 }
 def container_from_text(f):
     """The container a retired group's public parser answers from one C string, the shape the
@@ -5395,7 +5474,14 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             first, tail, ret = _nary
             bodies.append(emit_nary_scalars(f, first, tail, ret)); n_ter += 1
             rest = "".join(", " + t[0] for t in tail)
-            if first == "geo":
+            if first == "geo" and ret.startswith("cont:"):
+                # one GEOMETRY stands for the geometry and geography signatures alike, as
+                # #shape_array reads a geometry first; the box is the one each declares
+                rcb = ret.split(":", 1)[1]
+                rs = {CONT_SQL_ACC[rcb].get(s.get("ret")) for s in f.get("sqlSignatures") or []
+                      if len(s.get("args") or []) == 1 + len(tail)} - {None}
+                pairs = [("MobilityDuckGeometryType()", r) for r in sorted(rs)]
+            elif first == "geo":
                 pairs = [("MobilityDuckGeometryType()", "MobilityDuckGeometryType()")]
             elif first.startswith("cont:"):
                 # the operand's and the return's container types per declared signature, as
@@ -6096,7 +6182,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                                                       f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
                 continue
             # unary (X)->X|scalar: name-scoped (X_*→AllTypes, <elem>X_*→accessor).
-            if kind == "u_span" or kind.startswith("u_scalar:"):
+            if kind in ("u_span", "u_geo") or kind.startswith("u_scalar:"):
                 if C.get("single"):   # box hash carve-out: single type, concrete accessor
                     acc = C["single"]; r = acc if kind == "u_span" else dret
                     for nm in names:
@@ -6129,6 +6215,25 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                         for nm in names:
                             span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                                       f'"{reg_name(nm, f)}", {{{a}, {argdt}}}, {dret}, Gen_{fn}));')
+                continue
+            # (X, by-value scalar)->by-value scalar: name-scoped as u2iv, 2-arg sig {acc, argtype},
+            # plus the shorter {acc} through Gen_<fn>_d when the trailing argument has a SQL
+            # default (area(stbox) beside area(stbox, boolean)), as the csc arm registers round
+            if kind.startswith("u2sc:"):
+                argdt = SCALAR_ARG[kind.split(':')[1]][0]
+                scope, accs = C["scope"](fn)
+                dflt = trailing_arg_default(f)
+                if dflt is not None:
+                    span_bodies.append(emit_span(f, "u2sc_d:%s:%s" % (
+                        kind.split(':', 1)[1], sql_default_to_cpp(dflt)), C))
+                for a in (["type"] if scope == "all" else accs):
+                    sink = gen if scope == "all" else span_specific_regs
+                    for nm in names:
+                        sink.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                    f'"{reg_name(nm, f)}", {{{a}, {argdt}}}, {dret}, Gen_{fn}));')
+                        if dflt is not None:
+                            sink.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                        f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
                 continue
             # (X, by-value uint64 seed)->uint64 hash: name-scoped, 2-arg sig {acc, UBIGINT}.
             if kind.startswith("bsc:"):

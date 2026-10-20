@@ -41,7 +41,6 @@ struct SpansetFunctions{
     static void Spanset_upper(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spanset_lower_inc(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spanset_upper_inc(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Numspanset_width(DataChunk &args, ExpressionState &state, Vector &result);
     static void Datespanset_duration(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tstzspanset_duration(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spanset_num_spans(DataChunk &args, ExpressionState &state, Vector &result);
