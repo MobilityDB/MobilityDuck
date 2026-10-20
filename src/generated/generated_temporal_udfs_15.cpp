@@ -3809,7 +3809,6 @@ void RegisterGenerated_meos_quadbin(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("cellToPoint", {QuadbinTypes::quadbin()}, MobilityDuckGeometryType(), Gen_quadbin_cell_to_geompoint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("cellToBoundary", {QuadbinTypes::quadbin()}, MobilityDuckGeometryType(), Gen_quadbin_cell_to_geom));
     RegisterSerializedScalarFunction(loader, ScalarFunction("stbox", {QuadbinTypes::quadbin()}, StboxType::stbox(), Gen_quadbin_to_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {QuadbinTypes::quadbin()}, StboxType::stbox(), Gen_quadbin_to_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("stbox", {QuadbinTypes::quadbin(), LogicalType::TIMESTAMP_TZ}, StboxType::stbox(), Gen_quadbin_timestamptz_to_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("stbox", {QuadbinTypes::quadbin(), SpanTypes::tstzspan()}, StboxType::stbox(), Gen_quadbin_tstzspan_to_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("cellArea", {QuadbinTypes::quadbin()}, LogicalType::DOUBLE, Gen_quadbin_cell_area));

@@ -2375,9 +2375,7 @@ void RegisterGenerated_meos_npoint_base_comp(ExtensionLoader &loader) {
 
 void RegisterGenerated_meos_npoint_conversion(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tnpoint", {TgeompointType::tgeompoint()}, NpointTypes::tnpoint(), Gen_tgeompoint_to_tnpoint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TgeompointType::tgeompoint()}, NpointTypes::tnpoint(), Gen_tgeompoint_to_tnpoint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompoint", {NpointTypes::tnpoint()}, TgeompointType::tgeompoint(), Gen_tnpoint_to_tgeompoint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {NpointTypes::tnpoint()}, TgeompointType::tgeompoint(), Gen_tnpoint_to_tgeompoint));
 }
 
 void RegisterGenerated_meos_pointcloud_comp_temp(ExtensionLoader &loader) {
@@ -2495,7 +2493,6 @@ void RegisterGenerated_meos_s2cell(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("cellToPoint", {S2cellTypes::s2cell()}, MobilityDuckGeometryType(), Gen_s2cell_cell_to_geogpoint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("cellToBoundary", {S2cellTypes::s2cell()}, MobilityDuckGeometryType(), Gen_s2cell_cell_to_geog));
     RegisterSerializedScalarFunction(loader, ScalarFunction("stbox", {S2cellTypes::s2cell()}, StboxType::stbox(), Gen_s2cell_to_stbox));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {S2cellTypes::s2cell()}, StboxType::stbox(), Gen_s2cell_to_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("stbox", {S2cellTypes::s2cell(), LogicalType::TIMESTAMP_TZ}, StboxType::stbox(), Gen_s2cell_timestamptz_to_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("stbox", {S2cellTypes::s2cell(), SpanTypes::tstzspan()}, StboxType::stbox(), Gen_s2cell_tstzspan_to_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ts2CellToToken", {S2cellTypes::ts2cell()}, TemporalTypes::ttext(), Gen_ts2cell_cell_to_token));

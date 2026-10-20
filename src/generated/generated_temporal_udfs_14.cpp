@@ -2236,11 +2236,8 @@ void RegisterGenerated_meos_s2cell_comp_temp(ExtensionLoader &loader) {
 
 void RegisterGenerated_meos_s2cell_conversion(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("s2cell", {LogicalType::BIGINT}, S2cellTypes::s2cell(), Gen_bigint_to_s2cell));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {LogicalType::BIGINT}, S2cellTypes::s2cell(), Gen_bigint_to_s2cell));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cell", {TemporalTypes::tbigint()}, S2cellTypes::ts2cell(), Gen_tbigint_to_ts2cell));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {TemporalTypes::tbigint()}, S2cellTypes::ts2cell(), Gen_tbigint_to_ts2cell));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tbigint", {S2cellTypes::ts2cell()}, TemporalTypes::tbigint(), Gen_ts2cell_to_tbigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("::", {S2cellTypes::ts2cell()}, TemporalTypes::tbigint(), Gen_ts2cell_to_tbigint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cell", {TgeogpointType::tgeogpoint(), LogicalType::INTEGER, LogicalType::BOOLEAN}, S2cellTypes::ts2cell(), Gen_tgeogpoint_to_ts2cell));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cell", {TgeogpointType::tgeogpoint(), LogicalType::INTEGER}, S2cellTypes::ts2cell(), Gen_tgeogpoint_to_ts2cell_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cell", {TgeompointType::tgeompoint(), LogicalType::INTEGER, LogicalType::BOOLEAN}, S2cellTypes::ts2cell(), Gen_tgeompoint_to_ts2cell));
