@@ -59,7 +59,7 @@ quadbin	484c1fffffffffff
 
 # A jsonb element reaches its set through the value the temporal type carries.
 query I
-SELECT asText(set([startValue(TJSONB('{"k":1}@2000-01-01'))]));
+SELECT asText(set([startValue(TJSONB('"{\"k\":1}"@2000-01-01'))]));
 ----
 {"{\"k\": 1}"}
 
@@ -160,17 +160,17 @@ SELECT routes(set([npoint 'NPoint(1, 0.5)', npoint 'NPoint(2, 0.25)']));
 
 # A temporal value restricts to the values one of these sets holds.
 query I
-SELECT startValue(atValues(tjsonb '{"a":1}@2000-01-01', set([jsonb '{"a":1}'])))::VARCHAR;
+SELECT startValue(atValues(tjsonb '"{\"a\":1}"@2000-01-01', set([jsonb '{"a":1}'])))::VARCHAR;
 ----
 {"a": 1}
 
 query I
-SELECT minusValues(tjsonb '{"a":1}@2000-01-01', set([jsonb '{"a":1}'])) IS NULL;
+SELECT minusValues(tjsonb '"{\"a\":1}"@2000-01-01', set([jsonb '{"a":1}'])) IS NULL;
 ----
 true
 
 query I
-SELECT startValue(minusValues(tjsonb '{"a":1}@2000-01-01', set([jsonb '{"a":2}'])))::VARCHAR;
+SELECT startValue(minusValues(tjsonb '"{\"a\":1}"@2000-01-01', set([jsonb '{"a":2}'])))::VARCHAR;
 ----
 {"a": 1}
 
