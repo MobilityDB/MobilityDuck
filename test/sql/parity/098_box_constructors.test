@@ -1,0 +1,84 @@
+# name: test/sql/parity/098_box_constructors.test
+# description: The constructors of tbox and stbox from a value or a span and a time value, and from
+#             a geometry and a time value, generated from the catalog. The expected values are
+#             MobilityDB's own answers: mobilitydb/test/temporal/expected/021_tbox.test.out for the
+#             float and big integer spans, mobilitydb/test/geo/expected/060_tpoint_topops.test.out
+#             for the geometries, and MobilityDB's answer to the same call for the values and the
+#             integer spans; a box with a time dimension is compared with the box MobilityDB
+#             answers, so the session time zone does not enter.
+
+require mobilityduck
+
+# ---------------------------------------------------------------------------
+# A temporal box from a value and a timestamp or a period
+# ---------------------------------------------------------------------------
+
+query IIIIII
+SELECT
+  tbox(1, timestamptz '2001-01-01')
+    = tbox 'TBOXINT XT([1, 2),[2001-01-01, 2001-01-01])',
+  tbox(1::BIGINT, timestamptz '2001-01-01')
+    = tbox 'TBOXBIGINT XT([1, 2),[2001-01-01, 2001-01-01])',
+  tbox(1.5, timestamptz '2001-01-01')
+    = tbox 'TBOXFLOAT XT([1.5, 1.5],[2001-01-01, 2001-01-01])',
+  tbox(1, tstzspan '[2001-01-01,2001-01-02]')
+    = tbox 'TBOXINT XT([1, 2),[2001-01-01, 2001-01-02])',
+  tbox(1::BIGINT, tstzspan '[2001-01-01,2001-01-02]')
+    = tbox 'TBOXBIGINT XT([1, 2),[2001-01-01, 2001-01-02])',
+  tbox(1.5, tstzspan '[2001-01-01,2001-01-02]')
+    = tbox 'TBOXFLOAT XT([1.5, 1.5],[2001-01-01, 2001-01-02])';
+----
+true	true	true	true	true	true
+
+# ---------------------------------------------------------------------------
+# A temporal box from a span of values and a timestamp or a period
+# ---------------------------------------------------------------------------
+
+query IIIIII
+SELECT
+  tbox(intspan '[1,2]', timestamptz '2001-01-01')
+    = tbox 'TBOXINT XT([1, 3),[2001-01-01, 2001-01-01])',
+  tbox(intspan '[1,2]', tstzspan '[2001-01-01,2001-01-02]')
+    = tbox 'TBOXINT XT([1, 3),[2001-01-01, 2001-01-02])',
+  tbox(bigintspan '[1,2]', timestamptz '2001-01-01')
+    = tbox 'TBOXBIGINT XT([1, 3),[2001-01-01, 2001-01-01])',
+  tbox(bigintspan '[1,2]', tstzspan '[2001-01-01,2001-01-02]')
+    = tbox 'TBOXBIGINT XT([1, 3),[2001-01-01, 2001-01-02])',
+  tbox(floatspan '[1,2]', timestamptz '2001-01-01')
+    = tbox 'TBOXFLOAT XT([1, 2],[2001-01-01, 2001-01-01])',
+  tbox(floatspan '[1,2]', tstzspan '[2001-01-01,2001-01-02]')
+    = tbox 'TBOXFLOAT XT([1, 2],[2001-01-01, 2001-01-02])';
+----
+true	true	true	true	true	true
+
+# ---------------------------------------------------------------------------
+# A spatiotemporal box from a geometry and a timestamp or a period
+# ---------------------------------------------------------------------------
+
+query IIII
+SELECT
+  stbox(ST_GeomFromText('Point(1 1)'), timestamptz '2001-01-01')
+    = stbox 'STBOX XT(((1,1),(1,1)),[2001-01-01, 2001-01-01])',
+  stbox(ST_GeomFromText('POINT Z (1 1 1)'), timestamptz '2001-01-01')
+    = stbox 'STBOX ZT(((1,1,1),(1,1,1)),[2001-01-01, 2001-01-01])',
+  stbox(ST_GeomFromText('Point(1 1)'), tstzspan '[2001-01-01, 2001-01-02]')
+    = stbox 'STBOX XT(((1,1),(1,1)),[2001-01-01, 2001-01-02])',
+  stbox(ST_GeomFromText('POINT Z (1 1 1)'), tstzspan '[2001-01-01, 2001-01-02]')
+    = stbox 'STBOX ZT(((1,1,1),(1,1,1)),[2001-01-01, 2001-01-02])';
+----
+true	true	true	true
+
+# An empty geometry has no box
+query II
+SELECT stbox(ST_GeomFromText('Point empty'), timestamptz '2001-01-01') IS NULL,
+  stbox(ST_GeomFromText('Point empty'), tstzspan '[2001-01-01, 2001-01-02]') IS NULL;
+----
+true	true
+
+# A NULL operand answers NULL
+query III
+SELECT tbox(NULL::INTEGER, tstzspan '[2001-01-01,2001-01-02]') IS NULL,
+  tbox(intspan '[1,2]', NULL::tstzspan) IS NULL,
+  stbox(ST_GeomFromText('Point(1 1)'), NULL::tstzspan) IS NULL;
+----
+true	true	true

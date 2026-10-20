@@ -77,26 +77,6 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
-            "stbox",
-            {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ},
-            StboxType::stbox(),
-            StboxFunctions::Geo_timestamptz_to_stbox
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox",
-            {MobilityDuckGeometryType(), SpanTypes::tstzspan()},
-            StboxType::stbox(),
-            StboxFunctions::Geo_tstzspan_to_stbox
-        )
-    );
-
-
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
             "@>",
             {stbox(), stbox()},
             LogicalType::BOOLEAN,
