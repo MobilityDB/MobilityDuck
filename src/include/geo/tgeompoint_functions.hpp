@@ -24,15 +24,10 @@ struct TgeompointFunctions {
     static void Spatialarr_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tspatial_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static bool Tspatial_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    // getTime: Temporal_time
-    // duration: Temporal_duration
-    // startTimestamp: Temporal_start_timestamptz
-    static void Tgeompoint_sequence_constructor(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Conversion functions
      ****************************************************/
-    static void Temporal_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
     static bool Temporal_to_tstzspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* ***************************************************
@@ -41,65 +36,20 @@ struct TgeompointFunctions {
     // timestamps: Temporal_timestamps
 
     /* ***************************************************
-     * Restriction functions
-     ****************************************************/
-    static void Tgeompoint_value_at_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /* ***************************************************
      * Stops function
      ****************************************************/
     
-    /* ***************************************************
-    * TODO: Ever/Always Comparison functions
-    ****************************************************/
-    static void Ever_eq_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Always_eq_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Ever_ne_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Always_ne_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Ever_eq_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Always_eq_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Ever_ne_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Always_ne_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Ever_eq_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Always_eq_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Ever_ne_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Always_ne_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Teq_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tne_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Teq_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tne_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Teq_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tne_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Teq_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tne_temporal_temporal(DataChunk &args, ExpressionState &state, Vector &result);
     /* ***************************************************
      * Spatial functions
      ****************************************************/
 
     static void Tpoint_make_simple(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tpoint_trajectory_gs(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tspatial_transform(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /* ***************************************************
-     * Operators (workaround as functions)
-     ****************************************************/
-    static void Temporal_overlaps_tgeompoint_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_overlaps_tgeompoint_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_contains_tgeompoint_stbox(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Distance functions
      ****************************************************/
-    static void Tdistance_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tdistance_named(DataChunk &args, ExpressionState &state, Vector &result);
-    // static void gs_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void collect_gs(DataChunk &args, ExpressionState &state, Vector &result);
     static void distance_geo_geo(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /* nearestApproachInstant / nearestApproachDistance / nad */
-    static void Nad_tgeo_geo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Nad_geo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Nad_tgeo_tgeo(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Affine / translate / rotate / scale transforms

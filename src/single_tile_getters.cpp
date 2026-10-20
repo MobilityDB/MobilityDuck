@@ -24,27 +24,6 @@ namespace duckdb {
 
 namespace {
 
-inline string_t MallocBlobToResult(Vector &result, void *buf, size_t sz) {
-    string_t blob(reinterpret_cast<const char *>(buf), UnsafeNumericCast<uint32_t>(sz));
-    string_t stored = StringVector::AddStringOrBlob(result, blob);
-    free(buf);
-    return stored;
-}
-
-inline string_t TboxToBlob(Vector &result, TBox *tbox) {
-    string_t out = StringVector::AddStringOrBlob(
-        result, reinterpret_cast<const char *>(tbox), sizeof(TBox));
-    free(tbox);
-    return out;
-}
-
-inline string_t StboxToBlob(Vector &result, STBox *stbox) {
-    string_t out = StringVector::AddStringOrBlob(
-        result, reinterpret_cast<const char *>(stbox), sizeof(STBox));
-    free(stbox);
-    return out;
-}
-
 // =====================================================================
 // getValueTile(double, double [, double=0.0]) -> tbox
 // =====================================================================

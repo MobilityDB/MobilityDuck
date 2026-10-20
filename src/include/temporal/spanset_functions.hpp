@@ -27,29 +27,14 @@ struct SpansetFunctions{
     static bool Datespanset_to_tstzspanset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Tstzspanset_to_datespanset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
-    // other    
-
-    static void Intspanset_to_floatspanset(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Floatspanset_to_intspanset(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Datespanset_to_tstzspanset(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tstzspanset_to_datespanset(DataChunk &args, ExpressionState &state, Vector &result);
     // TODO: Multirange functions
 
     // Accessor functions
     static void Spanset_mem_size(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Spanset_lower(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Spanset_upper(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spanset_lower_inc(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spanset_upper_inc(DataChunk &args, ExpressionState &state, Vector &result);
     static void Datespanset_duration(DataChunk &args, ExpressionState &state, Vector &result);
     static void Tstzspanset_duration(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Spanset_num_spans(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Datespanset_num_dates(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Datespanset_start_date(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Datespanset_end_date(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tstzspanset_num_timestamps(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tstzspanset_start_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tstzspanset_end_timestamptz(DataChunk &args, ExpressionState &state, Vector &result);
 
     // Transformations functions
     // floor/ceil/round/degrees/radians on floatspanset are generated (generated_temporal_udfs.cpp).

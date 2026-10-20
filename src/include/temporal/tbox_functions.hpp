@@ -30,7 +30,6 @@ struct TboxFunctions {
     static bool Number_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     // TODO: what is duckdb equivalent of numeric?
-    // static void Numeric_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
 
     static void TimestamptzToTboxExecutor(Vector &value, Vector &result, idx_t count);
     static bool Timestamptz_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
@@ -57,10 +56,6 @@ struct TboxFunctions {
 
     // TODO: Selectivity functions
     
-    /********************************************************
-    * set operators
-    ********************************************************/
-    static void Intersection_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     // TODO: extend aggregation
 
     /* ***************************************************

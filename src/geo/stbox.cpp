@@ -83,15 +83,6 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
      * catalog-only *_bbox @sqlfn backing tag as an alias; that is internal, not a
      * user-facing canonical name.) */
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "*",
-            {stbox(), stbox()},
-            stbox(),
-            StboxFunctions::Intersection_stbox_stbox
-        )
-    );
-
     /* ***************************************************
      * Tile / box emitters and single-tile getters
      ****************************************************/

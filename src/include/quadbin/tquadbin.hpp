@@ -31,21 +31,11 @@ struct QuadbinFunctions {
     static bool Tquadbin_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Tquadbin_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
-    /* Static cell helpers (quadbinTileToCell is generated) */
-    static void Quadbin_get_resolution(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Quadbin_is_valid_cell(DataChunk &args, ExpressionState &state, Vector &result);
-
     /* Constructor */
     static void Tquadbin_make(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* Accessors (startValue/endValue/valueN/getValues are generated — see src/generated) */
 
-    /* Quadkey conversion */
-    static void Tquadbin_cell_to_quadkey(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /* Casts to/from tbigint */
-    static void Tbigint_to_tquadbin(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tquadbin_to_tbigint(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

@@ -20,13 +20,6 @@ namespace duckdb {
 namespace {
 
 /* For stbox_to_geo: 2D geodetic box via MEOS constructor (no Z dimension in output geometry). */
-inline STBox *Stbox_geodetic_xy_copy(const STBox *box) {
-    if (!stbox_isgeodetic(box) || !stbox_hasz(box)) {
-        return nullptr;
-    }
-    return stbox_make(stbox_hasx(box), false, true, box->srid, box->xmin, box->xmax, box->ymin, box->ymax,
-                      0.0, 0.0, stbox_hast(box) ? &box->period : nullptr);
-}
 
 inline void Stbox_normalize_geodetic_srid(STBox *box) {
     if ((stbox_isgeodetic(box) || MEOS_FLAGS_GET_GEODETIC(box->flags)) && box->srid == 0) {
@@ -117,80 +110,6 @@ bool StboxFunctions::Stbox_out(Vector &source, Vector &result, idx_t count, Cast
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
     return success;
-}
-
-/* ***************************************************
- * In/out functions: WKB/HexWKB <-> stbox
- ****************************************************/
-
-void StboxFunctions::Stbox_from_hexwkb(DataChunk &args, ExpressionState &state, Vector &result) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        args.data[0], result, args.size(),
-        [&](string_t input_hexwkb) -> string_t {
-            // string_t::GetData() is not NUL-terminated, but stbox_from_hexwkb()
-            // strlen()s its argument; reading the raw pointer overruns the buffer
-            // on allocators that leave the trailing byte non-zero (e.g. macOS arm64).
-            // Copy into a NUL-terminated std::string first, as the sibling consumers do.
-            std::string hexwkb = input_hexwkb.GetString();
-            STBox *stbox = stbox_from_hexwkb(hexwkb.c_str());
-            if (!stbox) {
-                throw InternalException("Failure in Stbox_from_hexwkb: unable to cast hexwkb to stbox");
-                return string_t();
-            }
-            Stbox_normalize_geodetic_srid(stbox);
-            size_t stbox_size = sizeof(STBox);
-            uint8_t *stbox_data = (uint8_t*)malloc(stbox_size);
-            if (!stbox_data) {
-                free(stbox);
-                throw InternalException("Failure in Stbox_in: unable to allocate memory for stbox");
-                return string_t();
-            }
-            memcpy(stbox_data, stbox, stbox_size);
-            string_t ret_str(reinterpret_cast<const char*>(stbox_data), stbox_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-            free(stbox_data);
-            free(stbox);
-            return stored_data;
-        }
-    );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-void StboxFunctions::Stbox_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        args.data[0], result, args.size(),
-        [&](string_t input_stbox) -> string_t {
-            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_stbox.GetData());
-            size_t data_size = input_stbox.GetSize();
-            if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid stbox data: insufficient size");
-            }
-            uint8_t *data_copy = (uint8_t*)malloc(data_size);
-            memcpy(data_copy, data, data_size);
-            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
-            if (!stbox) {
-                free(data_copy);
-                throw InternalException("Failure in Stbox_as_hexwkb: unable to cast binary to stbox");
-            }
-            size_t wkb_size = sizeof(STBox);
-            char *wkb = stbox_as_hexwkb(stbox, WKB_EXTENDED, &wkb_size);
-            if (!wkb) {
-                free(stbox);
-                throw InternalException("Failure in Stbox_as_hexwkb: unable to cast stbox to hexwkb");
-                return string_t();
-            }
-            string_t ret_str(wkb);
-            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-            free(wkb);
-            free(stbox);
-            return stored_data;
-        }
-    );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
 }
 
 /* ***************************************************
@@ -418,74 +337,6 @@ bool StboxFunctions::Tstzspanset_to_stbox_cast(Vector &source, Vector &result, i
  * Topological operators
  ****************************************************/
 
-void StboxFunctions::Intersection_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
-    BinaryExecutor::Execute<string_t, string_t, string_t>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t input_stbox1, string_t input_stbox2) -> string_t {
-            const uint8_t *data1 = reinterpret_cast<const uint8_t*>(input_stbox1.GetData());
-            size_t data_size1 = input_stbox1.GetSize();
-            if (data_size1 < sizeof(void*)) {
-                throw InvalidInputException("Invalid stbox data: insufficient size");
-            }
-            uint8_t *data_copy1 = (uint8_t*)malloc(data_size1);
-            if (!data_copy1) {
-                throw InternalException("Failure in Union_stbox_stbox: unable to allocate stbox copy");
-            }
-            memcpy(data_copy1, data1, data_size1);
-            STBox *stbox1 = reinterpret_cast<STBox*>(data_copy1);
-            if (!stbox1) {
-                free(data_copy1);
-                throw InternalException("Failure in Union_stbox_stbox: unable to cast binary to stbox");
-            }
-
-            const uint8_t *data2 = reinterpret_cast<const uint8_t*>(input_stbox2.GetData());
-            size_t data_size2 = input_stbox2.GetSize();
-            if (data_size2 < sizeof(void*)) {
-                free(data_copy1);
-                throw InvalidInputException("Invalid stbox data: insufficient size");
-            }
-            uint8_t *data_copy2 = (uint8_t*)malloc(data_size2);
-            if (!data_copy2) {
-                free(data_copy1);
-                throw InternalException("Failure in Union_stbox_stbox: unable to allocate stbox copy");
-            }
-            memcpy(data_copy2, data2, data_size2);
-            STBox *stbox2 = reinterpret_cast<STBox*>(data_copy2);
-            if (!stbox2) {
-                free(data_copy2);
-                free(data_copy1);
-                throw InternalException("Failure in Union_stbox_stbox: unable to cast binary to stbox");
-            }
-
-            STBox *ret = intersection_stbox_stbox(stbox1, stbox2);
-            if (!ret) {
-                free(stbox1);
-                free(stbox2);
-                throw InternalException("Failure in Union_stbox_stbox: unable to union stboxes");
-            }
-            size_t stbox_size = sizeof(STBox);
-            uint8_t *stbox_data = (uint8_t*)malloc(stbox_size);
-            if (!stbox_data) {
-                free(ret);
-                free(stbox1);
-                free(stbox2);
-                throw InternalException("Failure in Union_stbox_stbox: unable to allocate memory for stbox");
-            }
-            memcpy(stbox_data, ret, stbox_size);
-            string_t ret_str(reinterpret_cast<const char*>(stbox_data), stbox_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-            free(stbox_data);
-            free(ret);
-            free(stbox1);
-            free(stbox2);
-            return stored_data;
-        }
-    );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
 /* ***************************************************
  * Tile / box emitters, single-tile getters, and tspatial topological predicates
  ****************************************************/
@@ -504,18 +355,6 @@ inline Temporal *BlobToTempTile(string_t b) {
     uint8_t *copy = (uint8_t *)malloc(sz);
     memcpy(copy, b.GetData(), sz);
     return reinterpret_cast<Temporal *>(copy);
-}
-
-inline Temporal *BlobToTemp(string_t b) {
-    size_t sz = b.GetSize();
-    uint8_t *copy = (uint8_t *)malloc(sz);
-    memcpy(copy, b.GetData(), sz);
-    return reinterpret_cast<Temporal *>(copy);
-}
-
-string_t StboxToResultBlob(Vector &result, const STBox *box) {
-    string_t blob(reinterpret_cast<const char *>(box), sizeof(STBox));
-    return StringVector::AddStringOrBlob(result, blob);
 }
 
 void EmitStboxList(Vector &result, idx_t row, list_entry_t *list_entries,
@@ -542,13 +381,6 @@ GSERIALIZED *DefaultOriginPoint() {
     /* MEOS exports geompoint_make3dz; the SRID 0 / (0,0,0) origin matches
      * MobilityDB's `Point(0 0 0)` SQL DEFAULT for sorigin. */
     return geompoint_make3dz(0, 0.0, 0.0, 0.0);
-}
-
-inline STBox *BlobToStbox(string_t b) {
-    size_t sz = b.GetSize();
-    uint8_t *copy = (uint8_t *)malloc(sz);
-    memcpy(copy, b.GetData(), sz);
-    return reinterpret_cast<STBox *>(copy);
 }
 
 } // namespace
@@ -748,48 +580,5 @@ void StboxFunctions::Tgeo_space_time_boxes(DataChunk &args, ExpressionState &sta
     }
     if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
-
-#define DEFINE_TSPATIAL_TOPO(OP, MEOS)                                                                                                       \
-void StboxFunctions::OP##_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result) {                                          \
-    BinaryExecutor::Execute<string_t, string_t, bool>(                                                                                       \
-        args.data[0], args.data[1], result, args.size(),                                                                                     \
-        [](string_t bt, string_t bs) -> bool {                                                                                               \
-            Temporal *t = BlobToTemp(bt);                                                                                                    \
-            STBox    *s = BlobToStbox(bs);                                                                                                   \
-            bool r = MEOS##_tspatial_stbox(t, s);                                                                                            \
-            free(t); free(s);                                                                                                                \
-            return r;                                                                                                                        \
-        });                                                                                                                                   \
-}                                                                                                                                             \
-void StboxFunctions::OP##_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result) {                                          \
-    BinaryExecutor::Execute<string_t, string_t, bool>(                                                                                       \
-        args.data[0], args.data[1], result, args.size(),                                                                                     \
-        [](string_t bs, string_t bt) -> bool {                                                                                               \
-            STBox    *s = BlobToStbox(bs);                                                                                                   \
-            Temporal *t = BlobToTemp(bt);                                                                                                    \
-            bool r = MEOS##_stbox_tspatial(s, t);                                                                                            \
-            free(s); free(t);                                                                                                                \
-            return r;                                                                                                                        \
-        });                                                                                                                                   \
-}                                                                                                                                             \
-void StboxFunctions::OP##_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result) {                                       \
-    BinaryExecutor::Execute<string_t, string_t, bool>(                                                                                       \
-        args.data[0], args.data[1], result, args.size(),                                                                                     \
-        [](string_t b1, string_t b2) -> bool {                                                                                               \
-            Temporal *t1 = BlobToTemp(b1);                                                                                                   \
-            Temporal *t2 = BlobToTemp(b2);                                                                                                   \
-            bool r = MEOS##_tspatial_tspatial(t1, t2);                                                                                       \
-            free(t1); free(t2);                                                                                                              \
-            return r;                                                                                                                        \
-        });                                                                                                                                   \
-}
-
-DEFINE_TSPATIAL_TOPO(Contains,  contains)
-DEFINE_TSPATIAL_TOPO(Contained, contained)
-DEFINE_TSPATIAL_TOPO(Overlaps,  overlaps)
-DEFINE_TSPATIAL_TOPO(Same,      same)
-DEFINE_TSPATIAL_TOPO(Adjacent,  adjacent)
-
-#undef DEFINE_TSPATIAL_TOPO
 
 } // namespace duckdb

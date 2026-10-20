@@ -27,7 +27,6 @@ struct TpcpointFunctions {
     // generated startValue/endValue base value renders as hex-WKB text (cbuffer sibling).
     static bool Pcpoint_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Pcpoint_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool WkbBlobToGeometry(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 };
 
 

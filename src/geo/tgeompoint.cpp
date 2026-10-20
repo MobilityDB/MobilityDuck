@@ -229,70 +229,6 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
      ****************************************************/
     
     /* ***************************************************
-     * Comparison functions
-     ****************************************************/
-
-
-
-
-
-
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "=",
-            {tgeompoint(), tgeompoint()},
-            LogicalType::BOOLEAN,
-            TemporalFunctions::Temporal_eq
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "<>",
-            {tgeompoint(), tgeompoint()},
-            LogicalType::BOOLEAN,
-            TemporalFunctions::Temporal_ne
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "<",
-            {tgeompoint(), tgeompoint()},
-            LogicalType::BOOLEAN,
-            TemporalFunctions::Temporal_lt
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "<=",
-            {tgeompoint(), tgeompoint()},
-            LogicalType::BOOLEAN,
-            TemporalFunctions::Temporal_le
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            ">",
-            {tgeompoint(), tgeompoint()},
-            LogicalType::BOOLEAN,
-            TemporalFunctions::Temporal_gt
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            ">=",
-            {tgeompoint(), tgeompoint()},
-            LogicalType::BOOLEAN,
-            TemporalFunctions::Temporal_ge
-        )
-    );
-
-    /* ***************************************************
      * Spatial functions
      ****************************************************/
 
@@ -307,76 +243,11 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
 
 
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "transform",
-            {tgeompoint(), LogicalType::INTEGER},
-            tgeompoint(),
-            TgeompointFunctions::Tspatial_transform
-        )
-    );
-
     // round(tgeompoint) at both arities is generated from the catalog temporal_round
     // signature (generated_temporal_udfs.cpp); no hand registration remains.
 
 
     
-
-    /* ***************************************************
-     * Operators (workaround as functions)
-     ****************************************************/
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "&&", // overlaps
-            {tgeompoint(), StboxType::stbox()},
-            LogicalType::BOOLEAN,
-            TgeompointFunctions::Temporal_overlaps_tgeompoint_stbox
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "&&", // overlaps
-            {tgeompoint(), SpanTypes::tstzspan()},
-            LogicalType::BOOLEAN,
-            TgeompointFunctions::Temporal_overlaps_tgeompoint_tstzspan
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "@>", // contains
-            {tgeompoint(), StboxType::stbox()},
-            LogicalType::BOOLEAN,
-            TgeompointFunctions::Temporal_contains_tgeompoint_stbox
-        )
-    );
-
-     /* ***************************************************
-     * Distance functions
-     ****************************************************/
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "<->",
-            {tgeompoint(), tgeompoint()},
-            TemporalTypes::tfloat(),
-            TgeompointFunctions::Tdistance_tgeo_tgeo
-        )
-    );
-
-
-
-    // ExtensionUtil::RegisterFunction(
-    //     instance,
-    //     ScalarFunction(
-    //         "gs_as_text",
-    //         {LogicalType::BLOB},
-    //         LogicalType::VARCHAR,
-    //         TgeompointFunctions::gs_as_text
-    //     )
-    // );
 
     duckdb::RegisterSerializedScalarFunction(loader, 
         ScalarFunction(
@@ -411,14 +282,10 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         // by the generated surface (geometry-arg overloads via the Temporal+GSERIALIZED path).
     }
 
-    /* tdistance named form (mirrors the <-> operator) */
     {
         const auto TG = tgeompoint();
         const auto G  = MobilityDuckGeometryType();
-        const auto TF = TemporalTypes::tfloat();
         const auto D  = LogicalType::DOUBLE;
-
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tdistance", {TG, TG}, TF, TgeompointFunctions::Tdistance_named));
 
         /* nearestApproachInstant */
 
