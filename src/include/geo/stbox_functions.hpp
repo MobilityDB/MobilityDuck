@@ -28,16 +28,6 @@ struct StboxFunctions {
     static void Stbox_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
-     * Constructor functions
-     ****************************************************/
-    // static void Stbox_constructor_x(DataChunk &args, ExpressionState &state, Vector &result);
-    // static void Stbox_constructor_z(DataChunk &args, ExpressionState &state, Vector &result);
-    // static void Stbox_constructor_t(DataChunk &args, ExpressionState &state, Vector &result);
-
-    static void Geo_timestamptz_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Geo_tstzspan_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /* ***************************************************
      * Conversion functions + cast functions: [TYPE] -> stbox
      ****************************************************/
     static void Geo_to_stbox_common(Vector &source, Vector &result, idx_t count);

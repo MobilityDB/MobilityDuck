@@ -2984,6 +2984,35 @@ def ctor_duck_type(sqlt):
         return "LogicalType::LIST(%s)" % inner if inner else None
     return SQL_BASE_TO_DUCK.get(sqlt) or SET_TYPES.get(sqlt) or SPANSET_TYPES.get(sqlt)
 
+def span_operand(f, p, k):
+    """The #shape_arg triple of a span operand at argument k, typed as #scalar_arg_for types an
+    integer, by the one SQL type every signature declares there (tbox(integer, tstzspan),
+    stbox(geometry, tstzspan)); None for any other operand or for signatures that disagree. The
+    marshal decodes the blob into a span the emitter frees after the call (#hoist_span_operands)."""
+    if base(p["canonical"]) != "Span" or norm(p["canonical"]).count("*") != 1:
+        return None
+    decl = {(s.get("args") or [])[k] if k < len(s.get("args") or []) else None
+            for s in f.get("sqlSignatures") or []}
+    if len(decl) != 1:
+        return None
+    d = decl.pop()
+    return (SPAN_TYPES[d], "string_t", "BlobToSpan(a2)") if d in SPAN_TYPES else None
+
+def hoist_span_operands(args, indent):
+    """The arguments of a call with each span operand decoded into a local and freed after the
+    call, as #emit_nary_scalars decodes and frees its first operand x0: (the lines declaring the
+    locals, the arguments, the lines freeing them). `args` holds each argument's marshal
+    expression already read at the row."""
+    decl, call, free_ = [], [], []
+    for k, a in enumerate(args):
+        if a.startswith("BlobToSpan("):
+            decl.append(f"{indent}Span *p{k} = {a};")
+            call.append(f"p{k}")
+            free_.append(f"{indent}free(p{k});")
+        else:
+            call.append(a)
+    return decl, call, free_
+
 def shape_container_make(f):
     """A retired group's public constructor of a set, a span, a span set or a box: ('scalars', [the
     #shape_arg triple of each parameter], None, ret) for one taking by-value values and durations
@@ -3001,13 +3030,24 @@ def shape_container_make(f):
     ps = f.get("params") or []
     ia = (f.get("shape") or {}).get("inputArrays") or []
     if not ia:
-        # a by-value value, or a duration read as #shape_arg reads one
+        # a by-value value, or a duration read as #shape_arg reads one, and past the first a span
+        # (tbox(integer, tstzspan)) as #span_operand reads one
         def _value(p):
             b, n = base(p["canonical"]), norm(p["canonical"])
             return (b in SCALAR_ARG and "*" not in n) or (b == "Interval" and n.count("*") == 1)
-        if not ps or not all(_value(p) for p in ps):
+        if not ps or not _value(ps[0]):
             return None
-        return ("scalars", [shape_arg(p) for p in ps], None, rb)
+        info = [shape_arg(ps[0])]
+        for k, p in enumerate(ps[1:], start=1):
+            t = shape_arg(p) if _value(p) else span_operand(f, p, k)
+            if t is None:
+                return None
+            info.append(t)
+        # every signature names one argument per parameter: a constructor whose parameters the
+        # catalog binds (stbox_make behind stboxX) is not read argument by argument
+        if any(len(s.get("args") or []) != len(ps) for s in f.get("sqlSignatures") or []):
+            return None
+        return ("scalars", info, None, rb)
     if rb in ("TBox", "STBox"):
         return None
     if len(ia) != 1 or len(ps) != 2 or ia[0].get("param") != ps[0]["name"] \
@@ -3069,8 +3109,10 @@ def emit_container_make(f, kind, info, rb, k=None):
               "        if (!valid) { outv.SetInvalid(i); continue; }"]
         call = [info[c][2].replace("a2", f"in{c}[i]") for c in range(k)]
         call += [forward_literal(ps[c], defs[c]) for c in range(k, n)]
-        L += [f"        {rb} *r = {name}({', '.join(call)});",
-              "        if (!r) { outv.SetInvalid(i); continue; }",
+        decl, call, free_ = hoist_span_operands(call, "        ")
+        L += decl
+        L += [f"        {rb} *r = {name}({', '.join(call)});"] + free_
+        L += ["        if (!r) { outv.SetInvalid(i); continue; }",
               f"        out[i] = {writer};",
               "    }",
               "}"]
@@ -3239,7 +3281,10 @@ def shape_nary_scalars(f):
     # and a container of another kind, span(intspanset) -> intspan, spanN(intspanset, integer),
     # dates(datespanset) -> dateset
     if b0 in CONT_BLOBTO and n0.endswith("*") and len(ins) <= 3:
-        tail = [shape_arg(p) for p in ins[1:]]
+        # a span past the first answering a box is a period (tbox(intspan, tstzspan)), read as
+        # #span_operand reads one
+        tail = [shape_arg(p) or (span_operand(f, p, k) if rb in ("TBox", "STBox") else None)
+                for k, p in enumerate(ins[1:], start=1)]
         if None in tail or rb not in CONT_BLOBTO or not rn.endswith("*") \
                 or "const" in f["returnType"]["canonical"]:
             return None
@@ -3257,8 +3302,13 @@ def shape_nary_scalars(f):
     if b0 == "Temporal" and len(ins) < 4:
         return None
     tail = []
-    for p in ins[1:]:
+    for k, p in enumerate(ins[1:], start=1):
         bb, nn = base(p["canonical"]), norm(p["canonical"])
+        # the period of a geometry's box (stbox(geometry, tstzspan)), read as #span_operand reads one
+        sp = span_operand(f, p, k) if b0 == "GSERIALIZED" and rb == "STBox" else None
+        if sp is not None:
+            tail.append(sp)
+            continue
         if "*" in nn or bb not in SCALAR_ARG:
             return None
         tail.append(SCALAR_ARG[bb])
@@ -3307,11 +3357,14 @@ def emit_nary_scalars(f, first, tail, ret, dval=None):
         L.append(f"        {cb} *x0 = {CONT_BLOBTO[cb]}(in0[i]);")
     else:
         L.append("        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);")
-    call = ", ".join(["x0"] + [m.replace("a2", f"in{k}[i]") for k, (_d, _c, m) in enumerate(tail, start=1)]
-                     + ([dval] if dval is not None else []))
+    decl, args_, free_ = hoist_span_operands(
+        ["x0"] + [m.replace("a2", f"in{k}[i]") for k, (_d, _c, m) in enumerate(tail, start=1)]
+        + ([dval] if dval is not None else []), "        ")
+    L += decl
+    call = ", ".join(args_)
     if ret.startswith("cont:"):
         cb = ret.split(":", 1)[1]
-        L += [f"        {cb} *r = {name}({call});",
+        L += [f"        {cb} *r = {name}({call});"] + free_ + [
               "        free(x0);",
               "        if (!r) { outv.SetInvalid(i); continue; }",
               "        out[i] = %s;" % (PTR_RET[cb][1] % "r")]
@@ -4543,7 +4596,10 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_box_transf", "meos_geo_box_transf",
                   "meos_box_conversion", "meos_geo_box_conversion",
                   "meos_box_set", "meos_geo_box_set",
-                  "meos_box_inout", "meos_geo_box_inout"}
+                  "meos_box_inout", "meos_geo_box_inout",
+                  # The box constructors: tbox and stbox from a value, a span, a timestamp, a
+                  # period, a geometry and their pairs
+                  "meos_box_constructor", "meos_geo_box_constructor"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
@@ -4560,7 +4616,10 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # timeBins, timeBoxes and valueTimeBoxes are not registered by either.
 # box2d and box3d: PostGIS's box types, which DuckDB does not have, so box2d(stbox) and
 # box3d(stbox) answer no type this surface registers; no hand registration answers them either.
-RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d",
+# stboxX: the catalog gives stbox_make, whose eleven parameters the SQL constructor fills from
+# five arguments, the flags through boundArgs and the SRID read last in SQL and fourth in C; no
+# shape reads that mapping, and no hand registration answers stboxX either.
+RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX",
                        "getSpaceTile", "getSpaceTimeTile",
                        "spaceBoxes", "spaceSplit", "spaceTiles", "spaceTimeSplit", "spaceTimeTiles",
                        "timeBins", "timeBoxes", "timeSplit", "timeTiles",

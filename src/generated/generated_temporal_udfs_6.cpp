@@ -913,6 +913,174 @@ inline Temporal * trgeometry_append_tsequence_expand(Temporal * p0, const Tempor
 }
 
 
+// ===== @ingroup meos_box_constructor =====
+static void Gen_float_timestamptz_to_tbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<double>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        TBox *r = float_timestamptz_to_tbox(in0[i], DuckDBToMeosTimestamp(in1[i]).value);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TboxToBlob(result, r);
+    }
+}
+
+static void Gen_float_tstzspan_to_tbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<double>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Span *p1 = BlobToSpan(in1[i]);
+        TBox *r = float_tstzspan_to_tbox(in0[i], p1);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TboxToBlob(result, r);
+    }
+}
+
+static void Gen_int_timestamptz_to_tbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int32_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        TBox *r = int_timestamptz_to_tbox(in0[i], DuckDBToMeosTimestamp(in1[i]).value);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TboxToBlob(result, r);
+    }
+}
+
+static void Gen_bigint_timestamptz_to_tbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        TBox *r = bigint_timestamptz_to_tbox(in0[i], DuckDBToMeosTimestamp(in1[i]).value);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TboxToBlob(result, r);
+    }
+}
+
+static void Gen_int_tstzspan_to_tbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int32_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Span *p1 = BlobToSpan(in1[i]);
+        TBox *r = int_tstzspan_to_tbox(in0[i], p1);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TboxToBlob(result, r);
+    }
+}
+
+static void Gen_bigint_tstzspan_to_tbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Span *p1 = BlobToSpan(in1[i]);
+        TBox *r = bigint_tstzspan_to_tbox(in0[i], p1);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TboxToBlob(result, r);
+    }
+}
+
+static void Gen_numspan_tstzspan_to_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Span *x0 = BlobToSpan(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        TBox *r = numspan_tstzspan_to_tbox(x0, p1);
+        free(p1);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TboxToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_numspan_timestamptz_to_tbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Span *x0 = BlobToSpan(in0[i]);
+        TBox *r = numspan_timestamptz_to_tbox(x0, DuckDBToMeosTimestamp(in1[i]).value);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TboxToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+
 // ===== @ingroup meos_geo_box_topo =====
 static void Gen_adjacent_stbox_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -3628,6 +3796,21 @@ static void Gen_etouches_tpoint_geo(DataChunk &args, ExpressionState &, Vector &
 }
 
 } // anonymous
+
+void RegisterGenerated_meos_box_constructor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbox", {LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ}, TboxType::tbox(), Gen_float_timestamptz_to_tbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbox", {LogicalType::DOUBLE, SpanTypes::tstzspan()}, TboxType::tbox(), Gen_float_tstzspan_to_tbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbox", {LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ}, TboxType::tbox(), Gen_int_timestamptz_to_tbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbox", {LogicalType::BIGINT, LogicalType::TIMESTAMP_TZ}, TboxType::tbox(), Gen_bigint_timestamptz_to_tbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbox", {LogicalType::INTEGER, SpanTypes::tstzspan()}, TboxType::tbox(), Gen_int_tstzspan_to_tbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbox", {LogicalType::BIGINT, SpanTypes::tstzspan()}, TboxType::tbox(), Gen_bigint_tstzspan_to_tbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbox", {SpanTypes::bigintspan(), SpanTypes::tstzspan()}, TboxType::tbox(), Gen_numspan_tstzspan_to_tbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbox", {SpanTypes::intspan(), SpanTypes::tstzspan()}, TboxType::tbox(), Gen_numspan_tstzspan_to_tbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbox", {SpanTypes::floatspan(), SpanTypes::tstzspan()}, TboxType::tbox(), Gen_numspan_tstzspan_to_tbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbox", {SpanTypes::bigintspan(), LogicalType::TIMESTAMP_TZ}, TboxType::tbox(), Gen_numspan_timestamptz_to_tbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbox", {SpanTypes::intspan(), LogicalType::TIMESTAMP_TZ}, TboxType::tbox(), Gen_numspan_timestamptz_to_tbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbox", {SpanTypes::floatspan(), LogicalType::TIMESTAMP_TZ}, TboxType::tbox(), Gen_numspan_timestamptz_to_tbox));
+}
 
 void RegisterGenerated_meos_geo_box_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("stboxAdjacent", {StboxType::stbox(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_adjacent_stbox_stbox));

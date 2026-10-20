@@ -23,21 +23,6 @@ struct TboxFunctions {
     static bool Tbox_out(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* ***************************************************
-     * Constructor functions
-     ****************************************************/
-    template <typename TA>
-    static void NumberTimestamptzToTboxExecutor(Vector &value, Vector &t, MeosType basetype, Vector &result, idx_t count);
-    static void Number_timestamptz_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
-
-    static void Numspan_timestamptz_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
-
-    template <typename TA>
-    static void NumberTstzspanToTboxExecutor(Vector &value, Vector &span_str, MeosType basetype, Vector &result, idx_t count);
-    static void Number_tstzspan_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);;
-
-    static void Numspan_tstzspan_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /* ***************************************************
      * Conversion functions + cast functions: [TYPE] -> tbox
      ****************************************************/
     template <typename TA>

@@ -1105,6 +1105,54 @@ static void Gen_tcbuffer_translate(DataChunk &args, ExpressionState &, Vector &r
 }
 
 
+// ===== @ingroup meos_geo_box_constructor =====
+static void Gen_geo_timestamptz_to_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        STBox *r = geo_timestamptz_to_stbox(x0, DuckDBToMeosTimestamp(in1[i]).value);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StboxToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_geo_tstzspan_to_stbox(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        Span *p1 = BlobToSpan(in1[i]);
+        STBox *r = geo_tstzspan_to_stbox(x0, p1);
+        free(p1);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StboxToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+
 // ===== @ingroup meos_h3_base_inspection =====
 static void Gen_h3index_get_resolution(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -3838,6 +3886,11 @@ void RegisterGenerated_meos_cbuffer_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("rotate", {CbufferTypes::tcbuffer(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, CbufferTypes::tcbuffer(), Gen_tcbuffer_rotate));
     RegisterSerializedScalarFunction(loader, ScalarFunction("rotateZ", {CbufferTypes::tcbuffer(), LogicalType::DOUBLE}, CbufferTypes::tcbuffer(), Gen_tcbuffer_rotate_z));
     RegisterSerializedScalarFunction(loader, ScalarFunction("translate", {CbufferTypes::tcbuffer(), LogicalType::DOUBLE, LogicalType::DOUBLE}, CbufferTypes::tcbuffer(), Gen_tcbuffer_translate));
+}
+
+void RegisterGenerated_meos_geo_box_constructor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stbox", {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, StboxType::stbox(), Gen_geo_timestamptz_to_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stbox", {MobilityDuckGeometryType(), SpanTypes::tstzspan()}, StboxType::stbox(), Gen_geo_tstzspan_to_stbox));
 }
 
 void RegisterGenerated_meos_h3_base_inspection(ExtensionLoader &loader) {
