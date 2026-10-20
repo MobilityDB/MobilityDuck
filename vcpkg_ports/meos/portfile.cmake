@@ -53,69 +53,6 @@ if(NOT EXISTS "${_MEOS_JSONC_INC}/json.h")
     message(FATAL_ERROR "MEOS port: cannot locate vcpkg-installed json.h under ${CURRENT_INSTALLED_DIR}/include/json-c")
 endif()
 
-# Upstream gap: `temporal_parse` in `meos/src/temporal/type_parser.c` routes any
-# input that starts with '{' to the discrete-sequence parser, consuming the '{' as
-# the outer sequence delimiter.  For T_TJSONB, a bare instant like
-# `{"k":1}@2000-01-01` also starts with '{' (the JSON object delimiter), so it is
-# incorrectly dispatched to tdiscseq_parse which then tries to parse `"k":1}@...`
-# as a temporal instant and fails with "Missing delimeter character '@'".
-#
-# Fix: after peeking inside the outer '{', distinguish the three cases:
-#   - next char is '[' or '(' → sequence set (existing behaviour)
-#   - next char is '{' → discrete sequence (first instant's value starts with '{')
-#   - anything else AND basetype == T_JSONB → JSON-object instant; restore and
-#     parse via tinstant_parse
-# For non-T_JSONB types no observable behaviour change: their instant values never
-# start with '{', so the second condition (!=T_JSONB) keeps them in tdiscseq_parse.
-vcpkg_replace_string(
-    "${SOURCE_PATH}/meos/src/temporal/type_parser.c"
-    [=[  else if (**str == '{')
-  {
-    const char *bak = *str;
-    p_obrace(str);
-    p_whitespace(str);
-    if (**str == '[' || **str == '(')
-    {
-      *str = bak;
-      result = (Temporal *) tsequenceset_parse(str, temptype, interp);
-    }
-    else
-    {
-      *str = bak;
-      result = (Temporal *) tdiscseq_parse(str, temptype);
-    }
-  }]=]
-    [=[  else if (**str == '{')
-  {
-    const char *bak = *str;
-    p_obrace(str);
-    p_whitespace(str);
-    if (**str == '[' || **str == '(')
-    {
-      *str = bak;
-      result = (Temporal *) tsequenceset_parse(str, temptype, interp);
-    }
-    else if (**str == '{' || temptype_basetype(temptype) != T_JSONB)
-    {
-      /* Discrete sequence: either next token is another '{' (e.g. first
-       * instant's JSON-object value) or the base type never starts with '{'
-       * so the outer '{' is definitely the sequence delimiter. */
-      *str = bak;
-      result = (Temporal *) tdiscseq_parse(str, temptype);
-    }
-    else
-    {
-      /* The outer '{' belongs to the base value itself (e.g. a JSON object).
-       * Restore and parse as a temporal instant. */
-      *str = bak;
-      TInstant *inst = tinstant_parse(str, temptype, true);
-      if (! inst)
-        return NULL;
-      result = (Temporal *) inst;
-    }
-  }]=]
-)
-
 # USER-APPROVED-PIN-WRITE (2026-06-23): removed the binding's own stale
 # vcpkg_replace_string patches that INJECTED Datum accessors into pg_timestamp.h /
 # utils/timestamp.h and re-exported add_date_int/add_timestamptz_interval into

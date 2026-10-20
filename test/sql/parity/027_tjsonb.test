@@ -6,7 +6,7 @@ require mobilityduck
 
 # Round-trip a TJSONB instant through the cast.
 query I
-SELECT TJSONB('{"k":1}@2000-01-01')::VARCHAR;
+SELECT TJSONB('"{\"k\":1}"@2000-01-01')::VARCHAR;
 ----
 "{\"k\": 1}"@2000-01-01 00:00:00+01
 
@@ -18,13 +18,13 @@ SELECT TJSONB('{"x":42}', TIMESTAMPTZ '2020-06-01 00:00:00+00')::VARCHAR;
 
 # startValue returns the JSON of the first instant.
 query I
-SELECT startValue(TJSONB('{"a":1}@2000-01-01'));
+SELECT startValue(TJSONB('"{\"a\":1}"@2000-01-01'));
 ----
 {"a": 1}
 
 # endValue returns the JSON of the last instant.
 query I
-SELECT endValue(TJSONB('{"a":1}@2000-01-01'));
+SELECT endValue(TJSONB('"{\"a\":1}"@2000-01-01'));
 ----
 {"a": 1}
 
@@ -48,7 +48,7 @@ SELECT endValue(TJSONB('[{"v":1}@2000-01-01, {"v":2}@2000-01-02]'));
 
 # tempSubtype distinguishes instant from sequence.
 query I
-SELECT tempSubtype(TJSONB('{"k":1}@2000-01-01'));
+SELECT tempSubtype(TJSONB('"{\"k\":1}"@2000-01-01'));
 ----
 Instant
 
@@ -59,7 +59,7 @@ Sequence
 
 # HexWKB round-trip.
 query I
-SELECT tjsonbFromHexWKB(asHexWKB(TJSONB('{"k":1}@2000-01-01')))::VARCHAR;
+SELECT tjsonbFromHexWKB(asHexWKB(TJSONB('"{\"k\":1}"@2000-01-01')))::VARCHAR;
 ----
 "{\"k\": 1}"@2000-01-01 00:00:00+01
 
@@ -71,7 +71,7 @@ SELECT CAST('{"a":1}' AS jsonb)::VARCHAR;
 {"a": 1}
 
 query I
-SELECT CAST('{"k":1}' AS jsonb) = startValue(TJSONB('{"k":1}@2000-01-01'));
+SELECT CAST('{"k":1}' AS jsonb) = startValue(TJSONB('"{\"k\":1}"@2000-01-01'));
 ----
 true
 
@@ -84,36 +84,36 @@ SELECT asText(set([CAST('{"k":1}' AS jsonb)]));
 # A key of a temporal JSON value reaches a temporal of the key's own type. The third
 # argument is the null-handling mode, spelled the way MobilityDB spells it.
 query III
-SELECT tint(TJSONB('{"a":1}@2000-01-01'), 'a', 'use_json_null')::VARCHAR,
-       tbool(TJSONB('{"b":true}@2000-01-01'), 'b', 'use_json_null')::VARCHAR,
-       ttext(TJSONB('{"c":"x"}@2000-01-01'), 'c', 'use_json_null')::VARCHAR;
+SELECT tint(TJSONB('"{\"a\":1}"@2000-01-01'), 'a', 'use_json_null')::VARCHAR,
+       tbool(TJSONB('"{\"b\":true}"@2000-01-01'), 'b', 'use_json_null')::VARCHAR,
+       ttext(TJSONB('"{\"c\":\"x\"}"@2000-01-01'), 'c', 'use_json_null')::VARCHAR;
 ----
 1@2000-01-01 00:00:00+01	t@2000-01-01 00:00:00+01	"x"@2000-01-01 00:00:00+01
 
 # The mode may be left out, and the call answers what it answers with MobilityDB's default mode
 query III
-SELECT tint(TJSONB('{"a":1}@2000-01-01'), 'a') = tint(TJSONB('{"a":1}@2000-01-01'), 'a', 'raise_exception'),
-       tbool(TJSONB('{"b":true}@2000-01-01'), 'b') = tbool(TJSONB('{"b":true}@2000-01-01'), 'b', 'raise_exception'),
-       ttext(TJSONB('{"c":"x"}@2000-01-01'), 'c') = ttext(TJSONB('{"c":"x"}@2000-01-01'), 'c', 'raise_exception');
+SELECT tint(TJSONB('"{\"a\":1}"@2000-01-01'), 'a') = tint(TJSONB('"{\"a\":1}"@2000-01-01'), 'a', 'raise_exception'),
+       tbool(TJSONB('"{\"b\":true}"@2000-01-01'), 'b') = tbool(TJSONB('"{\"b\":true}"@2000-01-01'), 'b', 'raise_exception'),
+       ttext(TJSONB('"{\"c\":\"x\"}"@2000-01-01'), 'c') = ttext(TJSONB('"{\"c\":\"x\"}"@2000-01-01'), 'c', 'raise_exception');
 ----
 true	true	true
 
 # The mode is parsed by MEOS, so an unknown one is its error rather than a silent default.
 statement error
-SELECT tint(TJSONB('{"a":1}@2000-01-01'), 'a', 'not_a_mode');
+SELECT tint(TJSONB('"{\"a\":1}"@2000-01-01'), 'a', 'not_a_mode');
 ----
 Unknown null handling type
 
 # A key of a temporal JSONB value, with the null-handling mode as the third argument.
 # `astext` is bound by the wrapper, so it is not part of the SQL surface.
 query I
-SELECT tjsonbObjectField(TJSONB('{"a":1}@2000-01-01'), 'a', 'use_json_null')::VARCHAR;
+SELECT tjsonbObjectField(TJSONB('"{\"a\":1}"@2000-01-01'), 'a', 'use_json_null')::VARCHAR;
 ----
 "1"@2000-01-01 00:00:00+01
 
 # The mode reaches MEOS: an absent key becomes a JSON null under one mode.
 query I
-SELECT tjsonbObjectField(TJSONB('{"a":1}@2000-01-01'), 'zz', 'use_json_null')::VARCHAR;
+SELECT tjsonbObjectField(TJSONB('"{\"a\":1}"@2000-01-01'), 'zz', 'use_json_null')::VARCHAR;
 ----
 "null"@2000-01-01 00:00:00+01
 
@@ -126,19 +126,19 @@ SELECT tjsonbArrayElement(TJSONB('[[10,20,30]@2000-01-01]'), 1, 'use_json_null')
 # A path is one SQL argument: MobilityDB declares `text[]`, so DuckDB takes a list and
 # supplies the element count from the list's own length.
 query I
-SELECT tjsonbExtractPath(TJSONB('{"a":{"b":7}}@2000-01-01'), ['a','b'], 'use_json_null')::VARCHAR;
+SELECT tjsonbExtractPath(TJSONB('"{\"a\":{\"b\":7}}"@2000-01-01'), ['a','b'], 'use_json_null')::VARCHAR;
 ----
 "7"@2000-01-01 00:00:00+01
 
 query II
-SELECT tjsonbExistsAny(TJSONB('{"a":1,"b":2}@2000-01-01'), ['a','zz'])::VARCHAR,
-       tjsonbExistsAll(TJSONB('{"a":1,"b":2}@2000-01-01'), ['a','zz'])::VARCHAR;
+SELECT tjsonbExistsAny(TJSONB('"{\"a\":1,\"b\":2}"@2000-01-01'), ['a','zz'])::VARCHAR,
+       tjsonbExistsAll(TJSONB('"{\"a\":1,\"b\":2}"@2000-01-01'), ['a','zz'])::VARCHAR;
 ----
 t@2000-01-01 00:00:00+01	f@2000-01-01 00:00:00+01
 
 query II
-SELECT tjsonbDeletePath(TJSONB('{"a":{"b":7},"c":1}@2000-01-01'), ['a','b'])::VARCHAR,
-       tjsonbDeleteArray(TJSONB('{"a":1,"b":2}@2000-01-01'), ['a'])::VARCHAR;
+SELECT tjsonbDeletePath(TJSONB('"{\"a\":{\"b\":7},\"c\":1}"@2000-01-01'), ['a','b'])::VARCHAR,
+       tjsonbDeleteArray(TJSONB('"{\"a\":1,\"b\":2}"@2000-01-01'), ['a'])::VARCHAR;
 ----
 "{\"a\": {}, \"c\": 1}"@2000-01-01 00:00:00+01	"{\"b\": 2}"@2000-01-01 00:00:00+01
 
@@ -159,14 +159,14 @@ jsonpath input
 # The JSON path predicates take the path as a jsonpath value, the variables as jsonb and
 # the silent flag; `tz` is bound by the wrapper and is not part of the SQL surface.
 query II
-SELECT tjsonbPathExists(TJSONB('{"a":{"b":1}}@2000-01-01'), '$.a.b'::jsonpath, '{}'::jsonb, false)::VARCHAR,
-       tjsonbPathExists(TJSONB('{"a":{"b":1}}@2000-01-01'), '$.zz'::jsonpath, '{}'::jsonb, false)::VARCHAR;
+SELECT tjsonbPathExists(TJSONB('"{\"a\":{\"b\":1}}"@2000-01-01'), '$.a.b'::jsonpath, '{}'::jsonb, false)::VARCHAR,
+       tjsonbPathExists(TJSONB('"{\"a\":{\"b\":1}}"@2000-01-01'), '$.zz'::jsonpath, '{}'::jsonb, false)::VARCHAR;
 ----
 t@2000-01-01 00:00:00+01	f@2000-01-01 00:00:00+01
 
 query II
-SELECT tjsonbPathQueryFirst(TJSONB('{"a":{"b":7}}@2000-01-01'), '$.a.b'::jsonpath, '{}'::jsonb, false)::VARCHAR,
-       tjsonbPathQueryArray(TJSONB('{"a":{"b":7}}@2000-01-01'), '$.a.b'::jsonpath, '{}'::jsonb, false)::VARCHAR;
+SELECT tjsonbPathQueryFirst(TJSONB('"{\"a\":{\"b\":7}}"@2000-01-01'), '$.a.b'::jsonpath, '{}'::jsonb, false)::VARCHAR,
+       tjsonbPathQueryArray(TJSONB('"{\"a\":{\"b\":7}}"@2000-01-01'), '$.a.b'::jsonpath, '{}'::jsonb, false)::VARCHAR;
 ----
 "7"@2000-01-01 00:00:00+01	"[7]"@2000-01-01 00:00:00+01
 
@@ -174,8 +174,8 @@ SELECT tjsonbPathQueryFirst(TJSONB('{"a":{"b":7}}@2000-01-01'), '$.a.b'::jsonpat
 # which side of an existing element the value lands on, so a path naming a key the object
 # does not hold creates it whichever way the flag reads.
 query II
-SELECT tjsonbInsert(TJSONB('{"a":{}}@2000-01-01'), ['a','b'], '9'::jsonb, false)::VARCHAR,
-       tjsonbInsert(TJSONB('{"a":{}}@2000-01-01'), ['a','b'], '9'::jsonb, true)::VARCHAR;
+SELECT tjsonbInsert(TJSONB('"{\"a\":{}}"@2000-01-01'), ['a','b'], '9'::jsonb, false)::VARCHAR,
+       tjsonbInsert(TJSONB('"{\"a\":{}}"@2000-01-01'), ['a','b'], '9'::jsonb, true)::VARCHAR;
 ----
 "{\"a\": {\"b\": 9}}"@2000-01-01 00:00:00+01	"{\"a\": {\"b\": 9}}"@2000-01-01 00:00:00+01
 
@@ -183,22 +183,35 @@ SELECT tjsonbInsert(TJSONB('{"a":{}}@2000-01-01'), ['a','b'], '9'::jsonb, false)
 # names when it is false and after it when it is true. The object case above cannot show
 # that, both of its columns answering the same, so the two live together.
 query II
-SELECT tjsonbInsert(TJSONB('{"a":[1,2]}@2000-01-01'), ['a','1'], '9'::jsonb, false)::VARCHAR,
-       tjsonbInsert(TJSONB('{"a":[1,2]}@2000-01-01'), ['a','1'], '9'::jsonb, true)::VARCHAR;
+SELECT tjsonbInsert(TJSONB('"{\"a\":[1,2]}"@2000-01-01'), ['a','1'], '9'::jsonb, false)::VARCHAR,
+       tjsonbInsert(TJSONB('"{\"a\":[1,2]}"@2000-01-01'), ['a','1'], '9'::jsonb, true)::VARCHAR;
 ----
 "{\"a\": [1, 9, 2]}"@2000-01-01 00:00:00+01	"{\"a\": [1, 2, 9]}"@2000-01-01 00:00:00+01
 
 # The value accessors are generated from the out-parameter shape, so they answer the
 # jsonb the catalog declares and a miss is SQL NULL rather than an error.
 query III
-SELECT valueAtTimestamp(TJSONB('{"a":1}@2000-01-01'), TIMESTAMPTZ '2000-01-01')::VARCHAR,
-       typeof(valueAtTimestamp(TJSONB('{"a":1}@2000-01-01'), TIMESTAMPTZ '2000-01-01')),
-       valueAtTimestamp(TJSONB('{"a":1}@2000-01-01'), TIMESTAMPTZ '2010-01-01') IS NULL;
+SELECT valueAtTimestamp(TJSONB('"{\"a\":1}"@2000-01-01'), TIMESTAMPTZ '2000-01-01')::VARCHAR,
+       typeof(valueAtTimestamp(TJSONB('"{\"a\":1}"@2000-01-01'), TIMESTAMPTZ '2000-01-01')),
+       valueAtTimestamp(TJSONB('"{\"a\":1}"@2000-01-01'), TIMESTAMPTZ '2010-01-01') IS NULL;
 ----
 {"a": 1}	jsonb	true
 
 query II
-SELECT valueN(TJSONB('{"a":1}@2000-01-01'), 1)::VARCHAR,
-       valueN(TJSONB('{"a":1}@2000-01-01'), 9) IS NULL;
+SELECT valueN(TJSONB('"{\"a\":1}"@2000-01-01'), 1)::VARCHAR,
+       valueN(TJSONB('"{\"a\":1}"@2000-01-01'), 9) IS NULL;
 ----
 {"a": 1}	true
+
+# A discrete sequence whose first value is a quoted JSON object reads back the text
+# asText writes for it, in one statement with an instant of the same quoted form.
+query II
+SELECT asText(tjsonb '"{\"geom\": 1}"@2012-01-01') = 'x',
+       asText(tjsonb '{"{\"geom\": \"Point(1 1)\"}"@2012-01-01}') = 'x';
+----
+false	false
+
+query I
+SELECT asText(tjsonb '{"{\"geom\": \"Point(1 1)\"}"@2012-01-01, "{\"geom\": 2}"@2012-01-02}');
+----
+{"{\"geom\": \"Point(1 1)\"}"@2012-01-01 00:00:00+01, "{\"geom\": 2}"@2012-01-02 00:00:00+01}
