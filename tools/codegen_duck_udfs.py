@@ -4607,7 +4607,11 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   # shape_container_scalar
                   "meos_box_comp", "meos_geo_box_comp",
                   "meos_box_bbox_topo", "meos_geo_box_topo",
-                  "meos_box_bbox_pos", "meos_geo_box_pos"}
+                  "meos_box_bbox_pos", "meos_geo_box_pos",
+                  # The temporal constructors: a temporal value from a value and a timestamp, a
+                  # set, a span or a span set, and the sequence constructors over an array
+                  "meos_temporal_constructor", "meos_geo_constructor",
+                  "meos_json_constructor", "meos_pointcloud_constructor"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
@@ -4746,7 +4750,8 @@ def ctor_arg_slot(a, acc):
 # (src/temporal/temporal_functions.cpp: Temporal_to_t*, Tsequence(set)_constructor). The transforms
 # read an optional VARCHAR interp from data[1]; the array makes marshal the LIST child into a fresh
 # Temporal** (ListToTemporalArr), reinterpret to TInstant**/TSequence**, call the MEOS kernel, and
-# free. temptype (for the array interp default) comes from the registered result type's alias.
+# free. Without an interpolation the array makes take the default of the instants' type, linear
+# where it supports one and step otherwise, the SQL default each signature declares.
 _CTOR_BODY = {
   "to_inst":
     "static void Gen_{fn}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
@@ -4768,8 +4773,7 @@ _CTOR_BODY = {
     "    auto &arr = args.data[0]; arr.Flatten(rc);\n"
     "    auto &child = ListVector::GetEntry(arr);\n"
     "    child.Flatten(ListVector::GetListSize(arr));\n"
-    "    MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());\n"
-    "    interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;\n"
+    "    interpType interp = INTERP_NONE;\n"
     "    bool lower_inc = true, upper_inc = true;\n"
     "    if (args.ColumnCount() > 1) {{ auto &c = args.data[1]; c.Flatten(rc); Value v = c.GetValue(0); if (!v.IsNull()) interp = interptype_from_string(v.ToString().c_str()); }}\n"
     "    if (args.ColumnCount() > 2) {{ auto &c = args.data[2]; c.Flatten(rc); Value v = c.GetValue(0); if (!v.IsNull()) lower_inc = v.GetValue<bool>(); }}\n"
@@ -4778,7 +4782,9 @@ _CTOR_BODY = {
     "        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {{\n"
     "            int n = 0;\n"
     "            const Temporal **a = ListToTemporalArr(child, le, &n);\n"
-    "            TSequence *seq = tsequence_make((TInstant **) a, n, lower_inc, upper_inc, interp, true);\n"
+    "            interpType ip = interp != INTERP_NONE ? interp :\n"
+    "                (n > 0 && temptype_supports_linear((MeosType) a[0]->temptype) ? LINEAR : STEP);\n"
+    "            TSequence *seq = tsequence_make((TInstant **) a, n, lower_inc, upper_inc, ip, true);\n"
     "            string_t out = TemporalToBlobN(result, (Temporal *) seq, mask, idx);\n"
     "            FreeTemporalArr(a, n);\n"
     "            return out;\n"
@@ -4804,7 +4810,7 @@ _CTOR_BODY = {
   # <t>SeqSetGaps(<t>[][, interval maxt, float maxdist, text interp]): split the array of instants
   # into sequences at temporal gaps > maxt and/or value gaps > maxdist. Optional args mirror the PG
   # wrapper defaults (maxdist -1.0 = ignore value gaps, maxt NULL = ignore time gaps, interp default
-  # from temptype); the per-type arg subset (bool/text: only maxt; float: adds a text interp) comes
+  # from the instants' type); the per-type arg subset (bool/text: only maxt; float: adds a text interp) comes
   # from the catalog signatures, so the same body serves every callable arity.
   "make_gaps":
     "static void Gen_{fn}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
@@ -4813,8 +4819,7 @@ _CTOR_BODY = {
     "    auto &arr = args.data[0]; arr.Flatten(rc);\n"
     "    auto &child = ListVector::GetEntry(arr);\n"
     "    child.Flatten(ListVector::GetListSize(arr));\n"
-    "    MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());\n"
-    "    interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;\n"
+    "    interpType interp = INTERP_NONE;\n"
     "    MeosInterval maxt_val; bool has_maxt = false; double maxdist = -1.0;\n"
     "    if (args.ColumnCount() > 1) {{ auto &c = args.data[1]; c.Flatten(rc); Value v = c.GetValue(0); if (!v.IsNull()) {{ maxt_val = IntervaltToInterval(v.GetValue<interval_t>()); has_maxt = true; }} }}\n"
     "    if (args.ColumnCount() > 2) {{ auto &c = args.data[2]; c.Flatten(rc); Value v = c.GetValue(0); if (!v.IsNull()) maxdist = v.GetValue<double>(); }}\n"
@@ -4824,7 +4829,9 @@ _CTOR_BODY = {
     "        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {{\n"
     "            int n = 0;\n"
     "            const Temporal **a = ListToTemporalArr(child, le, &n);\n"
-    "            TSequenceSet *ss = tsequenceset_make_gaps((TInstant **) a, n, interp, maxt, maxdist);\n"
+    "            interpType ip = interp != INTERP_NONE ? interp :\n"
+    "                (n > 0 && temptype_supports_linear((MeosType) a[0]->temptype) ? LINEAR : STEP);\n"
+    "            TSequenceSet *ss = tsequenceset_make_gaps((TInstant **) a, n, ip, maxt, maxdist);\n"
     "            string_t out = TemporalToBlobN(result, (Temporal *) ss, mask, idx);\n"
     "            FreeTemporalArr(a, n);\n"
     "            return out;\n"
@@ -4873,6 +4880,140 @@ def emit_temporal_ctor(f, kind):
     if kind == "to_seqset":
         return _CTOR_TRANSFORM.format(fn=fn, meos="temporal_as_tsequenceset")
     return _CTOR_BODY[kind].format(fn=fn)
+
+# ---- Temporal constructors from a base value and a time value ----
+# tint(integer, timestamptz), tfloat(float, tstzspan, text), tgeompoint(geometry, tstzspanset, text),
+# tpcpoint(pcpoint, tstzset), ...: a retired group's public function over a base value and a
+# timestamp, a set, a span or a span set, with an interpolation past them, answering a temporal
+# value. Each signature MobilityDB declares registers under its own name, argument types and
+# result, with the shorter form its trailing default allows.
+TIME_OPERAND = {  # C base of the time operand -> (C++ local of its vector, marshal of `a2`, freed)
+    "TimestampTz": ("timestamp_tz_t", "DuckDBToMeosTimestamp(a2).value", False),
+    "Set":         ("string_t", "BlobToSet(a2)", True),
+    "Span":        ("string_t", "BlobToSpan(a2)", True),
+    "SpanSet":     ("string_t", "BlobToSpanSet(a2)", True),
+}
+def base_operand(p, sqlt):
+    """(DuckDB type, C++ local of its vector, marshal of `a2`, freed) of the base value of a
+    temporal constructor, `sqlt` the SQL type the signature declares for it; None otherwise. A
+    geography is the DuckDB GEOMETRY read as geodetic, as MobilityDB's geography input is."""
+    b, n = base(p["canonical"]), norm(p["canonical"])
+    if "*" not in n and b in SCALAR_ARG and b != "TimestampTz":
+        d = SQL_BASE_TO_DUCK.get(sqlt)
+        return (d, SCALAR_ARG[b][1], "a2", False) if d else None
+    if n.count("*") != 1:
+        return None
+    if b == "text" and sqlt == "text":
+        return ("LogicalType::VARCHAR", "string_t", "MakeText(a2)", True)
+    if b == "GSERIALIZED" and sqlt.startswith(("geometry", "geography")):
+        geog = sqlt.startswith("geography")
+        return ("MobilityDuckGeometryType()", "string_t",
+                "GeogFromGeometry(a2)" if geog else "GeometryToGSerialized(a2, 0)", True)
+    if b in PTR_IN and PTR_IN[b][0] != "MD_TEMPORAL":
+        return (PTR_IN[b][0], "string_t", PTR_IN[b][1] % "a2", True)
+    return None
+
+def shape_temporal_from_base(f):
+    """A retired group's public constructor of a temporal value from a base value and a time
+    value: [(the registered name, [DuckDB argument types], the result accessor, the marshal of the
+    base value)] per callable form, with the marshal of the time value and whether the C function
+    reads the interpolation; None for any other function. A geometry and a geography reach one C
+    function (tgeoinst_make backs tgeometry and tgeography) and differ in their marshal. A signature
+    whose interpolation the C function does not read (tpcpoint(pcpoint, tstzspan, text), over
+    tpcpointseq_from_base_tstzspan, which constructs the step sequence) reads the text and refuses
+    any other interpolation than its default."""
+    if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
+        return None
+    rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
+    if rb not in ("TInstant", "TSequence", "TSequenceSet") or rn.count("*") != 1:
+        return None
+    ps = f.get("params") or []
+    if len(ps) not in (2, 3):
+        return None
+    tb, tn = base(ps[1]["canonical"]), norm(ps[1]["canonical"])
+    if tb not in TIME_OPERAND or tn.count("*") != (0 if tb == "TimestampTz" else 1):
+        return None
+    has_interp = len(ps) == 3
+    if has_interp and (base(ps[2]["canonical"]) != "interpType" or "*" in norm(ps[2]["canonical"])):
+        return None
+    sigs = f.get("sqlSignatures") or []
+    if not sigs:
+        return None
+    forms = []
+    for s in sigs:
+        args, defs = s.get("args") or [], s.get("argDefaults") or []
+        if len(args) not in (2, 3) or s.get("ret") not in SIG_TEMPORAL_ACC:
+            return None
+        if len(args) == 3 and args[2] != "text":
+            return None
+        if len(args) == 2 and has_interp:
+            return None
+        v = base_operand(ps[0], args[0])
+        t = ctor_duck_type(args[1])
+        if v is None or t is None:
+            return None
+        dflt = defs[2] if len(args) == 3 and len(defs) == 3 else None
+        if len(args) == 3 and dflt is None and not has_interp:
+            return None
+        name = s.get("sqlName") or f["sqlfn"]
+        acc = SIG_TEMPORAL_ACC[s["ret"]]
+        forms.append((name, [v[0], t], acc, v))
+        if len(args) == 3:
+            forms.append((name, [v[0], t, "LogicalType::VARCHAR"], acc, v))
+    return (forms, TIME_OPERAND[tb], has_interp)
+
+def from_base_suffix(value):
+    """The suffix of the body #emit_temporal_from_base writes for a base value marshal: none for
+    the plain one, `_geog` for the geography read from a DuckDB GEOMETRY."""
+    return "_geog" if value[2].startswith("GeogFromGeometry") else ""
+
+def emit_temporal_from_base(f, value, time_, has_interp):
+    """The body of #shape_temporal_from_base: each argument read per row, the operands decoded
+    and freed after the call, the interpolation read from its text where the call states it and
+    from its SQL default otherwise. One body serves every form, as #emit_temporal_ctor's do: a
+    signature's default reaches the body as the third column's absence."""
+    name = f["name"]
+    sigs = f.get("sqlSignatures") or []
+    dflt = next((s["argDefaults"][2] for s in sigs
+                 if len(s.get("args") or []) == 3 and len(s.get("argDefaults") or []) == 3), None)
+    dlit = str(dflt).strip().strip("'") if dflt is not None else None
+    L = [f"static void Gen_{name}{from_base_suffix(value)}(DataChunk &args, ExpressionState &, "
+         "Vector &result) {",
+         "    EnsureMeosThreadInitialized();",
+         "    const idx_t rows = args.size();",
+         "    const idx_t ncol = args.ColumnCount();",
+         "    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);",
+         f"    auto in0 = FlatVector::GetData<{value[1]}>(args.data[0]);",
+         f"    auto in1 = FlatVector::GetData<{time_[0]}>(args.data[1]);",
+         "    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;",
+         "    auto out = FlatVector::GetData<string_t>(result);",
+         "    auto &outv = FlatVector::Validity(result);",
+         "    for (idx_t i = 0; i < rows; i++) {",
+         "        bool valid = true;",
+         "        for (idx_t c = 0; c < ncol; c++)",
+         "            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }",
+         "        if (!valid) { outv.SetInvalid(i); continue; }"]
+    call = []
+    if dlit is not None:
+        L.append(f'        interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str())'
+                 f' : interptype_from_string("{dlit}");')
+        if not has_interp:
+            L += [f'        if (interp != interptype_from_string("{dlit}"))',
+                  f'            throw NotImplementedException("{f["sqlfn"]} constructs the {dlit} '
+                  f'interpolation only");']
+    L.append(f"        auto v0 = {value[2].replace('a2', 'in0[i]')};")
+    L.append(f"        auto v1 = {time_[1].replace('a2', 'in1[i]')};")
+    call = ["v0", "v1"] + (["interp"] if has_interp else [])
+    L.append(f"        Temporal *r = (Temporal *) {name}({', '.join(call)});")
+    if value[3]:
+        L.append("        free(v0);")
+    if time_[2]:
+        L.append("        free(v1);")
+    L += ["        if (!r) { outv.SetInvalid(i); continue; }",
+          "        out[i] = TemporalToBlob(result, r);",
+          "    }",
+          "}"]
+    return "\n".join(L) + "\n"
 
 # ---- Set/Span/SpanSet FromHexWKB parsers (per-element-type NAME FAMILY) ----
 # The base-type-generic MEOS wrappers set_from_hexwkb/span_from_hexwkb/spanset_from_hexwkb back a
@@ -5341,6 +5482,22 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
     for f in fns:
         if declared is not None and f["name"] not in declared:
             continue            # pin/ABI gate: skip catalog fns absent from the build headers
+        tfb = shape_temporal_from_base(f)
+        if tfb:
+            # A temporal value from a base value and a time value, registered per declared
+            # signature with the shorter form of its trailing default (#shape_temporal_from_base)
+            STATE["grp"] = f.get("group") or "meos_ungrouped"
+            forms, time_, has_interp = tfb
+            emitted_values = []
+            for nm, slots, acc, value in forms:
+                if value not in emitted_values:
+                    emitted_values.append(value)
+                    bodies.append(emit_temporal_from_base(f, value, time_, has_interp))
+                specific_regs.append(
+                    f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    f'"{reg_name(nm, f)}", {{{", ".join(slots)}}}, {acc}, '
+                    f'Gen_{f["name"]}{from_base_suffix(value)}));')
+            continue
         tc = shape_temporal_ctor(f)
         if tc:
             # Temporal constructor / transform NAME FAMILY: one Gen_<fn> body, registered per
@@ -5353,7 +5510,11 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             for s in f.get("sqlSignatures", []):
                 # The registered SQL/return type is the RESULT temporal type (the parsers
                 # take a text/blob arg, the constructors an operand of the same type).
-                acc = CORE_CTOR_ACC.get(s["ret"])
+                # The constructors over an array of a retired group register for every temporal
+                # type the signatures declare (tgeometrySeq, tpcpointSeq, tcbufferSeqSet); the
+                # transforms and parsers stay on the core types their own groups register.
+                arr = (s.get("args") or [""])[0].endswith("[]")
+                acc = (SIG_TEMPORAL_ACC if retired(f) and arr else CORE_CTOR_ACC).get(s["ret"])
                 if not acc:
                     continue    # non-core (geo/cbuffer) -> registered in its own family file
                 nm = s.get("sqlName", f["sqlfn"])
@@ -6683,6 +6844,12 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "    text *t = (text *)malloc(VARHDRSZ + len);\n"
            "    SET_VARSIZE(t, VARHDRSZ + len);\n"
            "    memcpy(VARDATA(t), s.GetData(), len);\n    return t;\n}\n"
+           "// A geography from a DuckDB GEOMETRY, read as geodetic in the default SRID as MobilityDB\n"
+           "// reads a geography literal; caller frees.\n"
+           "inline GSERIALIZED *GeogFromGeometry(string_t blob) {\n"
+           "    GSERIALIZED *gs = GeometryToGSerialized(blob, 0);\n"
+           "    GSERIALIZED *geog = geom_to_geog(gs);\n"
+           "    free(gs);\n    return geog;\n}\n"
            "// text** from a DuckDB LIST(VARCHAR); the caller frees via FreeTextArr.\n"
            "inline text **ListToTextArr(Vector &child, list_entry_t le, int *count) {\n"
            "    auto data = FlatVector::GetData<string_t>(child);\n"

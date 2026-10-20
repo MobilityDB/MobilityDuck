@@ -42,7 +42,7 @@ SELECT asEWKT(tgeompoint(ST_Point(1,1), timestamptz '2012-01-01 08:00:00'));
 POINT(1 1)@2012-01-01 08:00:00+01
 
 query I
-SELECT asEWKT(tgeompoint(ST_Point(1,1), timestamptz '2012-01-01 08:00:00', 4326));
+SELECT asEWKT(setSRID(tgeompoint(ST_Point(1,1), timestamptz '2012-01-01 08:00:00'), 4326));
 ----
 SRID=4326;POINT(1 1)@2012-01-01 08:00:00+01
 

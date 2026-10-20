@@ -309,6 +309,14 @@ inline text *MakeText(string_t s) {
     memcpy(VARDATA(t), s.GetData(), len);
     return t;
 }
+// A geography from a DuckDB GEOMETRY, read as geodetic in the default SRID as MobilityDB
+// reads a geography literal; caller frees.
+inline GSERIALIZED *GeogFromGeometry(string_t blob) {
+    GSERIALIZED *gs = GeometryToGSerialized(blob, 0);
+    GSERIALIZED *geog = geom_to_geog(gs);
+    free(gs);
+    return geog;
+}
 // text** from a DuckDB LIST(VARCHAR); the caller frees via FreeTextArr.
 inline text **ListToTextArr(Vector &child, list_entry_t le, int *count) {
     auto data = FlatVector::GetData<string_t>(child);
@@ -2217,6 +2225,218 @@ static void Gen_tgeogpoint_great_circle_distance(DataChunk &args, ExpressionStat
 }
 
 
+// ===== @ingroup meos_pointcloud_constructor =====
+static void Gen_tpcpointinst_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = BlobToPcpoint(in0[i]);
+        auto v1 = DuckDBToMeosTimestamp(in1[i]).value;
+        Temporal *r = (Temporal *) tpcpointinst_make(v0, v1);
+        free(v0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tpcpointseq_from_base_tstzset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = BlobToPcpoint(in0[i]);
+        auto v1 = BlobToSet(in1[i]);
+        Temporal *r = (Temporal *) tpcpointseq_from_base_tstzset(v0, v1);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tpcpointseq_from_base_tstzspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("step");
+        if (interp != interptype_from_string("step"))
+            throw NotImplementedException("tpcpoint constructs the step interpolation only");
+        auto v0 = BlobToPcpoint(in0[i]);
+        auto v1 = BlobToSpan(in1[i]);
+        Temporal *r = (Temporal *) tpcpointseq_from_base_tstzspan(v0, v1);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tpcpointseqset_from_base_tstzspanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("step");
+        if (interp != interptype_from_string("step"))
+            throw NotImplementedException("tpcpoint constructs the step interpolation only");
+        auto v0 = BlobToPcpoint(in0[i]);
+        auto v1 = BlobToSpanSet(in1[i]);
+        Temporal *r = (Temporal *) tpcpointseqset_from_base_tstzspanset(v0, v1);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tpcpatchinst_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = BlobToPcpatch(in0[i]);
+        auto v1 = DuckDBToMeosTimestamp(in1[i]).value;
+        Temporal *r = (Temporal *) tpcpatchinst_make(v0, v1);
+        free(v0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tpcpatchseq_from_base_tstzset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = BlobToPcpatch(in0[i]);
+        auto v1 = BlobToSet(in1[i]);
+        Temporal *r = (Temporal *) tpcpatchseq_from_base_tstzset(v0, v1);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tpcpatchseq_from_base_tstzspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("step");
+        if (interp != interptype_from_string("step"))
+            throw NotImplementedException("tpcpatch constructs the step interpolation only");
+        auto v0 = BlobToPcpatch(in0[i]);
+        auto v1 = BlobToSpan(in1[i]);
+        Temporal *r = (Temporal *) tpcpatchseq_from_base_tstzspan(v0, v1);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tpcpatchseqset_from_base_tstzspanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("step");
+        if (interp != interptype_from_string("step"))
+            throw NotImplementedException("tpcpatch constructs the step interpolation only");
+        auto v0 = BlobToPcpatch(in0[i]);
+        auto v1 = BlobToSpanSet(in1[i]);
+        Temporal *r = (Temporal *) tpcpatchseqset_from_base_tstzspanset(v0, v1);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+
 // ===== @ingroup meos_pointcloud_transf =====
 struct Unnest_tpcpoint_unnestBind : public TableFunctionData { std::string blob; };
 struct Unnest_tpcpoint_unnestState : public GlobalTableFunctionState {
@@ -2464,6 +2684,21 @@ void RegisterGenerated_meos_h3_inspection(ExtensionLoader &loader) {
 void RegisterGenerated_meos_h3_metrics(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("th3EdgeLength", {H3indexTypes::th3index()}, TemporalTypes::tfloat(), Gen_th3index_edge_length));
     RegisterSerializedScalarFunction(loader, ScalarFunction("greatCircleDistance", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, TemporalTypes::tfloat(), Gen_tgeogpoint_great_circle_distance));
+}
+
+void RegisterGenerated_meos_pointcloud_constructor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpoint", {TPcpointTypes::pcpoint(), LogicalType::TIMESTAMP_TZ}, TPcpointTypes::tpcpoint(), Gen_tpcpointinst_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpoint", {TPcpointTypes::pcpoint(), SetTypes::tstzset()}, TPcpointTypes::tpcpoint(), Gen_tpcpointseq_from_base_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpoint", {TPcpointTypes::pcpoint(), SpanTypes::tstzspan()}, TPcpointTypes::tpcpoint(), Gen_tpcpointseq_from_base_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpoint", {TPcpointTypes::pcpoint(), SpanTypes::tstzspan(), LogicalType::VARCHAR}, TPcpointTypes::tpcpoint(), Gen_tpcpointseq_from_base_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpoint", {TPcpointTypes::pcpoint(), SpansetTypes::tstzspanset()}, TPcpointTypes::tpcpoint(), Gen_tpcpointseqset_from_base_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpoint", {TPcpointTypes::pcpoint(), SpansetTypes::tstzspanset(), LogicalType::VARCHAR}, TPcpointTypes::tpcpoint(), Gen_tpcpointseqset_from_base_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpatch", {TPcpatchTypes::pcpatch(), LogicalType::TIMESTAMP_TZ}, TPcpatchTypes::tpcpatch(), Gen_tpcpatchinst_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpatch", {TPcpatchTypes::pcpatch(), SetTypes::tstzset()}, TPcpatchTypes::tpcpatch(), Gen_tpcpatchseq_from_base_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpatch", {TPcpatchTypes::pcpatch(), SpanTypes::tstzspan()}, TPcpatchTypes::tpcpatch(), Gen_tpcpatchseq_from_base_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpatch", {TPcpatchTypes::pcpatch(), SpanTypes::tstzspan(), LogicalType::VARCHAR}, TPcpatchTypes::tpcpatch(), Gen_tpcpatchseq_from_base_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpatch", {TPcpatchTypes::pcpatch(), SpansetTypes::tstzspanset()}, TPcpatchTypes::tpcpatch(), Gen_tpcpatchseqset_from_base_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpatch", {TPcpatchTypes::pcpatch(), SpansetTypes::tstzspanset(), LogicalType::VARCHAR}, TPcpatchTypes::tpcpatch(), Gen_tpcpatchseqset_from_base_tstzspanset));
 }
 
 void RegisterGenerated_meos_pointcloud_transf(ExtensionLoader &loader) {

@@ -148,103 +148,6 @@ static void Tjsonb_constructor(DataChunk &args, ExpressionState &state, Vector &
         });
 }
 
-/* Two-argument instant constructor: tjsonb(json_text, timestamptz) */
-static void Tjsonbinst_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
-    BinaryExecutor::Execute<string_t, timestamp_tz_t, string_t>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t json_str, timestamp_tz_t t) -> string_t {
-            std::string s = json_str.GetString();
-            Jsonb *jb = jsonb_in(s.c_str());
-            if (!jb)
-                throw InvalidInputException("Invalid JSON input: " + s);
-            timestamp_tz_t meos_ts = DuckDBToMeosTimestamp(t);
-            TInstant *inst = tjsonbinst_make(jb, static_cast<TimestampTz>(meos_ts.value));
-            free(jb);
-            if (!inst)
-                throw InvalidInputException("Failed to create tjsonb instant");
-            return TemporalToBlob(result, reinterpret_cast<Temporal *>(inst));
-        });
-}
-
-/* Step sequence from a constant JSON value over a tstzspan */
-static void Tjsonb_sequence_from_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
-    BinaryExecutor::Execute<string_t, string_t, string_t>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](string_t json_str, string_t span_blob) -> string_t {
-            std::string sj = json_str.GetString();
-            Jsonb *jb = jsonb_in(sj.c_str());
-            if (!jb)
-                throw InvalidInputException("Invalid JSON input: " + sj);
-            size_t sp_sz = span_blob.GetSize();
-            uint8_t *sp_copy = static_cast<uint8_t *>(malloc(sp_sz));
-            if (!sp_copy) { free(jb); throw InternalException("malloc failed for span copy"); }
-            memcpy(sp_copy, span_blob.GetData(), sp_sz);
-            Span *sp = reinterpret_cast<Span *>(sp_copy);
-            TSequence *seq = tjsonbseq_from_base_tstzspan(jb, sp);
-            free(jb);
-            free(sp_copy);
-            if (!seq)
-                throw InvalidInputException("Failed to create tjsonb sequence");
-            return TemporalToBlob(result, reinterpret_cast<Temporal *>(seq));
-        });
-}
-
-/* Extract TInstant* array from a LIST(tjsonb) vector entry */
-static TInstant **temparr_extract_tjsonb(Vector &arr_vec, list_entry_t entry, int *count) {
-    auto &child = ListVector::GetEntry(arr_vec);
-    auto len    = entry.length;
-    auto off    = entry.offset;
-    if (len == 0) { *count = 0; return nullptr; }
-    *count = static_cast<int>(len);
-    TInstant **insts = static_cast<TInstant **>(malloc(sizeof(TInstant *) * len));
-    if (!insts) { *count = 0; return nullptr; }
-    for (idx_t i = 0; i < len; i++) {
-        string_t blob = FlatVector::GetData<string_t>(child)[off + i];
-        size_t sz = blob.GetSize();
-        uint8_t *copy = static_cast<uint8_t *>(malloc(sz));
-        if (!copy) {
-            for (idx_t j = 0; j < i; j++) free(insts[j]);
-            free(insts); *count = 0; return nullptr;
-        }
-        memcpy(copy, blob.GetData(), sz);
-        insts[i] = reinterpret_cast<TInstant *>(copy);
-    }
-    return insts;
-}
-
-/* Sequence constructor from LIST(tjsonb) instants */
-static void Tjsonb_sequence_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
-    const char *default_interp = "step";
-    auto count = args.size();
-
-    args.data[0].Flatten(count);
-    result.Flatten(count);
-
-    auto arr_data    = FlatVector::GetData<list_entry_t>(args.data[0]);
-    auto result_data = FlatVector::GetData<string_t>(result);
-    auto &arr_val    = FlatVector::Validity(args.data[0]);
-    auto &res_val    = FlatVector::Validity(result);
-
-    interpType interp = interptype_from_string(default_interp);
-
-    for (idx_t i = 0; i < count; i++) {
-        if (!arr_val.RowIsValid(i)) { res_val.SetInvalid(i); continue; }
-        int ninsts = 0;
-        TInstant **insts = temparr_extract_tjsonb(args.data[0], arr_data[i], &ninsts);
-        if (!insts || ninsts == 0) { res_val.SetInvalid(i); continue; }
-        TSequence *seq = tsequence_make(
-            (TInstant **) insts, ninsts,
-            true, true, interp, true);
-        for (int j = 0; j < ninsts; j++) free(insts[j]);
-        free(insts);
-        if (!seq) { res_val.SetInvalid(i); continue; }
-        size_t sz = temporal_mem_size(reinterpret_cast<Temporal *>(seq));
-        result_data[i] = StringVector::AddStringOrBlob(
-            result, reinterpret_cast<const char *>(seq), sz);
-        free(seq);
-    }
-}
-
 /* ------------------------------------------------------------------
  * Value accessors
  * ------------------------------------------------------------------ */
@@ -259,20 +162,11 @@ static void Tjsonb_sequence_constructor(DataChunk &args, ExpressionState &state,
 void TJsonbTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     const auto T = TJsonbTypes::tjsonb();
     const auto V = LogicalType::VARCHAR;
-    const auto TS = LogicalType::TIMESTAMP_TZ;
 
-    /* Constructors */
+    /* Constructors: tjsonb(jsonb, timestamptz | tstzset | tstzspan | tstzspanset) and
+     * tjsonbSeq are generated (meos_json_constructor, meos_temporal_constructor). */
     RegisterSerializedScalarFunction(loader,
         ScalarFunction("tjsonb", {V}, T, Tjsonb_constructor));
-    RegisterSerializedScalarFunction(loader,
-        ScalarFunction("tjsonb", {V, TS}, T, Tjsonbinst_constructor));
-    RegisterSerializedScalarFunction(loader,
-        ScalarFunction("tjsonb", {V, SpanTypes::tstzspan()}, T,
-                       Tjsonb_sequence_from_tstzspan));
-
-    RegisterSerializedScalarFunction(loader,
-        ScalarFunction("tjsonbSeq", {LogicalType::LIST(T)}, T,
-                       Tjsonb_sequence_constructor));
 
     /* Generic temporal functions applied to tjsonb. timeSpan/tempSubtype/interp/merge
      * are now GENERATED with identical signatures (generate-then-retire), so the hand

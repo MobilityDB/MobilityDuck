@@ -22,11 +22,6 @@ struct TgeompointFunctions {
     static void Tspatial_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spatialarr_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spatialarr_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result);
-    /* ***************************************************
-    * Constructor functions
-    ****************************************************/
-    static void Tpointinst_constructor(DataChunk &args, ExpressionState &state, Vector &result);
-    // tgeompointSeq: overload temporal's Tsequence_constructor
     static void Tspatial_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static bool Tspatial_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     // getTime: Temporal_time

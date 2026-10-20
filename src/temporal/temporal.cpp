@@ -133,14 +133,8 @@ void TemporalTypes::RegisterCastFunctions(ExtensionLoader &loader) {
 
 void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     for (auto &type : TemporalTypes::AllTypes()) {
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                StringUtil::Lower(type.GetAlias()),
-                {TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()), LogicalType::TIMESTAMP_TZ},
-                type,
-                TemporalFunctions::Tinstant_constructor
-            )
-        );
+        // The constructors from a base value and a time value, tint(integer, timestamptz) ..
+        // ttext(text, tstzspanset), are generated (meos_temporal_constructor, RETIRED_GROUPS).
         duckdb::RegisterSerializedScalarFunction(loader, 
             ScalarFunction(
                 StringUtil::Lower(type.GetAlias()),
@@ -149,54 +143,6 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
                 TemporalFunctions::Temporal_enforce_typmod
             )
         );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                StringUtil::Lower(type.GetAlias()),
-                {TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()), SetTypes::tstzset()},
-                type,
-                TemporalFunctions::Tsequence_from_base_tstzset
-            )
-        );
-
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                StringUtil::Lower(type.GetAlias()),
-                {TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()), SpanTypes::tstzspan()},
-                type,
-                TemporalFunctions::Tsequence_from_base_tstzspan
-            )
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                StringUtil::Lower(type.GetAlias()),
-                {TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()), SpanTypes::tstzspan(), LogicalType::VARCHAR},
-                type,
-                TemporalFunctions::Tsequence_from_base_tstzspan
-            )
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                StringUtil::Lower(type.GetAlias()),
-                {TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()), SpansetTypes::tstzspanset()},
-                type,
-                TemporalFunctions::Tsequenceset_from_base_tstzspanset
-            )
-        );
-        duckdb::RegisterSerializedScalarFunction(loader, 
-            ScalarFunction(
-                StringUtil::Lower(type.GetAlias()),
-                {TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str()), SpansetTypes::tstzspanset(), LogicalType::VARCHAR},
-                type,
-                TemporalFunctions::Tsequenceset_from_base_tstzspanset
-            )
-        );
-
-
-
-
-
-
 
         // timeSpan/valueSpan (temporal_to_tstzspan / tnumber_to_span, group
         // meos_temporal_conversion) are generated from the catalog sqlSignatures

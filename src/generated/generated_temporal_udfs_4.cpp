@@ -309,6 +309,14 @@ inline text *MakeText(string_t s) {
     memcpy(VARDATA(t), s.GetData(), len);
     return t;
 }
+// A geography from a DuckDB GEOMETRY, read as geodetic in the default SRID as MobilityDB
+// reads a geography literal; caller frees.
+inline GSERIALIZED *GeogFromGeometry(string_t blob) {
+    GSERIALIZED *gs = GeometryToGSerialized(blob, 0);
+    GSERIALIZED *geog = geom_to_geog(gs);
+    free(gs);
+    return geog;
+}
 // text** from a DuckDB LIST(VARCHAR); the caller frees via FreeTextArr.
 inline text **ListToTextArr(Vector &child, list_entry_t le, int *count) {
     auto data = FlatVector::GetData<string_t>(child);
@@ -1570,6 +1578,412 @@ static void Gen_stbox_round_d(DataChunk &args, ExpressionState &, Vector &result
 }
 
 
+// ===== @ingroup meos_geo_constructor =====
+static void Gen_tgeoinst_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = GeometryToGSerialized(in0[i], 0);
+        auto v1 = DuckDBToMeosTimestamp(in1[i]).value;
+        Temporal *r = (Temporal *) tgeoinst_make(v0, v1);
+        free(v0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tgeoinst_make_geog(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = GeogFromGeometry(in0[i]);
+        auto v1 = DuckDBToMeosTimestamp(in1[i]).value;
+        Temporal *r = (Temporal *) tgeoinst_make(v0, v1);
+        free(v0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tgeoseq_from_base_tstzset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = GeometryToGSerialized(in0[i], 0);
+        auto v1 = BlobToSet(in1[i]);
+        Temporal *r = (Temporal *) tgeoseq_from_base_tstzset(v0, v1);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tgeoseq_from_base_tstzset_geog(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = GeogFromGeometry(in0[i]);
+        auto v1 = BlobToSet(in1[i]);
+        Temporal *r = (Temporal *) tgeoseq_from_base_tstzset(v0, v1);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tgeoseq_from_base_tstzspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("step");
+        auto v0 = GeometryToGSerialized(in0[i], 0);
+        auto v1 = BlobToSpan(in1[i]);
+        Temporal *r = (Temporal *) tgeoseq_from_base_tstzspan(v0, v1, interp);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tgeoseq_from_base_tstzspan_geog(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("step");
+        auto v0 = GeogFromGeometry(in0[i]);
+        auto v1 = BlobToSpan(in1[i]);
+        Temporal *r = (Temporal *) tgeoseq_from_base_tstzspan(v0, v1, interp);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tgeoseqset_from_base_tstzspanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("step");
+        auto v0 = GeometryToGSerialized(in0[i], 0);
+        auto v1 = BlobToSpanSet(in1[i]);
+        Temporal *r = (Temporal *) tgeoseqset_from_base_tstzspanset(v0, v1, interp);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tgeoseqset_from_base_tstzspanset_geog(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("step");
+        auto v0 = GeogFromGeometry(in0[i]);
+        auto v1 = BlobToSpanSet(in1[i]);
+        Temporal *r = (Temporal *) tgeoseqset_from_base_tstzspanset(v0, v1, interp);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tpointinst_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = GeometryToGSerialized(in0[i], 0);
+        auto v1 = DuckDBToMeosTimestamp(in1[i]).value;
+        Temporal *r = (Temporal *) tpointinst_make(v0, v1);
+        free(v0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tpointinst_make_geog(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = GeogFromGeometry(in0[i]);
+        auto v1 = DuckDBToMeosTimestamp(in1[i]).value;
+        Temporal *r = (Temporal *) tpointinst_make(v0, v1);
+        free(v0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tpointseq_from_base_tstzset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = GeometryToGSerialized(in0[i], 0);
+        auto v1 = BlobToSet(in1[i]);
+        Temporal *r = (Temporal *) tpointseq_from_base_tstzset(v0, v1);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tpointseq_from_base_tstzset_geog(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = GeogFromGeometry(in0[i]);
+        auto v1 = BlobToSet(in1[i]);
+        Temporal *r = (Temporal *) tpointseq_from_base_tstzset(v0, v1);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tpointseq_from_base_tstzspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("linear");
+        auto v0 = GeometryToGSerialized(in0[i], 0);
+        auto v1 = BlobToSpan(in1[i]);
+        Temporal *r = (Temporal *) tpointseq_from_base_tstzspan(v0, v1, interp);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tpointseq_from_base_tstzspan_geog(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("linear");
+        auto v0 = GeogFromGeometry(in0[i]);
+        auto v1 = BlobToSpan(in1[i]);
+        Temporal *r = (Temporal *) tpointseq_from_base_tstzspan(v0, v1, interp);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tpointseqset_from_base_tstzspanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("linear");
+        auto v0 = GeometryToGSerialized(in0[i], 0);
+        auto v1 = BlobToSpanSet(in1[i]);
+        Temporal *r = (Temporal *) tpointseqset_from_base_tstzspanset(v0, v1, interp);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tpointseqset_from_base_tstzspanset_geog(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("linear");
+        auto v0 = GeogFromGeometry(in0[i]);
+        auto v1 = BlobToSpanSet(in1[i]);
+        Temporal *r = (Temporal *) tpointseqset_from_base_tstzspanset(v0, v1, interp);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+
 // ===== @ingroup meos_h3_comp_temp =====
 static void Gen_teq_h3index_th3index(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -2773,14 +3187,395 @@ static void Gen_same_tstzspan_temporal(DataChunk &args, ExpressionState &, Vecto
 
 
 // ===== @ingroup meos_temporal_constructor =====
+static void Gen_tboolinst_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<bool>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = in0[i];
+        auto v1 = DuckDBToMeosTimestamp(in1[i]).value;
+        Temporal *r = (Temporal *) tboolinst_make(v0, v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tboolseq_from_base_tstzset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<bool>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = in0[i];
+        auto v1 = BlobToSet(in1[i]);
+        Temporal *r = (Temporal *) tboolseq_from_base_tstzset(v0, v1);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tboolseq_from_base_tstzspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<bool>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = in0[i];
+        auto v1 = BlobToSpan(in1[i]);
+        Temporal *r = (Temporal *) tboolseq_from_base_tstzspan(v0, v1);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tboolseqset_from_base_tstzspanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<bool>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = in0[i];
+        auto v1 = BlobToSpanSet(in1[i]);
+        Temporal *r = (Temporal *) tboolseqset_from_base_tstzspanset(v0, v1);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tfloatinst_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<double>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = in0[i];
+        auto v1 = DuckDBToMeosTimestamp(in1[i]).value;
+        Temporal *r = (Temporal *) tfloatinst_make(v0, v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tfloatseq_from_base_tstzset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<double>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = in0[i];
+        auto v1 = BlobToSet(in1[i]);
+        Temporal *r = (Temporal *) tfloatseq_from_base_tstzset(v0, v1);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tfloatseq_from_base_tstzspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<double>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("linear");
+        auto v0 = in0[i];
+        auto v1 = BlobToSpan(in1[i]);
+        Temporal *r = (Temporal *) tfloatseq_from_base_tstzspan(v0, v1, interp);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tfloatseqset_from_base_tstzspanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<double>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("linear");
+        auto v0 = in0[i];
+        auto v1 = BlobToSpanSet(in1[i]);
+        Temporal *r = (Temporal *) tfloatseqset_from_base_tstzspanset(v0, v1, interp);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tintinst_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int32_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = in0[i];
+        auto v1 = DuckDBToMeosTimestamp(in1[i]).value;
+        Temporal *r = (Temporal *) tintinst_make(v0, v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tbigintinst_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = in0[i];
+        auto v1 = DuckDBToMeosTimestamp(in1[i]).value;
+        Temporal *r = (Temporal *) tbigintinst_make(v0, v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tintseq_from_base_tstzset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int32_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = in0[i];
+        auto v1 = BlobToSet(in1[i]);
+        Temporal *r = (Temporal *) tintseq_from_base_tstzset(v0, v1);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tbigintseq_from_base_tstzset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = in0[i];
+        auto v1 = BlobToSet(in1[i]);
+        Temporal *r = (Temporal *) tbigintseq_from_base_tstzset(v0, v1);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tintseq_from_base_tstzspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int32_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = in0[i];
+        auto v1 = BlobToSpan(in1[i]);
+        Temporal *r = (Temporal *) tintseq_from_base_tstzspan(v0, v1);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tbigintseq_from_base_tstzspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = in0[i];
+        auto v1 = BlobToSpan(in1[i]);
+        Temporal *r = (Temporal *) tbigintseq_from_base_tstzspan(v0, v1);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tintseqset_from_base_tstzspanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int32_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = in0[i];
+        auto v1 = BlobToSpanSet(in1[i]);
+        Temporal *r = (Temporal *) tintseqset_from_base_tstzspanset(v0, v1);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_tbigintseqset_from_base_tstzspanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = in0[i];
+        auto v1 = BlobToSpanSet(in1[i]);
+        Temporal *r = (Temporal *) tbigintseqset_from_base_tstzspanset(v0, v1);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
 static void Gen_tsequence_make(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     auto rc = args.size();
     auto &arr = args.data[0]; arr.Flatten(rc);
     auto &child = ListVector::GetEntry(arr);
     child.Flatten(ListVector::GetListSize(arr));
-    MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
-    interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;
+    interpType interp = INTERP_NONE;
     bool lower_inc = true, upper_inc = true;
     if (args.ColumnCount() > 1) { auto &c = args.data[1]; c.Flatten(rc); Value v = c.GetValue(0); if (!v.IsNull()) interp = interptype_from_string(v.ToString().c_str()); }
     if (args.ColumnCount() > 2) { auto &c = args.data[2]; c.Flatten(rc); Value v = c.GetValue(0); if (!v.IsNull()) lower_inc = v.GetValue<bool>(); }
@@ -2789,7 +3584,9 @@ static void Gen_tsequence_make(DataChunk &args, ExpressionState &, Vector &resul
         [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
             int n = 0;
             const Temporal **a = ListToTemporalArr(child, le, &n);
-            TSequence *seq = tsequence_make((TInstant **) a, n, lower_inc, upper_inc, interp, true);
+            interpType ip = interp != INTERP_NONE ? interp :
+                (n > 0 && temptype_supports_linear((MeosType) a[0]->temptype) ? LINEAR : STEP);
+            TSequence *seq = tsequence_make((TInstant **) a, n, lower_inc, upper_inc, ip, true);
             string_t out = TemporalToBlobN(result, (Temporal *) seq, mask, idx);
             FreeTemporalArr(a, n);
             return out;
@@ -2819,8 +3616,7 @@ static void Gen_tsequenceset_make_gaps(DataChunk &args, ExpressionState &, Vecto
     auto &arr = args.data[0]; arr.Flatten(rc);
     auto &child = ListVector::GetEntry(arr);
     child.Flatten(ListVector::GetListSize(arr));
-    MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(result.GetType().GetAlias().c_str());
-    interpType interp = temptype_supports_linear(temptype) ? LINEAR : STEP;
+    interpType interp = INTERP_NONE;
     MeosInterval maxt_val; bool has_maxt = false; double maxdist = -1.0;
     if (args.ColumnCount() > 1) { auto &c = args.data[1]; c.Flatten(rc); Value v = c.GetValue(0); if (!v.IsNull()) { maxt_val = IntervaltToInterval(v.GetValue<interval_t>()); has_maxt = true; } }
     if (args.ColumnCount() > 2) { auto &c = args.data[2]; c.Flatten(rc); Value v = c.GetValue(0); if (!v.IsNull()) maxdist = v.GetValue<double>(); }
@@ -2830,11 +3626,112 @@ static void Gen_tsequenceset_make_gaps(DataChunk &args, ExpressionState &, Vecto
         [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
             int n = 0;
             const Temporal **a = ListToTemporalArr(child, le, &n);
-            TSequenceSet *ss = tsequenceset_make_gaps((TInstant **) a, n, interp, maxt, maxdist);
+            interpType ip = interp != INTERP_NONE ? interp :
+                (n > 0 && temptype_supports_linear((MeosType) a[0]->temptype) ? LINEAR : STEP);
+            TSequenceSet *ss = tsequenceset_make_gaps((TInstant **) a, n, ip, maxt, maxdist);
             string_t out = TemporalToBlobN(result, (Temporal *) ss, mask, idx);
             FreeTemporalArr(a, n);
             return out;
         });
+}
+
+static void Gen_ttextinst_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = MakeText(in0[i]);
+        auto v1 = DuckDBToMeosTimestamp(in1[i]).value;
+        Temporal *r = (Temporal *) ttextinst_make(v0, v1);
+        free(v0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_ttextseq_from_base_tstzset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = MakeText(in0[i]);
+        auto v1 = BlobToSet(in1[i]);
+        Temporal *r = (Temporal *) ttextseq_from_base_tstzset(v0, v1);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_ttextseq_from_base_tstzspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = MakeText(in0[i]);
+        auto v1 = BlobToSpan(in1[i]);
+        Temporal *r = (Temporal *) ttextseq_from_base_tstzspan(v0, v1);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+}
+
+static void Gen_ttextseqset_from_base_tstzspanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    const idx_t ncol = args.ColumnCount();
+    for (idx_t c = 0; c < ncol; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < ncol; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        auto v0 = MakeText(in0[i]);
+        auto v1 = BlobToSpanSet(in1[i]);
+        Temporal *r = (Temporal *) ttextseqset_from_base_tstzspanset(v0, v1);
+        free(v0);
+        free(v1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
 }
 
 
@@ -3050,6 +3947,33 @@ void RegisterGenerated_meos_geo_box_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("round", {StboxType::stbox(), LogicalType::INTEGER}, StboxType::stbox(), Gen_stbox_round));
     RegisterSerializedScalarFunction(loader, ScalarFunction("round", {StboxType::stbox()}, StboxType::stbox(), Gen_stbox_round_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getSpace", {StboxType::stbox()}, StboxType::stbox(), Gen_stbox_get_space));
+}
+
+void RegisterGenerated_meos_geo_constructor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometry", {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, TGeometryTypes::tgeometry(), Gen_tgeoinst_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeography", {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, TGeographyTypes::tgeography(), Gen_tgeoinst_make_geog));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometry", {MobilityDuckGeometryType(), SetTypes::tstzset()}, TGeometryTypes::tgeometry(), Gen_tgeoseq_from_base_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeography", {MobilityDuckGeometryType(), SetTypes::tstzset()}, TGeographyTypes::tgeography(), Gen_tgeoseq_from_base_tstzset_geog));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometry", {MobilityDuckGeometryType(), SpanTypes::tstzspan()}, TGeometryTypes::tgeometry(), Gen_tgeoseq_from_base_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometry", {MobilityDuckGeometryType(), SpanTypes::tstzspan(), LogicalType::VARCHAR}, TGeometryTypes::tgeometry(), Gen_tgeoseq_from_base_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeography", {MobilityDuckGeometryType(), SpanTypes::tstzspan()}, TGeographyTypes::tgeography(), Gen_tgeoseq_from_base_tstzspan_geog));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeography", {MobilityDuckGeometryType(), SpanTypes::tstzspan(), LogicalType::VARCHAR}, TGeographyTypes::tgeography(), Gen_tgeoseq_from_base_tstzspan_geog));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometry", {MobilityDuckGeometryType(), SpansetTypes::tstzspanset()}, TGeometryTypes::tgeometry(), Gen_tgeoseqset_from_base_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometry", {MobilityDuckGeometryType(), SpansetTypes::tstzspanset(), LogicalType::VARCHAR}, TGeometryTypes::tgeometry(), Gen_tgeoseqset_from_base_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeography", {MobilityDuckGeometryType(), SpansetTypes::tstzspanset()}, TGeographyTypes::tgeography(), Gen_tgeoseqset_from_base_tstzspanset_geog));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeography", {MobilityDuckGeometryType(), SpansetTypes::tstzspanset(), LogicalType::VARCHAR}, TGeographyTypes::tgeography(), Gen_tgeoseqset_from_base_tstzspanset_geog));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompoint", {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, TgeompointType::tgeompoint(), Gen_tpointinst_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeogpoint", {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, TgeogpointType::tgeogpoint(), Gen_tpointinst_make_geog));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompoint", {MobilityDuckGeometryType(), SetTypes::tstzset()}, TgeompointType::tgeompoint(), Gen_tpointseq_from_base_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeogpoint", {MobilityDuckGeometryType(), SetTypes::tstzset()}, TgeogpointType::tgeogpoint(), Gen_tpointseq_from_base_tstzset_geog));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompoint", {MobilityDuckGeometryType(), SpanTypes::tstzspan()}, TgeompointType::tgeompoint(), Gen_tpointseq_from_base_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompoint", {MobilityDuckGeometryType(), SpanTypes::tstzspan(), LogicalType::VARCHAR}, TgeompointType::tgeompoint(), Gen_tpointseq_from_base_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeogpoint", {MobilityDuckGeometryType(), SpanTypes::tstzspan()}, TgeogpointType::tgeogpoint(), Gen_tpointseq_from_base_tstzspan_geog));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeogpoint", {MobilityDuckGeometryType(), SpanTypes::tstzspan(), LogicalType::VARCHAR}, TgeogpointType::tgeogpoint(), Gen_tpointseq_from_base_tstzspan_geog));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompoint", {MobilityDuckGeometryType(), SpansetTypes::tstzspanset()}, TgeompointType::tgeompoint(), Gen_tpointseqset_from_base_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompoint", {MobilityDuckGeometryType(), SpansetTypes::tstzspanset(), LogicalType::VARCHAR}, TgeompointType::tgeompoint(), Gen_tpointseqset_from_base_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeogpoint", {MobilityDuckGeometryType(), SpansetTypes::tstzspanset()}, TgeogpointType::tgeogpoint(), Gen_tpointseqset_from_base_tstzspanset_geog));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeogpoint", {MobilityDuckGeometryType(), SpansetTypes::tstzspanset(), LogicalType::VARCHAR}, TgeogpointType::tgeogpoint(), Gen_tpointseqset_from_base_tstzspanset_geog));
 }
 
 void RegisterGenerated_meos_h3_comp_temp(ExtensionLoader &loader) {
@@ -3748,6 +4672,36 @@ void RegisterGenerated_meos_temporal_bbox_topo(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_temporal_constructor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbool", {LogicalType::BOOLEAN, LogicalType::TIMESTAMP_TZ}, TemporalTypes::tbool(), Gen_tboolinst_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbool", {LogicalType::BOOLEAN, SetTypes::tstzset()}, TemporalTypes::tbool(), Gen_tboolseq_from_base_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbool", {LogicalType::BOOLEAN, SpanTypes::tstzspan()}, TemporalTypes::tbool(), Gen_tboolseq_from_base_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbool", {LogicalType::BOOLEAN, SpansetTypes::tstzspanset()}, TemporalTypes::tbool(), Gen_tboolseqset_from_base_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tfloat", {LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ}, TemporalTypes::tfloat(), Gen_tfloatinst_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tfloat", {LogicalType::DOUBLE, SetTypes::tstzset()}, TemporalTypes::tfloat(), Gen_tfloatseq_from_base_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tfloat", {LogicalType::DOUBLE, SpanTypes::tstzspan()}, TemporalTypes::tfloat(), Gen_tfloatseq_from_base_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tfloat", {LogicalType::DOUBLE, SpanTypes::tstzspan(), LogicalType::VARCHAR}, TemporalTypes::tfloat(), Gen_tfloatseq_from_base_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tfloat", {LogicalType::DOUBLE, SpansetTypes::tstzspanset()}, TemporalTypes::tfloat(), Gen_tfloatseqset_from_base_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tfloat", {LogicalType::DOUBLE, SpansetTypes::tstzspanset(), LogicalType::VARCHAR}, TemporalTypes::tfloat(), Gen_tfloatseqset_from_base_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tint", {LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ}, TemporalTypes::tint(), Gen_tintinst_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbigint", {LogicalType::BIGINT, LogicalType::TIMESTAMP_TZ}, TemporalTypes::tbigint(), Gen_tbigintinst_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tint", {LogicalType::INTEGER, SetTypes::tstzset()}, TemporalTypes::tint(), Gen_tintseq_from_base_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbigint", {LogicalType::BIGINT, SetTypes::tstzset()}, TemporalTypes::tbigint(), Gen_tbigintseq_from_base_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tint", {LogicalType::INTEGER, SpanTypes::tstzspan()}, TemporalTypes::tint(), Gen_tintseq_from_base_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbigint", {LogicalType::BIGINT, SpanTypes::tstzspan()}, TemporalTypes::tbigint(), Gen_tbigintseq_from_base_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tint", {LogicalType::INTEGER, SpansetTypes::tstzspanset()}, TemporalTypes::tint(), Gen_tintseqset_from_base_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tbigint", {LogicalType::BIGINT, SpansetTypes::tstzspanset()}, TemporalTypes::tbigint(), Gen_tbigintseqset_from_base_tstzspanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tcbufferSeq", {LogicalType::LIST(CbufferTypes::tcbuffer())}, CbufferTypes::tcbuffer(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tcbufferSeq", {LogicalType::LIST(CbufferTypes::tcbuffer()), LogicalType::VARCHAR}, CbufferTypes::tcbuffer(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tcbufferSeq", {LogicalType::LIST(CbufferTypes::tcbuffer()), LogicalType::VARCHAR, LogicalType::BOOLEAN}, CbufferTypes::tcbuffer(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tcbufferSeq", {LogicalType::LIST(CbufferTypes::tcbuffer()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, CbufferTypes::tcbuffer(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometrySeq", {LogicalType::LIST(TGeometryTypes::tgeometry())}, TGeometryTypes::tgeometry(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometrySeq", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::VARCHAR}, TGeometryTypes::tgeometry(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometrySeq", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::VARCHAR, LogicalType::BOOLEAN}, TGeometryTypes::tgeometry(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometrySeq", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, TGeometryTypes::tgeometry(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeographySeq", {LogicalType::LIST(TGeographyTypes::tgeography())}, TGeographyTypes::tgeography(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeographySeq", {LogicalType::LIST(TGeographyTypes::tgeography()), LogicalType::VARCHAR}, TGeographyTypes::tgeography(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeographySeq", {LogicalType::LIST(TGeographyTypes::tgeography()), LogicalType::VARCHAR, LogicalType::BOOLEAN}, TGeographyTypes::tgeography(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeographySeq", {LogicalType::LIST(TGeographyTypes::tgeography()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, TGeographyTypes::tgeography(), Gen_tsequence_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompointSeq", {LogicalType::LIST(TgeompointType::tgeompoint())}, TgeompointType::tgeompoint(), Gen_tsequence_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompointSeq", {LogicalType::LIST(TgeompointType::tgeompoint()), LogicalType::VARCHAR}, TgeompointType::tgeompoint(), Gen_tsequence_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompointSeq", {LogicalType::LIST(TgeompointType::tgeompoint()), LogicalType::VARCHAR, LogicalType::BOOLEAN}, TgeompointType::tgeompoint(), Gen_tsequence_make));
@@ -3756,6 +4710,42 @@ void RegisterGenerated_meos_temporal_constructor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeogpointSeq", {LogicalType::LIST(TgeogpointType::tgeogpoint()), LogicalType::VARCHAR}, TgeogpointType::tgeogpoint(), Gen_tsequence_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeogpointSeq", {LogicalType::LIST(TgeogpointType::tgeogpoint()), LogicalType::VARCHAR, LogicalType::BOOLEAN}, TgeogpointType::tgeogpoint(), Gen_tsequence_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeogpointSeq", {LogicalType::LIST(TgeogpointType::tgeogpoint()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, TgeogpointType::tgeogpoint(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("th3indexSeq", {LogicalType::LIST(H3indexTypes::th3index())}, H3indexTypes::th3index(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("th3indexSeq", {LogicalType::LIST(H3indexTypes::th3index()), LogicalType::VARCHAR}, H3indexTypes::th3index(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("th3indexSeq", {LogicalType::LIST(H3indexTypes::th3index()), LogicalType::VARCHAR, LogicalType::BOOLEAN}, H3indexTypes::th3index(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("th3indexSeq", {LogicalType::LIST(H3indexTypes::th3index()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, H3indexTypes::th3index(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonbSeq", {LogicalType::LIST(TJsonbTypes::tjsonb())}, TJsonbTypes::tjsonb(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonbSeq", {LogicalType::LIST(TJsonbTypes::tjsonb()), LogicalType::VARCHAR}, TJsonbTypes::tjsonb(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonbSeq", {LogicalType::LIST(TJsonbTypes::tjsonb()), LogicalType::VARCHAR, LogicalType::BOOLEAN}, TJsonbTypes::tjsonb(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonbSeq", {LogicalType::LIST(TJsonbTypes::tjsonb()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, TJsonbTypes::tjsonb(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tnpointSeq", {LogicalType::LIST(NpointTypes::tnpoint())}, NpointTypes::tnpoint(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tnpointSeq", {LogicalType::LIST(NpointTypes::tnpoint()), LogicalType::VARCHAR}, NpointTypes::tnpoint(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tnpointSeq", {LogicalType::LIST(NpointTypes::tnpoint()), LogicalType::VARCHAR, LogicalType::BOOLEAN}, NpointTypes::tnpoint(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tnpointSeq", {LogicalType::LIST(NpointTypes::tnpoint()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, NpointTypes::tnpoint(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpointSeq", {LogicalType::LIST(TPcpointTypes::tpcpoint())}, TPcpointTypes::tpcpoint(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpointSeq", {LogicalType::LIST(TPcpointTypes::tpcpoint()), LogicalType::VARCHAR}, TPcpointTypes::tpcpoint(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpointSeq", {LogicalType::LIST(TPcpointTypes::tpcpoint()), LogicalType::VARCHAR, LogicalType::BOOLEAN}, TPcpointTypes::tpcpoint(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpointSeq", {LogicalType::LIST(TPcpointTypes::tpcpoint()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, TPcpointTypes::tpcpoint(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpatchSeq", {LogicalType::LIST(TPcpatchTypes::tpcpatch())}, TPcpatchTypes::tpcpatch(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpatchSeq", {LogicalType::LIST(TPcpatchTypes::tpcpatch()), LogicalType::VARCHAR}, TPcpatchTypes::tpcpatch(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpatchSeq", {LogicalType::LIST(TPcpatchTypes::tpcpatch()), LogicalType::VARCHAR, LogicalType::BOOLEAN}, TPcpatchTypes::tpcpatch(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpatchSeq", {LogicalType::LIST(TPcpatchTypes::tpcpatch()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, TPcpatchTypes::tpcpatch(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tposeSeq", {LogicalType::LIST(PoseTypes::tpose())}, PoseTypes::tpose(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tposeSeq", {LogicalType::LIST(PoseTypes::tpose()), LogicalType::VARCHAR}, PoseTypes::tpose(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tposeSeq", {LogicalType::LIST(PoseTypes::tpose()), LogicalType::VARCHAR, LogicalType::BOOLEAN}, PoseTypes::tpose(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tposeSeq", {LogicalType::LIST(PoseTypes::tpose()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, PoseTypes::tpose(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tposechainSeq", {LogicalType::LIST(PosechainTypes::tposechain())}, PosechainTypes::tposechain(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tposechainSeq", {LogicalType::LIST(PosechainTypes::tposechain()), LogicalType::VARCHAR}, PosechainTypes::tposechain(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tposechainSeq", {LogicalType::LIST(PosechainTypes::tposechain()), LogicalType::VARCHAR, LogicalType::BOOLEAN}, PosechainTypes::tposechain(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tposechainSeq", {LogicalType::LIST(PosechainTypes::tposechain()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, PosechainTypes::tposechain(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbinSeq", {LogicalType::LIST(QuadbinTypes::tquadbin())}, QuadbinTypes::tquadbin(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbinSeq", {LogicalType::LIST(QuadbinTypes::tquadbin()), LogicalType::VARCHAR}, QuadbinTypes::tquadbin(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbinSeq", {LogicalType::LIST(QuadbinTypes::tquadbin()), LogicalType::VARCHAR, LogicalType::BOOLEAN}, QuadbinTypes::tquadbin(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbinSeq", {LogicalType::LIST(QuadbinTypes::tquadbin()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, QuadbinTypes::tquadbin(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cellSeq", {LogicalType::LIST(S2cellTypes::ts2cell())}, S2cellTypes::ts2cell(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cellSeq", {LogicalType::LIST(S2cellTypes::ts2cell()), LogicalType::VARCHAR}, S2cellTypes::ts2cell(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cellSeq", {LogicalType::LIST(S2cellTypes::ts2cell()), LogicalType::VARCHAR, LogicalType::BOOLEAN}, S2cellTypes::ts2cell(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cellSeq", {LogicalType::LIST(S2cellTypes::ts2cell()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, S2cellTypes::ts2cell(), Gen_tsequence_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tboolSeq", {LogicalType::LIST(TemporalTypes::tbool())}, TemporalTypes::tbool(), Gen_tsequence_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tboolSeq", {LogicalType::LIST(TemporalTypes::tbool()), LogicalType::VARCHAR}, TemporalTypes::tbool(), Gen_tsequence_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tboolSeq", {LogicalType::LIST(TemporalTypes::tbool()), LogicalType::VARCHAR, LogicalType::BOOLEAN}, TemporalTypes::tbool(), Gen_tsequence_make));
@@ -3776,13 +4766,37 @@ void RegisterGenerated_meos_temporal_constructor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("ttextSeq", {LogicalType::LIST(TemporalTypes::ttext()), LogicalType::VARCHAR}, TemporalTypes::ttext(), Gen_tsequence_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ttextSeq", {LogicalType::LIST(TemporalTypes::ttext()), LogicalType::VARCHAR, LogicalType::BOOLEAN}, TemporalTypes::ttext(), Gen_tsequence_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ttextSeq", {LogicalType::LIST(TemporalTypes::ttext()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, TemporalTypes::ttext(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tcbufferSeqSet", {LogicalType::LIST(CbufferTypes::tcbuffer())}, CbufferTypes::tcbuffer(), Gen_tsequenceset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometrySeqSet", {LogicalType::LIST(TGeometryTypes::tgeometry())}, TGeometryTypes::tgeometry(), Gen_tsequenceset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeographySeqSet", {LogicalType::LIST(TGeographyTypes::tgeography())}, TGeographyTypes::tgeography(), Gen_tsequenceset_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompointSeqSet", {LogicalType::LIST(TgeompointType::tgeompoint())}, TgeompointType::tgeompoint(), Gen_tsequenceset_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeogpointSeqSet", {LogicalType::LIST(TgeogpointType::tgeogpoint())}, TgeogpointType::tgeogpoint(), Gen_tsequenceset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("th3indexSeqSet", {LogicalType::LIST(H3indexTypes::th3index())}, H3indexTypes::th3index(), Gen_tsequenceset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonbSeqSet", {LogicalType::LIST(TJsonbTypes::tjsonb())}, TJsonbTypes::tjsonb(), Gen_tsequenceset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tnpointSeqSet", {LogicalType::LIST(NpointTypes::tnpoint())}, NpointTypes::tnpoint(), Gen_tsequenceset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpointSeqSet", {LogicalType::LIST(TPcpointTypes::tpcpoint())}, TPcpointTypes::tpcpoint(), Gen_tsequenceset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpatchSeqSet", {LogicalType::LIST(TPcpatchTypes::tpcpatch())}, TPcpatchTypes::tpcpatch(), Gen_tsequenceset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tposeSeqSet", {LogicalType::LIST(PoseTypes::tpose())}, PoseTypes::tpose(), Gen_tsequenceset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tposechainSeqSet", {LogicalType::LIST(PosechainTypes::tposechain())}, PosechainTypes::tposechain(), Gen_tsequenceset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbinSeqSet", {LogicalType::LIST(QuadbinTypes::tquadbin())}, QuadbinTypes::tquadbin(), Gen_tsequenceset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cellSeqSet", {LogicalType::LIST(S2cellTypes::ts2cell())}, S2cellTypes::ts2cell(), Gen_tsequenceset_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tboolSeqSet", {LogicalType::LIST(TemporalTypes::tbool())}, TemporalTypes::tbool(), Gen_tsequenceset_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tintSeqSet", {LogicalType::LIST(TemporalTypes::tint())}, TemporalTypes::tint(), Gen_tsequenceset_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tbigintSeqSet", {LogicalType::LIST(TemporalTypes::tbigint())}, TemporalTypes::tbigint(), Gen_tsequenceset_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tfloatSeqSet", {LogicalType::LIST(TemporalTypes::tfloat())}, TemporalTypes::tfloat(), Gen_tsequenceset_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ttextSeqSet", {LogicalType::LIST(TemporalTypes::ttext())}, TemporalTypes::ttext(), Gen_tsequenceset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tcbufferSeqSetGaps", {LogicalType::LIST(CbufferTypes::tcbuffer())}, CbufferTypes::tcbuffer(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tcbufferSeqSetGaps", {LogicalType::LIST(CbufferTypes::tcbuffer()), LogicalType::INTERVAL}, CbufferTypes::tcbuffer(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tcbufferSeqSetGaps", {LogicalType::LIST(CbufferTypes::tcbuffer()), LogicalType::INTERVAL, LogicalType::DOUBLE}, CbufferTypes::tcbuffer(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tcbufferSeqSetGaps", {LogicalType::LIST(CbufferTypes::tcbuffer()), LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::VARCHAR}, CbufferTypes::tcbuffer(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometrySeqSetGaps", {LogicalType::LIST(TGeometryTypes::tgeometry())}, TGeometryTypes::tgeometry(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometrySeqSetGaps", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::INTERVAL}, TGeometryTypes::tgeometry(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometrySeqSetGaps", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::INTERVAL, LogicalType::DOUBLE}, TGeometryTypes::tgeometry(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometrySeqSetGaps", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::VARCHAR}, TGeometryTypes::tgeometry(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeographySeqSetGaps", {LogicalType::LIST(TGeographyTypes::tgeography())}, TGeographyTypes::tgeography(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeographySeqSetGaps", {LogicalType::LIST(TGeographyTypes::tgeography()), LogicalType::INTERVAL}, TGeographyTypes::tgeography(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeographySeqSetGaps", {LogicalType::LIST(TGeographyTypes::tgeography()), LogicalType::INTERVAL, LogicalType::DOUBLE}, TGeographyTypes::tgeography(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tgeographySeqSetGaps", {LogicalType::LIST(TGeographyTypes::tgeography()), LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::VARCHAR}, TGeographyTypes::tgeography(), Gen_tsequenceset_make_gaps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompointSeqSetGaps", {LogicalType::LIST(TgeompointType::tgeompoint())}, TgeompointType::tgeompoint(), Gen_tsequenceset_make_gaps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompointSeqSetGaps", {LogicalType::LIST(TgeompointType::tgeompoint()), LogicalType::INTERVAL}, TgeompointType::tgeompoint(), Gen_tsequenceset_make_gaps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompointSeqSetGaps", {LogicalType::LIST(TgeompointType::tgeompoint()), LogicalType::INTERVAL, LogicalType::DOUBLE}, TgeompointType::tgeompoint(), Gen_tsequenceset_make_gaps));
@@ -3791,6 +4805,26 @@ void RegisterGenerated_meos_temporal_constructor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeogpointSeqSetGaps", {LogicalType::LIST(TgeogpointType::tgeogpoint()), LogicalType::INTERVAL}, TgeogpointType::tgeogpoint(), Gen_tsequenceset_make_gaps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeogpointSeqSetGaps", {LogicalType::LIST(TgeogpointType::tgeogpoint()), LogicalType::INTERVAL, LogicalType::DOUBLE}, TgeogpointType::tgeogpoint(), Gen_tsequenceset_make_gaps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeogpointSeqSetGaps", {LogicalType::LIST(TgeogpointType::tgeogpoint()), LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::VARCHAR}, TgeogpointType::tgeogpoint(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("th3indexSeqSetGaps", {LogicalType::LIST(H3indexTypes::th3index())}, H3indexTypes::th3index(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("th3indexSeqSetGaps", {LogicalType::LIST(H3indexTypes::th3index()), LogicalType::INTERVAL}, H3indexTypes::th3index(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonbSeqSetGaps", {LogicalType::LIST(TJsonbTypes::tjsonb())}, TJsonbTypes::tjsonb(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonbSeqSetGaps", {LogicalType::LIST(TJsonbTypes::tjsonb()), LogicalType::INTERVAL}, TJsonbTypes::tjsonb(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tnpointSeqSetGaps", {LogicalType::LIST(NpointTypes::tnpoint())}, NpointTypes::tnpoint(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tnpointSeqSetGaps", {LogicalType::LIST(NpointTypes::tnpoint()), LogicalType::INTERVAL}, NpointTypes::tnpoint(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tnpointSeqSetGaps", {LogicalType::LIST(NpointTypes::tnpoint()), LogicalType::INTERVAL, LogicalType::DOUBLE}, NpointTypes::tnpoint(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tnpointSeqSetGaps", {LogicalType::LIST(NpointTypes::tnpoint()), LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::VARCHAR}, NpointTypes::tnpoint(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tposeSeqSetGaps", {LogicalType::LIST(PoseTypes::tpose())}, PoseTypes::tpose(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tposeSeqSetGaps", {LogicalType::LIST(PoseTypes::tpose()), LogicalType::INTERVAL}, PoseTypes::tpose(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tposeSeqSetGaps", {LogicalType::LIST(PoseTypes::tpose()), LogicalType::INTERVAL, LogicalType::DOUBLE}, PoseTypes::tpose(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tposeSeqSetGaps", {LogicalType::LIST(PoseTypes::tpose()), LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::VARCHAR}, PoseTypes::tpose(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tposechainSeqSetGaps", {LogicalType::LIST(PosechainTypes::tposechain())}, PosechainTypes::tposechain(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tposechainSeqSetGaps", {LogicalType::LIST(PosechainTypes::tposechain()), LogicalType::INTERVAL}, PosechainTypes::tposechain(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tposechainSeqSetGaps", {LogicalType::LIST(PosechainTypes::tposechain()), LogicalType::INTERVAL, LogicalType::DOUBLE}, PosechainTypes::tposechain(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tposechainSeqSetGaps", {LogicalType::LIST(PosechainTypes::tposechain()), LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::VARCHAR}, PosechainTypes::tposechain(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbinSeqSetGaps", {LogicalType::LIST(QuadbinTypes::tquadbin())}, QuadbinTypes::tquadbin(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbinSeqSetGaps", {LogicalType::LIST(QuadbinTypes::tquadbin()), LogicalType::INTERVAL}, QuadbinTypes::tquadbin(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cellSeqSetGaps", {LogicalType::LIST(S2cellTypes::ts2cell())}, S2cellTypes::ts2cell(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cellSeqSetGaps", {LogicalType::LIST(S2cellTypes::ts2cell()), LogicalType::INTERVAL}, S2cellTypes::ts2cell(), Gen_tsequenceset_make_gaps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tboolSeqSetGaps", {LogicalType::LIST(TemporalTypes::tbool())}, TemporalTypes::tbool(), Gen_tsequenceset_make_gaps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tboolSeqSetGaps", {LogicalType::LIST(TemporalTypes::tbool()), LogicalType::INTERVAL}, TemporalTypes::tbool(), Gen_tsequenceset_make_gaps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tintSeqSetGaps", {LogicalType::LIST(TemporalTypes::tint())}, TemporalTypes::tint(), Gen_tsequenceset_make_gaps));
@@ -3805,6 +4839,10 @@ void RegisterGenerated_meos_temporal_constructor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tfloatSeqSetGaps", {LogicalType::LIST(TemporalTypes::tfloat()), LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::VARCHAR}, TemporalTypes::tfloat(), Gen_tsequenceset_make_gaps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ttextSeqSetGaps", {LogicalType::LIST(TemporalTypes::ttext())}, TemporalTypes::ttext(), Gen_tsequenceset_make_gaps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ttextSeqSetGaps", {LogicalType::LIST(TemporalTypes::ttext()), LogicalType::INTERVAL}, TemporalTypes::ttext(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ttext", {LogicalType::VARCHAR, LogicalType::TIMESTAMP_TZ}, TemporalTypes::ttext(), Gen_ttextinst_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ttext", {LogicalType::VARCHAR, SetTypes::tstzset()}, TemporalTypes::ttext(), Gen_ttextseq_from_base_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ttext", {LogicalType::VARCHAR, SpanTypes::tstzspan()}, TemporalTypes::ttext(), Gen_ttextseq_from_base_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ttext", {LogicalType::VARCHAR, SpansetTypes::tstzspanset()}, TemporalTypes::ttext(), Gen_ttextseqset_from_base_tstzspanset));
 }
 
 void RegisterGenerated_meos_temporal_conversion(ExtensionLoader &loader) {
