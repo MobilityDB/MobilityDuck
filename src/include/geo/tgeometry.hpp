@@ -22,7 +22,6 @@ struct TGeometryTypes {
 struct TgeometryFunctions {
     static bool StringToTgeometry(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool TgeometryToString(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool WkbBlobToGeometry(Vector &source, Vector &result, idx_t count, CastParameters &parameters); 
 };
 
 

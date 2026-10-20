@@ -131,15 +131,6 @@ void TboxType::RegisterCastFunctions(ExtensionLoader &loader) {
 }
 
 void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "*",
-            {tbox(), tbox()},
-            tbox(),
-            TboxFunctions::Intersection_tbox_tbox
-        )
-    );
-
     // hash(tbox) / hashExtended(tbox, UBIGINT) are generated from the catalog
     // (bare canonical names) in generated_temporal_udfs.cpp.
 }

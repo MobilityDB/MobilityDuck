@@ -110,56 +110,6 @@ static void Tpcpatch_constructor(DataChunk &args, ExpressionState &state, Vector
 
 
 /*
- * Conversions
-*/
-
-static void Temporal_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_geom_vec = args.data[0];
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_geom_vec, result, count,
-        [&](string_t input_str) -> string_t {
-            std::string input = input_str.GetString();
-
-            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
-
-            if (!temp) {
-                throw InvalidInputException("Invalid tpcpatch data: null pointer");
-            }
-
-            Span *timespan = temporal_to_tstzspan(temp);
-
-            if (!timespan) {
-                throw InvalidInputException("Failed to extract timespan from tpcpatch");
-            }
-
-            size_t span_size = sizeof(Span);
-
-            uint8_t *span_buffer = (uint8_t*)malloc(span_size);
-            if (!span_buffer) {
-                free(timespan);
-                throw InvalidInputException("Failed to allocate memory for timespan data");
-            }
-
-            memcpy(span_buffer, timespan, span_size);
-
-            string_t span_string_t(reinterpret_cast<const char*>(span_buffer), span_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-
-            free(span_buffer);
-            free(timespan);
-
-            return stored_data;
-        }
-    );
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
-/*
  * Transformations
 */
 
@@ -209,56 +159,6 @@ static void Temporal_to_tinstant(DataChunk &args, ExpressionState &state, Vector
 }
 
 
-static void Temporal_set_interp(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &tgeom_vec = args.data[0];
-    auto &interp_vec = args.data[1];
-
-    tgeom_vec.Flatten(count);
-    interp_vec.Flatten(count);
-
-    BinaryExecutor::Execute<string_t, string_t, string_t>(
-        tgeom_vec, interp_vec, result, count,
-        [&](string_t tgeom_str_t, string_t interp_str_t) -> string_t {
-
-            std::string input = tgeom_str_t.GetString();
-
-            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
-            if (!temp) {
-                throw InvalidInputException("Invalid tpcpatch data: null pointer");
-            }
-
-            std::string interp_str = interp_str_t.GetString();
-            interpType new_interp = interptype_from_string(interp_str.c_str());
-
-            Temporal *result_temp = temporal_set_interp(temp, new_interp);
-            if (!result_temp) {
-                throw InvalidInputException("Failed to set interpolation");
-            }
-
-            // Serialize result back to binary
-            size_t result_size = temporal_mem_size(result_temp);
-            uint8_t *result_buffer = (uint8_t*)malloc(result_size);
-            if (!result_buffer) {
-                free(result_temp);
-                throw InvalidInputException("Failed to allocate memory for result");
-            }
-
-            memcpy(result_buffer, result_temp, result_size);
-            string_t result_string_t(reinterpret_cast<const char*>(result_buffer), result_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, result_string_t);
-
-            free(result_buffer);
-            free(result_temp);
-
-            return stored_data;
-        });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
 
 
 /*
@@ -267,23 +167,6 @@ static void Temporal_set_interp(DataChunk &args, ExpressionState &state, Vector 
 
 
 
-
-// ---- pcpatch value accessors ----
-// The tpcpatch value type is a pgpointcloud pcpatch: an opaque varlena
-// (pgpointcloud SERIALIZED_PATCH) that is not a registered DuckDB type.
-// getValue / startValue / endValue surface it in its canonical hex-WKB
-// text form via the schema-free pcpatch_hex_out, mirroring tpcpatch_out.
-// pcid(tpcpatch) returns the pgpointcloud schema id and numPoints the
-// patch point count, both via the schema-free pcpatch_get_pcid /
-// pcpatch_npoints header reads.  The schema-aware accessors
-// (atGeometry, eIntersects, per-dimension getters) are not bound: they
-// need a registered PCSCHEMA, which a standalone DuckDB process does
-// not have.
-
-static Pcpatch *pcpatch_from_instant_value(const TInstant *inst) {
-    Datum d = tinstant_value(inst);
-    return reinterpret_cast<Pcpatch*>(d);
-}
 
 
 
@@ -463,26 +346,6 @@ void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction(
         "shiftScaleTime", {TGEOM, IVAL, IVAL}, TGEOM,
         TemporalFunctions::Temporal_shift_scale_time));
-
-    // ---- Comparison operators (eq, ne, lt, le, gt and ge are generated) ----
-    struct CmpEntry {
-        const char *name;
-        scalar_function_t fn;
-    };
-
-    // Operator forms — mirror the registrations tgeometry.cpp does.
-    const std::vector<CmpEntry> op_cmps = {
-        {"=",  TemporalFunctions::Temporal_eq},
-        {"<>", TemporalFunctions::Temporal_ne},
-        {"<",  TemporalFunctions::Temporal_lt},
-        {"<=", TemporalFunctions::Temporal_le},
-        {">",  TemporalFunctions::Temporal_gt},
-        {">=", TemporalFunctions::Temporal_ge},
-    };
-    for (const auto &c : op_cmps) {
-        RegisterMeosFunction(loader, ScalarFunction(
-            c.name, {TGEOM, TGEOM}, LogicalType::BOOLEAN, c.fn));
-    }
 }
 
 void TPcpatchTypes::RegisterTypes(ExtensionLoader &loader) {

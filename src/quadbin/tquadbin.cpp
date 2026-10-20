@@ -145,31 +145,6 @@ bool QuadbinFunctions::Tquadbin_out_cast(
 }
 
 /* =====================================================================
- * Static cell helpers
- * ===================================================================== */
-
-void QuadbinFunctions::Quadbin_get_resolution(
-    DataChunk &args, ExpressionState &state, Vector &result)
-{
-    UnaryExecutor::Execute<int64_t, int32_t>(
-        args.data[0], result, args.size(),
-        [](int64_t v) -> int32_t {
-            return static_cast<int32_t>(
-                quadbin_get_resolution(static_cast<Quadbin>(v)));
-        });
-}
-
-void QuadbinFunctions::Quadbin_is_valid_cell(
-    DataChunk &args, ExpressionState &state, Vector &result)
-{
-    UnaryExecutor::Execute<int64_t, bool>(
-        args.data[0], result, args.size(),
-        [](int64_t v) -> bool {
-            return quadbin_is_valid_cell(static_cast<Quadbin>(v));
-        });
-}
-
-/* =====================================================================
  * Constructor — tquadbininst_make wrapped as `tquadbin(cell, t)`
  * ===================================================================== */
 
@@ -182,60 +157,6 @@ void QuadbinFunctions::Tquadbin_make(
             TInstant *inst = tquadbininst_make(
                 static_cast<Quadbin>(cell), ToMeosTimestamp(t));
             return TempToBlob(result, reinterpret_cast<Temporal *>(inst));
-        });
-}
-
-/* =====================================================================
- * Quadkey conversion — tquadbin → tvarchar (base-4 slippy-tile string)
- * ===================================================================== */
-
-void QuadbinFunctions::Tquadbin_cell_to_quadkey(
-    DataChunk &args, ExpressionState &state, Vector &result)
-{
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
-        args.data[0], result, args.size(),
-        [&](string_t blob, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemp(blob);
-            Temporal *r = tquadbin_cell_to_quadkey(t);
-            free(t);
-            if (!r) { mask.SetInvalid(idx); return string_t(); }
-            char *str = temporal_out(r, OUT_DEFAULT_DECIMAL_DIGITS);
-            free(r);
-            std::string copy(str);
-            free(str);
-            return StringVector::AddString(result, copy);
-        });
-}
-
-/* =====================================================================
- * Casts to/from tbigint
- * ===================================================================== */
-
-void QuadbinFunctions::Tbigint_to_tquadbin(
-    DataChunk &args, ExpressionState &state, Vector &result)
-{
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
-        args.data[0], result, args.size(),
-        [&](string_t blob, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemp(blob);
-            Temporal *r = tbigint_to_tquadbin(t);
-            free(t);
-            if (!r) { mask.SetInvalid(idx); return string_t(); }
-            return TempToBlob(result, r);
-        });
-}
-
-void QuadbinFunctions::Tquadbin_to_tbigint(
-    DataChunk &args, ExpressionState &state, Vector &result)
-{
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
-        args.data[0], result, args.size(),
-        [&](string_t blob, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemp(blob);
-            Temporal *r = tquadbin_to_tbigint(t);
-            free(t);
-            if (!r) { mask.SetInvalid(idx); return string_t(); }
-            return TempToBlob(result, r);
         });
 }
 

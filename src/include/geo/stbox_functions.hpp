@@ -22,12 +22,6 @@ struct StboxFunctions {
     static bool Stbox_out(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* ***************************************************
-     * In/out functions: WKB/HexWKB <-> stbox
-     ****************************************************/
-    static void Stbox_from_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Stbox_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /* ***************************************************
      * Conversion functions + cast functions: [TYPE] -> stbox
      ****************************************************/
     static void Geo_to_stbox_common(Vector &source, Vector &result, idx_t count);
@@ -41,26 +35,6 @@ struct StboxFunctions {
      * TODO: Selectively functions for operators 
      ****************************************************/
 
-    /* ***************************************************
-     * Topological operators
-     ****************************************************/
-
-#define DECL_TSPATIAL_TOPO(OP)                                                                                  \
-    static void OP##_tspatial_stbox(DataChunk &args, ExpressionState &state, Vector &result);                   \
-    static void OP##_stbox_tspatial(DataChunk &args, ExpressionState &state, Vector &result);                   \
-    static void OP##_tspatial_tspatial(DataChunk &args, ExpressionState &state, Vector &result);
-
-    DECL_TSPATIAL_TOPO(Contains)
-    DECL_TSPATIAL_TOPO(Contained)
-    DECL_TSPATIAL_TOPO(Overlaps)
-    DECL_TSPATIAL_TOPO(Same)
-    DECL_TSPATIAL_TOPO(Adjacent)
-#undef DECL_TSPATIAL_TOPO
-
-    /* ***************************************************
-     * Set operators
-     ****************************************************/
-    static void Intersection_stbox_stbox(DataChunk &args, ExpressionState &state, Vector &result);
      // TODO: Split functions + Extent aggregation 
     
     /* ***************************************************

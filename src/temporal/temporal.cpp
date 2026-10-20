@@ -83,15 +83,6 @@ void TemporalTypes::RegisterCastFunctions(ExtensionLoader &loader) {
             TemporalFunctions::Temporal_out
         );
 
-    //     ExtensionUtil::RegisterCastFunction(
-    //         instance,
-    //         type,
-    //         type,
-    //         TemporalFunctions::Temporal_enforce_typmod_cast,
-    //         100
-    //     );
-    // }
-
     RegisterMeosCastFunction(loader, 
         LogicalType::BLOB,
         SpansetTypes::tstzspanset(),
@@ -399,27 +390,6 @@ void TemporalTypes::RegisterWkbFunctions(ExtensionLoader &loader) {
 }
 
 namespace {
-
-inline string_t MallocBlobToResultLocal(Vector &result, void *buf, size_t sz) {
-    string_t blob(reinterpret_cast<const char *>(buf), UnsafeNumericCast<uint32_t>(sz));
-    string_t stored = StringVector::AddStringOrBlob(result, blob);
-    free(buf);
-    return stored;
-}
-
-// ----- getBin: single-bin getters returning spans -----
-//
-// MobilityDB SQL: getBin(value, size, origin) -> <type>span. We compute the
-// lower bound via MEOS *_get_bin and pair it with upper = lower + size to
-// emit a [lower, upper) span blob. Time/date variants stride the duration
-// interval rather than a numeric size.
-
-inline string_t SpanToBlob(Vector &result, Span *span) {
-    string_t out = StringVector::AddStringOrBlob(
-        result, reinterpret_cast<const char *>(span), sizeof(Span));
-    free(span);
-    return out;
-}
 
 // ----- tbox tile emitters: LIST(tbox) outputs -----
 
