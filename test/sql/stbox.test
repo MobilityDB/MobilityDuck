@@ -50,8 +50,16 @@ SELECT asText(stbox 'STBOX XT(((1.123456789,1.23456789),(2.12345678,2.123456789)
 ----
 STBOX XT(((1.123456789,1.23456789),(2.12345678,2.123456789)),[2000-01-01 00:00:00+01, 2000-01-02 00:00:00+01])
 
+# asBinary writes the WKB, which carries no SRID, so the box read back from it has the geodetic
+# default, as MobilityDB answers (mobilitydb/test/geo/expected/051_stbox.test.out); the EWKB
+# carries the SRID through
 query I
 SELECT stboxFromBinary(asBinary(stbox 'SRID=7844;GEODSTBOX ZT(((1,1,1),(1,1,1)),[2000-01-01, 2000-01-01])'));
+----
+SRID=4326;GEODSTBOX ZT(((1,1,1),(1,1,1)),[2000-01-01 00:00:00+01, 2000-01-01 00:00:00+01])
+
+query I
+SELECT stboxFromEWKB(asEWKB(stbox 'SRID=7844;GEODSTBOX ZT(((1,1,1),(1,1,1)),[2000-01-01, 2000-01-01])'));
 ----
 SRID=7844;GEODSTBOX ZT(((1,1,1),(1,1,1)),[2000-01-01 00:00:00+01, 2000-01-01 00:00:00+01])
 

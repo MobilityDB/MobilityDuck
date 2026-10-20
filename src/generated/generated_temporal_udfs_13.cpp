@@ -638,6 +638,42 @@ inline SpanSet * tstzspanset_shift_scale_duration(const SpanSet * p0, const Meos
 inline SpanSet * tstzspanset_shift_scale_shift(const SpanSet * p0, const MeosInterval * p1) {
     return ::tstzspanset_shift_scale(p0, NULL, p1);
 }
+inline TBox * tfloatbox_shift_scale_hasshift_haswidth_width(const TBox * p0, double p1) {
+    return ::tfloatbox_shift_scale(p0, p1, 0, true, false);
+}
+inline TBox * tfloatbox_shift_scale_hasshift_haswidth_shift(const TBox * p0, double p1) {
+    return ::tfloatbox_shift_scale(p0, 0, p1, false, true);
+}
+inline TBox * tfloatbox_shift_scale_hasshift_haswidth(const TBox * p0, double p1, double p2) {
+    return ::tfloatbox_shift_scale(p0, p1, p2, true, true);
+}
+inline TBox * tintbox_shift_scale_hasshift_haswidth_width(const TBox * p0, int p1) {
+    return ::tintbox_shift_scale(p0, p1, 0, true, false);
+}
+inline TBox * tintbox_shift_scale_hasshift_haswidth_shift(const TBox * p0, int p1) {
+    return ::tintbox_shift_scale(p0, 0, p1, false, true);
+}
+inline TBox * tintbox_shift_scale_hasshift_haswidth(const TBox * p0, int p1, int p2) {
+    return ::tintbox_shift_scale(p0, p1, p2, true, true);
+}
+inline TBox * tbox_shift_scale_time_duration(const TBox * p0, const MeosInterval * p1) {
+    return ::tbox_shift_scale_time(p0, p1, NULL);
+}
+inline TBox * tbox_shift_scale_time_shift(const TBox * p0, const MeosInterval * p1) {
+    return ::tbox_shift_scale_time(p0, NULL, p1);
+}
+inline TBox * tbigintbox_shift_scale_hasshift_haswidth_width(const TBox * p0, int64_t p1) {
+    return ::tbigintbox_shift_scale(p0, p1, 0, true, false);
+}
+inline TBox * tbigintbox_shift_scale_hasshift_haswidth_shift(const TBox * p0, int64_t p1) {
+    return ::tbigintbox_shift_scale(p0, 0, p1, false, true);
+}
+inline TBox * tbigintbox_shift_scale_hasshift_haswidth(const TBox * p0, int64_t p1, int64_t p2) {
+    return ::tbigintbox_shift_scale(p0, p1, p2, true, true);
+}
+inline TBox * union_tbox_tbox_strict(const TBox * p0, const TBox * p1) {
+    return ::union_tbox_tbox(p0, p1, true);
+}
 inline TSequenceSet * temporal_segm_duration_atleast_true(const Temporal * p0, const MeosInterval * p1, bool p2) {
     return ::temporal_segm_duration(p0, p1, true, p2);
 }
@@ -796,6 +832,15 @@ inline GSERIALIZED * geo_scale_geo_sorigin(const GSERIALIZED * p0, const GSERIAL
 }
 inline GSERIALIZED * geo_translate_deltaz(const GSERIALIZED * p0, double p1, double p2) {
     return ::geo_translate(p0, p1, p2, 0);
+}
+inline STBox * stbox_shift_scale_time_duration(const STBox * p0, const MeosInterval * p1) {
+    return ::stbox_shift_scale_time(p0, p1, NULL);
+}
+inline STBox * stbox_shift_scale_time_shift(const STBox * p0, const MeosInterval * p1) {
+    return ::stbox_shift_scale_time(p0, NULL, p1);
+}
+inline STBox * union_stbox_stbox_strict(const STBox * p0, const STBox * p1) {
+    return ::union_stbox_stbox(p0, p1, true);
 }
 inline Temporal * bearing_tpoint_point_invert_invert_no(const Temporal * p0, const GSERIALIZED * p1) {
     return ::bearing_tpoint_point(p0, p1, false);

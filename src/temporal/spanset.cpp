@@ -92,7 +92,6 @@ void SpansetTypes::RegisterCastFunctions(ExtensionLoader &loader) {
 // --- Register Scalar Functions ---
 void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {    
     for (const auto &spanset_type : SpansetTypes::AllTypes()) {
-        auto base_type = SpansetTypeMapping::GetBaseType(spanset_type); 
         // asBinary / asHexWKB and the <spanset>FromText / FromBinary / FromHexWKB constructors
         // are generated from the catalog (meos_setspan_inout).
 
@@ -118,16 +117,6 @@ void SpansetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         duckdb::RegisterSerializedScalarFunction(loader, 
             ScalarFunction("upperInc", {spanset_type}, LogicalType::BOOLEAN, SpansetFunctions::Spanset_upper_inc)
         );
-
-        if (spanset_type == SpansetTypes::intspanset() || spanset_type == SpansetTypes::floatspanset() || spanset_type == SpansetTypes::bigintspanset()) {
-            duckdb::RegisterSerializedScalarFunction(loader, 
-                ScalarFunction("width", {spanset_type}, base_type, SpansetFunctions::Numspanset_width)
-            );
-
-            duckdb::RegisterSerializedScalarFunction(loader, 
-                ScalarFunction("width", {spanset_type, LogicalType::BOOLEAN}, base_type, SpansetFunctions::Numspanset_width)
-            );
-        }
 
         // numSpans on spanset types is generated from the catalog
         // (meos_setspan_accessor) in generated_temporal_udfs.cpp.

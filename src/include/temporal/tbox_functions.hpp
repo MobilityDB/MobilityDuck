@@ -42,85 +42,33 @@ struct TboxFunctions {
      ****************************************************/
     template <typename TA>
     static void NumberToTboxExecutor(Vector &value, MeosType basetype, Vector &result, idx_t count);
-    static void Number_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static bool Number_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     // TODO: what is duckdb equivalent of numeric?
     // static void Numeric_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
 
     static void TimestamptzToTboxExecutor(Vector &value, Vector &result, idx_t count);
-    static void Timestamptz_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static bool Timestamptz_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     static void SetToTboxExecutor(Vector &value, Vector &result, idx_t count);
-    static void Set_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static bool Set_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     static void SpanToTboxExecutor(Vector &value, Vector &result, idx_t count);
-    static void Span_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static bool Span_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     static void SpansetToTboxExecutor(Vector &value, Vector &result, idx_t count); 
-    static void Spanset_to_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static bool Spanset_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     /* ***************************************************
      * Conversion functions + cast functions: tbox -> [TYPE]
      ****************************************************/
     static void TboxToIntspanExecutor(Vector &value, Vector &result, idx_t count);
-    static void Tbox_to_intspan(DataChunk &args, ExpressionState &state, Vector &result);
     static bool Tbox_to_intspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     static void TboxToFloatspanExecutor(Vector &value, Vector &result, idx_t count);
-    static void Tbox_to_floatspan(DataChunk &args, ExpressionState &state, Vector &result);
     static bool Tbox_to_floatspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     static void TboxToTstzspanExecutor(Vector &value, Vector &result, idx_t count);
-    static void Tbox_to_tstzspan(DataChunk &args, ExpressionState &state, Vector &result);
     static bool Tbox_to_tstzspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-
-    /* ***************************************************
-     * Accessor functions
-     ****************************************************/
-    static void Tbox_hasx(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tbox_hast(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tbox_xmin(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tbox_xmin_inc(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tbox_xmax(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tbox_xmax_inc(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tbox_tmin(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tbox_tmin_inc(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tbox_tmax(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tbox_tmax_inc(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /* ***************************************************
-     * Transformation functions
-     ****************************************************/
-
-    template <typename TB>
-    static void TboxShiftValueExecutor(Vector &tbox, Vector &shift, LogicalType type, Vector &result, idx_t count);
-    static void Tbox_shift_value(DataChunk &args, ExpressionState &state, Vector &result);
-    
-    static void Tbox_shift_time(DataChunk &args, ExpressionState &state, Vector &result);
-
-    template <typename TB>
-    static void TboxScaleValueExecutor(Vector &tbox, Vector &scale, LogicalType type, Vector &result, idx_t count);
-    static void Tbox_scale_value(DataChunk &args, ExpressionState &state, Vector &result);
-
-    static void Tbox_scale_time(DataChunk &args, ExpressionState &state, Vector &result);
-
-    template <typename TB>
-    static void TboxShiftScaleValueExecutor(Vector &tbox, Vector &shift, Vector &scale, LogicalType type, Vector &result, idx_t count);
-    static void Tbox_shift_scale_value(DataChunk &args, ExpressionState &state, Vector &result);
-
-    static void Tbox_shift_scale_time(DataChunk &args, ExpressionState &state, Vector &result);
-
-    template <typename TB>
-    static void TboxExpandValueExecutor(Vector &tbox, Vector &value, MeosType basetype, Vector &result, idx_t count);
-    static void Tbox_expand_value(DataChunk &args, ExpressionState &state, Vector &result);
-
-    static void Tbox_expand_time(DataChunk &args, ExpressionState &state, Vector &result);
-
-    static void Tbox_round(DataChunk &args, ExpressionState &state, Vector &result);
 
     // TODO: Selectivity functions
     
@@ -148,7 +96,6 @@ struct TboxFunctions {
     /********************************************************
     * set operators
     ********************************************************/
-    static void Union_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     static void Intersection_tbox_tbox(DataChunk &args, ExpressionState &state, Vector &result);
     // TODO: extend aggregation
     // TODO: Comparison
@@ -163,10 +110,6 @@ struct TboxFunctions {
     /* ***************************************************
      * WKB / hex-WKB serialization + hashing
      ****************************************************/
-    static void Tbox_as_wkb(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tbox_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tbox_from_wkb(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tbox_from_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

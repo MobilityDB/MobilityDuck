@@ -638,6 +638,42 @@ inline SpanSet * tstzspanset_shift_scale_duration(const SpanSet * p0, const Meos
 inline SpanSet * tstzspanset_shift_scale_shift(const SpanSet * p0, const MeosInterval * p1) {
     return ::tstzspanset_shift_scale(p0, NULL, p1);
 }
+inline TBox * tfloatbox_shift_scale_hasshift_haswidth_width(const TBox * p0, double p1) {
+    return ::tfloatbox_shift_scale(p0, p1, 0, true, false);
+}
+inline TBox * tfloatbox_shift_scale_hasshift_haswidth_shift(const TBox * p0, double p1) {
+    return ::tfloatbox_shift_scale(p0, 0, p1, false, true);
+}
+inline TBox * tfloatbox_shift_scale_hasshift_haswidth(const TBox * p0, double p1, double p2) {
+    return ::tfloatbox_shift_scale(p0, p1, p2, true, true);
+}
+inline TBox * tintbox_shift_scale_hasshift_haswidth_width(const TBox * p0, int p1) {
+    return ::tintbox_shift_scale(p0, p1, 0, true, false);
+}
+inline TBox * tintbox_shift_scale_hasshift_haswidth_shift(const TBox * p0, int p1) {
+    return ::tintbox_shift_scale(p0, 0, p1, false, true);
+}
+inline TBox * tintbox_shift_scale_hasshift_haswidth(const TBox * p0, int p1, int p2) {
+    return ::tintbox_shift_scale(p0, p1, p2, true, true);
+}
+inline TBox * tbox_shift_scale_time_duration(const TBox * p0, const MeosInterval * p1) {
+    return ::tbox_shift_scale_time(p0, p1, NULL);
+}
+inline TBox * tbox_shift_scale_time_shift(const TBox * p0, const MeosInterval * p1) {
+    return ::tbox_shift_scale_time(p0, NULL, p1);
+}
+inline TBox * tbigintbox_shift_scale_hasshift_haswidth_width(const TBox * p0, int64_t p1) {
+    return ::tbigintbox_shift_scale(p0, p1, 0, true, false);
+}
+inline TBox * tbigintbox_shift_scale_hasshift_haswidth_shift(const TBox * p0, int64_t p1) {
+    return ::tbigintbox_shift_scale(p0, 0, p1, false, true);
+}
+inline TBox * tbigintbox_shift_scale_hasshift_haswidth(const TBox * p0, int64_t p1, int64_t p2) {
+    return ::tbigintbox_shift_scale(p0, p1, p2, true, true);
+}
+inline TBox * union_tbox_tbox_strict(const TBox * p0, const TBox * p1) {
+    return ::union_tbox_tbox(p0, p1, true);
+}
 inline TSequenceSet * temporal_segm_duration_atleast_true(const Temporal * p0, const MeosInterval * p1, bool p2) {
     return ::temporal_segm_duration(p0, p1, true, p2);
 }
@@ -797,6 +833,15 @@ inline GSERIALIZED * geo_scale_geo_sorigin(const GSERIALIZED * p0, const GSERIAL
 inline GSERIALIZED * geo_translate_deltaz(const GSERIALIZED * p0, double p1, double p2) {
     return ::geo_translate(p0, p1, p2, 0);
 }
+inline STBox * stbox_shift_scale_time_duration(const STBox * p0, const MeosInterval * p1) {
+    return ::stbox_shift_scale_time(p0, p1, NULL);
+}
+inline STBox * stbox_shift_scale_time_shift(const STBox * p0, const MeosInterval * p1) {
+    return ::stbox_shift_scale_time(p0, NULL, p1);
+}
+inline STBox * union_stbox_stbox_strict(const STBox * p0, const STBox * p1) {
+    return ::union_stbox_stbox(p0, p1, true);
+}
 inline Temporal * bearing_tpoint_point_invert_invert_no(const Temporal * p0, const GSERIALIZED * p1) {
     return ::bearing_tpoint_point(p0, p1, false);
 }
@@ -865,6 +910,297 @@ inline Temporal * trgeometry_append_tinstant_expand_interp_maxdist_maxt(Temporal
 }
 inline Temporal * trgeometry_append_tsequence_expand(Temporal * p0, const Temporal * p1) {
     return ::trgeometry_append_tsequence(p0, (const TSequence *) p1, false);
+}
+
+
+// ===== @ingroup meos_box_transf =====
+static void Gen_tbox_expand_time(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<interval_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        TBox *x0 = BlobToTbox(in0[i]);
+        TBox *r = tbox_expand_time(x0, MeosIntervalArg(in1[i]));
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TboxToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tfloatbox_shift_scale_hasshift_haswidth(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<double>(args.data[1]);
+    auto in2 = FlatVector::GetData<double>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        TBox *x0 = BlobToTbox(in0[i]);
+        TBox *r = tfloatbox_shift_scale_hasshift_haswidth(x0, in1[i], in2[i]);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TboxToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tintbox_shift_scale_hasshift_haswidth(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        TBox *x0 = BlobToTbox(in0[i]);
+        TBox *r = tintbox_shift_scale_hasshift_haswidth(x0, in1[i], in2[i]);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TboxToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tbox_shift_scale_time(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<interval_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<interval_t>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        TBox *x0 = BlobToTbox(in0[i]);
+        TBox *r = tbox_shift_scale_time(x0, MeosIntervalArg(in1[i]), MeosIntervalArg(in2[i]));
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TboxToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tbox_shift_scale_time_duration(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<interval_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        TBox *x0 = BlobToTbox(in0[i]);
+        TBox *r = tbox_shift_scale_time_duration(x0, MeosIntervalArg(in1[i]));
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TboxToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tbox_shift_scale_time_shift(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<interval_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        TBox *x0 = BlobToTbox(in0[i]);
+        TBox *r = tbox_shift_scale_time_shift(x0, MeosIntervalArg(in1[i]));
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TboxToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tbigintbox_shift_scale_hasshift_haswidth(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int64_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int64_t>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        TBox *x0 = BlobToTbox(in0[i]);
+        TBox *r = tbigintbox_shift_scale_hasshift_haswidth(x0, in1[i], in2[i]);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TboxToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tfloatbox_expand(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
+            TBox *s = BlobToTbox(in);
+            TBox *r = tfloatbox_expand(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TboxToBlob(result, r);
+        });
+}
+
+static void Gen_tintbox_expand(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            TBox *s = BlobToTbox(in);
+            TBox *r = tintbox_expand(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TboxToBlob(result, r);
+        });
+}
+
+static void Gen_tbox_round(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            TBox *s = BlobToTbox(in);
+            TBox *r = tbox_round(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TboxToBlob(result, r);
+        });
+}
+
+static void Gen_tbox_round_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a) {
+            TBox *s = BlobToTbox(a);
+            TBox *r = tbox_round(s, 0);
+            free(s);
+            return TboxToBlob(result, r);
+        });
+}
+
+static void Gen_tfloatbox_shift_scale_hasshift_haswidth_width(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
+            TBox *s = BlobToTbox(in);
+            TBox *r = tfloatbox_shift_scale_hasshift_haswidth_width(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TboxToBlob(result, r);
+        });
+}
+
+static void Gen_tfloatbox_shift_scale_hasshift_haswidth_shift(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
+            TBox *s = BlobToTbox(in);
+            TBox *r = tfloatbox_shift_scale_hasshift_haswidth_shift(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TboxToBlob(result, r);
+        });
+}
+
+static void Gen_tintbox_shift_scale_hasshift_haswidth_width(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            TBox *s = BlobToTbox(in);
+            TBox *r = tintbox_shift_scale_hasshift_haswidth_width(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TboxToBlob(result, r);
+        });
+}
+
+static void Gen_tintbox_shift_scale_hasshift_haswidth_shift(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            TBox *s = BlobToTbox(in);
+            TBox *r = tintbox_shift_scale_hasshift_haswidth_shift(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TboxToBlob(result, r);
+        });
+}
+
+static void Gen_tbigintbox_expand(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            TBox *s = BlobToTbox(in);
+            TBox *r = tbigintbox_expand(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TboxToBlob(result, r);
+        });
+}
+
+static void Gen_tbigintbox_shift_scale_hasshift_haswidth_width(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            TBox *s = BlobToTbox(in);
+            TBox *r = tbigintbox_shift_scale_hasshift_haswidth_width(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TboxToBlob(result, r);
+        });
+}
+
+static void Gen_tbigintbox_shift_scale_hasshift_haswidth_shift(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            TBox *s = BlobToTbox(in);
+            TBox *r = tbigintbox_shift_scale_hasshift_haswidth_shift(s, a2);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TboxToBlob(result, r);
+        });
 }
 
 
@@ -1334,6 +1670,152 @@ static void Gen_etouches_tcbuffer_cbuffer(DataChunk &args, ExpressionState &, Ve
 
 
 // ===== @ingroup meos_geo_box_inout =====
+static void Gen_stbox_as_ewkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    if (args.ColumnCount() > 1) {
+        BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+            [&](string_t in, string_t endian, ValidityMask &mask, idx_t idx) -> string_t {
+                STBox *x = BlobToStbox(in);
+                size_t sz = 0;
+                uint8_t *w = stbox_as_ewkb(x, wkb_variant_from_endian(endian.GetString().c_str()), &sz);
+                free(x);
+                if (!w) { mask.SetInvalid(idx); return string_t(); }
+                string_t out = StringVector::AddStringOrBlob(result, (const char *) w, sz);
+                free(w);
+                return out;
+            });
+    } else {
+        UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+            [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+                STBox *x = BlobToStbox(in);
+                size_t sz = 0;
+                uint8_t *w = stbox_as_ewkb(x, wkb_variant_from_endian(""), &sz);
+                free(x);
+                if (!w) { mask.SetInvalid(idx); return string_t(); }
+                string_t out = StringVector::AddStringOrBlob(result, (const char *) w, sz);
+                free(w);
+                return out;
+            });
+    }
+}
+
+static void Gen_stbox_as_hexewkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    if (args.ColumnCount() > 1) {
+        BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+            [&](string_t in, string_t endian, ValidityMask &mask, idx_t idx) -> string_t {
+                STBox *x = BlobToStbox(in);
+                size_t sz = 0;
+                char *w = stbox_as_hexewkb(x, wkb_variant_from_endian(endian.GetString().c_str()), &sz);
+                free(x);
+                if (!w) { mask.SetInvalid(idx); return string_t(); }
+                string_t out = StringVector::AddString(result, w);
+                free(w);
+                return out;
+            });
+    } else {
+        UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+            [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+                STBox *x = BlobToStbox(in);
+                size_t sz = 0;
+                char *w = stbox_as_hexewkb(x, wkb_variant_from_endian(""), &sz);
+                free(x);
+                if (!w) { mask.SetInvalid(idx); return string_t(); }
+                string_t out = StringVector::AddString(result, w);
+                free(w);
+                return out;
+            });
+    }
+}
+
+static void Gen_stbox_as_hexwkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    if (args.ColumnCount() > 1) {
+        BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+            [&](string_t in, string_t endian, ValidityMask &mask, idx_t idx) -> string_t {
+                STBox *x = BlobToStbox(in);
+                size_t sz = 0;
+                char *w = stbox_as_hexwkb(x, wkb_variant_from_endian(endian.GetString().c_str()), &sz);
+                free(x);
+                if (!w) { mask.SetInvalid(idx); return string_t(); }
+                string_t out = StringVector::AddString(result, w);
+                free(w);
+                return out;
+            });
+    } else {
+        UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+            [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+                STBox *x = BlobToStbox(in);
+                size_t sz = 0;
+                char *w = stbox_as_hexwkb(x, wkb_variant_from_endian(""), &sz);
+                free(x);
+                if (!w) { mask.SetInvalid(idx); return string_t(); }
+                string_t out = StringVector::AddString(result, w);
+                free(w);
+                return out;
+            });
+    }
+}
+
+static void Gen_stbox_as_wkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    if (args.ColumnCount() > 1) {
+        BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+            [&](string_t in, string_t endian, ValidityMask &mask, idx_t idx) -> string_t {
+                STBox *x = BlobToStbox(in);
+                size_t sz = 0;
+                uint8_t *w = stbox_as_wkb(x, wkb_variant_from_endian(endian.GetString().c_str()), &sz);
+                free(x);
+                if (!w) { mask.SetInvalid(idx); return string_t(); }
+                string_t out = StringVector::AddStringOrBlob(result, (const char *) w, sz);
+                free(w);
+                return out;
+            });
+    } else {
+        UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+            [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+                STBox *x = BlobToStbox(in);
+                size_t sz = 0;
+                uint8_t *w = stbox_as_wkb(x, wkb_variant_from_endian(""), &sz);
+                free(x);
+                if (!w) { mask.SetInvalid(idx); return string_t(); }
+                string_t out = StringVector::AddStringOrBlob(result, (const char *) w, sz);
+                free(w);
+                return out;
+            });
+    }
+}
+
+static void Gen_stbox_from_hexwkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            STBox *r = stbox_from_hexwkb(in.GetString().c_str());
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return StboxToBlob(result, r);
+        });
+}
+
+static void Gen_stbox_from_wkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            STBox *r = stbox_from_wkb((const uint8_t *) in.GetData(), (size_t) in.GetSize());
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return StboxToBlob(result, r);
+        });
+}
+
+static void Gen_stbox_in(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            STBox *r = stbox_in(in.GetString().c_str());
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return StboxToBlob(result, r);
+        });
+}
+
 static void Gen_stbox_out(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
@@ -2098,6 +2580,27 @@ static void Gen_temporal_append_finalfn(DataChunk &args, ExpressionState &, Vect
 
 } // anonymous
 
+void RegisterGenerated_meos_box_transf(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("expandTime", {TboxType::tbox(), LogicalType::INTERVAL}, TboxType::tbox(), Gen_tbox_expand_time));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("shiftScaleValue", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::DOUBLE}, TboxType::tbox(), Gen_tfloatbox_shift_scale_hasshift_haswidth));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("shiftScaleValue", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTEGER}, TboxType::tbox(), Gen_tintbox_shift_scale_hasshift_haswidth));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("shiftScaleTime", {TboxType::tbox(), LogicalType::INTERVAL, LogicalType::INTERVAL}, TboxType::tbox(), Gen_tbox_shift_scale_time));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("shiftTime", {TboxType::tbox(), LogicalType::INTERVAL}, TboxType::tbox(), Gen_tbox_shift_scale_time_duration));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("scaleTime", {TboxType::tbox(), LogicalType::INTERVAL}, TboxType::tbox(), Gen_tbox_shift_scale_time_shift));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("shiftScaleValue", {TboxType::tbox(), LogicalType::BIGINT, LogicalType::BIGINT}, TboxType::tbox(), Gen_tbigintbox_shift_scale_hasshift_haswidth));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("expandValue", {TboxType::tbox(), LogicalType::DOUBLE}, TboxType::tbox(), Gen_tfloatbox_expand));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("expandValue", {TboxType::tbox(), LogicalType::INTEGER}, TboxType::tbox(), Gen_tintbox_expand));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {TboxType::tbox(), LogicalType::INTEGER}, TboxType::tbox(), Gen_tbox_round));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {TboxType::tbox()}, TboxType::tbox(), Gen_tbox_round_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("shiftValue", {TboxType::tbox(), LogicalType::DOUBLE}, TboxType::tbox(), Gen_tfloatbox_shift_scale_hasshift_haswidth_width));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("scaleValue", {TboxType::tbox(), LogicalType::DOUBLE}, TboxType::tbox(), Gen_tfloatbox_shift_scale_hasshift_haswidth_shift));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("shiftValue", {TboxType::tbox(), LogicalType::INTEGER}, TboxType::tbox(), Gen_tintbox_shift_scale_hasshift_haswidth_width));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("scaleValue", {TboxType::tbox(), LogicalType::INTEGER}, TboxType::tbox(), Gen_tintbox_shift_scale_hasshift_haswidth_shift));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("expandValue", {TboxType::tbox(), LogicalType::BIGINT}, TboxType::tbox(), Gen_tbigintbox_expand));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("shiftValue", {TboxType::tbox(), LogicalType::BIGINT}, TboxType::tbox(), Gen_tbigintbox_shift_scale_hasshift_haswidth_width));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("scaleValue", {TboxType::tbox(), LogicalType::BIGINT}, TboxType::tbox(), Gen_tbigintbox_shift_scale_hasshift_haswidth_shift));
+}
+
 void RegisterGenerated_meos_cbuffer_rel_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("aContains", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_acontains_geo_tcbuffer));
     RegisterSerializedScalarFunction(loader, ScalarFunction("aContains", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_acontains_tcbuffer_cbuffer));
@@ -2133,6 +2636,19 @@ void RegisterGenerated_meos_cbuffer_rel_ever(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_geo_box_inout(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {StboxType::stbox()}, LogicalType::BLOB, Gen_stbox_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {StboxType::stbox(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_stbox_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {StboxType::stbox()}, LogicalType::VARCHAR, Gen_stbox_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {StboxType::stbox(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_stbox_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexWKB", {StboxType::stbox()}, LogicalType::VARCHAR, Gen_stbox_as_hexwkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexWKB", {StboxType::stbox(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_stbox_as_hexwkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asBinary", {StboxType::stbox()}, LogicalType::BLOB, Gen_stbox_as_wkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asBinary", {StboxType::stbox(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_stbox_as_wkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxFromHexWKB", {LogicalType::VARCHAR}, StboxType::stbox(), Gen_stbox_from_hexwkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxFromHexEWKB", {LogicalType::VARCHAR}, StboxType::stbox(), Gen_stbox_from_hexwkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxFromBinary", {LogicalType::BLOB}, StboxType::stbox(), Gen_stbox_from_wkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxFromEWKB", {LogicalType::BLOB}, StboxType::stbox(), Gen_stbox_from_wkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxFromText", {LogicalType::VARCHAR}, StboxType::stbox(), Gen_stbox_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {StboxType::stbox(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_stbox_out));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {StboxType::stbox()}, LogicalType::VARCHAR, Gen_stbox_out_d));
 }

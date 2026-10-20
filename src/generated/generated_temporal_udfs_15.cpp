@@ -638,6 +638,42 @@ inline SpanSet * tstzspanset_shift_scale_duration(const SpanSet * p0, const Meos
 inline SpanSet * tstzspanset_shift_scale_shift(const SpanSet * p0, const MeosInterval * p1) {
     return ::tstzspanset_shift_scale(p0, NULL, p1);
 }
+inline TBox * tfloatbox_shift_scale_hasshift_haswidth_width(const TBox * p0, double p1) {
+    return ::tfloatbox_shift_scale(p0, p1, 0, true, false);
+}
+inline TBox * tfloatbox_shift_scale_hasshift_haswidth_shift(const TBox * p0, double p1) {
+    return ::tfloatbox_shift_scale(p0, 0, p1, false, true);
+}
+inline TBox * tfloatbox_shift_scale_hasshift_haswidth(const TBox * p0, double p1, double p2) {
+    return ::tfloatbox_shift_scale(p0, p1, p2, true, true);
+}
+inline TBox * tintbox_shift_scale_hasshift_haswidth_width(const TBox * p0, int p1) {
+    return ::tintbox_shift_scale(p0, p1, 0, true, false);
+}
+inline TBox * tintbox_shift_scale_hasshift_haswidth_shift(const TBox * p0, int p1) {
+    return ::tintbox_shift_scale(p0, 0, p1, false, true);
+}
+inline TBox * tintbox_shift_scale_hasshift_haswidth(const TBox * p0, int p1, int p2) {
+    return ::tintbox_shift_scale(p0, p1, p2, true, true);
+}
+inline TBox * tbox_shift_scale_time_duration(const TBox * p0, const MeosInterval * p1) {
+    return ::tbox_shift_scale_time(p0, p1, NULL);
+}
+inline TBox * tbox_shift_scale_time_shift(const TBox * p0, const MeosInterval * p1) {
+    return ::tbox_shift_scale_time(p0, NULL, p1);
+}
+inline TBox * tbigintbox_shift_scale_hasshift_haswidth_width(const TBox * p0, int64_t p1) {
+    return ::tbigintbox_shift_scale(p0, p1, 0, true, false);
+}
+inline TBox * tbigintbox_shift_scale_hasshift_haswidth_shift(const TBox * p0, int64_t p1) {
+    return ::tbigintbox_shift_scale(p0, 0, p1, false, true);
+}
+inline TBox * tbigintbox_shift_scale_hasshift_haswidth(const TBox * p0, int64_t p1, int64_t p2) {
+    return ::tbigintbox_shift_scale(p0, p1, p2, true, true);
+}
+inline TBox * union_tbox_tbox_strict(const TBox * p0, const TBox * p1) {
+    return ::union_tbox_tbox(p0, p1, true);
+}
 inline TSequenceSet * temporal_segm_duration_atleast_true(const Temporal * p0, const MeosInterval * p1, bool p2) {
     return ::temporal_segm_duration(p0, p1, true, p2);
 }
@@ -796,6 +832,15 @@ inline GSERIALIZED * geo_scale_geo_sorigin(const GSERIALIZED * p0, const GSERIAL
 }
 inline GSERIALIZED * geo_translate_deltaz(const GSERIALIZED * p0, double p1, double p2) {
     return ::geo_translate(p0, p1, p2, 0);
+}
+inline STBox * stbox_shift_scale_time_duration(const STBox * p0, const MeosInterval * p1) {
+    return ::stbox_shift_scale_time(p0, p1, NULL);
+}
+inline STBox * stbox_shift_scale_time_shift(const STBox * p0, const MeosInterval * p1) {
+    return ::stbox_shift_scale_time(p0, NULL, p1);
+}
+inline STBox * union_stbox_stbox_strict(const STBox * p0, const STBox * p1) {
+    return ::union_stbox_stbox(p0, p1, true);
 }
 inline Temporal * bearing_tpoint_point_invert_invert_no(const Temporal * p0, const GSERIALIZED * p1) {
     return ::bearing_tpoint_point(p0, p1, false);
@@ -2659,6 +2704,28 @@ static void Gen_bigintspanset_upper(DataChunk &args, ExpressionState &, Vector &
         });
 }
 
+static void Gen_bigintspanset_width(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, bool, int64_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, bool a2) {
+            SpanSet *s = BlobToSpanSet(in);
+            int64_t r = bigintspanset_width(s, a2);
+            free(s);
+            return r;
+        });
+}
+
+static void Gen_bigintspanset_width_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            SpanSet *s = BlobToSpanSet(in);
+            int64_t r = bigintspanset_width(s, false);
+            free(s);
+            return r;
+        });
+}
+
 static void Gen_datespanset_duration(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, bool, interval_t>(args.data[0], args.data[1], result, args.size(),
@@ -2747,6 +2814,28 @@ static void Gen_floatspanset_upper(DataChunk &args, ExpressionState &, Vector &r
         });
 }
 
+static void Gen_floatspanset_width(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, bool, double>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, bool a2) {
+            SpanSet *s = BlobToSpanSet(in);
+            double r = floatspanset_width(s, a2);
+            free(s);
+            return r;
+        });
+}
+
+static void Gen_floatspanset_width_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, double>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            SpanSet *s = BlobToSpanSet(in);
+            double r = floatspanset_width(s, false);
+            free(s);
+            return r;
+        });
+}
+
 static void Gen_intspanset_lower(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, int32_t>(args.data[0], result, args.size(),
@@ -2764,6 +2853,28 @@ static void Gen_intspanset_upper(DataChunk &args, ExpressionState &, Vector &res
         [&](string_t in) {
             SpanSet *s = BlobToSpanSet(in);
             int32_t r = intspanset_upper(s);
+            free(s);
+            return r;
+        });
+}
+
+static void Gen_intspanset_width(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, bool, int32_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, bool a2) {
+            SpanSet *s = BlobToSpanSet(in);
+            int32_t r = intspanset_width(s, a2);
+            free(s);
+            return r;
+        });
+}
+
+static void Gen_intspanset_width_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, int32_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            SpanSet *s = BlobToSpanSet(in);
+            int32_t r = intspanset_width(s, false);
             free(s);
             return r;
         });
@@ -3915,6 +4026,8 @@ void RegisterGenerated_meos_setspan_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("upper", {SpanTypes::tstzspan()}, LogicalType::TIMESTAMP_TZ, Gen_tstzspan_upper));
     RegisterSerializedScalarFunction(loader, ScalarFunction("lower", {SpansetTypes::bigintspanset()}, LogicalType::BIGINT, Gen_bigintspanset_lower));
     RegisterSerializedScalarFunction(loader, ScalarFunction("upper", {SpansetTypes::bigintspanset()}, LogicalType::BIGINT, Gen_bigintspanset_upper));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("width", {SpansetTypes::bigintspanset(), LogicalType::BOOLEAN}, LogicalType::BIGINT, Gen_bigintspanset_width));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("width", {SpansetTypes::bigintspanset()}, LogicalType::BIGINT, Gen_bigintspanset_width_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {SpansetTypes::datespanset(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_datespanset_duration));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endDate", {SpansetTypes::datespanset()}, LogicalType::DATE, Gen_datespanset_end_date));
     RegisterSerializedScalarFunction(loader, ScalarFunction("lower", {SpansetTypes::datespanset()}, LogicalType::DATE, Gen_datespanset_lower));
@@ -3923,8 +4036,12 @@ void RegisterGenerated_meos_setspan_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("upper", {SpansetTypes::datespanset()}, LogicalType::DATE, Gen_datespanset_upper));
     RegisterSerializedScalarFunction(loader, ScalarFunction("lower", {SpansetTypes::floatspanset()}, LogicalType::DOUBLE, Gen_floatspanset_lower));
     RegisterSerializedScalarFunction(loader, ScalarFunction("upper", {SpansetTypes::floatspanset()}, LogicalType::DOUBLE, Gen_floatspanset_upper));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("width", {SpansetTypes::floatspanset(), LogicalType::BOOLEAN}, LogicalType::DOUBLE, Gen_floatspanset_width));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("width", {SpansetTypes::floatspanset()}, LogicalType::DOUBLE, Gen_floatspanset_width_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("lower", {SpansetTypes::intspanset()}, LogicalType::INTEGER, Gen_intspanset_lower));
     RegisterSerializedScalarFunction(loader, ScalarFunction("upper", {SpansetTypes::intspanset()}, LogicalType::INTEGER, Gen_intspanset_upper));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("width", {SpansetTypes::intspanset(), LogicalType::BOOLEAN}, LogicalType::INTEGER, Gen_intspanset_width));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("width", {SpansetTypes::intspanset()}, LogicalType::INTEGER, Gen_intspanset_width_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {SpansetTypes::tstzspanset(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_tstzspanset_duration));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {SpansetTypes::tstzspanset()}, LogicalType::TIMESTAMP_TZ, Gen_tstzspanset_end_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("lower", {SpansetTypes::tstzspanset()}, LogicalType::TIMESTAMP_TZ, Gen_tstzspanset_lower));

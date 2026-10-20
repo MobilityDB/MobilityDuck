@@ -638,6 +638,42 @@ inline SpanSet * tstzspanset_shift_scale_duration(const SpanSet * p0, const Meos
 inline SpanSet * tstzspanset_shift_scale_shift(const SpanSet * p0, const MeosInterval * p1) {
     return ::tstzspanset_shift_scale(p0, NULL, p1);
 }
+inline TBox * tfloatbox_shift_scale_hasshift_haswidth_width(const TBox * p0, double p1) {
+    return ::tfloatbox_shift_scale(p0, p1, 0, true, false);
+}
+inline TBox * tfloatbox_shift_scale_hasshift_haswidth_shift(const TBox * p0, double p1) {
+    return ::tfloatbox_shift_scale(p0, 0, p1, false, true);
+}
+inline TBox * tfloatbox_shift_scale_hasshift_haswidth(const TBox * p0, double p1, double p2) {
+    return ::tfloatbox_shift_scale(p0, p1, p2, true, true);
+}
+inline TBox * tintbox_shift_scale_hasshift_haswidth_width(const TBox * p0, int p1) {
+    return ::tintbox_shift_scale(p0, p1, 0, true, false);
+}
+inline TBox * tintbox_shift_scale_hasshift_haswidth_shift(const TBox * p0, int p1) {
+    return ::tintbox_shift_scale(p0, 0, p1, false, true);
+}
+inline TBox * tintbox_shift_scale_hasshift_haswidth(const TBox * p0, int p1, int p2) {
+    return ::tintbox_shift_scale(p0, p1, p2, true, true);
+}
+inline TBox * tbox_shift_scale_time_duration(const TBox * p0, const MeosInterval * p1) {
+    return ::tbox_shift_scale_time(p0, p1, NULL);
+}
+inline TBox * tbox_shift_scale_time_shift(const TBox * p0, const MeosInterval * p1) {
+    return ::tbox_shift_scale_time(p0, NULL, p1);
+}
+inline TBox * tbigintbox_shift_scale_hasshift_haswidth_width(const TBox * p0, int64_t p1) {
+    return ::tbigintbox_shift_scale(p0, p1, 0, true, false);
+}
+inline TBox * tbigintbox_shift_scale_hasshift_haswidth_shift(const TBox * p0, int64_t p1) {
+    return ::tbigintbox_shift_scale(p0, 0, p1, false, true);
+}
+inline TBox * tbigintbox_shift_scale_hasshift_haswidth(const TBox * p0, int64_t p1, int64_t p2) {
+    return ::tbigintbox_shift_scale(p0, p1, p2, true, true);
+}
+inline TBox * union_tbox_tbox_strict(const TBox * p0, const TBox * p1) {
+    return ::union_tbox_tbox(p0, p1, true);
+}
 inline TSequenceSet * temporal_segm_duration_atleast_true(const Temporal * p0, const MeosInterval * p1, bool p2) {
     return ::temporal_segm_duration(p0, p1, true, p2);
 }
@@ -796,6 +832,15 @@ inline GSERIALIZED * geo_scale_geo_sorigin(const GSERIALIZED * p0, const GSERIAL
 }
 inline GSERIALIZED * geo_translate_deltaz(const GSERIALIZED * p0, double p1, double p2) {
     return ::geo_translate(p0, p1, p2, 0);
+}
+inline STBox * stbox_shift_scale_time_duration(const STBox * p0, const MeosInterval * p1) {
+    return ::stbox_shift_scale_time(p0, p1, NULL);
+}
+inline STBox * stbox_shift_scale_time_shift(const STBox * p0, const MeosInterval * p1) {
+    return ::stbox_shift_scale_time(p0, NULL, p1);
+}
+inline STBox * union_stbox_stbox_strict(const STBox * p0, const STBox * p1) {
+    return ::union_stbox_stbox(p0, p1, true);
 }
 inline Temporal * bearing_tpoint_point_invert_invert_no(const Temporal * p0, const GSERIALIZED * p1) {
     return ::bearing_tpoint_point(p0, p1, false);
@@ -1199,6 +1244,19 @@ static void Gen_right_stbox_stbox(DataChunk &args, ExpressionState &, Vector &re
 
 
 // ===== @ingroup meos_geo_box_set =====
+static void Gen_union_stbox_stbox_strict(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            STBox *s1 = BlobToStbox(a);
+            STBox *s2 = BlobToStbox(b);
+            STBox *r = union_stbox_stbox_strict(s1, s2);
+            free(s1); free(s2);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return StboxToBlob(result, r);
+        });
+}
+
 static void Gen_intersection_stbox_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
@@ -3721,6 +3779,8 @@ void RegisterGenerated_meos_geo_box_pos(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_geo_box_set(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxUnion", {StboxType::stbox(), StboxType::stbox()}, StboxType::stbox(), Gen_union_stbox_stbox_strict));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {StboxType::stbox(), StboxType::stbox()}, StboxType::stbox(), Gen_union_stbox_stbox_strict));
     RegisterSerializedScalarFunction(loader, ScalarFunction("stboxIntersection", {StboxType::stbox(), StboxType::stbox()}, StboxType::stbox(), Gen_intersection_stbox_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("*", {StboxType::stbox(), StboxType::stbox()}, StboxType::stbox(), Gen_intersection_stbox_stbox));
 }

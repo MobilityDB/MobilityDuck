@@ -47,11 +47,14 @@
 
 namespace duckdb {
 
+void RegisterGenerated_meos_box_accessor(ExtensionLoader &loader);
 void RegisterGenerated_meos_box_bbox_pos(ExtensionLoader &loader);
 void RegisterGenerated_meos_box_bbox_topo(ExtensionLoader &loader);
 void RegisterGenerated_meos_box_comp(ExtensionLoader &loader);
+void RegisterGenerated_meos_box_conversion(ExtensionLoader &loader);
 void RegisterGenerated_meos_box_inout(ExtensionLoader &loader);
 void RegisterGenerated_meos_box_set(ExtensionLoader &loader);
+void RegisterGenerated_meos_box_transf(ExtensionLoader &loader);
 void RegisterGenerated_meos_cbuffer_accessor(ExtensionLoader &loader);
 void RegisterGenerated_meos_cbuffer_base_accessor(ExtensionLoader &loader);
 void RegisterGenerated_meos_cbuffer_base_comp(ExtensionLoader &loader);
@@ -74,11 +77,14 @@ void RegisterGenerated_meos_geo_base_transf(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_bbox_split(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_bbox_topo(ExtensionLoader &loader);
+void RegisterGenerated_meos_geo_box_accessor(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_box_comp(ExtensionLoader &loader);
+void RegisterGenerated_meos_geo_box_conversion(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_box_inout(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_box_pos(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_box_set(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_box_topo(ExtensionLoader &loader);
+void RegisterGenerated_meos_geo_box_transf(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_comp_ever(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_comp_temp(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_conversion(ExtensionLoader &loader);
@@ -265,11 +271,14 @@ void RegisterGenerated_meos_temporal_text(ExtensionLoader &loader);
 void RegisterGenerated_meos_temporal_transf(ExtensionLoader &loader);
 
 void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
+    RegisterGenerated_meos_box_accessor(loader);
     RegisterGenerated_meos_box_bbox_pos(loader);
     RegisterGenerated_meos_box_bbox_topo(loader);
     RegisterGenerated_meos_box_comp(loader);
+    RegisterGenerated_meos_box_conversion(loader);
     RegisterGenerated_meos_box_inout(loader);
     RegisterGenerated_meos_box_set(loader);
+    RegisterGenerated_meos_box_transf(loader);
     RegisterGenerated_meos_cbuffer_accessor(loader);
     RegisterGenerated_meos_cbuffer_base_accessor(loader);
     RegisterGenerated_meos_cbuffer_base_comp(loader);
@@ -292,11 +301,14 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_geo_bbox_pos(loader);
     RegisterGenerated_meos_geo_bbox_split(loader);
     RegisterGenerated_meos_geo_bbox_topo(loader);
+    RegisterGenerated_meos_geo_box_accessor(loader);
     RegisterGenerated_meos_geo_box_comp(loader);
+    RegisterGenerated_meos_geo_box_conversion(loader);
     RegisterGenerated_meos_geo_box_inout(loader);
     RegisterGenerated_meos_geo_box_pos(loader);
     RegisterGenerated_meos_geo_box_set(loader);
     RegisterGenerated_meos_geo_box_topo(loader);
+    RegisterGenerated_meos_geo_box_transf(loader);
     RegisterGenerated_meos_geo_comp_ever(loader);
     RegisterGenerated_meos_geo_comp_temp(loader);
     RegisterGenerated_meos_geo_conversion(loader);

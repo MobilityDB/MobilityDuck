@@ -605,45 +605,6 @@ void SpansetFunctions::Spanset_upper_inc(DataChunk &args, ExpressionState &state
         });
 }
 
-// --- width ---
-void SpansetFunctions::Numspanset_width(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input_vec = args.data[0];
-    input_vec.Flatten(args.size());
-
-    bool has_bools = args.ColumnCount() > 1;
-    Vector *bools_vec_ptr = has_bools ? &args.data[1] : nullptr;
-    if (has_bools) bools_vec_ptr->Flatten(args.size());
-
-    for (idx_t i = 0; i < args.size(); i++) {
-        if (FlatVector::IsNull(input_vec, i) || (has_bools && FlatVector::IsNull(*bools_vec_ptr, i))) {
-            FlatVector::SetNull(result, i, true);
-            continue;
-        }
-
-        auto blob = FlatVector::GetData<string_t>(input_vec)[i];
-        // Second argument registered as BOOLEAN; read as bool, not int32_t.
-        bool bools = has_bools ? FlatVector::GetData<bool>(*bools_vec_ptr)[i] : false;
-
-        const uint8_t *data = (const uint8_t *)blob.GetData();
-        size_t size = blob.GetSize();
-
-        SpanSet *s = (SpanSet *)malloc(size);
-        memcpy(s, data, size);
-        auto r = numspanset_width(s, bools);
-        free(s);
-        auto result_type = result.GetType().id();
-        if (result_type == LogicalType::INTEGER){
-            FlatVector::GetData<int32_t>(result)[i] = Datum(r);        
-        }        
-        if (result_type == LogicalType::BIGINT){
-            FlatVector::GetData<int64_t>(result)[i] = Datum(r);        
-        }
-        if (result_type == LogicalType::DOUBLE){
-            FlatVector::GetData<double>(result)[i] = DatumGetFloat8(r);        
-        }
-    }
-}
-
 // --- duration (datespanset) ---
 
 void SpansetFunctions::Datespanset_duration(DataChunk &args, ExpressionState &state, Vector &result) {
