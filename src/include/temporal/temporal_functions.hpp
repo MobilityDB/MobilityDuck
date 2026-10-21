@@ -49,7 +49,6 @@ struct TemporalFunctions {
     /* ***************************************************
      * Accessor functions
      ****************************************************/
-    static void Tnumber_avg_value(DataChunk &args, ExpressionState &state, Vector &result);
     // Temporal_timestamps retired: timestamps(<temporal>) is generated (temporal_timestamps) in generated_temporal_udfs.cpp.
     /* ***************************************************
      * Shift and scale 

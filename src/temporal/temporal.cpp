@@ -229,23 +229,7 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // src/generated/generated_temporal_udfs.cpp (RETIRED_GROUPS) — incl the tbigint
     // overloads the hand layer was missing.
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "avgValue",
-            {TemporalTypes::tint()},
-            LogicalType::DOUBLE,
-            TemporalFunctions::Tnumber_avg_value
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "avgValue",
-            {TemporalTypes::tfloat()},
-            LogicalType::DOUBLE,
-            TemporalFunctions::Tnumber_avg_value
-        )
-    );
+    // avgValue(tint | tbigint | tfloat) is generated from the catalog (Gen_tnumber_avg_value).
 
     // The boolean, arithmetic, text and distance operators over the temporal types are
     // generated from the catalog (src/generated).

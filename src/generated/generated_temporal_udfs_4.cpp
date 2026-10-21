@@ -2780,6 +2780,638 @@ static void Gen_tstzspan_get_bin_a2(DataChunk &args, ExpressionState &, Vector &
     }
 }
 
+static void Gen_bigintspan_bins(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Span *in = BlobToSpan(blob);
+        int64_t n_arg = FlatVector::GetData<int64_t>(n_vec)[i];
+        int64_t n2_arg = FlatVector::GetData<int64_t>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        int count = 0;
+        Span * arr = bigintspan_bins(in, n_arg, n2_arg, n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_bigintspan_bins_border_inc_vorigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Span *in = BlobToSpan(blob);
+        int64_t n_arg = FlatVector::GetData<int64_t>(n_vec)[i];
+        int count = 0;
+        Span * arr = bigintspan_bins_border_inc_vorigin(in, n_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_datespan_bins(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Span *in = BlobToSpan(blob);
+        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
+        date_t n2_arg = FlatVector::GetData<date_t>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        int count = 0;
+        Span * arr = datespan_bins(in, MeosIntervalArg(n_arg), ToMeosDate(n2_arg), n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_datespan_bins_border_inc_torigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Span *in = BlobToSpan(blob);
+        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
+        int count = 0;
+        Span * arr = datespan_bins_border_inc_torigin(in, MeosIntervalArg(n_arg), &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_floatspan_bins(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Span *in = BlobToSpan(blob);
+        double n_arg = FlatVector::GetData<double>(n_vec)[i];
+        double n2_arg = FlatVector::GetData<double>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        int count = 0;
+        Span * arr = floatspan_bins(in, n_arg, n2_arg, n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_floatspan_bins_border_inc_vorigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Span *in = BlobToSpan(blob);
+        double n_arg = FlatVector::GetData<double>(n_vec)[i];
+        int count = 0;
+        Span * arr = floatspan_bins_border_inc_vorigin(in, n_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_intspan_bins(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Span *in = BlobToSpan(blob);
+        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
+        int32_t n2_arg = FlatVector::GetData<int32_t>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        int count = 0;
+        Span * arr = intspan_bins(in, n_arg, n2_arg, n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_intspan_bins_border_inc_vorigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Span *in = BlobToSpan(blob);
+        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
+        int count = 0;
+        Span * arr = intspan_bins_border_inc_vorigin(in, n_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tstzspan_bins(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Span *in = BlobToSpan(blob);
+        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
+        timestamp_tz_t n2_arg = FlatVector::GetData<timestamp_tz_t>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        int count = 0;
+        Span * arr = tstzspan_bins(in, MeosIntervalArg(n_arg), DuckDBToMeosTimestamp(n2_arg).value, n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tstzspan_bins_border_inc_torigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Span *in = BlobToSpan(blob);
+        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
+        int count = 0;
+        Span * arr = tstzspan_bins_border_inc_torigin(in, MeosIntervalArg(n_arg), &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_bigintspanset_bins(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        SpanSet *in = BlobToSpanSet(blob);
+        int64_t n_arg = FlatVector::GetData<int64_t>(n_vec)[i];
+        int64_t n2_arg = FlatVector::GetData<int64_t>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        int count = 0;
+        Span * arr = bigintspanset_bins(in, n_arg, n2_arg, n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_bigintspanset_bins_border_inc_vorigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        SpanSet *in = BlobToSpanSet(blob);
+        int64_t n_arg = FlatVector::GetData<int64_t>(n_vec)[i];
+        int count = 0;
+        Span * arr = bigintspanset_bins_border_inc_vorigin(in, n_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_datespanset_bins(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        SpanSet *in = BlobToSpanSet(blob);
+        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
+        date_t n2_arg = FlatVector::GetData<date_t>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        int count = 0;
+        Span * arr = datespanset_bins(in, MeosIntervalArg(n_arg), ToMeosDate(n2_arg), n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_datespanset_bins_border_inc_torigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        SpanSet *in = BlobToSpanSet(blob);
+        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
+        int count = 0;
+        Span * arr = datespanset_bins_border_inc_torigin(in, MeosIntervalArg(n_arg), &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_floatspanset_bins(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        SpanSet *in = BlobToSpanSet(blob);
+        double n_arg = FlatVector::GetData<double>(n_vec)[i];
+        double n2_arg = FlatVector::GetData<double>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        int count = 0;
+        Span * arr = floatspanset_bins(in, n_arg, n2_arg, n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_floatspanset_bins_border_inc_vorigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        SpanSet *in = BlobToSpanSet(blob);
+        double n_arg = FlatVector::GetData<double>(n_vec)[i];
+        int count = 0;
+        Span * arr = floatspanset_bins_border_inc_vorigin(in, n_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_intspanset_bins(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        SpanSet *in = BlobToSpanSet(blob);
+        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
+        int32_t n2_arg = FlatVector::GetData<int32_t>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        int count = 0;
+        Span * arr = intspanset_bins(in, n_arg, n2_arg, n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
 static void Gen_intspanset_bins_border_inc_vorigin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     auto &in_vec = args.data[0];
@@ -2797,6 +3429,80 @@ static void Gen_intspanset_bins_border_inc_vorigin(DataChunk &args, ExpressionSt
         int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         int count = 0;
         Span * arr = intspanset_bins_border_inc_vorigin(in, n_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tstzspanset_bins(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        SpanSet *in = BlobToSpanSet(blob);
+        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
+        timestamp_tz_t n2_arg = FlatVector::GetData<timestamp_tz_t>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        int count = 0;
+        Span * arr = tstzspanset_bins(in, MeosIntervalArg(n_arg), DuckDBToMeosTimestamp(n2_arg).value, n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tstzspanset_bins_border_inc_torigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        SpanSet *in = BlobToSpanSet(blob);
+        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
+        int count = 0;
+        Span * arr = tstzspanset_bins_border_inc_torigin(in, MeosIntervalArg(n_arg), &count);
         free(in);
         int n = (arr && count > 0) ? count : 0;
         ListVector::Reserve(result, off + n);
@@ -4176,7 +4882,26 @@ void RegisterGenerated_meos_setspan_bin(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("getBin", {LogicalType::INTEGER, LogicalType::INTEGER}, SpanTypes::intspan(), Gen_intspan_get_bin_a2));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getBin", {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, SpanTypes::tstzspan(), Gen_tstzspan_get_bin));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getBin", {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL}, SpanTypes::tstzspan(), Gen_tstzspan_get_bin_a2));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bins", {SpanTypes::bigintspan(), LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BOOLEAN}, LogicalType::LIST(SpanTypes::bigintspan()), Gen_bigintspan_bins));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bins", {SpanTypes::bigintspan(), LogicalType::BIGINT}, LogicalType::LIST(SpanTypes::bigintspan()), Gen_bigintspan_bins_border_inc_vorigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bins", {SpansetTypes::bigintspanset(), LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BOOLEAN}, LogicalType::LIST(SpanTypes::bigintspan()), Gen_bigintspanset_bins));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bins", {SpansetTypes::bigintspanset(), LogicalType::BIGINT}, LogicalType::LIST(SpanTypes::bigintspan()), Gen_bigintspanset_bins_border_inc_vorigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bins", {SpanTypes::datespan(), LogicalType::INTERVAL, LogicalType::DATE, LogicalType::BOOLEAN}, LogicalType::LIST(SpanTypes::datespan()), Gen_datespan_bins));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bins", {SpanTypes::datespan(), LogicalType::INTERVAL}, LogicalType::LIST(SpanTypes::datespan()), Gen_datespan_bins_border_inc_torigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bins", {SpansetTypes::datespanset(), LogicalType::INTERVAL, LogicalType::DATE, LogicalType::BOOLEAN}, LogicalType::LIST(SpanTypes::datespan()), Gen_datespanset_bins));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bins", {SpansetTypes::datespanset(), LogicalType::INTERVAL}, LogicalType::LIST(SpanTypes::datespan()), Gen_datespanset_bins_border_inc_torigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bins", {SpanTypes::floatspan(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::BOOLEAN}, LogicalType::LIST(SpanTypes::floatspan()), Gen_floatspan_bins));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bins", {SpanTypes::floatspan(), LogicalType::DOUBLE}, LogicalType::LIST(SpanTypes::floatspan()), Gen_floatspan_bins_border_inc_vorigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bins", {SpansetTypes::floatspanset(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::BOOLEAN}, LogicalType::LIST(SpanTypes::floatspan()), Gen_floatspanset_bins));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bins", {SpansetTypes::floatspanset(), LogicalType::DOUBLE}, LogicalType::LIST(SpanTypes::floatspan()), Gen_floatspanset_bins_border_inc_vorigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bins", {SpanTypes::intspan(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::LIST(SpanTypes::intspan()), Gen_intspan_bins));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bins", {SpanTypes::intspan(), LogicalType::INTEGER}, LogicalType::LIST(SpanTypes::intspan()), Gen_intspan_bins_border_inc_vorigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bins", {SpansetTypes::intspanset(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::LIST(SpanTypes::intspan()), Gen_intspanset_bins));
     RegisterSerializedScalarFunction(loader, ScalarFunction("bins", {SpansetTypes::intspanset(), LogicalType::INTEGER}, LogicalType::LIST(SpanTypes::intspan()), Gen_intspanset_bins_border_inc_vorigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bins", {SpanTypes::tstzspan(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_tstzspan_bins));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bins", {SpanTypes::tstzspan(), LogicalType::INTERVAL}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_tstzspan_bins_border_inc_torigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bins", {SpansetTypes::tstzspanset(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_tstzspanset_bins));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bins", {SpansetTypes::tstzspanset(), LogicalType::INTERVAL}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_tstzspanset_bins_border_inc_torigin));
 }
 
 void RegisterGenerated_meos_temporal_bbox_topo(ExtensionLoader &loader) {

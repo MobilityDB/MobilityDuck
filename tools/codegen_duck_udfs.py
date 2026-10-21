@@ -2874,6 +2874,7 @@ ARRAY_ELEM.update({
 # container-input family (base of the single non-count param) -> (C container type, Blob->container fn)
 ARRAY_IN = {
     "Set":          ("Set",      "BlobToSet"),
+    "Span":         ("Span",     "BlobToSpan"),
     "SpanSet":      ("SpanSet",  "BlobToSpanSet"),
     "Temporal":     ("Temporal", "BlobToTemporal"),
     "TInstant":     ("Temporal", "BlobToTemporal"),
@@ -3846,13 +3847,30 @@ def sig_declared_ret(f, acc, arity):
         return SIG_TEMPORAL_ACC[on[0]["ret"]]
     return None
 
+def array_tail_sql(f, n):
+    """The SQL types of the `n` scalar arguments after an array-return's container, as the
+    signatures returning an array declare them, read from the same signatures and with the same
+    filter as #array_declared_accs; () without any, None when no array signature takes `n` of
+    them or the signatures disagree."""
+    if not n:
+        return ()
+    tails = {tuple(s["args"][1:]) for s in f.get("sqlSignatures") or []
+             if len(s.get("args") or []) == 1 + n and (s.get("ret") or "").endswith("[]")}
+    return tails.pop() if len(tails) == 1 else None
+
+def array_tail_params(f):
+    """The scalar parameters after an array-return's container, its count parameter left out,
+    split as #shape_array splits them (`ins[1:]`)."""
+    lf = ((f.get("shape") or {}).get("arrayReturn") or {}).get("lengthFrom") or {}
+    return [p for p in f["params"] if p.get("name") != lf.get("name")][1:]
+
 def array_declared_accs(f, tail=()):
     """The registered DuckDB accessors this array-return is CREATE FUNCTION'd for, from the catalog
     sqlSignatures whose SQL return is an array (`<base>[]`). Extended/unregistered arg types map to
     no accessor and drop out. This is the SoT for a generic (scope='all') array-return's type set,
     excluding types whose canonical return is NOT an array (e.g. set_spans over textset: no sig).
     `tail` matches the fixed scalar arguments after the container, as in _sig_ret_for."""
-    m = {**SET_TYPES, **SPANSET_TYPES, **SIG_TEMPORAL_ACC,
+    m = {**SET_TYPES, **SPAN_TYPES, **SPANSET_TYPES, **SIG_TEMPORAL_ACC,
          **CONT_SQL_ACC["TBox"], **CONT_SQL_ACC["STBox"]}
     out = []
     want_len = 1 + len(tail)
@@ -3943,10 +3961,17 @@ def shape_array(f):
     # shape and stays out (the *Pairs / table-fn forms).
     if not ins:
         return None
+    # The scalars after the container are read as the multi-argument shapes read theirs
+    # (scalar_arg_for), and named by the SQL types the array-returning signatures declare for
+    # them: one integer for the split-into-N family, a size, an origin and a border flag for the
+    # bins of a span (bins(intspan, integer, integer, boolean) -> intspan[]).
     tailp = ins[1:]
-    if len(tailp) > 1 or any(norm(p["canonical"]) != "int" for p in tailp):
+    targs = [scalar_arg_for(f, p) for p in tailp]
+    if any(t is None for t in targs):
         return None
-    tail = ("integer",) * len(tailp)
+    tail = array_tail_sql(f, len(tailp))
+    if tail is None or any(SQL_BASE_TO_DUCK.get(s) != t[0] for s, t in zip(tail, targs)):
+        return None
     ib = base(ins[0]["canonical"])
     # A cell id first, by value: the array a static cell function answers over the cell types its
     # signatures declare with an array return (quadbinCellToTile(quadbin) -> integer[])
@@ -3967,6 +3992,7 @@ def shape_array(f):
     if ib not in ARRAY_IN or not norm(ins[0]["canonical"]).endswith("*"):
         return None
     sc = (set_reg_scope(name) if ib == "Set" else spanset_reg_scope(name) if ib == "SpanSet"
+          else span_reg_scope(name) if ib == "Span"
           else box_reg_scope(CONT_SQL_ACC[ib][ib.lower()])(name) if ib in ("STBox", "TBox")
           else reg_scope(name))
     if sc is None:
@@ -4009,11 +4035,18 @@ def emit_array(f, ec, ib, tail=()):
         free_in = "        free(in);\n"
     _lt, ccpp, marsh = ARRAY_ELEM[ec]
     retc = norm(f["returnType"]["canonical"])          # e.g. "TimestampTz *", "text **", "Span *"
-    n_vec = ("    auto &n_vec = args.data[1];\n"
-             "    n_vec.Flatten(row_count);\n") if tail else ""
-    n_null = " || n_vec.GetValue(i).IsNull()" if tail else ""
-    n_read = "        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];\n" if tail else ""
-    call_args = "in, n_arg, &count" if tail else "in, &count"
+    # One vector per scalar after the container, read per row through its #scalar_arg_for triple
+    # and passed in the order the function declares it; a NULL in any of them answers a NULL list.
+    # The first keeps the n_vec / n_arg names of the split-into-N count.
+    targs = [scalar_arg_for(f, p) for p in array_tail_params(f)] if tail else []
+    nm = ["n" if k == 1 else f"n{k}" for k in range(1, len(targs) + 1)]
+    n_vec = "".join(f"    auto &{v}_vec = args.data[{k}];\n"
+                    f"    {v}_vec.Flatten(row_count);\n" for k, v in enumerate(nm, start=1))
+    n_null = "".join(f" || {v}_vec.GetValue(i).IsNull()" for v in nm)
+    n_read = "".join(f"        {cpp} {v}_arg = FlatVector::GetData<{cpp}>({v}_vec)[i];\n"
+                     for v, (_dt, cpp, _m) in zip(nm, targs))
+    call_args = ", ".join(["in"] + [m.replace("a2", f"{v}_arg")
+                                    for v, (_dt, _cpp, m) in zip(nm, targs)] + ["&count"])
     return (
 f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
 f"    EnsureMeosThreadInitialized();\n"
@@ -4951,19 +4984,16 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # unnest: DuckDB's own unnest cannot be overloaded, so the temporal unnest registers under the
 # name the catalog gives the other engines, temporalUnnest (#shape_unnest).
 # The tile and bin groups: the splits of a temporal value into its tiles (spaceSplit, timeSplit,
-# valueSplit and their combinations), the time bins of a temporal value, and the time and
-# value-time boxes of a temporal number return arrays of temporal values or of boxes over a
-# temporal number that no shape takes yet; src/temporal/temporal.cpp keeps them, and timeBins,
-# the number forms of timeBoxes and valueTimeBoxes are not registered by either.
+# valueSplit and their combinations) return arrays of temporal values that no shape takes yet;
+# src/temporal/temporal.cpp keeps them.
 # box2d and box3d: PostGIS's box types, which DuckDB does not have, so box2d(stbox) and
 # box3d(stbox) answer no type this surface registers; no hand registration answers them either.
 # stboxX: the catalog gives stbox_make, whose eleven parameters the SQL constructor fills from
 # five arguments, the flags through boundArgs and the SRID read last in SQL and fourth in C; no
 # shape reads that mapping, and no hand registration answers stboxX either.
 RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX",
-                       "spaceSplit", "spaceTimeSplit",
-                       "timeBins", "timeBoxes", "timeSplit",
-                       "valueSplit", "valueTimeBoxes", "valueTimeSplit"}
+                       "spaceSplit", "spaceTimeSplit", "timeSplit",
+                       "valueSplit", "valueTimeSplit"}
 def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
 TEMPORAL_CBASES = {"Temporal", "TInstant", "TSequence", "TSequenceSet"}
