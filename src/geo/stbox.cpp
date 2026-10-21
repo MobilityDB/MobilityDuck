@@ -72,9 +72,6 @@ void StboxType::RegisterCastFunctions(ExtensionLoader &loader) {
 }
 
 void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction("stbox", {LogicalType::VARCHAR}, stbox(), StboxFunctions::Stbox_in));
-
     /* Tspatial × {stbox, tspatial} topological predicates — the operators
      * (~=/@>/<@/&&/-|-) and the canonical bare named functions (same/contains/
      * contained/overlaps/adjacent, the names deployed by MobilityDB's .in.sql) —

@@ -72,10 +72,6 @@ bool StboxFunctions::Stbox_in_cast(Vector &source, Vector &result, idx_t count, 
     return true;
 }
 
-void StboxFunctions::Stbox_in(DataChunk &args, ExpressionState &state, Vector &result) {
-    Stbox_in_common(args.data[0], result, args.size());
-}
-
 bool StboxFunctions::Stbox_out(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     bool success = true;
     UnaryExecutor::Execute<string_t, string_t>(

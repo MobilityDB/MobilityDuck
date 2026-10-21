@@ -136,18 +136,6 @@ bool TjsonbFunctions::Jsonb_in_cast(
  * Constructors
  * ------------------------------------------------------------------ */
 
-static void Tjsonb_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        args.data[0], result, args.size(),
-        [&](string_t input_str) -> string_t {
-            std::string s = input_str.GetString();
-            Temporal *temp = tjsonb_in(s.c_str());
-            if (!temp)
-                throw InvalidInputException("Invalid tjsonb input: " + s);
-            return TemporalToBlob(result, temp);
-        });
-}
-
 /* ------------------------------------------------------------------
  * Value accessors
  * ------------------------------------------------------------------ */
@@ -165,8 +153,6 @@ void TJsonbTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     /* Constructors: tjsonb(jsonb, timestamptz | tstzset | tstzspan | tstzspanset) and
      * tjsonbSeq are generated (meos_json_constructor, meos_temporal_constructor). */
-    RegisterSerializedScalarFunction(loader,
-        ScalarFunction("tjsonb", {V}, T, Tjsonb_constructor));
 
     /* Generic temporal functions applied to tjsonb. timeSpan/tempSubtype/interp/merge
      * are now GENERATED with identical signatures (generate-then-retire), so the hand

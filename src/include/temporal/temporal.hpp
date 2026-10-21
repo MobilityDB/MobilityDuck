@@ -42,7 +42,6 @@ struct TemporalTypes {
     static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
     static void RegisterScalarFunctions(ExtensionLoader &loader);
-    static void RegisterWkbFunctions(ExtensionLoader &loader);
     static void RegisterTemporalTileSplit(ExtensionLoader &loader);
     static void RegisterTileGetters(ExtensionLoader &loader);
     static void RegisterTnumberValueSplit(ExtensionLoader &loader);

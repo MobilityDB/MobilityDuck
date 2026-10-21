@@ -366,7 +366,6 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TemporalTypes::RegisterTypes(loader);
 	TemporalTypes::RegisterCastFunctions(loader);
 	TemporalTypes::RegisterScalarFunctions(loader);
-	TemporalTypes::RegisterWkbFunctions(loader);
 	TemporalTypes::RegisterTemporalTileSplit(loader);
 	TemporalTypes::RegisterTnumberValueSplit(loader);
 
@@ -389,30 +388,25 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TgeompointType::RegisterType(loader);
 	TgeompointType::RegisterCastFunctions(loader);
 	TgeompointType::RegisterScalarFunctions(loader);
-	TgeompointType::RegisterRoundtripIO(loader);
 	TgeompointType::RegisterTpointSplit(loader);
 	TgeompointType::RegisterAnalyticsViz(loader);
 
 	TgeogpointType::RegisterType(loader);
 	TgeogpointType::RegisterCastFunctions(loader);
 	TgeogpointType::RegisterScalarFunctions(loader);
-	TgeogpointType::RegisterRoundtripIO(loader);
 
 	TGeometryTypes::RegisterScalarFunctions(loader);
 	TGeometryTypes::RegisterTypes(loader);
 	TGeometryTypes::RegisterCastFunctions(loader);
-	TGeometryTypes::RegisterScalarInOutFunctions(loader);
 	TGeometryOps::RegisterScalarFunctions(loader);
 
 	TGeographyTypes::RegisterTypes(loader);
 	TGeographyTypes::RegisterScalarFunctions(loader);
 	TGeographyTypes::RegisterCastFunctions(loader);
-	TGeographyTypes::RegisterScalarInOutFunctions(loader);
 	TGeographyOps::RegisterScalarFunctions(loader);
 
 	TGeogpointType::RegisterScalarFunctions(loader);
 	TGeogpointType::RegisterCastFunctions(loader);
-	TGeogpointType::RegisterScalarInOutFunctions(loader);
 	TGeogpointOps::RegisterScalarFunctions(loader);
 
 	// What a point cloud value's pcid names, stated as rows of two tables a
@@ -428,13 +422,11 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TPcpointTypes::RegisterTypes(loader);
 	TPcpointTypes::RegisterCastFunctions(loader);
 	TPcpointTypes::RegisterScalarFunctions(loader);
-	TPcpointTypes::RegisterScalarInOutFunctions(loader);
 
 	// Extended temporal type tpcpatch (requires the MEOS POINTCLOUD module).
 	TPcpatchTypes::RegisterTypes(loader);
 	TPcpatchTypes::RegisterCastFunctions(loader);
 	TPcpatchTypes::RegisterScalarFunctions(loader);
-	TPcpatchTypes::RegisterScalarInOutFunctions(loader);
 
 	SetTypes::RegisterTypes(loader);
 	SetTypes::RegisterCastFunctions(loader);
@@ -483,7 +475,6 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TJsonbTypes::RegisterTypes(loader);
 	TJsonbTypes::RegisterCastFunctions(loader);
 	TJsonbTypes::RegisterScalarFunctions(loader);
-	TJsonbTypes::RegisterScalarInOutFunctions(loader);
 
 	TRTreeModule::RegisterRTreeIndex(loader);
 	TRTreeModule::RegisterIndexScan(loader);

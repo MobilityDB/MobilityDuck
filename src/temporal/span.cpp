@@ -100,17 +100,9 @@ void SpanTypes::RegisterCastFunctions(ExtensionLoader &loader) {
 void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {    
     for (const auto &span_type : SpanTypes::AllTypes()) {
 
-        // asBinary / asHexWKB and the <span>FromText / FromBinary / FromHexWKB constructors are
-        // generated from the catalog (meos_setspan_inout).
-
-        // Register span constructor functions
-        duckdb::RegisterSerializedScalarFunction(loader,
-            ScalarFunction(span_type.ToString(), {LogicalType::VARCHAR}, span_type, SpanFunctions::Span_constructor)
-        );
-
-
-
-
+        // asBinary / asHexWKB, the <span>FromText / FromBinary / FromHexWKB constructors and
+        // the function form of the cast, <span>(text), are generated from the catalog
+        // (meos_setspan_inout and the type's input function).
 
         // span(<set>) is generated from the catalog (meos_setspan_conversion).
 

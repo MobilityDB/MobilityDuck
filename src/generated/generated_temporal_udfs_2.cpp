@@ -682,6 +682,21 @@ inline TBox * tbigintbox_shift_scale_hasshift_haswidth(const TBox * p0, int64_t 
 inline TBox * union_tbox_tbox_strict(const TBox * p0, const TBox * p1) {
     return ::union_tbox_tbox(p0, p1, true);
 }
+inline char * temporal_as_mfjson_srs(const Temporal * p0, int p1, int p2, int p3) {
+    return ::temporal_as_mfjson(p0, p1, p2, p3, NULL);
+}
+inline char * temporal_as_mfjson_flags_precision_srs(const Temporal * p0, int p1) {
+    return ::temporal_as_mfjson(p0, p1, 0, 15, NULL);
+}
+inline char * temporal_as_mfjson_flags_0_option_0_precision_15_srs_null(const Temporal * p0) {
+    return ::temporal_as_mfjson(p0, 0, 0, 15, NULL);
+}
+inline char * temporal_as_mfjson_precision_srs(const Temporal * p0, int p1, int p2) {
+    return ::temporal_as_mfjson(p0, p1, p2, 15, NULL);
+}
+inline char * temporal_as_mfjson_flags_0_option_0_precision_out_default_decimal_digits_srs_null(const Temporal * p0) {
+    return ::temporal_as_mfjson(p0, 0, 0, 15, NULL);
+}
 inline TSequenceSet * temporal_segm_duration_atleast_true(const Temporal * p0, const MeosInterval * p1, bool p2) {
     return ::temporal_segm_duration(p0, p1, true, p2);
 }
@@ -849,6 +864,9 @@ inline STBox * stbox_shift_scale_time_shift(const STBox * p0, const MeosInterval
 }
 inline STBox * union_stbox_stbox_strict(const STBox * p0, const STBox * p1) {
     return ::union_stbox_stbox(p0, p1, true);
+}
+inline char * tspatial_as_ewkt_maxdd(const Temporal * p0) {
+    return ::tspatial_as_ewkt(p0, 15);
 }
 inline Temporal * bearing_tpoint_point_invert_invert_no(const Temporal * p0, const GSERIALIZED * p1) {
     return ::bearing_tpoint_point(p0, p1, false);
@@ -2036,6 +2054,24 @@ static void Gen_union_set_h3index(DataChunk &args, ExpressionState &, Vector &re
 
 
 // ===== @ingroup meos_json_inout =====
+static void Gen_tjsonb_from_mfjson(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *r = tjsonb_from_mfjson(in.GetString().c_str());
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tjsonb_in(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *r = tjsonb_in(in.GetString().c_str());
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
 static void Gen_tjsonb_out(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
@@ -5197,6 +5233,9 @@ void RegisterGenerated_meos_h3_set_setops(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_json_inout(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonbFromMFJSON", {LogicalType::VARCHAR}, TJsonbTypes::tjsonb(), Gen_tjsonb_from_mfjson));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonbFromText", {LogicalType::VARCHAR}, TJsonbTypes::tjsonb(), Gen_tjsonb_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonb", {LogicalType::VARCHAR}, TJsonbTypes::tjsonb(), Gen_tjsonb_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {TJsonbTypes::tjsonb()}, LogicalType::VARCHAR, Gen_tjsonb_out));
 }
 
@@ -5275,6 +5314,7 @@ void RegisterGenerated_meos_rgeo_bbox_split(ExtensionLoader &loader) {
 void RegisterGenerated_meos_s2cell_base_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("s2cellFromHexWKB", {LogicalType::VARCHAR}, S2cellTypes::s2cell(), Gen_s2cell_from_hexwkb));
     RegisterSerializedScalarFunction(loader, ScalarFunction("s2cellFromText", {LogicalType::VARCHAR}, S2cellTypes::s2cell(), Gen_s2cell_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("s2cell", {LogicalType::VARCHAR}, S2cellTypes::s2cell(), Gen_s2cell_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {S2cellTypes::s2cell()}, LogicalType::VARCHAR, Gen_s2cell_out));
 }
 
@@ -5288,6 +5328,7 @@ void RegisterGenerated_meos_s2cell_set_accessor(ExtensionLoader &loader) {
 void RegisterGenerated_meos_s2cell_set_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("s2cellsetFromText", {LogicalType::VARCHAR}, SetTypes::s2cellset(), Gen_s2cellset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("s2cellsetFromEWKT", {LogicalType::VARCHAR}, SetTypes::s2cellset(), Gen_s2cellset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("s2cellset", {LogicalType::VARCHAR}, SetTypes::s2cellset(), Gen_s2cellset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::s2cellset()}, LogicalType::VARCHAR, Gen_s2cellset_out));
 }
 
@@ -5396,17 +5437,29 @@ void RegisterGenerated_meos_setspan_dist(ExtensionLoader &loader) {
 
 void RegisterGenerated_meos_setspan_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("bigintsetFromText", {LogicalType::VARCHAR}, SetTypes::bigintset(), Gen_bigintset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bigintset", {LogicalType::VARCHAR}, SetTypes::bigintset(), Gen_bigintset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("bigintspanFromText", {LogicalType::VARCHAR}, SpanTypes::bigintspan(), Gen_bigintspan_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bigintspan", {LogicalType::VARCHAR}, SpanTypes::bigintspan(), Gen_bigintspan_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("bigintspansetFromText", {LogicalType::VARCHAR}, SpansetTypes::bigintspanset(), Gen_bigintspanset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bigintspanset", {LogicalType::VARCHAR}, SpansetTypes::bigintspanset(), Gen_bigintspanset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("datesetFromText", {LogicalType::VARCHAR}, SetTypes::dateset(), Gen_dateset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("dateset", {LogicalType::VARCHAR}, SetTypes::dateset(), Gen_dateset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("datespanFromText", {LogicalType::VARCHAR}, SpanTypes::datespan(), Gen_datespan_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("datespan", {LogicalType::VARCHAR}, SpanTypes::datespan(), Gen_datespan_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("datespansetFromText", {LogicalType::VARCHAR}, SpansetTypes::datespanset(), Gen_datespanset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("datespanset", {LogicalType::VARCHAR}, SpansetTypes::datespanset(), Gen_datespanset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("floatsetFromText", {LogicalType::VARCHAR}, SetTypes::floatset(), Gen_floatset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("floatset", {LogicalType::VARCHAR}, SetTypes::floatset(), Gen_floatset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("floatspanFromText", {LogicalType::VARCHAR}, SpanTypes::floatspan(), Gen_floatspan_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("floatspan", {LogicalType::VARCHAR}, SpanTypes::floatspan(), Gen_floatspan_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("floatspansetFromText", {LogicalType::VARCHAR}, SpansetTypes::floatspanset(), Gen_floatspanset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("floatspanset", {LogicalType::VARCHAR}, SpansetTypes::floatspanset(), Gen_floatspanset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("intsetFromText", {LogicalType::VARCHAR}, SetTypes::intset(), Gen_intset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("intset", {LogicalType::VARCHAR}, SetTypes::intset(), Gen_intset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("intspanFromText", {LogicalType::VARCHAR}, SpanTypes::intspan(), Gen_intspan_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("intspan", {LogicalType::VARCHAR}, SpanTypes::intspan(), Gen_intspan_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("intspansetFromText", {LogicalType::VARCHAR}, SpansetTypes::intspanset(), Gen_intspanset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("intspanset", {LogicalType::VARCHAR}, SpansetTypes::intspanset(), Gen_intspanset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asHexWKB", {SetTypes::intset()}, LogicalType::VARCHAR, Gen_set_as_hexwkb));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asHexWKB", {SetTypes::intset(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_set_as_hexwkb));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asHexWKB", {SetTypes::bigintset()}, LogicalType::VARCHAR, Gen_set_as_hexwkb));
@@ -5523,9 +5576,13 @@ void RegisterGenerated_meos_setspan_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("datespansetFromBinary", {LogicalType::BLOB}, SpansetTypes::datespanset(), Gen_spanset_from_wkb));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tstzspansetFromBinary", {LogicalType::BLOB}, SpansetTypes::tstzspanset(), Gen_spanset_from_wkb));
     RegisterSerializedScalarFunction(loader, ScalarFunction("textsetFromText", {LogicalType::VARCHAR}, SetTypes::textset(), Gen_textset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("textset", {LogicalType::VARCHAR}, SetTypes::textset(), Gen_textset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tstzsetFromText", {LogicalType::VARCHAR}, SetTypes::tstzset(), Gen_tstzset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tstzset", {LogicalType::VARCHAR}, SetTypes::tstzset(), Gen_tstzset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tstzspanFromText", {LogicalType::VARCHAR}, SpanTypes::tstzspan(), Gen_tstzspan_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tstzspan", {LogicalType::VARCHAR}, SpanTypes::tstzspan(), Gen_tstzspan_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tstzspansetFromText", {LogicalType::VARCHAR}, SpansetTypes::tstzspanset(), Gen_tstzspanset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tstzspanset", {LogicalType::VARCHAR}, SpansetTypes::tstzspanset(), Gen_tstzspanset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::bigintset()}, LogicalType::VARCHAR, Gen_bigintset_out));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::dateset()}, LogicalType::VARCHAR, Gen_dateset_out));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::floatset(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_floatset_out));

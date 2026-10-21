@@ -1,0 +1,223 @@
+# name: test/sql/parity/101_temporal_io.test
+# description: The I/O functions of the temporal types and the function form of the cast of every
+#             type, generated from the catalog. The expected values are MobilityDB's own answers in
+#             mobilitydb/test/geo/expected/053_tpoint_inout.test.out,
+#             mobilitydb/test/geo/expected/053_tgeo_inout.test.out and
+#             mobilitydb/test/json/expected/452_tjsonb.test.out. A timestamp is written with its
+#             offset, so the instant, the WKB that carries it and the value compared are those
+#             MobilityDB reads in its PST session; a text answer is read in the session zone.
+# group: [sql]
+
+require mobilityduck
+
+# ---------------------------------------------------------------------------
+# The function form of the cast, T(text), reads what the literal reads
+# ---------------------------------------------------------------------------
+
+query IIIIII
+SELECT tgeompoint('Point(1 1)@2001-01-01') = tgeompoint 'Point(1 1)@2001-01-01',
+  tgeogpoint('Point(1 1)@2001-01-01') = tgeogpoint 'Point(1 1)@2001-01-01',
+  tgeometry('Linestring(1 1,2 2)@2001-01-01') = tgeometry 'Linestring(1 1,2 2)@2001-01-01',
+  tgeography('Point(1 1)@2001-01-01') = tgeography 'Point(1 1)@2001-01-01',
+  tjsonb('"{\"a\":1}"@2001-01-01') = tjsonb '"{\"a\":1}"@2001-01-01',
+  tint('[1@2001-01-01, 2@2001-01-02]') = tint '[1@2001-01-01, 2@2001-01-02]';
+----
+true	true	true	true	true	true
+
+query IIIII
+SELECT tbool('{true@2001-01-01, false@2001-01-02}') = tbool '{true@2001-01-01, false@2001-01-02}',
+  tfloat('[1.5@2001-01-01, 2.5@2001-01-02]') = tfloat '[1.5@2001-01-01, 2.5@2001-01-02]',
+  ttext('"AAA"@2001-01-01') = ttext '"AAA"@2001-01-01',
+  tbigint('1@2001-01-01') = tbigint '1@2001-01-01',
+  tbox('TBOXINT XT([1,2],[2001-01-01,2001-01-02])') = tbox 'TBOXINT XT([1,2],[2001-01-01,2001-01-02])';
+----
+true	true	true	true	true
+
+query IIIIII
+SELECT intspan('[1,3)') = intspan '[1,3)', floatspan('[1.5,2.5]') = floatspan '[1.5,2.5]',
+  tstzspan('[2001-01-01, 2001-01-02]') = tstzspan '[2001-01-01, 2001-01-02]',
+  intset('{1,2,3}') = intset '{1,2,3}', tstzspanset('{[2001-01-01, 2001-01-02]}') = tstzspanset '{[2001-01-01, 2001-01-02]}',
+  stbox('STBOX X((1,2),(3,4))') = stbox 'STBOX X((1,2),(3,4))';
+----
+true	true	true	true	true	true
+
+# ---------------------------------------------------------------------------
+# <type>FromText and FromEWKT read what the literal reads
+# ---------------------------------------------------------------------------
+
+query IIIIII
+SELECT tintFromText('[1@2001-01-01, 2@2001-01-02]') = tint '[1@2001-01-01, 2@2001-01-02]',
+  tboolFromText('true@2001-01-01') = tbool 'true@2001-01-01',
+  tfloatFromText('1.5@2001-01-01') = tfloat '1.5@2001-01-01',
+  ttextFromText('"AAA"@2001-01-01') = ttext '"AAA"@2001-01-01',
+  tbigintFromText('1@2001-01-01') = tbigint '1@2001-01-01',
+  tjsonbFromText('"{\"a\":1}"@2001-01-01') = tjsonb '"{\"a\":1}"@2001-01-01';
+----
+true	true	true	true	true	true
+
+query IIIIII
+SELECT tgeompointFromText('Point(1 1)@2001-01-01') = tgeompoint 'Point(1 1)@2001-01-01',
+  tgeompointFromEWKT('SRID=4326;Point(1 1)@2001-01-01') = tgeompoint 'SRID=4326;Point(1 1)@2001-01-01',
+  tgeogpointFromEWKT('SRID=4326;Point(1 1)@2001-01-01') = tgeogpoint 'Point(1 1)@2001-01-01',
+  tgeometryFromText('Point(1 1)@2001-01-01') = tgeometry 'Point(1 1)@2001-01-01',
+  tgeographyFromEWKT('SRID=4326;Point(1 1)@2001-01-01') = tgeography 'Point(1 1)@2001-01-01',
+  tgeometryFromEWKT(asEWKT(tgeometry 'SRID=3812;Point(1 1)@2001-01-01')) = tgeometry 'SRID=3812;Point(1 1)@2001-01-01';
+----
+true	true	true	true	true	true
+
+# asText and asEWKT with the maximum number of decimal digits: MobilityDB answers
+# POINT Z (1.123457 1.123457 1.123457) behind SRID=4326 for the geodetic point
+query II
+SELECT asText(tgeompoint 'Point(1.123456789 1.123456789 1.123456789)@2001-01-01', 6) LIKE 'POINT Z (1.123457 1.123457 1.123457)@%',
+  asEWKT(tgeogpoint 'Point(1.123456789 1.123456789 1.123456789)@2001-01-01', 6) LIKE 'SRID=4326;POINT Z (1.123457 1.123457 1.123457)@%';
+----
+true	true
+
+# ---------------------------------------------------------------------------
+# asBinary, asEWKB, asHexWKB and asHexEWKB write MobilityDB's bytes, with the endian
+# ---------------------------------------------------------------------------
+
+query III
+SELECT hex(asBinary(tgeompoint 'Point(1 1)@2001-01-01 00:00:00-08')),
+  hex(asBinary(tgeompoint 'Point(1 1)@2001-01-01 00:00:00-08', 'NDR')),
+  hex(asBinary(tgeompoint 'Point(1 1)@2001-01-01 00:00:00-08', 'XDR'));
+----
+012E00010101000000000000000000F03F000000000000F03F0060885EC91C0000	012E00010101000000000000000000F03F000000000000F03F0060885EC91C0000	00002E0100000000013FF00000000000003FF000000000000000001CC95E886000
+
+query III
+SELECT asHexEWKB(tgeompoint '[Point(1 1)@2001-01-01 00:00:00-08]'),
+  asHexEWKB(tgeompoint '[Point(1 1)@2001-01-01 00:00:00-08]', 'XDR'),
+  asHexEWKB(tgeometry '[Point(1 1)@2001-01-01 00:00:00-08]');
+----
+012E000E01000000030101000000000000000000F03F000000000000F03F0060885EC91C0000	00002E0E000000010300000000013FF00000000000003FF000000000000000001CC95E886000	013C000A01000000030101000000000000000000F03F000000000000F03F0060885EC91C0000
+
+query I
+SELECT hex(asBinary(tgeometry 'Point(1 1)@2001-01-01 00:00:00-08'));
+----
+013C00010101000000000000000000F03F000000000000F03F0060885EC91C0000
+
+# The WKB carries no SRID and the EWKB carries it: MobilityDB reads SRID=4326 back from the EWKB
+query II
+SELECT asEWKT(tgeompointFromEWKB(asEWKB(tgeompoint 'SRID=4326;Point(1 2 3)@2001-01-01'))) LIKE 'SRID=4326;POINT Z (1 2 3)@%',
+  asEWKT(tgeompointFromEWKB(asEWKB(tgeompoint 'SRID=5676;Point(1 1)@2001-01-01', 'XDR'))) LIKE 'SRID=5676;POINT(1 1)@%';
+----
+true	true
+
+statement error
+SELECT asEWKB(tgeompoint 'SRID=5676;Point(1 1)@2001-01-01', 'ABC');
+----
+Invalid value for endian flag
+
+# ---------------------------------------------------------------------------
+# Every reader inverts its writer
+# ---------------------------------------------------------------------------
+
+query IIIIII
+SELECT tgeompointFromBinary(asBinary(tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02]')) = tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02]',
+  tgeogpointFromBinary(asBinary(tgeogpoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02]')) = tgeogpoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02]',
+  tgeometryFromHexWKB(asHexWKB(tgeometry 'Linestring(1 1,2 2)@2001-01-01')) = tgeometry 'Linestring(1 1,2 2)@2001-01-01',
+  tgeographyFromHexEWKB(asHexEWKB(tgeography 'Point(1 1)@2001-01-01')) = tgeography 'Point(1 1)@2001-01-01',
+  tgeometryFromEWKB(asEWKB(tgeometry 'SRID=3812;Point(1 1)@2001-01-01')) = tgeometry 'SRID=3812;Point(1 1)@2001-01-01',
+  tgeogpointFromHexEWKB(asHexEWKB(tgeogpoint 'Point(1 1)@2001-01-01', 'XDR')) = tgeogpoint 'Point(1 1)@2001-01-01';
+----
+true	true	true	true	true	true
+
+query IIIIII
+SELECT tintFromBinary(asBinary(tint '[1@2001-01-01, 2@2001-01-02]')) = tint '[1@2001-01-01, 2@2001-01-02]',
+  tfloatFromBinary(asBinary(tfloat '[1.5@2001-01-01, 2.5@2001-01-02]', 'XDR')) = tfloat '[1.5@2001-01-01, 2.5@2001-01-02]',
+  tboolFromHexWKB(asHexWKB(tbool '{true@2001-01-01, false@2001-01-02}')) = tbool '{true@2001-01-01, false@2001-01-02}',
+  ttextFromBinary(asBinary(ttext '"AAA"@2001-01-01')) = ttext '"AAA"@2001-01-01',
+  tbigintFromBinary(asBinary(tbigint '1@2001-01-01')) = tbigint '1@2001-01-01',
+  tjsonbFromBinary(asBinary(tjsonb '"{\"a\":1}"@2001-01-01')) = tjsonb '"{\"a\":1}"@2001-01-01';
+----
+true	true	true	true	true	true
+
+query I
+SELECT tjsonbFromHexWKB(asHexWKB(tjsonb '[{"a":1}@2001-01-01, {"a":2}@2001-01-02]')) = tjsonb '[{"a":1}@2001-01-01, {"a":2}@2001-01-02]';
+----
+true
+
+# ---------------------------------------------------------------------------
+# asMFJSON takes MobilityDB's options: 1 the bounding box, 2 and 4 the short and the long name
+# of the reference system, then the JSON flags and the maximum number of decimal digits
+# ---------------------------------------------------------------------------
+
+# MobilityDB: {"type":"MovingPoint","coordinates":[[1,1]],"datetimes":["2001-01-01T00:00:00-08:00"],
+# "interpolation":"None"}, the same instant written in the session zone
+query I
+SELECT asMFJSON(tgeompoint 'Point(1 1)@2001-01-01 00:00:00-08');
+----
+{"type":"MovingPoint","coordinates":[[1,1]],"datetimes":["2001-01-01T09:00:00+01:00"],"interpolation":"None"}
+
+query I
+SELECT asMFJSON(tgeompoint 'SRID=4326;Point(50.813810 4.384260)@2019-01-01 18:00:00.15+02', 3, 0, 2);
+----
+{"type":"MovingPoint","crs":{"type":"Name","properties":{"name":"EPSG:4326"}},"bbox":[[50.81,4.38],[50.81,4.38]],"period":{"begin":"2019-01-01T17:00:00.15+01:00","end":"2019-01-01T17:00:00.15+01:00","lower_inc":true,"upper_inc":true},"coordinates":[[50.81,4.38]],"datetimes":["2019-01-01T17:00:00.15+01:00"],"interpolation":"None"}
+
+query I
+SELECT asMFJSON(tgeompoint 'SRID=4326;Point(50.813810 4.384260)@2019-01-01 18:00:00.15+02', 4, 0, 2);
+----
+{"type":"MovingPoint","crs":{"type":"Name","properties":{"name":"urn:ogc:def:crs:EPSG::4326"}},"coordinates":[[50.81,4.38]],"datetimes":["2019-01-01T17:00:00.15+01:00"],"interpolation":"None"}
+
+query I
+SELECT asMFJSON(tgeompoint '[Point(1 2 3)@2019-01-01 00:00:00-08, Point(4 5 6)@2019-01-02 00:00:00-08]', 1, 0, 2);
+----
+{"type":"MovingPoint","bbox":[[1,2,3],[4,5,6]],"period":{"begin":"2019-01-01T09:00:00+01:00","end":"2019-01-02T09:00:00+01:00","lower_inc":true,"upper_inc":true},"coordinates":[[1,2,3],[4,5,6]],"datetimes":["2019-01-01T09:00:00+01:00","2019-01-02T09:00:00+01:00"],"lower_inc":true,"upper_inc":true,"interpolation":"Linear"}
+
+statement error
+SELECT asMFJSON(tgeompoint 'Point(1 1)@2001-01-01', 0, 0, -1);
+----
+cannot be negative
+
+# A trailing default answers the shorter calls: asMFJSON(T), (T, options), (T, options, flags)
+query III
+SELECT asMFJSON(tfloat '1.5@2001-01-01') = asMFJSON(tfloat '1.5@2001-01-01', 0, 0, 15),
+  asMFJSON(tint '1@2001-01-01', 1) = asMFJSON(tint '1@2001-01-01', 1, 0),
+  asMFJSON(tgeogpoint 'Point(1 1)@2001-01-01', 0, 0) = asMFJSON(tgeogpoint 'Point(1 1)@2001-01-01');
+----
+true	true	true
+
+# A temporal geometry read back from its MF-JSON is compared through its EWKT, as MobilityDB's
+# 053_tgeo_inout reads it
+query IIIII
+SELECT tgeompointFromMFJSON(asMFJSON(tgeompoint '{[Point(1 2)@2001-01-01, Point(3 4)@2001-01-02],[Point(1 2)@2001-01-03, Point(3 4)@2001-01-04]}'))
+     = tgeompoint '{[Point(1 2)@2001-01-01, Point(3 4)@2001-01-02],[Point(1 2)@2001-01-03, Point(3 4)@2001-01-04]}',
+  tgeogpointFromMFJSON(asMFJSON(tgeogpoint 'Interp=Step;[Point(1 2)@2001-01-01, Point(3 4)@2001-01-02]'))
+     = tgeogpoint 'Interp=Step;[Point(1 2)@2001-01-01, Point(3 4)@2001-01-02]',
+  asEWKT(tgeometryFromMFJSON(asMFJSON(tgeometry 'Linestring(1 1,2 2)@2001-01-01'))) = asEWKT(tgeometry 'Linestring(1 1,2 2)@2001-01-01'),
+  asEWKT(tgeographyFromMFJSON(asMFJSON(tgeography 'Point(1 1)@2001-01-01'))) = asEWKT(tgeography 'Point(1 1)@2001-01-01'),
+  tintFromMFJSON(asMFJSON(tint '[1@2001-01-01, 2@2001-01-02]')) = tint '[1@2001-01-01, 2@2001-01-02]';
+----
+true	true	true	true	true
+
+# MobilityDB: tjsonbFromMFJSON(asMFJSON(tjsonb '[{"geom": "Point(1 1)"}@2001-01-01, ..., @2001-01-03]'))
+# answers the sequence normalized to its first and last instants
+query I
+SELECT tjsonbFromMFJSON(asMFJSON(tjsonb '[{"geom": "Point(1 1)"}@2001-01-01, {"geom": "Point(1 1)"}@2001-01-02, {"geom": "Point(1 1)"}@2001-01-03]'))
+     = tjsonb '[{"geom": "Point(1 1)"}@2001-01-01, {"geom": "Point(1 1)"}@2001-01-03]';
+----
+true
+
+# ---------------------------------------------------------------------------
+# The overloads MobilityDB does not declare are absent
+# ---------------------------------------------------------------------------
+
+statement error
+SELECT asMFJSON(tgeompoint 'Point(1 1)@2001-01-01', true);
+----
+No function matches
+
+statement error
+SELECT tjsonbFromEWKB(asBinary(tjsonb '"{\"a\":1}"@2001-01-01'));
+----
+does not exist
+
+statement error
+SELECT tjsonbFromHexEWKB(asHexWKB(tjsonb '"{\"a\":1}"@2001-01-01'));
+----
+does not exist
+
+statement error
+SELECT asHexEWKB(tjsonb '"{\"a\":1}"@2001-01-01');
+----
+No function matches

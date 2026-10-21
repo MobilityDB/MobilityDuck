@@ -91,47 +91,6 @@ bool SpanFunctions::Text_to_span(Vector &source, Vector &result, idx_t count, Ca
     return true;
 }
 
-// --- Span constructor from string ---
-void SpanFunctions::Span_constructor(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &input_vec = args.data[0];
-    auto &result_type = result.GetType();
-    std::string type_alias = result_type.GetAlias();
-    
-    MeosType target_meos_type = SpanTypeMapping::GetMeosTypeFromAlias(type_alias);
-    
-    if (target_meos_type == T_UNKNOWN) {
-        throw InvalidInputException("Unknown span type: " + type_alias);
-    }
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_vec, result, args.size(),
-        [&](string_t input_str) -> string_t {
-            std::string input = input_str.GetString();
-            
-            Span *span = span_in(input.c_str(), target_meos_type);
-            
-            if (span == NULL) {
-                throw InvalidInputException("Invalid " + type_alias + " format: " + input);
-            }
-
-
-            size_t span_size = sizeof(*span);
-            uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-
-            memcpy(span_buffer, span, span_size);
-
-            string_t span_string_t((char *) span_buffer, span_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-            
-            free(span_buffer);
-            free(span);
-            
-            return stored_data;
-        });
-}
-
-
-
 // --- Span binary constructor ---
 
 

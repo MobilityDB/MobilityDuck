@@ -28,7 +28,6 @@ struct SpanFunctions {
     // TODO (Type Range): static bool Range_to_span_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     // TODO (Type Range): static bool Span_to_range_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     // scalar functions
-    static void Span_constructor(DataChunk &args, ExpressionState &state, Vector &result);
     // TODO (Type Range): static void Range_to_span(DataChunk &args, ExpressionState &state, Vector &result);
     // TODO (Type Range): static void Span_to_range(DataChunk &args, ExpressionState &state, Vector &result);
         // accessors
