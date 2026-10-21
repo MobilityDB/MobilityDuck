@@ -510,31 +510,9 @@ void TemporalFunctions::Tnumber_shift_scale_value(DataChunk &args, ExpressionSta
 // catalog (Gen_tnumber_at_tbox / Gen_tnumber_minus_tbox in generated_temporal_udfs.cpp),
 // which call the same MEOS tnumber_at_tbox / tnumber_minus_tbox.
 
-void TemporalFunctions::Tnumber_avg_value(DataChunk &args, ExpressionState &state, Vector &result) {
-    UnaryExecutor::Execute<string_t, double_t>(
-        args.data[0], result, args.size(),
-        [&](string_t temp_str) {
-            const uint8_t *data = reinterpret_cast<const uint8_t*>(temp_str.GetData());
-            size_t data_size = temp_str.GetSize();
-            if (data_size < sizeof(void*)) {
-                throw InvalidInputException("[Tnumber_avg_value] Invalid Temporal data: insufficient size");
-            }
-            uint8_t *data_copy = (uint8_t*)malloc(data_size);
-            memcpy(data_copy, data, data_size);
-            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-            if (!temp) {
-                free(data_copy);
-                throw InternalException("Failure in Tnumber_avg_value: unable to cast string to temporal");
-            }
-            double ret = tnumber_avg_value(temp);
-            free(data_copy);
-            return ret;
-        }
-    );
-    if (args.size() == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
+// Tnumber_avg_value retired: avgValue(tint | tbigint | tfloat) is generated from the catalog
+// (Gen_tnumber_avg_value in generated_temporal_udfs.cpp), which calls the same MEOS
+// tnumber_avg_value.
 
 /* ***************************************************
  * Boolean operators

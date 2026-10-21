@@ -3825,6 +3825,884 @@ static void Tiles_tintbox_value_time_tiles_s0_a3ExecFn(ClientContext &, TableFun
     output.SetCardinality(rows);
 }
 
+static void Gen_temporal_time_bins(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
+        timestamp_tz_t n2_arg = FlatVector::GetData<timestamp_tz_t>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        int count = 0;
+        Span * arr = temporal_time_bins(in, MeosIntervalArg(n_arg), DuckDBToMeosTimestamp(n2_arg).value, n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_temporal_time_bins_border_inc_torigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
+        int count = 0;
+        Span * arr = temporal_time_bins_border_inc_torigin(in, MeosIntervalArg(n_arg), &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tbigint_time_boxes(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
+        timestamp_tz_t n2_arg = FlatVector::GetData<timestamp_tz_t>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        int count = 0;
+        TBox * arr = tbigint_time_boxes(in, MeosIntervalArg(n_arg), DuckDBToMeosTimestamp(n2_arg).value, n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tbigint_time_boxes_border_inc_torigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
+        int count = 0;
+        TBox * arr = tbigint_time_boxes_border_inc_torigin(in, MeosIntervalArg(n_arg), &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tbigint_value_bins(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        int64_t n_arg = FlatVector::GetData<int64_t>(n_vec)[i];
+        int64_t n2_arg = FlatVector::GetData<int64_t>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        int count = 0;
+        Span * arr = tbigint_value_bins(in, n_arg, n2_arg, n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tbigint_value_bins_border_inc_vorigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        int64_t n_arg = FlatVector::GetData<int64_t>(n_vec)[i];
+        int count = 0;
+        Span * arr = tbigint_value_bins_border_inc_vorigin(in, n_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tbigint_value_boxes(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        int64_t n_arg = FlatVector::GetData<int64_t>(n_vec)[i];
+        int64_t n2_arg = FlatVector::GetData<int64_t>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        int count = 0;
+        TBox * arr = tbigint_value_boxes(in, n_arg, n2_arg, n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tbigint_value_boxes_border_inc_vorigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        int64_t n_arg = FlatVector::GetData<int64_t>(n_vec)[i];
+        int count = 0;
+        TBox * arr = tbigint_value_boxes_border_inc_vorigin(in, n_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tbigint_value_time_boxes(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &n4_vec = args.data[4];
+    n4_vec.Flatten(row_count);
+    auto &n5_vec = args.data[5];
+    n5_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull() || n4_vec.GetValue(i).IsNull() || n5_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        int64_t n_arg = FlatVector::GetData<int64_t>(n_vec)[i];
+        interval_t n2_arg = FlatVector::GetData<interval_t>(n2_vec)[i];
+        int64_t n3_arg = FlatVector::GetData<int64_t>(n3_vec)[i];
+        timestamp_tz_t n4_arg = FlatVector::GetData<timestamp_tz_t>(n4_vec)[i];
+        bool n5_arg = FlatVector::GetData<bool>(n5_vec)[i];
+        int count = 0;
+        TBox * arr = tbigint_value_time_boxes(in, n_arg, MeosIntervalArg(n2_arg), n3_arg, DuckDBToMeosTimestamp(n4_arg).value, n5_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tbigint_value_time_boxes_border_inc_torigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        int64_t n_arg = FlatVector::GetData<int64_t>(n_vec)[i];
+        interval_t n2_arg = FlatVector::GetData<interval_t>(n2_vec)[i];
+        int64_t n3_arg = FlatVector::GetData<int64_t>(n3_vec)[i];
+        int count = 0;
+        TBox * arr = tbigint_value_time_boxes_border_inc_torigin(in, n_arg, MeosIntervalArg(n2_arg), n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tbigint_value_time_boxes_border_inc_torigin_vorigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        int64_t n_arg = FlatVector::GetData<int64_t>(n_vec)[i];
+        interval_t n2_arg = FlatVector::GetData<interval_t>(n2_vec)[i];
+        int count = 0;
+        TBox * arr = tbigint_value_time_boxes_border_inc_torigin_vorigin(in, n_arg, MeosIntervalArg(n2_arg), &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tfloat_time_boxes(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
+        timestamp_tz_t n2_arg = FlatVector::GetData<timestamp_tz_t>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        int count = 0;
+        TBox * arr = tfloat_time_boxes(in, MeosIntervalArg(n_arg), DuckDBToMeosTimestamp(n2_arg).value, n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tfloat_time_boxes_border_inc_torigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
+        int count = 0;
+        TBox * arr = tfloat_time_boxes_border_inc_torigin(in, MeosIntervalArg(n_arg), &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tfloat_value_bins(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        double n_arg = FlatVector::GetData<double>(n_vec)[i];
+        double n2_arg = FlatVector::GetData<double>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        int count = 0;
+        Span * arr = tfloat_value_bins(in, n_arg, n2_arg, n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tfloat_value_bins_border_inc_vorigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        double n_arg = FlatVector::GetData<double>(n_vec)[i];
+        int count = 0;
+        Span * arr = tfloat_value_bins_border_inc_vorigin(in, n_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tfloat_value_boxes(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        double n_arg = FlatVector::GetData<double>(n_vec)[i];
+        double n2_arg = FlatVector::GetData<double>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        int count = 0;
+        TBox * arr = tfloat_value_boxes(in, n_arg, n2_arg, n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tfloat_value_boxes_border_inc_vorigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        double n_arg = FlatVector::GetData<double>(n_vec)[i];
+        int count = 0;
+        TBox * arr = tfloat_value_boxes_border_inc_vorigin(in, n_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tfloat_value_time_boxes(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &n4_vec = args.data[4];
+    n4_vec.Flatten(row_count);
+    auto &n5_vec = args.data[5];
+    n5_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull() || n4_vec.GetValue(i).IsNull() || n5_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        double n_arg = FlatVector::GetData<double>(n_vec)[i];
+        interval_t n2_arg = FlatVector::GetData<interval_t>(n2_vec)[i];
+        double n3_arg = FlatVector::GetData<double>(n3_vec)[i];
+        timestamp_tz_t n4_arg = FlatVector::GetData<timestamp_tz_t>(n4_vec)[i];
+        bool n5_arg = FlatVector::GetData<bool>(n5_vec)[i];
+        int count = 0;
+        TBox * arr = tfloat_value_time_boxes(in, n_arg, MeosIntervalArg(n2_arg), n3_arg, DuckDBToMeosTimestamp(n4_arg).value, n5_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tfloat_value_time_boxes_border_inc_torigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        double n_arg = FlatVector::GetData<double>(n_vec)[i];
+        interval_t n2_arg = FlatVector::GetData<interval_t>(n2_vec)[i];
+        double n3_arg = FlatVector::GetData<double>(n3_vec)[i];
+        int count = 0;
+        TBox * arr = tfloat_value_time_boxes_border_inc_torigin(in, n_arg, MeosIntervalArg(n2_arg), n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tfloat_value_time_boxes_border_inc_torigin_vorigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        double n_arg = FlatVector::GetData<double>(n_vec)[i];
+        interval_t n2_arg = FlatVector::GetData<interval_t>(n2_vec)[i];
+        int count = 0;
+        TBox * arr = tfloat_value_time_boxes_border_inc_torigin_vorigin(in, n_arg, MeosIntervalArg(n2_arg), &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tint_time_boxes(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
+        timestamp_tz_t n2_arg = FlatVector::GetData<timestamp_tz_t>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        int count = 0;
+        TBox * arr = tint_time_boxes(in, MeosIntervalArg(n_arg), DuckDBToMeosTimestamp(n2_arg).value, n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tint_time_boxes_border_inc_torigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
+        int count = 0;
+        TBox * arr = tint_time_boxes_border_inc_torigin(in, MeosIntervalArg(n_arg), &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tint_value_bins(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
+        int32_t n2_arg = FlatVector::GetData<int32_t>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        int count = 0;
+        Span * arr = tint_value_bins(in, n_arg, n2_arg, n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
 static void Gen_tint_value_bins_border_inc_vorigin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     auto &in_vec = args.data[0];
@@ -3859,6 +4737,46 @@ static void Gen_tint_value_bins_border_inc_vorigin(DataChunk &args, ExpressionSt
     }
 }
 
+static void Gen_tint_value_boxes(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
+        int32_t n2_arg = FlatVector::GetData<int32_t>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        int count = 0;
+        TBox * arr = tint_value_boxes(in, n_arg, n2_arg, n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
 static void Gen_tint_value_boxes_border_inc_vorigin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     auto &in_vec = args.data[0];
@@ -3876,6 +4794,129 @@ static void Gen_tint_value_boxes_border_inc_vorigin(DataChunk &args, ExpressionS
         int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
         int count = 0;
         TBox * arr = tint_value_boxes_border_inc_vorigin(in, n_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tint_value_time_boxes(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &n4_vec = args.data[4];
+    n4_vec.Flatten(row_count);
+    auto &n5_vec = args.data[5];
+    n5_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull() || n4_vec.GetValue(i).IsNull() || n5_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
+        interval_t n2_arg = FlatVector::GetData<interval_t>(n2_vec)[i];
+        int32_t n3_arg = FlatVector::GetData<int32_t>(n3_vec)[i];
+        timestamp_tz_t n4_arg = FlatVector::GetData<timestamp_tz_t>(n4_vec)[i];
+        bool n5_arg = FlatVector::GetData<bool>(n5_vec)[i];
+        int count = 0;
+        TBox * arr = tint_value_time_boxes(in, n_arg, MeosIntervalArg(n2_arg), n3_arg, DuckDBToMeosTimestamp(n4_arg).value, n5_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tint_value_time_boxes_border_inc_torigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
+        interval_t n2_arg = FlatVector::GetData<interval_t>(n2_vec)[i];
+        int32_t n3_arg = FlatVector::GetData<int32_t>(n3_vec)[i];
+        int count = 0;
+        TBox * arr = tint_value_time_boxes_border_inc_torigin(in, n_arg, MeosIntervalArg(n2_arg), n3_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tint_value_time_boxes_border_inc_torigin_vorigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        int32_t n_arg = FlatVector::GetData<int32_t>(n_vec)[i];
+        interval_t n2_arg = FlatVector::GetData<interval_t>(n2_vec)[i];
+        int count = 0;
+        TBox * arr = tint_value_time_boxes_border_inc_torigin_vorigin(in, n_arg, MeosIntervalArg(n2_arg), &count);
         free(in);
         int n = (arr && count > 0) ? count : 0;
         ListVector::Reserve(result, off + n);
@@ -4282,8 +5323,43 @@ void RegisterGenerated_meos_temporal_analytics_tile(ExtensionLoader &loader) {
     loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTERVAL, LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ}, Tiles_tintbox_value_time_tiles_s0_a5ExecFn, Tiles_tintbox_value_time_tiles_s0_a5BindFn, Tiles_tintbox_value_time_tiles_s0_a5InitFn));
     loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTERVAL, LogicalType::INTEGER}, Tiles_tintbox_value_time_tiles_s0_a4ExecFn, Tiles_tintbox_value_time_tiles_s0_a4BindFn, Tiles_tintbox_value_time_tiles_s0_a4InitFn));
     loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTERVAL}, Tiles_tintbox_value_time_tiles_s0_a3ExecFn, Tiles_tintbox_value_time_tiles_s0_a3BindFn, Tiles_tintbox_value_time_tiles_s0_a3InitFn));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBins", {TemporalTypes::tbool(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_time_bins));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBins", {TemporalTypes::tint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_time_bins));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBins", {TemporalTypes::tbigint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_time_bins));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBins", {TemporalTypes::tfloat(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_time_bins));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBins", {TemporalTypes::ttext(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_time_bins));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBins", {TemporalTypes::tbool(), LogicalType::INTERVAL}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_time_bins_border_inc_torigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBins", {TemporalTypes::tint(), LogicalType::INTERVAL}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_time_bins_border_inc_torigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBins", {TemporalTypes::tbigint(), LogicalType::INTERVAL}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_time_bins_border_inc_torigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBins", {TemporalTypes::tfloat(), LogicalType::INTERVAL}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_time_bins_border_inc_torigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBins", {TemporalTypes::ttext(), LogicalType::INTERVAL}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_time_bins_border_inc_torigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TemporalTypes::tbigint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, LogicalType::LIST(TboxType::tbox()), Gen_tbigint_time_boxes));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TemporalTypes::tbigint(), LogicalType::INTERVAL}, LogicalType::LIST(TboxType::tbox()), Gen_tbigint_time_boxes_border_inc_torigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueBins", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BOOLEAN}, LogicalType::LIST(SpanTypes::bigintspan()), Gen_tbigint_value_bins));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueBins", {TemporalTypes::tbigint(), LogicalType::BIGINT}, LogicalType::LIST(SpanTypes::bigintspan()), Gen_tbigint_value_bins_border_inc_vorigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueBoxes", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BOOLEAN}, LogicalType::LIST(TboxType::tbox()), Gen_tbigint_value_boxes));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueBoxes", {TemporalTypes::tbigint(), LogicalType::BIGINT}, LogicalType::LIST(TboxType::tbox()), Gen_tbigint_value_boxes_border_inc_vorigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueTimeBoxes", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::INTERVAL, LogicalType::BIGINT, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, LogicalType::LIST(TboxType::tbox()), Gen_tbigint_value_time_boxes));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueTimeBoxes", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::INTERVAL, LogicalType::BIGINT}, LogicalType::LIST(TboxType::tbox()), Gen_tbigint_value_time_boxes_border_inc_torigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueTimeBoxes", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::INTERVAL}, LogicalType::LIST(TboxType::tbox()), Gen_tbigint_value_time_boxes_border_inc_torigin_vorigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TemporalTypes::tfloat(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, LogicalType::LIST(TboxType::tbox()), Gen_tfloat_time_boxes));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TemporalTypes::tfloat(), LogicalType::INTERVAL}, LogicalType::LIST(TboxType::tbox()), Gen_tfloat_time_boxes_border_inc_torigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueBins", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::BOOLEAN}, LogicalType::LIST(SpanTypes::floatspan()), Gen_tfloat_value_bins));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueBins", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, LogicalType::LIST(SpanTypes::floatspan()), Gen_tfloat_value_bins_border_inc_vorigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueBoxes", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::BOOLEAN}, LogicalType::LIST(TboxType::tbox()), Gen_tfloat_value_boxes));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueBoxes", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, LogicalType::LIST(TboxType::tbox()), Gen_tfloat_value_boxes_border_inc_vorigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueTimeBoxes", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, LogicalType::LIST(TboxType::tbox()), Gen_tfloat_value_time_boxes));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueTimeBoxes", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::INTERVAL, LogicalType::DOUBLE}, LogicalType::LIST(TboxType::tbox()), Gen_tfloat_value_time_boxes_border_inc_torigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueTimeBoxes", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::INTERVAL}, LogicalType::LIST(TboxType::tbox()), Gen_tfloat_value_time_boxes_border_inc_torigin_vorigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TemporalTypes::tint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, LogicalType::LIST(TboxType::tbox()), Gen_tint_time_boxes));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TemporalTypes::tint(), LogicalType::INTERVAL}, LogicalType::LIST(TboxType::tbox()), Gen_tint_time_boxes_border_inc_torigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueBins", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::LIST(SpanTypes::intspan()), Gen_tint_value_bins));
     RegisterSerializedScalarFunction(loader, ScalarFunction("valueBins", {TemporalTypes::tint(), LogicalType::INTEGER}, LogicalType::LIST(SpanTypes::intspan()), Gen_tint_value_bins_border_inc_vorigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueBoxes", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::LIST(TboxType::tbox()), Gen_tint_value_boxes));
     RegisterSerializedScalarFunction(loader, ScalarFunction("valueBoxes", {TemporalTypes::tint(), LogicalType::INTEGER}, LogicalType::LIST(TboxType::tbox()), Gen_tint_value_boxes_border_inc_vorigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueTimeBoxes", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTERVAL, LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, LogicalType::LIST(TboxType::tbox()), Gen_tint_value_time_boxes));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueTimeBoxes", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTERVAL, LogicalType::INTEGER}, LogicalType::LIST(TboxType::tbox()), Gen_tint_value_time_boxes_border_inc_torigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueTimeBoxes", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTERVAL}, LogicalType::LIST(TboxType::tbox()), Gen_tint_value_time_boxes_border_inc_torigin_vorigin));
 }
 
 } // namespace duckdb
