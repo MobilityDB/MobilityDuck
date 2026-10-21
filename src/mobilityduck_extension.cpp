@@ -42,7 +42,6 @@
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include "index/rtree_module.hpp"
 #include "index/sptree_module.hpp"
-#include "single_tile_getters.hpp"
 #include "temporal/temporal_parquet.hpp"
 
 #include <mutex>
@@ -381,10 +380,6 @@ static void LoadInternal(ExtensionLoader &loader) {
 	SpanTypes::RegisterTypes(loader);
 	SpanTypes::RegisterCastFunctions(loader);
 
-	// Tile getters return SpanTypes blobs and consume tbox, so all those
-	// types must already be registered.
-	TemporalTypes::RegisterTileGetters(loader);
-
 	TgeompointType::RegisterType(loader);
 	TgeompointType::RegisterCastFunctions(loader);
 	TgeompointType::RegisterScalarFunctions(loader);
@@ -485,10 +480,6 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TSPTreeModule::RegisterIndexScan(loader);
 	TSPTreeModule::RegisterScanOptimizer(loader);
 	TSPTreeModule::RegisterJoinOptimizer(loader);
-
-	// Single-tile getters depend on tbox, stbox, and the spatial GEOMETRY
-	// type being registered first.
-	SingleTileGetters::RegisterScalarFunctions(loader);
 
 	// Catalog-driven scalar UDFs generated from the MEOS-API catalog, organized by
 	// doxygen @ingroup group. Registered last, after every type accessor exists.

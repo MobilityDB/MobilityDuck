@@ -886,6 +886,12 @@ inline Temporal * tgeo_translate_deltaz(const Temporal * p0, double p1, double p
 inline STBox * tgeo_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
     return ::tgeo_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
 }
+inline STBox * tgeo_space_time_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, TimestampTz p6, int * p7) {
+    return ::tgeo_space_time_boxes(p0, p1, p2, p3, p4, p5, p6, true, true, p7);
+}
+inline STBox * tgeo_space_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, int * p6) {
+    return ::tgeo_space_time_boxes(p0, p1, p2, p3, p4, p5, timestamptz_in("2000-01-03", -1), true, true, p6);
+}
 inline STBox * stbox_get_space_tile_ysize_zsize(const GSERIALIZED * p0, double p1, const GSERIALIZED * p2) {
     return ::stbox_get_space_tile(p0, p1, 0, 0, p2);
 }
@@ -924,6 +930,15 @@ inline char * poseset_out_maxdd(const Set * p0) {
 }
 inline char * posechainset_out_maxdd(const Set * p0) {
     return ::posechainset_out(p0, 15);
+}
+inline STBox * trgeometry_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
+    return ::trgeometry_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
+}
+inline STBox * trgeometry_space_time_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, TimestampTz p6, int * p7) {
+    return ::trgeometry_space_time_boxes(p0, p1, p2, p3, p4, p5, p6, true, true, p7);
+}
+inline STBox * trgeometry_space_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, int * p6) {
+    return ::trgeometry_space_time_boxes(p0, p1, p2, p3, p4, p5, timestamptz_in("2000-01-03", -1), true, true, p6);
 }
 inline Temporal * trgeometry_append_tinstant_expand_interp_maxdist_maxt(Temporal * p0, const Temporal * p1) {
     return ::trgeometry_append_tinstant(p0, (const TInstant *) p1, LINEAR, 0.0, NULL, false);
@@ -2658,6 +2673,292 @@ static void Gen_overlaps_spanset_spanset(DataChunk &args, ExpressionState &, Vec
 
 
 // ===== @ingroup meos_temporal_analytics_tile =====
+struct Tiles_tbigintbox_value_tiles_s0_a4Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tbigintbox_value_tiles_s0_a4State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tbigintbox_value_tiles_s0_a4State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tbigintbox_value_tiles_s0_a4BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tbigintbox_value_tiles_s0_a4Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_tiles_s0_a4InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tbigintbox_value_tiles_s0_a4Bind>();
+    auto st = make_uniq<Tiles_tbigintbox_value_tiles_s0_a4State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<int64_t>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return v.GetValue<int64_t>(); };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<bool>(); };
+    st->tiles = tbigintbox_value_tiles(x0, c1(), c2(), c3(), &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tbigintbox_value_tiles_s0_a4ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tbigintbox_value_tiles_s0_a4State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tbigintbox_value_tiles_s0_a3Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tbigintbox_value_tiles_s0_a3State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tbigintbox_value_tiles_s0_a3State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tbigintbox_value_tiles_s0_a3BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tbigintbox_value_tiles_s0_a3Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_tiles_s0_a3InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tbigintbox_value_tiles_s0_a3Bind>();
+    auto st = make_uniq<Tiles_tbigintbox_value_tiles_s0_a3State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<int64_t>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return v.GetValue<int64_t>(); };
+    st->tiles = tbigintbox_value_tiles(x0, c1(), c2(), true, &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tbigintbox_value_tiles_s0_a3ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tbigintbox_value_tiles_s0_a3State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tbigintbox_value_tiles_s0_a2Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tbigintbox_value_tiles_s0_a2State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tbigintbox_value_tiles_s0_a2State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tbigintbox_value_tiles_s0_a2BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tbigintbox_value_tiles_s0_a2Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_tiles_s0_a2InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tbigintbox_value_tiles_s0_a2Bind>();
+    auto st = make_uniq<Tiles_tbigintbox_value_tiles_s0_a2State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<int64_t>(); };
+    st->tiles = tbigintbox_value_tiles(x0, c1(), 0, true, &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tbigintbox_value_tiles_s0_a2ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tbigintbox_value_tiles_s0_a2State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tbigintbox_value_time_tiles_s0_a6Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tbigintbox_value_time_tiles_s0_a6State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tbigintbox_value_time_tiles_s0_a6State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tbigintbox_value_time_tiles_s0_a6BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tbigintbox_value_time_tiles_s0_a6Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_time_tiles_s0_a6InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tbigintbox_value_time_tiles_s0_a6Bind>();
+    auto st = make_uniq<Tiles_tbigintbox_value_time_tiles_s0_a6State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<int64_t>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<int64_t>(); };
+    auto c4 = [&]() { auto &v = b.in[4]; return DuckDBToMeosTimestamp(v.GetValue<timestamp_tz_t>()).value; };
+    auto c5 = [&]() { auto &v = b.in[5]; return v.GetValue<bool>(); };
+    st->tiles = tbigintbox_value_time_tiles(x0, c1(), c2(), c3(), c4(), c5(), &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tbigintbox_value_time_tiles_s0_a6ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tbigintbox_value_time_tiles_s0_a6State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tbigintbox_value_time_tiles_s0_a5Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tbigintbox_value_time_tiles_s0_a5State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tbigintbox_value_time_tiles_s0_a5State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tbigintbox_value_time_tiles_s0_a5BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tbigintbox_value_time_tiles_s0_a5Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_time_tiles_s0_a5InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tbigintbox_value_time_tiles_s0_a5Bind>();
+    auto st = make_uniq<Tiles_tbigintbox_value_time_tiles_s0_a5State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<int64_t>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<int64_t>(); };
+    auto c4 = [&]() { auto &v = b.in[4]; return DuckDBToMeosTimestamp(v.GetValue<timestamp_tz_t>()).value; };
+    st->tiles = tbigintbox_value_time_tiles(x0, c1(), c2(), c3(), c4(), true, &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tbigintbox_value_time_tiles_s0_a5ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tbigintbox_value_time_tiles_s0_a5State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tbigintbox_value_time_tiles_s0_a4Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tbigintbox_value_time_tiles_s0_a4State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tbigintbox_value_time_tiles_s0_a4State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tbigintbox_value_time_tiles_s0_a4BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tbigintbox_value_time_tiles_s0_a4Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_time_tiles_s0_a4InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tbigintbox_value_time_tiles_s0_a4Bind>();
+    auto st = make_uniq<Tiles_tbigintbox_value_time_tiles_s0_a4State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<int64_t>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<int64_t>(); };
+    st->tiles = tbigintbox_value_time_tiles(x0, c1(), c2(), c3(), timestamptz_in("2000-01-03", -1), true, &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tbigintbox_value_time_tiles_s0_a4ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tbigintbox_value_time_tiles_s0_a4State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tbigintbox_value_time_tiles_s0_a3Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tbigintbox_value_time_tiles_s0_a3State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tbigintbox_value_time_tiles_s0_a3State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tbigintbox_value_time_tiles_s0_a3BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tbigintbox_value_time_tiles_s0_a3Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_time_tiles_s0_a3InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tbigintbox_value_time_tiles_s0_a3Bind>();
+    auto st = make_uniq<Tiles_tbigintbox_value_time_tiles_s0_a3State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<int64_t>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    st->tiles = tbigintbox_value_time_tiles(x0, c1(), c2(), 0, timestamptz_in("2000-01-03", -1), true, &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tbigintbox_value_time_tiles_s0_a3ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tbigintbox_value_time_tiles_s0_a3State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
 static void Gen_tbox_get_time_tile(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
@@ -2800,6 +3101,698 @@ static void Gen_tbox_get_value_time_tile_torigin_vorigin(DataChunk &args, Expres
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = TboxToBlob(result, r);
     }
+}
+
+struct Tiles_tbox_time_tiles_s0_a4Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tbox_time_tiles_s0_a4State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tbox_time_tiles_s0_a4State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tbox_time_tiles_s0_a4BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tbox_time_tiles_s0_a4Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("timeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tbox_time_tiles_s0_a4InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tbox_time_tiles_s0_a4Bind>();
+    auto st = make_uniq<Tiles_tbox_time_tiles_s0_a4State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    auto c2 = [&]() { auto &v = b.in[2]; return DuckDBToMeosTimestamp(v.GetValue<timestamp_tz_t>()).value; };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<bool>(); };
+    st->tiles = tbox_time_tiles(x0, c1(), c2(), c3(), &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tbox_time_tiles_s0_a4ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tbox_time_tiles_s0_a4State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tbox_time_tiles_s0_a3Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tbox_time_tiles_s0_a3State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tbox_time_tiles_s0_a3State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tbox_time_tiles_s0_a3BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tbox_time_tiles_s0_a3Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("timeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tbox_time_tiles_s0_a3InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tbox_time_tiles_s0_a3Bind>();
+    auto st = make_uniq<Tiles_tbox_time_tiles_s0_a3State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    auto c2 = [&]() { auto &v = b.in[2]; return DuckDBToMeosTimestamp(v.GetValue<timestamp_tz_t>()).value; };
+    st->tiles = tbox_time_tiles(x0, c1(), c2(), true, &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tbox_time_tiles_s0_a3ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tbox_time_tiles_s0_a3State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tbox_time_tiles_s0_a2Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tbox_time_tiles_s0_a2State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tbox_time_tiles_s0_a2State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tbox_time_tiles_s0_a2BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tbox_time_tiles_s0_a2Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("timeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tbox_time_tiles_s0_a2InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tbox_time_tiles_s0_a2Bind>();
+    auto st = make_uniq<Tiles_tbox_time_tiles_s0_a2State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    st->tiles = tbox_time_tiles(x0, c1(), timestamptz_in("2000-01-03", -1), true, &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tbox_time_tiles_s0_a2ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tbox_time_tiles_s0_a2State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tfloatbox_value_tiles_s0_a4Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tfloatbox_value_tiles_s0_a4State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tfloatbox_value_tiles_s0_a4State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tfloatbox_value_tiles_s0_a4BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tfloatbox_value_tiles_s0_a4Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_tiles_s0_a4InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tfloatbox_value_tiles_s0_a4Bind>();
+    auto st = make_uniq<Tiles_tfloatbox_value_tiles_s0_a4State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return v.GetValue<double>(); };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<bool>(); };
+    st->tiles = tfloatbox_value_tiles(x0, c1(), c2(), c3(), &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tfloatbox_value_tiles_s0_a4ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tfloatbox_value_tiles_s0_a4State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tfloatbox_value_tiles_s0_a3Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tfloatbox_value_tiles_s0_a3State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tfloatbox_value_tiles_s0_a3State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tfloatbox_value_tiles_s0_a3BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tfloatbox_value_tiles_s0_a3Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_tiles_s0_a3InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tfloatbox_value_tiles_s0_a3Bind>();
+    auto st = make_uniq<Tiles_tfloatbox_value_tiles_s0_a3State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return v.GetValue<double>(); };
+    st->tiles = tfloatbox_value_tiles(x0, c1(), c2(), true, &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tfloatbox_value_tiles_s0_a3ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tfloatbox_value_tiles_s0_a3State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tfloatbox_value_tiles_s0_a2Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tfloatbox_value_tiles_s0_a2State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tfloatbox_value_tiles_s0_a2State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tfloatbox_value_tiles_s0_a2BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tfloatbox_value_tiles_s0_a2Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_tiles_s0_a2InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tfloatbox_value_tiles_s0_a2Bind>();
+    auto st = make_uniq<Tiles_tfloatbox_value_tiles_s0_a2State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    st->tiles = tfloatbox_value_tiles(x0, c1(), 0.0, true, &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tfloatbox_value_tiles_s0_a2ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tfloatbox_value_tiles_s0_a2State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tfloatbox_value_time_tiles_s0_a6Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tfloatbox_value_time_tiles_s0_a6State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tfloatbox_value_time_tiles_s0_a6State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tfloatbox_value_time_tiles_s0_a6BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tfloatbox_value_time_tiles_s0_a6Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_time_tiles_s0_a6InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tfloatbox_value_time_tiles_s0_a6Bind>();
+    auto st = make_uniq<Tiles_tfloatbox_value_time_tiles_s0_a6State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<double>(); };
+    auto c4 = [&]() { auto &v = b.in[4]; return DuckDBToMeosTimestamp(v.GetValue<timestamp_tz_t>()).value; };
+    auto c5 = [&]() { auto &v = b.in[5]; return v.GetValue<bool>(); };
+    st->tiles = tfloatbox_value_time_tiles(x0, c1(), c2(), c3(), c4(), c5(), &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tfloatbox_value_time_tiles_s0_a6ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tfloatbox_value_time_tiles_s0_a6State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tfloatbox_value_time_tiles_s0_a5Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tfloatbox_value_time_tiles_s0_a5State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tfloatbox_value_time_tiles_s0_a5State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tfloatbox_value_time_tiles_s0_a5BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tfloatbox_value_time_tiles_s0_a5Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_time_tiles_s0_a5InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tfloatbox_value_time_tiles_s0_a5Bind>();
+    auto st = make_uniq<Tiles_tfloatbox_value_time_tiles_s0_a5State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<double>(); };
+    auto c4 = [&]() { auto &v = b.in[4]; return DuckDBToMeosTimestamp(v.GetValue<timestamp_tz_t>()).value; };
+    st->tiles = tfloatbox_value_time_tiles(x0, c1(), c2(), c3(), c4(), true, &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tfloatbox_value_time_tiles_s0_a5ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tfloatbox_value_time_tiles_s0_a5State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tfloatbox_value_time_tiles_s0_a4Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tfloatbox_value_time_tiles_s0_a4State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tfloatbox_value_time_tiles_s0_a4State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tfloatbox_value_time_tiles_s0_a4BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tfloatbox_value_time_tiles_s0_a4Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_time_tiles_s0_a4InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tfloatbox_value_time_tiles_s0_a4Bind>();
+    auto st = make_uniq<Tiles_tfloatbox_value_time_tiles_s0_a4State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<double>(); };
+    st->tiles = tfloatbox_value_time_tiles(x0, c1(), c2(), c3(), timestamptz_in("2000-01-03", -1), true, &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tfloatbox_value_time_tiles_s0_a4ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tfloatbox_value_time_tiles_s0_a4State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tfloatbox_value_time_tiles_s0_a3Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tfloatbox_value_time_tiles_s0_a3State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tfloatbox_value_time_tiles_s0_a3State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tfloatbox_value_time_tiles_s0_a3BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tfloatbox_value_time_tiles_s0_a3Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_time_tiles_s0_a3InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tfloatbox_value_time_tiles_s0_a3Bind>();
+    auto st = make_uniq<Tiles_tfloatbox_value_time_tiles_s0_a3State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    st->tiles = tfloatbox_value_time_tiles(x0, c1(), c2(), 0.0, timestamptz_in("2000-01-03", -1), true, &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tfloatbox_value_time_tiles_s0_a3ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tfloatbox_value_time_tiles_s0_a3State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tintbox_value_tiles_s0_a4Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tintbox_value_tiles_s0_a4State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tintbox_value_tiles_s0_a4State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tintbox_value_tiles_s0_a4BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tintbox_value_tiles_s0_a4Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_tiles_s0_a4InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tintbox_value_tiles_s0_a4Bind>();
+    auto st = make_uniq<Tiles_tintbox_value_tiles_s0_a4State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<int32_t>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return v.GetValue<int32_t>(); };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<bool>(); };
+    st->tiles = tintbox_value_tiles(x0, c1(), c2(), c3(), &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tintbox_value_tiles_s0_a4ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tintbox_value_tiles_s0_a4State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tintbox_value_tiles_s0_a3Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tintbox_value_tiles_s0_a3State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tintbox_value_tiles_s0_a3State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tintbox_value_tiles_s0_a3BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tintbox_value_tiles_s0_a3Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_tiles_s0_a3InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tintbox_value_tiles_s0_a3Bind>();
+    auto st = make_uniq<Tiles_tintbox_value_tiles_s0_a3State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<int32_t>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return v.GetValue<int32_t>(); };
+    st->tiles = tintbox_value_tiles(x0, c1(), c2(), true, &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tintbox_value_tiles_s0_a3ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tintbox_value_tiles_s0_a3State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tintbox_value_tiles_s0_a2Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tintbox_value_tiles_s0_a2State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tintbox_value_tiles_s0_a2State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tintbox_value_tiles_s0_a2BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tintbox_value_tiles_s0_a2Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_tiles_s0_a2InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tintbox_value_tiles_s0_a2Bind>();
+    auto st = make_uniq<Tiles_tintbox_value_tiles_s0_a2State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<int32_t>(); };
+    st->tiles = tintbox_value_tiles(x0, c1(), 0, true, &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tintbox_value_tiles_s0_a2ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tintbox_value_tiles_s0_a2State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tintbox_value_time_tiles_s0_a6Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tintbox_value_time_tiles_s0_a6State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tintbox_value_time_tiles_s0_a6State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tintbox_value_time_tiles_s0_a6BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tintbox_value_time_tiles_s0_a6Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_time_tiles_s0_a6InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tintbox_value_time_tiles_s0_a6Bind>();
+    auto st = make_uniq<Tiles_tintbox_value_time_tiles_s0_a6State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<int32_t>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<int32_t>(); };
+    auto c4 = [&]() { auto &v = b.in[4]; return DuckDBToMeosTimestamp(v.GetValue<timestamp_tz_t>()).value; };
+    auto c5 = [&]() { auto &v = b.in[5]; return v.GetValue<bool>(); };
+    st->tiles = tintbox_value_time_tiles(x0, c1(), c2(), c3(), c4(), c5(), &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tintbox_value_time_tiles_s0_a6ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tintbox_value_time_tiles_s0_a6State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tintbox_value_time_tiles_s0_a5Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tintbox_value_time_tiles_s0_a5State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tintbox_value_time_tiles_s0_a5State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tintbox_value_time_tiles_s0_a5BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tintbox_value_time_tiles_s0_a5Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_time_tiles_s0_a5InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tintbox_value_time_tiles_s0_a5Bind>();
+    auto st = make_uniq<Tiles_tintbox_value_time_tiles_s0_a5State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<int32_t>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<int32_t>(); };
+    auto c4 = [&]() { auto &v = b.in[4]; return DuckDBToMeosTimestamp(v.GetValue<timestamp_tz_t>()).value; };
+    st->tiles = tintbox_value_time_tiles(x0, c1(), c2(), c3(), c4(), true, &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tintbox_value_time_tiles_s0_a5ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tintbox_value_time_tiles_s0_a5State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tintbox_value_time_tiles_s0_a4Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tintbox_value_time_tiles_s0_a4State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tintbox_value_time_tiles_s0_a4State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tintbox_value_time_tiles_s0_a4BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tintbox_value_time_tiles_s0_a4Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_time_tiles_s0_a4InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tintbox_value_time_tiles_s0_a4Bind>();
+    auto st = make_uniq<Tiles_tintbox_value_time_tiles_s0_a4State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<int32_t>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<int32_t>(); };
+    st->tiles = tintbox_value_time_tiles(x0, c1(), c2(), c3(), timestamptz_in("2000-01-03", -1), true, &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tintbox_value_time_tiles_s0_a4ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tintbox_value_time_tiles_s0_a4State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_tintbox_value_time_tiles_s0_a3Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_tintbox_value_time_tiles_s0_a3State : public GlobalTableFunctionState {
+    TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_tintbox_value_time_tiles_s0_a3State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_tintbox_value_time_tiles_s0_a3BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_tintbox_value_time_tiles_s0_a3Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("valueTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, TboxType::tbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_time_tiles_s0_a3InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_tintbox_value_time_tiles_s0_a3Bind>();
+    auto st = make_uniq<Tiles_tintbox_value_time_tiles_s0_a3State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    TBox *x0 = BlobToTbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<int32_t>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    st->tiles = tintbox_value_time_tiles(x0, c1(), c2(), 0, timestamptz_in("2000-01-03", -1), true, &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_tintbox_value_time_tiles_s0_a3ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_tintbox_value_time_tiles_s0_a3State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
+    }
+    output.SetCardinality(rows);
 }
 
 static void Gen_tint_value_bins_border_inc_vorigin(DataChunk &args, ExpressionState &, Vector &result) {
@@ -3228,6 +4221,13 @@ void RegisterGenerated_meos_setspan_topo(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_temporal_analytics_tile(ExtensionLoader &loader) {
+    loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BOOLEAN}, Tiles_tbigintbox_value_tiles_s0_a4ExecFn, Tiles_tbigintbox_value_tiles_s0_a4BindFn, Tiles_tbigintbox_value_tiles_s0_a4InitFn));
+    loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::BIGINT, LogicalType::BIGINT}, Tiles_tbigintbox_value_tiles_s0_a3ExecFn, Tiles_tbigintbox_value_tiles_s0_a3BindFn, Tiles_tbigintbox_value_tiles_s0_a3InitFn));
+    loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::BIGINT}, Tiles_tbigintbox_value_tiles_s0_a2ExecFn, Tiles_tbigintbox_value_tiles_s0_a2BindFn, Tiles_tbigintbox_value_tiles_s0_a2InitFn));
+    loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::BIGINT, LogicalType::INTERVAL, LogicalType::BIGINT, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, Tiles_tbigintbox_value_time_tiles_s0_a6ExecFn, Tiles_tbigintbox_value_time_tiles_s0_a6BindFn, Tiles_tbigintbox_value_time_tiles_s0_a6InitFn));
+    loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::BIGINT, LogicalType::INTERVAL, LogicalType::BIGINT, LogicalType::TIMESTAMP_TZ}, Tiles_tbigintbox_value_time_tiles_s0_a5ExecFn, Tiles_tbigintbox_value_time_tiles_s0_a5BindFn, Tiles_tbigintbox_value_time_tiles_s0_a5InitFn));
+    loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::BIGINT, LogicalType::INTERVAL, LogicalType::BIGINT}, Tiles_tbigintbox_value_time_tiles_s0_a4ExecFn, Tiles_tbigintbox_value_time_tiles_s0_a4BindFn, Tiles_tbigintbox_value_time_tiles_s0_a4InitFn));
+    loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::BIGINT, LogicalType::INTERVAL}, Tiles_tbigintbox_value_time_tiles_s0_a3ExecFn, Tiles_tbigintbox_value_time_tiles_s0_a3BindFn, Tiles_tbigintbox_value_time_tiles_s0_a3InitFn));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getTBoxTimeTile", {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, TboxType::tbox(), Gen_tbox_get_time_tile));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getTBoxTimeTile", {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL}, TboxType::tbox(), Gen_tbox_get_time_tile_a2));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValueTile", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, TboxType::tbox(), Gen_tbox_get_value_tile));
@@ -3235,6 +4235,23 @@ void RegisterGenerated_meos_temporal_analytics_tile(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValueTimeTile", {LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ, LogicalType::DOUBLE, LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ}, TboxType::tbox(), Gen_tbox_get_value_time_tile));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValueTimeTile", {LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ, LogicalType::DOUBLE, LogicalType::INTERVAL, LogicalType::DOUBLE}, TboxType::tbox(), Gen_tbox_get_value_time_tile_a5));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValueTimeTile", {LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ, LogicalType::DOUBLE, LogicalType::INTERVAL}, TboxType::tbox(), Gen_tbox_get_value_time_tile_torigin_vorigin));
+    loader.RegisterFunction(TableFunction("timeTiles", {TboxType::tbox(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, Tiles_tbox_time_tiles_s0_a4ExecFn, Tiles_tbox_time_tiles_s0_a4BindFn, Tiles_tbox_time_tiles_s0_a4InitFn));
+    loader.RegisterFunction(TableFunction("timeTiles", {TboxType::tbox(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, Tiles_tbox_time_tiles_s0_a3ExecFn, Tiles_tbox_time_tiles_s0_a3BindFn, Tiles_tbox_time_tiles_s0_a3InitFn));
+    loader.RegisterFunction(TableFunction("timeTiles", {TboxType::tbox(), LogicalType::INTERVAL}, Tiles_tbox_time_tiles_s0_a2ExecFn, Tiles_tbox_time_tiles_s0_a2BindFn, Tiles_tbox_time_tiles_s0_a2InitFn));
+    loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::BOOLEAN}, Tiles_tfloatbox_value_tiles_s0_a4ExecFn, Tiles_tfloatbox_value_tiles_s0_a4BindFn, Tiles_tfloatbox_value_tiles_s0_a4InitFn));
+    loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::DOUBLE}, Tiles_tfloatbox_value_tiles_s0_a3ExecFn, Tiles_tfloatbox_value_tiles_s0_a3BindFn, Tiles_tfloatbox_value_tiles_s0_a3InitFn));
+    loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::DOUBLE}, Tiles_tfloatbox_value_tiles_s0_a2ExecFn, Tiles_tfloatbox_value_tiles_s0_a2BindFn, Tiles_tfloatbox_value_tiles_s0_a2InitFn));
+    loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, Tiles_tfloatbox_value_time_tiles_s0_a6ExecFn, Tiles_tfloatbox_value_time_tiles_s0_a6BindFn, Tiles_tfloatbox_value_time_tiles_s0_a6InitFn));
+    loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ}, Tiles_tfloatbox_value_time_tiles_s0_a5ExecFn, Tiles_tfloatbox_value_time_tiles_s0_a5BindFn, Tiles_tfloatbox_value_time_tiles_s0_a5InitFn));
+    loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::INTERVAL, LogicalType::DOUBLE}, Tiles_tfloatbox_value_time_tiles_s0_a4ExecFn, Tiles_tfloatbox_value_time_tiles_s0_a4BindFn, Tiles_tfloatbox_value_time_tiles_s0_a4InitFn));
+    loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::INTERVAL}, Tiles_tfloatbox_value_time_tiles_s0_a3ExecFn, Tiles_tfloatbox_value_time_tiles_s0_a3BindFn, Tiles_tfloatbox_value_time_tiles_s0_a3InitFn));
+    loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::BOOLEAN}, Tiles_tintbox_value_tiles_s0_a4ExecFn, Tiles_tintbox_value_tiles_s0_a4BindFn, Tiles_tintbox_value_tiles_s0_a4InitFn));
+    loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTEGER}, Tiles_tintbox_value_tiles_s0_a3ExecFn, Tiles_tintbox_value_tiles_s0_a3BindFn, Tiles_tintbox_value_tiles_s0_a3InitFn));
+    loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::INTEGER}, Tiles_tintbox_value_tiles_s0_a2ExecFn, Tiles_tintbox_value_tiles_s0_a2BindFn, Tiles_tintbox_value_tiles_s0_a2InitFn));
+    loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTERVAL, LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, Tiles_tintbox_value_time_tiles_s0_a6ExecFn, Tiles_tintbox_value_time_tiles_s0_a6BindFn, Tiles_tintbox_value_time_tiles_s0_a6InitFn));
+    loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTERVAL, LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ}, Tiles_tintbox_value_time_tiles_s0_a5ExecFn, Tiles_tintbox_value_time_tiles_s0_a5BindFn, Tiles_tintbox_value_time_tiles_s0_a5InitFn));
+    loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTERVAL, LogicalType::INTEGER}, Tiles_tintbox_value_time_tiles_s0_a4ExecFn, Tiles_tintbox_value_time_tiles_s0_a4BindFn, Tiles_tintbox_value_time_tiles_s0_a4InitFn));
+    loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTERVAL}, Tiles_tintbox_value_time_tiles_s0_a3ExecFn, Tiles_tintbox_value_time_tiles_s0_a3BindFn, Tiles_tintbox_value_time_tiles_s0_a3InitFn));
     RegisterSerializedScalarFunction(loader, ScalarFunction("valueBins", {TemporalTypes::tint(), LogicalType::INTEGER}, LogicalType::LIST(SpanTypes::intspan()), Gen_tint_value_bins_border_inc_vorigin));
     RegisterSerializedScalarFunction(loader, ScalarFunction("valueBoxes", {TemporalTypes::tint(), LogicalType::INTEGER}, LogicalType::LIST(TboxType::tbox()), Gen_tint_value_boxes_border_inc_vorigin));
 }

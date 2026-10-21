@@ -886,6 +886,12 @@ inline Temporal * tgeo_translate_deltaz(const Temporal * p0, double p1, double p
 inline STBox * tgeo_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
     return ::tgeo_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
 }
+inline STBox * tgeo_space_time_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, TimestampTz p6, int * p7) {
+    return ::tgeo_space_time_boxes(p0, p1, p2, p3, p4, p5, p6, true, true, p7);
+}
+inline STBox * tgeo_space_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, int * p6) {
+    return ::tgeo_space_time_boxes(p0, p1, p2, p3, p4, p5, timestamptz_in("2000-01-03", -1), true, true, p6);
+}
 inline STBox * stbox_get_space_tile_ysize_zsize(const GSERIALIZED * p0, double p1, const GSERIALIZED * p2) {
     return ::stbox_get_space_tile(p0, p1, 0, 0, p2);
 }
@@ -924,6 +930,15 @@ inline char * poseset_out_maxdd(const Set * p0) {
 }
 inline char * posechainset_out_maxdd(const Set * p0) {
     return ::posechainset_out(p0, 15);
+}
+inline STBox * trgeometry_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
+    return ::trgeometry_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
+}
+inline STBox * trgeometry_space_time_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, TimestampTz p6, int * p7) {
+    return ::trgeometry_space_time_boxes(p0, p1, p2, p3, p4, p5, p6, true, true, p7);
+}
+inline STBox * trgeometry_space_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, int * p6) {
+    return ::trgeometry_space_time_boxes(p0, p1, p2, p3, p4, p5, timestamptz_in("2000-01-03", -1), true, true, p6);
 }
 inline Temporal * trgeometry_append_tinstant_expand_interp_maxdist_maxt(Temporal * p0, const Temporal * p1) {
     return ::trgeometry_append_tinstant(p0, (const TInstant *) p1, LINEAR, 0.0, NULL, false);
@@ -1362,6 +1377,825 @@ static void Gen_tpoint_minus_elevation(DataChunk &args, ExpressionState &, Vecto
 
 
 // ===== @ingroup meos_geo_tile =====
+static void Gen_tgeo_space_boxes_s0_a7(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 7; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 7; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i); list_entries[i] = list_entry_t{off, 0};
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        Temporal *x0 = BlobToTemporal(a0);
+        int32_t srid0 = tspatial_srid(x0);
+        GSERIALIZED *g4 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[i], srid0);
+        int count = 0;
+        STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], g4, FlatVector::GetData<bool>(args.data[5])[i], FlatVector::GetData<bool>(args.data[6])[i], &count);
+        free(x0); free(g4);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
+            off += n;
+        }
+        free(arr);
+    }
+}
+
+static void Gen_tgeo_space_boxes_s0_a6(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 6; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 6; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i); list_entries[i] = list_entry_t{off, 0};
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        Temporal *x0 = BlobToTemporal(a0);
+        int32_t srid0 = tspatial_srid(x0);
+        GSERIALIZED *g4 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[i], srid0);
+        int count = 0;
+        STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], g4, FlatVector::GetData<bool>(args.data[5])[i], true, &count);
+        free(x0); free(g4);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
+            off += n;
+        }
+        free(arr);
+    }
+}
+
+static void Gen_tgeo_space_boxes_s0_a5(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 5; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i); list_entries[i] = list_entry_t{off, 0};
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        Temporal *x0 = BlobToTemporal(a0);
+        int32_t srid0 = tspatial_srid(x0);
+        GSERIALIZED *g4 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[i], srid0);
+        int count = 0;
+        STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], g4, true, true, &count);
+        free(x0); free(g4);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
+            off += n;
+        }
+        free(arr);
+    }
+}
+
+static void Gen_tgeo_space_boxes_s0_a4(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 4; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i); list_entries[i] = list_entry_t{off, 0};
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        Temporal *x0 = BlobToTemporal(a0);
+        int32_t srid0 = tspatial_srid(x0);
+        GSERIALIZED *g4 = geom_in("Point(0 0 0)", -1);
+        int count = 0;
+        STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], g4, true, true, &count);
+        free(x0); free(g4);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
+            off += n;
+        }
+        free(arr);
+    }
+}
+
+static void Gen_tgeo_space_boxes_s1_a5(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 5; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i); list_entries[i] = list_entry_t{off, 0};
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        Temporal *x0 = BlobToTemporal(a0);
+        int32_t srid0 = tspatial_srid(x0);
+        GSERIALIZED *g2 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[2])[i], srid0);
+        int count = 0;
+        STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], 0, 0, g2, FlatVector::GetData<bool>(args.data[3])[i], FlatVector::GetData<bool>(args.data[4])[i], &count);
+        free(x0); free(g2);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
+            off += n;
+        }
+        free(arr);
+    }
+}
+
+static void Gen_tgeo_space_boxes_s1_a4(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 4; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i); list_entries[i] = list_entry_t{off, 0};
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        Temporal *x0 = BlobToTemporal(a0);
+        int32_t srid0 = tspatial_srid(x0);
+        GSERIALIZED *g2 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[2])[i], srid0);
+        int count = 0;
+        STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], 0, 0, g2, FlatVector::GetData<bool>(args.data[3])[i], true, &count);
+        free(x0); free(g2);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
+            off += n;
+        }
+        free(arr);
+    }
+}
+
+static void Gen_tgeo_space_boxes_s1_a3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i); list_entries[i] = list_entry_t{off, 0};
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        Temporal *x0 = BlobToTemporal(a0);
+        int32_t srid0 = tspatial_srid(x0);
+        GSERIALIZED *g2 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[2])[i], srid0);
+        int count = 0;
+        STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], 0, 0, g2, true, true, &count);
+        free(x0); free(g2);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
+            off += n;
+        }
+        free(arr);
+    }
+}
+
+static void Gen_tgeo_space_boxes_s1_a2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i); list_entries[i] = list_entry_t{off, 0};
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        Temporal *x0 = BlobToTemporal(a0);
+        int32_t srid0 = tspatial_srid(x0);
+        GSERIALIZED *g2 = geom_in("Point(0 0 0)", -1);
+        int count = 0;
+        STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], 0, 0, g2, true, true, &count);
+        free(x0); free(g2);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
+            off += n;
+        }
+        free(arr);
+    }
+}
+
+static void Gen_tgeo_space_boxes_s2_a6(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 6; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 6; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i); list_entries[i] = list_entry_t{off, 0};
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        Temporal *x0 = BlobToTemporal(a0);
+        int32_t srid0 = tspatial_srid(x0);
+        GSERIALIZED *g3 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[3])[i], srid0);
+        int count = 0;
+        STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], 0, g3, FlatVector::GetData<bool>(args.data[4])[i], FlatVector::GetData<bool>(args.data[5])[i], &count);
+        free(x0); free(g3);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
+            off += n;
+        }
+        free(arr);
+    }
+}
+
+static void Gen_tgeo_space_boxes_s2_a5(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 5; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i); list_entries[i] = list_entry_t{off, 0};
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        Temporal *x0 = BlobToTemporal(a0);
+        int32_t srid0 = tspatial_srid(x0);
+        GSERIALIZED *g3 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[3])[i], srid0);
+        int count = 0;
+        STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], 0, g3, FlatVector::GetData<bool>(args.data[4])[i], true, &count);
+        free(x0); free(g3);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
+            off += n;
+        }
+        free(arr);
+    }
+}
+
+static void Gen_tgeo_space_boxes_s2_a4(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 4; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i); list_entries[i] = list_entry_t{off, 0};
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        Temporal *x0 = BlobToTemporal(a0);
+        int32_t srid0 = tspatial_srid(x0);
+        GSERIALIZED *g3 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[3])[i], srid0);
+        int count = 0;
+        STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], 0, g3, true, true, &count);
+        free(x0); free(g3);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
+            off += n;
+        }
+        free(arr);
+    }
+}
+
+static void Gen_tgeo_space_boxes_s2_a3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i); list_entries[i] = list_entry_t{off, 0};
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        Temporal *x0 = BlobToTemporal(a0);
+        int32_t srid0 = tspatial_srid(x0);
+        GSERIALIZED *g3 = geom_in("Point(0 0 0)", -1);
+        int count = 0;
+        STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], 0, g3, true, true, &count);
+        free(x0); free(g3);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
+            off += n;
+        }
+        free(arr);
+    }
+}
+
+static void Gen_stbox_get_space_tile_s0_a5(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto out = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 5; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i);
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
+        int32_t srid0 = 0;
+        GSERIALIZED *g4 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[i], srid0);
+        STBox *r = stbox_get_space_tile(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], g4);
+        free(x0); free(g4);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StboxToBlob(result, r);
+    }
+}
+
+static void Gen_stbox_get_space_tile_s0_a4(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto out = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 4; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i);
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
+        int32_t srid0 = 0;
+        GSERIALIZED *g4 = geom_in("Point(0 0 0)", -1);
+        STBox *r = stbox_get_space_tile(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], g4);
+        free(x0); free(g4);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StboxToBlob(result, r);
+    }
+}
+
+static void Gen_stbox_get_space_tile_ysize_zsize_s0_a3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto out = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i);
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
+        int32_t srid0 = 0;
+        GSERIALIZED *g2 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[2])[i], srid0);
+        STBox *r = stbox_get_space_tile_ysize_zsize(x0, FlatVector::GetData<double>(args.data[1])[i], g2);
+        free(x0); free(g2);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StboxToBlob(result, r);
+    }
+}
+
+static void Gen_stbox_get_space_tile_ysize_zsize_s0_a2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto out = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i);
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
+        int32_t srid0 = 0;
+        GSERIALIZED *g2 = geom_in("Point(0 0 0)", -1);
+        STBox *r = stbox_get_space_tile_ysize_zsize(x0, FlatVector::GetData<double>(args.data[1])[i], g2);
+        free(x0); free(g2);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StboxToBlob(result, r);
+    }
+}
+
+static void Gen_stbox_get_space_tile_zsize_s0_a4(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto out = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 4; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i);
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
+        int32_t srid0 = 0;
+        GSERIALIZED *g3 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[3])[i], srid0);
+        STBox *r = stbox_get_space_tile_zsize(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], g3);
+        free(x0); free(g3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StboxToBlob(result, r);
+    }
+}
+
+static void Gen_stbox_get_space_tile_zsize_s0_a3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto out = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i);
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
+        int32_t srid0 = 0;
+        GSERIALIZED *g3 = geom_in("Point(0 0 0)", -1);
+        STBox *r = stbox_get_space_tile_zsize(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], g3);
+        free(x0); free(g3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StboxToBlob(result, r);
+    }
+}
+
+static void Gen_stbox_get_space_time_tile_s0_a8(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 8; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto out = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 8; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i);
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
+        int32_t srid0 = 0;
+        GSERIALIZED *g6 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[6])[i], srid0);
+        STBox *r = stbox_get_space_time_tile(x0, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[1])[i]).value, FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], FlatVector::GetData<double>(args.data[4])[i], MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[5])[i]), g6, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[7])[i]).value);
+        free(x0); free(g6);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StboxToBlob(result, r);
+    }
+}
+
+static void Gen_stbox_get_space_time_tile_s0_a7(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 7; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto out = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 7; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i);
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
+        int32_t srid0 = 0;
+        GSERIALIZED *g6 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[6])[i], srid0);
+        STBox *r = stbox_get_space_time_tile(x0, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[1])[i]).value, FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], FlatVector::GetData<double>(args.data[4])[i], MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[5])[i]), g6, timestamptz_in("2000-01-03", -1));
+        free(x0); free(g6);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StboxToBlob(result, r);
+    }
+}
+
+static void Gen_stbox_get_space_time_tile_s0_a6(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 6; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto out = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 6; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i);
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
+        int32_t srid0 = 0;
+        GSERIALIZED *g6 = geom_in("Point(0 0 0)", -1);
+        STBox *r = stbox_get_space_time_tile(x0, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[1])[i]).value, FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], FlatVector::GetData<double>(args.data[4])[i], MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[5])[i]), g6, timestamptz_in("2000-01-03", -1));
+        free(x0); free(g6);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StboxToBlob(result, r);
+    }
+}
+
+static void Gen_stbox_get_space_time_tile_s1_a6(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 6; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto out = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 6; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i);
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
+        int32_t srid0 = 0;
+        GSERIALIZED *g4 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[i], srid0);
+        STBox *r = stbox_get_space_time_tile(x0, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[1])[i]).value, FlatVector::GetData<double>(args.data[2])[i], 0, 0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[3])[i]), g4, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[5])[i]).value);
+        free(x0); free(g4);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StboxToBlob(result, r);
+    }
+}
+
+static void Gen_stbox_get_space_time_tile_s1_a5(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto out = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 5; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i);
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
+        int32_t srid0 = 0;
+        GSERIALIZED *g4 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[i], srid0);
+        STBox *r = stbox_get_space_time_tile(x0, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[1])[i]).value, FlatVector::GetData<double>(args.data[2])[i], 0, 0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[3])[i]), g4, timestamptz_in("2000-01-03", -1));
+        free(x0); free(g4);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StboxToBlob(result, r);
+    }
+}
+
+static void Gen_stbox_get_space_time_tile_s1_a4(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto out = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 4; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i);
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
+        int32_t srid0 = 0;
+        GSERIALIZED *g4 = geom_in("Point(0 0 0)", -1);
+        STBox *r = stbox_get_space_time_tile(x0, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[1])[i]).value, FlatVector::GetData<double>(args.data[2])[i], 0, 0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[3])[i]), g4, timestamptz_in("2000-01-03", -1));
+        free(x0); free(g4);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StboxToBlob(result, r);
+    }
+}
+
+static void Gen_stbox_get_space_time_tile_s2_a7(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 7; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto out = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 7; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i);
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
+        int32_t srid0 = 0;
+        GSERIALIZED *g5 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[5])[i], srid0);
+        STBox *r = stbox_get_space_time_tile(x0, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[1])[i]).value, FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], 0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[4])[i]), g5, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[6])[i]).value);
+        free(x0); free(g5);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StboxToBlob(result, r);
+    }
+}
+
+static void Gen_stbox_get_space_time_tile_s2_a6(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 6; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto out = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 6; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i);
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
+        int32_t srid0 = 0;
+        GSERIALIZED *g5 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[5])[i], srid0);
+        STBox *r = stbox_get_space_time_tile(x0, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[1])[i]).value, FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], 0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[4])[i]), g5, timestamptz_in("2000-01-03", -1));
+        free(x0); free(g5);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StboxToBlob(result, r);
+    }
+}
+
+static void Gen_stbox_get_space_time_tile_s2_a5(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto out = FlatVector::GetData<string_t>(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 5; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i);
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
+        int32_t srid0 = 0;
+        GSERIALIZED *g5 = geom_in("Point(0 0 0)", -1);
+        STBox *r = stbox_get_space_time_tile(x0, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[1])[i]).value, FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], 0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[4])[i]), g5, timestamptz_in("2000-01-03", -1));
+        free(x0); free(g5);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StboxToBlob(result, r);
+    }
+}
+
 static void Gen_stbox_get_time_tile(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
@@ -1399,6 +2233,1026 @@ static void Gen_stbox_get_time_tile_a2(DataChunk &args, ExpressionState &, Vecto
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = StboxToBlob(result, r);
     }
+}
+
+struct Tiles_stbox_space_tiles_s0_a6Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_tiles_s0_a6State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_tiles_s0_a6State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_tiles_s0_a6BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_tiles_s0_a6Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_tiles_s0_a6InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_tiles_s0_a6Bind>();
+    auto st = make_uniq<Tiles_stbox_space_tiles_s0_a6State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return v.GetValue<double>(); };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<double>(); };
+    std::string g4_blob = StringValue::Get(b.in[4]);
+    GSERIALIZED *g4 = GeometryToGSerialized(string_t(g4_blob.data(), (uint32_t) g4_blob.size()), x0->srid);
+    auto c5 = [&]() { auto &v = b.in[5]; return v.GetValue<bool>(); };
+    st->tiles = stbox_space_tiles(x0, c1(), c2(), c3(), g4, c5(), &st->count);
+    free(x0); free(g4);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_tiles_s0_a6ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_tiles_s0_a6State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_space_tiles_s0_a5Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_tiles_s0_a5State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_tiles_s0_a5State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_tiles_s0_a5BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_tiles_s0_a5Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_tiles_s0_a5InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_tiles_s0_a5Bind>();
+    auto st = make_uniq<Tiles_stbox_space_tiles_s0_a5State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return v.GetValue<double>(); };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<double>(); };
+    std::string g4_blob = StringValue::Get(b.in[4]);
+    GSERIALIZED *g4 = GeometryToGSerialized(string_t(g4_blob.data(), (uint32_t) g4_blob.size()), x0->srid);
+    st->tiles = stbox_space_tiles(x0, c1(), c2(), c3(), g4, true, &st->count);
+    free(x0); free(g4);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_tiles_s0_a5ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_tiles_s0_a5State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_space_tiles_s0_a4Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_tiles_s0_a4State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_tiles_s0_a4State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_tiles_s0_a4BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_tiles_s0_a4Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_tiles_s0_a4InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_tiles_s0_a4Bind>();
+    auto st = make_uniq<Tiles_stbox_space_tiles_s0_a4State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return v.GetValue<double>(); };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<double>(); };
+    GSERIALIZED *g4 = geom_in("Point(0 0 0)", -1);
+    st->tiles = stbox_space_tiles(x0, c1(), c2(), c3(), g4, true, &st->count);
+    free(x0); free(g4);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_tiles_s0_a4ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_tiles_s0_a4State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_space_tiles_s1_a4Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_tiles_s1_a4State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_tiles_s1_a4State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_tiles_s1_a4BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_tiles_s1_a4Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_tiles_s1_a4InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_tiles_s1_a4Bind>();
+    auto st = make_uniq<Tiles_stbox_space_tiles_s1_a4State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    std::string g2_blob = StringValue::Get(b.in[2]);
+    GSERIALIZED *g2 = GeometryToGSerialized(string_t(g2_blob.data(), (uint32_t) g2_blob.size()), x0->srid);
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<bool>(); };
+    st->tiles = stbox_space_tiles(x0, c1(), 0, 0, g2, c3(), &st->count);
+    free(x0); free(g2);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_tiles_s1_a4ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_tiles_s1_a4State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_space_tiles_s1_a3Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_tiles_s1_a3State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_tiles_s1_a3State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_tiles_s1_a3BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_tiles_s1_a3Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_tiles_s1_a3InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_tiles_s1_a3Bind>();
+    auto st = make_uniq<Tiles_stbox_space_tiles_s1_a3State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    std::string g2_blob = StringValue::Get(b.in[2]);
+    GSERIALIZED *g2 = GeometryToGSerialized(string_t(g2_blob.data(), (uint32_t) g2_blob.size()), x0->srid);
+    st->tiles = stbox_space_tiles(x0, c1(), 0, 0, g2, true, &st->count);
+    free(x0); free(g2);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_tiles_s1_a3ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_tiles_s1_a3State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_space_tiles_s1_a2Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_tiles_s1_a2State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_tiles_s1_a2State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_tiles_s1_a2BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_tiles_s1_a2Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_tiles_s1_a2InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_tiles_s1_a2Bind>();
+    auto st = make_uniq<Tiles_stbox_space_tiles_s1_a2State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    GSERIALIZED *g2 = geom_in("Point(0 0 0)", -1);
+    st->tiles = stbox_space_tiles(x0, c1(), 0, 0, g2, true, &st->count);
+    free(x0); free(g2);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_tiles_s1_a2ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_tiles_s1_a2State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_space_tiles_s2_a5Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_tiles_s2_a5State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_tiles_s2_a5State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_tiles_s2_a5BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_tiles_s2_a5Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_tiles_s2_a5InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_tiles_s2_a5Bind>();
+    auto st = make_uniq<Tiles_stbox_space_tiles_s2_a5State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return v.GetValue<double>(); };
+    std::string g3_blob = StringValue::Get(b.in[3]);
+    GSERIALIZED *g3 = GeometryToGSerialized(string_t(g3_blob.data(), (uint32_t) g3_blob.size()), x0->srid);
+    auto c4 = [&]() { auto &v = b.in[4]; return v.GetValue<bool>(); };
+    st->tiles = stbox_space_tiles(x0, c1(), c2(), 0, g3, c4(), &st->count);
+    free(x0); free(g3);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_tiles_s2_a5ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_tiles_s2_a5State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_space_tiles_s2_a4Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_tiles_s2_a4State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_tiles_s2_a4State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_tiles_s2_a4BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_tiles_s2_a4Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_tiles_s2_a4InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_tiles_s2_a4Bind>();
+    auto st = make_uniq<Tiles_stbox_space_tiles_s2_a4State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return v.GetValue<double>(); };
+    std::string g3_blob = StringValue::Get(b.in[3]);
+    GSERIALIZED *g3 = GeometryToGSerialized(string_t(g3_blob.data(), (uint32_t) g3_blob.size()), x0->srid);
+    st->tiles = stbox_space_tiles(x0, c1(), c2(), 0, g3, true, &st->count);
+    free(x0); free(g3);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_tiles_s2_a4ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_tiles_s2_a4State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_space_tiles_s2_a3Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_tiles_s2_a3State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_tiles_s2_a3State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_tiles_s2_a3BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_tiles_s2_a3Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_tiles_s2_a3InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_tiles_s2_a3Bind>();
+    auto st = make_uniq<Tiles_stbox_space_tiles_s2_a3State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return v.GetValue<double>(); };
+    GSERIALIZED *g3 = geom_in("Point(0 0 0)", -1);
+    st->tiles = stbox_space_tiles(x0, c1(), c2(), 0, g3, true, &st->count);
+    free(x0); free(g3);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_tiles_s2_a3ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_tiles_s2_a3State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_space_time_tiles_s0_a8Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_time_tiles_s0_a8State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_time_tiles_s0_a8State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_time_tiles_s0_a8BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_time_tiles_s0_a8Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_time_tiles_s0_a8InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_time_tiles_s0_a8Bind>();
+    auto st = make_uniq<Tiles_stbox_space_time_tiles_s0_a8State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return v.GetValue<double>(); };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<double>(); };
+    auto c4 = [&]() { auto &v = b.in[4]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    std::string g5_blob = StringValue::Get(b.in[5]);
+    GSERIALIZED *g5 = GeometryToGSerialized(string_t(g5_blob.data(), (uint32_t) g5_blob.size()), x0->srid);
+    auto c6 = [&]() { auto &v = b.in[6]; return DuckDBToMeosTimestamp(v.GetValue<timestamp_tz_t>()).value; };
+    auto c7 = [&]() { auto &v = b.in[7]; return v.GetValue<bool>(); };
+    st->tiles = stbox_space_time_tiles(x0, c1(), c2(), c3(), c4(), g5, c6(), c7(), &st->count);
+    free(x0); free(g5);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_time_tiles_s0_a8ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_time_tiles_s0_a8State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_space_time_tiles_s0_a7Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_time_tiles_s0_a7State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_time_tiles_s0_a7State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_time_tiles_s0_a7BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_time_tiles_s0_a7Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_time_tiles_s0_a7InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_time_tiles_s0_a7Bind>();
+    auto st = make_uniq<Tiles_stbox_space_time_tiles_s0_a7State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return v.GetValue<double>(); };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<double>(); };
+    auto c4 = [&]() { auto &v = b.in[4]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    std::string g5_blob = StringValue::Get(b.in[5]);
+    GSERIALIZED *g5 = GeometryToGSerialized(string_t(g5_blob.data(), (uint32_t) g5_blob.size()), x0->srid);
+    auto c6 = [&]() { auto &v = b.in[6]; return DuckDBToMeosTimestamp(v.GetValue<timestamp_tz_t>()).value; };
+    st->tiles = stbox_space_time_tiles(x0, c1(), c2(), c3(), c4(), g5, c6(), true, &st->count);
+    free(x0); free(g5);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_time_tiles_s0_a7ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_time_tiles_s0_a7State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_space_time_tiles_s0_a6Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_time_tiles_s0_a6State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_time_tiles_s0_a6State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_time_tiles_s0_a6BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_time_tiles_s0_a6Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_time_tiles_s0_a6InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_time_tiles_s0_a6Bind>();
+    auto st = make_uniq<Tiles_stbox_space_time_tiles_s0_a6State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return v.GetValue<double>(); };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<double>(); };
+    auto c4 = [&]() { auto &v = b.in[4]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    std::string g5_blob = StringValue::Get(b.in[5]);
+    GSERIALIZED *g5 = GeometryToGSerialized(string_t(g5_blob.data(), (uint32_t) g5_blob.size()), x0->srid);
+    st->tiles = stbox_space_time_tiles(x0, c1(), c2(), c3(), c4(), g5, timestamptz_in("2000-01-03", -1), true, &st->count);
+    free(x0); free(g5);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_time_tiles_s0_a6ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_time_tiles_s0_a6State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_space_time_tiles_s0_a5Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_time_tiles_s0_a5State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_time_tiles_s0_a5State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_time_tiles_s0_a5BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_time_tiles_s0_a5Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_time_tiles_s0_a5InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_time_tiles_s0_a5Bind>();
+    auto st = make_uniq<Tiles_stbox_space_time_tiles_s0_a5State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return v.GetValue<double>(); };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<double>(); };
+    auto c4 = [&]() { auto &v = b.in[4]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    GSERIALIZED *g5 = geom_in("Point(0 0 0)", -1);
+    st->tiles = stbox_space_time_tiles(x0, c1(), c2(), c3(), c4(), g5, timestamptz_in("2000-01-03", -1), true, &st->count);
+    free(x0); free(g5);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_time_tiles_s0_a5ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_time_tiles_s0_a5State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_space_time_tiles_s1_a6Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_time_tiles_s1_a6State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_time_tiles_s1_a6State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_time_tiles_s1_a6BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_time_tiles_s1_a6Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_time_tiles_s1_a6InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_time_tiles_s1_a6Bind>();
+    auto st = make_uniq<Tiles_stbox_space_time_tiles_s1_a6State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    std::string g3_blob = StringValue::Get(b.in[3]);
+    GSERIALIZED *g3 = GeometryToGSerialized(string_t(g3_blob.data(), (uint32_t) g3_blob.size()), x0->srid);
+    auto c4 = [&]() { auto &v = b.in[4]; return DuckDBToMeosTimestamp(v.GetValue<timestamp_tz_t>()).value; };
+    auto c5 = [&]() { auto &v = b.in[5]; return v.GetValue<bool>(); };
+    st->tiles = stbox_space_time_tiles(x0, c1(), 0, 0, c2(), g3, c4(), c5(), &st->count);
+    free(x0); free(g3);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_time_tiles_s1_a6ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_time_tiles_s1_a6State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_space_time_tiles_s1_a5Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_time_tiles_s1_a5State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_time_tiles_s1_a5State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_time_tiles_s1_a5BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_time_tiles_s1_a5Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_time_tiles_s1_a5InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_time_tiles_s1_a5Bind>();
+    auto st = make_uniq<Tiles_stbox_space_time_tiles_s1_a5State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    std::string g3_blob = StringValue::Get(b.in[3]);
+    GSERIALIZED *g3 = GeometryToGSerialized(string_t(g3_blob.data(), (uint32_t) g3_blob.size()), x0->srid);
+    auto c4 = [&]() { auto &v = b.in[4]; return DuckDBToMeosTimestamp(v.GetValue<timestamp_tz_t>()).value; };
+    st->tiles = stbox_space_time_tiles(x0, c1(), 0, 0, c2(), g3, c4(), true, &st->count);
+    free(x0); free(g3);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_time_tiles_s1_a5ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_time_tiles_s1_a5State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_space_time_tiles_s1_a4Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_time_tiles_s1_a4State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_time_tiles_s1_a4State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_time_tiles_s1_a4BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_time_tiles_s1_a4Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_time_tiles_s1_a4InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_time_tiles_s1_a4Bind>();
+    auto st = make_uniq<Tiles_stbox_space_time_tiles_s1_a4State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    std::string g3_blob = StringValue::Get(b.in[3]);
+    GSERIALIZED *g3 = GeometryToGSerialized(string_t(g3_blob.data(), (uint32_t) g3_blob.size()), x0->srid);
+    st->tiles = stbox_space_time_tiles(x0, c1(), 0, 0, c2(), g3, timestamptz_in("2000-01-03", -1), true, &st->count);
+    free(x0); free(g3);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_time_tiles_s1_a4ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_time_tiles_s1_a4State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_space_time_tiles_s1_a3Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_time_tiles_s1_a3State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_time_tiles_s1_a3State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_time_tiles_s1_a3BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_time_tiles_s1_a3Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_time_tiles_s1_a3InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_time_tiles_s1_a3Bind>();
+    auto st = make_uniq<Tiles_stbox_space_time_tiles_s1_a3State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    GSERIALIZED *g3 = geom_in("Point(0 0 0)", -1);
+    st->tiles = stbox_space_time_tiles(x0, c1(), 0, 0, c2(), g3, timestamptz_in("2000-01-03", -1), true, &st->count);
+    free(x0); free(g3);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_time_tiles_s1_a3ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_time_tiles_s1_a3State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_space_time_tiles_s2_a7Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_time_tiles_s2_a7State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_time_tiles_s2_a7State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_time_tiles_s2_a7BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_time_tiles_s2_a7Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_time_tiles_s2_a7InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_time_tiles_s2_a7Bind>();
+    auto st = make_uniq<Tiles_stbox_space_time_tiles_s2_a7State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return v.GetValue<double>(); };
+    auto c3 = [&]() { auto &v = b.in[3]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    std::string g4_blob = StringValue::Get(b.in[4]);
+    GSERIALIZED *g4 = GeometryToGSerialized(string_t(g4_blob.data(), (uint32_t) g4_blob.size()), x0->srid);
+    auto c5 = [&]() { auto &v = b.in[5]; return DuckDBToMeosTimestamp(v.GetValue<timestamp_tz_t>()).value; };
+    auto c6 = [&]() { auto &v = b.in[6]; return v.GetValue<bool>(); };
+    st->tiles = stbox_space_time_tiles(x0, c1(), c2(), 0, c3(), g4, c5(), c6(), &st->count);
+    free(x0); free(g4);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_time_tiles_s2_a7ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_time_tiles_s2_a7State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_space_time_tiles_s2_a6Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_time_tiles_s2_a6State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_time_tiles_s2_a6State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_time_tiles_s2_a6BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_time_tiles_s2_a6Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_time_tiles_s2_a6InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_time_tiles_s2_a6Bind>();
+    auto st = make_uniq<Tiles_stbox_space_time_tiles_s2_a6State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return v.GetValue<double>(); };
+    auto c3 = [&]() { auto &v = b.in[3]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    std::string g4_blob = StringValue::Get(b.in[4]);
+    GSERIALIZED *g4 = GeometryToGSerialized(string_t(g4_blob.data(), (uint32_t) g4_blob.size()), x0->srid);
+    auto c5 = [&]() { auto &v = b.in[5]; return DuckDBToMeosTimestamp(v.GetValue<timestamp_tz_t>()).value; };
+    st->tiles = stbox_space_time_tiles(x0, c1(), c2(), 0, c3(), g4, c5(), true, &st->count);
+    free(x0); free(g4);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_time_tiles_s2_a6ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_time_tiles_s2_a6State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_space_time_tiles_s2_a5Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_time_tiles_s2_a5State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_time_tiles_s2_a5State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_time_tiles_s2_a5BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_time_tiles_s2_a5Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_time_tiles_s2_a5InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_time_tiles_s2_a5Bind>();
+    auto st = make_uniq<Tiles_stbox_space_time_tiles_s2_a5State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return v.GetValue<double>(); };
+    auto c3 = [&]() { auto &v = b.in[3]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    std::string g4_blob = StringValue::Get(b.in[4]);
+    GSERIALIZED *g4 = GeometryToGSerialized(string_t(g4_blob.data(), (uint32_t) g4_blob.size()), x0->srid);
+    st->tiles = stbox_space_time_tiles(x0, c1(), c2(), 0, c3(), g4, timestamptz_in("2000-01-03", -1), true, &st->count);
+    free(x0); free(g4);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_time_tiles_s2_a5ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_time_tiles_s2_a5State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_space_time_tiles_s2_a4Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_space_time_tiles_s2_a4State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_space_time_tiles_s2_a4State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_space_time_tiles_s2_a4BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_space_time_tiles_s2_a4Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("spaceTimeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_space_time_tiles_s2_a4InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_space_time_tiles_s2_a4Bind>();
+    auto st = make_uniq<Tiles_stbox_space_time_tiles_s2_a4State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return v.GetValue<double>(); };
+    auto c2 = [&]() { auto &v = b.in[2]; return v.GetValue<double>(); };
+    auto c3 = [&]() { auto &v = b.in[3]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    GSERIALIZED *g4 = geom_in("Point(0 0 0)", -1);
+    st->tiles = stbox_space_time_tiles(x0, c1(), c2(), 0, c3(), g4, timestamptz_in("2000-01-03", -1), true, &st->count);
+    free(x0); free(g4);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_space_time_tiles_s2_a4ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_space_time_tiles_s2_a4State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_time_tiles_s0_a4Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_time_tiles_s0_a4State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_time_tiles_s0_a4State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_time_tiles_s0_a4BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_time_tiles_s0_a4Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("timeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_time_tiles_s0_a4InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_time_tiles_s0_a4Bind>();
+    auto st = make_uniq<Tiles_stbox_time_tiles_s0_a4State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    auto c2 = [&]() { auto &v = b.in[2]; return DuckDBToMeosTimestamp(v.GetValue<timestamp_tz_t>()).value; };
+    auto c3 = [&]() { auto &v = b.in[3]; return v.GetValue<bool>(); };
+    st->tiles = stbox_time_tiles(x0, c1(), c2(), c3(), &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_time_tiles_s0_a4ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_time_tiles_s0_a4State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_time_tiles_s0_a3Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_time_tiles_s0_a3State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_time_tiles_s0_a3State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_time_tiles_s0_a3BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_time_tiles_s0_a3Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("timeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_time_tiles_s0_a3InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_time_tiles_s0_a3Bind>();
+    auto st = make_uniq<Tiles_stbox_time_tiles_s0_a3State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    auto c2 = [&]() { auto &v = b.in[2]; return DuckDBToMeosTimestamp(v.GetValue<timestamp_tz_t>()).value; };
+    st->tiles = stbox_time_tiles(x0, c1(), c2(), true, &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_time_tiles_s0_a3ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_time_tiles_s0_a3State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
+}
+
+struct Tiles_stbox_time_tiles_s0_a2Bind : public TableFunctionData { vector<Value> in; };
+struct Tiles_stbox_time_tiles_s0_a2State : public GlobalTableFunctionState {
+    STBox *tiles = nullptr; int count = 0; idx_t idx = 0;
+    ~Tiles_stbox_time_tiles_s0_a2State() { free(tiles); }
+};
+static unique_ptr<FunctionData> Tiles_stbox_time_tiles_s0_a2BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto b = make_uniq<Tiles_stbox_time_tiles_s0_a2Bind>();
+    for (auto &v : input.inputs) {
+        if (v.IsNull()) throw BinderException("timeTiles: expects non-null arguments");
+        b->in.push_back(v);
+    }
+    types = {LogicalType::INTEGER, StboxType::stbox()};
+    names = {"index", "tile"};
+    return std::move(b);
+}
+static unique_ptr<GlobalTableFunctionState> Tiles_stbox_time_tiles_s0_a2InitFn(ClientContext &, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized();
+    auto &b = input.bind_data->Cast<Tiles_stbox_time_tiles_s0_a2Bind>();
+    auto st = make_uniq<Tiles_stbox_time_tiles_s0_a2State>();
+    std::string a0 = StringValue::Get(b.in[0]);
+    STBox *x0 = BlobToStbox(string_t(a0.data(), (uint32_t) a0.size()));
+    auto c1 = [&]() { auto &v = b.in[1]; return MeosIntervalArg(v.GetValue<interval_t>()); };
+    st->tiles = stbox_time_tiles(x0, c1(), timestamptz_in("2000-01-03", -1), true, &st->count);
+    free(x0);
+    if (!st->tiles) st->count = 0;
+    return std::move(st);
+}
+static void Tiles_stbox_time_tiles_s0_a2ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
+    auto &st = input.global_state->Cast<Tiles_stbox_time_tiles_s0_a2State>();
+    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+    auto &v1 = output.data[1];
+    for (idx_t i = 0; i < rows; i++, st.idx++) {
+        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;
+        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
+    }
+    output.SetCardinality(rows);
 }
 
 
@@ -4944,8 +6798,71 @@ void RegisterGenerated_meos_geo_restrict(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_geo_tile(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s0_a7));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s0_a7));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s0_a6));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s0_a6));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType()}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s0_a5));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType()}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s0_a5));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s0_a4));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s0_a4));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s1_a5));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s1_a5));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s1_a4));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s1_a4));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, MobilityDuckGeometryType()}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s1_a3));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, MobilityDuckGeometryType()}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s1_a3));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s1_a2));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TgeompointType::tgeompoint(), LogicalType::DOUBLE}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s1_a2));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s2_a6));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s2_a6));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s2_a5));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s2_a5));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType()}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s2_a4));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType()}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s2_a4));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s2_a3));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s2_a3));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("getSpaceTile", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType()}, StboxType::stbox(), Gen_stbox_get_space_tile_s0_a5));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("getSpaceTile", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, StboxType::stbox(), Gen_stbox_get_space_tile_s0_a4));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("getSpaceTile", {MobilityDuckGeometryType(), LogicalType::DOUBLE, MobilityDuckGeometryType()}, StboxType::stbox(), Gen_stbox_get_space_tile_ysize_zsize_s0_a3));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("getSpaceTile", {MobilityDuckGeometryType(), LogicalType::DOUBLE}, StboxType::stbox(), Gen_stbox_get_space_tile_ysize_zsize_s0_a2));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("getSpaceTile", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType()}, StboxType::stbox(), Gen_stbox_get_space_tile_zsize_s0_a4));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("getSpaceTile", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE}, StboxType::stbox(), Gen_stbox_get_space_tile_zsize_s0_a3));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("getSpaceTimeTile", {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, StboxType::stbox(), Gen_stbox_get_space_time_tile_s0_a8));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("getSpaceTimeTile", {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType()}, StboxType::stbox(), Gen_stbox_get_space_time_tile_s0_a7));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("getSpaceTimeTile", {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL}, StboxType::stbox(), Gen_stbox_get_space_time_tile_s0_a6));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("getSpaceTimeTile", {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, StboxType::stbox(), Gen_stbox_get_space_time_tile_s1_a6));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("getSpaceTimeTile", {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType()}, StboxType::stbox(), Gen_stbox_get_space_time_tile_s1_a5));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("getSpaceTimeTile", {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::DOUBLE, LogicalType::INTERVAL}, StboxType::stbox(), Gen_stbox_get_space_time_tile_s1_a4));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("getSpaceTimeTile", {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, StboxType::stbox(), Gen_stbox_get_space_time_tile_s2_a7));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("getSpaceTimeTile", {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType()}, StboxType::stbox(), Gen_stbox_get_space_time_tile_s2_a6));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("getSpaceTimeTile", {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL}, StboxType::stbox(), Gen_stbox_get_space_time_tile_s2_a5));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getStboxTimeTile", {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, StboxType::stbox(), Gen_stbox_get_time_tile));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getStboxTimeTile", {LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL}, StboxType::stbox(), Gen_stbox_get_time_tile_a2));
+    loader.RegisterFunction(TableFunction("spaceTiles", {StboxType::stbox(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN}, Tiles_stbox_space_tiles_s0_a6ExecFn, Tiles_stbox_space_tiles_s0_a6BindFn, Tiles_stbox_space_tiles_s0_a6InitFn));
+    loader.RegisterFunction(TableFunction("spaceTiles", {StboxType::stbox(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType()}, Tiles_stbox_space_tiles_s0_a5ExecFn, Tiles_stbox_space_tiles_s0_a5BindFn, Tiles_stbox_space_tiles_s0_a5InitFn));
+    loader.RegisterFunction(TableFunction("spaceTiles", {StboxType::stbox(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, Tiles_stbox_space_tiles_s0_a4ExecFn, Tiles_stbox_space_tiles_s0_a4BindFn, Tiles_stbox_space_tiles_s0_a4InitFn));
+    loader.RegisterFunction(TableFunction("spaceTiles", {StboxType::stbox(), LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN}, Tiles_stbox_space_tiles_s1_a4ExecFn, Tiles_stbox_space_tiles_s1_a4BindFn, Tiles_stbox_space_tiles_s1_a4InitFn));
+    loader.RegisterFunction(TableFunction("spaceTiles", {StboxType::stbox(), LogicalType::DOUBLE, MobilityDuckGeometryType()}, Tiles_stbox_space_tiles_s1_a3ExecFn, Tiles_stbox_space_tiles_s1_a3BindFn, Tiles_stbox_space_tiles_s1_a3InitFn));
+    loader.RegisterFunction(TableFunction("spaceTiles", {StboxType::stbox(), LogicalType::DOUBLE}, Tiles_stbox_space_tiles_s1_a2ExecFn, Tiles_stbox_space_tiles_s1_a2BindFn, Tiles_stbox_space_tiles_s1_a2InitFn));
+    loader.RegisterFunction(TableFunction("spaceTiles", {StboxType::stbox(), LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN}, Tiles_stbox_space_tiles_s2_a5ExecFn, Tiles_stbox_space_tiles_s2_a5BindFn, Tiles_stbox_space_tiles_s2_a5InitFn));
+    loader.RegisterFunction(TableFunction("spaceTiles", {StboxType::stbox(), LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType()}, Tiles_stbox_space_tiles_s2_a4ExecFn, Tiles_stbox_space_tiles_s2_a4BindFn, Tiles_stbox_space_tiles_s2_a4InitFn));
+    loader.RegisterFunction(TableFunction("spaceTiles", {StboxType::stbox(), LogicalType::DOUBLE, LogicalType::DOUBLE}, Tiles_stbox_space_tiles_s2_a3ExecFn, Tiles_stbox_space_tiles_s2_a3BindFn, Tiles_stbox_space_tiles_s2_a3InitFn));
+    loader.RegisterFunction(TableFunction("spaceTimeTiles", {StboxType::stbox(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, Tiles_stbox_space_time_tiles_s0_a8ExecFn, Tiles_stbox_space_time_tiles_s0_a8BindFn, Tiles_stbox_space_time_tiles_s0_a8InitFn));
+    loader.RegisterFunction(TableFunction("spaceTimeTiles", {StboxType::stbox(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, Tiles_stbox_space_time_tiles_s0_a7ExecFn, Tiles_stbox_space_time_tiles_s0_a7BindFn, Tiles_stbox_space_time_tiles_s0_a7InitFn));
+    loader.RegisterFunction(TableFunction("spaceTimeTiles", {StboxType::stbox(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType()}, Tiles_stbox_space_time_tiles_s0_a6ExecFn, Tiles_stbox_space_time_tiles_s0_a6BindFn, Tiles_stbox_space_time_tiles_s0_a6InitFn));
+    loader.RegisterFunction(TableFunction("spaceTimeTiles", {StboxType::stbox(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL}, Tiles_stbox_space_time_tiles_s0_a5ExecFn, Tiles_stbox_space_time_tiles_s0_a5BindFn, Tiles_stbox_space_time_tiles_s0_a5InitFn));
+    loader.RegisterFunction(TableFunction("spaceTimeTiles", {StboxType::stbox(), LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, Tiles_stbox_space_time_tiles_s1_a6ExecFn, Tiles_stbox_space_time_tiles_s1_a6BindFn, Tiles_stbox_space_time_tiles_s1_a6InitFn));
+    loader.RegisterFunction(TableFunction("spaceTimeTiles", {StboxType::stbox(), LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, Tiles_stbox_space_time_tiles_s1_a5ExecFn, Tiles_stbox_space_time_tiles_s1_a5BindFn, Tiles_stbox_space_time_tiles_s1_a5InitFn));
+    loader.RegisterFunction(TableFunction("spaceTimeTiles", {StboxType::stbox(), LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType()}, Tiles_stbox_space_time_tiles_s1_a4ExecFn, Tiles_stbox_space_time_tiles_s1_a4BindFn, Tiles_stbox_space_time_tiles_s1_a4InitFn));
+    loader.RegisterFunction(TableFunction("spaceTimeTiles", {StboxType::stbox(), LogicalType::DOUBLE, LogicalType::INTERVAL}, Tiles_stbox_space_time_tiles_s1_a3ExecFn, Tiles_stbox_space_time_tiles_s1_a3BindFn, Tiles_stbox_space_time_tiles_s1_a3InitFn));
+    loader.RegisterFunction(TableFunction("spaceTimeTiles", {StboxType::stbox(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, Tiles_stbox_space_time_tiles_s2_a7ExecFn, Tiles_stbox_space_time_tiles_s2_a7BindFn, Tiles_stbox_space_time_tiles_s2_a7InitFn));
+    loader.RegisterFunction(TableFunction("spaceTimeTiles", {StboxType::stbox(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, Tiles_stbox_space_time_tiles_s2_a6ExecFn, Tiles_stbox_space_time_tiles_s2_a6BindFn, Tiles_stbox_space_time_tiles_s2_a6InitFn));
+    loader.RegisterFunction(TableFunction("spaceTimeTiles", {StboxType::stbox(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType()}, Tiles_stbox_space_time_tiles_s2_a5ExecFn, Tiles_stbox_space_time_tiles_s2_a5BindFn, Tiles_stbox_space_time_tiles_s2_a5InitFn));
+    loader.RegisterFunction(TableFunction("spaceTimeTiles", {StboxType::stbox(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL}, Tiles_stbox_space_time_tiles_s2_a4ExecFn, Tiles_stbox_space_time_tiles_s2_a4BindFn, Tiles_stbox_space_time_tiles_s2_a4InitFn));
+    loader.RegisterFunction(TableFunction("timeTiles", {StboxType::stbox(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, Tiles_stbox_time_tiles_s0_a4ExecFn, Tiles_stbox_time_tiles_s0_a4BindFn, Tiles_stbox_time_tiles_s0_a4InitFn));
+    loader.RegisterFunction(TableFunction("timeTiles", {StboxType::stbox(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, Tiles_stbox_time_tiles_s0_a3ExecFn, Tiles_stbox_time_tiles_s0_a3BindFn, Tiles_stbox_time_tiles_s0_a3InitFn));
+    loader.RegisterFunction(TableFunction("timeTiles", {StboxType::stbox(), LogicalType::INTERVAL}, Tiles_stbox_time_tiles_s0_a2ExecFn, Tiles_stbox_time_tiles_s0_a2BindFn, Tiles_stbox_time_tiles_s0_a2InitFn));
 }
 
 void RegisterGenerated_meos_h3_traversal(ExtensionLoader &loader) {

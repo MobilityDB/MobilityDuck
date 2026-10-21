@@ -3275,6 +3275,306 @@ def emit_unnest(f, dt, write, ctype):
     ]
     return "\n".join(lines)
 
+# ── the tiles of a box: a set-returning function of (index, tile) rows ─────────────────────
+# MobilityDB declares timeTiles, valueTiles, valueTimeTiles, spaceTiles and spaceTimeTiles as
+# SETOF index_tbox / index_stbox (`CREATE TYPE index_tbox AS (index integer, tile tbox)`); the
+# catalog states it per signature (`retSet`, `columns` reading the ordinal and the return), with the
+# SQL defaults (`argDefaults`) and the arguments a short form binds (`boundArgs`, the sizes a
+# one-size form leaves at 0). PostgreSQL and DuckDB call a set-returning function in FROM
+# (Unnesting), so each declared form is a table function whose bind keeps the
+# arguments, whose init makes the one MEOS call and whose exec hands the rows out, as
+# #emit_unnest does for temporalUnnest. A literal default is read in init, the time origin through
+# the MEOS parser in the session time zone as MobilityDB reads it.
+TILE_BOX_IN = {"TBox": ("BlobToTbox", "TboxType::tbox()", None),
+               "STBox": ("BlobToStbox", "StboxType::stbox()", "srid")}
+TILE_BOX_OUT = {"TBox": "TboxToBlob", "STBox": "StboxToBlob"}
+# The (name, argument types) of every tile form registered: a form a trailing SQL default
+# allows is also a record of #project_signature_forms, and calls the same function with the
+# same literals, so it is registered once.
+TILE_REGISTERED = set()
+
+
+def _tile_arg(p):
+    """(DuckDB type, C expression over the Value `v`) for a tile argument, or None."""
+    b, n = base(p["canonical"]), norm(p["canonical"])
+    if b == "Interval" and n.count("*") == 1:
+        return ("LogicalType::INTERVAL", "MeosIntervalArg(v.GetValue<interval_t>())")
+    if b == "GSERIALIZED" and n.count("*") == 1:
+        return ("MobilityDuckGeometryType()", None)
+    if b in SCALAR_ARG and "*" not in n:
+        dt, cpp, expr = SCALAR_ARG[b]
+        return (dt, expr.replace("a2", "v.GetValue<%s>()" % cpp))
+    return None
+
+
+def shape_box_tiles(f):
+    """[(sqlSignature, inputs, bound)] for a retired group's public function answering the tiles of
+    a box as a set of (index, tile) rows; None otherwise."""
+    if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
+        return None
+    ar = (f.get("shape") or {}).get("arrayReturn") or {}
+    eb = base((ar.get("element") or {}).get("canonical") or "")
+    lf = (ar.get("lengthFrom") or {}).get("name")
+    if eb not in TILE_BOX_OUT or not lf:
+        return None
+    ps = [p for p in f.get("params") or [] if p.get("name") != lf]
+    if not ps or base(ps[0]["canonical"]) not in TILE_BOX_IN:
+        return None
+    forms = []
+    for s in f.get("sqlSignatures") or []:
+        cols = s.get("columns") or []
+        if not s.get("retSet") or [c.get("from") for c in cols] != ["ordinal", "return"]:
+            return None
+        bound = s.get("boundArgs") or {}
+        ins = [p for p in ps if p["name"] not in bound]
+        if len(ins) != len(s.get("args") or []):
+            return None
+        if any(_tile_arg(p) is None for p in ins[1:]):
+            return None
+        forms.append((s, ins, bound))
+    return forms or None
+
+
+def emit_box_tiles(f, tag, s, ins, bound, k):
+    """The bind, init and exec of one form of #shape_box_tiles, reading the first `k` declared
+    arguments and the SQL default of the others."""
+    name = f["name"]
+    ps = [p for p in f["params"] if p.get("name") != f["shape"]["arrayReturn"]["lengthFrom"]["name"]]
+    b0 = base(ps[0]["canonical"])
+    blobto, _acc, srid = TILE_BOX_IN[b0]
+    eb = base(f["shape"]["arrayReturn"]["element"]["canonical"])
+    S = f"Tiles_{name}_{tag}"
+    defs = s.get("argDefaults") or [None] * len(ins)
+    L = [f"struct {S}Bind : public TableFunctionData {{ vector<Value> in; }};",
+         f"struct {S}State : public GlobalTableFunctionState {{",
+         f"    {eb} *tiles = nullptr; int count = 0; idx_t idx = 0;",
+         f"    ~{S}State() {{ free(tiles); }}",
+         "};",
+         f"static unique_ptr<FunctionData> {S}BindFn(ClientContext &, TableFunctionBindInput &input,",
+         "                                          vector<LogicalType> &types, vector<string> &names) {",
+         f"    auto b = make_uniq<{S}Bind>();",
+         "    for (auto &v : input.inputs) {",
+         f"        if (v.IsNull()) throw BinderException(\"{f['sqlfn']}: expects non-null arguments\");",
+         "        b->in.push_back(v);",
+         "    }",
+         f"    types = {{LogicalType::INTEGER, {TILE_BOX_IN[eb][1]}}};",
+         "    names = {\"index\", \"tile\"};",
+         "    return std::move(b);",
+         "}",
+         f"static unique_ptr<GlobalTableFunctionState> {S}InitFn(ClientContext &, TableFunctionInitInput &input) {{",
+         "    EnsureMeosThreadInitialized();",
+         f"    auto &b = input.bind_data->Cast<{S}Bind>();",
+         f"    auto st = make_uniq<{S}State>();",
+         "    std::string a0 = StringValue::Get(b.in[0]);",
+         f"    {b0} *x0 = {blobto}(string_t(a0.data(), (uint32_t) a0.size()));"]
+    geos, call = [], []
+    byname = {p["name"]: i for i, p in enumerate(ins)}
+    for p in ps:
+        nm = p["name"]
+        if p is ps[0]:
+            call.append("x0"); continue
+        if nm in bound:
+            call.append(str(bound[nm])); continue
+        i = byname[nm]
+        dt, expr = _tile_arg(p)
+        if dt == "MobilityDuckGeometryType()":
+            g = f"g{i}"
+            sr = "x0->srid" if srid else "0"
+            if i < k:
+                L.append(f"    std::string {g}_blob = StringValue::Get(b.in[{i}]);")
+                L.append(f"    GSERIALIZED *{g} = GeometryToGSerialized(string_t({g}_blob.data(), "
+                         f"(uint32_t) {g}_blob.size()), {sr});")
+            else:
+                lit = str(defs[i]).strip().strip("'")
+                L.append(f"    GSERIALIZED *{g} = geom_in(\"{lit}\", -1);")
+            geos.append(g); call.append(g); continue
+        if i < k:
+            L.append(f"    auto c{i} = [&]() {{ auto &v = b.in[{i}]; return {expr}; }};")
+            call.append(f"c{i}()")
+        else:
+            lit = forward_literal(p, defs[i])
+            if lit is None:
+                raise ValueError(f"{name}: no literal for {nm}")
+            call.append(lit)
+    L += [f"    st->tiles = {name}({', '.join(call)}, &st->count);",
+          f"    free(x0);" + "".join(f" free({g});" for g in geos),
+          "    if (!st->tiles) st->count = 0;",
+          "    return std::move(st);",
+          "}",
+          f"static void {S}ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {{",
+          f"    auto &st = input.global_state->Cast<{S}State>();",
+          "    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);",
+          "    auto &v1 = output.data[1];",
+          "    for (idx_t i = 0; i < rows; i++, st.idx++) {",
+          "        FlatVector::GetData<int32_t>(output.data[0])[i] = (int32_t) st.idx + 1;",
+          f"        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, "
+          f"(const char *) &st.tiles[st.idx], sizeof({eb}));",
+          "    }",
+          "    output.SetCardinality(rows);",
+          "}",
+          ""]
+    return "\n".join(L)
+
+
+# ── the boxes of a spatial value and the tile of a point: one scalar per row ───────────────
+# spaceBoxes and spaceTimeBoxes answer stbox[] from a spatial temporal value, its sizes, an origin
+# geometry, a time origin and two flags; getSpaceTile and getSpaceTimeTile answer one stbox from a
+# point. Their signatures differ in the sizes a one-size form binds (`boundArgs`) and share the
+# trailing SQL defaults (`argDefaults`), as the tiles of a box do, so each form reads the first
+# `k` declared arguments per row and passes the bound and defaulted ones as literals. A geometry
+# past the first operand is read in the SRID of the first, as the hand executors read the
+# origin: tspatial_srid of a temporal value, 0 for a geometry.
+def shape_box_scalars(f):
+    """[(first kind, [(sigs, ins, bound)]), ret kind] for a retired group's public function
+    answering stbox[] from a spatial temporal value whose tail #shape_array does not take, or one
+    stbox from a geometry followed by a geometry; None otherwise. Signatures with the same tail and
+    the same bindings share one body."""
+    if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
+        return None
+    ar = (f.get("shape") or {}).get("arrayReturn") or {}
+    lf = (ar.get("lengthFrom") or {}).get("name")
+    ps = [p for p in f.get("params") or [] if p.get("name") != lf]
+    if len(ps) < 2:
+        return None
+    b0, n0 = base(ps[0]["canonical"]), norm(ps[0]["canonical"])
+    if n0.count("*") != 1 or b0 not in ("Temporal", "GSERIALIZED"):
+        return None
+    if ar:
+        if base((ar.get("element") or {}).get("canonical") or "") != "STBox" or not lf \
+                or b0 != "Temporal":
+            return None
+        if all(norm(p["canonical"]) == "int" for p in ps[1:]) and len(ps) == 2:
+            return None                          # #shape_array's split-into-N tail
+        ret = "list"
+    else:
+        rc = f.get("returnType") or {}
+        if base(rc.get("canonical") or "") != "STBox" or norm(rc["canonical"]).count("*") != 1 \
+                or b0 != "GSERIALIZED" or not any(base(p["canonical"]) == "GSERIALIZED"
+                                                   for p in ps[1:]):
+            return None
+        ret = "box"
+    groups = {}
+    for s in f.get("sqlSignatures") or []:
+        if s.get("retSet"):
+            return None
+        bound = s.get("boundArgs") or {}
+        ins = [p for p in ps if p["name"] not in bound]
+        args = s.get("args") or []
+        if len(ins) != len(args) or any(_tile_arg(p) is None for p in ins[1:]):
+            return None
+        if b0 == "Temporal" and args[0] not in SIG_TEMPORAL_ACC:
+            return None
+        if b0 == "GSERIALIZED" and args[0] != "geometry":
+            return None
+        key = (tuple(args[1:]), tuple(sorted(bound.items())), tuple(s.get("argDefaults") or []))
+        groups.setdefault(key, (s, ins, bound, []))[3].append(args[0])
+    if not groups:
+        return None
+    return ("temporal" if b0 == "Temporal" else "geo", list(groups.values()), ret)
+
+
+def emit_box_scalars(f, first, tag, s, ins, bound, k, ret):
+    """The per-row body of one form of #shape_box_scalars reading the first `k` declared
+    arguments, the others from their SQL defaults."""
+    name = f["name"]
+    ar = (f.get("shape") or {}).get("arrayReturn") or {}
+    lf = (ar.get("lengthFrom") or {}).get("name")
+    ps = [p for p in f["params"] if p.get("name") != lf]
+    defs = s.get("argDefaults") or [None] * len(ins)
+    byname = {p["name"]: i for i, p in enumerate(ins)}
+    L = [f"static void Gen_{name}_{tag}(DataChunk &args, ExpressionState &, Vector &result) {{",
+         "    EnsureMeosThreadInitialized();",
+         "    const idx_t rows = args.size();",
+         f"    for (idx_t c = 0; c < {k}; c++) args.data[c].Flatten(rows);",
+         "    auto &outv = FlatVector::Validity(result);"]
+    if ret == "list":
+        L += ["    auto list_entries = FlatVector::GetData<list_entry_t>(result);",
+              "    idx_t off = 0;"]
+    else:
+        L.append("    auto out = FlatVector::GetData<string_t>(result);")
+    L += ["    for (idx_t i = 0; i < rows; i++) {",
+          "        bool valid = true;",
+          f"        for (idx_t c = 0; c < {k}; c++)",
+          "            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }",
+          "        if (!valid) {",
+          "            outv.SetInvalid(i);" + (" list_entries[i] = list_entry_t{off, 0};"
+                                              if ret == "list" else ""),
+          "            continue;",
+          "        }",
+          "        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];"]
+    if first == "temporal":
+        L += ["        Temporal *x0 = BlobToTemporal(a0);",
+              "        int32_t srid0 = tspatial_srid(x0);"]
+    else:
+        L += ["        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);",
+              "        int32_t srid0 = 0;"]
+    call, geos = ["x0"], []
+    for p in ps[1:]:
+        nm = p["name"]
+        if nm in bound:
+            call.append(str(bound[nm]))
+            continue
+        i = byname[nm]
+        bb = base(p["canonical"])
+        if bb == "GSERIALIZED":
+            g = f"g{i}"
+            if i < k:
+                L.append(f"        GSERIALIZED *{g} = GeometryToGSerialized("
+                         f"FlatVector::GetData<string_t>(args.data[{i}])[i], srid0);")
+            else:
+                lit = str(defs[i]).strip().strip("'")
+                L.append(f"        GSERIALIZED *{g} = geom_in(\"{lit}\", -1);")
+            geos.append(g)
+            call.append(g)
+            continue
+        if i >= k:
+            lit = forward_literal(p, defs[i])
+            if lit is None:
+                raise ValueError(f"{name}: no literal for {nm}")
+            call.append(lit)
+        elif bb == "Interval":
+            call.append(f"MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[{i}])[i])")
+        else:
+            _dt, cpp, expr = SCALAR_ARG[bb]
+            call.append(expr.replace("a2", f"FlatVector::GetData<{cpp}>(args.data[{i}])[i]"))
+    frees = "free(x0);" + "".join(f" free({g});" for g in geos)
+    if ret == "list":
+        L += ["        int count = 0;",
+              f"        STBox *arr = {name}({', '.join(call)}, &count);",
+              f"        {frees}",
+              "        int n = (arr && count > 0) ? count : 0;",
+              "        ListVector::Reserve(result, off + n);",
+              "        ListVector::SetListSize(result, off + n);",
+              "        list_entries[i] = list_entry_t{off, (uint64_t) n};",
+              "        if (n > 0) {",
+              "            auto &child_vector = ListVector::GetEntry(result);",
+              "            child_vector.SetVectorType(VectorType::FLAT_VECTOR);",
+              "            auto *cd = FlatVector::GetData<string_t>(child_vector);",
+              "            for (int j = 0; j < n; ++j) { %s }" % ARRAY_ELEM["STBox"][2],
+              "            off += n;",
+              "        }",
+              "        free(arr);"]
+    else:
+        L += [f"        STBox *r = {name}({', '.join(call)});",
+              f"        {frees}",
+              "        if (!r) { outv.SetInvalid(i); continue; }",
+              "        out[i] = %s;" % (PTR_RET["STBox"][1] % "r")]   # frees r
+    L += ["    }", "}", ""]
+    return "\n".join(L)
+
+
+def box_tile_forms(s, ins):
+    """The numbers of declared arguments a signature registers: all of them, and each shorter
+    form its trailing SQL defaults allow."""
+    n = len(ins)
+    defs = s.get("argDefaults") or [None] * n
+    ks = [n]
+    k = n
+    while k > 1 and defs[k - 1] is not None:
+        k -= 1
+        ks.append(k)
+    return ks
+
 def shape_nary_scalars(f):
     """(first operand kind, [scalar marshals], return kind) for a retired group's function whose
     first operand is a temporal value or a geometry, followed by three or more by-value scalars,
@@ -4518,6 +4818,9 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   # getValueTile, getTBoxTimeTile, getValueTimeTile and getStboxTimeTile, by
                   # #shape_container_make from their values and durations.
                   "meos_setspan_bin", "meos_temporal_analytics_tile", "meos_geo_tile",
+                  # the tiles of a box as (index, tile) rows (#shape_box_tiles), the boxes of a
+                  # spatial value and the tile of a point (#shape_box_scalars)
+                  "meos_geo_bbox_split", "meos_rgeo_tile",
                   # the set and span transformations: shiftScale and the duration forms of shift,
                   # scale, expand and tprecision reach #shape_nary_scalars' container arm
                   "meos_setspan_transf",
@@ -4647,22 +4950,20 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # no longer listed here. Empty: every @sqlfn of a retired group is generated.
 # unnest: DuckDB's own unnest cannot be overloaded, so the temporal unnest registers under the
 # name the catalog gives the other engines, temporalUnnest (#shape_unnest).
-# The tile and bin groups: the tiles of a geometry (getSpaceTile, getSpaceTimeTile) read a
-# geometry and a point origin no container shape takes, and the tiles, boxes, bins and splits of a
-# box or a temporal value return a set of rows or an array of boxes the generator does not yet
-# register; src/single_tile_getters.cpp, src/geo and src/temporal/temporal.cpp keep them, and
-# timeBins, timeBoxes and valueTimeBoxes are not registered by either.
+# The tile and bin groups: the splits of a temporal value into its tiles (spaceSplit, timeSplit,
+# valueSplit and their combinations), the time bins of a temporal value, and the time and
+# value-time boxes of a temporal number return arrays of temporal values or of boxes over a
+# temporal number that no shape takes yet; src/temporal/temporal.cpp keeps them, and timeBins,
+# the number forms of timeBoxes and valueTimeBoxes are not registered by either.
 # box2d and box3d: PostGIS's box types, which DuckDB does not have, so box2d(stbox) and
 # box3d(stbox) answer no type this surface registers; no hand registration answers them either.
 # stboxX: the catalog gives stbox_make, whose eleven parameters the SQL constructor fills from
 # five arguments, the flags through boundArgs and the SRID read last in SQL and fourth in C; no
 # shape reads that mapping, and no hand registration answers stboxX either.
 RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX",
-                       "getSpaceTile", "getSpaceTimeTile",
-                       "spaceBoxes", "spaceSplit", "spaceTiles", "spaceTimeSplit", "spaceTimeTiles",
-                       "timeBins", "timeBoxes", "timeSplit", "timeTiles",
-                       "valueSplit", "valueTiles", "valueTimeBoxes", "valueTimeSplit",
-                       "valueTimeTiles"}
+                       "spaceSplit", "spaceTimeSplit",
+                       "timeBins", "timeBoxes", "timeSplit",
+                       "valueSplit", "valueTimeBoxes", "valueTimeSplit"}
 def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
 TEMPORAL_CBASES = {"Temporal", "TInstant", "TSequence", "TSequenceSet"}
@@ -5708,6 +6009,55 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             for a in un_accs:
                 specific_regs.append(f'    loader.RegisterFunction(TableFunction("{un_name}", {{{a}}}, '
                                      f'{S_}ExecFn, {S_}BindFn, {S_}InitFn));')
+            continue
+        # the tiles of a box, one (index, tile) row each (timeTiles, spaceTimeTiles): a table function
+        # per declared form, its shorter forms the trailing SQL defaults allow
+        _bt = shape_box_tiles(f)
+        if _bt:
+            STATE["grp"] = f.get("group") or "meos_ungrouped"
+            for j, (s_, ins_, bound_) in enumerate(_bt):
+                for k_ in box_tile_forms(s_, ins_):
+                    tag = f"s{j}_a{k_}"
+                    S_ = f"Tiles_{f['name']}_{tag}"
+                    types_ = [TILE_BOX_IN[base(ins_[0]["canonical"])][1]] + \
+                             [_tile_arg(p)[0] for p in ins_[1:k_]]
+                    nms = [reg_name(nm, f) for nm in reg_names(f, s_.get("sqlName") or f["sqlfn"], aliases)
+                           if (reg_name(nm, f), tuple(types_)) not in TILE_REGISTERED]
+                    if not nms:
+                        continue
+                    bodies.append(emit_box_tiles(f, tag, s_, ins_, bound_, k_))
+                    for nm in nms:
+                        TILE_REGISTERED.add((nm, tuple(types_)))
+                        specific_regs.append(f'    loader.RegisterFunction(TableFunction("{nm}", '
+                                             f'{{{", ".join(types_)}}}, {S_}ExecFn, {S_}BindFn, {S_}InitFn));')
+            continue
+        # the boxes of a spatial value and the tile of a point (spaceBoxes, getSpaceTile): a scalar
+        # per declared form over the first operand types its signatures name
+        _bs = shape_box_scalars(f)
+        if _bs:
+            STATE["grp"] = f.get("group") or "meos_ungrouped"
+            first_, groups_, ret_ = _bs
+            rt_ = "LogicalType::LIST(StboxType::stbox())" if ret_ == "list" else "StboxType::stbox()"
+            for j, (s_, ins_, bound_, firsts_) in enumerate(groups_):
+                accs_ = ([SIG_TEMPORAL_ACC[a] for a in firsts_] if first_ == "temporal"
+                         else ["MobilityDuckGeometryType()"])
+                for k_ in box_tile_forms(s_, ins_):
+                    tag = f"s{j}_a{k_}"
+                    tail_ = [_tile_arg(p)[0] for p in ins_[1:k_]]
+                    sql_ = s_.get("sqlName") or f["sqlfn"]
+                    regs_ = []
+                    for acc in accs_:
+                        types_ = tuple([acc] + tail_)
+                        for nm in reg_names(f, sql_, aliases):
+                            if (reg_name(nm, f), types_) not in TILE_REGISTERED:
+                                regs_.append((reg_name(nm, f), types_))
+                    if not regs_:
+                        continue
+                    bodies.append(emit_box_scalars(f, first_, tag, s_, ins_, bound_, k_, ret_))
+                    for nm, types_ in regs_:
+                        TILE_REGISTERED.add((nm, types_))
+                        specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                             f'"{nm}", {{{", ".join(types_)}}}, {rt_}, Gen_{f["name"]}_{tag}));')
             continue
         # a temporal value or a geometry followed by three or more scalars (rotate, affine),
         # registered over the types its signatures declare, as the restriction groups' are
