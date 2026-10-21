@@ -43,7 +43,7 @@ jobs:
   # `duckdb_version` and `ci_tools_version` inputs.
   versions:
     name: Supported DuckDB versions
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       supported: ${{ steps.pick.outputs.supported }}
     steps:
@@ -68,7 +68,7 @@ jobs:
     # upstream; the fork is where it runs until it is taken. On the MinGW job the fork
     # also takes the R the runner image carries: the build compiles with the Rtools
     # toolchain and never runs R, so R devel is not downloaded.
-    uses: estebanzimanyi/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.5.5-vcpkg-cache-nor
+    uses: estebanzimanyi/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.5.5-node24
     with:
       duckdb_version: ${{ matrix.duckdb }}
       extension_name: mobilityduck
@@ -124,9 +124,9 @@ jobs:
   # seconds and gates the pull request rather than waiting on a build.
   source-audits:
     name: Source audits
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Declared return types are the ones the executors write
         run: python3 scripts/return-type-audit.py .
 
@@ -158,13 +158,13 @@ jobs:
       matrix:
         duckdb: ${{ fromJSON(needs.versions.outputs.supported) }}
         include: ${{ fromJSON(github.event_name == 'pull_request'
-          && '[{"duckdb_arch":"linux_amd64","runner":"ubuntu-latest","native":true},{"duckdb_arch":"osx_arm64","runner":"macos-14","native":true}]'
-          || '[{"duckdb_arch":"linux_amd64","runner":"ubuntu-latest","native":true},{"duckdb_arch":"linux_arm64","runner":"ubuntu-24.04-arm","native":true},{"duckdb_arch":"osx_amd64","runner":"macos-14","native":false},{"duckdb_arch":"osx_arm64","runner":"macos-14","native":true}]') }}
+          && '[{"duckdb_arch":"linux_amd64","runner":"ubuntu-24.04","native":true},{"duckdb_arch":"osx_arm64","runner":"macos-14","native":true}]'
+          || '[{"duckdb_arch":"linux_amd64","runner":"ubuntu-24.04","native":true},{"duckdb_arch":"linux_arm64","runner":"ubuntu-24.04-arm","native":true},{"duckdb_arch":"osx_amd64","runner":"macos-14","native":false},{"duckdb_arch":"osx_arm64","runner":"macos-14","native":true}]') }}
     runs-on: ${{ matrix.runner }}
     steps:
       # Artifact name is built from duckdb_version + extension_name, both read
       # from the matrix rather than written again.
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: mobilityduck-${{ matrix.duckdb }}-extension-${{ matrix.duckdb_arch }}
           path: artifact
