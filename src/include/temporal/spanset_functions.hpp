@@ -29,13 +29,6 @@ struct SpansetFunctions{
 
     // TODO: Multirange functions
 
-    // Accessor functions
-    static void Spanset_mem_size(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Spanset_lower_inc(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Spanset_upper_inc(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Datespanset_duration(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tstzspanset_duration(DataChunk &args, ExpressionState &state, Vector &result);
-
     // Transformations functions
     // floor/ceil/round/degrees/radians on floatspanset are generated (generated_temporal_udfs.cpp).
     

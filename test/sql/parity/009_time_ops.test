@@ -4,20 +4,20 @@
 #
 # Time-only specialisations of operators between tstzset / tstzspan
 # and timestamptz / interval:
-# - Shift arithmetic: tstzset/tstzspan + interval
+# - The shift of a tstzset and a tstzspan by an interval, shift(tstzset | tstzspan, interval)
 # - Distance operator <-> answering the seconds between two times, as a float
 
 require mobilityduck
 
-# tstzset / tstzspan + interval (shift)
+# shift(tstzset | tstzspan, interval)
 
 query I
-SELECT tstzset '{2000-01-01}' + interval '1 day';
+SELECT shift(tstzset '{2000-01-01}', interval '1 day');
 ----
 {"2000-01-02 00:00:00+01"}
 
 query I
-SELECT tstzspan '[2000-01-01, 2000-01-02]' + interval '1 day';
+SELECT shift(tstzspan '[2000-01-01, 2000-01-02]', interval '1 day');
 ----
 [2000-01-02 00:00:00+01, 2000-01-03 00:00:00+01]
 

@@ -970,13 +970,16 @@ def ret_set_type(name, arg_acc):
     m = re.search(r'_to_(intset|bigintset|floatset|textset|dateset|tstzset)$', name)
     return SET_TYPES[m.group(1)] if m else arg_acc
 
-# SQL set-type name -> the CORE Duck accessor. Extended sets (geomset/geogset/
-# cbufferset/npointset/poseset/...) are absent -> a scalar-param overload on them
-# registers nothing here (they are gated to their own family files).
-SET_SQL_TO_ACC = dict(SET_TYPES)
+# The geometry and geography sets, whose element GSERIALIZED has no base value marshaller of the
+# set loops (BASE_LOGICAL): the generic set loops over SetTypes::AllTypes() do not reach them, and
+# the functions over them register per declared signature through the maps below.
+GEO_SET_TYPES = {"geomset": "SpatialSetType::geomset()", "geogset": "SpatialSetType::geogset()"}
+
+# SQL set-type name -> the Duck accessor a declared signature registers over.
+SET_SQL_TO_ACC = {**SET_TYPES, **GEO_SET_TYPES}
 
 # The set type a declared (set, scalar) -> set signature names: the registered set types.
-SET_SIG_ACC = dict(SET_TYPES)
+SET_SIG_ACC = {**SET_TYPES, **GEO_SET_TYPES}
 
 def declared_element_pairs(f, setfirst):
     """[(set accessor, result accessor, None)] for the two-argument signatures the catalog declares
@@ -2438,6 +2441,11 @@ def cont_out_ret4(f, out):
     ob = outptr_base(out)
     if ob in BASEVAL_PTR_RET:
         return (PTR_RET[ob][0], f"{ob} *", "string_t", PTR_RET[ob][1] % "o")
+    # an owned geometry handed back (valueN(geomset, integer)), written as the GEOMETRY a
+    # geometry result is (#static_cell_ret) and freed by #emit_cont_outparam
+    if n == "GSERIALIZED **":
+        return ("MobilityDuckGeometryType()", "GSERIALIZED *", "string_t",
+                "GSerializedToGeometry(o, state, result)")
     return None
 
 def emit_cont_outparam(f, tail, cloc, cpp, out):
@@ -2446,7 +2454,9 @@ def emit_cont_outparam(f, tail, cloc, cpp, out):
     name = f["name"]; n = 1 + len(tail)
     cb = base(classify(f)[0][0]["canonical"])
     give = cont_out_ret4(f, out)[3]
-    L = [f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{",
+    geo = norm(out) == "GSERIALIZED **"
+    state = "state" if geo else ""
+    L = [f"static void Gen_{name}(DataChunk &args, ExpressionState &{state}, Vector &result) {{",
          "    EnsureMeosThreadInitialized();",
          "    const idx_t rows = args.size();",
          f"    for (idx_t c = 0; c < {n}; c++) args.data[c].Flatten(rows);",
@@ -2467,8 +2477,10 @@ def emit_cont_outparam(f, tail, cloc, cpp, out):
     L += [f"        bool ok = {name}({call});",
           "        free(x0);",
           "        if (!ok) { outv.SetInvalid(i); continue; }",
-          f"        out[i] = {give};",
-          "    }",
+          f"        out[i] = {give};"]
+    if geo:
+        L.append("        free(o);")
+    L += ["    }",
           "    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);",
           "}", ""]
     return "\n".join(L)
@@ -3004,7 +3016,11 @@ def ctor_duck_type(sqlt):
     if sqlt.endswith("[]"):
         inner = ctor_duck_type(sqlt[:-2])
         return "LogicalType::LIST(%s)" % inner if inner else None
-    return SQL_BASE_TO_DUCK.get(sqlt) or SET_TYPES.get(sqlt) or SPANSET_TYPES.get(sqlt)
+    # a base value of another family (cbuffer), a cell (h3index), a geometry or a geography (both
+    # a DuckDB GEOMETRY), and a geometry set
+    return (SQL_BASE_TO_DUCK.get(sqlt) or SET_TYPES.get(sqlt) or SPANSET_TYPES.get(sqlt)
+            or GEO_SET_TYPES.get(sqlt) or BASE_LOGICAL.get(sqlt) or CELL_SQL.get(sqlt)
+            or ("MobilityDuckGeometryType()" if sqlt in ("geometry", "geography") else None))
 
 def span_operand(f, p, k):
     """The #shape_arg triple of a span operand at argument k, typed as #scalar_arg_for types an
@@ -3063,7 +3079,10 @@ def shape_container_make(f):
             return (b in SCALAR_ARG and "*" not in n) or (b == "Interval" and n.count("*") == 1)
         if not ps or not _value(ps[0]):
             return None
-        info = [shape_arg(ps[0])]
+        # a cell id (h3index_to_set) is read from the int64_t vector of its BIGINT-backed cell
+        # type, as #scalar_arg_for reads one
+        cell0 = base(ps[0]["canonical"]) in CELL_UINT and "*" not in norm(ps[0]["canonical"])
+        info = [("LogicalType::BIGINT", "int64_t", "(uint64_t) a2") if cell0 else shape_arg(ps[0])]
         for k, p in enumerate(ps[1:], start=1):
             t = shape_arg(p) if _value(p) else span_operand(f, p, k)
             if t is None:
@@ -3083,13 +3102,71 @@ def shape_container_make(f):
     if n0 == "text **":
         return ("basearr", "text *", ("LogicalType::VARCHAR", "string_t", "MakeText(a2)"), rb)
     b0 = base(ps[0]["canonical"])
+    # the base values of another family or the geometries of a SQL array, as pointers each read
+    # from its blob (jsonbset_make, geoset_make), or as the fixed-size structs a blob copies
+    # (cbufferset_make, npointset_make)
+    if n0.endswith("**"):
+        b2 = base(n0[:-1])
+        if b2 in BASEVAL_PTR_IN or b2 == "GSERIALIZED":
+            return ("ptrarr", b2, None, rb)
+        return None
     if n0.count("*") != 1:
         return None
     if b0 == "Span":
         return ("spanarr", "Span", None, rb)
+    if b0 in BASEVAL_PTR_IN:
+        return ("structarr", b0, None, rb)
+    # a cell id (h3indexset_make), whose cell type is a BIGINT alias: its vector holds int64_t,
+    # the bits of the uint64 id, as #scalar_arg_for reads one
+    if b0 in CELL_UINT:
+        return ("basearr", b0, ("LogicalType::BIGINT", "int64_t", "(uint64_t) a2"), rb)
     if b0 in SCALAR_ARG:
         return ("basearr", b0, SCALAR_ARG[b0], rb)
     return None
+
+def emit_value_array_make(f, kind, b0, rb):
+    """The body of a set built from a SQL array of base values of another family or of
+    geometries (#shape_container_make's ptrarr and structarr): each element read from its blob as
+    #base_operand reads one (BlobToCbuffer, GeometryToGSerialized), into an array of pointers or
+    of the structs they point to, the array and its elements freed after the call. A NULL element
+    raises PostgreSQL's message for it, as the other arrays do."""
+    name = f["name"]
+    writer = PTR_RET[rb][1] % "r"
+    read = ("GeometryToGSerialized(cd[le.offset + j], 0)" if b0 == "GSERIALIZED"
+            else PTR_IN[b0][1] % "cd[le.offset + j]")
+    if kind == "ptrarr":
+        decl = f"{b0} **arr = ({b0} **) malloc(sizeof({b0} *) * (n > 0 ? n : 1));"
+        put = f"arr[j] = {read};"
+        release = "for (int j = 0; j < got; j++) free(arr[j]); "
+        cast = "(%s) " % f["params"][0]["canonical"]
+    else:
+        decl = f"{b0} *arr = ({b0} *) malloc(sizeof({b0}) * (n > 0 ? n : 1));"
+        put = f"{b0} *v = {read};\n                arr[j] = *v;\n                free(v);"
+        release = ""
+        cast = ""
+    return (
+f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+f"    EnsureMeosThreadInitialized();\n"
+f"    auto &lv = args.data[0];\n"
+f"    auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));\n"
+f"    auto cd = FlatVector::GetData<string_t>(child);\n"
+f"    auto &cv = FlatVector::Validity(child);\n"
+f"    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),\n"
+f"        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+f"            int n = (int) le.length, got = 0;\n"
+f"            {decl}\n"
+f"            for (int j = 0; j < n; j++, got++) {{\n"
+f"                if (!cv.RowIsValid(le.offset + j)) {{\n"
+f"                    {release}free(arr);\n"
+f"                    throw InvalidInputException(\"null array element not allowed in this context\");\n"
+f"                }}\n"
+f"                {put}\n"
+f"            }}\n"
+f"            {rb} *r = {name}({cast}arr, n);\n"
+f"            {release}free(arr);\n"
+f"            if (!r) {{ mask.SetInvalid(idx); return string_t(); }}\n"
+f"            return {writer};\n"
+f"        }});\n}}\n")
 
 def ctor_forms(f, s, kind):
     """The (number of SQL arguments read, body suffix) forms a signature registers: the full one and,
@@ -3143,6 +3220,8 @@ def emit_container_make(f, kind, info, rb, k=None):
               "    }",
               "}"]
         return "\n".join(L) + "\n"
+    if kind in ("ptrarr", "structarr"):
+        return emit_value_array_make(f, kind, info[0], rb)
     elem, conv = info if kind == "basearr" else ("Span", None)
     cpp = "string_t" if kind == "spanarr" else conv[1]
     if kind == "spanarr":
@@ -4655,6 +4734,17 @@ def shape_span(f, C=SPAN_C):
         b0, b1 = base(ins[0]["canonical"]), base(ins[1]["canonical"])
         if {b0, b1} == {"Span", "SpanSet"}:
             return ("b_mix:%s_%s" % (b0.lower(), b1.lower()), "LogicalType::BOOLEAN")
+    # two collections -> a collection of another type: the union and the difference of two spans,
+    # which answer a span set, and the set operations between a span and a span set in either
+    # order (spanUnion(intspan, intspanset), spansetMinus(intspanset, intspan)). Detected once
+    # under Span, as b_mix is, and registered over the types each declared signature names; the
+    # operations whose operands and result are one container are the (X,X) -> X arm below.
+    if (cb == "Span" and rb in RET_CONT_TOBLOB and rn.endswith("*")
+            and "const" not in f["returnType"]["canonical"]
+            and norm(ins[0]["canonical"]).endswith("*") and norm(ins[1]["canonical"]).endswith("*")):
+        b0, b1 = base(ins[0]["canonical"]), base(ins[1]["canonical"])
+        if {b0, b1} <= {"Span", "SpanSet"} and not b0 == b1 == rb:
+            return ("b_cont:%s_%s:%s" % (b0.lower(), b1.lower(), rb), "type")
     # generic (X,X) -> bool|X
     if not (contp(ins[0]) and contp(ins[1])): return None
     if rb == cb and rn.endswith("*"):  return ("b_span", "type")
@@ -4674,6 +4764,19 @@ def emit_span(f, kind, C=SPAN_C):
                 f"            {CT[t0]} *x = {BT[t0]}(a);\n            {CT[t1]} *y = {BT[t1]}(b);\n"
                 f"            bool r = {name}(x, y);\n            free(x); free(y);\n"
                 f"            return r;\n        }});\n}}\n")
+    if kind.startswith("b_cont:"):  # (Span|SpanSet, Span|SpanSet) -> Span|SpanSet of another type
+        ops, rbase = kind.split(':')[1:]
+        t0, t1 = ops.split('_')
+        BT = {"span": "BlobToSpan", "spanset": "BlobToSpanSet"}
+        CT = {"span": "Span", "spanset": "SpanSet"}
+        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+                f"            {CT[t0]} *x = {BT[t0]}(a);\n            {CT[t1]} *y = {BT[t1]}(b);\n"
+                f"            {rbase} *r = {name}(x, y);\n            free(x); free(y);\n"
+                f"            if (!r) {{ mask.SetInvalid(idx); return string_t(); }}\n"
+                f"            return {RET_CONT_TOBLOB[rbase]}(result, r);\n        }});\n}}\n")
     if kind.startswith("setsc:"):   # (X, scalar) -> bool
         _dt, cpp2, marsh = SCALAR_ARG[kind.split(':')[1]]
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
@@ -4778,6 +4881,14 @@ def emit_span(f, kind, C=SPAN_C):
                 f"        [&](string_t a) {{\n"
                 f"            {cb} *s = {bt}(a);\n            char *r = {name}(s, {dflt});\n            free(s);\n"
                 f"            return TakeCString(result, r);\n        }});\n}}\n")
+    if kind.startswith("u2iv_d:"):  # the same, with the scalar bound to its SQL DEFAULT
+        dflt = kind.split(':', 2)[2]
+        return (f"static void Gen_{name}_d(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+                f"    EnsureMeosThreadInitialized();\n"
+                f"    UnaryExecutor::Execute<string_t, interval_t>(args.data[0], result, args.size(),\n"
+                f"        [&](string_t in) {{\n"
+                f"            {cb} *s = {bt}(in);\n            MeosInterval *r = {name}(s, {dflt});\n            free(s);\n"
+                f"            return TakeInterval(r);\n        }});\n}}\n")
     if kind.startswith("u2iv:"):    # (X, by-value scalar) -> owned Interval (duration(spanset,bool))
         _dt, cpp2, marsh = SCALAR_ARG[kind.split(':')[1]]
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
@@ -5074,7 +5185,27 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   # points (stbox, asMVTGeom, geoMeasure) and the native geometry operations
                   # collect(geometry[]) and distance(geometry, geometry)
                   "meos_temporal_analytics_reduction", "meos_temporal_bool",
-                  "meos_geo_conversion", "meos_geo_base_spatial", "meos_geo_base_dist"}
+                  "meos_geo_conversion", "meos_geo_base_spatial", "meos_geo_base_dist",
+                  # The functions of the base types: round(float, integer) and the shorter form
+                  # its SQL default allows
+                  "meos_base_types",
+                  # The geometry and geography sets: their text and WKB I/O, constructors,
+                  # conversions, accessors and SRID, over the signatures declared for geomset and
+                  # geogset (GEO_SET_TYPES)
+                  "meos_geo_set_inout", "meos_geo_set_constructor", "meos_geo_set_conversion",
+                  "meos_geo_set_accessor", "meos_geo_set_srid",
+                  # The set of one base value of every other family, set(cbuffer) .. set(s2cell)
+                  # (#shape_static_retired), and the set of their array (#shape_container_make)
+                  "meos_cbuffer_set_conversion", "meos_h3_set_conversion",
+                  "meos_json_set_conversion", "meos_npoint_set_conversion",
+                  "meos_pointcloud_set_conversion", "meos_pose_set_conversion",
+                  "meos_posechain_set_conversion", "meos_quadbin_set_conversion",
+                  "meos_s2cell_set_conversion",
+                  "meos_cbuffer_set_constructor", "meos_h3_set_constructor",
+                  "meos_json_set_constructor", "meos_npoint_set_constructor",
+                  "meos_pointcloud_set_constructor", "meos_pose_set_constructor",
+                  "meos_posechain_set_constructor", "meos_quadbin_set_constructor",
+                  "meos_s2cell_set_constructor"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
@@ -5492,7 +5623,7 @@ CONTAINER_FROM_HEXWKB = {
     "span_from_hexwkb":    "Span",
     "spanset_from_hexwkb": "SpanSet",
 }
-CONTAINER_FROMHEX_ACC = {**SET_TYPES, **SQL_CONTAINER_ACC}
+CONTAINER_FROMHEX_ACC = {**SET_TYPES, **GEO_SET_TYPES, **SQL_CONTAINER_ACC}
 _CFH_SERIALIZE = {
     "Set":     "            return SetToBlobN(result, r, mask, idx);\n",
     "Span":    "            if (!r) { mask.SetInvalid(idx); return string_t(); }\n"
@@ -5809,10 +5940,21 @@ def emit_baseval_scalar(f, bb, rb):
 # written back as int64_t, the id keeping its bits both ways.
 CELL_SQL = {_acc_sqlname(v): v for v in CELL_BASEVAL.values()}         # h3index / quadbin / s2cell
 
-def static_cell_arg(p, sqlt, i):
+def static_cell_arg(p, sqlt, i, wide=False):
     """(DuckDB type, executor C++ type, MEOS-call expression, pre-call lines, post-call lines) for
-    argument `i`, whose C parameter is `p` and whose declared SQL type is `sqlt`; None if unmappable."""
+    argument `i`, whose C parameter is `p` and whose declared SQL type is `sqlt`; None if unmappable.
+    With `wide`, as #shape_static_retired reads them, a text, a geometry or geography and a base
+    value behind a pointer are read as #base_operand reads the base value of a constructor, into a
+    local freed after the call."""
     b, n, v = base(p["canonical"]), norm(p["canonical"]), "a%d" % i
+    if wide and n.count("*") == 1 and b not in ("Set", "Span", "SpanSet", "char"):
+        bo = base_operand(p, sqlt)
+        if bo is None:
+            return None
+        dt, _cpp, marsh, _freed = bo
+        loc = "p%d" % i
+        return (dt, "string_t", loc, "%s *%s = %s;\n            " % (b, loc, marsh.replace("a2", v)),
+                "free(%s); " % loc)
     if b in CELL_UINT and "*" not in n:
         if sqlt in CELL_SQL:
             return (CELL_SQL[sqlt], "int64_t", "static_cast<uint64_t>(%s)" % v, "", "")
@@ -5907,7 +6049,48 @@ def shape_static_cell(f):
         sigs.append((s, args, ret))
     return sigs or None
 
-def emit_static_cell(f, args, ret):
+def shape_static_retired(f):
+    """[(sqlSignature, [arg tuples], ret tuple)] for a public function of a retired group over no
+    temporal value that no other shape emits, one entry per declared signature #static_cell_arg
+    (wide) and #static_cell_ret marshal: round(float, integer), set(text), set(cbuffer),
+    set(h3index), SRID(geomset), startValue(geomset). #gen_cpp asks it last, of the functions with
+    no body yet, so it never takes a function from another shape."""
+    if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
+        return None
+    if re.search(r'_(out|in|send|recv)$', f["sqlfn"]):
+        return None
+    if unregistered_family_ref(f["name"]) is not None:
+        return None
+    ins, out = classify(f)
+    if out is not None or not 1 <= len(ins) <= 3:
+        return None
+    if any(base(p["canonical"]) in TEMPORAL_CBASES for p in ins):
+        return None
+    # a set read or answered (the sets of the families and of geometries, set(text)), or a
+    # function of by-value numbers alone (round(float, integer))
+    is_set = lambda c: base(c) == "Set" and norm(c).endswith("*")
+    byval = lambda c: "*" not in norm(c) and (base(c) in SCALAR_ARG or base(c) in BYVAL_RET)
+    if not (any(is_set(p["canonical"]) for p in ins) or is_set(f["returnType"]["canonical"])
+            or (all(byval(p["canonical"]) for p in ins) and byval(f["returnType"]["canonical"]))):
+        return None
+    sigs = []
+    for s in f.get("sqlSignatures") or []:
+        if len(s["args"]) != len(ins) or re.search(r'_(out|in|send|recv)$', s.get("sqlName") or ""):
+            continue
+        args = [static_cell_arg(p, t, i, wide=True) for i, (p, t) in enumerate(zip(ins, s["args"]))]
+        ret = static_cell_ret(f, s["ret"])
+        if ret is None or any(a is None for a in args):
+            continue
+        sigs.append((s, args, ret))
+    return sigs or None
+
+def emit_static_cell(f, args, ret, sfx="", dval=None):
+    """The body of a static function, Gen_<fn><sfx>: `sfx` names a second body of the same function
+    whose operands marshal otherwise (a geography where the first reads a geometry). With `dval`,
+    the shorter body Gen_<fn><sfx>_d its trailing SQL default answers, that literal in the last
+    argument's place, as #emit_nary_scalars passes one."""
+    if dval is not None:
+        args, sfx = args[:-1], sfx + "_d"
     name, n = f["name"], len(args)
     ex = {1: "UnaryExecutor", 2: "BinaryExecutor", 3: "TernaryExecutor"}[n]
     _dt, rett, cct, rlines, nulls = ret
@@ -5915,7 +6098,7 @@ def emit_static_cell(f, args, ret):
     vecs = ", ".join("args.data[%d]" % i for i in range(n))
     params = ", ".join("%s a%d" % (a[1], i) for i, a in enumerate(args))
     pre, post = "".join(a[3] for a in args), "".join(a[4] for a in args)
-    call = ", ".join(a[2] for a in args)
+    call = ", ".join([a[2] for a in args] + ([dval] if dval is not None else []))
     state = "state" if "GSerializedToGeometry" in rlines else ""
     if nulls:
         head = (f"    {ex}::ExecuteWithNulls<{tps}, {rett}>({vecs}, result, args.size(),\n"
@@ -5923,7 +6106,7 @@ def emit_static_cell(f, args, ret):
     else:
         head = (f"    {ex}::Execute<{tps}, {rett}>({vecs}, result, args.size(),\n"
                 f"        [&]({params}) -> {rett} {{\n")
-    return (f"static void Gen_{name}(DataChunk &args, ExpressionState &{state}, Vector &result) {{\n"
+    return (f"static void Gen_{name}{sfx}(DataChunk &args, ExpressionState &{state}, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n{head}"
             f"            {pre}{cct} r = {name}({call});\n"
             + (f"            {post}\n" if post else "")
@@ -6035,15 +6218,15 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 nm = s.get("sqlName") or f["sqlfn"]
                 if re.search(r'_(out|in|send|recv)$', nm):
                     continue
-                # the containers this group parses itself (a typed <type>_in beside the writer:
-                # intset_in .. tstzspanset_in); the sets of the other families (cbufferset,
-                # poseset, ...) keep the writers and readers their own files register
-                # and every temporal value, whose readers and writers the temporal, spatial, JSON
-                # and point cloud I/O groups retire together, over each type declared
+                # the spans and span sets this group parses itself (a typed <type>_in beside the
+                # writer: intspan_in .. tstzspanset_in), every set, the sets of the other families
+                # and of geometries among them (asBinary(cbufferset), geomsetFromBinary), and
+                # every temporal value, whose readers and writers the temporal, spatial, JSON and
+                # point cloud I/O groups retire together, over each type declared
                 cio = cw[1] if cw else cr
                 tname = (s.get("args") or [None])[0] if cw else s.get("ret")
                 own = FN_BY_NAME.get(f"{tname}_in")
-                if cio != "Temporal" and (not own or own.get("group") != f.get("group")):
+                if cio not in ("Temporal", "Set") and (not own or own.get("group") != f.get("group")):
                     continue
                 if cw:
                     acc = io_acc(cio).get((s.get("args") or [None])[0])
@@ -6124,19 +6307,27 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             STATE["grp"] = f.get("group") or "meos_ungrouped"
             kind, el, conv, rb_ = _mk
             info = el if kind == "scalars" else (el, conv)
-            emitted = set()
+            emitted, taken = set(), set()
             for s in f.get("sqlSignatures") or []:
                 ret_ = ctor_duck_type(s.get("ret") or "")
                 argt = [ctor_duck_type(a) for a in s.get("args") or []]
                 if ret_ is None or None in argt:
                     continue
                 for k, sfx in ctor_forms(f, s, kind):
+                    # a signature whose DuckDB arguments an earlier one takes registers nothing:
+                    # set(geography[]) reads the GEOMETRY list set(geometry[]) reads
+                    nms = [reg_name(nm, f) for nm in reg_names(f, s.get("sqlName") or f["sqlfn"], aliases)]
+                    if all((nm.lower(), tuple(argt[:k])) in taken for nm in nms):
+                        continue
                     if sfx not in emitted:
                         emitted.add(sfx)
                         bodies.append(emit_container_make(f, kind, info, rb_, k)); n_un += 1
-                    for nm in reg_names(f, s.get("sqlName") or f["sqlfn"], aliases):
+                    for nm in nms:
+                        if (nm.lower(), tuple(argt[:k])) in taken:
+                            continue
+                        taken.add((nm.lower(), tuple(argt[:k])))
                         specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
-                                             f'"{reg_name(nm, f)}", {{{", ".join(argt[:k])}}}, {ret_}, '
+                                             f'"{nm}", {{{", ".join(argt[:k])}}}, {ret_}, '
                                              f'Gen_{f["name"]}{sfx}));')
             continue
         # a set-returning function the other engines call by its `altSqlName` (temporalUnnest):
@@ -6210,11 +6401,14 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             rest = "".join(", " + t[0] for t in tail)
             if first == "geo" and ret.startswith("cont:"):
                 # one GEOMETRY stands for the geometry and geography signatures alike, as
-                # #shape_array reads a geometry first; the box is the one each declares
+                # #shape_array reads a geometry first; the container is the one the first
+                # declared signature answers (the box both declare, the geomset of set(geometry)
+                # where set(geography) answers a geogset), one registration per argument list
                 rcb = ret.split(":", 1)[1]
-                rs = {CONT_SQL_ACC[rcb].get(s.get("ret")) for s in f.get("sqlSignatures") or []
-                      if len(s.get("args") or []) == 1 + len(tail)} - {None}
-                pairs = [("MobilityDuckGeometryType()", r, [f["sqlfn"]]) for r in sorted(rs)]
+                rs = [CONT_SQL_ACC[rcb].get(s.get("ret")) for s in f.get("sqlSignatures") or []
+                      if len(s.get("args") or []) == 1 + len(tail)]
+                pairs = [("MobilityDuckGeometryType()", r, [f["sqlfn"]])
+                         for r in [x for x in rs if x][:1]]
             elif first in ("geo", "geoarr") and ret in ("geo", "geo:out"):
                 pairs = [("MobilityDuckGeometryType()" if first == "geo"
                           else "LogicalType::LIST(MobilityDuckGeometryType())",
@@ -6854,6 +7048,18 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             for nm in names:
                 set_generic_regs.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
                                         f'"{reg_name(nm, f)}", {argsig}, {rett}, Gen_{fn}));')
+            # the geometry and geography sets, which SetTypes::AllTypes() does not hold, over the
+            # signatures declared for them (memSize(geomset), setUnion(geogset, geogset))
+            for s in f.get("sqlSignatures") or []:
+                ga = [GEO_SET_TYPES.get(a) for a in s["args"]]
+                if len(ga) != nargs or None in ga:
+                    continue
+                r2 = GEO_SET_TYPES.get(s.get("ret")) if dret == "LogicalType::BLOB" else dret
+                if r2 is None:
+                    continue
+                for nm in names:
+                    set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                             f'"{reg_name(nm, f)}", {{{", ".join(ga)}}}, {r2}, Gen_{fn}));')
         else:
             for a in accs:
                 sig = spec_sig % ((a,) * spec_sig.count("%s"))
@@ -6910,6 +7116,23 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     for nm in names:
                         span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                                   f'"{reg_name(nm, f)}", {sig}, LogicalType::BOOLEAN, Gen_{fn}));')
+                continue
+            # set operation between two collections answering a third: one registration per
+            # declared signature, its operands and result typed by the span and span set maps
+            if kind.startswith("b_cont:"):
+                _accmap = {**SPAN_TYPES, **SPANSET_TYPES}
+                _seen = set()
+                for s in (f.get("sqlSignatures") or []):
+                    a0, a1 = _accmap.get(s["args"][0]), _accmap.get(s["args"][1])
+                    racc = _accmap.get(s.get("ret"))
+                    if not (a0 and a1 and racc):
+                        continue
+                    for nm in reg_names(f, s.get("sqlName") or sqlfn, aliases):
+                        reg = (f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                               f'"{reg_name(nm, f)}", {{{a0}, {a1}}}, {racc}, Gen_{fn}));')
+                        if reg not in _seen:
+                            _seen.add(reg)
+                            span_specific_regs.append(reg)
                 continue
             # container-and-value set operation: the operand is the container this element names,
             # and the result is the container the RETURN type names for that same element.
@@ -6977,15 +7200,27 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             if kind.startswith("u2iv:"):
                 argdt = SCALAR_ARG[kind.split(':')[1]][0]
                 scope, accs = C["scope"](fn)
+                # the shorter form the SQL default of the trailing argument allows
+                # (duration(tstzspanset) beside duration(tstzspanset, boolean)), as u2sc below
+                dflt = trailing_arg_default(f)
+                if dflt is not None:
+                    span_bodies.append(emit_span(f, "u2iv_d:%s:%s" % (
+                        kind.split(':', 1)[1], sql_default_to_cpp(dflt)), C))
                 if scope == "all":
                     for nm in names:
                         gen.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
                                    f'"{reg_name(nm, f)}", {{type, {argdt}}}, {dret}, Gen_{fn}));')
+                        if dflt is not None:
+                            gen.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                       f'"{reg_name(nm, f)}", {{type}}, {dret}, Gen_{fn}_d));')
                 else:
                     for a in accs:
                         for nm in names:
                             span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                                       f'"{reg_name(nm, f)}", {{{a}, {argdt}}}, {dret}, Gen_{fn}));')
+                            if dflt is not None:
+                                span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                                          f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
                 continue
             # (X, by-value scalar)->by-value scalar: name-scoped as u2iv, 2-arg sig {acc, argtype},
             # plus the shorter {acc} through Gen_<fn>_d when the trailing argument has a SQL
@@ -7031,6 +7266,14 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             if kind.startswith("csc:"):
                 argdt = SCALAR_ARG[kind.split(':')[1]][0]
                 scope, accs = C["scope"](fn)
+                # a typed kernel serving the declared signatures of a sibling type registers over
+                # each type they name (intspan_expand answers expand(datespan, integer) too)
+                if scope != "all":
+                    _cmap = {**SPAN_TYPES, **SPANSET_TYPES}
+                    _decl = [_cmap.get(s["args"][0]) for s in f.get("sqlSignatures") or []
+                             if len(s["args"]) == 2 and s.get("ret") == s["args"][0]]
+                    if _decl and all(_decl):
+                        accs = list(dict.fromkeys(_decl))
                 dflt = trailing_arg_default(f)
                 if dflt is not None:
                     span_bodies.append(emit_defaulted_unary(fn, C["blobto"], C["toblob"], C["cbase"],
@@ -7481,6 +7724,50 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         for nm in names:
             set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                      f'"{reg_name(nm, f)}", {sig}, {rett}, Gen_{fn}));')
+
+    # The functions of a retired group over no temporal value that no shape above emits, one
+    # registration per declared signature the body marshals (#shape_static_retired), as the
+    # static cell functions register theirs
+    _emitted = {m for acc in (bodies, set_bodies, span_bodies, temporal_box_bodies)
+                for _g, _line in acc.items
+                for m in re.findall(r'\bstatic void Gen_([A-Za-z0-9_]+)\(', _line)}
+    for f in fns:
+        if declared is not None and f["name"] not in declared:
+            continue
+        if f["name"] in _emitted:
+            continue
+        stc = shape_static_retired(f)
+        if not stc:
+            continue
+        STATE["grp"] = f.get("group") or "meos_ungrouped"
+        fn = f["name"]
+        # one body per way of marshalling the operands and the result (a geometry and a
+        # geography read apart), the first Gen_<fn>, the next Gen_<fn>_v1, ...
+        # A signature whose DuckDB arguments another one already takes registers nothing: a
+        # geography is read as a GEOMETRY, so set(geography) would answer the call set(geometry)
+        # answers. The shorter form a trailing SQL default allows registers beside the full one.
+        body_of, taken = {}, set()
+        for s, sargs, sret in stc:
+            key = (tuple(a[1:] for a in sargs), sret[1:])
+            n_ = len(sargs)
+            dflt = (s.get("argDefaults") or [None] * n_)[-1] if n_ > 1 else None
+            forms = [(sargs, None)] + ([(sargs[:-1], sql_default_to_cpp(dflt))] if dflt is not None else [])
+            for nm in reg_names(f, s.get("sqlName", f["sqlfn"]), aliases,
+                                "{%s}" % ", ".join(a[0] for a in sargs)):
+                for fargs, dv in forms:
+                    slots = ", ".join(a[0] for a in fargs)
+                    if (reg_name(nm, f).lower(), slots) in taken:
+                        continue
+                    taken.add((reg_name(nm, f).lower(), slots))
+                    if key not in body_of:
+                        body_of[key] = "" if not body_of else "_v%d" % len(body_of)
+                    bkey = (key, dv)
+                    if bkey not in body_of:
+                        body_of[bkey] = body_of[key] + ("_d" if dv is not None else "")
+                        bodies.append(emit_static_cell(f, sargs, sret, body_of[key], dv))
+                    specific_regs.append(
+                        f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        f'"{reg_name(nm, f)}", {{{slots}}}, {sret[0]}, Gen_{fn}{body_of[bkey]}));')
 
     # ---- bodies, sectioned by @ingroup group (one section per group) ----
     body_by_grp = defaultdict(list)

@@ -886,6 +886,15 @@ inline GSERIALIZED * geo_translate_deltaz(const GSERIALIZED * p0, double p1, dou
 inline GSERIALIZED * line_interpolate_point_repeat(const GSERIALIZED * p0, double p1) {
     return ::line_interpolate_point(p0, p1, false);
 }
+inline char * spatialset_as_text_maxdd(const Set * p0) {
+    return ::spatialset_as_text(p0, 15);
+}
+inline char * spatialset_as_ewkt_maxdd(const Set * p0) {
+    return ::spatialset_as_ewkt(p0, 15);
+}
+inline Set * spatialset_transform_pipeline_is_forward_srid(const Set * p0, const char * p1) {
+    return ::spatialset_transform_pipeline(p0, p1, 0, true);
+}
 inline STBox * stbox_shift_scale_time_duration(const STBox * p0, const MeosInterval * p1) {
     return ::stbox_shift_scale_time(p0, p1, NULL);
 }
@@ -1074,6 +1083,19 @@ static void Gen_tne_tcbuffer_cbuffer(DataChunk &args, ExpressionState &, Vector 
             Temporal *r = tne_tcbuffer_cbuffer(t, a2p);
             free(a2p); free(t);
             return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+
+// ===== @ingroup meos_cbuffer_set_conversion =====
+static void Gen_cbuffer_to_set(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            Cbuffer *p0 = BlobToCbuffer(a0);
+            Set * r = cbuffer_to_set(p0);
+            free(p0); 
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
@@ -2880,6 +2902,17 @@ static void Gen_datespanset_duration(DataChunk &args, ExpressionState &, Vector 
         });
 }
 
+static void Gen_datespanset_duration_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, interval_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            SpanSet *s = BlobToSpanSet(in);
+            MeosInterval *r = datespanset_duration(s, false);
+            free(s);
+            return TakeInterval(r);
+        });
+}
+
 static void Gen_datespanset_end_date(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, date_t>(args.data[0], result, args.size(),
@@ -3073,6 +3106,17 @@ static void Gen_tstzspanset_duration(DataChunk &args, ExpressionState &, Vector 
         [&](string_t in, bool a2) {
             SpanSet *s = BlobToSpanSet(in);
             MeosInterval *r = tstzspanset_duration(s, a2);
+            free(s);
+            return TakeInterval(r);
+        });
+}
+
+static void Gen_tstzspanset_duration_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, interval_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            SpanSet *s = BlobToSpanSet(in);
+            MeosInterval *r = tstzspanset_duration(s, false);
             free(s);
             return TakeInterval(r);
         });
@@ -3955,6 +3999,24 @@ static void Gen_tbigint_shift_value(DataChunk &args, ExpressionState &, Vector &
         });
 }
 
+static void Gen_float_degrees(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<double, bool, double>(args.data[0], args.data[1], result, args.size(),
+        [&](double a0, bool a1) -> double {
+            double r = float_degrees(a0, a1);
+            return (double) r;
+        });
+}
+
+static void Gen_float_degrees_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<double, double>(args.data[0], result, args.size(),
+        [&](double a0) -> double {
+            double r = float_degrees(a0, false);
+            return (double) r;
+        });
+}
+
 } // anonymous
 
 void RegisterGenerated_meos_box_bbox_topo(ExtensionLoader &loader) {
@@ -3973,6 +4035,10 @@ void RegisterGenerated_meos_box_bbox_topo(ExtensionLoader &loader) {
 void RegisterGenerated_meos_cbuffer_comp_temp(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tEqual", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, TemporalTypes::tbool(), Gen_teq_tcbuffer_cbuffer));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tNotEqual", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, TemporalTypes::tbool(), Gen_tne_tcbuffer_cbuffer));
+}
+
+void RegisterGenerated_meos_cbuffer_set_conversion(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {CbufferTypes::cbuffer()}, SetTypes::cbufferset(), Gen_cbuffer_to_set));
 }
 
 void RegisterGenerated_meos_cbuffer_transf(ExtensionLoader &loader) {
@@ -4146,6 +4212,10 @@ void RegisterGenerated_meos_setspan_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {SetTypes::floatset()}, LogicalType::DOUBLE, Gen_floatset_start_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {SetTypes::intset()}, LogicalType::INTEGER, Gen_intset_end_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {SetTypes::intset()}, LogicalType::INTEGER, Gen_intset_start_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("memSize", {SpatialSetType::geomset()}, LogicalType::INTEGER, Gen_set_mem_size));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("memSize", {SpatialSetType::geogset()}, LogicalType::INTEGER, Gen_set_mem_size));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numValues", {SpatialSetType::geomset()}, LogicalType::INTEGER, Gen_set_num_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numValues", {SpatialSetType::geogset()}, LogicalType::INTEGER, Gen_set_num_values));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {SetTypes::textset()}, LogicalType::VARCHAR, Gen_textset_end_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {SetTypes::textset()}, LogicalType::VARCHAR, Gen_textset_start_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {SetTypes::tstzset()}, LogicalType::TIMESTAMP_TZ, Gen_tstzset_end_value));
@@ -4180,6 +4250,7 @@ void RegisterGenerated_meos_setspan_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("width", {SpansetTypes::bigintspanset(), LogicalType::BOOLEAN}, LogicalType::BIGINT, Gen_bigintspanset_width));
     RegisterSerializedScalarFunction(loader, ScalarFunction("width", {SpansetTypes::bigintspanset()}, LogicalType::BIGINT, Gen_bigintspanset_width_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {SpansetTypes::datespanset(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_datespanset_duration));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {SpansetTypes::datespanset()}, LogicalType::INTERVAL, Gen_datespanset_duration_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endDate", {SpansetTypes::datespanset()}, LogicalType::DATE, Gen_datespanset_end_date));
     RegisterSerializedScalarFunction(loader, ScalarFunction("lower", {SpansetTypes::datespanset()}, LogicalType::DATE, Gen_datespanset_lower));
     RegisterSerializedScalarFunction(loader, ScalarFunction("numDates", {SpansetTypes::datespanset()}, LogicalType::INTEGER, Gen_datespanset_num_dates));
@@ -4194,6 +4265,7 @@ void RegisterGenerated_meos_setspan_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("width", {SpansetTypes::intspanset(), LogicalType::BOOLEAN}, LogicalType::INTEGER, Gen_intspanset_width));
     RegisterSerializedScalarFunction(loader, ScalarFunction("width", {SpansetTypes::intspanset()}, LogicalType::INTEGER, Gen_intspanset_width_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {SpansetTypes::tstzspanset(), LogicalType::BOOLEAN}, LogicalType::INTERVAL, Gen_tstzspanset_duration));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("duration", {SpansetTypes::tstzspanset()}, LogicalType::INTERVAL, Gen_tstzspanset_duration_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endTimestamp", {SpansetTypes::tstzspanset()}, LogicalType::TIMESTAMP_TZ, Gen_tstzspanset_end_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("lower", {SpansetTypes::tstzspanset()}, LogicalType::TIMESTAMP_TZ, Gen_tstzspanset_lower));
     RegisterSerializedScalarFunction(loader, ScalarFunction("numTimestamps", {SpansetTypes::tstzspanset()}, LogicalType::INTEGER, Gen_tstzspanset_num_timestamps));
@@ -4225,6 +4297,8 @@ void RegisterGenerated_meos_setspan_comp(ExtensionLoader &loader) {
         RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {type, type}, LogicalType::BOOLEAN, Gen_set_ne));
     }
     RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {SetTypes::cbufferset(), SetTypes::cbufferset()}, LogicalType::INTEGER, Gen_set_cmp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {SpatialSetType::geomset(), SpatialSetType::geomset()}, LogicalType::INTEGER, Gen_set_cmp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {SpatialSetType::geogset(), SpatialSetType::geogset()}, LogicalType::INTEGER, Gen_set_cmp));
     RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {SetTypes::h3indexset(), SetTypes::h3indexset()}, LogicalType::INTEGER, Gen_set_cmp));
     RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {SetTypes::jsonbset(), SetTypes::jsonbset()}, LogicalType::INTEGER, Gen_set_cmp));
     RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {SetTypes::npointset(), SetTypes::npointset()}, LogicalType::INTEGER, Gen_set_cmp));
@@ -4250,6 +4324,32 @@ void RegisterGenerated_meos_setspan_comp(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {SpansetTypes::floatspanset(), SpansetTypes::floatspanset()}, LogicalType::INTEGER, Gen_spanset_cmp));
     RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {SpansetTypes::datespanset(), SpansetTypes::datespanset()}, LogicalType::INTEGER, Gen_spanset_cmp));
     RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {SpansetTypes::tstzspanset(), SpansetTypes::tstzspanset()}, LogicalType::INTEGER, Gen_spanset_cmp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {SpatialSetType::geomset()}, LogicalType::UINTEGER, Gen_set_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {SpatialSetType::geogset()}, LogicalType::UINTEGER, Gen_set_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {SpatialSetType::geomset(), SpatialSetType::geomset()}, LogicalType::BOOLEAN, Gen_set_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("=", {SpatialSetType::geomset(), SpatialSetType::geomset()}, LogicalType::BOOLEAN, Gen_set_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {SpatialSetType::geogset(), SpatialSetType::geogset()}, LogicalType::BOOLEAN, Gen_set_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("=", {SpatialSetType::geogset(), SpatialSetType::geogset()}, LogicalType::BOOLEAN, Gen_set_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {SpatialSetType::geomset(), SpatialSetType::geomset()}, LogicalType::BOOLEAN, Gen_set_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {SpatialSetType::geomset(), SpatialSetType::geomset()}, LogicalType::BOOLEAN, Gen_set_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {SpatialSetType::geogset(), SpatialSetType::geogset()}, LogicalType::BOOLEAN, Gen_set_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {SpatialSetType::geogset(), SpatialSetType::geogset()}, LogicalType::BOOLEAN, Gen_set_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {SpatialSetType::geomset(), SpatialSetType::geomset()}, LogicalType::BOOLEAN, Gen_set_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">", {SpatialSetType::geomset(), SpatialSetType::geomset()}, LogicalType::BOOLEAN, Gen_set_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {SpatialSetType::geogset(), SpatialSetType::geogset()}, LogicalType::BOOLEAN, Gen_set_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">", {SpatialSetType::geogset(), SpatialSetType::geogset()}, LogicalType::BOOLEAN, Gen_set_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("le", {SpatialSetType::geomset(), SpatialSetType::geomset()}, LogicalType::BOOLEAN, Gen_set_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<=", {SpatialSetType::geomset(), SpatialSetType::geomset()}, LogicalType::BOOLEAN, Gen_set_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("le", {SpatialSetType::geogset(), SpatialSetType::geogset()}, LogicalType::BOOLEAN, Gen_set_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<=", {SpatialSetType::geogset(), SpatialSetType::geogset()}, LogicalType::BOOLEAN, Gen_set_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {SpatialSetType::geomset(), SpatialSetType::geomset()}, LogicalType::BOOLEAN, Gen_set_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<", {SpatialSetType::geomset(), SpatialSetType::geomset()}, LogicalType::BOOLEAN, Gen_set_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {SpatialSetType::geogset(), SpatialSetType::geogset()}, LogicalType::BOOLEAN, Gen_set_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<", {SpatialSetType::geogset(), SpatialSetType::geogset()}, LogicalType::BOOLEAN, Gen_set_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {SpatialSetType::geomset(), SpatialSetType::geomset()}, LogicalType::BOOLEAN, Gen_set_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {SpatialSetType::geomset(), SpatialSetType::geomset()}, LogicalType::BOOLEAN, Gen_set_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {SpatialSetType::geogset(), SpatialSetType::geogset()}, LogicalType::BOOLEAN, Gen_set_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {SpatialSetType::geogset(), SpatialSetType::geogset()}, LogicalType::BOOLEAN, Gen_set_ne));
     for (auto &type : SpanTypes::AllTypes()) {
         RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {type}, LogicalType::UINTEGER, Gen_span_hash));
         RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {type, LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_span_hash_extended));
@@ -4529,6 +4629,8 @@ void RegisterGenerated_meos_temporal_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("shiftScaleValue", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::BIGINT}, TemporalTypes::tbigint(), Gen_tbigint_shift_scale_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("shiftValue", {TemporalTypes::tint(), LogicalType::INTEGER}, TemporalTypes::tint(), Gen_tint_shift_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("shiftValue", {TemporalTypes::tbigint(), LogicalType::BIGINT}, TemporalTypes::tbigint(), Gen_tbigint_shift_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {LogicalType::DOUBLE, LogicalType::BOOLEAN}, LogicalType::DOUBLE, Gen_float_degrees));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("degrees", {LogicalType::DOUBLE}, LogicalType::DOUBLE, Gen_float_degrees_d));
 }
 
 } // namespace duckdb

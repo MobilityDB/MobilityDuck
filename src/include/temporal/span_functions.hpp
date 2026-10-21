@@ -30,20 +30,8 @@ struct SpanFunctions {
     // scalar functions
     // TODO (Type Range): static void Range_to_span(DataChunk &args, ExpressionState &state, Vector &result);
     // TODO (Type Range): static void Span_to_range(DataChunk &args, ExpressionState &state, Vector &result);
-        // accessors
-    static void Span_lower_inc(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Span_upper_inc(DataChunk &args, ExpressionState &state, Vector &result);
-        //transformations
-    static void Numspan_expand(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tstzspan_shift(DataChunk &args, ExpressionState &state, Vector &result);
-    // floor/ceil/round/degrees/radians on floatspan are generated (generated_temporal_udfs.cpp);
-    // only round(DOUBLE), the scalar base helper, remains hand-written.
-    static void Float_round(DataChunk &args, ExpressionState &state, Vector &result);
         // Set operators
-    static void Union_span_span(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Intersection_span_span(DataChunk &args, ExpressionState &state, Vector &result);
     static void Intersection_value_span(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Minus_span_span(DataChunk &args, ExpressionState &state, Vector &result);
     
 };
 

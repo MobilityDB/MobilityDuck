@@ -886,6 +886,15 @@ inline GSERIALIZED * geo_translate_deltaz(const GSERIALIZED * p0, double p1, dou
 inline GSERIALIZED * line_interpolate_point_repeat(const GSERIALIZED * p0, double p1) {
     return ::line_interpolate_point(p0, p1, false);
 }
+inline char * spatialset_as_text_maxdd(const Set * p0) {
+    return ::spatialset_as_text(p0, 15);
+}
+inline char * spatialset_as_ewkt_maxdd(const Set * p0) {
+    return ::spatialset_as_ewkt(p0, 15);
+}
+inline Set * spatialset_transform_pipeline_is_forward_srid(const Set * p0, const char * p1) {
+    return ::spatialset_transform_pipeline(p0, p1, 0, true);
+}
 inline STBox * stbox_shift_scale_time_duration(const STBox * p0, const MeosInterval * p1) {
     return ::stbox_shift_scale_time(p0, p1, NULL);
 }
@@ -1172,6 +1181,106 @@ static void Gen_geo_split_n_stboxes(DataChunk &args, ExpressionState &, Vector &
 
 
 // ===== @ingroup meos_geo_set_inout =====
+static void Gen_geogset_in(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *r = geogset_in(in.GetString().c_str());
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_geomset_in(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *r = geomset_in(in.GetString().c_str());
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_spatialset_as_ewkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    if (args.ColumnCount() > 1) {
+        BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+            [&](string_t in, string_t endian, ValidityMask &mask, idx_t idx) -> string_t {
+                Set *x = BlobToSet(in);
+                size_t sz = 0;
+                uint8_t *w = spatialset_as_ewkb(x, wkb_variant_from_endian(endian.GetString().c_str()), &sz);
+                free(x);
+                if (!w) { mask.SetInvalid(idx); return string_t(); }
+                string_t out = StringVector::AddStringOrBlob(result, (const char *) w, sz);
+                free(w);
+                return out;
+            });
+    } else {
+        UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+            [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+                Set *x = BlobToSet(in);
+                size_t sz = 0;
+                uint8_t *w = spatialset_as_ewkb(x, wkb_variant_from_endian(""), &sz);
+                free(x);
+                if (!w) { mask.SetInvalid(idx); return string_t(); }
+                string_t out = StringVector::AddStringOrBlob(result, (const char *) w, sz);
+                free(w);
+                return out;
+            });
+    }
+}
+
+static void Gen_spatialset_as_hexewkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    if (args.ColumnCount() > 1) {
+        BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+            [&](string_t in, string_t endian, ValidityMask &mask, idx_t idx) -> string_t {
+                Set *x = BlobToSet(in);
+                size_t sz = 0;
+                char *w = spatialset_as_hexewkb(x, wkb_variant_from_endian(endian.GetString().c_str()), &sz);
+                free(x);
+                if (!w) { mask.SetInvalid(idx); return string_t(); }
+                string_t out = StringVector::AddString(result, w);
+                free(w);
+                return out;
+            });
+    } else {
+        UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+            [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+                Set *x = BlobToSet(in);
+                size_t sz = 0;
+                char *w = spatialset_as_hexewkb(x, wkb_variant_from_endian(""), &sz);
+                free(x);
+                if (!w) { mask.SetInvalid(idx); return string_t(); }
+                string_t out = StringVector::AddString(result, w);
+                free(w);
+                return out;
+            });
+    }
+}
+
+static void Gen_spatialset_as_text_maxdd(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *p0 = BlobToSet(a0);
+            char * r = spatialset_as_text_maxdd(p0);
+            free(p0); 
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TakeCString(result, r);
+        });
+}
+
+static void Gen_spatialset_as_ewkt_maxdd(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *p0 = BlobToSet(a0);
+            char * r = spatialset_as_ewkt_maxdd(p0);
+            free(p0); 
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TakeCString(result, r);
+        });
+}
+
 static void Gen_spatialset_as_text(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
@@ -1465,6 +1574,32 @@ static void Gen_tjsonbseqset_from_base_tstzspanset(DataChunk &args, ExpressionSt
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = TemporalToBlob(result, r);
     }
+}
+
+
+// ===== @ingroup meos_json_set_constructor =====
+static void Gen_jsonbset_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &lv = args.data[0];
+    auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));
+    auto cd = FlatVector::GetData<string_t>(child);
+    auto &cv = FlatVector::Validity(child);
+    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),
+        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
+            int n = (int) le.length, got = 0;
+            Jsonb **arr = (Jsonb **) malloc(sizeof(Jsonb *) * (n > 0 ? n : 1));
+            for (int j = 0; j < n; j++, got++) {
+                if (!cv.RowIsValid(le.offset + j)) {
+                    for (int j = 0; j < got; j++) free(arr[j]); free(arr);
+                    throw InvalidInputException("null array element not allowed in this context");
+                }
+                arr[j] = BlobToJsonb(cd[le.offset + j]);
+            }
+            Set *r = jsonbset_make((const Jsonb **) arr, n);
+            for (int j = 0; j < got; j++) free(arr[j]); free(arr);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SetToBlob(result, r);
+        });
 }
 
 
@@ -1934,6 +2069,33 @@ static void Gen_ever_ne_trgeometry_trgeometry(DataChunk &args, ExpressionState &
             free(t1); free(t2);
             if (r < 0) { mask.SetInvalid(idx); return bool(); }
             return (r != 0);
+        });
+}
+
+
+// ===== @ingroup meos_s2cell_set_constructor =====
+static void Gen_s2cellset_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &lv = args.data[0];
+    auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));
+    auto cd = FlatVector::GetData<int64_t>(child);
+    auto &cv = FlatVector::Validity(child);
+    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),
+        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
+            int n = (int) le.length, got = 0;
+            uint64_t *arr = (uint64_t *) malloc(sizeof(uint64_t) * (n > 0 ? n : 1));
+            for (int j = 0; j < n; j++, got++) {
+                if (!cv.RowIsValid(le.offset + j)) {
+                    free(arr);
+                    throw InvalidInputException("null array element not allowed in this context");
+                }
+                auto a2 = cd[le.offset + j];
+                arr[j] = (uint64_t) a2;
+            }
+            Set *r = s2cellset_make(arr, n);
+            free(arr);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SetToBlob(result, r);
         });
 }
 
@@ -4999,29 +5161,87 @@ void RegisterGenerated_meos_geo_base_bbox(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_geo_set_inout(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("geogsetFromText", {LogicalType::VARCHAR}, SpatialSetType::geogset(), Gen_geogset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("geogsetFromEWKT", {LogicalType::VARCHAR}, SpatialSetType::geogset(), Gen_geogset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("geogset", {LogicalType::VARCHAR}, SpatialSetType::geogset(), Gen_geogset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("geomsetFromText", {LogicalType::VARCHAR}, SpatialSetType::geomset(), Gen_geomset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("geomsetFromEWKT", {LogicalType::VARCHAR}, SpatialSetType::geomset(), Gen_geomset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("geomset", {LogicalType::VARCHAR}, SpatialSetType::geomset(), Gen_geomset_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SetTypes::cbufferset()}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SetTypes::cbufferset(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SpatialSetType::geomset()}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SpatialSetType::geomset(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SpatialSetType::geogset()}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SpatialSetType::geogset(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SetTypes::h3indexset()}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SetTypes::h3indexset(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SetTypes::npointset()}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SetTypes::npointset(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SetTypes::pcpointset()}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SetTypes::pcpointset(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SetTypes::pcpatchset()}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SetTypes::pcpatchset(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SetTypes::poseset()}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SetTypes::poseset(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SetTypes::posechainset()}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SetTypes::posechainset(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SetTypes::quadbinset()}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SetTypes::quadbinset(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SetTypes::s2cellset()}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {SetTypes::s2cellset(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_spatialset_as_ewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SetTypes::cbufferset()}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SetTypes::cbufferset(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SpatialSetType::geomset()}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SpatialSetType::geomset(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SpatialSetType::geogset()}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SpatialSetType::geogset(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SetTypes::h3indexset()}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SetTypes::h3indexset(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SetTypes::npointset()}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SetTypes::npointset(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SetTypes::pcpointset()}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SetTypes::pcpointset(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SetTypes::pcpatchset()}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SetTypes::pcpatchset(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SetTypes::poseset()}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SetTypes::poseset(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SetTypes::posechainset()}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SetTypes::posechainset(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SetTypes::quadbinset()}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SetTypes::quadbinset(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SetTypes::s2cellset()}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {SetTypes::s2cellset(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_spatialset_as_hexewkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::pcpointset()}, LogicalType::VARCHAR, Gen_spatialset_as_text_maxdd));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::pcpatchset()}, LogicalType::VARCHAR, Gen_spatialset_as_text_maxdd));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SetTypes::h3indexset()}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt_maxdd));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SetTypes::pcpointset()}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt_maxdd));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SetTypes::pcpatchset()}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt_maxdd));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SetTypes::quadbinset()}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt_maxdd));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SetTypes::s2cellset()}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt_maxdd));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::cbufferset(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_spatialset_as_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::cbufferset()}, LogicalType::VARCHAR, Gen_spatialset_as_text_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SpatialSetType::geomset(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_spatialset_as_text));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SpatialSetType::geomset()}, LogicalType::VARCHAR, Gen_spatialset_as_text_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SpatialSetType::geogset(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_spatialset_as_text));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SpatialSetType::geogset()}, LogicalType::VARCHAR, Gen_spatialset_as_text_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::npointset(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_spatialset_as_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::npointset()}, LogicalType::VARCHAR, Gen_spatialset_as_text_d));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::pcpointset()}, LogicalType::VARCHAR, Gen_spatialset_as_text_d));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::pcpatchset()}, LogicalType::VARCHAR, Gen_spatialset_as_text_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::poseset(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_spatialset_as_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::poseset()}, LogicalType::VARCHAR, Gen_spatialset_as_text_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::posechainset(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_spatialset_as_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::posechainset()}, LogicalType::VARCHAR, Gen_spatialset_as_text_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SetTypes::cbufferset(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SetTypes::cbufferset()}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt_d));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SetTypes::h3indexset()}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SpatialSetType::geomset(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SpatialSetType::geomset()}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SpatialSetType::geogset(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SpatialSetType::geogset()}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SetTypes::npointset(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SetTypes::npointset()}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt_d));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SetTypes::pcpointset()}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt_d));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SetTypes::pcpatchset()}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SetTypes::poseset(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SetTypes::poseset()}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SetTypes::posechainset(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SetTypes::posechainset()}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt_d));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SetTypes::quadbinset()}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt_d));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {SetTypes::s2cellset()}, LogicalType::VARCHAR, Gen_spatialset_as_ewkt_d));
 }
 
 void RegisterGenerated_meos_h3_base_latlng(ExtensionLoader &loader) {
@@ -5051,6 +5271,10 @@ void RegisterGenerated_meos_json_constructor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonb", {TJsonbTypes::jsonb(), SetTypes::tstzset()}, TJsonbTypes::tjsonb(), Gen_tjsonbseq_from_base_tstzset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonb", {TJsonbTypes::jsonb(), SpanTypes::tstzspan()}, TJsonbTypes::tjsonb(), Gen_tjsonbseq_from_base_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tjsonb", {TJsonbTypes::jsonb(), SpansetTypes::tstzspanset()}, TJsonbTypes::tjsonb(), Gen_tjsonbseqset_from_base_tstzspanset));
+}
+
+void RegisterGenerated_meos_json_set_constructor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::LIST(TJsonbTypes::jsonb())}, SetTypes::jsonbset(), Gen_jsonbset_make));
 }
 
 void RegisterGenerated_meos_pointcloud_box_comp(ExtensionLoader &loader) {
@@ -5116,6 +5340,10 @@ void RegisterGenerated_meos_rgeo_comp_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry()}, LogicalType::BOOLEAN, Gen_ever_ne_trgeometry_trgeometry));
 }
 
+void RegisterGenerated_meos_s2cell_set_constructor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::LIST(S2cellTypes::s2cell())}, SetTypes::s2cellset(), Gen_s2cellset_make));
+}
+
 void RegisterGenerated_meos_setspan_topo(ExtensionLoader &loader) {
     for (auto &type : SetTypes::AllTypes()) {
         RegisterSerializedScalarFunction(loader, ScalarFunction("setContained", {type, type}, LogicalType::BOOLEAN, Gen_contained_set_set));
@@ -5133,6 +5361,10 @@ void RegisterGenerated_meos_setspan_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {LogicalType::DOUBLE, SetTypes::floatset()}, LogicalType::BOOLEAN, Gen_contained_float_set));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setContained", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::BOOLEAN, Gen_contained_int_set));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {LogicalType::INTEGER, SetTypes::intset()}, LogicalType::BOOLEAN, Gen_contained_int_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("setContained", {SpatialSetType::geomset(), SpatialSetType::geomset()}, LogicalType::BOOLEAN, Gen_contained_set_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {SpatialSetType::geomset(), SpatialSetType::geomset()}, LogicalType::BOOLEAN, Gen_contained_set_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("setContained", {SpatialSetType::geogset(), SpatialSetType::geogset()}, LogicalType::BOOLEAN, Gen_contained_set_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {SpatialSetType::geogset(), SpatialSetType::geogset()}, LogicalType::BOOLEAN, Gen_contained_set_set));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setContained", {LogicalType::VARCHAR, SetTypes::textset()}, LogicalType::BOOLEAN, Gen_contained_text_set));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<@", {LogicalType::VARCHAR, SetTypes::textset()}, LogicalType::BOOLEAN, Gen_contained_text_set));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setContained", {LogicalType::TIMESTAMP_TZ, SetTypes::tstzset()}, LogicalType::BOOLEAN, Gen_contained_timestamptz_set));
@@ -5145,10 +5377,18 @@ void RegisterGenerated_meos_setspan_topo(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {SetTypes::floatset(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_contains_set_float));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setContains", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::BOOLEAN, Gen_contains_set_int));
     RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {SetTypes::intset(), LogicalType::INTEGER}, LogicalType::BOOLEAN, Gen_contains_set_int));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("setContains", {SpatialSetType::geomset(), SpatialSetType::geomset()}, LogicalType::BOOLEAN, Gen_contains_set_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {SpatialSetType::geomset(), SpatialSetType::geomset()}, LogicalType::BOOLEAN, Gen_contains_set_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("setContains", {SpatialSetType::geogset(), SpatialSetType::geogset()}, LogicalType::BOOLEAN, Gen_contains_set_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {SpatialSetType::geogset(), SpatialSetType::geogset()}, LogicalType::BOOLEAN, Gen_contains_set_set));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setContains", {SetTypes::textset(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, Gen_contains_set_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {SetTypes::textset(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, Gen_contains_set_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setContains", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, Gen_contains_set_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("@>", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, LogicalType::BOOLEAN, Gen_contains_set_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("setOverlaps", {SpatialSetType::geomset(), SpatialSetType::geomset()}, LogicalType::BOOLEAN, Gen_overlaps_set_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {SpatialSetType::geomset(), SpatialSetType::geomset()}, LogicalType::BOOLEAN, Gen_overlaps_set_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("setOverlaps", {SpatialSetType::geogset(), SpatialSetType::geogset()}, LogicalType::BOOLEAN, Gen_overlaps_set_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("&&", {SpatialSetType::geogset(), SpatialSetType::geogset()}, LogicalType::BOOLEAN, Gen_overlaps_set_set));
     for (auto &type : SpanTypes::AllTypes()) {
         RegisterSerializedScalarFunction(loader, ScalarFunction("spanAdjacent", {type, type}, LogicalType::BOOLEAN, Gen_adjacent_span_span));
         RegisterSerializedScalarFunction(loader, ScalarFunction("-|-", {type, type}, LogicalType::BOOLEAN, Gen_adjacent_span_span));

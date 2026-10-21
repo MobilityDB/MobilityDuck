@@ -886,6 +886,15 @@ inline GSERIALIZED * geo_translate_deltaz(const GSERIALIZED * p0, double p1, dou
 inline GSERIALIZED * line_interpolate_point_repeat(const GSERIALIZED * p0, double p1) {
     return ::line_interpolate_point(p0, p1, false);
 }
+inline char * spatialset_as_text_maxdd(const Set * p0) {
+    return ::spatialset_as_text(p0, 15);
+}
+inline char * spatialset_as_ewkt_maxdd(const Set * p0) {
+    return ::spatialset_as_ewkt(p0, 15);
+}
+inline Set * spatialset_transform_pipeline_is_forward_srid(const Set * p0, const char * p1) {
+    return ::spatialset_transform_pipeline(p0, p1, 0, true);
+}
 inline STBox * stbox_shift_scale_time_duration(const STBox * p0, const MeosInterval * p1) {
     return ::stbox_shift_scale_time(p0, p1, NULL);
 }
@@ -2573,6 +2582,17 @@ static void Gen_timestamptz_to_spanset(DataChunk &args, ExpressionState &, Vecto
     }
 }
 
+static void Gen_text_to_set(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            text *p0 = MakeText(a0);
+            Set * r = text_to_set(p0);
+            free(p0); 
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
 static void Gen_dateset_to_tstzset(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
@@ -3338,6 +3358,7 @@ void RegisterGenerated_meos_setspan_conversion(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::TIMESTAMP_TZ}, SetTypes::tstzset(), Gen_timestamptz_to_set));
     RegisterSerializedScalarFunction(loader, ScalarFunction("span", {LogicalType::TIMESTAMP_TZ}, SpanTypes::tstzspan(), Gen_timestamptz_to_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanset", {LogicalType::TIMESTAMP_TZ}, SpansetTypes::tstzspanset(), Gen_timestamptz_to_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::VARCHAR}, SetTypes::textset(), Gen_text_to_set));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tstzset", {SetTypes::dateset()}, SetTypes::tstzset(), Gen_dateset_to_tstzset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("intset", {SetTypes::floatset()}, SetTypes::intset(), Gen_floatset_to_intset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("floatset", {SetTypes::intset()}, SetTypes::floatset(), Gen_intset_to_floatset));

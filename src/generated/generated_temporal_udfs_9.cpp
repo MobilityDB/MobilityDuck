@@ -886,6 +886,15 @@ inline GSERIALIZED * geo_translate_deltaz(const GSERIALIZED * p0, double p1, dou
 inline GSERIALIZED * line_interpolate_point_repeat(const GSERIALIZED * p0, double p1) {
     return ::line_interpolate_point(p0, p1, false);
 }
+inline char * spatialset_as_text_maxdd(const Set * p0) {
+    return ::spatialset_as_text(p0, 15);
+}
+inline char * spatialset_as_ewkt_maxdd(const Set * p0) {
+    return ::spatialset_as_ewkt(p0, 15);
+}
+inline Set * spatialset_transform_pipeline_is_forward_srid(const Set * p0, const char * p1) {
+    return ::spatialset_transform_pipeline(p0, p1, 0, true);
+}
 inline STBox * stbox_shift_scale_time_duration(const STBox * p0, const MeosInterval * p1) {
     return ::stbox_shift_scale_time(p0, p1, NULL);
 }
@@ -1821,6 +1830,19 @@ static void Gen_tpcpatch_from_mfjson(DataChunk &args, ExpressionState &, Vector 
 }
 
 
+// ===== @ingroup meos_pose_set_conversion =====
+static void Gen_pose_to_set(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            Pose *p0 = BlobToPose(a0);
+            Set * r = pose_to_set(p0);
+            free(p0); 
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
+
 // ===== @ingroup meos_posechain_base_inout =====
 static void Gen_posechain_in(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -1899,6 +1921,33 @@ static void Gen_tposechain_minus_value(DataChunk &args, ExpressionState &, Vecto
             Temporal *r = tposechain_minus_value(t, a2p);
             free(a2p); free(t);
             return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+
+// ===== @ingroup meos_quadbin_set_constructor =====
+static void Gen_quadbinset_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &lv = args.data[0];
+    auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));
+    auto cd = FlatVector::GetData<int64_t>(child);
+    auto &cv = FlatVector::Validity(child);
+    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),
+        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
+            int n = (int) le.length, got = 0;
+            uint64_t *arr = (uint64_t *) malloc(sizeof(uint64_t) * (n > 0 ? n : 1));
+            for (int j = 0; j < n; j++, got++) {
+                if (!cv.RowIsValid(le.offset + j)) {
+                    free(arr);
+                    throw InvalidInputException("null array element not allowed in this context");
+                }
+                auto a2 = cd[le.offset + j];
+                arr[j] = (uint64_t) a2;
+            }
+            Set *r = quadbinset_make(arr, n);
+            free(arr);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SetToBlob(result, r);
         });
 }
 
@@ -2951,6 +3000,10 @@ void RegisterGenerated_meos_pointcloud_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpatchFromMFJSON", {LogicalType::VARCHAR}, TPcpatchTypes::tpcpatch(), Gen_tpcpatch_from_mfjson));
 }
 
+void RegisterGenerated_meos_pose_set_conversion(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {PoseTypes::pose()}, SetTypes::poseset(), Gen_pose_to_set));
+}
+
 void RegisterGenerated_meos_posechain_base_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("posechain", {LogicalType::VARCHAR}, PosechainTypes::posechain(), Gen_posechain_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {PosechainTypes::posechain(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_posechain_as_text));
@@ -2962,6 +3015,10 @@ void RegisterGenerated_meos_posechain_base_inout(ExtensionLoader &loader) {
 void RegisterGenerated_meos_posechain_restrict(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("atValue", {PosechainTypes::tposechain(), PosechainTypes::posechain()}, PosechainTypes::tposechain(), Gen_tposechain_at_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusValue", {PosechainTypes::tposechain(), PosechainTypes::posechain()}, PosechainTypes::tposechain(), Gen_tposechain_minus_value));
+}
+
+void RegisterGenerated_meos_quadbin_set_constructor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::LIST(QuadbinTypes::quadbin())}, SetTypes::quadbinset(), Gen_quadbinset_make));
 }
 
 void RegisterGenerated_meos_rgeo_restrict(ExtensionLoader &loader) {
