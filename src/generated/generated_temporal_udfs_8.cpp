@@ -757,6 +757,9 @@ inline Temporal * temporal_append_tinstant_expand_maxdist_maxt(Temporal * p0, co
 inline Temporal * temporal_append_tsequence_expand(Temporal * p0, const Temporal * p1) {
     return ::temporal_append_tsequence(p0, (const TSequence *) p1, false);
 }
+inline Temporal * temporal_tsample_interp_torigin(const Temporal * p0, const MeosInterval * p1) {
+    return ::temporal_tsample(p0, p1, timestamptz_in("2000-01-03", -1), interptype_from_string("discrete"));
+}
 inline Span * temporal_time_bins_border_inc_torigin(const Temporal * p0, const MeosInterval * p1, int * p2) {
     return ::temporal_time_bins(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
 }
@@ -880,6 +883,9 @@ inline GSERIALIZED * geo_scale_geo_sorigin(const GSERIALIZED * p0, const GSERIAL
 inline GSERIALIZED * geo_translate_deltaz(const GSERIALIZED * p0, double p1, double p2) {
     return ::geo_translate(p0, p1, p2, 0);
 }
+inline GSERIALIZED * line_interpolate_point_repeat(const GSERIALIZED * p0, double p1) {
+    return ::line_interpolate_point(p0, p1, false);
+}
 inline STBox * stbox_shift_scale_time_duration(const STBox * p0, const MeosInterval * p1) {
     return ::stbox_shift_scale_time(p0, p1, NULL);
 }
@@ -891,6 +897,12 @@ inline STBox * union_stbox_stbox_strict(const STBox * p0, const STBox * p1) {
 }
 inline char * tspatial_as_ewkt_maxdd(const Temporal * p0) {
     return ::tspatial_as_ewkt(p0, 15);
+}
+inline bool tpoint_as_mvtgeom_buffer_clip_geom(const Temporal * p0, const STBox * p1, int32_t p2, GSERIALIZED ** p3, int64_t ** p4, int * p5) {
+    return ::tpoint_as_mvtgeom(p0, p1, p2, 256, true, p3, p4, p5);
+}
+inline bool tpoint_as_mvtgeom_buffer_clip_geom_extent(const Temporal * p0, const STBox * p1, GSERIALIZED ** p2, int64_t ** p3, int * p4) {
+    return ::tpoint_as_mvtgeom(p0, p1, 4096, 256, true, p2, p3, p4);
 }
 inline Temporal * bearing_tpoint_point_invert_invert_no(const Temporal * p0, const GSERIALIZED * p1) {
     return ::bearing_tpoint_point(p0, p1, false);
@@ -1081,6 +1093,317 @@ static void Gen_ever_ne_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &, Ve
             if (r < 0) { mask.SetInvalid(idx); return bool(); }
             return (r != 0);
         });
+}
+
+
+// ===== @ingroup meos_geo_base_spatial =====
+static void Gen_geo_collect_garray(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 1; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        GSERIALIZED **x0 = (GSERIALIZED **) malloc(sizeof(GSERIALIZED *) * (le0.length + 1));
+        int n0 = 0;
+        for (idx_t j = 0; j < le0.length; j++)
+            if (ch0v.RowIsValid(le0.offset + j))
+                x0[n0++] = GeometryToGSerialized(ch0d[le0.offset + j], 0);
+        if (n0 == 0) { free(x0); outv.SetInvalid(i); continue; }
+        GSERIALIZED *r = geo_collect_garray(x0, n0);
+        for (int j = 0; j < n0; j++) free(x0[j]);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = GSerializedToGeometry(r, state, result);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_geo_makeline_garray(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 1; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        GSERIALIZED **x0 = (GSERIALIZED **) malloc(sizeof(GSERIALIZED *) * (le0.length + 1));
+        int n0 = 0;
+        for (idx_t j = 0; j < le0.length; j++)
+            if (ch0v.RowIsValid(le0.offset + j))
+                x0[n0++] = GeometryToGSerialized(ch0d[le0.offset + j], 0);
+        if (n0 == 0) { free(x0); outv.SetInvalid(i); continue; }
+        GSERIALIZED *r = geo_makeline_garray(x0, n0);
+        for (int j = 0; j < n0; j++) free(x0[j]);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = GSerializedToGeometry(r, state, result);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_geo_num_points(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<int32_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 1; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        int32_t r = geo_num_points(x0);
+        free(x0);
+        out[i] = (int32_t) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_geo_num_geos(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<int32_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 1; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        int32_t r = geo_num_geos(x0);
+        free(x0);
+        out[i] = (int32_t) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_geo_geo_n(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *r = geo_geo_n(x0, in1[i]);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = GSerializedToGeometry(r, state, result);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_geom_boundary(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 1; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *r = geom_boundary(x0);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = GSerializedToGeometry(r, state, result);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_geom_buffer(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<double>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *r = geom_buffer(x0, in1[i], in2[i].GetString().c_str());
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = GSerializedToGeometry(r, state, result);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_geom_convex_hull(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 1; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *r = geom_convex_hull(x0);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = GSerializedToGeometry(r, state, result);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_geom_is_simple(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 1; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        bool r = geom_is_simple(x0);
+        free(x0);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_geom_oriented_envelope(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 1; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *r = geom_oriented_envelope(x0);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = GSerializedToGeometry(r, state, result);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_line_interpolate_point_repeat(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<double>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *r = line_interpolate_point_repeat(x0, in1[i]);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = GSerializedToGeometry(r, state, result);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_line_locate_point(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<double>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], 0);
+        double r = line_locate_point(x0, p1);
+        free(p1);
+        free(x0);
+        out[i] = (double) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_line_substring(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<double>(args.data[1]);
+    auto in2 = FlatVector::GetData<double>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *r = line_substring(x0, in1[i], in2[i]);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = GSerializedToGeometry(r, state, result);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 
@@ -3468,6 +3791,22 @@ void RegisterGenerated_meos_cbuffer_comp_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_ever_ne_tcbuffer_tcbuffer));
 }
 
+void RegisterGenerated_meos_geo_base_spatial(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("collect", {LogicalType::LIST(MobilityDuckGeometryType())}, MobilityDuckGeometryType(), Gen_geo_collect_garray));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("makeLine", {LogicalType::LIST(MobilityDuckGeometryType())}, MobilityDuckGeometryType(), Gen_geo_makeline_garray));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numPoints", {MobilityDuckGeometryType()}, LogicalType::INTEGER, Gen_geo_num_points));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numGeometries", {MobilityDuckGeometryType()}, LogicalType::INTEGER, Gen_geo_num_geos));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("geometryN", {MobilityDuckGeometryType(), LogicalType::INTEGER}, MobilityDuckGeometryType(), Gen_geo_geo_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("boundary", {MobilityDuckGeometryType()}, MobilityDuckGeometryType(), Gen_geom_boundary));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("buffer", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::VARCHAR}, MobilityDuckGeometryType(), Gen_geom_buffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("convexHull", {MobilityDuckGeometryType()}, MobilityDuckGeometryType(), Gen_geom_convex_hull));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("isSimple", {MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_geom_is_simple));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("orientedEnvelope", {MobilityDuckGeometryType()}, MobilityDuckGeometryType(), Gen_geom_oriented_envelope));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lineInterpolatePoint", {MobilityDuckGeometryType(), LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_line_interpolate_point_repeat));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lineLocatePoint", {MobilityDuckGeometryType(), MobilityDuckGeometryType()}, LogicalType::DOUBLE, Gen_line_locate_point));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lineSubstring", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_line_substring));
+}
+
 void RegisterGenerated_meos_h3_base_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("isValidCell", {H3indexTypes::h3index()}, LogicalType::BOOLEAN, Gen_h3_is_valid_cell));
     RegisterSerializedScalarFunction(loader, ScalarFunction("isValidDirectedEdge", {H3indexTypes::h3index()}, LogicalType::BOOLEAN, Gen_h3_is_valid_directed_edge));
@@ -3558,6 +3897,7 @@ void RegisterGenerated_meos_pose_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("rotateX", {PoseTypes::tpose(), LogicalType::DOUBLE}, PoseTypes::tpose(), Gen_tpose_rotate_x));
     RegisterSerializedScalarFunction(loader, ScalarFunction("rotateY", {PoseTypes::tpose(), LogicalType::DOUBLE}, PoseTypes::tpose(), Gen_tpose_rotate_y));
     RegisterSerializedScalarFunction(loader, ScalarFunction("rotateZ", {PoseTypes::tpose(), LogicalType::DOUBLE}, PoseTypes::tpose(), Gen_tpose_rotate_z));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("rotate", {PoseTypes::tpose(), LogicalType::DOUBLE}, PoseTypes::tpose(), Gen_tpose_rotate_z));
     RegisterSerializedScalarFunction(loader, ScalarFunction("translate", {PoseTypes::tpose(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, PoseTypes::tpose(), Gen_tpose_translate));
     RegisterSerializedScalarFunction(loader, ScalarFunction("translate", {PoseTypes::tpose(), LogicalType::DOUBLE, LogicalType::DOUBLE}, PoseTypes::tpose(), Gen_tpose_translate_d));
     loader.RegisterFunction(TableFunction("temporalUnnest", {PoseTypes::tpose()}, Unnest_tpose_unnestExecFn, Unnest_tpose_unnestBindFn, Unnest_tpose_unnestInitFn));

@@ -134,162 +134,10 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "stbox",
-            {tgeompoint()},
-            StboxType::stbox(),
-            TgeompointFunctions::Tspatial_to_stbox
-        )
-    );
-    
-    /* ***************************************************
-     * Conversion functions
-     ****************************************************/
-    // timeSpan(tgeompoint) (temporal_to_tstzspan, group meos_temporal_conversion) is
-    // generated from the catalog in generated_temporal_udfs.cpp (RETIRED_GROUPS).
-
-    /***************************************************
-     * Transformation functions
-     ****************************************************/
-    
-
-
-
-
-
-
-
-
-
-
-    /* ***************************************************
-    * Accessor functions
-    ****************************************************/
-
-
-
-    // timestamps(tgeompoint) is generated from the catalog (temporal_timestamps) in generated_temporal_udfs.cpp.
-
-    /* ***************************************************
-     * Shift and Scale functions
-     ****************************************************/
-
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "shiftScaleTime",
-            {tgeompoint(), LogicalType::INTERVAL, LogicalType::INTERVAL},
-            tgeompoint(),
-            TemporalFunctions::Temporal_shift_scale_time
-        )
-    );
-
-    //TODO: unnest 
-
-    /* ***************************************************
-     * Restriction functions
-     ****************************************************/
-
-    
-    /* ***************************************************
-     * Modification function
-     ****************************************************/
-
-
-
-
-
-
-
-
-
-
-
-    /* ***************************************************
-     * Stops function
-     ****************************************************/
-    
-    /* ***************************************************
-     * Spatial functions
-     ****************************************************/
-
-
-
-
-
-
-
-
-
-
-
-
-    // round(tgeompoint) at both arities is generated from the catalog temporal_round
-    // signature (generated_temporal_udfs.cpp); no hand registration remains.
-
-
-    
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "collect_gs",
-            {LogicalType::LIST(LogicalType::BLOB)},
-            LogicalType::BLOB,
-            TgeompointFunctions::collect_gs
-        )
-    );
-
-    duckdb::RegisterSerializedScalarFunction(loader, 
-        ScalarFunction(
-            "distance_gs",
-            {LogicalType::BLOB, LogicalType::BLOB},
-            LogicalType::DOUBLE,
-            TgeompointFunctions::distance_geo_geo
-        )
-    );
-
-    /* ***************************************************
-     * Spatial comparison predicates — ever/always + temporal_t*
-     * on tgeompoint × {geometry, tgeompoint}
-     ****************************************************/
-    {
-        const auto T = tgeompoint();
-        const auto G = MobilityDuckGeometryType();
-
-        // ever/always spatial comparisons (meos_temporal_comp_ever) are supplied by
-        // the generated surface (geometry-arg overloads via the Temporal+GSERIALIZED path).
-
-        // spatial temporal comparisons tEqual/tNotEqual (meos_temporal_comp_temp) are supplied
-        // by the generated surface (geometry-arg overloads via the Temporal+GSERIALIZED path).
-    }
-
-    {
-        const auto TG = tgeompoint();
-        const auto G  = MobilityDuckGeometryType();
-        const auto D  = LogicalType::DOUBLE;
-
-        /* nearestApproachInstant */
-
-        /* nearestApproachDistance */
-
-        /* nad — alias */
-
-        /* affine (12-arg and 6-arg) */
-
-        /* translate */
-
-        /* rotate */
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("rotate", {TG, D},       TG, TgeompointFunctions::Tgeo_rotate_angle));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("rotate", {TG, D, G},    TG, TgeompointFunctions::Tgeo_rotate_geom));
-
-        /* rotateZ / rotateX / rotateY */
-
-        /* transscale */
-
-        /* scale */
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("scale", {TG, G, G}, TG, TgeompointFunctions::Tgeo_scale_geom_origin));
-    }
+    // stbox(tgeompoint), shiftScaleTime(tgeompoint, interval, interval), rotate and scale over
+    // tgeompoint, and collect(geometry[]) and distance(geometry, geometry), the native geometry
+    // operations, are generated from the catalog (meos_geo_conversion, meos_temporal_transf,
+    // meos_geo_transf, meos_geo_base_spatial, meos_geo_base_dist).
 }
 
 /* ***************************************************
@@ -303,13 +151,10 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
  *
  *   RETURNS TABLE(spaceBin geometry, [timeBin timestamptz,] tpoint tgeompoint)
  *
- * asMVTGeom + geoMeasure for tgeompoint
+ * asMVTGeom for tgeompoint
  *
  *   asMVTGeom(tgeompoint, stbox bounds[, extent int[, buffer int[, clip bool]]])
  *     RETURNS STRUCT(geom geometry, times bigint[])
- *
- *   geoMeasure(tgeompoint, tfloat measure[, segmentize boolean])
- *     RETURNS geometry
  ****************************************************/
 
 namespace {
@@ -667,41 +512,6 @@ OperatorResultType SpaceTimeSplitInOut(ExecutionContext &context, TableFunctionI
     return SpaceSplitInOutCommon(context, data_p, input, output, /*with_time=*/true);
 }
 
-void TgeoGeoMeasureExec(DataChunk &args, ExpressionState &state, Vector &result) {
-    const idx_t row_count = args.size();
-    for (idx_t i = 0; i < args.ColumnCount(); i++) args.data[i].Flatten(row_count);
-    const idx_t cc = args.ColumnCount();
-    auto in_temp = FlatVector::GetData<string_t>(args.data[0]);
-    auto in_meas = FlatVector::GetData<string_t>(args.data[1]);
-    auto &v0 = FlatVector::Validity(args.data[0]);
-    auto &v1 = FlatVector::Validity(args.data[1]);
-    auto out_data = FlatVector::GetData<string_t>(result);
-    auto &out_validity = FlatVector::Validity(result);
-
-    for (idx_t row = 0; row < row_count; row++) {
-        if (!v0.RowIsValid(row) || !v1.RowIsValid(row)) {
-            out_validity.SetInvalid(row);
-            continue;
-        }
-        Temporal *t = BlobToTempMVT(in_temp[row]);
-        Temporal *m = BlobToTempMVT(in_meas[row]);
-        bool segmentize = (cc > 2) ? FlatVector::GetData<bool>(args.data[2])[row] : false;
-        GSERIALIZED *geom = nullptr;
-        bool ok = tpoint_tfloat_to_geomeas(t, m, segmentize, &geom);
-        free(t); free(m);
-        if (!ok || !geom) {
-            out_validity.SetInvalid(row);
-            if (geom) free(geom);
-            continue;
-        }
-        ArenaAllocator arena(BufferAllocator::Get(state.GetContext()));
-        string_t enc = GSerializedToGeometry(geom, arena, result);
-        out_data[row] = StringVector::AddStringOrBlob(result, enc);
-        free(geom);
-    }
-    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
-}
-
 } // namespace
 
 void TgeompointType::RegisterTpointSplit(ExtensionLoader &loader) {
@@ -761,9 +571,8 @@ void TgeompointType::RegisterAnalyticsViz(ExtensionLoader &loader) {
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("asMVTGeom", {T, B, I, I},          MVT_OUT, TgeoAsMVTGeomExec));
     duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("asMVTGeom", {T, B, I, I, BL},      MVT_OUT, TgeoAsMVTGeomExec));
 
-    /* geoMeasure(tgeompoint, tfloat[, segmentize]) -> geometry */
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("geoMeasure", {T, TemporalTypes::tfloat()},     G, TgeoGeoMeasureExec));
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("geoMeasure", {T, TemporalTypes::tfloat(), BL}, G, TgeoGeoMeasureExec));
+    // geoMeasure(tgeompoint | tgeogpoint, tfloat[, boolean]) is generated from the catalog
+    // (tpoint_tfloat_to_geomeas, meos_geo_conversion).
 }
 
 } // namespace duckdb

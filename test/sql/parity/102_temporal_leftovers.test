@@ -1,0 +1,228 @@
+# name: test/sql/parity/102_temporal_leftovers.test
+# description: tsample, whenTrue, stbox over the spatial temporal types, shiftScaleTime, the
+#             <type>Inst conversions, rotate and scale over a temporal point, geoMeasure, the
+#             conversion of a geometry to a temporal point and the native geometry operations,
+#             generated from the catalog. The expected values are MobilityDB's own answers:
+#             mobilitydb/test/temporal/expected/022_temporal.test.out and 025_temporal_tile.test.out,
+#             mobilitydb/test/geo/expected/049_geo_funcs.test.out, 052_tpoint.test.out,
+#             052_tgeo.test.out, 076_tpoint_analytics.test.out and 076_tgeo_analytics.test.out,
+#             mobilitydb/test/json/expected/452_tjsonb.test.out, and the whenTrue example of the
+#             manual (doc/temporal_alpha.xml). A temporal value is compared through its text with
+#             the text of the value MobilityDB answers, so the session time zone enters both sides
+#             alike, and a geometry through the text of the geometry MobilityDB answers.
+# group: [parity]
+
+require mobilityduck
+
+# ---------------------------------------------------------------------------
+# tsample, with the time origin, its default '2000-01-03' and the interpolation
+# ---------------------------------------------------------------------------
+
+query IIII
+SELECT
+  asText(tsample(tint '[1@2001-01-01, 5@2001-01-05]', interval '2 days', timestamptz '2001-01-01'))
+    = asText(tint '{1@2001-01-01, 1@2001-01-03, 5@2001-01-05}'),
+  asText(tsample(tint '[1@2001-01-01, 5@2001-01-05]', interval '2 days'))
+    = asText(tint '{1@2001-01-01, 1@2001-01-03, 5@2001-01-05}'),
+  asText(tsample(tgeompoint '[Point(1 1)@2001-01-01, Point(5 5)@2001-01-05]', interval '2 days',
+      timestamptz '2001-01-01'))
+    = asText(tgeompoint '{Point(1 1)@2001-01-01, Point(3 3)@2001-01-03, Point(5 5)@2001-01-05}'),
+  asText(tsample(tgeompoint '[Point(1 1)@2001-01-01, Point(5 5)@2001-01-05]', interval '2 days',
+      timestamptz '2001-01-01', 'linear'))
+    = asText(tgeompoint '[Point(1 1)@2001-01-01, Point(5 5)@2001-01-05]');
+----
+true	true	true	true
+
+query I
+SELECT
+  asText(tsample(tgeometry '[Point(1 1)@2001-01-01, Point(5 5)@2001-01-05]', interval '2 days',
+      timestamptz '2001-01-01'))
+    = asText(tgeometry '{Point(1 1)@2001-01-01, Point(1 1)@2001-01-03, Point(5 5)@2001-01-05}');
+----
+true
+
+# ---------------------------------------------------------------------------
+# whenTrue
+# ---------------------------------------------------------------------------
+
+query II
+SELECT
+  asText(whenTrue(tGreaterThan(tfloat '[1@2001-01-01, 4@2001-01-04, 1@2001-01-07]', 2.0)))
+    = asText(tstzspanset '{(2001-01-02, 2001-01-06)}'),
+  asText(whenTrue(tDwithin(tgeompoint '[Point(1 1)@2001-01-01, Point(4 4)@2001-01-04,
+      Point(1 1)@2001-01-07]', geometry 'Point(1 1)', sqrt(2))))
+    = asText(tstzspanset '{[2001-01-01, 2001-01-02], [2001-01-06, 2001-01-07]}');
+----
+true	true
+
+# ---------------------------------------------------------------------------
+# stbox over the spatial temporal types
+# ---------------------------------------------------------------------------
+
+query III
+SELECT
+  stbox(tgeompoint 'Point(1 1)@2001-01-01')::VARCHAR
+    = (stbox 'STBOX XT(((1,1),(1,1)),[2001-01-01, 2001-01-01])')::VARCHAR,
+  stbox(tgeompoint 'SRID=4326;[Point(10 60)@2001-01-01, Point(50 60)@2001-01-02]')::VARCHAR
+    = (stbox 'SRID=4326;STBOX XT(((10,60),(50,60)),[2001-01-01, 2001-01-02])')::VARCHAR,
+  stbox(tgeometry 'Point(1 1)@2001-01-01')::VARCHAR
+    = (stbox 'STBOX XT(((1,1),(1,1)),[2001-01-01, 2001-01-01])')::VARCHAR;
+----
+true	true	true
+
+query II
+SELECT
+  stbox(tgeogpoint 'Interp=Step;[Point(10 60)@2001-01-01, Point(50 60)@2001-01-02]')::VARCHAR
+    = (stbox 'SRID=4326;GEODSTBOX XT(((10,60),(50,60)),[2001-01-01, 2001-01-02])')::VARCHAR,
+  stbox(tgeography 'Point(1 1)@2001-01-01')::VARCHAR
+    = (stbox 'SRID=4326;GEODSTBOX XT(((1,1),(1,1)),[2001-01-01, 2001-01-01])')::VARCHAR;
+----
+true	true
+
+# ---------------------------------------------------------------------------
+# shiftScaleTime over every temporal type, and shiftTime and scaleTime beside it
+# ---------------------------------------------------------------------------
+
+query IIII
+SELECT
+  asText(shiftScaleTime(tbool 't@2001-01-01', interval '1 day', interval '1 day'))
+    = asText(tbool 't@2001-01-02'),
+  asText(shiftScaleTime(tbool '{t@2001-01-01, f@2001-01-02, t@2001-01-03}', interval '1 day',
+      interval '1 day'))
+    = asText(tbool '{t@2001-01-02, f@2001-01-02 12:00:00, t@2001-01-03}'),
+  asText(shiftScaleTime(tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-03]',
+      interval '1 day', interval '1 day'))
+    = asText(tgeompoint '[Point(1 1)@2001-01-02, Point(2 2)@2001-01-03]'),
+  asText(shiftScaleTime(tgeography '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-03]',
+      interval '1 day', interval '1 day'))
+    = asText(tgeography '[Point(1 1)@2001-01-02, Point(2 2)@2001-01-03]');
+----
+true	true	true	true
+
+query II
+SELECT
+  asText(shiftTime(tint '[1@2001-01-01, 2@2001-01-03]', interval '1 day'))
+    = asText(tint '[1@2001-01-02, 2@2001-01-04]'),
+  asText(scaleTime(tint '[1@2001-01-01, 2@2001-01-03]', interval '1 day'))
+    = asText(tint '[1@2001-01-01, 2@2001-01-02]');
+----
+true	true
+
+# ---------------------------------------------------------------------------
+# The <type>Inst conversions of the other temporal types
+# ---------------------------------------------------------------------------
+
+query III
+SELECT
+  asEWKT(tgeometryInst(tgeometry 'Point(1 1)@2001-01-01'))
+    = asEWKT(tgeometry 'Point(1 1)@2001-01-01'),
+  asText(tjsonbInst(tjsonb '[{"geom": "Point(1 1)"}@2001-01-01]'))
+    = asText(tjsonb '"{\"geom\": \"Point(1 1)\"}"@2001-01-01'),
+  tempSubtype(tgeographyInst(tgeography '{Point(1 1)@2001-01-01}'));
+----
+true	true	Instant
+
+# ---------------------------------------------------------------------------
+# rotate and scale over a temporal point, about the origin or a geometry
+# ---------------------------------------------------------------------------
+
+query III
+SELECT
+  asEWKT(rotate(tgeompoint '[Point(50 160)@2001-01-01, Point(50 50)@2001-01-02, Point(100 50)@2001-01-03]',
+      pi()), 6)
+    = asEWKT(tgeompoint '[Point(-50 -160)@2001-01-01, Point(-50 -50)@2001-01-02, Point(-100 -50)@2001-01-03]'),
+  asEWKT(rotate(tgeompoint '[Point(50 160)@2001-01-01, Point(50 50)@2001-01-02]', pi() / 6,
+      geometry 'Point(50 160)'), 6)
+    = asEWKT(rotate(tgeompoint '[Point(50 160)@2001-01-01, Point(50 50)@2001-01-02]', pi() / 6,
+      50.0, 160.0), 6),
+  asEWKT(scale(tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02]', geometry 'Point(2 2)',
+      geometry 'Point(1 1)'))
+    = asEWKT(tgeompoint '[Point(1 1)@2001-01-01, Point(3 3)@2001-01-02]');
+----
+true	true	true
+
+# ---------------------------------------------------------------------------
+# geoMeasure
+# ---------------------------------------------------------------------------
+
+query II
+SELECT
+  ST_AsText(geoMeasure(tgeompoint 'Point(1 1)@2001-01-01', tfloat '5@2001-01-01'))
+    = ST_AsText(geometry 'POINT M (1 1 5)'),
+  ST_AsText(geoMeasure(tgeompoint '[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02, Point(1 1)@2001-01-03]',
+      tfloat '[5@2001-01-01, 7@2001-01-02, 5@2001-01-03]', false))
+    = ST_AsText(geometry 'LINESTRING M (1 1 5,2 2 7,1 1 5)');
+----
+true	true
+
+# ---------------------------------------------------------------------------
+# A temporal point from a geometry whose M values are its timestamps
+# ---------------------------------------------------------------------------
+
+query I
+SELECT
+  asText(tgeompoint(geometry 'LINESTRING M (1 1 978307200,2 2 978393600)'))
+    = asText(tgeompoint '[Point(1 1)@2001-01-01 00:00:00+00, Point(2 2)@2001-01-02 00:00:00+00]');
+----
+true
+
+# ---------------------------------------------------------------------------
+# The native geometry operations
+# ---------------------------------------------------------------------------
+
+query IIII
+SELECT
+  ST_AsText(collect([geometry 'Point(1 1)', geometry 'Point(2 2)']))
+    = ST_AsText(geometry 'MULTIPOINT((1 1),(2 2))'),
+  ST_AsText(collect([geometry 'Point(1 1)', geometry 'Linestring(0 0,1 1)']))
+    = ST_AsText(geometry 'GEOMETRYCOLLECTION(POINT(1 1),LINESTRING(0 0,1 1))'),
+  collect([]::GEOMETRY[]) IS NULL,
+  makeLine([]::GEOMETRY[]) IS NULL;
+----
+true	true	true	true
+
+query IIII
+SELECT
+  distance(geometry 'POINT Z (0 0 0)', geometry 'POINT Z (3 4 12)'),
+  round(maxDistance(geometry 'LINESTRING Z (0 0 0,1 0 0)', geometry 'POINT Z (0 0 2)'), 6),
+  ST_AsText(shortestLine(geometry 'POINT Z (0 0 0)', geometry 'LINESTRING Z (1 -1 1,1 1 1)'))
+    = ST_AsText(geometry 'LINESTRING Z (0 0 0,1 0 1)'),
+  lineLocatePoint(geometry 'Linestring(0 0,4 0,4 3)', geometry 'Point(4 4)');
+----
+13.0	2.236068	true	1.0
+
+query IIIII
+SELECT
+  numPoints(geometry 'Polygon((0 0,4 0,4 4,0 4,0 0))'),
+  isSimple(geometry 'Point(1 2)'),
+  isSimple(geometry 'Multipoint(0 0,1 1,0 0)'),
+  isSimple(geometry 'Multilinestring((0 0,10 0),(5 -5,5 5))'),
+  numGeometries(geometry 'MultiPoint(1 1,5 5)');
+----
+5	true	false	false	2
+
+query IIIIII
+SELECT
+  ST_AsText(boundary(geometry 'Polygon((0 0,4 0,4 4,0 4,0 0))'))
+    = ST_AsText(geometry 'LINESTRING(0 0,4 0,4 4,0 4,0 0)'),
+  ST_AsText(geometryN(geometry 'MultiPoint(1 1,5 5)', 2)) = ST_AsText(geometry 'POINT(5 5)'),
+  ST_AsText(convexHull(geometry 'Multipoint(0 0,1 1,2 2)'))
+    = ST_AsText(geometry 'LINESTRING(0 0,2 2)'),
+  ST_AsText(lineInterpolatePoint(geometry 'Linestring(0 0,4 0,4 3)', 0.25))
+    = ST_AsText(geometry 'POINT(1.75 0)'),
+  ST_AsText(round(lineSubstring(geometry 'Linestring(0 0,4 0,4 3)', 0.25, 0.8), 6))
+    = ST_AsText(geometry 'LINESTRING(1.75 0,4 0,4 1.6)'),
+  ST_AsText(orientedEnvelope(geometry 'Linestring(0 0,10 0)'))
+    = ST_AsText(geometry 'LINESTRING(0 0,10 0)');
+----
+true	true	true	true	true	true
+
+query I
+SELECT ST_IsEmpty(buffer(geometry 'Point(0 0)', 0.0, ''));
+----
+true
+
+statement error
+SELECT distance(geometry 'POINT Z (0 0 0)', geometry 'Point(3 4)');
+----
+Operation on mixed 2D/3D dimensions

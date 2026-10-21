@@ -757,6 +757,9 @@ inline Temporal * temporal_append_tinstant_expand_maxdist_maxt(Temporal * p0, co
 inline Temporal * temporal_append_tsequence_expand(Temporal * p0, const Temporal * p1) {
     return ::temporal_append_tsequence(p0, (const TSequence *) p1, false);
 }
+inline Temporal * temporal_tsample_interp_torigin(const Temporal * p0, const MeosInterval * p1) {
+    return ::temporal_tsample(p0, p1, timestamptz_in("2000-01-03", -1), interptype_from_string("discrete"));
+}
 inline Span * temporal_time_bins_border_inc_torigin(const Temporal * p0, const MeosInterval * p1, int * p2) {
     return ::temporal_time_bins(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
 }
@@ -880,6 +883,9 @@ inline GSERIALIZED * geo_scale_geo_sorigin(const GSERIALIZED * p0, const GSERIAL
 inline GSERIALIZED * geo_translate_deltaz(const GSERIALIZED * p0, double p1, double p2) {
     return ::geo_translate(p0, p1, p2, 0);
 }
+inline GSERIALIZED * line_interpolate_point_repeat(const GSERIALIZED * p0, double p1) {
+    return ::line_interpolate_point(p0, p1, false);
+}
 inline STBox * stbox_shift_scale_time_duration(const STBox * p0, const MeosInterval * p1) {
     return ::stbox_shift_scale_time(p0, p1, NULL);
 }
@@ -891,6 +897,12 @@ inline STBox * union_stbox_stbox_strict(const STBox * p0, const STBox * p1) {
 }
 inline char * tspatial_as_ewkt_maxdd(const Temporal * p0) {
     return ::tspatial_as_ewkt(p0, 15);
+}
+inline bool tpoint_as_mvtgeom_buffer_clip_geom(const Temporal * p0, const STBox * p1, int32_t p2, GSERIALIZED ** p3, int64_t ** p4, int * p5) {
+    return ::tpoint_as_mvtgeom(p0, p1, p2, 256, true, p3, p4, p5);
+}
+inline bool tpoint_as_mvtgeom_buffer_clip_geom_extent(const Temporal * p0, const STBox * p1, GSERIALIZED ** p2, int64_t ** p3, int * p4) {
+    return ::tpoint_as_mvtgeom(p0, p1, 4096, 256, true, p2, p3, p4);
 }
 inline Temporal * bearing_tpoint_point_invert_invert_no(const Temporal * p0, const GSERIALIZED * p1) {
     return ::bearing_tpoint_point(p0, p1, false);
@@ -989,6 +1001,81 @@ static void Gen_cbuffer_radius(DataChunk &args, ExpressionState &, Vector &resul
             if (r == DBL_MAX) { mask.SetInvalid(idx); return double(); }
             return r;
         });
+}
+
+
+// ===== @ingroup meos_geo_base_dist =====
+static void Gen_geo_distance(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<double>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], 0);
+        double r = geo_distance(x0, p1);
+        free(p1);
+        free(x0);
+        if (r == DBL_MAX) { outv.SetInvalid(i); continue; }
+        out[i] = (double) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_geo_shortestline(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], 0);
+        GSERIALIZED *r = geo_shortestline(x0, p1);
+        free(p1);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = GSerializedToGeometry(r, state, result);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_geom_max_distance(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<double>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], 0);
+        double r = geom_max_distance(x0, p1);
+        free(p1);
+        free(x0);
+        if (r == DBL_MAX) { outv.SetInvalid(i); continue; }
+        out[i] = (double) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 
@@ -1094,6 +1181,32 @@ static void Gen_geo_rotate(DataChunk &args, ExpressionState &state, Vector &resu
         if (!valid) { outv.SetInvalid(i); continue; }
         GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
         GSERIALIZED *r = geo_rotate(x0, in1[i], in2[i], in3[i]);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = GSerializedToGeometry(r, state, result);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_geo_rotate_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<double>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *p2 = GeometryToGSerialized(in2[i], 0);
+        GSERIALIZED *r = geo_rotate_geo(x0, in1[i], p2);
+        free(p2);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = GSerializedToGeometry(r, state, result);
@@ -1257,6 +1370,59 @@ static void Gen_geo_scale_zfactor(DataChunk &args, ExpressionState &state, Vecto
         if (!valid) { outv.SetInvalid(i); continue; }
         GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
         GSERIALIZED *r = geo_scale_zfactor(x0, in1[i], in2[i]);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = GSerializedToGeometry(r, state, result);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_geo_scale_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], 0);
+        GSERIALIZED *p2 = GeometryToGSerialized(in2[i], 0);
+        GSERIALIZED *r = geo_scale_geo(x0, p1, p2);
+        free(p1);
+        free(p2);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = GSerializedToGeometry(r, state, result);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_geo_scale_geo_sorigin(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], 0);
+        GSERIALIZED *r = geo_scale_geo_sorigin(x0, p1);
+        free(p1);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = GSerializedToGeometry(r, state, result);
@@ -2945,11 +3111,18 @@ void RegisterGenerated_meos_cbuffer_base_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("radius", {CbufferTypes::cbuffer()}, LogicalType::DOUBLE, Gen_cbuffer_radius));
 }
 
+void RegisterGenerated_meos_geo_base_dist(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("distance", {MobilityDuckGeometryType(), MobilityDuckGeometryType()}, LogicalType::DOUBLE, Gen_geo_distance));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("shortestLine", {MobilityDuckGeometryType(), MobilityDuckGeometryType()}, MobilityDuckGeometryType(), Gen_geo_shortestline));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("maxDistance", {MobilityDuckGeometryType(), MobilityDuckGeometryType()}, LogicalType::DOUBLE, Gen_geom_max_distance));
+}
+
 void RegisterGenerated_meos_geo_base_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("affine", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_geo_affine));
     RegisterSerializedScalarFunction(loader, ScalarFunction("affine", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_geo_affine_c_f_g_h_i_zoff));
     RegisterSerializedScalarFunction(loader, ScalarFunction("reverse", {MobilityDuckGeometryType()}, MobilityDuckGeometryType(), Gen_geo_reverse));
     RegisterSerializedScalarFunction(loader, ScalarFunction("rotate", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_geo_rotate));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("rotate", {MobilityDuckGeometryType(), LogicalType::DOUBLE, MobilityDuckGeometryType()}, MobilityDuckGeometryType(), Gen_geo_rotate_geo));
     RegisterSerializedScalarFunction(loader, ScalarFunction("rotateX", {MobilityDuckGeometryType(), LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_geo_rotate_x));
     RegisterSerializedScalarFunction(loader, ScalarFunction("rotateY", {MobilityDuckGeometryType(), LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_geo_rotate_y));
     RegisterSerializedScalarFunction(loader, ScalarFunction("rotateZ", {MobilityDuckGeometryType(), LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_geo_rotate_z));
@@ -2957,6 +3130,8 @@ void RegisterGenerated_meos_geo_base_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("round", {MobilityDuckGeometryType()}, MobilityDuckGeometryType(), Gen_geo_round_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("scale", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_geo_scale));
     RegisterSerializedScalarFunction(loader, ScalarFunction("scale", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_geo_scale_zfactor));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("scale", {MobilityDuckGeometryType(), MobilityDuckGeometryType(), MobilityDuckGeometryType()}, MobilityDuckGeometryType(), Gen_geo_scale_geo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("scale", {MobilityDuckGeometryType(), MobilityDuckGeometryType()}, MobilityDuckGeometryType(), Gen_geo_scale_geo_sorigin));
     RegisterSerializedScalarFunction(loader, ScalarFunction("segmentize", {MobilityDuckGeometryType(), LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_geo_segmentize));
     RegisterSerializedScalarFunction(loader, ScalarFunction("translate", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_geo_translate));
     RegisterSerializedScalarFunction(loader, ScalarFunction("translate", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_geo_translate_deltaz));

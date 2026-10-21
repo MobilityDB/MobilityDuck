@@ -51,19 +51,6 @@ struct TemporalFunctions {
      ****************************************************/
     // Temporal_timestamps retired: timestamps(<temporal>) is generated (temporal_timestamps) in generated_temporal_udfs.cpp.
     /* ***************************************************
-     * Shift and scale 
-     ****************************************************/
-    static void Temporal_shift_scale_time(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Temporal_tsample(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /* ***************************************************
-     * Transformation functions
-     ****************************************************/
-    static void Temporal_to_tinstant(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tnumber_shift_value(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tnumber_scale_value(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tnumber_shift_scale_value(DataChunk &args, ExpressionState &state, Vector &result);
-    /* ***************************************************
      * Restriction functions
      ****************************************************/
     /* ***************************************************
@@ -78,11 +65,6 @@ struct TemporalFunctions {
      * Local Aggregate Functions
      ****************************************************/
     // TODO: Selectivity functions 
-
-    /* ***************************************************
-     * Boolean operators
-     ****************************************************/
-    static void Tbool_when_true(DataChunk &args, ExpressionState &state, Vector &result);
 
     /* ***************************************************
      * Boolean operators on tbool

@@ -65,54 +65,6 @@ LogicalType TPcpointTypes::tpcpoint() {
 
 
 
-/*
- * Transformations
-*/
-
-static void Temporal_to_tinstant(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_geom_vec = args.data[0];
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        input_geom_vec, result, count,
-        [&](string_t input_str) -> string_t {
-            std::string input = input_str.GetString();
-
-            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
-
-            if (!temp) {
-                throw InvalidInputException("Invalid tpcpoint data: null pointer");
-            }
-
-            TInstant *inst = temporal_as_tinstant(temp);
-            if (!inst) {
-                throw InvalidInputException("Failed to convert tpcpoint to TInstant");
-            }
-
-            size_t inst_size = temporal_mem_size((Temporal*)inst);
-
-            uint8_t *inst_buffer = (uint8_t*)malloc(inst_size);
-            if (!inst_buffer) {
-                free(inst);
-                throw InvalidInputException("Failed to allocate memory for TInstant data");
-            }
-
-            memcpy(inst_buffer, inst, inst_size);
-
-            string_t inst_string_t(reinterpret_cast<const char*>(inst_buffer), inst_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, inst_string_t);
-
-            free(inst_buffer);
-            free(inst);
-
-            return stored_data;
-        }
-    );
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
 
 
 
@@ -207,13 +159,6 @@ static void Tpcpoint_pcid(DataChunk &args, ExpressionState &state, Vector &resul
 
 void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
-    auto tpcpoint_to_tinstant_function = ScalarFunction(
-        "tpcpointInst",
-        {TPcpointTypes::tpcpoint()},
-        TPcpointTypes::tpcpoint(),
-        Temporal_to_tinstant);
-    duckdb::RegisterSerializedScalarFunction(loader,  tpcpoint_to_tinstant_function);
-
 
 
 
@@ -232,27 +177,8 @@ void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     );
     duckdb::RegisterSerializedScalarFunction(loader,  tpcpoint_pcid_function);
 
-
-
-
-
-
-    // ===================================================================
-    // Foundational tpcpoint surface — accessors, time/value-restrict,
-    // modifiers, and comparison. The MEOS C functions delegated to here
-    // are subtype-agnostic (they take Temporal *), so we reuse the same
-    // generic handlers wired for tgeompoint in temporal_functions.cpp.
-    // ===================================================================
-
-    const LogicalType TGEOM = TPcpointTypes::tpcpoint();
-    const LogicalType TSTZ  = LogicalType::TIMESTAMP_TZ;
-    const LogicalType IVAL  = LogicalType::INTERVAL;
-
-    // ---- Modifiers (shift / scale / shiftScale / append / insert / update /
-    // delete) ----
-    RegisterMeosFunction(loader, ScalarFunction(
-        "shiftScaleTime", {TGEOM, IVAL, IVAL}, TGEOM,
-        TemporalFunctions::Temporal_shift_scale_time));
+    // tpcpointInst(tpcpoint) and shiftScaleTime(tpcpoint, interval, interval) are generated from
+    // the catalog (meos_temporal_transf).
 }
 
 void TPcpointTypes::RegisterTypes(ExtensionLoader &loader) {

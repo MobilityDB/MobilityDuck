@@ -20,7 +20,6 @@ struct TgeompointFunctions {
     // Out function: overload Temporal_out
     static void Spatialarr_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spatialarr_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tspatial_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
     static bool Tspatial_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* ***************************************************
@@ -40,21 +39,6 @@ struct TgeompointFunctions {
     /* ***************************************************
      * Spatial functions
      ****************************************************/
-
-    static void Tpoint_make_simple(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /* ***************************************************
-     * Distance functions
-     ****************************************************/
-    static void collect_gs(DataChunk &args, ExpressionState &state, Vector &result);
-    static void distance_geo_geo(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /* ***************************************************
-     * Affine / translate / rotate / scale transforms
-     ****************************************************/
-    static void Tgeo_rotate_angle(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tgeo_rotate_geom(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Tgeo_scale_geom_origin(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

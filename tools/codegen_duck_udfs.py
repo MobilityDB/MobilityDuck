@@ -1186,6 +1186,10 @@ def forward_literal(p, raw):
     # passes them (tools/codegen_jvm.py): `interp` LINEAR, `maxt` NULL
     if "*" not in n and text in ENUM_MEMBERS.get(b, ()):
         return text
+    # an enum the SQL names in text (tsample's interp DEFAULT 'discrete'), read through the reader
+    # #shape_arg reads its argument with
+    if "*" not in n and b in ENUM_READER:
+        return '%s("%s")' % (ENUM_READER[b], text)
     if "*" in n and text == "NULL":
         return "NULL"
     if b == "Interval" and n.count("*") == 1:
@@ -1253,7 +1257,12 @@ def project_signature_forms(f):
             forms.setdefault(key, []).append(ns)
     if not forms:
         return [f]
-    out = [dict(f, sqlSignatures=keep)] if keep else []
+    # the signatures binding nothing keep the function, under the one name they declare when it
+    # is not the function's (shiftScaleTime(tint, interval, interval), where shiftTime and
+    # scaleTime bind a NULL shift or duration)
+    kept_names = {s.get("sqlName") or f["sqlfn"] for s in keep}
+    sqlfn = kept_names.pop() if len(kept_names) == 1 else f["sqlfn"]
+    out = [dict(f, sqlSignatures=keep, sqlfn=sqlfn)] if keep else []
     names = Counter("_".join(k for k, _v in key) for key in forms)
     for key, fsigs in forms.items():
         fixed = dict(key)
@@ -3017,9 +3026,13 @@ def hoist_span_operands(args, indent):
     locals, the arguments, the lines freeing them). `args` holds each argument's marshal
     expression already read at the row."""
     decl, call, free_ = [], [], []
+    # a geometry and a temporal value are decoded and freed the same way (#shape_nary_scalars)
+    owned = (("BlobToSpan(", "Span"), ("GeometryToGSerialized(", "GSERIALIZED"),
+             ("BlobToTemporal(", "Temporal"))
     for k, a in enumerate(args):
-        if a.startswith("BlobToSpan("):
-            decl.append(f"{indent}Span *p{k} = {a};")
+        ct = next((c for pre, c in owned if a.startswith(pre)), None)
+        if ct is not None:
+            decl.append(f"{indent}{ct} *p{k} = {a};")
             call.append(f"p{k}")
             free_.append(f"{indent}free(p{k});")
         else:
@@ -3581,11 +3594,15 @@ def shape_nary_scalars(f):
     first operand is a temporal value or a geometry, followed by three or more by-value scalars,
     answering a temporal value or a geometry (rotate(tgeompoint, float, float, float), affine over
     twelve), past the three operands DuckDB's executors take; None otherwise. The shape reads every
-    operand per row, as the hand Tgeo_affine_12 executor does, and answers NULL for any NULL one."""
+    operand per row, as the hand Tgeo_affine_12 executor does, and answers NULL for any NULL one.
+    It also reads the operands no other shape takes beside a temporal value or a geometry: a
+    duration, an enum read from its name, a text, a second geometry or temporal value, an array of
+    geometries first, a by-value result of a geometry and a geometry handed back through an
+    out-parameter."""
     if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
         return None
     ins, out = classify(f)
-    if out is not None or not ins:
+    if not ins:
         return None
     b0, n0 = base(ins[0]["canonical"]), norm(ins[0]["canonical"])
     rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
@@ -3593,7 +3610,7 @@ def shape_nary_scalars(f):
     # or span set: shiftScale(intspan, integer, integer), shiftScale(tstzset, interval, interval),
     # and a container of another kind, span(intspanset) -> intspan, spanN(intspanset, integer),
     # dates(datespanset) -> dateset
-    if b0 in CONT_BLOBTO and n0.endswith("*") and len(ins) <= 3:
+    if out is None and b0 in CONT_BLOBTO and n0.endswith("*") and len(ins) <= 3:
         # a span past the first answering a box is a period (tbox(intspan, tstzspan)), read as
         # #span_operand reads one
         tail = [shape_arg(p) or (span_operand(f, p, k) if rb in ("TBox", "STBox") else None)
@@ -3608,38 +3625,86 @@ def shape_nary_scalars(f):
                                            and "*" not in norm(ins[1]["canonical"]))):
             return None
         return ("cont:" + b0, tail, "cont:" + rb)
-    if not n0.endswith("*") or b0 not in ("Temporal", "GSERIALIZED"):
+    # an array of geometries with its count (collect(geometry[]), makeLine(geometry[])), the
+    # array and its length the catalog's `inputArrays` names, read from a LIST of GEOMETRY
+    arr = ((f.get("shape") or {}).get("inputArrays") or [None])[0]
+    if n0.replace("*", "").strip() == "GSERIALIZED" and n0.endswith("**") and arr and len(ins) >= 2 \
+            and arr.get("param") == ins[0]["name"] \
+            and (arr.get("lengthFrom") or {}).get("name") == ins[1]["name"] \
+            and base(ins[1]["canonical"]) == "int" and "*" not in norm(ins[1]["canonical"]):
+        first, ins = "geoarr", [ins[0]] + ins[2:]
+    elif not n0.endswith("*") or n0.endswith("**") or b0 not in ("Temporal", "GSERIALIZED"):
         return None
-    # a temporal value with fewer scalars is the unary, binary and ternary shapes'; a geometry,
-    # which no other shape takes first, is this one's whatever its scalars (reverse(geometry))
-    if b0 == "Temporal" and len(ins) < 4:
+    else:
+        first = "temporal" if b0 == "Temporal" else "geo"
+    # a geometry handed back through an out-parameter, the call answering whether there is one
+    # (geoMeasure(tgeompoint, tfloat, boolean) over tpoint_tfloat_to_geomeas)
+    if out is not None and not (norm(out) == "GSERIALIZED **"
+                                and norm(f["returnType"]["canonical"]) == "bool"):
         return None
+    # a temporal value with fewer scalars is the unary, binary and ternary shapes'; one with a
+    # geometry or a second temporal value among them, or a geometry handed back, is this one's
+    # where no other shape takes it (rotate(tgeompoint, float, geometry)); a geometry, which no
+    # other shape takes first, is this one's whatever its scalars (reverse(geometry))
+    if first == "temporal" and len(ins) < 4:
+        later = {base(p["canonical"]) for p in ins[1:] if norm(p["canonical"]).count("*") == 1}
+        if not (later & {"GSERIALIZED", "Temporal"} or out is not None):
+            return None
+        if any(s(f) for s in (shape_binary, shape_ternary, shape_geo_temporal, shape_binary_tt,
+                              shape_binary_tt_scalar, shape_outparam)):
+            return None
+    sigs = f.get("sqlSignatures") or []
     tail = []
     for k, p in enumerate(ins[1:], start=1):
         bb, nn = base(p["canonical"]), norm(p["canonical"])
         # the period of a geometry's box (stbox(geometry, tstzspan)), read as #span_operand reads one
-        sp = span_operand(f, p, k) if b0 == "GSERIALIZED" and rb == "STBox" else None
+        sp = span_operand(f, p, k) if first == "geo" and rb == "STBox" else None
         if sp is not None:
             tail.append(sp)
             continue
-        if "*" in nn or bb not in SCALAR_ARG:
+        # a geometry, read in the SRID of the temporal value beside it as #emit_geo_temporal
+        # reads one, else in SRID 0, and freed after the call (#hoist_span_operands)
+        if bb == "GSERIALIZED" and nn.count("*") == 1:
+            srid = "tspatial_srid(x0)" if first == "temporal" else "0"
+            tail.append(("MobilityDuckGeometryType()", "string_t",
+                         "GeometryToGSerialized(a2, %s)" % srid))
+            continue
+        # a temporal value, typed by the one SQL type every signature declares there
+        # (geoMeasure(tgeompoint, tfloat, boolean)) and freed after the call
+        if bb == "Temporal" and nn.count("*") == 1:
+            decl = {s["args"][k] for s in sigs if len(s.get("args") or []) == len(ins)}
+            acc = SIG_TEMPORAL_ACC.get(decl.pop()) if len(decl) == 1 else None
+            if acc is None:
+                return None
+            tail.append((acc, "string_t", "BlobToTemporal(a2)"))
+            continue
+        # a by-value scalar, a duration, an enum read from its name or a text, as #shape_arg
+        # reads one (tsample(tint, interval, timestamptz, text), buffer(geometry, float, text))
+        sa = shape_arg(p)
+        if sa is None:
             return None
-        tail.append(SCALAR_ARG[bb])
+        tail.append(sa)
+    if out is not None:
+        return (first, tail, "geo:out")
+    # a by-value result of a geometry or an array of them (numPoints(geometry),
+    # distance(geometry, geometry)), as #scalar_ret4 types and writes it
+    if first != "temporal" and rb in SCALAR_RET_CPP and "*" not in rn:
+        return (first, tail, "scalar")
     if not rn.endswith("*") or "const" in f["returnType"]["canonical"]:
         return None
     if rb in TEMPORAL_PTR_RET:
         ret = "temporal"
     elif rb == "GSERIALIZED":
         ret = "geo"
-    elif rb in CONT_BLOBTO and b0 == "GSERIALIZED":
+    elif rb in CONT_BLOBTO and first == "geo":
         # the box of a geometry (stbox(geometry)), typed by the signature as a container is
         ret = "cont:" + rb
-    elif rb == "char" and b0 == "Temporal":
+    elif rb == "char" and first == "temporal":
         # the text of a temporal value (asMFJSON(tfloat, integer, integer, integer))
         ret = "text"
     else:
         return None
-    return ("temporal" if b0 == "Temporal" else "geo", tail, ret)
+    return (first, tail, ret)
 
 def emit_nary_scalars(f, first, tail, ret, dval=None):
     """The per-row body of #shape_nary_scalars: every operand flattened and read at the row, a
@@ -3652,52 +3717,83 @@ def emit_nary_scalars(f, first, tail, ret, dval=None):
     if dval is not None:
         tail = tail[:-1]
     n = 1 + len(tail)
+    # a by-value result is written in the type #scalar_ret4 registers it as
+    _sreg, sct, scpp, sexpr = scalar_ret4(f) if ret == "scalar" else (None, None, "string_t", None)
     L = [f"static void Gen_{name}{sfx}(DataChunk &args, ExpressionState &state, Vector &result) {{",
          "    EnsureMeosThreadInitialized();",
          "    const idx_t rows = args.size();",
-         f"    for (idx_t c = 0; c < {n}; c++) args.data[c].Flatten(rows);",
-         "    auto in0 = FlatVector::GetData<string_t>(args.data[0]);"]
+         f"    for (idx_t c = 0; c < {n}; c++) args.data[c].Flatten(rows);"]
+    if first == "geoarr":
+        L += ["    auto in0 = ListVector::GetData(args.data[0]);",
+              "    auto &ch0 = ListVector::GetEntry(args.data[0]);",
+              "    ch0.Flatten(ListVector::GetListSize(args.data[0]));",
+              "    auto ch0d = FlatVector::GetData<string_t>(ch0);",
+              "    auto &ch0v = FlatVector::Validity(ch0);"]
+    else:
+        L.append("    auto in0 = FlatVector::GetData<string_t>(args.data[0]);")
     for k, (_dt, cpp, _m) in enumerate(tail, start=1):
         L.append(f"    auto in{k} = FlatVector::GetData<{cpp}>(args.data[{k}]);")
-    L += ["    auto out = FlatVector::GetData<string_t>(result);",
+    L += [f"    auto out = FlatVector::GetData<{scpp}>(result);",
           "    auto &outv = FlatVector::Validity(result);",
           "    for (idx_t i = 0; i < rows; i++) {",
           "        bool valid = true;",
           f"        for (idx_t c = 0; c < {n}; c++)",
           "            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }",
           "        if (!valid) { outv.SetInvalid(i); continue; }"]
+    free_x0 = ["        free(x0);"]
     if first == "temporal":
         L.append("        Temporal *x0 = BlobToTemporal(in0[i]);")
     elif first.startswith("cont:"):
         cb = first.split(":", 1)[1]
         L.append(f"        {cb} *x0 = {CONT_BLOBTO[cb]}(in0[i]);")
+    elif first == "geoarr":
+        # the geometries of the list, its NULL elements left out as PostGIS leaves them out of
+        # an array, and no geometry answering NULL as the SQL function does (count == 0)
+        L += ["        const list_entry_t le0 = in0[i];",
+              "        GSERIALIZED **x0 = (GSERIALIZED **) malloc(sizeof(GSERIALIZED *) * (le0.length + 1));",
+              "        int n0 = 0;",
+              "        for (idx_t j = 0; j < le0.length; j++)",
+              "            if (ch0v.RowIsValid(le0.offset + j))",
+              "                x0[n0++] = GeometryToGSerialized(ch0d[le0.offset + j], 0);",
+              "        if (n0 == 0) { free(x0); outv.SetInvalid(i); continue; }"]
+        free_x0 = ["        for (int j = 0; j < n0; j++) free(x0[j]);", "        free(x0);"]
     else:
         L.append("        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);")
     decl, args_, free_ = hoist_span_operands(
-        ["x0"] + [m.replace("a2", f"in{k}[i]") for k, (_d, _c, m) in enumerate(tail, start=1)]
+        ["x0"] + (["n0"] if first == "geoarr" else [])
+        + [m.replace("a2", f"in{k}[i]") for k, (_d, _c, m) in enumerate(tail, start=1)]
         + ([dval] if dval is not None else []), "        ")
     L += decl
     call = ", ".join(args_)
     if ret.startswith("cont:"):
         cb = ret.split(":", 1)[1]
-        L += [f"        {cb} *r = {name}({call});"] + free_ + [
-              "        free(x0);",
+        L += [f"        {cb} *r = {name}({call});"] + free_ + free_x0 + [
               "        if (!r) { outv.SetInvalid(i); continue; }",
               "        out[i] = %s;" % (PTR_RET[cb][1] % "r")]
     elif ret == "temporal":
-        L += [f"        Temporal *r = (Temporal *) {name}({call});",
-              "        free(x0);",
+        L += [f"        Temporal *r = (Temporal *) {name}({call});"] + free_ + free_x0 + [
               "        if (!r) { outv.SetInvalid(i); continue; }",
               "        out[i] = TemporalToBlob(result, r);"]
     elif ret == "text":
-        L += [f"        char *r = {name}({call});",
-              "        free(x0);",
+        L += [f"        char *r = {name}({call});"] + free_ + free_x0 + [
               "        if (!r) { outv.SetInvalid(i); continue; }",
               "        out[i] = StringVector::AddString(result, r);",
               "        free(r);"]
+    elif ret == "scalar":
+        guard = SCALAR_NULL_GUARD.get((f.get("shape") or {}).get("nullableResult"))
+        L += [f"        {sct} r = {name}({call});"] + free_ + free_x0
+        if guard:
+            L.append(f"        if ({guard}) {{ outv.SetInvalid(i); continue; }}")
+        L.append(f"        out[i] = {sexpr};")
+    elif ret == "geo:out":
+        # the geometry handed back through the last parameter, NULL where the call finds none
+        L += ["        GSERIALIZED *r = NULL;",
+              f"        bool found = {name}({call}, &r);"] + free_ + free_x0 + [
+              "        if (!found || !r) { outv.SetInvalid(i); continue; }",
+              "        out[i] = GSerializedToGeometry(r, state, result);",
+              "        free(r);"]
     else:
-        L += [f"        GSERIALIZED *r = {name}({call});",
-              "        free(x0);",
+        L += [f"        GSERIALIZED *r = {name}({call});"] + free_ + free_x0 + [
               "        if (!r) { outv.SetInvalid(i); continue; }",
               "        out[i] = GSerializedToGeometry(r, state, result);",
               "        free(r);"]
@@ -4973,7 +5069,12 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   # FromHexEWKB, FromHexWKB and asText, asEWKT, asMFJSON, asBinary, asEWKB,
                   # asHexEWKB, asHexWKB, one signature per type MobilityDB declares
                   "meos_temporal_inout", "meos_geo_inout", "meos_json_inout",
-                  "meos_pointcloud_inout"}
+                  "meos_pointcloud_inout",
+                  # The temporal leftovers: tsample, whenTrue, the conversions of the temporal
+                  # points (stbox, asMVTGeom, geoMeasure) and the native geometry operations
+                  # collect(geometry[]) and distance(geometry, geometry)
+                  "meos_temporal_analytics_reduction", "meos_temporal_bool",
+                  "meos_geo_conversion", "meos_geo_base_spatial", "meos_geo_base_dist"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
@@ -4991,9 +5092,16 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # stboxX: the catalog gives stbox_make, whose eleven parameters the SQL constructor fills from
 # five arguments, the flags through boundArgs and the SRID read last in SQL and fourth in C; no
 # shape reads that mapping, and no hand registration answers stboxX either.
+# asMVTGeom: its result is the composite geom_times (a geometry and the bigint[] of its times),
+# which tpoint_as_mvtgeom hands back through three out-parameters; no shape builds a STRUCT from
+# out-parameters, so src/geo/tgeompoint.cpp keeps it. The clusters of a geometry array
+# (clusterKMeans, clusterDBSCAN, clusterIntersecting, clusterWithin) answer an array, of integers
+# or of geometries, with its count through an out-parameter, which no shape returns from an
+# array of geometries; no hand registration answers them either.
 RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX",
                        "spaceSplit", "spaceTimeSplit", "timeSplit",
-                       "valueSplit", "valueTimeSplit"}
+                       "valueSplit", "valueTimeSplit", "asMVTGeom",
+                       "clusterKMeans", "clusterDBSCAN", "clusterIntersecting", "clusterWithin"}
 def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
 TEMPORAL_CBASES = {"Temporal", "TInstant", "TSequence", "TSequenceSet"}
@@ -5858,7 +5966,10 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             bodies.append(emit_temporal_ctor(f, tc))
             # a reader of a retired I/O group (tcbufferFromHexWKB) reads every temporal type its
             # signatures declare, the transforms and constructors the core types
-            ctor_acc = (SIG_TEMPORAL_ACC if tc in ("from_hexwkb", "from_mfjson") and retired(f)
+            # and the transforms of a retired group every type theirs declare (tgeometryInst,
+            # tpcpatchSeq, tjsonbSeqSet)
+            ctor_acc = (SIG_TEMPORAL_ACC if tc in ("from_hexwkb", "from_mfjson", "to_inst",
+                                                   "to_seq", "to_seqset") and retired(f)
                         else CORE_CTOR_ACC)
             for s in f.get("sqlSignatures", []):
                 # The registered SQL/return type is the RESULT temporal type (the parsers
@@ -6103,9 +6214,28 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 rcb = ret.split(":", 1)[1]
                 rs = {CONT_SQL_ACC[rcb].get(s.get("ret")) for s in f.get("sqlSignatures") or []
                       if len(s.get("args") or []) == 1 + len(tail)} - {None}
-                pairs = [("MobilityDuckGeometryType()", r) for r in sorted(rs)]
-            elif first == "geo":
-                pairs = [("MobilityDuckGeometryType()", "MobilityDuckGeometryType()")]
+                pairs = [("MobilityDuckGeometryType()", r, [f["sqlfn"]]) for r in sorted(rs)]
+            elif first in ("geo", "geoarr") and ret in ("geo", "geo:out"):
+                pairs = [("MobilityDuckGeometryType()" if first == "geo"
+                          else "LogicalType::LIST(MobilityDuckGeometryType())",
+                          "MobilityDuckGeometryType()", [f["sqlfn"]])]
+            elif first in ("geo", "geoarr"):
+                # the signatures over a geometry, under their own names and results: a
+                # temporal value typed by the signature (tgeompoint(geometry)), a by-value result
+                # as #scalar_ret4 registers it (numPoints(geometry), distance(geometry, geometry));
+                # the geography signatures read a geodetic value DuckDB's GEOMETRY does not carry
+                a0 = ("MobilityDuckGeometryType()" if first == "geo"
+                      else "LogicalType::LIST(MobilityDuckGeometryType())")
+                pairs, seen_ = [], set()
+                for s in f.get("sqlSignatures") or []:
+                    if (s.get("args") or [None])[0] != ("geometry" if first == "geo" else "geometry[]") \
+                            or len(s["args"]) != 1 + len(tail):
+                        continue
+                    r = (scalar_ret4(f)[0] if ret == "scalar" else SIG_TEMPORAL_ACC.get(s.get("ret")))
+                    nm0 = s.get("sqlName") or f["sqlfn"]
+                    if r and (nm0, r) not in seen_:
+                        seen_.add((nm0, r))
+                        pairs.append((a0, r, [nm0]))
             elif first.startswith("cont:"):
                 # the operand's and the return's container types per declared signature, as
                 # #container_scalar_sigs reads one (CONT_SQL_ACC), under the signature's own name
@@ -6144,11 +6274,19 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 accs_ = sig_declared_accs(f) or (_sc[1] if _sc and _sc[0] == "types" else None) or []
                 pairs = []
                 for a in accs_:
-                    r = ("MobilityDuckGeometryType()" if ret == "geo" else
+                    r = ("MobilityDuckGeometryType()" if ret in ("geo", "geo:out") else
                          "LogicalType::VARCHAR" if ret == "text" else
                          (sig_declared_ret(f, a, 1 + len(tail))
                           or ret_temporal_type(f["name"], a, f.get("group"), f.get("sqlReturnType"))))
-                    pairs.append((a, r))
+                    # under the name its signatures at this arity declare (geoMeasure, where the
+                    # function's other signatures are geometry(tgeompoint))
+                    at = [s for s in f.get("sqlSignatures") or []
+                          if len(s.get("args") or []) == 1 + len(tail)]
+                    nms = sorted({s.get("sqlName") or f["sqlfn"] for s in at
+                                  if s["args"][0] == _acc_sqlname(a)})
+                    if at and not nms:
+                        continue    # a type no signature at this arity takes first
+                    pairs.append((a, r, nms or [f["sqlfn"]]))
             # a trailing SQL default also registers the shorter form through Gen_<fn>_d, as the
             # container arm above does (extendedKalmanFilter(tfloat, float, float, float)); the
             # defaults before it are the shorter records #project_signature_forms forwards
@@ -6162,9 +6300,9 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             if dflt is not None:
                 forms.append(("".join(", " + t[0] for t in tail[:-1]), "_d"))
                 bodies.append(emit_nary_scalars(f, first, tail, ret, dflt))
-            for a, r in pairs:
+            for a, r, nms in pairs:
                 for rr, sfx in forms:
-                    for nm in reg_names(f, f["sqlfn"], aliases, "{x%s}" % rr):
+                    for nm in [x for nm0 in nms for x in reg_names(f, nm0, aliases, "{x%s}" % rr)]:
                         specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                              f'"{reg_name(nm, f)}", {{{a}{rr}}}, {r}, Gen_{f["name"]}{sfx}));')
             continue
@@ -6399,7 +6537,15 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                       else ret_set_type(fn, a) if dret == "MD_SET" else dret)
                 if dret == "MD_TEMPORAL":
                     r2 = sig_declared_ret(f, a, sig.count(",") + 1) or r2
-                for nm in names:
+                # a retired group's signature of the same arguments under another name
+                # (rotate(tgeompoint, float) beside rotateZ(tgeompoint, float), both over
+                # tgeo_rotate_z) registers under that name too
+                more = sorted({s["sqlName"] for s in f.get("sqlSignatures") or []
+                               if retired(f) and s.get("sqlName") and s["sqlName"] != sqlfn
+                               and (s.get("args") or [None])[0] == _acc_sqlname(a)
+                               and len(s["args"]) == sig.count(",") + 1}) if not u else []
+                for nm in names + [x for m in more for x in reg_names(f, m, aliases, argsig)
+                                   if x not in names]:
                     specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {sig}, {r2}, Gen_{fn}));')
         # THE COMMUTED OVERLOAD. Six geo backings are CREATE FUNCTION'd in BOTH operand orders
