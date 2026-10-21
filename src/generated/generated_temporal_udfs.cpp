@@ -227,6 +227,7 @@ void RegisterGenerated_meos_rgeo_rel_ever(ExtensionLoader &loader);
 void RegisterGenerated_meos_rgeo_rel_temp(ExtensionLoader &loader);
 void RegisterGenerated_meos_rgeo_restrict(ExtensionLoader &loader);
 void RegisterGenerated_meos_rgeo_spatialfuncs(ExtensionLoader &loader);
+void RegisterGenerated_meos_rgeo_tile(ExtensionLoader &loader);
 void RegisterGenerated_meos_rgeo_transf(ExtensionLoader &loader);
 void RegisterGenerated_meos_s2cell(ExtensionLoader &loader);
 void RegisterGenerated_meos_s2cell_accessor(ExtensionLoader &loader);
@@ -458,6 +459,7 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_rgeo_rel_temp(loader);
     RegisterGenerated_meos_rgeo_restrict(loader);
     RegisterGenerated_meos_rgeo_spatialfuncs(loader);
+    RegisterGenerated_meos_rgeo_tile(loader);
     RegisterGenerated_meos_rgeo_transf(loader);
     RegisterGenerated_meos_s2cell(loader);
     RegisterGenerated_meos_s2cell_accessor(loader);

@@ -1,0 +1,189 @@
+# name: test/sql/parity/025_temporal_tile_tiles.test
+# description: the tiles of a temporal box, table functions answering MobilityDB's (index, tile) rows
+# group: [sql]
+#
+# valueTiles, timeTiles and valueTimeTiles return SETOF index_tbox in MobilityDB, so in DuckDB
+# they are table functions called in FROM with the columns index and tile. Each query is one of
+# mobilitydb/test/temporal/queries/025_temporal_tile.test.sql and each answer the one of its
+# expected output, read in the time zone of MobilityDB's suite (America/Los_Angeles).
+
+require mobilityduck
+
+statement ok
+SET TimeZone='America/Los_Angeles'
+
+# MobilityDB: SELECT valueTiles(tfloat '[15@2001-01-15, 25@2001-01-25]'::tbox, 2.5) LIMIT 3;
+query II
+SELECT index, tile::VARCHAR FROM valueTiles(tfloat '[15@2001-01-15, 25@2001-01-25]'::tbox, 2.5) LIMIT 3;
+----
+1	TBOXFLOAT X([15, 17.5))
+2	TBOXFLOAT X([17.5, 20))
+3	TBOXFLOAT X([20, 22.5))
+
+# MobilityDB: SELECT valueTiles(tfloat '[15@2001-01-15, 25@2001-01-25]'::tbox, 2.5, 15.5) LIMIT 3;
+query II
+SELECT index, tile::VARCHAR FROM valueTiles(tfloat '[15@2001-01-15, 25@2001-01-25]'::tbox, 2.5, 15.5) LIMIT 3;
+----
+1	TBOXFLOAT X([13, 15.5))
+2	TBOXFLOAT X([15.5, 18))
+3	TBOXFLOAT X([18, 20.5))
+
+# MobilityDB: SELECT valueTiles(tbox 'TBOXINT XT([15, 25],[2001-01-15, 2001-01-25])', 2) LIMIT 3;
+query II
+SELECT index, tile::VARCHAR FROM valueTiles(tbox 'TBOXINT XT([15, 25],[2001-01-15, 2001-01-25])', 2) LIMIT 3;
+----
+1	TBOXINT X([14, 16))
+2	TBOXINT X([16, 18))
+3	TBOXINT X([18, 20))
+
+# MobilityDB: SELECT valueTiles(tbox 'TBOXINT XT([15, 25],[2001-01-15, 2001-01-25])', 2, 15) LIMIT 3;
+query II
+SELECT index, tile::VARCHAR FROM valueTiles(tbox 'TBOXINT XT([15, 25],[2001-01-15, 2001-01-25])', 2, 15) LIMIT 3;
+----
+1	TBOXINT X([15, 17))
+2	TBOXINT X([17, 19))
+3	TBOXINT X([19, 21))
+
+# MobilityDB: SELECT valueTiles(tbox 'TBOXBIGINT XT([15, 25],[2001-01-15, 2001-01-25])', 2::bigint) LIMIT 3;
+query II
+SELECT index, tile::VARCHAR FROM valueTiles(tbox 'TBOXBIGINT XT([15, 25],[2001-01-15, 2001-01-25])', 2::BIGINT) LIMIT 3;
+----
+1	TBOXBIGINT X([14, 16))
+2	TBOXBIGINT X([16, 18))
+3	TBOXBIGINT X([18, 20))
+
+# MobilityDB: SELECT valueTiles(tbox 'TBOXBIGINT XT([15, 25],[2001-01-15, 2001-01-25])', 2::bigint, 15::bigint) LIMIT 3;
+query II
+SELECT index, tile::VARCHAR FROM valueTiles(tbox 'TBOXBIGINT XT([15, 25],[2001-01-15, 2001-01-25])', 2::BIGINT, 15::BIGINT) LIMIT 3;
+----
+1	TBOXBIGINT X([15, 17))
+2	TBOXBIGINT X([17, 19))
+3	TBOXBIGINT X([19, 21))
+
+# MobilityDB: SELECT valueTiles(tbox 'TBOXINT XT([15, 25],[2001-01-15, 2001-01-25])', 2.5);
+# MobilityDB refuses it in its PostgreSQL wrapper; DuckDB resolves a DOUBLE size to
+# tfloatbox_value_tiles, whose MEOS validation refuses the integer box
+statement error
+SELECT index, tile::VARCHAR FROM valueTiles(tbox 'TBOXINT XT([15, 25],[2001-01-15, 2001-01-25])', 2.5);
+----
+The span must be of type floatspan
+
+# MobilityDB: SELECT valueTiles(tbox 'TBOXINT XT([15, 25],[2001-01-15, 2001-01-25])', 0);
+# MobilityDB refuses a zero size in its PostgreSQL wrapper; DuckDB reaches tintbox_value_tiles,
+# which refuses it inside MEOS
+statement error
+SELECT index, tile::VARCHAR FROM valueTiles(tbox 'TBOXINT XT([15, 25],[2001-01-15, 2001-01-25])', 0);
+----
+At least one of the arguments vsize or duration must be given
+
+# MobilityDB: SELECT valueTiles(tbox 'TBOX T([2001-01-15, 2001-01-25])', 2);
+statement error
+SELECT index, tile::VARCHAR FROM valueTiles(tbox 'TBOX T([2001-01-15, 2001-01-25])', 2);
+----
+The tbox must have X dimension
+
+# MobilityDB: SELECT timeTiles(tfloat '[15@2001-01-15, 25@2001-01-25]'::tbox, '1 week') LIMIT 3;
+query II
+SELECT index, tile::VARCHAR FROM timeTiles(tfloat '[15@2001-01-15, 25@2001-01-25]'::tbox, INTERVAL '1 week') LIMIT 3;
+----
+1	TBOXFLOAT XT([15, 25],[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+2	TBOXFLOAT XT([15, 25],[2001-01-22 00:00:00-08, 2001-01-29 00:00:00-08))
+
+# MobilityDB: SELECT timeTiles(tfloat '[15@2001-01-15, 25@2001-01-25]'::tbox, '1 week', '2020-06-15') LIMIT 3;
+query II
+SELECT index, tile::VARCHAR FROM timeTiles(tfloat '[15@2001-01-15, 25@2001-01-25]'::tbox, INTERVAL '1 week', TIMESTAMPTZ '2020-06-15') LIMIT 3;
+----
+1	TBOXFLOAT XT([15, 25],[2001-01-14 23:00:00-08, 2001-01-21 23:00:00-08))
+2	TBOXFLOAT XT([15, 25],[2001-01-21 23:00:00-08, 2001-01-28 23:00:00-08))
+
+# MobilityDB: SELECT timeTiles(tbox 'TBOX T([2001-01-15, 2001-01-25])', '1 week');
+query II
+SELECT index, tile::VARCHAR FROM timeTiles(tbox 'TBOX T([2001-01-15, 2001-01-25])', INTERVAL '1 week');
+----
+1	TBOX T([2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+2	TBOX T([2001-01-22 00:00:00-08, 2001-01-29 00:00:00-08))
+
+# MobilityDB: SELECT valueTimeTiles(tfloat '[15@2001-01-15, 25@2001-01-25]'::tbox, 2.5, '1 week') LIMIT 3;
+query II
+SELECT index, tile::VARCHAR FROM valueTimeTiles(tfloat '[15@2001-01-15, 25@2001-01-25]'::tbox, 2.5, INTERVAL '1 week') LIMIT 3;
+----
+1	TBOXFLOAT XT([15, 17.5),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+2	TBOXFLOAT XT([17.5, 20),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+3	TBOXFLOAT XT([20, 22.5),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+
+# MobilityDB: SELECT valueTimeTiles(tfloat '[15@2001-01-15, 25@2001-01-25]'::tbox, 2.5, '1 week', 15.5) LIMIT 3;
+query II
+SELECT index, tile::VARCHAR FROM valueTimeTiles(tfloat '[15@2001-01-15, 25@2001-01-25]'::tbox, 2.5, INTERVAL '1 week', 15.5) LIMIT 3;
+----
+1	TBOXFLOAT XT([13, 15.5),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+2	TBOXFLOAT XT([15.5, 18),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+3	TBOXFLOAT XT([18, 20.5),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+
+# MobilityDB: SELECT valueTimeTiles(tfloat '[15@2001-01-15, 25@2001-01-25]'::tbox, 2.5, '1 week', 15.5, '2001-01-15') LIMIT 3;
+query II
+SELECT index, tile::VARCHAR FROM valueTimeTiles(tfloat '[15@2001-01-15, 25@2001-01-25]'::tbox, 2.5, INTERVAL '1 week', 15.5, TIMESTAMPTZ '2001-01-15') LIMIT 3;
+----
+1	TBOXFLOAT XT([13, 15.5),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+2	TBOXFLOAT XT([15.5, 18),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+3	TBOXFLOAT XT([18, 20.5),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+
+# MobilityDB: SELECT valueTimeTiles(tbox 'TBOXINT XT([15, 25],[2001-01-15, 2001-01-25])', 2, '1 week') LIMIT 3;
+query II
+SELECT index, tile::VARCHAR FROM valueTimeTiles(tbox 'TBOXINT XT([15, 25],[2001-01-15, 2001-01-25])', 2, INTERVAL '1 week') LIMIT 3;
+----
+1	TBOXINT XT([14, 16),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+2	TBOXINT XT([16, 18),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+3	TBOXINT XT([18, 20),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+
+# MobilityDB: SELECT valueTimeTiles(tbox 'TBOXINT XT([15, 25],[2001-01-15, 2001-01-25])', 2, '1 week', 15, '2001-01-15') LIMIT 3;
+query II
+SELECT index, tile::VARCHAR FROM valueTimeTiles(tbox 'TBOXINT XT([15, 25],[2001-01-15, 2001-01-25])', 2, INTERVAL '1 week', 15, TIMESTAMPTZ '2001-01-15') LIMIT 3;
+----
+1	TBOXINT XT([15, 17),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+2	TBOXINT XT([17, 19),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+3	TBOXINT XT([19, 21),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+
+# MobilityDB: SELECT valueTimeTiles(tbox 'TBOXBIGINT XT([15, 25],[2001-01-15, 2001-01-25])', 2::bigint, '1 week') LIMIT 3;
+query II
+SELECT index, tile::VARCHAR FROM valueTimeTiles(tbox 'TBOXBIGINT XT([15, 25],[2001-01-15, 2001-01-25])', 2::BIGINT, INTERVAL '1 week') LIMIT 3;
+----
+1	TBOXBIGINT XT([14, 16),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+2	TBOXBIGINT XT([16, 18),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+3	TBOXBIGINT XT([18, 20),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+
+# MobilityDB: SELECT valueTimeTiles(tbox 'TBOXBIGINT XT([15, 25],[2001-01-15, 2001-01-25])', 2::bigint, '1 week', 15::bigint, '2001-01-15') LIMIT 3;
+query II
+SELECT index, tile::VARCHAR FROM valueTimeTiles(tbox 'TBOXBIGINT XT([15, 25],[2001-01-15, 2001-01-25])', 2::BIGINT, INTERVAL '1 week', 15::BIGINT, TIMESTAMPTZ '2001-01-15') LIMIT 3;
+----
+1	TBOXBIGINT XT([15, 17),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+2	TBOXBIGINT XT([17, 19),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+3	TBOXBIGINT XT([19, 21),[2001-01-15 00:00:00-08, 2001-01-22 00:00:00-08))
+
+# MobilityDB: SELECT valueTimeTiles(tbox 'TBOXINT XT([15, 25],[2001-01-15, 2001-01-25])', 2.5, '1 week');
+# As for valueTiles: a DOUBLE size resolves to tfloatbox_value_time_tiles, which refuses it in MEOS
+statement error
+SELECT index, tile::VARCHAR FROM valueTimeTiles(tbox 'TBOXINT XT([15, 25],[2001-01-15, 2001-01-25])', 2.5, INTERVAL '1 week');
+----
+The span must be of type floatspan
+
+# MobilityDB: SELECT (timeTiles(tbox 'TBOXFLOAT XT((1, 5),[2001-09-01, 2001-09-02])', '1 day', '2001-09-01')).*;
+query II
+SELECT index, tile::VARCHAR FROM timeTiles(tbox 'TBOXFLOAT XT((1, 5),[2001-09-01, 2001-09-02])', INTERVAL '1 day', TIMESTAMPTZ '2001-09-01');
+----
+1	TBOXFLOAT XT((1, 5),[2001-09-01 00:00:00-07, 2001-09-02 00:00:00-07))
+2	TBOXFLOAT XT((1, 5),[2001-09-02 00:00:00-07, 2001-09-03 00:00:00-07))
+
+# MobilityDB: SELECT (timeTiles(tbox 'TBOXINT XT([1, 5],[2001-09-01, 2001-09-02])', '1 day', '2001-09-01')).*;
+query II
+SELECT index, tile::VARCHAR FROM timeTiles(tbox 'TBOXINT XT([1, 5],[2001-09-01, 2001-09-02])', INTERVAL '1 day', TIMESTAMPTZ '2001-09-01');
+----
+1	TBOXINT XT([1, 6),[2001-09-01 00:00:00-07, 2001-09-02 00:00:00-07))
+2	TBOXINT XT([1, 6),[2001-09-02 00:00:00-07, 2001-09-03 00:00:00-07))
+
+# MobilityDB: SELECT (timeTiles(tbox 'TBOXBIGINT XT([1, 5],[2001-09-01, 2001-09-02])', '1 day', '2001-09-01')).*;
+query II
+SELECT index, tile::VARCHAR FROM timeTiles(tbox 'TBOXBIGINT XT([1, 5],[2001-09-01, 2001-09-02])', INTERVAL '1 day', TIMESTAMPTZ '2001-09-01');
+----
+1	TBOXBIGINT XT([1, 6),[2001-09-01 00:00:00-07, 2001-09-02 00:00:00-07))
+2	TBOXBIGINT XT([1, 6),[2001-09-02 00:00:00-07, 2001-09-03 00:00:00-07))
+

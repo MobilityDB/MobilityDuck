@@ -10,21 +10,22 @@
 require mobilityduck
 
 # =============================================================================
-# valueTiles(tbox, size, origin [, borderInc]) and timeTiles(tbox, duration, origin [, borderInc])
+# valueTiles(tbox, size, origin [, borderInc]) and timeTiles(tbox, duration, origin [, borderInc]),
+# table functions called in FROM
 # =============================================================================
 
 query I
-SELECT len(valueTiles(tbox 'TBOXFLOAT X([1, 10])', 5.0, 0.0));
+SELECT count(*) FROM valueTiles(tbox 'TBOXFLOAT X([1, 10])', 5.0, 0.0);
 ----
 3
 
 query I
-SELECT len(valueTiles(tbox 'TBOXFLOAT X([1, 10])', 5.0, 0.0, false));
+SELECT count(*) FROM valueTiles(tbox 'TBOXFLOAT X([1, 10])', 5.0, 0.0, false);
 ----
 2
 
 query I
-SELECT len(timeTiles(tbox 'TBOXFLOAT XT([1, 2],[2000-01-01, 2000-01-03])', interval '1 day', timestamptz '2000-01-01', false));
+SELECT count(*) FROM timeTiles(tbox 'TBOXFLOAT XT([1, 2],[2000-01-01, 2000-01-03])', interval '1 day', timestamptz '2000-01-01', false);
 ----
 2
 
@@ -47,8 +48,8 @@ SELECT count(*) FROM valueSplit(tfloat '[1@2000-01-01, 10@2000-01-03]', 5.0, 0.0
 ----
 2
 
-# A NULL borderInc answers no tile, as the other arguments do
-query I
-SELECT valueTiles(tbox 'TBOXFLOAT X([1, 10])', 5.0, 0.0, NULL) IS NULL;
+# A NULL argument is refused when the tiles are bound, as temporalUnnest refuses one
+statement error
+SELECT count(*) FROM valueTiles(tbox 'TBOXFLOAT X([1, 10])', 5.0, 0.0, NULL);
 ----
-true
+expects non-null arguments

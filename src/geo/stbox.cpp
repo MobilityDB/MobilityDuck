@@ -79,50 +79,6 @@ void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {
      * src/generated/generated_temporal_udfs.cpp. (reg_names also registers the
      * catalog-only *_bbox @sqlfn backing tag as an alias; that is internal, not a
      * user-facing canonical name.) */
-
-    /* ***************************************************
-     * Tile / box emitters and single-tile getters
-     ****************************************************/
-    {
-        const auto B  = stbox();
-        const auto P  = TgeompointType::tgeompoint();
-        const auto G  = MobilityDuckGeometryType();
-        const auto D  = LogicalType::DOUBLE;
-        const auto I  = LogicalType::INTERVAL;
-        const auto TS = LogicalType::TIMESTAMP_TZ;
-        const auto BB = LogicalType::BOOLEAN;
-        const auto LB = LogicalType::LIST(B);
-
-        // spaceTiles(stbox, xsz, ysz, zsz[, sorigin geom[, borderInc bool]])
-        RegisterMeosFunction(loader, ScalarFunction("spaceTiles", {B, D, D, D},          LB, StboxFunctions::Stbox_space_tiles));
-        RegisterMeosFunction(loader, ScalarFunction("spaceTiles", {B, D, D, D, G},       LB, StboxFunctions::Stbox_space_tiles));
-        RegisterMeosFunction(loader, ScalarFunction("spaceTiles", {B, D, D, D, G, BB},   LB, StboxFunctions::Stbox_space_tiles));
-
-        // timeTiles(stbox, duration[, torigin tstz[, borderInc bool]])
-        RegisterMeosFunction(loader, ScalarFunction("timeTiles", {B, I},          LB, StboxFunctions::Stbox_time_tiles));
-        RegisterMeosFunction(loader, ScalarFunction("timeTiles", {B, I, TS},      LB, StboxFunctions::Stbox_time_tiles));
-        RegisterMeosFunction(loader, ScalarFunction("timeTiles", {B, I, TS, BB},  LB, StboxFunctions::Stbox_time_tiles));
-
-        // spaceTimeTiles(stbox, xsz, ysz, zsz, duration[, sorigin[, torigin[, borderInc]]])
-        RegisterMeosFunction(loader, ScalarFunction("spaceTimeTiles", {B, D, D, D, I},                LB, StboxFunctions::Stbox_space_time_tiles));
-        RegisterMeosFunction(loader, ScalarFunction("spaceTimeTiles", {B, D, D, D, I, G},             LB, StboxFunctions::Stbox_space_time_tiles));
-        RegisterMeosFunction(loader, ScalarFunction("spaceTimeTiles", {B, D, D, D, I, G, TS},         LB, StboxFunctions::Stbox_space_time_tiles));
-        RegisterMeosFunction(loader, ScalarFunction("spaceTimeTiles", {B, D, D, D, I, G, TS, BB},     LB, StboxFunctions::Stbox_space_time_tiles));
-
-        // spaceBoxes(tgeompoint, xsz, ysz, zsz[, sorigin[, borderInc]])
-        RegisterMeosFunction(loader, ScalarFunction("spaceBoxes", {P, D, D, D},          LB, StboxFunctions::Tgeo_space_boxes));
-        RegisterMeosFunction(loader, ScalarFunction("spaceBoxes", {P, D, D, D, G},       LB, StboxFunctions::Tgeo_space_boxes));
-        RegisterMeosFunction(loader, ScalarFunction("spaceBoxes", {P, D, D, D, G, BB},   LB, StboxFunctions::Tgeo_space_boxes));
-
-        // spaceTimeBoxes(tgeompoint, xsz, ysz, zsz, duration[, sorigin[, torigin[, borderInc]]])
-        RegisterMeosFunction(loader, ScalarFunction("spaceTimeBoxes", {P, D, D, D, I},                LB, StboxFunctions::Tgeo_space_time_boxes));
-        RegisterMeosFunction(loader, ScalarFunction("spaceTimeBoxes", {P, D, D, D, I, G},             LB, StboxFunctions::Tgeo_space_time_boxes));
-        RegisterMeosFunction(loader, ScalarFunction("spaceTimeBoxes", {P, D, D, D, I, G, TS},         LB, StboxFunctions::Tgeo_space_time_boxes));
-        RegisterMeosFunction(loader, ScalarFunction("spaceTimeBoxes", {P, D, D, D, I, G, TS, BB},     LB, StboxFunctions::Tgeo_space_time_boxes));
-
-        // The single-tile getters getSpaceTile, getStboxTimeTile and
-        // getSpaceTimeTile are registered by single_tile_getters.cpp.
-    }
 }
 
 } // namespace duckdb

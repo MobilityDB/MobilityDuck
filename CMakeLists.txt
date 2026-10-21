@@ -174,7 +174,6 @@ set(EXTENSION_SOURCES
     src/rgeo/trgeometry.cpp
     src/posechain/tposechain.cpp
     src/index/rtree_module.cpp
-    src/single_tile_getters.cpp
     src/index/rtree_index_create_physical.cpp
     src/index/rtree_index_scan.cpp
     src/index/rtree_optimize_scan.cpp
