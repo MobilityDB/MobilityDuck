@@ -365,9 +365,9 @@ unique_ptr<FunctionData> TemporalSplitBind(ClientContext &, TableFunctionBindInp
     return make_uniq<TemporalSplitBindData>(info.ttype, info.with_value, info.is_int, info.with_time);
 }
 
-unique_ptr<LocalTableFunctionState> TemporalSplitLocalInit(ExecutionContext &, TableFunctionInitInput &,
+unique_ptr<LocalTableFunctionState> TemporalSplitLocalInit(ExecutionContext &context, TableFunctionInitInput &,
                                                            GlobalTableFunctionState *) {
-    EnsureMeosThreadInitialized();
+    EnsureMeosThreadInitialized(context.client);
     return make_uniq<TemporalSplitLocalState>();
 }
 

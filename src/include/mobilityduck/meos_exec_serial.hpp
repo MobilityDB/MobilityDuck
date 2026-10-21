@@ -65,8 +65,10 @@ inline void RegisterSerializedScalarFunctionAs(ExtensionLoader &loader, ScalarFu
  * Every other scalar MobilityDuck registers follows the session's zone as well:
  * MEOS parses and prints timestamps, and turns them into dates, in the zone of
  * the session that runs the query. A function set is the same scalars under one
- * name. Aggregates and table functions register unchanged: they hand values to
- * the query in binary, so no zone enters their results.
+ * name. Aggregates register unchanged: they hand values to the query in binary,
+ * so no zone enters their results. A table function follows the session's zone
+ * in its own init, which DuckDB may run on any worker thread: the tiles read
+ * their default time origin and divide time by a duration there.
  */
 inline ScalarFunction FollowingSessionTimezone(ScalarFunction sf) {
 	scalar_function_t orig = std::move(sf.function);

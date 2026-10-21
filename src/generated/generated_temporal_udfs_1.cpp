@@ -3203,8 +3203,8 @@ static unique_ptr<FunctionData> Unnest_tpcpoint_unnestBindFn(ClientContext &, Ta
     names = {"value", "time"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Unnest_tpcpoint_unnestInitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Unnest_tpcpoint_unnestInitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Unnest_tpcpoint_unnestBind>();
     auto st = make_uniq<Unnest_tpcpoint_unnestState>();
     Temporal *t = BlobToTemporal(string_t(b.blob.data(), (uint32_t) b.blob.size()));
@@ -3248,8 +3248,8 @@ static unique_ptr<FunctionData> Unnest_tpcpatch_unnestBindFn(ClientContext &, Ta
     names = {"value", "time"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Unnest_tpcpatch_unnestInitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Unnest_tpcpatch_unnestInitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Unnest_tpcpatch_unnestBind>();
     auto st = make_uniq<Unnest_tpcpatch_unnestState>();
     Temporal *t = BlobToTemporal(string_t(b.blob.data(), (uint32_t) b.blob.size()));

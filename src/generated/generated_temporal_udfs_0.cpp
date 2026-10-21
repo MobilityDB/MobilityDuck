@@ -2719,8 +2719,8 @@ static unique_ptr<FunctionData> Tiles_tbigintbox_value_tiles_s0_a4BindFn(ClientC
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_tiles_s0_a4InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_tiles_s0_a4InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tbigintbox_value_tiles_s0_a4Bind>();
     auto st = make_uniq<Tiles_tbigintbox_value_tiles_s0_a4State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -2760,8 +2760,8 @@ static unique_ptr<FunctionData> Tiles_tbigintbox_value_tiles_s0_a3BindFn(ClientC
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_tiles_s0_a3InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_tiles_s0_a3InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tbigintbox_value_tiles_s0_a3Bind>();
     auto st = make_uniq<Tiles_tbigintbox_value_tiles_s0_a3State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -2800,8 +2800,8 @@ static unique_ptr<FunctionData> Tiles_tbigintbox_value_tiles_s0_a2BindFn(ClientC
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_tiles_s0_a2InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_tiles_s0_a2InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tbigintbox_value_tiles_s0_a2Bind>();
     auto st = make_uniq<Tiles_tbigintbox_value_tiles_s0_a2State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -2839,8 +2839,8 @@ static unique_ptr<FunctionData> Tiles_tbigintbox_value_time_tiles_s0_a6BindFn(Cl
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_time_tiles_s0_a6InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_time_tiles_s0_a6InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tbigintbox_value_time_tiles_s0_a6Bind>();
     auto st = make_uniq<Tiles_tbigintbox_value_time_tiles_s0_a6State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -2882,8 +2882,8 @@ static unique_ptr<FunctionData> Tiles_tbigintbox_value_time_tiles_s0_a5BindFn(Cl
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_time_tiles_s0_a5InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_time_tiles_s0_a5InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tbigintbox_value_time_tiles_s0_a5Bind>();
     auto st = make_uniq<Tiles_tbigintbox_value_time_tiles_s0_a5State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -2924,8 +2924,8 @@ static unique_ptr<FunctionData> Tiles_tbigintbox_value_time_tiles_s0_a4BindFn(Cl
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_time_tiles_s0_a4InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_time_tiles_s0_a4InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tbigintbox_value_time_tiles_s0_a4Bind>();
     auto st = make_uniq<Tiles_tbigintbox_value_time_tiles_s0_a4State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -2965,8 +2965,8 @@ static unique_ptr<FunctionData> Tiles_tbigintbox_value_time_tiles_s0_a3BindFn(Cl
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_time_tiles_s0_a3InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tbigintbox_value_time_tiles_s0_a3InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tbigintbox_value_time_tiles_s0_a3Bind>();
     auto st = make_uniq<Tiles_tbigintbox_value_time_tiles_s0_a3State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -3149,8 +3149,8 @@ static unique_ptr<FunctionData> Tiles_tbox_time_tiles_s0_a4BindFn(ClientContext 
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tbox_time_tiles_s0_a4InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tbox_time_tiles_s0_a4InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tbox_time_tiles_s0_a4Bind>();
     auto st = make_uniq<Tiles_tbox_time_tiles_s0_a4State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -3190,8 +3190,8 @@ static unique_ptr<FunctionData> Tiles_tbox_time_tiles_s0_a3BindFn(ClientContext 
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tbox_time_tiles_s0_a3InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tbox_time_tiles_s0_a3InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tbox_time_tiles_s0_a3Bind>();
     auto st = make_uniq<Tiles_tbox_time_tiles_s0_a3State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -3230,8 +3230,8 @@ static unique_ptr<FunctionData> Tiles_tbox_time_tiles_s0_a2BindFn(ClientContext 
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tbox_time_tiles_s0_a2InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tbox_time_tiles_s0_a2InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tbox_time_tiles_s0_a2Bind>();
     auto st = make_uniq<Tiles_tbox_time_tiles_s0_a2State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -3269,8 +3269,8 @@ static unique_ptr<FunctionData> Tiles_tfloatbox_value_tiles_s0_a4BindFn(ClientCo
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_tiles_s0_a4InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_tiles_s0_a4InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tfloatbox_value_tiles_s0_a4Bind>();
     auto st = make_uniq<Tiles_tfloatbox_value_tiles_s0_a4State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -3310,8 +3310,8 @@ static unique_ptr<FunctionData> Tiles_tfloatbox_value_tiles_s0_a3BindFn(ClientCo
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_tiles_s0_a3InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_tiles_s0_a3InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tfloatbox_value_tiles_s0_a3Bind>();
     auto st = make_uniq<Tiles_tfloatbox_value_tiles_s0_a3State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -3350,8 +3350,8 @@ static unique_ptr<FunctionData> Tiles_tfloatbox_value_tiles_s0_a2BindFn(ClientCo
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_tiles_s0_a2InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_tiles_s0_a2InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tfloatbox_value_tiles_s0_a2Bind>();
     auto st = make_uniq<Tiles_tfloatbox_value_tiles_s0_a2State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -3389,8 +3389,8 @@ static unique_ptr<FunctionData> Tiles_tfloatbox_value_time_tiles_s0_a6BindFn(Cli
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_time_tiles_s0_a6InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_time_tiles_s0_a6InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tfloatbox_value_time_tiles_s0_a6Bind>();
     auto st = make_uniq<Tiles_tfloatbox_value_time_tiles_s0_a6State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -3432,8 +3432,8 @@ static unique_ptr<FunctionData> Tiles_tfloatbox_value_time_tiles_s0_a5BindFn(Cli
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_time_tiles_s0_a5InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_time_tiles_s0_a5InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tfloatbox_value_time_tiles_s0_a5Bind>();
     auto st = make_uniq<Tiles_tfloatbox_value_time_tiles_s0_a5State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -3474,8 +3474,8 @@ static unique_ptr<FunctionData> Tiles_tfloatbox_value_time_tiles_s0_a4BindFn(Cli
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_time_tiles_s0_a4InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_time_tiles_s0_a4InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tfloatbox_value_time_tiles_s0_a4Bind>();
     auto st = make_uniq<Tiles_tfloatbox_value_time_tiles_s0_a4State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -3515,8 +3515,8 @@ static unique_ptr<FunctionData> Tiles_tfloatbox_value_time_tiles_s0_a3BindFn(Cli
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_time_tiles_s0_a3InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tfloatbox_value_time_tiles_s0_a3InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tfloatbox_value_time_tiles_s0_a3Bind>();
     auto st = make_uniq<Tiles_tfloatbox_value_time_tiles_s0_a3State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -3555,8 +3555,8 @@ static unique_ptr<FunctionData> Tiles_tintbox_value_tiles_s0_a4BindFn(ClientCont
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_tiles_s0_a4InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_tiles_s0_a4InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tintbox_value_tiles_s0_a4Bind>();
     auto st = make_uniq<Tiles_tintbox_value_tiles_s0_a4State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -3596,8 +3596,8 @@ static unique_ptr<FunctionData> Tiles_tintbox_value_tiles_s0_a3BindFn(ClientCont
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_tiles_s0_a3InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_tiles_s0_a3InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tintbox_value_tiles_s0_a3Bind>();
     auto st = make_uniq<Tiles_tintbox_value_tiles_s0_a3State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -3636,8 +3636,8 @@ static unique_ptr<FunctionData> Tiles_tintbox_value_tiles_s0_a2BindFn(ClientCont
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_tiles_s0_a2InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_tiles_s0_a2InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tintbox_value_tiles_s0_a2Bind>();
     auto st = make_uniq<Tiles_tintbox_value_tiles_s0_a2State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -3675,8 +3675,8 @@ static unique_ptr<FunctionData> Tiles_tintbox_value_time_tiles_s0_a6BindFn(Clien
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_time_tiles_s0_a6InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_time_tiles_s0_a6InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tintbox_value_time_tiles_s0_a6Bind>();
     auto st = make_uniq<Tiles_tintbox_value_time_tiles_s0_a6State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -3718,8 +3718,8 @@ static unique_ptr<FunctionData> Tiles_tintbox_value_time_tiles_s0_a5BindFn(Clien
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_time_tiles_s0_a5InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_time_tiles_s0_a5InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tintbox_value_time_tiles_s0_a5Bind>();
     auto st = make_uniq<Tiles_tintbox_value_time_tiles_s0_a5State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -3760,8 +3760,8 @@ static unique_ptr<FunctionData> Tiles_tintbox_value_time_tiles_s0_a4BindFn(Clien
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_time_tiles_s0_a4InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_time_tiles_s0_a4InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tintbox_value_time_tiles_s0_a4Bind>();
     auto st = make_uniq<Tiles_tintbox_value_time_tiles_s0_a4State>();
     std::string a0 = StringValue::Get(b.in[0]);
@@ -3801,8 +3801,8 @@ static unique_ptr<FunctionData> Tiles_tintbox_value_time_tiles_s0_a3BindFn(Clien
     names = {"index", "tile"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_time_tiles_s0_a3InitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Tiles_tintbox_value_time_tiles_s0_a3InitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Tiles_tintbox_value_time_tiles_s0_a3Bind>();
     auto st = make_uniq<Tiles_tintbox_value_time_tiles_s0_a3State>();
     std::string a0 = StringValue::Get(b.in[0]);

@@ -2476,8 +2476,8 @@ static unique_ptr<FunctionData> Unnest_tquadbin_unnestBindFn(ClientContext &, Ta
     names = {"value", "time"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Unnest_tquadbin_unnestInitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Unnest_tquadbin_unnestInitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Unnest_tquadbin_unnestBind>();
     auto st = make_uniq<Unnest_tquadbin_unnestState>();
     Temporal *t = BlobToTemporal(string_t(b.blob.data(), (uint32_t) b.blob.size()));

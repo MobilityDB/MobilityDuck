@@ -2805,8 +2805,8 @@ f"    bind->b = StringValue::Get(input.inputs[1]);\n"
 f"    return_types = {{{ret_types}}};\n"
 f"    names = {{{names_list}}};\n"
 f"    return std::move(bind);\n}}\n"
-f"static unique_ptr<GlobalTableFunctionState> PathInit_{name}(ClientContext &, TableFunctionInitInput &input) {{\n"
-f"    EnsureMeosThreadInitialized();\n"
+f"static unique_ptr<GlobalTableFunctionState> PathInit_{name}(ClientContext &context, TableFunctionInitInput &input) {{\n"
+f"    EnsureMeosThreadInitialized(context);\n"
 f"    auto &bind = input.bind_data->Cast<PathBind_{name}>();\n"
 f"    auto state = make_uniq<PathState_{name}>();\n"
 f"    Temporal *t1 = BlobToTemporal(bind.a);\n"
@@ -3245,8 +3245,8 @@ def emit_unnest(f, dt, write, ctype):
         "    names = {\"value\", \"time\"};",
         "    return std::move(b);",
         "}",
-        f"static unique_ptr<GlobalTableFunctionState> {S}InitFn(ClientContext &, TableFunctionInitInput &input) {{",
-        "    EnsureMeosThreadInitialized();",
+        f"static unique_ptr<GlobalTableFunctionState> {S}InitFn(ClientContext &context, TableFunctionInitInput &input) {{",
+        "    EnsureMeosThreadInitialized(context);",
         f"    auto &b = input.bind_data->Cast<{S}Bind>();",
         f"    auto st = make_uniq<{S}State>();",
         "    Temporal *t = BlobToTemporal(string_t(b.blob.data(), (uint32_t) b.blob.size()));",
@@ -3362,8 +3362,8 @@ def emit_box_tiles(f, tag, s, ins, bound, k):
          "    names = {\"index\", \"tile\"};",
          "    return std::move(b);",
          "}",
-         f"static unique_ptr<GlobalTableFunctionState> {S}InitFn(ClientContext &, TableFunctionInitInput &input) {{",
-         "    EnsureMeosThreadInitialized();",
+         f"static unique_ptr<GlobalTableFunctionState> {S}InitFn(ClientContext &context, TableFunctionInitInput &input) {{",
+         "    EnsureMeosThreadInitialized(context);",
          f"    auto &b = input.bind_data->Cast<{S}Bind>();",
          f"    auto st = make_uniq<{S}State>();",
          "    std::string a0 = StringValue::Get(b.in[0]);",
