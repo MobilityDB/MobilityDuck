@@ -646,6 +646,36 @@ inline SpanSet * tstzspanset_shift_scale_duration(const SpanSet * p0, const Meos
 inline SpanSet * tstzspanset_shift_scale_shift(const SpanSet * p0, const MeosInterval * p1) {
     return ::tstzspanset_shift_scale(p0, NULL, p1);
 }
+inline Span * bigintspan_bins_border_inc_vorigin(const Span * p0, int64_t p1, int * p2) {
+    return ::bigintspan_bins(p0, p1, 0, true, p2);
+}
+inline Span * bigintspanset_bins_border_inc_vorigin(const SpanSet * p0, int64_t p1, int * p2) {
+    return ::bigintspanset_bins(p0, p1, 0, true, p2);
+}
+inline Span * datespan_bins_border_inc_torigin(const Span * p0, const MeosInterval * p1, int * p2) {
+    return ::datespan_bins(p0, p1, date_in("2000-01-01"), true, p2);
+}
+inline Span * datespanset_bins_border_inc_torigin(const SpanSet * p0, const MeosInterval * p1, int * p2) {
+    return ::datespanset_bins(p0, p1, date_in("2000-01-01"), true, p2);
+}
+inline Span * floatspan_bins_border_inc_vorigin(const Span * p0, double p1, int * p2) {
+    return ::floatspan_bins(p0, p1, 0.0, true, p2);
+}
+inline Span * floatspanset_bins_border_inc_vorigin(const SpanSet * p0, double p1, int * p2) {
+    return ::floatspanset_bins(p0, p1, 0.0, true, p2);
+}
+inline Span * intspan_bins_border_inc_vorigin(const Span * p0, int p1, int * p2) {
+    return ::intspan_bins(p0, p1, 0, true, p2);
+}
+inline Span * intspanset_bins_border_inc_vorigin(const SpanSet * p0, int p1, int * p2) {
+    return ::intspanset_bins(p0, p1, 0, true, p2);
+}
+inline Span * tstzspan_bins_border_inc_torigin(const Span * p0, const MeosInterval * p1, int * p2) {
+    return ::tstzspan_bins(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
+}
+inline Span * tstzspanset_bins_border_inc_torigin(const SpanSet * p0, const MeosInterval * p1, int * p2) {
+    return ::tstzspanset_bins(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
+}
 inline TBox * tfloatbox_shift_scale_hasshift_haswidth_width(const TBox * p0, double p1) {
     return ::tfloatbox_shift_scale(p0, p1, 0, true, false);
 }

@@ -646,6 +646,36 @@ inline SpanSet * tstzspanset_shift_scale_duration(const SpanSet * p0, const Meos
 inline SpanSet * tstzspanset_shift_scale_shift(const SpanSet * p0, const MeosInterval * p1) {
     return ::tstzspanset_shift_scale(p0, NULL, p1);
 }
+inline Span * bigintspan_bins_border_inc_vorigin(const Span * p0, int64_t p1, int * p2) {
+    return ::bigintspan_bins(p0, p1, 0, true, p2);
+}
+inline Span * bigintspanset_bins_border_inc_vorigin(const SpanSet * p0, int64_t p1, int * p2) {
+    return ::bigintspanset_bins(p0, p1, 0, true, p2);
+}
+inline Span * datespan_bins_border_inc_torigin(const Span * p0, const MeosInterval * p1, int * p2) {
+    return ::datespan_bins(p0, p1, date_in("2000-01-01"), true, p2);
+}
+inline Span * datespanset_bins_border_inc_torigin(const SpanSet * p0, const MeosInterval * p1, int * p2) {
+    return ::datespanset_bins(p0, p1, date_in("2000-01-01"), true, p2);
+}
+inline Span * floatspan_bins_border_inc_vorigin(const Span * p0, double p1, int * p2) {
+    return ::floatspan_bins(p0, p1, 0.0, true, p2);
+}
+inline Span * floatspanset_bins_border_inc_vorigin(const SpanSet * p0, double p1, int * p2) {
+    return ::floatspanset_bins(p0, p1, 0.0, true, p2);
+}
+inline Span * intspan_bins_border_inc_vorigin(const Span * p0, int p1, int * p2) {
+    return ::intspan_bins(p0, p1, 0, true, p2);
+}
+inline Span * intspanset_bins_border_inc_vorigin(const SpanSet * p0, int p1, int * p2) {
+    return ::intspanset_bins(p0, p1, 0, true, p2);
+}
+inline Span * tstzspan_bins_border_inc_torigin(const Span * p0, const MeosInterval * p1, int * p2) {
+    return ::tstzspan_bins(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
+}
+inline Span * tstzspanset_bins_border_inc_torigin(const SpanSet * p0, const MeosInterval * p1, int * p2) {
+    return ::tstzspanset_bins(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
+}
 inline TBox * tfloatbox_shift_scale_hasshift_haswidth_width(const TBox * p0, double p1) {
     return ::tfloatbox_shift_scale(p0, p1, 0, true, false);
 }
@@ -3016,9 +3046,6 @@ static void Gen_tpcpointseq_from_base_tstzspan(DataChunk &args, ExpressionState 
         for (idx_t c = 0; c < ncol; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("step");
-        if (interp != interptype_from_string("step"))
-            throw NotImplementedException("tpcpoint constructs the step interpolation only");
         auto v0 = BlobToPcpoint(in0[i]);
         auto v1 = BlobToSpan(in1[i]);
         Temporal *r = (Temporal *) tpcpointseq_from_base_tstzspan(v0, v1);
@@ -3044,9 +3071,6 @@ static void Gen_tpcpointseqset_from_base_tstzspanset(DataChunk &args, Expression
         for (idx_t c = 0; c < ncol; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("step");
-        if (interp != interptype_from_string("step"))
-            throw NotImplementedException("tpcpoint constructs the step interpolation only");
         auto v0 = BlobToPcpoint(in0[i]);
         auto v1 = BlobToSpanSet(in1[i]);
         Temporal *r = (Temporal *) tpcpointseqset_from_base_tstzspanset(v0, v1);
@@ -3121,9 +3145,6 @@ static void Gen_tpcpatchseq_from_base_tstzspan(DataChunk &args, ExpressionState 
         for (idx_t c = 0; c < ncol; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("step");
-        if (interp != interptype_from_string("step"))
-            throw NotImplementedException("tpcpatch constructs the step interpolation only");
         auto v0 = BlobToPcpatch(in0[i]);
         auto v1 = BlobToSpan(in1[i]);
         Temporal *r = (Temporal *) tpcpatchseq_from_base_tstzspan(v0, v1);
@@ -3149,9 +3170,6 @@ static void Gen_tpcpatchseqset_from_base_tstzspanset(DataChunk &args, Expression
         for (idx_t c = 0; c < ncol; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("step");
-        if (interp != interptype_from_string("step"))
-            throw NotImplementedException("tpcpatch constructs the step interpolation only");
         auto v0 = BlobToPcpatch(in0[i]);
         auto v1 = BlobToSpanSet(in1[i]);
         Temporal *r = (Temporal *) tpcpatchseqset_from_base_tstzspanset(v0, v1);
@@ -3454,15 +3472,11 @@ void RegisterGenerated_meos_pointcloud_constructor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpoint", {TPcpointTypes::pcpoint(), LogicalType::TIMESTAMP_TZ}, TPcpointTypes::tpcpoint(), Gen_tpcpointinst_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpoint", {TPcpointTypes::pcpoint(), SetTypes::tstzset()}, TPcpointTypes::tpcpoint(), Gen_tpcpointseq_from_base_tstzset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpoint", {TPcpointTypes::pcpoint(), SpanTypes::tstzspan()}, TPcpointTypes::tpcpoint(), Gen_tpcpointseq_from_base_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpoint", {TPcpointTypes::pcpoint(), SpanTypes::tstzspan(), LogicalType::VARCHAR}, TPcpointTypes::tpcpoint(), Gen_tpcpointseq_from_base_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpoint", {TPcpointTypes::pcpoint(), SpansetTypes::tstzspanset()}, TPcpointTypes::tpcpoint(), Gen_tpcpointseqset_from_base_tstzspanset));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpoint", {TPcpointTypes::pcpoint(), SpansetTypes::tstzspanset(), LogicalType::VARCHAR}, TPcpointTypes::tpcpoint(), Gen_tpcpointseqset_from_base_tstzspanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpatch", {TPcpatchTypes::pcpatch(), LogicalType::TIMESTAMP_TZ}, TPcpatchTypes::tpcpatch(), Gen_tpcpatchinst_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpatch", {TPcpatchTypes::pcpatch(), SetTypes::tstzset()}, TPcpatchTypes::tpcpatch(), Gen_tpcpatchseq_from_base_tstzset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpatch", {TPcpatchTypes::pcpatch(), SpanTypes::tstzspan()}, TPcpatchTypes::tpcpatch(), Gen_tpcpatchseq_from_base_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpatch", {TPcpatchTypes::pcpatch(), SpanTypes::tstzspan(), LogicalType::VARCHAR}, TPcpatchTypes::tpcpatch(), Gen_tpcpatchseq_from_base_tstzspan));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpatch", {TPcpatchTypes::pcpatch(), SpansetTypes::tstzspanset()}, TPcpatchTypes::tpcpatch(), Gen_tpcpatchseqset_from_base_tstzspanset));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpcpatch", {TPcpatchTypes::pcpatch(), SpansetTypes::tstzspanset(), LogicalType::VARCHAR}, TPcpatchTypes::tpcpatch(), Gen_tpcpatchseqset_from_base_tstzspanset));
 }
 
 void RegisterGenerated_meos_pointcloud_transf(ExtensionLoader &loader) {
