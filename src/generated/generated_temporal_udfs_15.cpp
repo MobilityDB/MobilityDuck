@@ -1088,8 +1088,8 @@ static unique_ptr<FunctionData> Unnest_tcbuffer_unnestBindFn(ClientContext &, Ta
     names = {"value", "time"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Unnest_tcbuffer_unnestInitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Unnest_tcbuffer_unnestInitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Unnest_tcbuffer_unnestBind>();
     auto st = make_uniq<Unnest_tcbuffer_unnestState>();
     Temporal *t = BlobToTemporal(string_t(b.blob.data(), (uint32_t) b.blob.size()));
@@ -3463,8 +3463,8 @@ static unique_ptr<FunctionData> Unnest_tbool_unnestBindFn(ClientContext &, Table
     names = {"value", "time"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Unnest_tbool_unnestInitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Unnest_tbool_unnestInitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Unnest_tbool_unnestBind>();
     auto st = make_uniq<Unnest_tbool_unnestState>();
     Temporal *t = BlobToTemporal(string_t(b.blob.data(), (uint32_t) b.blob.size()));
@@ -3507,8 +3507,8 @@ static unique_ptr<FunctionData> Unnest_tfloat_unnestBindFn(ClientContext &, Tabl
     names = {"value", "time"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Unnest_tfloat_unnestInitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Unnest_tfloat_unnestInitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Unnest_tfloat_unnestBind>();
     auto st = make_uniq<Unnest_tfloat_unnestState>();
     Temporal *t = BlobToTemporal(string_t(b.blob.data(), (uint32_t) b.blob.size()));
@@ -3551,8 +3551,8 @@ static unique_ptr<FunctionData> Unnest_tint_unnestBindFn(ClientContext &, TableF
     names = {"value", "time"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Unnest_tint_unnestInitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Unnest_tint_unnestInitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Unnest_tint_unnestBind>();
     auto st = make_uniq<Unnest_tint_unnestState>();
     Temporal *t = BlobToTemporal(string_t(b.blob.data(), (uint32_t) b.blob.size()));
@@ -3595,8 +3595,8 @@ static unique_ptr<FunctionData> Unnest_tbigint_unnestBindFn(ClientContext &, Tab
     names = {"value", "time"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Unnest_tbigint_unnestInitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Unnest_tbigint_unnestInitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Unnest_tbigint_unnestBind>();
     auto st = make_uniq<Unnest_tbigint_unnestState>();
     Temporal *t = BlobToTemporal(string_t(b.blob.data(), (uint32_t) b.blob.size()));
@@ -3640,8 +3640,8 @@ static unique_ptr<FunctionData> Unnest_ttext_unnestBindFn(ClientContext &, Table
     names = {"value", "time"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Unnest_ttext_unnestInitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Unnest_ttext_unnestInitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Unnest_ttext_unnestBind>();
     auto st = make_uniq<Unnest_ttext_unnestState>();
     Temporal *t = BlobToTemporal(string_t(b.blob.data(), (uint32_t) b.blob.size()));

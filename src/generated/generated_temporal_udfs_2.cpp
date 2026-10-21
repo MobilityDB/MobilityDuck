@@ -2145,8 +2145,8 @@ static unique_ptr<FunctionData> Unnest_tjsonb_unnestBindFn(ClientContext &, Tabl
     names = {"value", "time"};
     return std::move(b);
 }
-static unique_ptr<GlobalTableFunctionState> Unnest_tjsonb_unnestInitFn(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> Unnest_tjsonb_unnestInitFn(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &b = input.bind_data->Cast<Unnest_tjsonb_unnestBind>();
     auto st = make_uniq<Unnest_tjsonb_unnestState>();
     Temporal *t = BlobToTemporal(string_t(b.blob.data(), (uint32_t) b.blob.size()));
@@ -4046,8 +4046,8 @@ static unique_ptr<FunctionData> PathBindFn_temporal_dyntimewarp_path(ClientConte
     names = {"i", "j"};
     return std::move(bind);
 }
-static unique_ptr<GlobalTableFunctionState> PathInit_temporal_dyntimewarp_path(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> PathInit_temporal_dyntimewarp_path(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &bind = input.bind_data->Cast<PathBind_temporal_dyntimewarp_path>();
     auto state = make_uniq<PathState_temporal_dyntimewarp_path>();
     Temporal *t1 = BlobToTemporal(bind.a);
@@ -4110,8 +4110,8 @@ static unique_ptr<FunctionData> PathBindFn_temporal_frechet_path(ClientContext &
     names = {"i", "j"};
     return std::move(bind);
 }
-static unique_ptr<GlobalTableFunctionState> PathInit_temporal_frechet_path(ClientContext &, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized();
+static unique_ptr<GlobalTableFunctionState> PathInit_temporal_frechet_path(ClientContext &context, TableFunctionInitInput &input) {
+    EnsureMeosThreadInitialized(context);
     auto &bind = input.bind_data->Cast<PathBind_temporal_frechet_path>();
     auto state = make_uniq<PathState_temporal_frechet_path>();
     Temporal *t1 = BlobToTemporal(bind.a);
