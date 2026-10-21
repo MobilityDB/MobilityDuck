@@ -185,8 +185,46 @@ set(EXTENSION_SOURCES
     src/temporal/temporal_parquet.cpp
 )
 
-build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
-build_loadable_extension(${TARGET_NAME} "" ${EXTENSION_SOURCES})
+# Outside Windows and Emscripten every source but the entry file compiles to the
+# same object for the static and the loadable extension: both targets build
+# position-independent code (DuckDB sets CMAKE_POSITION_INDEPENDENT_CODE), and the
+# loadable-only DUCKDB_BUILD_LOADABLE_EXTENSION reaches a declaration only in
+# winapi.hpp and duckdb.h under _WIN32. So those sources compile once, into an
+# object library both targets link, and only src/mobilityduck_extension.cpp, which
+# reads that define, compiles per target. On Windows the define switches the
+# linkage DuckDB's headers declare, so there each target compiles its own objects.
+set(MOBILITYDUCK_ENTRY_SOURCE src/mobilityduck_extension.cpp)
+if(WIN32 OR EMSCRIPTEN)
+  set(MOBILITYDUCK_SHARED_OBJECTS OFF)
+else()
+  set(MOBILITYDUCK_SHARED_OBJECTS ON)
+endif()
+
+if(MOBILITYDUCK_SHARED_OBJECTS)
+  set(MOBILITYDUCK_OBJECT_SOURCES ${EXTENSION_SOURCES})
+  list(REMOVE_ITEM MOBILITYDUCK_OBJECT_SOURCES ${MOBILITYDUCK_ENTRY_SOURCE})
+  add_library(${TARGET_NAME}_objects OBJECT ${MOBILITYDUCK_OBJECT_SOURCES})
+  # The usage requirements of duckdb_static, which build_static_extension links.
+  target_link_libraries(${TARGET_NAME}_objects PRIVATE duckdb_static)
+  build_static_extension(${TARGET_NAME} ${MOBILITYDUCK_ENTRY_SOURCE}
+    $<TARGET_OBJECTS:${TARGET_NAME}_objects>)
+  build_loadable_extension(${TARGET_NAME} "" ${MOBILITYDUCK_ENTRY_SOURCE}
+    $<TARGET_OBJECTS:${TARGET_NAME}_objects>)
+  # The shared objects take the visibility the loadable extension sets for its
+  # own, so it keeps exporting its entry point alone; the static archive links
+  # into executables, where visibility does not change what they call.
+  get_target_property(_md_visibility ${LOADABLE_EXTENSION_NAME} CXX_VISIBILITY_PRESET)
+  if(_md_visibility)
+    set_target_properties(${TARGET_NAME}_objects PROPERTIES
+      CXX_VISIBILITY_PRESET ${_md_visibility})
+  endif()
+  set(MOBILITYDUCK_COMPILE_TARGETS ${EXTENSION_NAME} ${LOADABLE_EXTENSION_NAME}
+    ${TARGET_NAME}_objects)
+else()
+  build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
+  build_loadable_extension(${TARGET_NAME} "" ${EXTENSION_SOURCES})
+  set(MOBILITYDUCK_COMPILE_TARGETS ${EXTENSION_NAME} ${LOADABLE_EXTENSION_NAME})
+endif()
 
 # -----------------------------
 # json-c target / include handling
@@ -194,15 +232,17 @@ build_loadable_extension(${TARGET_NAME} "" ${EXTENSION_SOURCES})
 if(TARGET json-c::json-c)
   set(JSONC_TGT json-c::json-c)
 else()
-  target_include_directories(${EXTENSION_NAME} SYSTEM PRIVATE ${JSON-C_INCLUDE_DIRS})
-  target_include_directories(${LOADABLE_EXTENSION_NAME} SYSTEM PRIVATE ${JSON-C_INCLUDE_DIRS})
+  foreach(_md_target ${MOBILITYDUCK_COMPILE_TARGETS})
+    target_include_directories(${_md_target} SYSTEM PRIVATE ${JSON-C_INCLUDE_DIRS})
+  endforeach()
   set(JSONC_TGT ${JSON-C_LIBRARIES})
 endif()
 
 # H3 headers for meos_h3.h (see the find_path above) — attached per-target like
 # json-c, since build_*_extension targets don't inherit directory includes.
-target_include_directories(${EXTENSION_NAME} SYSTEM PRIVATE ${H3_INCLUDE_DIR})
-target_include_directories(${LOADABLE_EXTENSION_NAME} SYSTEM PRIVATE ${H3_INCLUDE_DIR})
+foreach(_md_target ${MOBILITYDUCK_COMPILE_TARGETS})
+  target_include_directories(${_md_target} SYSTEM PRIVATE ${H3_INCLUDE_DIR})
+endforeach()
 
 # -----------------------------
 # MEOS's own external dependencies
@@ -240,7 +280,7 @@ set(MOBILITYDUCK_LINK_LIBS
 # The GEOMETRY type and its WKB conversion live in the spatial extension on the
 # v1.4 line and in DuckDB core from v1.5.0, so src/include/duckdb_version_compat.hpp
 # selects between them. DuckDB's own build sets these two variables.
-foreach(_md_target ${EXTENSION_NAME} ${LOADABLE_EXTENSION_NAME})
+foreach(_md_target ${MOBILITYDUCK_COMPILE_TARGETS})
   target_compile_definitions(${_md_target} PRIVATE
     MOBILITYDUCK_DUCKDB_MAJOR=${DUCKDB_MAJOR_VERSION}
     MOBILITYDUCK_DUCKDB_MINOR=${DUCKDB_MINOR_VERSION})
@@ -248,6 +288,10 @@ endforeach()
 
 target_link_libraries(${EXTENSION_NAME} ${MOBILITYDUCK_LINK_LIBS})
 target_link_libraries(${LOADABLE_EXTENSION_NAME} ${MOBILITYDUCK_LINK_LIBS})
+if(MOBILITYDUCK_SHARED_OBJECTS)
+  # The include directories and definitions these libraries carry.
+  target_link_libraries(${TARGET_NAME}_objects PRIVATE ${MOBILITYDUCK_LINK_LIBS})
+endif()
 
 # -----------------------------
 # Install (static & loadable)
