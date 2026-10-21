@@ -757,9 +757,6 @@ inline Temporal ** tbigint_value_time_split_border_inc_torigin(const Temporal * 
 inline Temporal ** tbigint_value_time_split_border_inc_torigin_vorigin(const Temporal * p0, int64_t p1, const MeosInterval * p2, int64_t ** p3, TimestampTz ** p4, int * p5) {
     return ::tbigint_value_time_split(p0, p1, p2, 0, timestamptz_in("2000-01-03", -1), true, p3, p4, p5);
 }
-inline TBox * tbigintbox_time_tiles_border_inc_torigin(const TBox * p0, const MeosInterval * p1, int * p2) {
-    return ::tbigintbox_time_tiles(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
-}
 inline TBox * tbigintbox_value_tiles_border_inc_vorigin(const TBox * p0, int64_t p1, int * p2) {
     return ::tbigintbox_value_tiles(p0, p1, 0, true, p2);
 }
@@ -771,6 +768,9 @@ inline TBox * tbigintbox_value_time_tiles_border_inc_torigin_vorigin(const TBox 
 }
 inline TBox * tbox_get_value_time_tile_torigin_vorigin(double p0, TimestampTz p1, double p2, const MeosInterval * p3) {
     return ::tbox_get_value_time_tile(p0, p1, p2, p3, 0.0, timestamptz_in("2000-01-03", -1));
+}
+inline TBox * tbox_time_tiles_border_inc_torigin(const TBox * p0, const MeosInterval * p1, int * p2) {
+    return ::tbox_time_tiles(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
 }
 inline TBox * tfloat_time_boxes_border_inc_torigin(const Temporal * p0, const MeosInterval * p1, int * p2) {
     return ::tfloat_time_boxes(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
@@ -795,9 +795,6 @@ inline Temporal ** tfloat_value_time_split_border_inc_torigin(const Temporal * p
 }
 inline Temporal ** tfloat_value_time_split_border_inc_torigin_vorigin(const Temporal * p0, double p1, const MeosInterval * p2, double ** p3, TimestampTz ** p4, int * p5) {
     return ::tfloat_value_time_split(p0, p1, p2, 0.0, timestamptz_in("2000-01-03", -1), true, p3, p4, p5);
-}
-inline TBox * tfloatbox_time_tiles_border_inc_torigin(const TBox * p0, const MeosInterval * p1, int * p2) {
-    return ::tfloatbox_time_tiles(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
 }
 inline TBox * tfloatbox_value_tiles_border_inc_vorigin(const TBox * p0, double p1, int * p2) {
     return ::tfloatbox_value_tiles(p0, p1, 0.0, true, p2);
@@ -831,9 +828,6 @@ inline Temporal ** tint_value_time_split_border_inc_torigin(const Temporal * p0,
 }
 inline Temporal ** tint_value_time_split_border_inc_torigin_vorigin(const Temporal * p0, int p1, const MeosInterval * p2, int ** p3, TimestampTz ** p4, int * p5) {
     return ::tint_value_time_split(p0, p1, p2, 0, timestamptz_in("2000-01-03", -1), true, p3, p4, p5);
-}
-inline TBox * tintbox_time_tiles_border_inc_torigin(const TBox * p0, const MeosInterval * p1, int * p2) {
-    return ::tintbox_time_tiles(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
 }
 inline TBox * tintbox_value_tiles_border_inc_vorigin(const TBox * p0, int p1, int * p2) {
     return ::tintbox_value_tiles(p0, p1, 0, true, p2);
