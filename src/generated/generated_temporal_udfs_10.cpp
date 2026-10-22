@@ -1164,6 +1164,75 @@ static void Gen_geoset_start_value(DataChunk &args, ExpressionState &state, Vect
         });
 }
 
+struct SetUnnest_geoset_valuesState : public LocalTableFunctionState {
+    GSERIALIZED * *values = nullptr; int count = 0; int idx = 0;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(values[k]);
+        }
+        free(values);
+        values = nullptr; count = 0; idx = 0;
+    }
+    ~SetUnnest_geoset_valuesState() { Release(); }
+};
+static unique_ptr<FunctionData> SetUnnest_geoset_valuesBindFn(ClientContext &, TableFunctionBindInput &,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    types = {MobilityDuckGeometryType()};
+    names = {"unnest"};
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> SetUnnest_geoset_valuesInitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<SetUnnest_geoset_valuesState>();
+}
+static OperatorResultType SetUnnest_geoset_valuesInOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<SetUnnest_geoset_valuesState>();
+    auto &v0 = output.data[0];
+    ArenaAllocator arena(Allocator::DefaultAllocator());
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            UnifiedVectorFormat in;
+            input.data[0].ToUnifiedFormat(input.size(), in);
+            auto r = in.sel->get_index(st.row);
+            if (in.validity.RowIsValid(r)) {
+                Set *s = BlobToSet(UnifiedVectorFormat::GetData<string_t>(in)[r]);
+                st.values = geoset_values(s, &st.count);
+                free(s);
+                if (!st.values) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        GSERIALIZED * x = st.values[st.idx];
+        FlatVector::GetData<string_t>(v0)[i] = GSerializedToGeometry(x, arena, v0); free(x);
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction SetUnnest_geoset_valuesTable(const LogicalType &type) {
+    TableFunction fn("setUnnest", {type}, nullptr, SetUnnest_geoset_valuesBindFn, nullptr, SetUnnest_geoset_valuesInitFn);
+    fn.in_out_function = SetUnnest_geoset_valuesInOutFn;
+    return fn;
+}
+
 
 // ===== @ingroup meos_h3_hierarchy =====
 static void Gen_h3_cell_to_children(DataChunk &args, ExpressionState &, Vector &result) {
@@ -6257,6 +6326,8 @@ void RegisterGenerated_meos_geo_set_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {SpatialSetType::geogset()}, MobilityDuckGeometryType(), Gen_geoset_end_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {SpatialSetType::geomset()}, MobilityDuckGeometryType(), Gen_geoset_start_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {SpatialSetType::geogset()}, MobilityDuckGeometryType(), Gen_geoset_start_value));
+    loader.RegisterFunction(SetUnnest_geoset_valuesTable(SpatialSetType::geomset()));
+    loader.RegisterFunction(SetUnnest_geoset_valuesTable(SpatialSetType::geogset()));
 }
 
 void RegisterGenerated_meos_h3_hierarchy(ExtensionLoader &loader) {

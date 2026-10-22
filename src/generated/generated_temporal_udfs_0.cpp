@@ -1724,6 +1724,142 @@ static void Gen_pcpatchset_value_n(DataChunk &args, ExpressionState &, Vector &r
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
+struct SetUnnest_pcpointset_valuesState : public LocalTableFunctionState {
+    Pcpoint * *values = nullptr; int count = 0; int idx = 0;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(values[k]);
+        }
+        free(values);
+        values = nullptr; count = 0; idx = 0;
+    }
+    ~SetUnnest_pcpointset_valuesState() { Release(); }
+};
+static unique_ptr<FunctionData> SetUnnest_pcpointset_valuesBindFn(ClientContext &, TableFunctionBindInput &,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    types = {TPcpointTypes::pcpoint()};
+    names = {"unnest"};
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> SetUnnest_pcpointset_valuesInitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<SetUnnest_pcpointset_valuesState>();
+}
+static OperatorResultType SetUnnest_pcpointset_valuesInOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<SetUnnest_pcpointset_valuesState>();
+    auto &v0 = output.data[0];
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            UnifiedVectorFormat in;
+            input.data[0].ToUnifiedFormat(input.size(), in);
+            auto r = in.sel->get_index(st.row);
+            if (in.validity.RowIsValid(r)) {
+                Set *s = BlobToSet(UnifiedVectorFormat::GetData<string_t>(in)[r]);
+                st.values = pcpointset_values(s, &st.count);
+                free(s);
+                if (!st.values) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        Pcpoint * x = st.values[st.idx];
+        FlatVector::GetData<string_t>(v0)[i] = PcpointToBlob(v0, x);
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction SetUnnest_pcpointset_valuesTable(const LogicalType &type) {
+    TableFunction fn("setUnnest", {type}, nullptr, SetUnnest_pcpointset_valuesBindFn, nullptr, SetUnnest_pcpointset_valuesInitFn);
+    fn.in_out_function = SetUnnest_pcpointset_valuesInOutFn;
+    return fn;
+}
+
+struct SetUnnest_pcpatchset_valuesState : public LocalTableFunctionState {
+    Pcpatch * *values = nullptr; int count = 0; int idx = 0;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(values[k]);
+        }
+        free(values);
+        values = nullptr; count = 0; idx = 0;
+    }
+    ~SetUnnest_pcpatchset_valuesState() { Release(); }
+};
+static unique_ptr<FunctionData> SetUnnest_pcpatchset_valuesBindFn(ClientContext &, TableFunctionBindInput &,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    types = {TPcpatchTypes::pcpatch()};
+    names = {"unnest"};
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> SetUnnest_pcpatchset_valuesInitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<SetUnnest_pcpatchset_valuesState>();
+}
+static OperatorResultType SetUnnest_pcpatchset_valuesInOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<SetUnnest_pcpatchset_valuesState>();
+    auto &v0 = output.data[0];
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            UnifiedVectorFormat in;
+            input.data[0].ToUnifiedFormat(input.size(), in);
+            auto r = in.sel->get_index(st.row);
+            if (in.validity.RowIsValid(r)) {
+                Set *s = BlobToSet(UnifiedVectorFormat::GetData<string_t>(in)[r]);
+                st.values = pcpatchset_values(s, &st.count);
+                free(s);
+                if (!st.values) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        Pcpatch * x = st.values[st.idx];
+        FlatVector::GetData<string_t>(v0)[i] = PcpatchToBlob(v0, x);
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction SetUnnest_pcpatchset_valuesTable(const LogicalType &type) {
+    TableFunction fn("setUnnest", {type}, nullptr, SetUnnest_pcpatchset_valuesBindFn, nullptr, SetUnnest_pcpatchset_valuesInitFn);
+    fn.in_out_function = SetUnnest_pcpatchset_valuesInOutFn;
+    return fn;
+}
+
 static void Gen_pcpointset_start_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
@@ -5295,6 +5431,8 @@ void RegisterGenerated_meos_pointcloud_box_comp(ExtensionLoader &loader) {
 void RegisterGenerated_meos_pointcloud_set_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("valueN", {SetTypes::pcpointset(), LogicalType::INTEGER}, TPcpointTypes::pcpoint(), Gen_pcpointset_value_n));
     RegisterSerializedScalarFunction(loader, ScalarFunction("valueN", {SetTypes::pcpatchset(), LogicalType::INTEGER}, TPcpatchTypes::pcpatch(), Gen_pcpatchset_value_n));
+    loader.RegisterFunction(SetUnnest_pcpointset_valuesTable(SetTypes::pcpointset()));
+    loader.RegisterFunction(SetUnnest_pcpatchset_valuesTable(SetTypes::pcpatchset()));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {SetTypes::pcpointset()}, TPcpointTypes::pcpoint(), Gen_pcpointset_start_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {SetTypes::pcpointset()}, TPcpointTypes::pcpoint(), Gen_pcpointset_end_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {SetTypes::pcpatchset()}, TPcpatchTypes::pcpatch(), Gen_pcpatchset_start_value));

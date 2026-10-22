@@ -3305,19 +3305,22 @@ def shape_unnest(f):
         return None
     return (next(iter(names)), accs, dt, write, elem[:-1].strip())
 
-def emit_unnest(f, dt, write, ctype):
-    """The bind, init and exec of #shape_unnest's table function, after #emit_path_table: the
-    bind keeps the operand, init makes the one MEOS call, exec hands the rows out a vector at a
-    time, freeing each value and time as it writes them; the state frees what was never read."""
+def emit_unnest(f, name, dt, write, ctype):
+    """The bind, local state and in-out function of #shape_unnest's table function, after the
+    splits of src/temporal/temporal.cpp (TemporalSplitInOut): the temporal value comes from a
+    literal or from a LATERAL column, as MobilityDB's unnest takes either; each input row makes
+    the one MEOS call when the output reaches it, and its rows are handed out a vector at a time,
+    each value and time freed as it is written; the state frees what was never read. A NULL
+    temporal value has no row, as the strict unnest of MobilityDB answers none."""
     n = f["name"]
     S = f"Unnest_{n}"
     geo = "GSerializedToGeometry" in write
     lines = [
-        f"struct {S}Bind : public TableFunctionData {{ std::string blob; }};",
-        f"struct {S}State : public GlobalTableFunctionState {{",
-        f"    {ctype} *values = nullptr; SpanSet **times = nullptr; int count = 0; idx_t idx = 0;",
-        f"    ~{S}State() {{",
-        "        for (idx_t k = idx; k < (idx_t) count; k++) {",
+        f"struct {S}State : public LocalTableFunctionState {{",
+        f"    {ctype} *values = nullptr; SpanSet **times = nullptr; int count = 0; int idx = 0;",
+        "    idx_t row = 0; bool loaded = false;",
+        "    void Release() {",
+        "        for (int k = idx; k < count; k++) {",
     ]
     if ctype.endswith("*"):
         lines.append("            free(values[k]);")
@@ -3325,44 +3328,200 @@ def emit_unnest(f, dt, write, ctype):
         "            free(times[k]);",
         "        }",
         "        free(values); free(times);",
+        "        values = nullptr; times = nullptr; count = 0; idx = 0;",
         "    }",
+        f"    ~{S}State() {{ Release(); }}",
         "};",
-        f"static unique_ptr<FunctionData> {S}BindFn(ClientContext &, TableFunctionBindInput &input,",
+        f"static unique_ptr<FunctionData> {S}BindFn(ClientContext &, TableFunctionBindInput &,",
         "                                          vector<LogicalType> &types, vector<string> &names) {",
-        "    if (input.inputs.size() != 1 || input.inputs[0].IsNull())",
-        "        throw BinderException(\"temporalUnnest: expects a non-null temporal value\");",
-        f"    auto b = make_uniq<{S}Bind>();",
-        "    b->blob = StringValue::Get(input.inputs[0]);",
         f"    types = {{{dt}, SpansetTypes::tstzspanset()}};",
         "    names = {\"value\", \"time\"};",
-        "    return std::move(b);",
+        "    return make_uniq<TableFunctionData>();",
         "}",
-        f"static unique_ptr<GlobalTableFunctionState> {S}InitFn(ClientContext &context, TableFunctionInitInput &input) {{",
-        "    EnsureMeosThreadInitialized(context);",
-        f"    auto &b = input.bind_data->Cast<{S}Bind>();",
-        f"    auto st = make_uniq<{S}State>();",
-        "    Temporal *t = BlobToTemporal(string_t(b.blob.data(), (uint32_t) b.blob.size()));",
-        f"    st->times = {n}(t, &st->values, &st->count);",
-        "    free(t);",
-        "    if (!st->times) st->count = 0;",
-        "    return std::move(st);",
+        f"static unique_ptr<LocalTableFunctionState> {S}InitFn(ExecutionContext &context, TableFunctionInitInput &,",
+        "                                          GlobalTableFunctionState *) {",
+        "    EnsureMeosThreadInitialized(context.client);",
+        f"    return make_uniq<{S}State>();",
         "}",
-        f"static void {S}ExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {{",
-        f"    auto &st = input.global_state->Cast<{S}State>();",
-        "    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);",
+        f"static OperatorResultType {S}InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,",
+        "                                          DataChunk &output) {",
+        f"    auto &st = data.local_state->Cast<{S}State>();",
         "    auto &v0 = output.data[0]; auto &v1 = output.data[1];",
     ]
     if geo:
         lines.append("    ArenaAllocator arena(Allocator::DefaultAllocator());")
     lines += [
-        "    for (idx_t i = 0; i < rows; i++, st.idx++) {",
+        "    idx_t i = 0;",
+        "    while (i < STANDARD_VECTOR_SIZE) {",
+        "        if (!st.loaded) {",
+        "            if (st.row >= input.size()) {",
+        "                if (i > 0) {",
+        "                    output.SetCardinality(i);",
+        "                    return OperatorResultType::HAVE_MORE_OUTPUT;",
+        "                }",
+        "                st.row = 0;",
+        "                return OperatorResultType::NEED_MORE_INPUT;",
+        "            }",
+        "            UnifiedVectorFormat in;",
+        "            input.data[0].ToUnifiedFormat(input.size(), in);",
+        "            auto r = in.sel->get_index(st.row);",
+        "            if (in.validity.RowIsValid(r)) {",
+        "                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(in)[r]);",
+        f"                st.times = {n}(t, &st.values, &st.count);",
+        "                free(t);",
+        "                if (!st.times) st.count = 0;",
+        "            }",
+        "            st.loaded = true;",
+        "        }",
+        "        if (st.idx >= st.count) {",
+        "            st.Release();",
+        "            st.loaded = false;",
+        "            st.row++;",
+        "            continue;",
+        "        }",
         f"        {ctype} x = st.values[st.idx];",
         f"        {write}",
         "        SpanSet *ss = st.times[st.idx];",
         "        FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) ss, spanset_mem_size(ss));",
         "        free(ss);",
+        "        st.idx++; i++;",
         "    }",
-        "    output.SetCardinality(rows);",
+        "    output.SetCardinality(i);",
+        "    return OperatorResultType::HAVE_MORE_OUTPUT;",
+        "}",
+        f"static TableFunction {S}Table(const LogicalType &type) {{",
+        f"    TableFunction fn(\"{name}\", {{type}}, nullptr, {S}BindFn, nullptr, {S}InitFn);",
+        f"    fn.in_out_function = {S}InOutFn;",
+        "    return fn;",
+        "}",
+        "",
+    ]
+    return "\n".join(lines)
+
+def shape_set_unnest(f):
+    """(engine name, [set accessors], element DuckDB type, element C type, element writer) for a
+    function the catalog declares set-returning over a set under the name the other engines take
+    (`altSqlName`, the `@altsqlfn setUnnest` of Set_unnest): `<elem> *<set>_values(const Set *,
+    int *count)`, one row per value of the set. The writer stores the value `x` into the column
+    `v0` the way #emit_array stores an element of getValues (ARRAY_ELEM), and a geometry as
+    #shape_unnest stores one. None otherwise."""
+    if f.get("api") != "public":
+        return None
+    ps = f.get("params") or []
+    if len(ps) != 2 or base(ps[0]["canonical"]) != "Set" or norm(ps[1]["canonical"]) != "int *":
+        return None
+    sigs = [s for s in f.get("sqlSignatures") or []
+            if s.get("retSet") and s.get("altSqlName") and len(s.get("args") or []) == 1]
+    names = {s["altSqlName"] for s in sigs}
+    if len(names) != 1:
+        return None
+    ec = re.sub(r"^struct\s+", "", norm(f["returnType"]["canonical"]))
+    if not ec.endswith("*"):
+        return None
+    ec = ec[:-1].strip()                       # what the array holds: int, text *, Cbuffer *, ...
+    if ec == "GSERIALIZED *":
+        write = "FlatVector::GetData<string_t>(v0)[i] = GSerializedToGeometry(x, arena, v0); free(x);"
+    elif ec in ARRAY_ELEM:
+        _lt, ccpp, marsh = ARRAY_ELEM[ec]
+        write = (marsh.replace("cd[off + j]", "FlatVector::GetData<%s>(v0)[i]" % ccpp)
+                 .replace("arr[j]", "x").replace("child_vector", "v0"))
+    else:
+        return None
+    accs = []
+    for s in sigs:
+        acc = SET_SIG_ACC.get(s["args"][0])
+        dt = ("MobilityDuckGeometryType()" if s["ret"] in ("geometry", "geography")
+              else SQL_BASE_TO_DUCK.get(s["ret"]) or BASE_LOGICAL.get(s["ret"]))
+        if acc and dt:
+            accs.append((acc, dt))
+    if not accs or len({dt for _a, dt in accs}) != 1:
+        return None
+    return (next(iter(names)), [a for a, _dt in accs], accs[0][1], ec, write)
+
+def emit_set_unnest(f, name, dt, ctype, write):
+    """The bind, local state and in-out function of #shape_set_unnest's table function, as
+    #emit_unnest builds temporalUnnest's: the set comes from a literal or from a LATERAL column,
+    each input row makes the one MEOS call when the output reaches it, and its values are handed
+    out a vector at a time in the order of the set, each freed as it is written; the state frees
+    what was never read. A NULL set has no row, as the strict unnest of MobilityDB answers none.
+    The column is named unnest, as PostgreSQL names the column of SELECT * FROM unnest(set)."""
+    n = f["name"]
+    S = f"SetUnnest_{n}"
+    geo = "GSerializedToGeometry" in write
+    lines = [
+        f"struct {S}State : public LocalTableFunctionState {{",
+        f"    {ctype} *values = nullptr; int count = 0; int idx = 0;",
+        "    idx_t row = 0; bool loaded = false;",
+        "    void Release() {",
+    ]
+    if ctype.endswith("*"):
+        lines += ["        for (int k = idx; k < count; k++) {",
+                  "            free(values[k]);",
+                  "        }"]
+    lines += [
+        "        free(values);",
+        "        values = nullptr; count = 0; idx = 0;",
+        "    }",
+        f"    ~{S}State() {{ Release(); }}",
+        "};",
+        f"static unique_ptr<FunctionData> {S}BindFn(ClientContext &, TableFunctionBindInput &,",
+        "                                          vector<LogicalType> &types, vector<string> &names) {",
+        f"    types = {{{dt}}};",
+        "    names = {\"unnest\"};",
+        "    return make_uniq<TableFunctionData>();",
+        "}",
+        f"static unique_ptr<LocalTableFunctionState> {S}InitFn(ExecutionContext &context, TableFunctionInitInput &,",
+        "                                          GlobalTableFunctionState *) {",
+        "    EnsureMeosThreadInitialized(context.client);",
+        f"    return make_uniq<{S}State>();",
+        "}",
+        f"static OperatorResultType {S}InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,",
+        "                                          DataChunk &output) {",
+        f"    auto &st = data.local_state->Cast<{S}State>();",
+        "    auto &v0 = output.data[0];",
+    ]
+    if geo:
+        lines.append("    ArenaAllocator arena(Allocator::DefaultAllocator());")
+    lines += [
+        "    idx_t i = 0;",
+        "    while (i < STANDARD_VECTOR_SIZE) {",
+        "        if (!st.loaded) {",
+        "            if (st.row >= input.size()) {",
+        "                if (i > 0) {",
+        "                    output.SetCardinality(i);",
+        "                    return OperatorResultType::HAVE_MORE_OUTPUT;",
+        "                }",
+        "                st.row = 0;",
+        "                return OperatorResultType::NEED_MORE_INPUT;",
+        "            }",
+        "            UnifiedVectorFormat in;",
+        "            input.data[0].ToUnifiedFormat(input.size(), in);",
+        "            auto r = in.sel->get_index(st.row);",
+        "            if (in.validity.RowIsValid(r)) {",
+        "                Set *s = BlobToSet(UnifiedVectorFormat::GetData<string_t>(in)[r]);",
+        f"                st.values = {n}(s, &st.count);",
+        "                free(s);",
+        "                if (!st.values) st.count = 0;",
+        "            }",
+        "            st.loaded = true;",
+        "        }",
+        "        if (st.idx >= st.count) {",
+        "            st.Release();",
+        "            st.loaded = false;",
+        "            st.row++;",
+        "            continue;",
+        "        }",
+        f"        {ctype} x = st.values[st.idx];",
+        f"        {write}",
+        "        st.idx++; i++;",
+        "    }",
+        "    output.SetCardinality(i);",
+        "    return OperatorResultType::HAVE_MORE_OUTPUT;",
+        "}",
+        f"static TableFunction {S}Table(const LogicalType &type) {{",
+        f"    TableFunction fn(\"{name}\", {{type}}, nullptr, {S}BindFn, nullptr, {S}InitFn);",
+        f"    fn.in_out_function = {S}InOutFn;",
+        "    return fn;",
         "}",
         "",
     ]
@@ -3375,8 +3534,8 @@ def emit_unnest(f, dt, write, ctype):
 # SQL defaults (`argDefaults`) and the arguments a short form binds (`boundArgs`, the sizes a
 # one-size form leaves at 0). PostgreSQL and DuckDB call a set-returning function in FROM
 # (Unnesting), so each declared form is a table function whose bind keeps the
-# arguments, whose init makes the one MEOS call and whose exec hands the rows out, as
-# #emit_unnest does for temporalUnnest. A literal default is read in init, the time origin through
+# arguments, whose init makes the one MEOS call and whose exec hands the rows out. A literal
+# default is read in init, the time origin through
 # the MEOS parser in the session time zone as MobilityDB reads it.
 TILE_BOX_IN = {"TBox": ("BlobToTbox", "TboxType::tbox()", None),
                "STBox": ("BlobToStbox", "StboxType::stbox()", "srid")}
@@ -5205,7 +5364,10 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_json_set_constructor", "meos_npoint_set_constructor",
                   "meos_pointcloud_set_constructor", "meos_pose_set_constructor",
                   "meos_posechain_set_constructor", "meos_quadbin_set_constructor",
-                  "meos_s2cell_set_constructor"}
+                  "meos_s2cell_set_constructor",
+                  # What a point cloud schema states: its SRID, compression and number of
+                  # dimensions over the pcid that names it (#shape_static_retired)
+                  "meos_pointcloud_schema_cache"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
@@ -5229,10 +5391,15 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # (clusterKMeans, clusterDBSCAN, clusterIntersecting, clusterWithin) answer an array, of integers
 # or of geometries, with its count through an out-parameter, which no shape returns from an
 # array of geometries; no hand registration answers them either.
+# pointCloudSchemaRegister: MobilityDB declares no SQL function of the name, a schema being the
+# rows of its tables pointcloud_schemas and pointcloud_dimensions, so the catalog states no
+# signature for meos_pc_schema_register_dims, whose dimensions are an array of PCDimensionSpec
+# with its count; src/pointcloud/pcschema.cpp keeps it.
 RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX",
                        "spaceSplit", "spaceTimeSplit", "timeSplit",
                        "valueSplit", "valueTimeSplit", "asMVTGeom",
-                       "clusterKMeans", "clusterDBSCAN", "clusterIntersecting", "clusterWithin"}
+                       "clusterKMeans", "clusterDBSCAN", "clusterIntersecting", "clusterWithin",
+                       "pointCloudSchemaRegister"}
 def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
 TEMPORAL_CBASES = {"Temporal", "TInstant", "TSequence", "TSequenceSet"}
@@ -6008,8 +6175,35 @@ def static_cell_ret(f, sqlr):
                 "            return %s;" % rexpr, True)
     if b in BYVAL_RET and "*" not in n:
         dt, cct, rett, rexpr = scalar_ret4(f)
+        guard = static_null_guard(f)
+        if guard is not None:
+            return (dt, rett, cct, "if (%s) { mask.SetInvalid(idx); return %s(); }\n"
+                    "            return %s;" % (guard, rett, rexpr), True)
         return (dt, rett, cct, "return %s;" % rexpr, False)
     return None
+
+def static_null_guard(f):
+    """The test on `r` under which the wrapper of `f` answers NULL for its by-value result, as the
+    catalog states it (`shape.nullableResult`), else None. A guard SCALAR_NULL_GUARD names maps as
+    it does there. Any other guard over the result, the parameters of `f` and public MEOS functions
+    reads `r` for the result and @A<i>@ for the i-th parameter, which #emit_static_cell replaces
+    with the operand it passes: pointCloudSchemaSRID answers NULL where meos_pc_schema_ndims(pcid)
+    < 0, as MobilityDB's Pointcloud_schema_srid does."""
+    nr = (f.get("shape") or {}).get("nullableResult")
+    if nr in SCALAR_NULL_GUARD:
+        return SCALAR_NULL_GUARD[nr]
+    m = re.fullmatch(r'if \((.+)\)', nr or "")
+    if not m:
+        return None
+    params = [p["name"] for p in classify(f)[0]]
+    for tok in re.findall(r'[A-Za-z_]\w*', m.group(1)):
+        if tok != "result" and tok not in params \
+                and (FN_BY_NAME.get(tok) or {}).get("api") != "public":
+            return None
+    expr = re.sub(r'\bresult\b', 'r', m.group(1))
+    for i, nm in enumerate(params):
+        expr = re.sub(r'\b%s\b' % re.escape(nm), '@A%d@' % i, expr)
+    return expr
 
 def shape_static_cell(f):
     """[(sqlSignature, [arg tuples], ret tuple)] for a static cell function, else None. One entry per
@@ -6067,11 +6261,14 @@ def shape_static_retired(f):
     if any(base(p["canonical"]) in TEMPORAL_CBASES for p in ins):
         return None
     # a set read or answered (the sets of the families and of geometries, set(text)), or a
-    # function of by-value numbers alone (round(float, integer))
+    # function of by-value numbers alone answering a number or a text (round(float, integer),
+    # pointCloudSchemaCompression(integer))
     is_set = lambda c: base(c) == "Set" and norm(c).endswith("*")
     byval = lambda c: "*" not in norm(c) and (base(c) in SCALAR_ARG or base(c) in BYVAL_RET)
-    if not (any(is_set(p["canonical"]) for p in ins) or is_set(f["returnType"]["canonical"])
-            or (all(byval(p["canonical"]) for p in ins) and byval(f["returnType"]["canonical"]))):
+    is_text = lambda c: base(c) == "char" and norm(c).endswith("*")
+    rc = f["returnType"]["canonical"]
+    if not (any(is_set(p["canonical"]) for p in ins) or is_set(rc)
+            or (all(byval(p["canonical"]) for p in ins) and (byval(rc) or is_text(rc)))):
         return None
     sigs = []
     for s in f.get("sqlSignatures") or []:
@@ -6094,6 +6291,8 @@ def emit_static_cell(f, args, ret, sfx="", dval=None):
     name, n = f["name"], len(args)
     ex = {1: "UnaryExecutor", 2: "BinaryExecutor", 3: "TernaryExecutor"}[n]
     _dt, rett, cct, rlines, nulls = ret
+    for i, a in enumerate(args):        # the operands a guard of #static_null_guard reads
+        rlines = rlines.replace("@A%d@" % i, a[2])
     tps = ", ".join(a[1] for a in args)
     vecs = ", ".join("args.data[%d]" % i for i in range(n))
     params = ", ".join("%s a%d" % (a[1], i) for i, a in enumerate(args))
@@ -6336,11 +6535,10 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         if _un:
             STATE["grp"] = f.get("group") or "meos_ungrouped"
             un_name, un_accs, un_dt, un_write, un_ctype = _un
-            bodies.append(emit_unnest(f, un_dt, un_write, un_ctype))
+            bodies.append(emit_unnest(f, un_name, un_dt, un_write, un_ctype))
             S_ = f"Unnest_{f['name']}"
             for a in un_accs:
-                specific_regs.append(f'    loader.RegisterFunction(TableFunction("{un_name}", {{{a}}}, '
-                                     f'{S_}ExecFn, {S_}BindFn, {S_}InitFn));')
+                specific_regs.append(f'    loader.RegisterFunction({S_}Table({a}));')
             continue
         # the tiles of a box, one (index, tile) row each (timeTiles, spaceTimeTiles): a table function
         # per declared form, its shorter forms the trailing SQL defaults allow
@@ -7768,6 +7966,22 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     specific_regs.append(
                         f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                         f'"{reg_name(nm, f)}", {{{slots}}}, {sret[0]}, Gen_{fn}{body_of[bkey]}));')
+
+    # a set-returning function over a set the other engines call by its `altSqlName`
+    # (setUnnest): a table function over the set types its signatures declare. The typed
+    # <set>_values functions also answer getValues, which an earlier arm emits, so they are read
+    # here in a pass of their own
+    for f in fns:
+        if declared is not None and f["name"] not in declared:
+            continue
+        _su = shape_set_unnest(f)
+        if not _su:
+            continue
+        STATE["grp"] = f.get("group") or "meos_ungrouped"
+        su_name, su_accs, su_dt, su_ctype, su_write = _su
+        bodies.append(emit_set_unnest(f, su_name, su_dt, su_ctype, su_write))
+        for a in su_accs:
+            specific_regs.append(f'    loader.RegisterFunction(SetUnnest_{f["name"]}Table({a}));')
 
     # ---- bodies, sectioned by @ingroup group (one section per group) ----
     body_by_grp = defaultdict(list)

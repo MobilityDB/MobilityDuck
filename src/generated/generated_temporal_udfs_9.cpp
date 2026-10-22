@@ -1681,6 +1681,71 @@ static void Gen_h3indexset_value_n(DataChunk &args, ExpressionState &, Vector &r
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
+struct SetUnnest_h3indexset_valuesState : public LocalTableFunctionState {
+    uint64_t *values = nullptr; int count = 0; int idx = 0;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        free(values);
+        values = nullptr; count = 0; idx = 0;
+    }
+    ~SetUnnest_h3indexset_valuesState() { Release(); }
+};
+static unique_ptr<FunctionData> SetUnnest_h3indexset_valuesBindFn(ClientContext &, TableFunctionBindInput &,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    types = {H3indexTypes::h3index()};
+    names = {"unnest"};
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> SetUnnest_h3indexset_valuesInitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<SetUnnest_h3indexset_valuesState>();
+}
+static OperatorResultType SetUnnest_h3indexset_valuesInOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<SetUnnest_h3indexset_valuesState>();
+    auto &v0 = output.data[0];
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            UnifiedVectorFormat in;
+            input.data[0].ToUnifiedFormat(input.size(), in);
+            auto r = in.sel->get_index(st.row);
+            if (in.validity.RowIsValid(r)) {
+                Set *s = BlobToSet(UnifiedVectorFormat::GetData<string_t>(in)[r]);
+                st.values = h3indexset_values(s, &st.count);
+                free(s);
+                if (!st.values) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        uint64_t x = st.values[st.idx];
+        FlatVector::GetData<int64_t>(v0)[i] = (int64_t) x;
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction SetUnnest_h3indexset_valuesTable(const LogicalType &type) {
+    TableFunction fn("setUnnest", {type}, nullptr, SetUnnest_h3indexset_valuesBindFn, nullptr, SetUnnest_h3indexset_valuesInitFn);
+    fn.in_out_function = SetUnnest_h3indexset_valuesInOutFn;
+    return fn;
+}
+
 static void Gen_h3indexset_values(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     auto &in_vec = args.data[0];
@@ -2976,6 +3041,7 @@ void RegisterGenerated_meos_h3_set_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {SetTypes::h3indexset()}, H3indexTypes::h3index(), Gen_h3indexset_end_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {SetTypes::h3indexset()}, H3indexTypes::h3index(), Gen_h3indexset_start_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("valueN", {SetTypes::h3indexset(), LogicalType::INTEGER}, H3indexTypes::h3index(), Gen_h3indexset_value_n));
+    loader.RegisterFunction(SetUnnest_h3indexset_valuesTable(SetTypes::h3indexset()));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValues", {SetTypes::h3indexset()}, LogicalType::LIST(H3indexTypes::h3index()), Gen_h3indexset_values));
 }
 

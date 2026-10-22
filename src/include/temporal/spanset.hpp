@@ -21,7 +21,6 @@ struct SpansetTypes {
 
     static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
-    static void RegisterSetUnnest(ExtensionLoader &loader);    
 };
 
 struct SpansetTypeMapping {

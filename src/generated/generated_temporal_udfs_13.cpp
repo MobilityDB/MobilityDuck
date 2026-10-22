@@ -1522,6 +1522,38 @@ static void Gen_tpcpatch_value_at_timestamptz(DataChunk &args, ExpressionState &
 }
 
 
+// ===== @ingroup meos_pointcloud_schema_cache =====
+static void Gen_meos_pc_schema_srid(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<int32_t, int32_t>(args.data[0], result, args.size(),
+        [&](int32_t a0, ValidityMask &mask, idx_t idx) -> int32_t {
+            int32_t r = meos_pc_schema_srid(static_cast<uint32_t>(a0));
+            if (meos_pc_schema_ndims(static_cast<uint32_t>(a0)) < 0) { mask.SetInvalid(idx); return int32_t(); }
+            return (int32_t) r;
+        });
+}
+
+static void Gen_meos_pc_schema_compression(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<int32_t, string_t>(args.data[0], result, args.size(),
+        [&](int32_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            const char * r = meos_pc_schema_compression(static_cast<uint32_t>(a0));
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return StringVector::AddString(result, r);
+        });
+}
+
+static void Gen_meos_pc_schema_ndims(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<int32_t, int32_t>(args.data[0], result, args.size(),
+        [&](int32_t a0, ValidityMask &mask, idx_t idx) -> int32_t {
+            int32_t r = meos_pc_schema_ndims(static_cast<uint32_t>(a0));
+            if (r < 0) { mask.SetInvalid(idx); return int32_t(); }
+            return (int32_t) r;
+        });
+}
+
+
 // ===== @ingroup meos_pose_restrict =====
 static void Gen_tpose_at_geom(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -1719,48 +1751,75 @@ static void Gen_s2cell_to_set(DataChunk &args, ExpressionState &, Vector &result
 
 
 // ===== @ingroup meos_s2cell_transf =====
-struct Unnest_ts2cell_unnestBind : public TableFunctionData { std::string blob; };
-struct Unnest_ts2cell_unnestState : public GlobalTableFunctionState {
-    uint64_t *values = nullptr; SpanSet **times = nullptr; int count = 0; idx_t idx = 0;
-    ~Unnest_ts2cell_unnestState() {
-        for (idx_t k = idx; k < (idx_t) count; k++) {
+struct Unnest_ts2cell_unnestState : public LocalTableFunctionState {
+    uint64_t *values = nullptr; SpanSet **times = nullptr; int count = 0; int idx = 0;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
             free(times[k]);
         }
         free(values); free(times);
+        values = nullptr; times = nullptr; count = 0; idx = 0;
     }
+    ~Unnest_ts2cell_unnestState() { Release(); }
 };
-static unique_ptr<FunctionData> Unnest_ts2cell_unnestBindFn(ClientContext &, TableFunctionBindInput &input,
+static unique_ptr<FunctionData> Unnest_ts2cell_unnestBindFn(ClientContext &, TableFunctionBindInput &,
                                           vector<LogicalType> &types, vector<string> &names) {
-    if (input.inputs.size() != 1 || input.inputs[0].IsNull())
-        throw BinderException("temporalUnnest: expects a non-null temporal value");
-    auto b = make_uniq<Unnest_ts2cell_unnestBind>();
-    b->blob = StringValue::Get(input.inputs[0]);
     types = {S2cellTypes::s2cell(), SpansetTypes::tstzspanset()};
     names = {"value", "time"};
-    return std::move(b);
+    return make_uniq<TableFunctionData>();
 }
-static unique_ptr<GlobalTableFunctionState> Unnest_ts2cell_unnestInitFn(ClientContext &context, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized(context);
-    auto &b = input.bind_data->Cast<Unnest_ts2cell_unnestBind>();
-    auto st = make_uniq<Unnest_ts2cell_unnestState>();
-    Temporal *t = BlobToTemporal(string_t(b.blob.data(), (uint32_t) b.blob.size()));
-    st->times = ts2cell_unnest(t, &st->values, &st->count);
-    free(t);
-    if (!st->times) st->count = 0;
-    return std::move(st);
+static unique_ptr<LocalTableFunctionState> Unnest_ts2cell_unnestInitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Unnest_ts2cell_unnestState>();
 }
-static void Unnest_ts2cell_unnestExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
-    auto &st = input.global_state->Cast<Unnest_ts2cell_unnestState>();
-    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+static OperatorResultType Unnest_ts2cell_unnestInOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Unnest_ts2cell_unnestState>();
     auto &v0 = output.data[0]; auto &v1 = output.data[1];
-    for (idx_t i = 0; i < rows; i++, st.idx++) {
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            UnifiedVectorFormat in;
+            input.data[0].ToUnifiedFormat(input.size(), in);
+            auto r = in.sel->get_index(st.row);
+            if (in.validity.RowIsValid(r)) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(in)[r]);
+                st.times = ts2cell_unnest(t, &st.values, &st.count);
+                free(t);
+                if (!st.times) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
         uint64_t x = st.values[st.idx];
         FlatVector::GetData<int64_t>(v0)[i] = (int64_t) x;
         SpanSet *ss = st.times[st.idx];
         FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) ss, spanset_mem_size(ss));
         free(ss);
+        st.idx++; i++;
     }
-    output.SetCardinality(rows);
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Unnest_ts2cell_unnestTable(const LogicalType &type) {
+    TableFunction fn("temporalUnnest", {type}, nullptr, Unnest_ts2cell_unnestBindFn, nullptr, Unnest_ts2cell_unnestInitFn);
+    fn.in_out_function = Unnest_ts2cell_unnestInOutFn;
+    return fn;
 }
 
 
@@ -2914,6 +2973,12 @@ void RegisterGenerated_meos_pointcloud_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("valueAtTimestamp", {TPcpatchTypes::tpcpatch(), LogicalType::TIMESTAMP_TZ}, TPcpatchTypes::pcpatch(), Gen_tpcpatch_value_at_timestamptz));
 }
 
+void RegisterGenerated_meos_pointcloud_schema_cache(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("pointCloudSchemaSRID", {LogicalType::INTEGER}, LogicalType::INTEGER, Gen_meos_pc_schema_srid));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("pointCloudSchemaCompression", {LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_meos_pc_schema_compression));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("pointCloudSchemaNDims", {LogicalType::INTEGER}, LogicalType::INTEGER, Gen_meos_pc_schema_ndims));
+}
+
 void RegisterGenerated_meos_pose_restrict(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("atGeometry", {PoseTypes::tpose(), MobilityDuckGeometryType()}, PoseTypes::tpose(), Gen_tpose_at_geom));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atStbox", {PoseTypes::tpose(), StboxType::stbox(), LogicalType::BOOLEAN}, PoseTypes::tpose(), Gen_tpose_at_stbox));
@@ -2938,7 +3003,7 @@ void RegisterGenerated_meos_s2cell_set_conversion(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_s2cell_transf(ExtensionLoader &loader) {
-    loader.RegisterFunction(TableFunction("temporalUnnest", {S2cellTypes::ts2cell()}, Unnest_ts2cell_unnestExecFn, Unnest_ts2cell_unnestBindFn, Unnest_ts2cell_unnestInitFn));
+    loader.RegisterFunction(Unnest_ts2cell_unnestTable(S2cellTypes::ts2cell()));
 }
 
 void RegisterGenerated_meos_temporal_comp_temp(ExtensionLoader &loader) {

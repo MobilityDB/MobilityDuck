@@ -269,11 +269,78 @@ bike
 car
 highway
 
-query I 
+query I
 SELECT * FROM setUnnest(tstzset '{2001-01-01 08:00:00, 2001-01-03 09:30:00}');
 ----
 2001-01-01 08:00:00+01
 2001-01-03 09:30:00+01
+
+# MobilityDB's 351_quadbinset: SELECT unnest(quadbinset ...) ORDER BY 1
+query I
+SELECT unnest::VARCHAR FROM setUnnest(quadbinset '{480fffffffffffff, 48427fffffffffff}') ORDER BY 1;
+----
+480fffffffffffff
+48427fffffffffff
+
+# MobilityDB's 251_h3indexset: one row per value of the set
+query I
+SELECT COUNT(*) = numValues(h3indexset '{8a2a1072b59ffff, 831c02fffffffff, 880326b885fffff}')
+FROM setUnnest(h3indexset '{8a2a1072b59ffff, 831c02fffffffff, 880326b885fffff}');
+----
+true
+
+# The set of a column, as PostgreSQL's FROM t, unnest(t.s): MobilityDB's 001_set_tbl and
+# 050_set_tbl unnest each row and gather the values back with setUnion, which answers the set of
+# every row (0 rows differing); a NULL set has no row, unnest being strict
+statement ok
+CREATE TABLE tbl_set_unnest AS
+SELECT 1 AS k, intset '{1, 5, -7}' AS i, textset '{"highway", "car"}' AS t,
+  floatset '{1.5, 2.5}' AS f, tstzset '{2001-01-01, 2001-01-03}' AS ts,
+  geomset '{Point(1 1), Point(2 2)}' AS g
+UNION ALL SELECT 2, intset '{3}', textset '{"bike"}', floatset '{-1}', tstzset '{2001-02-01}',
+  geomset '{Point(3 3)}'
+UNION ALL SELECT 3, NULL, NULL, NULL, NULL, NULL;
+
+query II
+SELECT k, count(*) FROM tbl_set_unnest, setUnnest(tbl_set_unnest.i) GROUP BY k ORDER BY k;
+----
+1	3
+2	1
+
+query I
+WITH test1(k, i) AS (SELECT k, u.unnest FROM tbl_set_unnest, setUnnest(tbl_set_unnest.i) u),
+test2(k, i) AS (SELECT k, setUnionAgg(i) FROM test1 GROUP BY k)
+SELECT COUNT(*) FROM test2 t1, tbl_set_unnest t2 WHERE t1.k = t2.k AND t1.i <> t2.i;
+----
+0
+
+query I
+WITH test1(k, t) AS (SELECT k, u.unnest FROM tbl_set_unnest, setUnnest(tbl_set_unnest.t) u),
+test2(k, t) AS (SELECT k, setUnionAgg(t) FROM test1 GROUP BY k)
+SELECT COUNT(*) FROM test2 t1, tbl_set_unnest t2 WHERE t1.k = t2.k AND t1.t <> t2.t;
+----
+0
+
+query I
+WITH test1(k, f) AS (SELECT k, u.unnest FROM tbl_set_unnest, setUnnest(tbl_set_unnest.f) u),
+test2(k, f) AS (SELECT k, setUnionAgg(f) FROM test1 GROUP BY k)
+SELECT COUNT(*) FROM test2 t1, tbl_set_unnest t2 WHERE t1.k = t2.k AND t1.f <> t2.f;
+----
+0
+
+query I
+WITH test1(k, ts) AS (SELECT k, u.unnest FROM tbl_set_unnest, setUnnest(tbl_set_unnest.ts) u),
+test2(k, ts) AS (SELECT k, setUnionAgg(ts) FROM test1 GROUP BY k)
+SELECT COUNT(*) FROM test2 t1, tbl_set_unnest t2 WHERE t1.k = t2.k AND t1.ts <> t2.ts;
+----
+0
+
+query I
+WITH test1(k, g) AS (SELECT k, u.unnest FROM tbl_set_unnest, setUnnest(tbl_set_unnest.g) u),
+test2(k, g) AS (SELECT k, setUnionAgg(g) FROM test1 GROUP BY k)
+SELECT COUNT(*) FROM test2 t1, tbl_set_unnest t2 WHERE t1.k = t2.k AND t1.g <> t2.g;
+----
+0
 
 query I
 SELECT intset '{1,2,3}' + intset '{3, 4, 5}';
