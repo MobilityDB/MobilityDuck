@@ -77,13 +77,6 @@ struct TemporalFunctions {
     // floor/ceil/round/degrees/radians on tfloat are generated (generated_temporal_udfs.cpp).
 
     /* ***************************************************
-     * Workaround functions
-     ****************************************************/
-    template <typename T>
-    static void Temporal_dump_common(DataChunk &args, Vector &result, MeosType basetype);
-    static void Temporal_dump(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /* ***************************************************
      * Math functions
      ****************************************************/
     // round(tfloat/tgeompoint/tgeogpoint/...) is generated (generated_temporal_udfs.cpp).

@@ -2490,48 +2490,75 @@ static void Gen_tgeompoint_to_tquadbin_d(DataChunk &args, ExpressionState &, Vec
 
 
 // ===== @ingroup meos_quadbin_transf =====
-struct Unnest_tquadbin_unnestBind : public TableFunctionData { std::string blob; };
-struct Unnest_tquadbin_unnestState : public GlobalTableFunctionState {
-    uint64_t *values = nullptr; SpanSet **times = nullptr; int count = 0; idx_t idx = 0;
-    ~Unnest_tquadbin_unnestState() {
-        for (idx_t k = idx; k < (idx_t) count; k++) {
+struct Unnest_tquadbin_unnestState : public LocalTableFunctionState {
+    uint64_t *values = nullptr; SpanSet **times = nullptr; int count = 0; int idx = 0;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
             free(times[k]);
         }
         free(values); free(times);
+        values = nullptr; times = nullptr; count = 0; idx = 0;
     }
+    ~Unnest_tquadbin_unnestState() { Release(); }
 };
-static unique_ptr<FunctionData> Unnest_tquadbin_unnestBindFn(ClientContext &, TableFunctionBindInput &input,
+static unique_ptr<FunctionData> Unnest_tquadbin_unnestBindFn(ClientContext &, TableFunctionBindInput &,
                                           vector<LogicalType> &types, vector<string> &names) {
-    if (input.inputs.size() != 1 || input.inputs[0].IsNull())
-        throw BinderException("temporalUnnest: expects a non-null temporal value");
-    auto b = make_uniq<Unnest_tquadbin_unnestBind>();
-    b->blob = StringValue::Get(input.inputs[0]);
     types = {QuadbinTypes::quadbin(), SpansetTypes::tstzspanset()};
     names = {"value", "time"};
-    return std::move(b);
+    return make_uniq<TableFunctionData>();
 }
-static unique_ptr<GlobalTableFunctionState> Unnest_tquadbin_unnestInitFn(ClientContext &context, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized(context);
-    auto &b = input.bind_data->Cast<Unnest_tquadbin_unnestBind>();
-    auto st = make_uniq<Unnest_tquadbin_unnestState>();
-    Temporal *t = BlobToTemporal(string_t(b.blob.data(), (uint32_t) b.blob.size()));
-    st->times = tquadbin_unnest(t, &st->values, &st->count);
-    free(t);
-    if (!st->times) st->count = 0;
-    return std::move(st);
+static unique_ptr<LocalTableFunctionState> Unnest_tquadbin_unnestInitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Unnest_tquadbin_unnestState>();
 }
-static void Unnest_tquadbin_unnestExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
-    auto &st = input.global_state->Cast<Unnest_tquadbin_unnestState>();
-    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+static OperatorResultType Unnest_tquadbin_unnestInOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Unnest_tquadbin_unnestState>();
     auto &v0 = output.data[0]; auto &v1 = output.data[1];
-    for (idx_t i = 0; i < rows; i++, st.idx++) {
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            UnifiedVectorFormat in;
+            input.data[0].ToUnifiedFormat(input.size(), in);
+            auto r = in.sel->get_index(st.row);
+            if (in.validity.RowIsValid(r)) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(in)[r]);
+                st.times = tquadbin_unnest(t, &st.values, &st.count);
+                free(t);
+                if (!st.times) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
         uint64_t x = st.values[st.idx];
         FlatVector::GetData<int64_t>(v0)[i] = (int64_t) x;
         SpanSet *ss = st.times[st.idx];
         FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) ss, spanset_mem_size(ss));
         free(ss);
+        st.idx++; i++;
     }
-    output.SetCardinality(rows);
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Unnest_tquadbin_unnestTable(const LogicalType &type) {
+    TableFunction fn("temporalUnnest", {type}, nullptr, Unnest_tquadbin_unnestBindFn, nullptr, Unnest_tquadbin_unnestInitFn);
+    fn.in_out_function = Unnest_tquadbin_unnestInOutFn;
+    return fn;
 }
 
 
@@ -4894,7 +4921,7 @@ void RegisterGenerated_meos_quadbin_conversion(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_quadbin_transf(ExtensionLoader &loader) {
-    loader.RegisterFunction(TableFunction("temporalUnnest", {QuadbinTypes::tquadbin()}, Unnest_tquadbin_unnestExecFn, Unnest_tquadbin_unnestBindFn, Unnest_tquadbin_unnestInitFn));
+    loader.RegisterFunction(Unnest_tquadbin_unnestTable(QuadbinTypes::tquadbin()));
 }
 
 void RegisterGenerated_meos_s2cell_base_comp(ExtensionLoader &loader) {

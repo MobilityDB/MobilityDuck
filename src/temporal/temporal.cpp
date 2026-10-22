@@ -60,15 +60,6 @@ const std::vector<LogicalType> &TemporalTypes::AllTypes() {
     return types;
 }
 
-LogicalType TemporalTypes::GetBaseTypeFromAlias(const char *alias) {
-    for (size_t i = 0; i < sizeof(BASE_TYPES) / sizeof(BASE_TYPES[0]); i++) {
-        if (strcmp(alias, BASE_TYPES[i].alias) == 0) {
-            return BASE_TYPES[i].basetype;
-        }
-    }
-    throw InternalException("Invalid temporal type alias: %s", alias);
-}
-
 void TemporalTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     for (auto &type : TemporalTypes::AllTypes()) {
         RegisterMeosCastFunction(loader, 
@@ -140,29 +131,6 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
         // in src/generated/generated_temporal_udfs.cpp (RETIRED_GROUPS).
 
         // timestamps(<temporal_type>) is generated from the catalog (temporal_timestamps) in generated_temporal_udfs.cpp.
-
-        if (type.GetAlias() != "tbool") {
-            duckdb::RegisterSerializedScalarFunction(loader, 
-                ScalarFunction(
-                    "tempDump",
-                    {type},
-                    LogicalType::LIST(
-                        LogicalType::STRUCT(
-                            {{"value", TemporalTypes::GetBaseTypeFromAlias(type.GetAlias().c_str())},
-                            {"time", SpansetTypes::tstzspanset()}}
-                        )
-                    ),
-                    TemporalFunctions::Temporal_dump
-                )
-            );
-        }
-        
-
-        
-
-
-
-
     }
 
     // The temporal accessors (getValue/startValue/endValue/minValue/maxValue, getValues,

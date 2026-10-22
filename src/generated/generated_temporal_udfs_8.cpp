@@ -1535,6 +1535,74 @@ static void Gen_jsonbset_value_n(DataChunk &args, ExpressionState &, Vector &res
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
+struct SetUnnest_jsonbset_valuesState : public LocalTableFunctionState {
+    Jsonb * *values = nullptr; int count = 0; int idx = 0;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(values[k]);
+        }
+        free(values);
+        values = nullptr; count = 0; idx = 0;
+    }
+    ~SetUnnest_jsonbset_valuesState() { Release(); }
+};
+static unique_ptr<FunctionData> SetUnnest_jsonbset_valuesBindFn(ClientContext &, TableFunctionBindInput &,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    types = {TJsonbTypes::jsonb()};
+    names = {"unnest"};
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> SetUnnest_jsonbset_valuesInitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<SetUnnest_jsonbset_valuesState>();
+}
+static OperatorResultType SetUnnest_jsonbset_valuesInOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<SetUnnest_jsonbset_valuesState>();
+    auto &v0 = output.data[0];
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            UnifiedVectorFormat in;
+            input.data[0].ToUnifiedFormat(input.size(), in);
+            auto r = in.sel->get_index(st.row);
+            if (in.validity.RowIsValid(r)) {
+                Set *s = BlobToSet(UnifiedVectorFormat::GetData<string_t>(in)[r]);
+                st.values = jsonbset_values(s, &st.count);
+                free(s);
+                if (!st.values) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        Jsonb * x = st.values[st.idx];
+        FlatVector::GetData<string_t>(v0)[i] = JsonbToBlob(v0, x);
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction SetUnnest_jsonbset_valuesTable(const LogicalType &type) {
+    TableFunction fn("setUnnest", {type}, nullptr, SetUnnest_jsonbset_valuesBindFn, nullptr, SetUnnest_jsonbset_valuesInitFn);
+    fn.in_out_function = SetUnnest_jsonbset_valuesInOutFn;
+    return fn;
+}
+
 static void Gen_jsonbset_end_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
@@ -2088,49 +2156,76 @@ static void Gen_tpose_translate_d(DataChunk &args, ExpressionState &state, Vecto
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-struct Unnest_tpose_unnestBind : public TableFunctionData { std::string blob; };
-struct Unnest_tpose_unnestState : public GlobalTableFunctionState {
-    Pose * *values = nullptr; SpanSet **times = nullptr; int count = 0; idx_t idx = 0;
-    ~Unnest_tpose_unnestState() {
-        for (idx_t k = idx; k < (idx_t) count; k++) {
+struct Unnest_tpose_unnestState : public LocalTableFunctionState {
+    Pose * *values = nullptr; SpanSet **times = nullptr; int count = 0; int idx = 0;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
             free(values[k]);
             free(times[k]);
         }
         free(values); free(times);
+        values = nullptr; times = nullptr; count = 0; idx = 0;
     }
+    ~Unnest_tpose_unnestState() { Release(); }
 };
-static unique_ptr<FunctionData> Unnest_tpose_unnestBindFn(ClientContext &, TableFunctionBindInput &input,
+static unique_ptr<FunctionData> Unnest_tpose_unnestBindFn(ClientContext &, TableFunctionBindInput &,
                                           vector<LogicalType> &types, vector<string> &names) {
-    if (input.inputs.size() != 1 || input.inputs[0].IsNull())
-        throw BinderException("temporalUnnest: expects a non-null temporal value");
-    auto b = make_uniq<Unnest_tpose_unnestBind>();
-    b->blob = StringValue::Get(input.inputs[0]);
     types = {PoseTypes::pose(), SpansetTypes::tstzspanset()};
     names = {"value", "time"};
-    return std::move(b);
+    return make_uniq<TableFunctionData>();
 }
-static unique_ptr<GlobalTableFunctionState> Unnest_tpose_unnestInitFn(ClientContext &context, TableFunctionInitInput &input) {
-    EnsureMeosThreadInitialized(context);
-    auto &b = input.bind_data->Cast<Unnest_tpose_unnestBind>();
-    auto st = make_uniq<Unnest_tpose_unnestState>();
-    Temporal *t = BlobToTemporal(string_t(b.blob.data(), (uint32_t) b.blob.size()));
-    st->times = tpose_unnest(t, &st->values, &st->count);
-    free(t);
-    if (!st->times) st->count = 0;
-    return std::move(st);
+static unique_ptr<LocalTableFunctionState> Unnest_tpose_unnestInitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Unnest_tpose_unnestState>();
 }
-static void Unnest_tpose_unnestExecFn(ClientContext &, TableFunctionInput &input, DataChunk &output) {
-    auto &st = input.global_state->Cast<Unnest_tpose_unnestState>();
-    idx_t rows = MinValue<idx_t>(STANDARD_VECTOR_SIZE, (idx_t) st.count - st.idx);
+static OperatorResultType Unnest_tpose_unnestInOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Unnest_tpose_unnestState>();
     auto &v0 = output.data[0]; auto &v1 = output.data[1];
-    for (idx_t i = 0; i < rows; i++, st.idx++) {
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            UnifiedVectorFormat in;
+            input.data[0].ToUnifiedFormat(input.size(), in);
+            auto r = in.sel->get_index(st.row);
+            if (in.validity.RowIsValid(r)) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(in)[r]);
+                st.times = tpose_unnest(t, &st.values, &st.count);
+                free(t);
+                if (!st.times) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
         Pose * x = st.values[st.idx];
         FlatVector::GetData<string_t>(v0)[i] = PoseToBlob(v0, x);
         SpanSet *ss = st.times[st.idx];
         FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) ss, spanset_mem_size(ss));
         free(ss);
+        st.idx++; i++;
     }
-    output.SetCardinality(rows);
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Unnest_tpose_unnestTable(const LogicalType &type) {
+    TableFunction fn("temporalUnnest", {type}, nullptr, Unnest_tpose_unnestBindFn, nullptr, Unnest_tpose_unnestInitFn);
+    fn.in_out_function = Unnest_tpose_unnestInOutFn;
+    return fn;
 }
 
 
@@ -3861,6 +3956,7 @@ void RegisterGenerated_meos_h3_set_inout(ExtensionLoader &loader) {
 
 void RegisterGenerated_meos_json_set_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("valueN", {SetTypes::jsonbset(), LogicalType::INTEGER}, TJsonbTypes::jsonb(), Gen_jsonbset_value_n));
+    loader.RegisterFunction(SetUnnest_jsonbset_valuesTable(SetTypes::jsonbset()));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {SetTypes::jsonbset()}, TJsonbTypes::jsonb(), Gen_jsonbset_end_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {SetTypes::jsonbset()}, TJsonbTypes::jsonb(), Gen_jsonbset_start_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValues", {SetTypes::jsonbset()}, LogicalType::LIST(TJsonbTypes::jsonb()), Gen_jsonbset_values));
@@ -3939,7 +4035,7 @@ void RegisterGenerated_meos_pose_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("rotate", {PoseTypes::tpose(), LogicalType::DOUBLE}, PoseTypes::tpose(), Gen_tpose_rotate_z));
     RegisterSerializedScalarFunction(loader, ScalarFunction("translate", {PoseTypes::tpose(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, PoseTypes::tpose(), Gen_tpose_translate));
     RegisterSerializedScalarFunction(loader, ScalarFunction("translate", {PoseTypes::tpose(), LogicalType::DOUBLE, LogicalType::DOUBLE}, PoseTypes::tpose(), Gen_tpose_translate_d));
-    loader.RegisterFunction(TableFunction("temporalUnnest", {PoseTypes::tpose()}, Unnest_tpose_unnestExecFn, Unnest_tpose_unnestBindFn, Unnest_tpose_unnestInitFn));
+    loader.RegisterFunction(Unnest_tpose_unnestTable(PoseTypes::tpose()));
 }
 
 void RegisterGenerated_meos_posechain_accessor(ExtensionLoader &loader) {

@@ -74,3 +74,42 @@ statement error
 SELECT asMFJSON(tpcpoint '0163000000000000000000F03F00000000000000400000000000000840@2024-01-01');
 ----
 PCSCHEMA for pcid 99 not registered
+
+# What a registered schema states, as MobilityDB's 399_pointcloud_schemas reads
+# it for its schema of three double dimensions in SRID 4326 without compression:
+# 4326 | none | 3.
+query III
+SELECT pointCloudSchemaSRID(7), pointCloudSchemaCompression(7), pointCloudSchemaNDims(7);
+----
+4326	none	3
+
+# A pcid no schema names answers NULL, as in MobilityDB.
+query III
+SELECT pointCloudSchemaSRID(999) IS NULL, pointCloudSchemaCompression(999), pointCloudSchemaNDims(999);
+----
+true	NULL	NULL
+
+# A schema stated again replaces the one the pcid named: MobilityDB answers
+# dimensional for the compression its row is updated to, and 2 for the active
+# dimensions once the third is inactive.
+statement ok
+UPDATE pointcloud_schemas SET compression = 'dimensional' WHERE pcid = 7;
+
+statement ok
+UPDATE pointcloud_dimensions SET active = false WHERE pcid = 7 AND dim_no = 3;
+
+query I
+SELECT pointCloudSchemaRegister(s.pcid, s.srid, s.compression,
+         list({'dim_no': d.dim_no, 'dim_name': d.dim_name,
+               'interpretation': d.interpretation, 'dim_scale': d.dim_scale,
+               'dim_offset': d.dim_offset, 'active': d.active,
+               'description': d.description} ORDER BY d.dim_no))
+FROM pointcloud_schemas s JOIN pointcloud_dimensions d USING (pcid)
+GROUP BY s.pcid, s.srid, s.compression;
+----
+true
+
+query II
+SELECT pointCloudSchemaCompression(7), pointCloudSchemaNDims(7);
+----
+dimensional	2

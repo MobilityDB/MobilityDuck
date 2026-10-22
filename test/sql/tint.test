@@ -404,10 +404,47 @@ SELECT * FROM temporalUnnest(tint '[1@2001-01-01, 2@2001-01-02, 1@2001-01-03]') 
 1	{[2001-01-01 00:00:00+01, 2001-01-02 00:00:00+01), [2001-01-03 00:00:00+01, 2001-01-03 00:00:00+01]}
 2	{[2001-01-02 00:00:00+01, 2001-01-03 00:00:00+01)}
 
-query I
-select tempDump(tint '[1@2001-01-01, 2@2001-01-02, 1@2001-01-03]');
+# MobilityDB's 022_temporal: SELECT (rec).value, (rec).time FROM (SELECT unnest(tint ...) AS rec)
+query II
+SELECT value, time FROM temporalUnnest(tint '{5@2001-01-01, 2@2001-01-02, 9@2001-01-03, 2@2001-01-04}') ORDER BY value;
 ----
-[{'value': 1, 'time': '{[2001-01-01 00:00:00+01, 2001-01-02 00:00:00+01), [2001-01-03 00:00:00+01, 2001-01-03 00:00:00+01]}'}, {'value': 2, 'time': '{[2001-01-02 00:00:00+01, 2001-01-03 00:00:00+01)}'}]
+2	{[2001-01-02 00:00:00+01, 2001-01-02 00:00:00+01], [2001-01-04 00:00:00+01, 2001-01-04 00:00:00+01]}
+5	{[2001-01-01 00:00:00+01, 2001-01-01 00:00:00+01]}
+9	{[2001-01-03 00:00:00+01, 2001-01-03 00:00:00+01]}
+
+query I
+SELECT value FROM temporalUnnest(tint 'Interp=Step;{[7@2001-01-01, 3@2001-01-02], [7@2001-01-03, 1@2001-01-04]}') ORDER BY value;
+----
+1
+3
+7
+
+query I
+SELECT value FROM temporalUnnest(tint '5@2001-01-01');
+----
+5
+
+# The temporal value of a column, as PostgreSQL's FROM t, unnest(t.temp); a NULL value has no
+# row, unnest being strict
+statement ok
+CREATE TABLE tbl_unnest AS
+SELECT 1 AS k, tint '{5@2001-01-01, 2@2001-01-02, 9@2001-01-03, 2@2001-01-04}' AS temp
+UNION ALL SELECT 2, tint '5@2001-01-01'
+UNION ALL SELECT 3, NULL;
+
+query III
+SELECT k, u.value, u.time FROM tbl_unnest, temporalUnnest(tbl_unnest.temp) u ORDER BY k, u.value;
+----
+1	2	{[2001-01-02 00:00:00+01, 2001-01-02 00:00:00+01], [2001-01-04 00:00:00+01, 2001-01-04 00:00:00+01]}
+1	5	{[2001-01-01 00:00:00+01, 2001-01-01 00:00:00+01]}
+1	9	{[2001-01-03 00:00:00+01, 2001-01-03 00:00:00+01]}
+2	5	{[2001-01-01 00:00:00+01, 2001-01-01 00:00:00+01]}
+
+query II
+SELECT value, time FROM temporalUnnest(tbool '{true@2001-01-01, false@2001-01-02, true@2001-01-03}') ORDER BY value;
+----
+false	{[2001-01-02 00:00:00+01, 2001-01-02 00:00:00+01]}
+true	{[2001-01-01 00:00:00+01, 2001-01-01 00:00:00+01], [2001-01-03 00:00:00+01, 2001-01-03 00:00:00+01]}
 
 query I
 SELECT atSpan(tint '{[1@2000-01-01, 2@2000-01-02, 1@2000-01-03],[3@2000-01-04, 3@2000-01-05]}', intspan '[1,3]');

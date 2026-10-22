@@ -16,19 +16,6 @@ namespace duckdb {
 
 class ExtensionLoader;
 
-typedef struct {
-    const char *alias;
-    LogicalType basetype;
-} basetype_struct;
-
-static const basetype_struct BASE_TYPES[] = {
-    {"tint", LogicalType::BIGINT},
-    {"tbigint", LogicalType::BIGINT},
-    {"tbool", LogicalType::BOOLEAN},
-    {"tfloat", LogicalType::DOUBLE},
-    {"ttext", LogicalType::VARCHAR}
-};
-
 struct TemporalTypes {
     static LogicalType tint();
     static LogicalType tbigint();
@@ -37,7 +24,6 @@ struct TemporalTypes {
     static LogicalType ttext();
 
     static const std::vector<LogicalType> &AllTypes();
-    static LogicalType GetBaseTypeFromAlias(const char *alias);
 
     static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);

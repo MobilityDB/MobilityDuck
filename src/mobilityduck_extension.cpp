@@ -425,7 +425,6 @@ static void LoadInternal(ExtensionLoader &loader) {
 
 	SetTypes::RegisterTypes(loader);
 	SetTypes::RegisterCastFunctions(loader);
-	SetTypes::RegisterSetUnnest(loader);
 
 	SpatialSetType::RegisterTypes(loader);
 	SpatialSetType::RegisterCastFunctions(loader);

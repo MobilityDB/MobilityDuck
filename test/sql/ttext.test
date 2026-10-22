@@ -35,10 +35,13 @@ SELECT ttextSeq(ARRAY[
 ----
 ["A"@2025-01-01 08:00:00+01]
 
+# MobilityDB's 022_temporal: SELECT (rec).value FROM (SELECT unnest(ttext ...) AS rec)
 query I
-SELECT tempDump(ttext '["AAA"@2001-01-01, "BBB"@2001-01-02, "AAA"@2001-01-03]');
+SELECT value FROM temporalUnnest(ttext '{BBB@2001-01-01, AAA@2001-01-02, BBB@2001-01-03, CCC@2001-01-04}') ORDER BY value;
 ----
-[{'value': AAA, 'time': '{[2001-01-01 00:00:00+01, 2001-01-02 00:00:00+01), [2001-01-03 00:00:00+01, 2001-01-03 00:00:00+01]}'}, {'value': BBB, 'time': '{[2001-01-02 00:00:00+01, 2001-01-03 00:00:00+01)}'}]
+AAA
+BBB
+CCC
 
 query I
 SELECT atMin(ttext '{[AAA@2000-01-01, BBB@2000-01-02, AAA@2000-01-03],[CCC@2000-01-04, CCC@2000-01-05]}');

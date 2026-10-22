@@ -26,10 +26,13 @@ SELECT * FROM temporalUnnest(tfloat '[1.5@2001-01-01, 2.5@2001-01-02]');
 ----
 Operation not supported for temporal values with linear interpolation
 
+# MobilityDB's 022_temporal: SELECT (rec).value FROM (SELECT unnest(tfloat ...) AS rec)
 query I
-SELECT tempDump(tfloat '[1.5@2001-01-01, 2.5@2001-01-02, 1.5@2001-01-03]');
+SELECT value FROM temporalUnnest(tfloat '{10@2001-01-01, 9.5@2001-01-02, 10@2001-01-03, 2@2001-01-04}') ORDER BY value;
 ----
-[{'value': 1.5, 'time': '{[2001-01-01 00:00:00+01, 2001-01-01 00:00:00+01], [2001-01-03 00:00:00+01, 2001-01-03 00:00:00+01]}'}, {'value': 2.5, 'time': '{[2001-01-02 00:00:00+01, 2001-01-02 00:00:00+01]}'}]
+2.0
+9.5
+10.0
 
 query I
 SELECT atSpan(tfloat 'Interp=Step;{[1.5@2000-01-01, 2.5@2000-01-02, 1.5@2000-01-03],[3.5@2000-01-04, 3.5@2000-01-05]}', floatspan '[1,3]');
