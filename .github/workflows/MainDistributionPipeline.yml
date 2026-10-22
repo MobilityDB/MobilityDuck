@@ -68,7 +68,7 @@ jobs:
     # upstream; the fork is where it runs until it is taken. On the MinGW job the fork
     # also takes the R the runner image carries: the build compiles with the Rtools
     # toolchain and never runs R, so R devel is not downloaded.
-    uses: estebanzimanyi/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.5.5-node24
+    uses: estebanzimanyi/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.5.5-node24.1
     with:
       duckdb_version: ${{ matrix.duckdb }}
       extension_name: mobilityduck
