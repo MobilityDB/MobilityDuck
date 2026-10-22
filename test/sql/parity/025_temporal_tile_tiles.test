@@ -69,12 +69,11 @@ SELECT index, tile::VARCHAR FROM valueTiles(tbox 'TBOXINT XT([15, 25],[2001-01-1
 The span must be of type floatspan
 
 # MobilityDB: SELECT valueTiles(tbox 'TBOXINT XT([15, 25],[2001-01-15, 2001-01-25])', 0);
-# MobilityDB refuses a zero size in its PostgreSQL wrapper; DuckDB reaches tintbox_value_tiles,
-# which refuses it inside MEOS
+# tintbox_value_tiles refuses a zero size at entry, the answer of MobilityDB's 025_temporal_tile
 statement error
 SELECT index, tile::VARCHAR FROM valueTiles(tbox 'TBOXINT XT([15, 25],[2001-01-15, 2001-01-25])', 0);
 ----
-At least one of the arguments vsize or duration must be given
+The value must be strictly positive: 0
 
 # MobilityDB: SELECT valueTiles(tbox 'TBOX T([2001-01-15, 2001-01-25])', 2);
 statement error
