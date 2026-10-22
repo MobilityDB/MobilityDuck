@@ -26,6 +26,7 @@
 #include "pose/tpose.hpp"
 #include "rgeo/trgeometry.hpp"
 #include "posechain/tposechain.hpp"
+#include "raster/raquet.hpp"
 #include "spatial/spatial_types.hpp"
 #include "geo_util.hpp"
 #include "meos_internal.h"
@@ -269,6 +270,26 @@ inline Nsegment *BlobToNsegment(string_t blob) {
     Nsegment *copy = (Nsegment *)malloc(sizeof(Nsegment));
     memcpy(copy, blob.GetData(), sizeof(Nsegment));
     return copy;
+}
+// Self-contained blob<->Raquet marshalling. The Raquet structure is opaque, so the
+// stored BLOB is the WKB serialisation of the tile, the wire form its text hex-encodes.
+inline string_t RaquetToBlob(Vector &result, Raquet *rq) {
+    size_t sz = 0;
+    uint8_t *wkb = raquet_as_wkb(rq, 0, &sz);
+    free(rq);
+    if (!wkb) throw InvalidInputException("raquet: cannot serialise the tile");
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)wkb, sz);
+    free(wkb);
+    return out;
+}
+inline string_t RaquetToBlobN(Vector &result, Raquet *rq, ValidityMask &mask, idx_t idx) {
+    if (!rq) { mask.SetInvalid(idx); return string_t(); }
+    return RaquetToBlob(result, rq);
+}
+inline Raquet *BlobToRaquet(string_t blob) {
+    Raquet *rq = raquet_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());
+    if (!rq) throw InvalidInputException("raquet: invalid tile serialisation");
+    return rq;
 }
 // Self-contained blob<->STBox/TBox marshalling (FIXED-size structs -> sizeof).
 inline string_t StboxToBlob(Vector &result, STBox *b) {
@@ -981,6 +1002,9 @@ inline char * poseset_out_maxdd(const Set * p0) {
 }
 inline char * posechainset_out_maxdd(const Set * p0) {
     return ::posechainset_out(p0, 15);
+}
+inline BandStats * raster_summary_stats_band_exclude_nodata(const Raster * p0) {
+    return ::raster_summary_stats(p0, 1, true);
 }
 inline STBox * trgeometry_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
     return ::trgeometry_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
@@ -3506,6 +3530,123 @@ static void Gen_posechain_to_set(DataChunk &args, ExpressionState &, Vector &res
         });
 }
 
+
+// ===== @ingroup meos_raster_base_comp =====
+static void Gen_raquet_hash(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, uint32_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Raquet *v = BlobToRaquet(in);
+            uint32_t r = raquet_hash(v);
+            free(v);
+            return r;
+        });
+}
+
+static void Gen_raquet_cmp(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<int32_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raquet *p0 = BlobToRaquet(in0[i]);
+        Raquet *p1 = BlobToRaquet(in1[i]);
+        int32_t r = raquet_cmp(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (int32_t) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raquet_hash_extended(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, uint64_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2) {
+            Raquet *s = BlobToRaquet(in);
+            uint64_t r = raquet_hash_extended(s, a2);
+            free(s);
+            return r;
+        });
+}
+
+static void Gen_raquet_eq(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Raquet *s1 = BlobToRaquet(a);
+            Raquet *s2 = BlobToRaquet(b);
+            bool r = raquet_eq(s1, s2);
+            free(s1); free(s2);
+            return r;
+        });
+}
+
+static void Gen_raquet_ne(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Raquet *s1 = BlobToRaquet(a);
+            Raquet *s2 = BlobToRaquet(b);
+            bool r = raquet_ne(s1, s2);
+            free(s1); free(s2);
+            return r;
+        });
+}
+
+static void Gen_raquet_lt(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Raquet *s1 = BlobToRaquet(a);
+            Raquet *s2 = BlobToRaquet(b);
+            bool r = raquet_lt(s1, s2);
+            free(s1); free(s2);
+            return r;
+        });
+}
+
+static void Gen_raquet_le(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Raquet *s1 = BlobToRaquet(a);
+            Raquet *s2 = BlobToRaquet(b);
+            bool r = raquet_le(s1, s2);
+            free(s1); free(s2);
+            return r;
+        });
+}
+
+static void Gen_raquet_ge(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Raquet *s1 = BlobToRaquet(a);
+            Raquet *s2 = BlobToRaquet(b);
+            bool r = raquet_ge(s1, s2);
+            free(s1); free(s2);
+            return r;
+        });
+}
+
+static void Gen_raquet_gt(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Raquet *s1 = BlobToRaquet(a);
+            Raquet *s2 = BlobToRaquet(b);
+            bool r = raquet_gt(s1, s2);
+            free(s1); free(s2);
+            return r;
+        });
+}
+
 } // anonymous
 
 void RegisterGenerated_meos_box_accessor(ExtensionLoader &loader) {
@@ -3732,6 +3873,24 @@ void RegisterGenerated_meos_pointcloud_transf(ExtensionLoader &loader) {
 
 void RegisterGenerated_meos_posechain_set_conversion(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("set", {PosechainTypes::posechain()}, SetTypes::posechainset(), Gen_posechain_to_set));
+}
+
+void RegisterGenerated_meos_raster_base_comp(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {RaquetTypes::raquet()}, LogicalType::UINTEGER, Gen_raquet_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {RaquetTypes::raquet(), RaquetTypes::raquet()}, LogicalType::INTEGER, Gen_raquet_cmp));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {RaquetTypes::raquet(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_raquet_hash_extended));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {RaquetTypes::raquet(), RaquetTypes::raquet()}, LogicalType::BOOLEAN, Gen_raquet_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("=", {RaquetTypes::raquet(), RaquetTypes::raquet()}, LogicalType::BOOLEAN, Gen_raquet_eq));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {RaquetTypes::raquet(), RaquetTypes::raquet()}, LogicalType::BOOLEAN, Gen_raquet_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {RaquetTypes::raquet(), RaquetTypes::raquet()}, LogicalType::BOOLEAN, Gen_raquet_ne));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {RaquetTypes::raquet(), RaquetTypes::raquet()}, LogicalType::BOOLEAN, Gen_raquet_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<", {RaquetTypes::raquet(), RaquetTypes::raquet()}, LogicalType::BOOLEAN, Gen_raquet_lt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("le", {RaquetTypes::raquet(), RaquetTypes::raquet()}, LogicalType::BOOLEAN, Gen_raquet_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("<=", {RaquetTypes::raquet(), RaquetTypes::raquet()}, LogicalType::BOOLEAN, Gen_raquet_le));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {RaquetTypes::raquet(), RaquetTypes::raquet()}, LogicalType::BOOLEAN, Gen_raquet_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {RaquetTypes::raquet(), RaquetTypes::raquet()}, LogicalType::BOOLEAN, Gen_raquet_ge));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {RaquetTypes::raquet(), RaquetTypes::raquet()}, LogicalType::BOOLEAN, Gen_raquet_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction(">", {RaquetTypes::raquet(), RaquetTypes::raquet()}, LogicalType::BOOLEAN, Gen_raquet_gt));
 }
 
 } // namespace duckdb

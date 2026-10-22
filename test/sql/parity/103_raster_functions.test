@@ -1,0 +1,398 @@
+# name: test/sql/parity/103_raster_functions.test
+# description: The raster tile raquet and the sampling of a tile or of a raster file along a
+#             trajectory, generated from the catalog, and the signatures of the other families
+#             the same shape reaches: the comparisons of a base value with a temporal value of its
+#             family, applyPose(pose, tpose) and nearestApproachDistance(stbox, stbox). The
+#             expected values are MobilityDB's own answers:
+#             mobilitydb/test/raster/expected/500_raster.test.out,
+#             mobilitydb/test/cbuffer/expected/204_tcbuffer_compops.test.out,
+#             mobilitydb/test/pose/expected/104_tpose_compops.test.out and 100_pose.test.out,
+#             mobilitydb/test/json/expected/458_tjsonb_compops.test.out,
+#             mobilitydb/test/npoint/expected/302_tnpoint.test.out and
+#             mobilitydb/test/geo/expected/064_tpoint_distance.test.out. test/data/raster_file_forms.tif
+#             and test/data/raquet_file_form.tif are the two files that regression writes: the 3x3
+#             float32 raster at origin (0, 3) with unit pixels in EPSG:4326 holding 10 .. 90 row by
+#             row, whose answers it states equal to those of the same raster read as a raster value,
+#             and the bytes of the 2x2 UINT8 tile it decodes from hex. The raster regression runs in
+#             UTC, as this test does. A temporal value is compared through its text with the text of
+#             the value MobilityDB answers.
+# group: [parity]
+
+require mobilityduck
+
+statement ok
+SET TimeZone='UTC'
+
+# ---------------------------------------------------------------------------
+# rasterTileValue over one tile and over an array of tiles
+# ---------------------------------------------------------------------------
+
+query II
+SELECT
+  rasterTileValue(tgeompoint 'SRID=4326;[Point(-90 45)@2001-01-01, Point(0 45)@2001-01-02)',
+    raquet(from_hex('14141414'), 2, 2, quadbinTileToCell(1, 0, 1), 'uint8')) IS NULL,
+  asText(rasterTileValue(tgeompoint 'SRID=4326;[Point(-90 45)@2001-01-01, Point(0 45)@2001-01-02]',
+    raquet(from_hex('14141414'), 2, 2, quadbinTileToCell(1, 0, 1), 'uint8')))
+    = asText(tfloat 'Interp=Step;[20@2001-01-02 00:00:00+00]');
+----
+true	true
+
+query III
+WITH t AS (
+  SELECT tgeompoint 'SRID=4326;{Point(-45.0 75.0)@2024-01-01,
+    Point(45.0 75.0)@2024-01-02, Point(135.0 75.0)@2024-01-03}' AS traj,
+    raquet(from_hex('01020304'), 2, 2, quadbin '4813ffffffffffff', 'UINT8') AS west,
+    raquet(from_hex('01020304'), 2, 2, quadbin '4817ffffffffffff', 'UINT8') AS east
+)
+SELECT asText(rasterTileValue(traj, west)) = asText(tfloat '{2@2024-01-01 00:00:00+00}'),
+  asText(rasterTileValue(traj, east))
+    = asText(tfloat '{1@2024-01-02 00:00:00+00, 2@2024-01-03 00:00:00+00}'),
+  asText(rasterTileValue(traj, [west, east]))
+    = asText(tfloat '{2@2024-01-01 00:00:00+00, 1@2024-01-02 00:00:00+00, 2@2024-01-03 00:00:00+00}')
+FROM t;
+----
+true	true	true
+
+query III
+WITH t AS (
+  SELECT tgeompoint 'SRID=4326;{Point(-45.0 75.0)@2024-01-01, Point(45.0 75.0)@2024-01-02, Point(135.0 75.0)@2024-01-03}' AS traj,
+    raquet(from_hex('01020304'), 2, 2, quadbin '4817ffffffffffff', 'UINT8') AS east,
+    raquet(from_hex('01020304'), 2, 2, quadbin '4824ffffffffffff', 'UINT8') AS fine
+)
+SELECT asText(rasterTileValue(traj, fine)) = asText(tfloat '{4@2024-01-02 00:00:00+00}'),
+  asText(rasterTileValue(traj, [east, fine]))
+    = asText(tfloat '{4@2024-01-02 00:00:00+00, 2@2024-01-03 00:00:00+00}'),
+  asText(rasterTileValue(traj, [fine, east]))
+    = asText(tfloat '{4@2024-01-02 00:00:00+00, 2@2024-01-03 00:00:00+00}')
+FROM t;
+----
+true	true	true
+
+query III
+WITH t AS (
+  SELECT tgeompoint 'SRID=4326;[Point(-45.0 75.0)@2024-01-01,
+    Point(135.0 75.0)@2024-01-03]' AS traj,
+    raquet(from_hex('01020304'), 2, 2, quadbin '4813ffffffffffff', 'UINT8') AS west,
+    raquet(from_hex('01020304'), 2, 2, quadbin '4817ffffffffffff', 'UINT8') AS east,
+    raquet(from_hex('05060708'), 2, 2, quadbin '4824ffffffffffff', 'UINT8') AS fine
+)
+SELECT asText(rasterTileValue(traj, [west, east, fine]))
+    = asText(tfloat 'Interp=Step;{[2@2024-01-01 00:00:00+00, 7@2024-01-01 12:00:00+00, 8@2024-01-02 00:00:00+00, 2@2024-01-02 12:00:00+00, 2@2024-01-03 00:00:00+00]}'),
+  asText(rasterTileValue(traj, [fine, east, west])) = asText(rasterTileValue(traj, [west, east, fine])),
+  asText(rasterTileValue(traj, [east])) = asText(rasterTileValue(traj, east))
+FROM t;
+----
+true	true	true
+
+query II
+WITH t AS (
+  SELECT tgeompoint 'SRID=4326;{Point(45.0 75.0)@2024-01-02}' AS traj,
+    raquet(from_hex('01020304'), 2, 2, quadbin '4817ffffffffffff', 'UINT8') AS east,
+    raquet(from_hex('01020304'), 2, 2, quadbin '4813ffffffffffff', 'UINT8') AS west
+)
+SELECT asText(rasterTileValue(traj, [east])) = asText(rasterTileValue(traj, east)),
+  rasterTileValue(traj, [west]) IS NULL
+FROM t;
+----
+true	true
+
+statement error
+SELECT rasterTileValue(tgeompoint 'SRID=4326;{Point(45.0 75.0)@2024-01-02}', []::raquet[]);
+----
+The input array cannot be empty
+
+# ---------------------------------------------------------------------------
+# rasterTileValueQuadbin, the pixel band of a tile and its cell without the tile
+# ---------------------------------------------------------------------------
+
+query II
+SELECT
+  asText(rasterTileValueQuadbin(tgeompoint 'SRID=4326;[Point(45.0 75.0)@2024-01-01,
+    Point(135.0 75.0)@2024-01-02]', from_hex('01020304'), 2, 2, quadbin '4817ffffffffffff',
+    'uint8', 0.0, false))
+    = asText(tfloat 'Interp=Step;[1@2024-01-01 00:00:00+00, 2@2024-01-01 12:00:00+00, 2@2024-01-02 00:00:00+00]'),
+  asText(rasterTileValueQuadbin(tgeompoint 'SRID=4326;{Point(45.0 75.0)@2024-01-01,
+    Point(135.0 75.0)@2024-01-02, Point(45.0 10.0)@2024-01-03, Point(-45.0 75.0)@2024-01-04}',
+    from_hex('01020304'), 2, 2, quadbin '4817ffffffffffff', 'UINT8', 0.0, false))
+    = asText(tfloat '{1@2024-01-01 00:00:00+00, 2@2024-01-02 00:00:00+00, 3@2024-01-03 00:00:00+00}');
+----
+true	true
+
+query I
+WITH t(traj) AS (
+  SELECT tgeompoint 'SRID=4326;{Point(45.0 75.0)@2024-01-01, Point(135.0 75.0)@2024-01-02, Point(45.0 10.0)@2024-01-03, Point(-45.0 75.0)@2024-01-04}')
+SELECT asText(rasterTileValue(traj,
+         raquet(from_hex('01020304'), 2, 2, quadbin '4817ffffffffffff', 'UINT8')))
+     = asText(rasterTileValueQuadbin(traj,
+         from_hex('01020304'), 2, 2, quadbin '4817ffffffffffff', 'UINT8', 0.0, false))
+FROM t;
+----
+true
+
+statement error
+SELECT rasterTileValueQuadbin(tgeompoint 'SRID=4326;{Point(45.0 10.0)@2024-01-01}',
+  from_hex('0102'), 2, 2, quadbin '4817ffffffffffff', 'UINT8', 0.0, false);
+----
+The pixel array has 2 bytes but 4 are required for a 2 x 2 tile
+
+statement error
+SELECT rasterTileValueQuadbin(tgeompoint 'SRID=4326;{Point(45.0 10.0)@2024-01-01}',
+  from_hex('01020304'), 65538, 2, quadbin '4817ffffffffffff', 'UINT8', 0.0, false);
+----
+The width and height of a raquet tile must be at most 65535: 65538 x 2
+
+statement error
+SELECT rasterTileValueQuadbin(tgeompoint 'SRID=4326;{Point(45.0 10.0)@2024-01-01}',
+  from_hex('01020304'), 2, -1, quadbin '4817ffffffffffff', 'UINT8', 0.0, false);
+----
+The width and height of a raquet tile must be positive
+
+statement error
+SELECT rasterTileValueQuadbin(tgeompoint 'SRID=4326;{Point(45.0 10.0)@2024-01-01}',
+  from_hex('01020304'), 0, 2, quadbin '4817ffffffffffff', 'UINT8', 0.0, false);
+----
+The width and height of a raquet tile must be positive
+
+# ---------------------------------------------------------------------------
+# raquetRead, a tile decoded from the bytes of a raster file or read from a file
+# ---------------------------------------------------------------------------
+
+query I
+SELECT raquetRead(
+         from_hex('49492a00080000000b000001030001000000020000000101030001000000020000000201030001000000080000000301030001000000010000000601030001000000010000001101040001000000920000001501030001000000010000001601030001000000020000001701040001000000040000001c01030001000000010000005301030001000000010000000000000001020304'),
+         quadbin '4817ffffffffffff')::VARCHAR
+     = raquet(from_hex('01020304'), 2, 2, quadbin '4817ffffffffffff', 'UINT8')::VARCHAR;
+----
+true
+
+query I
+WITH t(bytes) AS (VALUES (from_hex('49492a00080000000f0000010300010000000200000001010300010000000200000002010300010000000800000003010300010000000100000006010300010000000100000011010400010000006b0100001501030001000000010000001601030001000000020000001701040001000000040000001c01030001000000010000005301030001000000010000000e830c0003000000c200000082840c0006000000da000000af870300200000000a010000b1870200210000004a0100000000000093107c45f81b634193107c45f81b63410000000000000000000000000000000000000000000000000000000000000000000000000000000093107c45f81b734100000000000000000100010000000700000400000100010001040000010001000204b187190000000108b187070019000608000001008e23000c00000100110f040c000001002923574753203834202f2050736575646f2d4d65726361746f727c5747532038347c0001020304')))
+SELECT raquetRead(bytes)::VARCHAR = raquetRead(bytes, quadbin '4817ffffffffffff')::VARCHAR
+FROM t;
+----
+true
+
+statement error
+SELECT raquetRead(
+  from_hex('49492a00080000000b000001030001000000020000000101030001000000020000000201030001000000080000000301030001000000010000000601030001000000010000001101040001000000920000001501030001000000010000001601030001000000020000001701040001000000040000001c01030001000000010000005301030001000000010000000000000001020304'));
+----
+Raster has no geotransform; cannot derive its QUADBIN cell
+
+statement error
+SELECT raquetRead(from_hex('49492a00080000000f0000010300010000000200000001010300010000000200000002010300010000000800000003010300010000000100000006010300010000000100000011010400010000006b0100001501030001000000010000001601030001000000020000001701040001000000040000001c01030001000000010000005301030001000000010000000e830c0003000000c200000082840c0006000000da000000af870300200000000a010000b1870200210000004a0100000000000093107c45f81b634193107c45f81b63410000000000000000000000000000000000000000000000000000000000000000000000000000244093107c45f81b734100000000000000000100010000000700000400000100010001040000010001000204b187190000000108b187070019000608000001008e23000c00000100110f040c000001002923574753203834202f2050736575646f2d4d65726361746f727c5747532038347c0001020304'));
+----
+Raster origin is not aligned to the QUADBIN tile grid
+
+query I
+SELECT raquetRead('test/data/raquet_file_form.tif', quadbin '4817ffffffffffff')::VARCHAR
+     = raquet(from_hex('01020304'), 2, 2, quadbin '4817ffffffffffff', 'UINT8')::VARCHAR;
+----
+true
+
+# ---------------------------------------------------------------------------
+# rasterValue, atRasterValue, minusRasterValue, eRasterValue and aRasterValue over a file,
+# the trajectory first and the band, 1 by default, last
+# ---------------------------------------------------------------------------
+
+query II
+WITH trip AS (
+  SELECT tgeompoint 'SRID=4326;[POINT(0.5 2.5)@2001-01-01,
+    POINT(2.5 2.5)@2001-01-02, POINT(0.5 0.5)@2001-01-03]' AS t
+)
+SELECT asText(rasterValue(t, 'test/data/raster_file_forms.tif'))
+    = asText(tfloat 'Interp=Step;[10@2001-01-01 00:00:00+00, 20@2001-01-01 06:00:00+00, 30@2001-01-01 18:00:00+00, 50@2001-01-02 06:00:00+00, 70@2001-01-02 18:00:00+00, 70@2001-01-03 00:00:00+00]'),
+  asText(rasterValue(t, 'test/data/raster_file_forms.tif', 1))
+    = asText(rasterValue(t, 'test/data/raster_file_forms.tif'))
+FROM trip;
+----
+true	true
+
+query II
+WITH trip AS (
+  SELECT tgeompoint 'SRID=4326;[POINT(0.5 2.5)@2001-01-01,
+    POINT(1.5 1.5)@2001-01-02, POINT(0.5 0.5)@2001-01-03]' AS t
+)
+SELECT asText(atRasterValue(t, 'test/data/raster_file_forms.tif', floatspan '[40, 90]'), 6)
+    = asText(tgeompoint 'SRID=4326;{[POINT(1 2)@2001-01-01 12:00:00+00, POINT(1.5 1.5)@2001-01-02 00:00:00+00, POINT(0.5 0.5)@2001-01-03 00:00:00+00]}', 6),
+  asText(minusRasterValue(t, 'test/data/raster_file_forms.tif', floatspan '[40, 90]', 1), 6)
+    = asText(tgeompoint 'SRID=4326;{[POINT(0.5 2.5)@2001-01-01 00:00:00+00, POINT(1 2)@2001-01-01 12:00:00+00)}', 6)
+FROM trip;
+----
+true	true
+
+query IIII
+WITH trip AS (
+  SELECT tgeompoint 'SRID=4326;[POINT(0.5 2.5)@2001-01-01, POINT(0.5 0.5)@2001-01-02]' AS t
+)
+SELECT eRasterValue(t, 'test/data/raster_file_forms.tif', floatspan '[70, 90]'),
+  eRasterValue(t, 'test/data/raster_file_forms.tif', floatspan '[80, 90]'),
+  aRasterValue(t, 'test/data/raster_file_forms.tif', floatspan '[70, 90]'),
+  aRasterValue(t, 'test/data/raster_file_forms.tif', floatspan '[0, 100]', 1)
+FROM trip;
+----
+true	false	false	true
+
+# ---------------------------------------------------------------------------
+# The WKB of a tile, its accessors, comparisons, hashes and box
+# ---------------------------------------------------------------------------
+
+query IIII
+SELECT
+  raquetFromBinary(asBinary(raquet(from_hex('01020304'), 2, 2, quadbin '4817ffffffffffff', 'UINT8')))
+    = raquet(from_hex('01020304'), 2, 2, quadbin '4817ffffffffffff', 'UINT8'),
+  raquetFromHexWKB(asHexWKB(raquet(from_hex('0102030405060708'), 2, 2, quadbin '4817ffffffffffff',
+    'INT16', -9999.0)))
+    = raquet(from_hex('0102030405060708'), 2, 2, quadbin '4817ffffffffffff', 'INT16', -9999.0),
+  raquetFromBinary(asBinary(raquet(from_hex('01020304'), 2, 2, quadbin '4817ffffffffffff', 'UINT8'),
+    'XDR')) = raquet(from_hex('01020304'), 2, 2, quadbin '4817ffffffffffff', 'UINT8'),
+  raquetFromHexWKB(asHexWKB(raquet(from_hex('01020304'), 2, 2, quadbin '4817ffffffffffff', 'UINT8'),
+    'NDR')) = raquet(from_hex('01020304'), 2, 2, quadbin '4817ffffffffffff', 'UINT8');
+----
+true	true	true	true
+
+query IIIII
+SELECT quadbin(tile)::VARCHAR, width(tile), height(tile), bandPixelType(tile),
+  bandNoDataValue(tile) IS NULL
+FROM (SELECT raquet(from_hex('01020304'), 2, 2, quadbin '4817ffffffffffff', 'UINT8') AS tile) t;
+----
+4817ffffffffffff	2	2	uint8	true
+
+query IIIIIIIIIII
+SELECT bandPixelType(raquet(from_hex('01'), 1, 1, quadbin '4817ffffffffffff', 'UINT8')),
+       bandPixelType(raquet(from_hex('0102'), 1, 1, quadbin '4817ffffffffffff', 'INT16')),
+       bandPixelType(raquet(from_hex('01020304'), 1, 1, quadbin '4817ffffffffffff', 'INT32')),
+       bandPixelType(raquet(from_hex('01020304'), 1, 1, quadbin '4817ffffffffffff', 'FLOAT32')),
+       bandPixelType(raquet(from_hex('0102030405060708'), 1, 1, quadbin '4817ffffffffffff', 'FLOAT64')),
+       bandPixelType(raquet(from_hex('01'), 1, 1, quadbin '4817ffffffffffff', 'INT8')),
+       bandPixelType(raquet(from_hex('0102'), 1, 1, quadbin '4817ffffffffffff', 'UINT16')),
+       bandPixelType(raquet(from_hex('01020304'), 1, 1, quadbin '4817ffffffffffff', 'UINT32')),
+       bandPixelType(raquet(from_hex('0102030405060708'), 1, 1, quadbin '4817ffffffffffff', 'INT64')),
+       bandPixelType(raquet(from_hex('0102030405060708'), 1, 1, quadbin '4817ffffffffffff', 'UINT64')),
+       bandPixelType(raquet(from_hex('0102'), 1, 1, quadbin '4817ffffffffffff', 'FLOAT16'));
+----
+uint8	int16	int32	float32	float64	int8	uint16	uint32	int64	uint64	float16
+
+query II
+SELECT bandHasNoDataValue(tile), bandNoDataValue(tile) = -9999
+FROM (SELECT raquet(from_hex('0102'), 2, 1, quadbin '4817ffffffffffff', 'UINT8', -9999.0) AS tile) t;
+----
+true	true
+
+query III
+SELECT pixels(raquet(from_hex('01020304'), 2, 2, quadbin '4817ffffffffffff', 'UINT8'))
+    = from_hex('01020304'),
+  octet_length(pixels(raquet(from_hex('0102030405060708'), 2, 1, quadbin '4817ffffffffffff', 'FLOAT32'))),
+  raquet(pixels(tile), width(tile), height(tile), quadbin(tile), bandPixelType(tile),
+    bandNoDataValue(tile)) = tile
+FROM (SELECT raquet(from_hex('0102030405060708'), 2, 2, quadbin '4817ffffffffffff', 'INT16',
+  -9999.0) AS tile) t;
+----
+true	8	true
+
+query IIIIII
+SELECT raquet(from_hex('0102'), 2, 1, quadbin '4817ffffffffffff', 'UINT8') =
+       raquet(from_hex('0102'), 2, 1, quadbin '4817ffffffffffff', 'UINT8'),
+       raquet(from_hex('0102'), 2, 1, quadbin '4817ffffffffffff', 'UINT8') <>
+       raquet(from_hex('0103'), 2, 1, quadbin '4817ffffffffffff', 'UINT8'),
+       lt(raquet(from_hex('0102'), 2, 1, quadbin '4817ffffffffffff', 'UINT8'),
+          raquet(from_hex('0103'), 2, 1, quadbin '4817ffffffffffff', 'UINT8')),
+       le(raquet(from_hex('0102'), 2, 1, quadbin '4817ffffffffffff', 'UINT8'),
+          raquet(from_hex('0102'), 2, 1, quadbin '4817ffffffffffff', 'UINT8')),
+       gt(raquet(from_hex('0103'), 2, 1, quadbin '4817ffffffffffff', 'UINT8'),
+          raquet(from_hex('0102'), 2, 1, quadbin '4817ffffffffffff', 'UINT8')),
+       ge(raquet(from_hex('0102'), 2, 1, quadbin '4817ffffffffffff', 'UINT8'),
+          raquet(from_hex('0102'), 2, 1, quadbin '4817ffffffffffff', 'UINT8'));
+----
+true	true	true	true	true	true
+
+query III
+SELECT cmp(raquet(from_hex('0102'), 2, 1, quadbin '4817ffffffffffff', 'UINT8'),
+           raquet(from_hex('0103'), 2, 1, quadbin '4817ffffffffffff', 'UINT8')),
+       cmp(raquet(from_hex('0102'), 2, 1, quadbin '4817ffffffffffff', 'UINT8'),
+           raquet(from_hex('0102'), 2, 1, quadbin '4817ffffffffffff', 'UINT8')),
+       cmp(raquet(from_hex('0103'), 2, 1, quadbin '4817ffffffffffff', 'UINT8'),
+           raquet(from_hex('0102'), 2, 1, quadbin '4817ffffffffffff', 'UINT8'));
+----
+-1	0	1
+
+query II
+SELECT hash(raquet(from_hex('0102'), 2, 1, quadbin '4817ffffffffffff', 'UINT8')) =
+       hash(raquet(from_hex('0102'), 2, 1, quadbin '4817ffffffffffff', 'UINT8')),
+       hashExtended(raquet(from_hex('0102'), 2, 1, quadbin '4817ffffffffffff', 'UINT8'), 0) <>
+       hashExtended(raquet(from_hex('0102'), 2, 1, quadbin '4817ffffffffffff', 'UINT8'), 1);
+----
+true	true
+
+query II
+SELECT round(stbox(raquet(from_hex('01020304'), 2, 2, quadbin '4817ffffffffffff', 'UINT8')), 6)
+    = stbox 'SRID=4326;STBOX X((0,0),(180,85.051129))',
+  stbox(raquet(from_hex('0102'), 2, 1, quadbin '4817ffffffffffff', 'UINT8'))
+    = stbox(raquet(from_hex('01020304'), 2, 2, quadbin '4817ffffffffffff', 'UINT8'));
+----
+true	true
+
+# ---------------------------------------------------------------------------
+# A base value compared with a temporal value of its family
+# ---------------------------------------------------------------------------
+
+query IIII
+SELECT
+  asText(tEqual(cbuffer 'Cbuffer(Point(1 1), 0.5)', tcbuffer 'Cbuffer(Point(1 1), 0.5)@2001-01-01'))
+    = asText(tbool 't@2001-01-01'),
+  asText(tEqual(cbuffer 'Cbuffer(Point(1 1), 0.5)', tcbuffer '{Cbuffer(Point(1 1), 0.3)@2001-01-01, Cbuffer(Point(1 1), 0.5)@2001-01-02, Cbuffer(Point(1 1), 0.5)@2001-01-03}'))
+    = asText(tbool '{f@2001-01-01, t@2001-01-02, t@2001-01-03}'),
+  asText(tEqual(cbuffer 'Cbuffer(Point(1 1), 0.5)', tcbuffer '[Cbuffer(Point(1 1), 0.2)@2001-01-01, Cbuffer(Point(1 1), 0.4)@2001-01-02, Cbuffer(Point(1 1), 0.5)@2001-01-03]'))
+    = asText(tbool '{[f@2001-01-01, t@2001-01-03]}'),
+  asText(tEqual(cbuffer 'Cbuffer(Point(1 1), 0.5)', tcbuffer '{[Cbuffer(Point(1 1), 0.2)@2001-01-01, Cbuffer(Point(1 1), 0.4)@2001-01-02, Cbuffer(Point(1 1), 0.5)@2001-01-03], [Cbuffer(Point(2 2), 0.6)@2001-01-04, Cbuffer(Point(2 2), 0.6)@2001-01-05]}'))
+    = asText(tbool '{[f@2001-01-01, t@2001-01-03], [f@2001-01-04, f@2001-01-05]}');
+----
+true	true	true	true
+
+query III
+SELECT
+  asText(tEqual(pose 'Pose(Point(1 1), 0.5)', tpose 'Pose(Point(1 1), 0.5)@2001-01-01'))
+    = asText(tbool 't@2001-01-01'),
+  asText(tEqual(jsonb '{"geom": "Point(1 1)"}', tjsonb '{{"geom": "Point(1 1)"}@2001-01-01, {"geom": "Point(1 1"}@2001-01-02, {"geom": "Point(1 1"}@2001-01-03}'))
+    = asText(tbool '{t@2001-01-01, f@2001-01-02, f@2001-01-03}'),
+  asText(tEqual(jsonb '{"geom": "Point(1 1)"}', tjsonb '[{"geom": "Point(1 1)"}@2001-01-01, {"geom": "Point(1 1)"}@2001-01-02, {"geom": "Point(1 1"}@2001-01-03]'))
+    = asText(tbool '[t@2001-01-01, f@2001-01-03]');
+----
+true	true	true
+
+query IIIIIIII
+SELECT
+  eEqual(npoint 'Npoint(1, 0.5)', tnpoint 'Npoint(1, 0.5)@2001-01-01'),
+  eEqual(npoint 'Npoint(1, 0.5)', tnpoint '{Npoint(1, 0.3)@2001-01-01, Npoint(1, 0.5)@2001-01-02, Npoint(1, 0.5)@2001-01-03}'),
+  eEqual(npoint 'Npoint(1, 0.5)', tnpoint '[Npoint(1, 0.2)@2001-01-01, Npoint(1, 0.4)@2001-01-02, Npoint(1, 0.5)@2001-01-03]'),
+  eEqual(npoint 'Npoint(1, 0.5)', tnpoint '{[Npoint(1, 0.2)@2001-01-01, Npoint(1, 0.4)@2001-01-02, Npoint(1, 0.5)@2001-01-03], [Npoint(2, 0.6)@2001-01-04, Npoint(2, 0.6)@2001-01-05]}'),
+  aEqual(npoint 'Npoint(1, 0.5)', tnpoint 'Npoint(1, 0.5)@2001-01-01'),
+  aEqual(npoint 'Npoint(1, 0.5)', tnpoint '{Npoint(1, 0.3)@2001-01-01, Npoint(1, 0.5)@2001-01-02, Npoint(1, 0.5)@2001-01-03}'),
+  aEqual(npoint 'Npoint(1, 0.5)', tnpoint '[Npoint(1, 0.2)@2001-01-01, Npoint(1, 0.4)@2001-01-02, Npoint(1, 0.5)@2001-01-03]'),
+  aEqual(npoint 'Npoint(1, 0.5)', tnpoint '{[Npoint(1, 0.2)@2001-01-01, Npoint(1, 0.4)@2001-01-02, Npoint(1, 0.5)@2001-01-03], [Npoint(2, 0.6)@2001-01-04, Npoint(2, 0.6)@2001-01-05]}');
+----
+true	true	true	true	true	false	false	false
+
+# ---------------------------------------------------------------------------
+# applyPose(pose, tpose) and nearestApproachDistance(stbox, stbox)
+# ---------------------------------------------------------------------------
+
+query I
+SELECT asText(round(applyPose(pose 'Pose(Point(1 0), 0)',
+  tpose '[Pose(Point(0 0), 0)@2026-01-01, Pose(Point(10 20), 1.5707963267948966)@2026-01-02]'), 6))
+  = asText(tpose '[Pose(Point(1 0),0)@2026-01-01, Pose(Point(10 21),1.570796)@2026-01-02]');
+----
+true
+
+statement error
+SELECT applyPose(pose 'Pose(Point(1 0 0), 1, 0, 0, 0)',
+  tpose '[Pose(Point(0 0), 0)@2026-01-01, Pose(Point(1 1), 0)@2026-01-02]');
+----
+Operation on mixed 2D/3D dimensions
+
+query II
+SELECT round(nearestApproachDistance(stbox 'SRID=4326;GEODSTBOX X((0,1),(0,2))',
+         stbox 'SRID=4326;GEODSTBOX X((0,0),(0,0))'), 3),
+       round(nearestApproachDistance(stbox 'SRID=4326;GEODSTBOX X((0,1),(0,2))',
+         stbox 'SRID=4326;GEODSTBOX X((0,0),(0,0))', false), 3);
+----
+110574.389	111195.08

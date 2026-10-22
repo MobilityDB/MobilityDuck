@@ -26,6 +26,7 @@
 #include "pose/tpose.hpp"
 #include "rgeo/trgeometry.hpp"
 #include "posechain/tposechain.hpp"
+#include "raster/raquet.hpp"
 #include "spatial/spatial_types.hpp"
 #include "geo_util.hpp"
 #include "meos_internal.h"
@@ -269,6 +270,26 @@ inline Nsegment *BlobToNsegment(string_t blob) {
     Nsegment *copy = (Nsegment *)malloc(sizeof(Nsegment));
     memcpy(copy, blob.GetData(), sizeof(Nsegment));
     return copy;
+}
+// Self-contained blob<->Raquet marshalling. The Raquet structure is opaque, so the
+// stored BLOB is the WKB serialisation of the tile, the wire form its text hex-encodes.
+inline string_t RaquetToBlob(Vector &result, Raquet *rq) {
+    size_t sz = 0;
+    uint8_t *wkb = raquet_as_wkb(rq, 0, &sz);
+    free(rq);
+    if (!wkb) throw InvalidInputException("raquet: cannot serialise the tile");
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)wkb, sz);
+    free(wkb);
+    return out;
+}
+inline string_t RaquetToBlobN(Vector &result, Raquet *rq, ValidityMask &mask, idx_t idx) {
+    if (!rq) { mask.SetInvalid(idx); return string_t(); }
+    return RaquetToBlob(result, rq);
+}
+inline Raquet *BlobToRaquet(string_t blob) {
+    Raquet *rq = raquet_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());
+    if (!rq) throw InvalidInputException("raquet: invalid tile serialisation");
+    return rq;
 }
 // Self-contained blob<->STBox/TBox marshalling (FIXED-size structs -> sizeof).
 inline string_t StboxToBlob(Vector &result, STBox *b) {
@@ -982,6 +1003,9 @@ inline char * poseset_out_maxdd(const Set * p0) {
 inline char * posechainset_out_maxdd(const Set * p0) {
     return ::posechainset_out(p0, 15);
 }
+inline BandStats * raster_summary_stats_band_exclude_nodata(const Raster * p0) {
+    return ::raster_summary_stats(p0, 1, true);
+}
 inline STBox * trgeometry_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
     return ::trgeometry_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
 }
@@ -1434,6 +1458,52 @@ static void Gen_mindistance_tgeoarr_tgeoarr(DataChunk &args, ExpressionState &, 
             if (r == DBL_MAX) { mask.SetInvalid(idx); return double(); }
             return r;
         });
+}
+
+static void Gen_nad_stbox_stbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    auto out = FlatVector::GetData<double>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        STBox *p0 = BlobToStbox(in0[i]);
+        STBox *p1 = BlobToStbox(in1[i]);
+        double r = nad_stbox_stbox(p0, p1, in2[i]);
+        free(p0);
+        free(p1);
+        if (r == DBL_MAX) { outv.SetInvalid(i); continue; }
+        out[i] = (double) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_nad_stbox_stbox_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<double>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        STBox *p0 = BlobToStbox(in0[i]);
+        STBox *p1 = BlobToStbox(in1[i]);
+        double r = nad_stbox_stbox(p0, p1, true);
+        free(p0);
+        free(p1);
+        if (r == DBL_MAX) { outv.SetInvalid(i); continue; }
+        out[i] = (double) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 static void Gen_nad_tgeo_stbox(DataChunk &args, ExpressionState &, Vector &result) {
@@ -4222,6 +4292,8 @@ void RegisterGenerated_meos_geo_dist(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("minDistance", {LogicalType::LIST(TgeogpointType::tgeogpoint()), LogicalType::LIST(TgeogpointType::tgeogpoint())}, LogicalType::DOUBLE, Gen_mindistance_tgeoarr_tgeoarr));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minDistance", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::LIST(TGeometryTypes::tgeometry())}, LogicalType::DOUBLE, Gen_mindistance_tgeoarr_tgeoarr));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minDistance", {LogicalType::LIST(TGeographyTypes::tgeography()), LogicalType::LIST(TGeographyTypes::tgeography())}, LogicalType::DOUBLE, Gen_mindistance_tgeoarr_tgeoarr));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {StboxType::stbox(), StboxType::stbox(), LogicalType::BOOLEAN}, LogicalType::DOUBLE, Gen_nad_stbox_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {StboxType::stbox(), StboxType::stbox()}, LogicalType::DOUBLE, Gen_nad_stbox_stbox_v1));
     RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::DOUBLE, Gen_nad_tgeo_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("|=|", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::DOUBLE, Gen_nad_tgeo_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::DOUBLE, Gen_nad_tgeo_stbox));

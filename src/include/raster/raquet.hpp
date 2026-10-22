@@ -28,46 +28,8 @@ struct RaquetFunctions {
     static bool Raquet_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Raquet_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
-    /* Constructors */
+    /* Constructor */
     static void Raquet_constructor(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_read(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /* Accessors */
-    static void Raquet_quadbin(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_width(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_height(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_band_pixel_type(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_band_has_nodata_value(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_band_nodata_value(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_pixels(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_as_binary(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_from_binary(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_from_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_to_stbox(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /* Comparisons */
-    static void Raquet_eq(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_ne(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_lt(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_le(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_ge(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_gt(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_cmp(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_hash(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raquet_hash_extended(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /* Sampling a raster file along a trajectory, through GDAL */
-    static void Raster_value(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raster_at_value(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raster_minus_value(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Eraster_value(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Araster_value(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /* Sampling along a trajectory */
-    static void Raster_tile_value(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raster_tile_value_array(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Raster_tile_value_quadbin(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

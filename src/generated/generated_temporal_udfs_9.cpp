@@ -26,6 +26,7 @@
 #include "pose/tpose.hpp"
 #include "rgeo/trgeometry.hpp"
 #include "posechain/tposechain.hpp"
+#include "raster/raquet.hpp"
 #include "spatial/spatial_types.hpp"
 #include "geo_util.hpp"
 #include "meos_internal.h"
@@ -269,6 +270,26 @@ inline Nsegment *BlobToNsegment(string_t blob) {
     Nsegment *copy = (Nsegment *)malloc(sizeof(Nsegment));
     memcpy(copy, blob.GetData(), sizeof(Nsegment));
     return copy;
+}
+// Self-contained blob<->Raquet marshalling. The Raquet structure is opaque, so the
+// stored BLOB is the WKB serialisation of the tile, the wire form its text hex-encodes.
+inline string_t RaquetToBlob(Vector &result, Raquet *rq) {
+    size_t sz = 0;
+    uint8_t *wkb = raquet_as_wkb(rq, 0, &sz);
+    free(rq);
+    if (!wkb) throw InvalidInputException("raquet: cannot serialise the tile");
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)wkb, sz);
+    free(wkb);
+    return out;
+}
+inline string_t RaquetToBlobN(Vector &result, Raquet *rq, ValidityMask &mask, idx_t idx) {
+    if (!rq) { mask.SetInvalid(idx); return string_t(); }
+    return RaquetToBlob(result, rq);
+}
+inline Raquet *BlobToRaquet(string_t blob) {
+    Raquet *rq = raquet_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());
+    if (!rq) throw InvalidInputException("raquet: invalid tile serialisation");
+    return rq;
 }
 // Self-contained blob<->STBox/TBox marshalling (FIXED-size structs -> sizeof).
 inline string_t StboxToBlob(Vector &result, STBox *b) {
@@ -981,6 +1002,9 @@ inline char * poseset_out_maxdd(const Set * p0) {
 }
 inline char * posechainset_out_maxdd(const Set * p0) {
     return ::posechainset_out(p0, 15);
+}
+inline BandStats * raster_summary_stats_band_exclude_nodata(const Raster * p0) {
+    return ::raster_summary_stats(p0, 1, true);
 }
 inline STBox * trgeometry_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
     return ::trgeometry_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
@@ -2014,6 +2038,78 @@ static void Gen_quadbinset_make(DataChunk &args, ExpressionState &, Vector &resu
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SetToBlob(result, r);
         });
+}
+
+
+// ===== @ingroup meos_raster_base_constructor =====
+static void Gen_raquet_read(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int64_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n1 = !FlatVector::Validity(args.data[1]).RowIsValid(i);
+        std::string s0 = in0[i].GetString();
+        Raquet *r = raquet_read(s0.c_str(), (n1 ? static_cast<uint64_t>(0) : static_cast<uint64_t>(in1[i])));
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RaquetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raquet_read_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        std::string s0 = in0[i].GetString();
+        Raquet *r = raquet_read(s0.c_str(), static_cast<uint64_t>(0));
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RaquetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raquet_read_bytes(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int64_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n1 = !FlatVector::Validity(args.data[1]).RowIsValid(i);
+        Raquet *r = raquet_read_bytes((const uint8_t *) in0[i].GetData(), (size_t) in0[i].GetSize(), (n1 ? static_cast<uint64_t>(0) : static_cast<uint64_t>(in1[i])));
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RaquetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raquet_read_bytes_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raquet *r = raquet_read_bytes((const uint8_t *) in0[i].GetData(), (size_t) in0[i].GetSize(), static_cast<uint64_t>(0));
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RaquetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 
@@ -3085,6 +3181,13 @@ void RegisterGenerated_meos_posechain_restrict(ExtensionLoader &loader) {
 
 void RegisterGenerated_meos_quadbin_set_constructor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::LIST(QuadbinTypes::quadbin())}, SetTypes::quadbinset(), Gen_quadbinset_make));
+}
+
+void RegisterGenerated_meos_raster_base_constructor(ExtensionLoader &loader) {
+    { ScalarFunction sf = ScalarFunction("raquetRead", {LogicalType::VARCHAR, QuadbinTypes::quadbin()}, RaquetTypes::raquet(), Gen_raquet_read); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
+    RegisterSerializedScalarFunction(loader, ScalarFunction("raquetRead", {LogicalType::VARCHAR}, RaquetTypes::raquet(), Gen_raquet_read_v1));
+    { ScalarFunction sf = ScalarFunction("raquetRead", {LogicalType::BLOB, QuadbinTypes::quadbin()}, RaquetTypes::raquet(), Gen_raquet_read_bytes); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
+    RegisterSerializedScalarFunction(loader, ScalarFunction("raquetRead", {LogicalType::BLOB}, RaquetTypes::raquet(), Gen_raquet_read_bytes_v1));
 }
 
 void RegisterGenerated_meos_rgeo_restrict(ExtensionLoader &loader) {
