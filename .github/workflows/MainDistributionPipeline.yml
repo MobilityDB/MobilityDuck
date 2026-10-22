@@ -231,7 +231,7 @@ jobs:
       fail-fast: false
       matrix:
         duckdb: ${{ fromJSON(needs.versions.outputs.supported) }}
-    uses: duckdb/extension-ci-tools/.github/workflows/_extension_deploy.yml@v1.5.5
+    uses: estebanzimanyi/extension-ci-tools/.github/workflows/_extension_deploy.yml@v1.5.5-node24.5
     secrets: inherit
     with:
       duckdb_version: ${{ matrix.duckdb }}
