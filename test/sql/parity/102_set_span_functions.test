@@ -1,0 +1,206 @@
+# name: test/sql/parity/102_set_span_functions.test
+# description: The functions of the geometry sets and the set, span and span set functions
+#             generated from the catalog: the union and difference of two spans and the set
+#             operations of a span with a span set, duration(spanset) at one argument,
+#             expand(datespan, integer), round(float), set(base) and set(base[]) over every
+#             family, the WKB I/O of the sets of every family, and the accessors, SRID, text and
+#             WKB I/O and constructors of geomset and geogset. The expected values are
+#             MobilityDB's own answers in mobilitydb/test/temporal/expected/003_span.test.out,
+#             005_span_ops.test.out, 007_spanset.test.out, 009_time_ops.test.out,
+#             mobilitydb/test/geo/expected/049_geo_equality.test.out, 050_set_tbl.test.out,
+#             056_tgeo_spatialfuncs.test.out, and the set tests of the h3, quadbin, s2cell, json
+#             and posechain families. A timestamp is read in MobilityDB's PST session.
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+SET TimeZone = 'America/Los_Angeles';
+
+# ---------------------------------------------------------------------------
+# The union and the difference of two spans answer a span set
+# ---------------------------------------------------------------------------
+
+query III
+SELECT (floatspan '[1, 3]' + floatspan '[1, 3]')::VARCHAR,
+  (floatspan '[1, 3]' + floatspan '(3, 5]')::VARCHAR,
+  (floatspan '[1, 1]' + floatspan '[3,4]')::VARCHAR;
+----
+{[1, 3]}	{[1, 5]}	{[1, 1], [3, 4]}
+
+query IIIII
+SELECT (floatspan '[1, 3]' - floatspan '[1, 3]') IS NULL,
+  (floatspan '[1, 3]' - floatspan '(3, 5]')::VARCHAR,
+  (floatspan '[1, 6]' - floatspan '[3,8]')::VARCHAR,
+  (floatspan '[3, 6]' - floatspan '[1, 4]')::VARCHAR,
+  (floatspan '[1, 6]' - floatspan '[3,4]')::VARCHAR;
+----
+true	{[1, 3]}	{[1, 3)}	{(4, 6]}	{[1, 3), (4, 6]}
+
+query II
+SELECT spanUnion(floatspan '[1, 1]', floatspan '[3,4]')::VARCHAR,
+  spanMinus(floatspan '[1, 6]', floatspan '[3,4]')::VARCHAR;
+----
+{[1, 1], [3, 4]}	{[1, 3), (4, 6]}
+
+query III
+SELECT (intspan '[1, 3]' * intspan '[3, 5]')::VARCHAR,
+  (floatspan '[1, 3]' * floatspan '[1, 3]')::VARCHAR,
+  (floatspan '[1, 3]' * floatspan '(3, 5]') IS NULL;
+----
+[3, 4)	[1, 3]	true
+
+query III
+SELECT (tstzspan '[2001-01-01, 2001-01-03]' + tstzspan '[2001-01-01, 2001-01-03]')::VARCHAR,
+  (tstzspan '[2001-01-01, 2001-01-03]' + tstzspan '(2001-01-03, 2001-01-05]')::VARCHAR,
+  (tstzspan '[2001-01-01, 2001-01-03]' - tstzspan '[2001-01-01, 2001-01-03]') IS NULL;
+----
+{[2001-01-01 00:00:00-08, 2001-01-03 00:00:00-08]}	{[2001-01-01 00:00:00-08, 2001-01-05 00:00:00-08]}	true
+
+# ---------------------------------------------------------------------------
+# The set operations of a span with a span set, in either order
+# ---------------------------------------------------------------------------
+
+query I
+SELECT (tstzspan '[2001-01-01, 2001-01-03]' + tstzspanset '{[2001-01-01, 2001-01-03],[2001-01-04, 2001-01-05]}')::VARCHAR;
+----
+{[2001-01-01 00:00:00-08, 2001-01-03 00:00:00-08], [2001-01-04 00:00:00-08, 2001-01-05 00:00:00-08]}
+
+query II
+SELECT (tstzspan '[2001-01-01, 2001-01-03]' - tstzspanset '{[2001-01-01, 2001-01-02],[2001-01-04, 2001-01-05]}')::VARCHAR,
+  (tstzspan '[2001-01-01, 2001-01-03]' - tstzspanset '{[2001-01-01, 2001-01-03],[2001-01-04, 2001-01-05]}') IS NULL;
+----
+{(2001-01-02 00:00:00-08, 2001-01-03 00:00:00-08]}	true
+
+query II
+SELECT (tstzspan '[2001-01-01, 2001-01-03]' * tstzspanset '{[2001-01-01, 2001-01-03],[2001-01-04, 2001-01-05]}')::VARCHAR,
+  (tstzspan '[2001-01-03, 2001-01-04]' * tstzspanset '{[2001-01-01, 2001-01-02],[2001-01-05, 2001-01-06]}') IS NULL;
+----
+{[2001-01-01 00:00:00-08, 2001-01-03 00:00:00-08]}	true
+
+query I
+SELECT (tstzspanset '{[2001-01-01, 2001-01-03],[2001-01-04, 2001-01-05]}' + tstzspan '[2001-01-01, 2001-01-03]')::VARCHAR;
+----
+{[2001-01-01 00:00:00-08, 2001-01-03 00:00:00-08], [2001-01-04 00:00:00-08, 2001-01-05 00:00:00-08]}
+
+# ---------------------------------------------------------------------------
+# duration(spanset) at one argument, expand(datespan, integer), round(float)
+# ---------------------------------------------------------------------------
+
+query III
+SELECT duration(datespanset '{[2001-01-01,2001-01-01]}'),
+  duration(datespanset '{[2001-01-01,2001-01-02),[2001-01-03,2001-01-04),[2001-01-05,2001-01-06)}'),
+  duration(datespanset '{[2001-01-01,2001-01-02),[2001-01-03,2001-01-04),[2001-01-05,2001-01-06)}', true);
+----
+1 day	3 days	5 days
+
+query II
+SELECT duration(tstzspanset '{[2001-01-01,2001-01-01]}'),
+  duration(tstzspanset '{(2001-01-01,2001-01-02),(2001-01-03,2001-01-04),(2001-01-05,2001-01-06)}');
+----
+00:00:00	3 days
+
+query I
+SELECT expand(datespan '[2001-01-01,2001-01-02]', 1)::VARCHAR;
+----
+[2000-12-31, 2001-01-04)
+
+query III
+SELECT round(1.123456789::DOUBLE, 6), round(1.5::DOUBLE), round(2.5::DOUBLE, 0);
+----
+1.123457	2.0	3.0
+
+# ---------------------------------------------------------------------------
+# set(base) and set(base[]) over the families and set(text)
+# ---------------------------------------------------------------------------
+
+query IIII
+SELECT set(h3index '8a2a1072b59ffff')::VARCHAR,
+  set(ARRAY[h3index '8a2a1072b59ffff', h3index '831c02fffffffff'])::VARCHAR,
+  set(quadbin '480fffffffffffff')::VARCHAR,
+  set(ARRAY[quadbin '480fffffffffffff', quadbin '48427fffffffffff'])::VARCHAR;
+----
+{"8a2a1072b59ffff"}	{"831c02fffffffff", "8a2a1072b59ffff"}	{"480fffffffffffff"}	{"480fffffffffffff", "48427fffffffffff"}
+
+query II
+SELECT set(ARRAY[s2cell '47c3c444c000000c', s2cell '47c3c444c0000004'])::VARCHAR,
+  set(ARRAY[jsonb '1', jsonb '2', jsonb '3'])::VARCHAR;
+----
+{"47c3c444c0000004", "47c3c444c000000c"}	{1, 2, 3}
+
+query II
+SELECT set('abc')::VARCHAR, set('abc') = textset '{"abc"}';
+----
+{"abc"}	true
+
+# 052_tpoint.test.out:3927, the set of one geometry
+query I
+SELECT asText(atValues(tgeompoint 'Point(1 1)@2001-01-01', set(geometry 'Linestring(1 1,2 2)'))) IS NULL;
+----
+true
+
+# the set of an array answers the set its literal states, as Set_constructor does
+query IIII
+SELECT set(ARRAY[geometry 'Point(1 1)', geometry 'Point(2 2)']) = geomset '{"Point(1 1)", "Point(2 2)"}',
+  set(ARRAY[cbuffer 'Cbuffer(Point(1 1), 0.5)', cbuffer 'Cbuffer(Point(2 2), 1)']) = cbufferset '{"Cbuffer(Point(1 1), 0.5)", "Cbuffer(Point(2 2), 1)"}',
+  set(ARRAY[npoint 'NPoint(1, 0.5)', npoint 'NPoint(2, 0.25)']) = npointset '{"NPoint(1, 0.5)", "NPoint(2, 0.25)"}',
+  set(cbuffer 'Cbuffer(Point(1 1), 0.5)') = cbufferset '{"Cbuffer(Point(1 1), 0.5)"}';
+----
+true	true	true	true
+
+# ---------------------------------------------------------------------------
+# The WKB I/O of the sets of the families
+# ---------------------------------------------------------------------------
+
+query IIII
+SELECT h3indexsetFromBinary(asBinary(h3indexset '{8a2a1072b59ffff, 831c02fffffffff}')) = h3indexset '{8a2a1072b59ffff, 831c02fffffffff}',
+  h3indexsetFromHexWKB(asHexWKB(h3indexset '{8a2a1072b59ffff}')) = h3indexset '{8a2a1072b59ffff}',
+  quadbinsetFromBinary(asBinary(quadbinset '{480fffffffffffff, 48427fffffffffff}')) = quadbinset '{480fffffffffffff, 48427fffffffffff}',
+  s2cellsetFromHexWKB(asHexWKB(s2cellset '{47c3c444c000000c}')) = s2cellset '{47c3c444c000000c}';
+----
+true	true	true	true
+
+query II
+SELECT posechainsetFromBinary(asBinary(posechainset '{"PoseChain(Pose(Point(1 2), 0.5))", "PoseChain(Pose(Point(3 0), 0.25))"}')) =
+    posechainset '{"PoseChain(Pose(Point(1 2), 0.5))", "PoseChain(Pose(Point(3 0), 0.25))"}',
+  memSize(quadbinset '{480fffffffffffff, 48427fffffffffff}') > 0;
+----
+true	true
+
+# ---------------------------------------------------------------------------
+# The geometry and geography sets
+# ---------------------------------------------------------------------------
+
+query III
+SELECT numValues(geomset '{"Linestring(0 0,2 0)", "Linestring(0 0,1 0,2 0)"}'),
+  SRID(geomset '{"SRID=5676;Point(1 1)", "SRID=5676;Point(2 2)"}'),
+  memSize(geomset '{"Point(1 1)"}') > 0;
+----
+2	5676	true
+
+query II
+SELECT asText(geomsetFromHexWKB(asHexWKB(geomset '{"Point(1 1 1)"}'))),
+  asText(geomsetFromBinary(asBinary(geomset '{"Point(1 1 1)"}')));
+----
+{"POINT Z (1 1 1)"}	{"POINT Z (1 1 1)"}
+
+# the accessors of a geometry set, its SRID and its text
+query IIII
+SELECT startValue(geomset '{"Point(1 1)", "Point(2 2)"}')::VARCHAR,
+  endValue(geomset '{"Point(1 1)", "Point(2 2)"}')::VARCHAR,
+  valueN(geomset '{"Point(1 1)", "Point(2 2)"}', 2)::VARCHAR,
+  valueN(geomset '{"Point(1 1)"}', 2) IS NULL;
+----
+POINT (1 1)	POINT (2 2)	POINT (2 2)	true
+
+query III
+SELECT SRID(setSRID(geomset '{"Point(1 1)"}', 5676)),
+  asEWKT(setSRID(geomset '{"Point(1 1)"}', 5676)),
+  asText(geomset '{"Point(1.123456789 1)"}', 2);
+----
+5676	SRID=5676;{"POINT(1 1)"}	{"POINT(1.12 1)"}
+
+query II
+SELECT numValues(geogset '{"Point(1 1)", "Point(2 2)"}'), SRID(geogset '{"Point(1 1)"}');
+----
+2	4326

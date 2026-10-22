@@ -886,6 +886,15 @@ inline GSERIALIZED * geo_translate_deltaz(const GSERIALIZED * p0, double p1, dou
 inline GSERIALIZED * line_interpolate_point_repeat(const GSERIALIZED * p0, double p1) {
     return ::line_interpolate_point(p0, p1, false);
 }
+inline char * spatialset_as_text_maxdd(const Set * p0) {
+    return ::spatialset_as_text(p0, 15);
+}
+inline char * spatialset_as_ewkt_maxdd(const Set * p0) {
+    return ::spatialset_as_ewkt(p0, 15);
+}
+inline Set * spatialset_transform_pipeline_is_forward_srid(const Set * p0, const char * p1) {
+    return ::spatialset_transform_pipeline(p0, p1, 0, true);
+}
 inline STBox * stbox_shift_scale_time_duration(const STBox * p0, const MeosInterval * p1) {
     return ::stbox_shift_scale_time(p0, p1, NULL);
 }
@@ -1414,7 +1423,77 @@ static void Gen_tne_tgeo_geo(DataChunk &args, ExpressionState &, Vector &result)
 }
 
 
+// ===== @ingroup meos_geo_set_conversion =====
+static void Gen_geo_to_set(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 1; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        Set *r = geo_to_set(x0);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_geoset_to_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *p0 = BlobToSet(a0);
+            GSERIALIZED * r = geoset_to_geo(p0);
+            free(p0); 
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            string_t out = GSerializedToGeometry(r, state, result);
+            free(r);
+            return out;
+        });
+}
+
+
 // ===== @ingroup meos_geo_set_srid =====
+static void Gen_spatialset_transform_pipeline_is_forward_srid(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Set *x0 = BlobToSet(in0[i]);
+        Set *r = spatialset_transform_pipeline_is_forward_srid(x0, in1[i].GetString().c_str());
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_spatialset_srid(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, int32_t>(args.data[0], result, args.size(),
+        [&](string_t a0) -> int32_t {
+            Set *p0 = BlobToSet(a0);
+            int32_t r = spatialset_srid(p0);
+            free(p0); 
+            return (int32_t) r;
+        });
+}
+
 static void Gen_spatialset_set_srid(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
@@ -3899,11 +3978,31 @@ void RegisterGenerated_meos_geo_comp_temp(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tNotEqual", {TGeographyTypes::tgeography(), MobilityDuckGeometryType()}, TemporalTypes::tbool(), Gen_tne_tgeo_geo));
 }
 
+void RegisterGenerated_meos_geo_set_conversion(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {MobilityDuckGeometryType()}, SpatialSetType::geomset(), Gen_geo_to_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("geometry", {SpatialSetType::geomset()}, MobilityDuckGeometryType(), Gen_geoset_to_geo));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("geography", {SpatialSetType::geogset()}, MobilityDuckGeometryType(), Gen_geoset_to_geo));
+}
+
 void RegisterGenerated_meos_geo_set_srid(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {SetTypes::cbufferset(), LogicalType::VARCHAR}, SetTypes::cbufferset(), Gen_spatialset_transform_pipeline_is_forward_srid));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {SpatialSetType::geomset(), LogicalType::VARCHAR}, SpatialSetType::geomset(), Gen_spatialset_transform_pipeline_is_forward_srid));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {SpatialSetType::geogset(), LogicalType::VARCHAR}, SpatialSetType::geogset(), Gen_spatialset_transform_pipeline_is_forward_srid));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {SetTypes::poseset(), LogicalType::VARCHAR}, SetTypes::poseset(), Gen_spatialset_transform_pipeline_is_forward_srid));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {SetTypes::posechainset(), LogicalType::VARCHAR}, SetTypes::posechainset(), Gen_spatialset_transform_pipeline_is_forward_srid));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {SetTypes::cbufferset()}, LogicalType::INTEGER, Gen_spatialset_srid));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {SpatialSetType::geomset()}, LogicalType::INTEGER, Gen_spatialset_srid));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {SpatialSetType::geogset()}, LogicalType::INTEGER, Gen_spatialset_srid));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {SetTypes::poseset()}, LogicalType::INTEGER, Gen_spatialset_srid));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {SetTypes::posechainset()}, LogicalType::INTEGER, Gen_spatialset_srid));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {SetTypes::cbufferset(), LogicalType::INTEGER}, SetTypes::cbufferset(), Gen_spatialset_set_srid));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {SpatialSetType::geomset(), LogicalType::INTEGER}, SpatialSetType::geomset(), Gen_spatialset_set_srid));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {SpatialSetType::geogset(), LogicalType::INTEGER}, SpatialSetType::geogset(), Gen_spatialset_set_srid));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {SetTypes::poseset(), LogicalType::INTEGER}, SetTypes::poseset(), Gen_spatialset_set_srid));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {SetTypes::posechainset(), LogicalType::INTEGER}, SetTypes::posechainset(), Gen_spatialset_set_srid));
     RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {SetTypes::cbufferset(), LogicalType::INTEGER}, SetTypes::cbufferset(), Gen_spatialset_transform));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {SpatialSetType::geomset(), LogicalType::INTEGER}, SpatialSetType::geomset(), Gen_spatialset_transform));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {SpatialSetType::geogset(), LogicalType::INTEGER}, SpatialSetType::geogset(), Gen_spatialset_transform));
     RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {SetTypes::poseset(), LogicalType::INTEGER}, SetTypes::poseset(), Gen_spatialset_transform));
     RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {SetTypes::posechainset(), LogicalType::INTEGER}, SetTypes::posechainset(), Gen_spatialset_transform));
 }

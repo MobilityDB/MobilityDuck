@@ -886,6 +886,15 @@ inline GSERIALIZED * geo_translate_deltaz(const GSERIALIZED * p0, double p1, dou
 inline GSERIALIZED * line_interpolate_point_repeat(const GSERIALIZED * p0, double p1) {
     return ::line_interpolate_point(p0, p1, false);
 }
+inline char * spatialset_as_text_maxdd(const Set * p0) {
+    return ::spatialset_as_text(p0, 15);
+}
+inline char * spatialset_as_ewkt_maxdd(const Set * p0) {
+    return ::spatialset_as_ewkt(p0, 15);
+}
+inline Set * spatialset_transform_pipeline_is_forward_srid(const Set * p0, const char * p1) {
+    return ::spatialset_transform_pipeline(p0, p1, 0, true);
+}
 inline STBox * stbox_shift_scale_time_duration(const STBox * p0, const MeosInterval * p1) {
     return ::stbox_shift_scale_time(p0, p1, NULL);
 }
@@ -1568,6 +1577,19 @@ static void Gen_th3index_directed_edge_to_boundary(DataChunk &args, ExpressionSt
             Temporal *r = th3index_directed_edge_to_boundary(t);
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+
+// ===== @ingroup meos_npoint_set_conversion =====
+static void Gen_npoint_to_set(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            Npoint *p0 = BlobToNpoint(a0);
+            Set * r = npoint_to_set(p0);
+            free(p0); 
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
@@ -2366,6 +2388,10 @@ void RegisterGenerated_meos_h3_edges(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("th3GetDirectedEdgeOrigin", {H3indexTypes::th3index()}, H3indexTypes::th3index(), Gen_th3index_get_directed_edge_origin));
     RegisterSerializedScalarFunction(loader, ScalarFunction("th3GetDirectedEdgeDestination", {H3indexTypes::th3index()}, H3indexTypes::th3index(), Gen_th3index_get_directed_edge_destination));
     RegisterSerializedScalarFunction(loader, ScalarFunction("th3DirectedEdgeToBoundary", {H3indexTypes::th3index()}, TGeographyTypes::tgeography(), Gen_th3index_directed_edge_to_boundary));
+}
+
+void RegisterGenerated_meos_npoint_set_conversion(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {NpointTypes::npoint()}, SetTypes::npointset(), Gen_npoint_to_set));
 }
 
 void RegisterGenerated_meos_pose_set_inout(ExtensionLoader &loader) {

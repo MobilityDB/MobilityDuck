@@ -886,6 +886,15 @@ inline GSERIALIZED * geo_translate_deltaz(const GSERIALIZED * p0, double p1, dou
 inline GSERIALIZED * line_interpolate_point_repeat(const GSERIALIZED * p0, double p1) {
     return ::line_interpolate_point(p0, p1, false);
 }
+inline char * spatialset_as_text_maxdd(const Set * p0) {
+    return ::spatialset_as_text(p0, 15);
+}
+inline char * spatialset_as_ewkt_maxdd(const Set * p0) {
+    return ::spatialset_as_ewkt(p0, 15);
+}
+inline Set * spatialset_transform_pipeline_is_forward_srid(const Set * p0, const char * p1) {
+    return ::spatialset_transform_pipeline(p0, p1, 0, true);
+}
 inline STBox * stbox_shift_scale_time_duration(const STBox * p0, const MeosInterval * p1) {
     return ::stbox_shift_scale_time(p0, p1, NULL);
 }
@@ -1102,6 +1111,60 @@ static void Gen_tbox_out_d(DataChunk &args, ExpressionState &, Vector &result) {
 }
 
 
+// ===== @ingroup meos_geo_set_accessor =====
+static void Gen_geoset_value_n(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Set *x0 = BlobToSet(in0[i]);
+        GSERIALIZED * o = (GSERIALIZED *) 0;
+        bool ok = geoset_value_n(x0, in1[i], &o);
+        free(x0);
+        if (!ok) { outv.SetInvalid(i); continue; }
+        out[i] = GSerializedToGeometry(o, state, result);
+        free(o);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_geoset_end_value(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *p0 = BlobToSet(a0);
+            GSERIALIZED * r = geoset_end_value(p0);
+            free(p0); 
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            string_t out = GSerializedToGeometry(r, state, result);
+            free(r);
+            return out;
+        });
+}
+
+static void Gen_geoset_start_value(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *p0 = BlobToSet(a0);
+            GSERIALIZED * r = geoset_start_value(p0);
+            free(p0); 
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            string_t out = GSerializedToGeometry(r, state, result);
+            free(r);
+            return out;
+        });
+}
+
+
 // ===== @ingroup meos_h3_hierarchy =====
 static void Gen_h3_cell_to_children(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -1176,6 +1239,33 @@ static void Gen_h3_uncompact_cells(DataChunk &args, ExpressionState &, Vector &r
             Set *r = h3_uncompact_cells(s, a2);
             free(s);
             return SetToBlobN(result, r, mask, idx);
+        });
+}
+
+
+// ===== @ingroup meos_h3_set_constructor =====
+static void Gen_h3indexset_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &lv = args.data[0];
+    auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));
+    auto cd = FlatVector::GetData<int64_t>(child);
+    auto &cv = FlatVector::Validity(child);
+    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),
+        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
+            int n = (int) le.length, got = 0;
+            uint64_t *arr = (uint64_t *) malloc(sizeof(uint64_t) * (n > 0 ? n : 1));
+            for (int j = 0; j < n; j++, got++) {
+                if (!cv.RowIsValid(le.offset + j)) {
+                    free(arr);
+                    throw InvalidInputException("null array element not allowed in this context");
+                }
+                auto a2 = cd[le.offset + j];
+                arr[j] = (uint64_t) a2;
+            }
+            Set *r = h3indexset_make(arr, n);
+            free(arr);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SetToBlob(result, r);
         });
 }
 
@@ -1737,6 +1827,30 @@ static void Gen_tpcbox_out_d(DataChunk &args, ExpressionState &, Vector &result)
 }
 
 
+// ===== @ingroup meos_pointcloud_set_conversion =====
+static void Gen_pcpoint_to_set(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            Pcpoint *p0 = BlobToPcpoint(a0);
+            Set * r = pcpoint_to_set(p0);
+            free(p0); 
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_pcpatch_to_set(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            Pcpatch *p0 = BlobToPcpatch(a0);
+            Set * r = pcpatch_to_set(p0);
+            free(p0); 
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
+
 // ===== @ingroup meos_pose_dist =====
 static void Gen_tdistance_tpose_pose(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -2053,6 +2167,32 @@ static void Gen_nad_tpose_stbox_rev(DataChunk &args, ExpressionState &, Vector &
             free(bx); free(t);
             if (r == std::numeric_limits<double>::max()) { mask.SetInvalid(idx); return double(); }
             return (double) r;
+        });
+}
+
+
+// ===== @ingroup meos_posechain_set_constructor =====
+static void Gen_posechainset_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &lv = args.data[0];
+    auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));
+    auto cd = FlatVector::GetData<string_t>(child);
+    auto &cv = FlatVector::Validity(child);
+    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),
+        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
+            int n = (int) le.length, got = 0;
+            PoseChain **arr = (PoseChain **) malloc(sizeof(PoseChain *) * (n > 0 ? n : 1));
+            for (int j = 0; j < n; j++, got++) {
+                if (!cv.RowIsValid(le.offset + j)) {
+                    for (int j = 0; j < got; j++) free(arr[j]); free(arr);
+                    throw InvalidInputException("null array element not allowed in this context");
+                }
+                arr[j] = BlobToPosechain(cd[le.offset + j]);
+            }
+            Set *r = posechainset_make((const struct PoseChain **) arr, n);
+            for (int j = 0; j < got; j++) free(arr[j]); free(arr);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SetToBlob(result, r);
         });
 }
 
@@ -6110,6 +6250,15 @@ void RegisterGenerated_meos_box_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {TboxType::tbox()}, LogicalType::VARCHAR, Gen_tbox_out_d));
 }
 
+void RegisterGenerated_meos_geo_set_accessor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueN", {SpatialSetType::geomset(), LogicalType::INTEGER}, MobilityDuckGeometryType(), Gen_geoset_value_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueN", {SpatialSetType::geogset(), LogicalType::INTEGER}, MobilityDuckGeometryType(), Gen_geoset_value_n));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {SpatialSetType::geomset()}, MobilityDuckGeometryType(), Gen_geoset_end_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {SpatialSetType::geogset()}, MobilityDuckGeometryType(), Gen_geoset_end_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {SpatialSetType::geomset()}, MobilityDuckGeometryType(), Gen_geoset_start_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {SpatialSetType::geogset()}, MobilityDuckGeometryType(), Gen_geoset_start_value));
+}
+
 void RegisterGenerated_meos_h3_hierarchy(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("cellToChildren", {H3indexTypes::h3index(), LogicalType::INTEGER}, SetTypes::h3indexset(), Gen_h3_cell_to_children));
     RegisterSerializedScalarFunction(loader, ScalarFunction("cellToParent", {H3indexTypes::th3index()}, H3indexTypes::th3index(), Gen_th3index_cell_to_parent_next));
@@ -6118,6 +6267,10 @@ void RegisterGenerated_meos_h3_hierarchy(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("th3CellToChildPos", {H3indexTypes::th3index(), LogicalType::INTEGER}, TemporalTypes::tbigint(), Gen_th3index_cell_to_child_pos));
     RegisterSerializedScalarFunction(loader, ScalarFunction("th3ChildPosToCell", {H3indexTypes::th3index(), H3indexTypes::th3index(), LogicalType::INTEGER}, H3indexTypes::th3index(), Gen_th3index_child_pos_to_cell));
     RegisterSerializedScalarFunction(loader, ScalarFunction("uncompactCells", {SetTypes::h3indexset(), LogicalType::INTEGER}, SetTypes::h3indexset(), Gen_h3_uncompact_cells));
+}
+
+void RegisterGenerated_meos_h3_set_constructor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::LIST(H3indexTypes::h3index())}, SetTypes::h3indexset(), Gen_h3indexset_make));
 }
 
 void RegisterGenerated_meos_json_base_comp(ExtensionLoader &loader) {
@@ -6178,6 +6331,11 @@ void RegisterGenerated_meos_pointcloud_box_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {TpcboxType::tpcbox()}, LogicalType::VARCHAR, Gen_tpcbox_out_d));
 }
 
+void RegisterGenerated_meos_pointcloud_set_conversion(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {TPcpointTypes::pcpoint()}, SetTypes::pcpointset(), Gen_pcpoint_to_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {TPcpatchTypes::pcpatch()}, SetTypes::pcpatchset(), Gen_pcpatch_to_set));
+}
+
 void RegisterGenerated_meos_pose_dist(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tDistance", {PoseTypes::tpose(), PoseTypes::pose()}, TemporalTypes::tfloat(), Gen_tdistance_tpose_pose));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<->", {PoseTypes::tpose(), PoseTypes::pose()}, TemporalTypes::tfloat(), Gen_tdistance_tpose_pose));
@@ -6213,6 +6371,10 @@ void RegisterGenerated_meos_pose_dist(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("|=|", {PoseTypes::tpose(), StboxType::stbox()}, LogicalType::DOUBLE, Gen_nad_tpose_stbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {StboxType::stbox(), PoseTypes::tpose()}, LogicalType::DOUBLE, Gen_nad_tpose_stbox_rev));
     RegisterSerializedScalarFunction(loader, ScalarFunction("|=|", {StboxType::stbox(), PoseTypes::tpose()}, LogicalType::DOUBLE, Gen_nad_tpose_stbox_rev));
+}
+
+void RegisterGenerated_meos_posechain_set_constructor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::LIST(PosechainTypes::posechain())}, SetTypes::posechainset(), Gen_posechainset_make));
 }
 
 void RegisterGenerated_meos_rgeo_conversion(ExtensionLoader &loader) {
@@ -6289,11 +6451,15 @@ void RegisterGenerated_meos_setspan_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("shift", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), Gen_intset_shift_scale_hasshift_haswidth_width));
     RegisterSerializedScalarFunction(loader, ScalarFunction("scale", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), Gen_intset_shift_scale_hasshift_haswidth_shift));
     RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::cbufferset(), LogicalType::INTEGER}, SetTypes::cbufferset(), Gen_set_round));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SpatialSetType::geomset(), LogicalType::INTEGER}, SpatialSetType::geomset(), Gen_set_round));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SpatialSetType::geogset(), LogicalType::INTEGER}, SpatialSetType::geogset(), Gen_set_round));
     RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::npointset(), LogicalType::INTEGER}, SetTypes::npointset(), Gen_set_round));
     RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::poseset(), LogicalType::INTEGER}, SetTypes::poseset(), Gen_set_round));
     RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::posechainset(), LogicalType::INTEGER}, SetTypes::posechainset(), Gen_set_round));
     RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::floatset(), LogicalType::INTEGER}, SetTypes::floatset(), Gen_set_round));
     RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::cbufferset()}, SetTypes::cbufferset(), Gen_set_round_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SpatialSetType::geomset()}, SpatialSetType::geomset(), Gen_set_round_d));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SpatialSetType::geogset()}, SpatialSetType::geogset(), Gen_set_round_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::npointset()}, SetTypes::npointset(), Gen_set_round_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::poseset()}, SetTypes::poseset(), Gen_set_round_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("round", {SetTypes::posechainset()}, SetTypes::posechainset(), Gen_set_round_d));
@@ -6308,6 +6474,7 @@ void RegisterGenerated_meos_setspan_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("expand", {SpanTypes::bigintspan(), LogicalType::BIGINT}, SpanTypes::bigintspan(), Gen_bigintspan_expand));
     RegisterSerializedScalarFunction(loader, ScalarFunction("expand", {SpanTypes::floatspan(), LogicalType::DOUBLE}, SpanTypes::floatspan(), Gen_floatspan_expand));
     RegisterSerializedScalarFunction(loader, ScalarFunction("expand", {SpanTypes::intspan(), LogicalType::INTEGER}, SpanTypes::intspan(), Gen_intspan_expand));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("expand", {SpanTypes::datespan(), LogicalType::INTEGER}, SpanTypes::datespan(), Gen_intspan_expand));
     RegisterSerializedScalarFunction(loader, ScalarFunction("shift", {SpanTypes::bigintspan(), LogicalType::BIGINT}, SpanTypes::bigintspan(), Gen_bigintspan_shift_scale_hasshift_haswidth_width));
     RegisterSerializedScalarFunction(loader, ScalarFunction("scale", {SpanTypes::bigintspan(), LogicalType::BIGINT}, SpanTypes::bigintspan(), Gen_bigintspan_shift_scale_hasshift_haswidth_shift));
     RegisterSerializedScalarFunction(loader, ScalarFunction("shift", {SpanTypes::datespan(), LogicalType::INTEGER}, SpanTypes::datespan(), Gen_datespan_shift_scale_hasshift_haswidth_width));

@@ -886,6 +886,15 @@ inline GSERIALIZED * geo_translate_deltaz(const GSERIALIZED * p0, double p1, dou
 inline GSERIALIZED * line_interpolate_point_repeat(const GSERIALIZED * p0, double p1) {
     return ::line_interpolate_point(p0, p1, false);
 }
+inline char * spatialset_as_text_maxdd(const Set * p0) {
+    return ::spatialset_as_text(p0, 15);
+}
+inline char * spatialset_as_ewkt_maxdd(const Set * p0) {
+    return ::spatialset_as_ewkt(p0, 15);
+}
+inline Set * spatialset_transform_pipeline_is_forward_srid(const Set * p0, const char * p1) {
+    return ::spatialset_transform_pipeline(p0, p1, 0, true);
+}
 inline STBox * stbox_shift_scale_time_duration(const STBox * p0, const MeosInterval * p1) {
     return ::stbox_shift_scale_time(p0, p1, NULL);
 }
@@ -2095,6 +2104,19 @@ static void Gen_tne_th3index_h3index(DataChunk &args, ExpressionState &, Vector 
             Temporal *r = tne_th3index_h3index(t, (uint64_t) a2);
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+
+// ===== @ingroup meos_json_set_conversion =====
+static void Gen_jsonb_to_set(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            Jsonb *p0 = BlobToJsonb(a0);
+            Set * r = jsonb_to_set(p0);
+            free(p0); 
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
@@ -4810,6 +4832,10 @@ void RegisterGenerated_meos_h3_comp_temp(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tEqual", {H3indexTypes::th3index(), H3indexTypes::h3index()}, TemporalTypes::tbool(), Gen_teq_th3index_h3index));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tNotEqual", {H3indexTypes::h3index(), H3indexTypes::th3index()}, TemporalTypes::tbool(), Gen_tne_h3index_th3index));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tNotEqual", {H3indexTypes::th3index(), H3indexTypes::h3index()}, TemporalTypes::tbool(), Gen_tne_th3index_h3index));
+}
+
+void RegisterGenerated_meos_json_set_conversion(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {TJsonbTypes::jsonb()}, SetTypes::jsonbset(), Gen_jsonb_to_set));
 }
 
 void RegisterGenerated_meos_json_set_json(ExtensionLoader &loader) {

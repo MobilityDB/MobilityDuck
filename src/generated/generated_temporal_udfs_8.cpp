@@ -886,6 +886,15 @@ inline GSERIALIZED * geo_translate_deltaz(const GSERIALIZED * p0, double p1, dou
 inline GSERIALIZED * line_interpolate_point_repeat(const GSERIALIZED * p0, double p1) {
     return ::line_interpolate_point(p0, p1, false);
 }
+inline char * spatialset_as_text_maxdd(const Set * p0) {
+    return ::spatialset_as_text(p0, 15);
+}
+inline char * spatialset_as_ewkt_maxdd(const Set * p0) {
+    return ::spatialset_as_ewkt(p0, 15);
+}
+inline Set * spatialset_transform_pipeline_is_forward_srid(const Set * p0, const char * p1) {
+    return ::spatialset_transform_pipeline(p0, p1, 0, true);
+}
 inline STBox * stbox_shift_scale_time_duration(const STBox * p0, const MeosInterval * p1) {
     return ::stbox_shift_scale_time(p0, p1, NULL);
 }
@@ -1404,6 +1413,32 @@ static void Gen_line_substring(DataChunk &args, ExpressionState &state, Vector &
         free(r);
     }
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+
+// ===== @ingroup meos_geo_set_constructor =====
+static void Gen_geoset_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &lv = args.data[0];
+    auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));
+    auto cd = FlatVector::GetData<string_t>(child);
+    auto &cv = FlatVector::Validity(child);
+    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),
+        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
+            int n = (int) le.length, got = 0;
+            GSERIALIZED **arr = (GSERIALIZED **) malloc(sizeof(GSERIALIZED *) * (n > 0 ? n : 1));
+            for (int j = 0; j < n; j++, got++) {
+                if (!cv.RowIsValid(le.offset + j)) {
+                    for (int j = 0; j < got; j++) free(arr[j]); free(arr);
+                    throw InvalidInputException("null array element not allowed in this context");
+                }
+                arr[j] = GeometryToGSerialized(cd[le.offset + j], 0);
+            }
+            Set *r = geoset_make((GSERIALIZED **) arr, n);
+            for (int j = 0; j < got; j++) free(arr[j]); free(arr);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SetToBlob(result, r);
+        });
 }
 
 
@@ -3805,6 +3840,10 @@ void RegisterGenerated_meos_geo_base_spatial(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("lineInterpolatePoint", {MobilityDuckGeometryType(), LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_line_interpolate_point_repeat));
     RegisterSerializedScalarFunction(loader, ScalarFunction("lineLocatePoint", {MobilityDuckGeometryType(), MobilityDuckGeometryType()}, LogicalType::DOUBLE, Gen_line_locate_point));
     RegisterSerializedScalarFunction(loader, ScalarFunction("lineSubstring", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_line_substring));
+}
+
+void RegisterGenerated_meos_geo_set_constructor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::LIST(MobilityDuckGeometryType())}, SpatialSetType::geomset(), Gen_geoset_make));
 }
 
 void RegisterGenerated_meos_h3_base_accessor(ExtensionLoader &loader) {

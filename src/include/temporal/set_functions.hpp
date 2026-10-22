@@ -27,21 +27,8 @@ struct SetFunctions {
     static bool Tstzset_to_dateset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     // scalar functions
-    static void Set_as_binary(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Set_as_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Set_from_binary(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Set_from_hexwkb(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Set_constructor(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Value_to_set(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Set_mem_size(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Set_num_values(DataChunk &args, ExpressionState &state, Vector &result);
     // Set_values retired: getValues(<set>) is generated (set_values) in generated_temporal_udfs.cpp.
-    static void Tstzset_shift(DataChunk &args, ExpressionState &state, Vector &result);
 
-    // operators 
-    static void Union_set_set(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Minus_set_set(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Intersect_set_set(DataChunk &args, ExpressionState &state, Vector &result);
     //TODO: Selectivity functions
 };
 

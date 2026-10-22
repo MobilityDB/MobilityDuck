@@ -425,12 +425,10 @@ static void LoadInternal(ExtensionLoader &loader) {
 
 	SetTypes::RegisterTypes(loader);
 	SetTypes::RegisterCastFunctions(loader);
-	SetTypes::RegisterScalarFunctions(loader);
 	SetTypes::RegisterSetUnnest(loader);
 
 	SpatialSetType::RegisterTypes(loader);
 	SpatialSetType::RegisterCastFunctions(loader);
-	SpatialSetType::RegisterScalarFunctions(loader);
 
 	QuadbinTypes::RegisterTypes(loader);
 	QuadbinTypes::RegisterCastFunctions(loader);
@@ -465,7 +463,6 @@ static void LoadInternal(ExtensionLoader &loader) {
 
 	SpansetTypes::RegisterTypes(loader);
 	SpansetTypes::RegisterCastFunctions(loader);
-	SpansetTypes::RegisterScalarFunctions(loader);
 
 	TJsonbTypes::RegisterTypes(loader);
 	TJsonbTypes::RegisterCastFunctions(loader);

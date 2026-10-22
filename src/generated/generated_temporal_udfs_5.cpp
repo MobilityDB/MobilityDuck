@@ -886,6 +886,15 @@ inline GSERIALIZED * geo_translate_deltaz(const GSERIALIZED * p0, double p1, dou
 inline GSERIALIZED * line_interpolate_point_repeat(const GSERIALIZED * p0, double p1) {
     return ::line_interpolate_point(p0, p1, false);
 }
+inline char * spatialset_as_text_maxdd(const Set * p0) {
+    return ::spatialset_as_text(p0, 15);
+}
+inline char * spatialset_as_ewkt_maxdd(const Set * p0) {
+    return ::spatialset_as_ewkt(p0, 15);
+}
+inline Set * spatialset_transform_pipeline_is_forward_srid(const Set * p0, const char * p1) {
+    return ::spatialset_transform_pipeline(p0, p1, 0, true);
+}
 inline STBox * stbox_shift_scale_time_duration(const STBox * p0, const MeosInterval * p1) {
     return ::stbox_shift_scale_time(p0, p1, NULL);
 }
@@ -987,6 +996,26 @@ inline Temporal * trgeometry_append_tinstant_expand_interp_maxdist_maxt(Temporal
 }
 inline Temporal * trgeometry_append_tsequence_expand(Temporal * p0, const Temporal * p1) {
     return ::trgeometry_append_tsequence(p0, (const TSequence *) p1, false);
+}
+
+
+// ===== @ingroup meos_base_types =====
+static void Gen_float_round(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<double, int32_t, double>(args.data[0], args.data[1], result, args.size(),
+        [&](double a0, int32_t a1) -> double {
+            double r = float_round(a0, a1);
+            return (double) r;
+        });
+}
+
+static void Gen_float_round_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<double, double>(args.data[0], result, args.size(),
+        [&](double a0) -> double {
+            double r = float_round(a0, 0);
+            return (double) r;
+        });
 }
 
 
@@ -5795,6 +5824,19 @@ static void Gen_intersection_span_span(DataChunk &args, ExpressionState &, Vecto
         });
 }
 
+static void Gen_intersection_span_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *x = BlobToSpan(a);
+            SpanSet *y = BlobToSpanSet(b);
+            SpanSet *r = intersection_span_spanset(x, y);
+            free(x); free(y);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
+        });
+}
+
 static void Gen_intersection_span_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, args.size(),
@@ -5804,6 +5846,19 @@ static void Gen_intersection_span_timestamptz(DataChunk &args, ExpressionState &
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanToBlob(result, r);
+        });
+}
+
+static void Gen_intersection_spanset_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            SpanSet *x = BlobToSpanSet(a);
+            Span *y = BlobToSpan(b);
+            SpanSet *r = intersection_spanset_span(x, y);
+            free(x); free(y);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
         });
 }
 
@@ -5903,6 +5958,32 @@ static void Gen_minus_span_int(DataChunk &args, ExpressionState &, Vector &resul
         });
 }
 
+static void Gen_minus_span_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *x = BlobToSpan(a);
+            Span *y = BlobToSpan(b);
+            SpanSet *r = minus_span_span(x, y);
+            free(x); free(y);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
+        });
+}
+
+static void Gen_minus_span_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *x = BlobToSpan(a);
+            SpanSet *y = BlobToSpanSet(b);
+            SpanSet *r = minus_span_spanset(x, y);
+            free(x); free(y);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
+        });
+}
+
 static void Gen_minus_span_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, args.size(),
@@ -5910,6 +5991,19 @@ static void Gen_minus_span_timestamptz(DataChunk &args, ExpressionState &, Vecto
             Span *s = BlobToSpan(a);
             SpanSet *r = minus_span_timestamptz(s, DuckDBToMeosTimestamp(a2).value);
             free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
+        });
+}
+
+static void Gen_minus_spanset_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            SpanSet *x = BlobToSpanSet(a);
+            Span *y = BlobToSpan(b);
+            SpanSet *r = minus_spanset_span(x, y);
+            free(x); free(y);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
         });
@@ -6023,6 +6117,32 @@ static void Gen_union_span_int(DataChunk &args, ExpressionState &, Vector &resul
         });
 }
 
+static void Gen_union_span_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *x = BlobToSpan(a);
+            Span *y = BlobToSpan(b);
+            SpanSet *r = union_span_span(x, y);
+            free(x); free(y);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
+        });
+}
+
+static void Gen_union_span_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *x = BlobToSpan(a);
+            SpanSet *y = BlobToSpanSet(b);
+            SpanSet *r = union_span_spanset(x, y);
+            free(x); free(y);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
+        });
+}
+
 static void Gen_union_span_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, args.size(),
@@ -6030,6 +6150,19 @@ static void Gen_union_span_timestamptz(DataChunk &args, ExpressionState &, Vecto
             Span *s = BlobToSpan(a);
             SpanSet *r = union_span_timestamptz(s, DuckDBToMeosTimestamp(a2).value);
             free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
+        });
+}
+
+static void Gen_union_spanset_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            SpanSet *x = BlobToSpanSet(a);
+            Span *y = BlobToSpan(b);
+            SpanSet *r = union_spanset_span(x, y);
+            free(x); free(y);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
         });
@@ -6387,6 +6520,11 @@ static void Gen_union_timestamptz_spanset(DataChunk &args, ExpressionState &, Ve
 }
 
 } // anonymous
+
+void RegisterGenerated_meos_base_types(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {LogicalType::DOUBLE, LogicalType::INTEGER}, LogicalType::DOUBLE, Gen_float_round));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {LogicalType::DOUBLE}, LogicalType::DOUBLE, Gen_float_round_d));
+}
 
 void RegisterGenerated_meos_cbuffer_base_comp(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {CbufferTypes::cbuffer()}, LogicalType::UINTEGER, Gen_cbuffer_hash));
@@ -7316,6 +7454,10 @@ void RegisterGenerated_meos_setspan_set(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), Gen_intersection_set_float));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setIntersection", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), Gen_intersection_set_int));
     RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), Gen_intersection_set_int));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("setIntersection", {SpatialSetType::geomset(), SpatialSetType::geomset()}, SpatialSetType::geomset(), Gen_intersection_set_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpatialSetType::geomset(), SpatialSetType::geomset()}, SpatialSetType::geomset(), Gen_intersection_set_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("setIntersection", {SpatialSetType::geogset(), SpatialSetType::geogset()}, SpatialSetType::geogset(), Gen_intersection_set_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpatialSetType::geogset(), SpatialSetType::geogset()}, SpatialSetType::geogset(), Gen_intersection_set_set));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setIntersection", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), Gen_intersection_set_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), Gen_intersection_set_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setIntersection", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, SetTypes::tstzset(), Gen_intersection_set_timestamptz));
@@ -7340,6 +7482,10 @@ void RegisterGenerated_meos_setspan_set(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), Gen_minus_set_float));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setMinus", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), Gen_minus_set_int));
     RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), Gen_minus_set_int));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("setMinus", {SpatialSetType::geomset(), SpatialSetType::geomset()}, SpatialSetType::geomset(), Gen_minus_set_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SpatialSetType::geomset(), SpatialSetType::geomset()}, SpatialSetType::geomset(), Gen_minus_set_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("setMinus", {SpatialSetType::geogset(), SpatialSetType::geogset()}, SpatialSetType::geogset(), Gen_minus_set_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SpatialSetType::geogset(), SpatialSetType::geogset()}, SpatialSetType::geogset(), Gen_minus_set_set));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setMinus", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), Gen_minus_set_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), Gen_minus_set_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setMinus", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, SetTypes::tstzset(), Gen_minus_set_timestamptz));
@@ -7364,6 +7510,10 @@ void RegisterGenerated_meos_setspan_set(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), Gen_union_set_float));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setUnion", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), Gen_union_set_int));
     RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), Gen_union_set_int));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("setUnion", {SpatialSetType::geomset(), SpatialSetType::geomset()}, SpatialSetType::geomset(), Gen_union_set_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpatialSetType::geomset(), SpatialSetType::geomset()}, SpatialSetType::geomset(), Gen_union_set_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("setUnion", {SpatialSetType::geogset(), SpatialSetType::geogset()}, SpatialSetType::geogset(), Gen_union_set_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpatialSetType::geogset(), SpatialSetType::geogset()}, SpatialSetType::geogset(), Gen_union_set_set));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setUnion", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), Gen_union_set_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SetTypes::textset(), LogicalType::VARCHAR}, SetTypes::textset(), Gen_union_set_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setUnion", {SetTypes::tstzset(), LogicalType::TIMESTAMP_TZ}, SetTypes::tstzset(), Gen_union_set_timestamptz));
@@ -7384,8 +7534,28 @@ void RegisterGenerated_meos_setspan_set(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpanTypes::floatspan(), LogicalType::DOUBLE}, SpanTypes::floatspan(), Gen_intersection_span_float));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanIntersection", {SpanTypes::intspan(), LogicalType::INTEGER}, SpanTypes::intspan(), Gen_intersection_span_int));
     RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpanTypes::intspan(), LogicalType::INTEGER}, SpanTypes::intspan(), Gen_intersection_span_int));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanIntersection", {SpanTypes::intspan(), SpansetTypes::intspanset()}, SpansetTypes::intspanset(), Gen_intersection_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpanTypes::intspan(), SpansetTypes::intspanset()}, SpansetTypes::intspanset(), Gen_intersection_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanIntersection", {SpanTypes::bigintspan(), SpansetTypes::bigintspanset()}, SpansetTypes::bigintspanset(), Gen_intersection_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpanTypes::bigintspan(), SpansetTypes::bigintspanset()}, SpansetTypes::bigintspanset(), Gen_intersection_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanIntersection", {SpanTypes::floatspan(), SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_intersection_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpanTypes::floatspan(), SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_intersection_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanIntersection", {SpanTypes::datespan(), SpansetTypes::datespanset()}, SpansetTypes::datespanset(), Gen_intersection_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpanTypes::datespan(), SpansetTypes::datespanset()}, SpansetTypes::datespanset(), Gen_intersection_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanIntersection", {SpanTypes::tstzspan(), SpansetTypes::tstzspanset()}, SpansetTypes::tstzspanset(), Gen_intersection_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpanTypes::tstzspan(), SpansetTypes::tstzspanset()}, SpansetTypes::tstzspanset(), Gen_intersection_span_spanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanIntersection", {SpanTypes::tstzspan(), LogicalType::TIMESTAMP_TZ}, SpanTypes::tstzspan(), Gen_intersection_span_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpanTypes::tstzspan(), LogicalType::TIMESTAMP_TZ}, SpanTypes::tstzspan(), Gen_intersection_span_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spansetIntersection", {SpansetTypes::intspanset(), SpanTypes::intspan()}, SpansetTypes::intspanset(), Gen_intersection_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpansetTypes::intspanset(), SpanTypes::intspan()}, SpansetTypes::intspanset(), Gen_intersection_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spansetIntersection", {SpansetTypes::bigintspanset(), SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), Gen_intersection_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpansetTypes::bigintspanset(), SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), Gen_intersection_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spansetIntersection", {SpansetTypes::floatspanset(), SpanTypes::floatspan()}, SpansetTypes::floatspanset(), Gen_intersection_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpansetTypes::floatspanset(), SpanTypes::floatspan()}, SpansetTypes::floatspanset(), Gen_intersection_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spansetIntersection", {SpansetTypes::datespanset(), SpanTypes::datespan()}, SpansetTypes::datespanset(), Gen_intersection_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpansetTypes::datespanset(), SpanTypes::datespan()}, SpansetTypes::datespanset(), Gen_intersection_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spansetIntersection", {SpansetTypes::tstzspanset(), SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), Gen_intersection_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpansetTypes::tstzspanset(), SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), Gen_intersection_spanset_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanMinus", {LogicalType::BIGINT, SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), Gen_minus_bigint_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("-", {LogicalType::BIGINT, SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), Gen_minus_bigint_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanMinus", {LogicalType::DATE, SpanTypes::datespan()}, SpansetTypes::datespanset(), Gen_minus_date_span));
@@ -7402,8 +7572,38 @@ void RegisterGenerated_meos_setspan_set(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SpanTypes::floatspan(), LogicalType::DOUBLE}, SpansetTypes::floatspanset(), Gen_minus_span_float));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanMinus", {SpanTypes::intspan(), LogicalType::INTEGER}, SpansetTypes::intspanset(), Gen_minus_span_int));
     RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SpanTypes::intspan(), LogicalType::INTEGER}, SpansetTypes::intspanset(), Gen_minus_span_int));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanMinus", {SpanTypes::intspan(), SpanTypes::intspan()}, SpansetTypes::intspanset(), Gen_minus_span_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SpanTypes::intspan(), SpanTypes::intspan()}, SpansetTypes::intspanset(), Gen_minus_span_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanMinus", {SpanTypes::bigintspan(), SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), Gen_minus_span_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SpanTypes::bigintspan(), SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), Gen_minus_span_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanMinus", {SpanTypes::floatspan(), SpanTypes::floatspan()}, SpansetTypes::floatspanset(), Gen_minus_span_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SpanTypes::floatspan(), SpanTypes::floatspan()}, SpansetTypes::floatspanset(), Gen_minus_span_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanMinus", {SpanTypes::datespan(), SpanTypes::datespan()}, SpansetTypes::datespanset(), Gen_minus_span_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SpanTypes::datespan(), SpanTypes::datespan()}, SpansetTypes::datespanset(), Gen_minus_span_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanMinus", {SpanTypes::tstzspan(), SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), Gen_minus_span_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SpanTypes::tstzspan(), SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), Gen_minus_span_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanMinus", {SpanTypes::intspan(), SpansetTypes::intspanset()}, SpansetTypes::intspanset(), Gen_minus_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SpanTypes::intspan(), SpansetTypes::intspanset()}, SpansetTypes::intspanset(), Gen_minus_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanMinus", {SpanTypes::bigintspan(), SpansetTypes::bigintspanset()}, SpansetTypes::bigintspanset(), Gen_minus_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SpanTypes::bigintspan(), SpansetTypes::bigintspanset()}, SpansetTypes::bigintspanset(), Gen_minus_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanMinus", {SpanTypes::floatspan(), SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_minus_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SpanTypes::floatspan(), SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_minus_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanMinus", {SpanTypes::datespan(), SpansetTypes::datespanset()}, SpansetTypes::datespanset(), Gen_minus_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SpanTypes::datespan(), SpansetTypes::datespanset()}, SpansetTypes::datespanset(), Gen_minus_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanMinus", {SpanTypes::tstzspan(), SpansetTypes::tstzspanset()}, SpansetTypes::tstzspanset(), Gen_minus_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SpanTypes::tstzspan(), SpansetTypes::tstzspanset()}, SpansetTypes::tstzspanset(), Gen_minus_span_spanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanMinus", {SpanTypes::tstzspan(), LogicalType::TIMESTAMP_TZ}, SpansetTypes::tstzspanset(), Gen_minus_span_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SpanTypes::tstzspan(), LogicalType::TIMESTAMP_TZ}, SpansetTypes::tstzspanset(), Gen_minus_span_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spansetMinus", {SpansetTypes::intspanset(), SpanTypes::intspan()}, SpansetTypes::intspanset(), Gen_minus_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SpansetTypes::intspanset(), SpanTypes::intspan()}, SpansetTypes::intspanset(), Gen_minus_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spansetMinus", {SpansetTypes::bigintspanset(), SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), Gen_minus_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SpansetTypes::bigintspanset(), SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), Gen_minus_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spansetMinus", {SpansetTypes::floatspanset(), SpanTypes::floatspan()}, SpansetTypes::floatspanset(), Gen_minus_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SpansetTypes::floatspanset(), SpanTypes::floatspan()}, SpansetTypes::floatspanset(), Gen_minus_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spansetMinus", {SpansetTypes::datespanset(), SpanTypes::datespan()}, SpansetTypes::datespanset(), Gen_minus_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SpansetTypes::datespanset(), SpanTypes::datespan()}, SpansetTypes::datespanset(), Gen_minus_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spansetMinus", {SpansetTypes::tstzspanset(), SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), Gen_minus_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SpansetTypes::tstzspanset(), SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), Gen_minus_spanset_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanMinus", {LogicalType::TIMESTAMP_TZ, SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), Gen_minus_timestamptz_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("-", {LogicalType::TIMESTAMP_TZ, SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), Gen_minus_timestamptz_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanUnion", {LogicalType::BIGINT, SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), Gen_union_bigint_span));
@@ -7422,8 +7622,38 @@ void RegisterGenerated_meos_setspan_set(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpanTypes::floatspan(), LogicalType::DOUBLE}, SpansetTypes::floatspanset(), Gen_union_span_float));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanUnion", {SpanTypes::intspan(), LogicalType::INTEGER}, SpansetTypes::intspanset(), Gen_union_span_int));
     RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpanTypes::intspan(), LogicalType::INTEGER}, SpansetTypes::intspanset(), Gen_union_span_int));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanUnion", {SpanTypes::intspan(), SpanTypes::intspan()}, SpansetTypes::intspanset(), Gen_union_span_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpanTypes::intspan(), SpanTypes::intspan()}, SpansetTypes::intspanset(), Gen_union_span_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanUnion", {SpanTypes::bigintspan(), SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), Gen_union_span_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpanTypes::bigintspan(), SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), Gen_union_span_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanUnion", {SpanTypes::floatspan(), SpanTypes::floatspan()}, SpansetTypes::floatspanset(), Gen_union_span_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpanTypes::floatspan(), SpanTypes::floatspan()}, SpansetTypes::floatspanset(), Gen_union_span_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanUnion", {SpanTypes::datespan(), SpanTypes::datespan()}, SpansetTypes::datespanset(), Gen_union_span_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpanTypes::datespan(), SpanTypes::datespan()}, SpansetTypes::datespanset(), Gen_union_span_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanUnion", {SpanTypes::tstzspan(), SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), Gen_union_span_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpanTypes::tstzspan(), SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), Gen_union_span_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanUnion", {SpanTypes::intspan(), SpansetTypes::intspanset()}, SpansetTypes::intspanset(), Gen_union_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpanTypes::intspan(), SpansetTypes::intspanset()}, SpansetTypes::intspanset(), Gen_union_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanUnion", {SpanTypes::bigintspan(), SpansetTypes::bigintspanset()}, SpansetTypes::bigintspanset(), Gen_union_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpanTypes::bigintspan(), SpansetTypes::bigintspanset()}, SpansetTypes::bigintspanset(), Gen_union_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanUnion", {SpanTypes::floatspan(), SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_union_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpanTypes::floatspan(), SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_union_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanUnion", {SpanTypes::datespan(), SpansetTypes::datespanset()}, SpansetTypes::datespanset(), Gen_union_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpanTypes::datespan(), SpansetTypes::datespanset()}, SpansetTypes::datespanset(), Gen_union_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanUnion", {SpanTypes::tstzspan(), SpansetTypes::tstzspanset()}, SpansetTypes::tstzspanset(), Gen_union_span_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpanTypes::tstzspan(), SpansetTypes::tstzspanset()}, SpansetTypes::tstzspanset(), Gen_union_span_spanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanUnion", {SpanTypes::tstzspan(), LogicalType::TIMESTAMP_TZ}, SpansetTypes::tstzspanset(), Gen_union_span_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpanTypes::tstzspan(), LogicalType::TIMESTAMP_TZ}, SpansetTypes::tstzspanset(), Gen_union_span_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spansetUnion", {SpansetTypes::intspanset(), SpanTypes::intspan()}, SpansetTypes::intspanset(), Gen_union_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpansetTypes::intspanset(), SpanTypes::intspan()}, SpansetTypes::intspanset(), Gen_union_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spansetUnion", {SpansetTypes::bigintspanset(), SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), Gen_union_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpansetTypes::bigintspanset(), SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), Gen_union_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spansetUnion", {SpansetTypes::floatspanset(), SpanTypes::floatspan()}, SpansetTypes::floatspanset(), Gen_union_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpansetTypes::floatspanset(), SpanTypes::floatspan()}, SpansetTypes::floatspanset(), Gen_union_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spansetUnion", {SpansetTypes::datespanset(), SpanTypes::datespan()}, SpansetTypes::datespanset(), Gen_union_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpansetTypes::datespanset(), SpanTypes::datespan()}, SpansetTypes::datespanset(), Gen_union_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spansetUnion", {SpansetTypes::tstzspanset(), SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), Gen_union_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpansetTypes::tstzspanset(), SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), Gen_union_spanset_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanUnion", {LogicalType::TIMESTAMP_TZ, SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), Gen_union_timestamptz_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("+", {LogicalType::TIMESTAMP_TZ, SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), Gen_union_timestamptz_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spansetIntersection", {SpansetTypes::bigintspanset(), LogicalType::BIGINT}, SpansetTypes::bigintspanset(), Gen_intersection_spanset_bigint));

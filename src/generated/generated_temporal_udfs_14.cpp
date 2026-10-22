@@ -886,6 +886,15 @@ inline GSERIALIZED * geo_translate_deltaz(const GSERIALIZED * p0, double p1, dou
 inline GSERIALIZED * line_interpolate_point_repeat(const GSERIALIZED * p0, double p1) {
     return ::line_interpolate_point(p0, p1, false);
 }
+inline char * spatialset_as_text_maxdd(const Set * p0) {
+    return ::spatialset_as_text(p0, 15);
+}
+inline char * spatialset_as_ewkt_maxdd(const Set * p0) {
+    return ::spatialset_as_ewkt(p0, 15);
+}
+inline Set * spatialset_transform_pipeline_is_forward_srid(const Set * p0, const char * p1) {
+    return ::spatialset_transform_pipeline(p0, p1, 0, true);
+}
 inline STBox * stbox_shift_scale_time_duration(const STBox * p0, const MeosInterval * p1) {
     return ::stbox_shift_scale_time(p0, p1, NULL);
 }
@@ -2027,6 +2036,32 @@ static void Gen_npointset_in(DataChunk &args, ExpressionState &, Vector &result)
 }
 
 
+// ===== @ingroup meos_pose_set_constructor =====
+static void Gen_poseset_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &lv = args.data[0];
+    auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));
+    auto cd = FlatVector::GetData<string_t>(child);
+    auto &cv = FlatVector::Validity(child);
+    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),
+        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
+            int n = (int) le.length, got = 0;
+            Pose **arr = (Pose **) malloc(sizeof(Pose *) * (n > 0 ? n : 1));
+            for (int j = 0; j < n; j++, got++) {
+                if (!cv.RowIsValid(le.offset + j)) {
+                    for (int j = 0; j < got; j++) free(arr[j]); free(arr);
+                    throw InvalidInputException("null array element not allowed in this context");
+                }
+                arr[j] = BlobToPose(cd[le.offset + j]);
+            }
+            Set *r = poseset_make((const struct Pose **) arr, n);
+            for (int j = 0; j < got; j++) free(arr[j]); free(arr);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SetToBlob(result, r);
+        });
+}
+
+
 // ===== @ingroup meos_quadbin_base_comp =====
 static void Gen_quadbin_eq(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -2775,6 +2810,10 @@ void RegisterGenerated_meos_npoint_set_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("npointsetFromText", {LogicalType::VARCHAR}, SetTypes::npointset(), Gen_npointset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("npointsetFromEWKT", {LogicalType::VARCHAR}, SetTypes::npointset(), Gen_npointset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("npointset", {LogicalType::VARCHAR}, SetTypes::npointset(), Gen_npointset_in));
+}
+
+void RegisterGenerated_meos_pose_set_constructor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::LIST(PoseTypes::pose())}, SetTypes::poseset(), Gen_poseset_make));
 }
 
 void RegisterGenerated_meos_quadbin_base_comp(ExtensionLoader &loader) {
