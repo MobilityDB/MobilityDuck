@@ -70,6 +70,7 @@ PTR_IN  = {  # MEOS base type -> (DuckDB arg LogicalType, "C++ expr producing th
     "Pose":         ("PoseTypes::pose()", "BlobToPose(%s)"),
     "PoseChain":    ("PosechainTypes::posechain()", "BlobToPosechain(%s)"),
     "Nsegment":     ("NpointTypes::nsegment()", "BlobToNsegment(%s)"),
+    "Raquet":       ("RaquetTypes::raquet()", "BlobToRaquet(%s)"),
 }
 PTR_RET = {  # MEOS base type -> (DuckDB ret LogicalType, "C++ expr producing string_t from MEOS ptr `%s` in `result`")
     "Temporal":     ("MD_TEMPORAL", "TemporalToBlob(result, %s)"),
@@ -89,6 +90,7 @@ PTR_RET = {  # MEOS base type -> (DuckDB ret LogicalType, "C++ expr producing st
     "Pose":         ("PoseTypes::pose()", "PoseToBlob(result, %s)"),
     "PoseChain":    ("PosechainTypes::posechain()", "PosechainToBlob(result, %s)"),
     "Nsegment":     ("NpointTypes::nsegment()", "NsegmentToBlob(result, %s)"),
+    "Raquet":       ("RaquetTypes::raquet()", "RaquetToBlob(result, %s)"),
 }
 # The temporal-family pointer returns that marshal as one DuckDB temporal handle. A MEOS
 # accessor/cast can return a concrete subtype pointer (TInstant */TSequence */TSequenceSet *
@@ -946,7 +948,12 @@ BASE_LOGICAL = {
     "s2cell": "S2cellTypes::s2cell()",
     "pose": "PoseTypes::pose()", "posechain": "PosechainTypes::posechain()",
     "pcpoint": "TPcpointTypes::pcpoint()", "pcpatch": "TPcpatchTypes::pcpatch()",
+    "raquet": "RaquetTypes::raquet()",
 }
+# The base values no set type holds: MEOS declares no T_<BASE>SET for them, so they stay out of
+# BASE_ORDER, which SET_TYPES and the set type registration read, and take the base-value arms
+# alone. raquet, the raster tile, is one.
+BASE_ONLY = ["raquet"]
 def set_reg_scope(name):
     """('all',None) for generic set_* | ('types',[acc]) for <elem>set_* | None."""
     if name.startswith("set_"):
@@ -4787,11 +4794,12 @@ TPCBOX_C = dict(cbase="TPCBox", blobto="BlobToTpcbox", toblob="TpcboxToBlob",
 # Bases carrying their value BY VALUE rather than behind a pointer have no blob to marshal and are
 # absent: quadbin and h3index are the eight bytes of the Datum, so they take no descriptor here.
 BASE_CBASE = {"jsonb": "Jsonb", "cbuffer": "Cbuffer", "npoint": "Npoint", "pose": "Pose",
-              "posechain": "PoseChain", "pcpoint": "Pcpoint", "pcpatch": "Pcpatch"}
+              "posechain": "PoseChain", "pcpoint": "Pcpoint", "pcpatch": "Pcpatch",
+              "raquet": "Raquet"}
 BASEVAL_C = [dict(cbase=BASE_CBASE[b], blobto="BlobTo" + b.capitalize(),
                   toblob=b.capitalize() + "ToBlob", elem={}, scope=None,
                   ret=(lambda n, a: a), single=BASE_LOGICAL[b])
-             for b in BASE_ORDER if b in BASE_CBASE]
+             for b in BASE_ORDER + BASE_ONLY if b in BASE_CBASE]
 def shape_span(f, C=SPAN_C):
     if supported(f) is not None: return None
     if re.search(r'_(transfn|finalfn|combinefn)$', f["name"]): return None
@@ -5367,7 +5375,13 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_s2cell_set_constructor",
                   # What a point cloud schema states: its SRID, compression and number of
                   # dimensions over the pcid that names it (#shape_static_retired)
-                  "meos_pointcloud_schema_cache"}
+                  "meos_pointcloud_schema_cache",
+                  # The raster tile raquet: its text and WKB I/O, constructors, accessors,
+                  # comparisons and box, and the sampling of a tile or a raster file along a
+                  # trajectory, over the signatures MobilityDB declares for raquet
+                  "meos_raster", "meos_raster_base_accessor", "meos_raster_base_constructor",
+                  "meos_raster_base_inout", "meos_raster_base_comp",
+                  "meos_raster_base_conversion"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
@@ -5395,11 +5409,20 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # rows of its tables pointcloud_schemas and pointcloud_dimensions, so the catalog states no
 # signature for meos_pc_schema_register_dims, whose dimensions are an array of PCDimensionSpec
 # with its count; src/pointcloud/pcschema.cpp keeps it.
+# The functions over MobilityDB's raster type (rasterFromBinary, numBands, scaleX, summaryStats and
+# the others): the raster is PostGIS's, which DuckDB does not have, so they answer or take no type
+# this surface registers; no hand registration answers them either. The raquet constructor
+# raquet(bytea, integer, integer, quadbin, text, float) is not among them, its name being answered
+# by raquet(text): raquet_make takes `has_nodata`, which its wrapper sets from whether the nodata
+# argument is NULL and which the catalog states no binding for, so src/raster/raquet.cpp keeps it.
 RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX",
                        "spaceSplit", "spaceTimeSplit", "timeSplit",
                        "valueSplit", "valueTimeSplit", "asMVTGeom",
                        "clusterKMeans", "clusterDBSCAN", "clusterIntersecting", "clusterWithin",
-                       "pointCloudSchemaRegister"}
+                       "pointCloudSchemaRegister",
+                       "rasterFromBinary", "rasterFromHexWKB", "numBands", "upperLeftX",
+                       "upperLeftY", "scaleX", "scaleY", "skewX", "skewY", "summaryStats",
+                       "valueCount", "sameAlignment", "notSameAlignmentReason"}
 def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
 TEMPORAL_CBASES = {"Temporal", "TInstant", "TSequence", "TSequenceSet"}
@@ -6078,6 +6101,10 @@ def shape_baseval_scalar(f):
     if bb not in BASEVAL_PTR_IN or not norm(ins[0]["canonical"]).endswith("*"):
         return None
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
+    # a cell id the signature declares (quadbin(raquet)) is its cell type, which #shape_sig_call
+    # reads from the signature, not the unsigned integer of its C type
+    if rb in CELL_UINT and f.get("sqlReturnType") in CELL_SQL:
+        return None
     if rb in BYVAL_RET and "*" not in rn:
         return (bb, rb)
     return None
@@ -6310,6 +6337,319 @@ def emit_static_cell(f, args, ret, sfx="", dval=None):
             f"            {pre}{cct} r = {name}({call});\n"
             + (f"            {post}\n" if post else "")
             + f"            {rlines}\n        }});\n}}\n")
+
+# ---------------- Calls placed by the catalog: one body per declared signature ----------------
+# A public function of a retired group that no shape above emits is called the way its PostgreSQL
+# wrapper calls it, which the catalog states: the C parameter each SQL argument fills (`sqlArgParams`,
+# else the C parameters in order), the pointer and length pairs one SQL argument fills (a bytea
+# fills a byte string and its size, an array of a base value fills the array and its count:
+# `inputArrays`), the parameters MEOS writes back (`outParams`), the literal a parameter no
+# argument fills takes (`boundArgs`), and the value a NULL argument binds (`nullDefaultBinds`). A
+# signature whose parameters these leave unfilled registers nothing.
+
+def sig_call_arg(f, p, t, k, arrays, lenp):
+    """The marshalling of SQL argument `k`, declared as SQL type `t`, into C parameter `p` (and, for
+    a pointer and length pair, into the length parameter `lenp`): a dict with the DuckDB type `dt`,
+    the C++ type of its vector `cpp`, the lines decoding it `pre`, the C expressions of the
+    parameters it fills `cexpr` (name -> expression), the lines freeing what it decoded `post`, and
+    its `kind`; None if no marshalling reaches it."""
+    b, n, v = base(p["canonical"]), norm(p["canonical"]), "in%d[i]" % k
+    a = arrays.get(p["name"])
+    if a is not None:
+        elem = norm((a.get("element") or {}).get("canonical") or "")
+        ln = lenp["cType"] if lenp else None
+        if lenp is None:
+            return None
+        if elem == "uint8_t" and t == "bytea":
+            return dict(kind="bytes", dt="LogicalType::BLOB", cpp="string_t", pre=[], post=[],
+                        cexpr={p["name"]: "(const uint8_t *) %s.GetData()" % v,
+                               lenp["name"]: "(%s) %s.GetSize()" % (ln, v)})
+        eb = base(elem)
+        acc = BASE_LOGICAL.get(t[:-2]) if t.endswith("[]") else None
+        if eb in BASEVAL_PTR_IN and elem.endswith("*") and acc and PTR_IN[eb][0] == acc:
+            # the elements of the list, its NULL elements left out as #emit_nary_scalars leaves
+            # them out of an array of geometries; an empty list still hands MEOS an allocated
+            # array, as PostgreSQL does, so MEOS answers for its count, not for a NULL pointer
+            pre = ["const list_entry_t le%d = %s;" % (k, v),
+                   "vector<%s *> v%d;" % (eb, k),
+                   "v%d.reserve(le%d.length + 1);" % (k, k),
+                   "for (idx_t j = 0; j < le%d.length; j++)" % k,
+                   "    if (ch%dv.RowIsValid(le%d.offset + j))" % (k, k),
+                   "        v%d.push_back(%s);" % (k, PTR_IN[eb][1] % ("ch%dd[le%d.offset + j]" % (k, k)))]
+            return dict(kind="list", dt="LogicalType::LIST(%s)" % acc, cpp="list_entry_t", pre=pre,
+                        post=["for (auto *e : v%d) free(e);" % k],
+                        cexpr={p["name"]: "(%s) v%d.data()" % (p["cType"], k),
+                               lenp["name"]: "(%s) v%d.size()" % (ln, k)})
+        return None
+    if n.count("*") == 1 and b in TEMPORAL_CBASES:
+        acc = SIG_TEMPORAL_ACC.get(t)
+        if not acc:
+            return None
+        return dict(kind="ptr", dt=acc, cpp="string_t",
+                    pre=["Temporal *p%d = BlobToTemporal(%s);" % (k, v)], post=["free(p%d);" % k],
+                    cexpr={p["name"]: "p%d" % k})
+    if n.count("*") == 1 and b in PTR_IN:
+        acc = BASE_LOGICAL.get(t) or SQL_BASE_TO_DUCK.get(t) or SET_SIG_ACC.get(t)
+        if not acc or (b in BASEVAL_PTR_IN and PTR_IN[b][0] != acc):
+            return None
+        return dict(kind="ptr", dt=acc, cpp="string_t",
+                    pre=["%s *p%d = %s;" % (b, k, PTR_IN[b][1] % v)], post=["free(p%d);" % k],
+                    cexpr={p["name"]: "p%d" % k})
+    if b == "char" and n.count("*") == 1 and t == "text":
+        return dict(kind="cstr", dt="LogicalType::VARCHAR", cpp="string_t",
+                    pre=["std::string s%d = %s.GetString();" % (k, v)], post=[],
+                    cexpr={p["name"]: "s%d.c_str()" % k})
+    if "*" in n:
+        return None
+    if b in CELL_UINT and t in CELL_SQL:
+        return dict(kind="byval", dt=CELL_SQL[t], cpp="int64_t", pre=[], post=[],
+                    cexpr={p["name"]: "static_cast<uint64_t>(%s)" % v})
+    if b in ENUM_READER and t == "text":
+        return dict(kind="byval", dt="LogicalType::VARCHAR", cpp="string_t", pre=[], post=[],
+                    cexpr={p["name"]: "%s(%s.GetString().c_str())" % (ENUM_READER[b], v)})
+    if b in SCALAR_ARG and SQL_SCALAR_RET.get(t) == SCALAR_ARG[b][0]:
+        dt, cpp, ex = SCALAR_ARG[b]
+        return dict(kind="byval", dt=dt, cpp=cpp, pre=[], post=[],
+                    cexpr={p["name"]: ex.replace("a2", v)})
+    return None
+
+def sig_call_literal(p, raw):
+    """The C argument SQL literal `raw` stands for in C parameter `p` (#forward_literal, and a C
+    string for a text), else None."""
+    b, n = base(p["canonical"]), norm(p["canonical"])
+    if b == "char" and n.count("*") == 1:
+        text = str(raw).strip()
+        if text.upper() == "NULL":
+            return None
+        return '"%s"' % text.strip("'").replace("\\", "\\\\").replace('"', '\\"')
+    if b in CELL_UINT and "*" not in n:
+        lit = str(raw).strip()
+        return None if lit.upper() == "NULL" else "static_cast<uint64_t>(%s)" % lit
+    return forward_literal(p, raw)
+
+def sig_call_ret(f, s, outs):
+    """(DuckDB type, C++ type of the result vector, the call and result lines, where `CALL` stands
+    for the call) for the result of `f` declared as `s["ret"]`, its out-parameters `outs` read back;
+    None if no marshalling reaches it."""
+    rc = f["returnType"]["canonical"]
+    rb, rn, sqlr = base(rc), norm(rc), s.get("ret")
+    sizes = [p for p in outs if norm(p["canonical"]) == "size_t *"]
+    vals = [p for p in outs if norm(p["canonical"]) != "size_t *"]
+    null = "outv.SetInvalid(i); continue;"
+    if vals:
+        # a value handed back beside a flag stating there is one (bandNoDataValue)
+        if len(vals) != 1 or sizes or rn != "bool":
+            return None
+        on = norm(vals[0]["canonical"])
+        dt = SQL_SCALAR_RET.get(sqlr)
+        if on not in OUTPARAM_LOCAL or dt is None or OUTPRIM.get(on) != dt:
+            return None
+        cloc, cpp = OUTPARAM_LOCAL[on]
+        return (dt, cpp, ["%s v{};" % cloc,
+                          "bool found = CALL;"], ["if (!found) { %s }" % null,
+                                                  "out[i] = (%s) v;" % cpp], {vals[0]["name"]: "&v"})
+    if len(sizes) > 1:
+        return None
+    if sizes:
+        # a byte string or a text with its length (pixels, asBinary, asHexWKB)
+        size = {sizes[0]["name"]: "&sz"}
+        if rn == "uint8_t *" and sqlr == "bytea":
+            return ("LogicalType::BLOB", "string_t", ["size_t sz = 0;", "uint8_t *r = CALL;"],
+                    ["if (!r) { %s }" % null,
+                     "out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);",
+                     "free(r);"], size)
+        if rn == "char *" and sqlr == "text":
+            return ("LogicalType::VARCHAR", "string_t", ["size_t sz = 0;", "char *r = CALL;"],
+                    ["if (!r) { %s }" % null, "out[i] = StringVector::AddString(result, r);",
+                     "free(r);"], size)
+        return None
+    if rn.endswith("*") and "const" not in rc:
+        if rb in TEMPORAL_PTR_RET:
+            acc = SIG_TEMPORAL_ACC.get(sqlr)
+            if not acc:
+                return None
+            return (acc, "string_t", ["Temporal *r = (Temporal *) CALL;"],
+                    ["if (!r) { %s }" % null, "out[i] = TemporalToBlob(result, r);"], {})
+        if rb in PTR_RET and rb not in TEMPORAL_PTR_RET:
+            acc = BASE_LOGICAL.get(sqlr) or SQL_BASE_TO_DUCK.get(sqlr) or SET_SIG_ACC.get(sqlr)
+            if not acc or (rb in BASEVAL_PTR_RET and PTR_RET[rb][0] != acc):
+                return None
+            return (acc, "string_t", ["%s *r = CALL;" % rb],
+                    ["if (!r) { %s }" % null, "out[i] = %s;" % (PTR_RET[rb][1] % "r")], {})
+        if rb == "char" and sqlr == "text":
+            return ("LogicalType::VARCHAR", "string_t", ["char *r = CALL;"],
+                    ["if (!r) { %s }" % null, "out[i] = TakeCString(result, r);"], {})
+        return None
+    if "*" in rn:
+        return None
+    if rb in CELL_UINT and sqlr in CELL_SQL:
+        return (CELL_SQL[sqlr], "int64_t", ["uint64_t r = CALL;"],
+                ["out[i] = static_cast<int64_t>(r);"], {})
+    # a fallible predicate, -1 on error, 1 or 0 otherwise (eRasterValue)
+    if rb in ("int", "int32_t") and sqlr == "boolean":
+        return ("LogicalType::BOOLEAN", "bool", ["int r = CALL;"],
+                ["if (r < 0) { %s }" % null, "out[i] = (r != 0);"], {})
+    if rb in BYVAL_RET:
+        dt, cct, rett, rexpr = scalar_ret4(f)
+        guard = SCALAR_NULL_GUARD.get((f.get("shape") or {}).get("nullableResult"))
+        return (dt, rett, ["%s r = CALL;" % cct],
+                (["if (%s) { %s }" % (guard, null)] if guard else []) + ["out[i] = %s;" % rexpr], {})
+    return None
+
+# The public functions declaring each SQL signature, (name, argument types) -> count, filled on
+# first use from FN_BY_NAME.
+SIG_CLAIMS = Counter()
+
+def sig_claims(s, f):
+    """How many public functions declare signature `s` of `f`: more than one when the PostgreSQL
+    wrapper picks the kernel from the value (nearestApproachDistance(tbox, tbox) over
+    nad_tboxint_tboxint, nad_tboxbigint_tboxbigint and nad_tboxfloat_tboxfloat), so the signature
+    names no single function to call."""
+    if not SIG_CLAIMS:
+        for g in FN_BY_NAME.values():
+            if g.get("api") == "public" and g.get("sqlfn"):
+                for t in g.get("sqlSignatures") or []:
+                    SIG_CLAIMS[((t.get("sqlName") or g["sqlfn"]).lower(), tuple(t["args"]))] += 1
+    return SIG_CLAIMS[((s.get("sqlName") or f["sqlfn"]).lower(), tuple(s["args"]))]
+
+def shape_sig_call(f):
+    """[(signature, [argument marshallings], parameter literals, NULL binds, result)] for a public
+    function of a retired group, one entry per declared signature the catalog places on its C
+    parameters (see the section comment) and no other public function declares; None if none.
+    #gen_cpp asks it last, of the functions with no body yet, after #shape_static_retired."""
+    if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
+        return None
+    if re.search(r'_(out|in|send|recv)$', f["sqlfn"]) or unregistered_family_ref(f["name"]):
+        return None
+    shape = f.get("shape") or {}
+    ps = f.get("params") or []
+    byname = {p["name"]: p for p in ps}
+    outn = set(shape.get("outParams") or [])
+    if ps and norm(ps[-1]["canonical"]) == "size_t *" and "const" not in ps[-1]["canonical"]:
+        outn.add(ps[-1]["name"])
+    arrays = {a["param"]: a for a in shape.get("inputArrays") or []
+              if (a.get("lengthFrom") or {}).get("kind") == "param"}
+    lenof = {a["lengthFrom"]["name"]: a["param"] for a in arrays.values()}
+    outs = [p for p in ps if p["name"] in outn]
+    facing = [p for p in ps if p["name"] not in outn and p["name"] not in lenof]
+    plans = []
+    for s in f.get("sqlSignatures") or []:
+        if re.search(r'_(out|in|send|recv)$', s.get("sqlName") or "") or sig_claims(s, f) > 1:
+            continue
+        order = s.get("sqlArgParams") or shape.get("sqlArgParams") or [p["name"] for p in facing]
+        if len(order) != len(s["args"]) or any(nm not in byname for nm in order):
+            continue
+        bound = {}
+        for p in facing:
+            if p["name"] in order:
+                continue
+            lit = (s.get("boundArgs") or {}).get(p["name"])
+            lit = sig_call_literal(p, lit) if lit is not None else None
+            if lit is None:
+                bound = None        # a parameter no argument fills and no literal binds
+                break
+            bound[p["name"]] = lit
+        if bound is None:
+            continue
+        args = []
+        for k, (nm, t) in enumerate(zip(order, s["args"])):
+            lenp = byname.get((arrays.get(nm) or {}).get("lengthFrom", {}).get("name", ""))
+            args.append(sig_call_arg(f, byname[nm], t, k, arrays, lenp))
+        if any(a is None for a in args):
+            continue
+        # the value a NULL argument binds, for a by-value argument
+        nb = {}
+        for kk, binds in (s.get("nullDefaultBinds") or {}).items():
+            k = int(kk)
+            if k >= len(args) or args[k]["kind"] != "byval":
+                nb = None
+                break
+            lits = {cn: sig_call_literal(byname[cn], lit) for cn, lit in binds.items() if cn in byname}
+            if len(lits) != len(binds) or None in lits.values() or set(lits) != set(args[k]["cexpr"]):
+                nb = None
+                break
+            nb[k] = lits
+        if nb is None:
+            continue
+        ret = sig_call_ret(f, s, outs)
+        if ret is None:
+            continue
+        plans.append((s, order, args, bound, nb, ret))
+    return plans or None
+
+def sig_call_forms(f, plan):
+    """[(number of arguments, {C parameter: literal} of the omitted ones)] a signature registers:
+    the full form, and each shorter one its trailing SQL defaults allow, an omitted argument taking
+    the value its NULL binds or the literal its default names."""
+    s, order, args, _bound, nb, _ret = plan
+    n = len(args)
+    byname = {p["name"]: p for p in f.get("params") or []}
+    defs = s.get("argDefaults") or [None] * n
+    forms, lits = [(n, {})], {}
+    for k in range(n - 1, -1, -1):
+        d = defs[k] if k < len(defs) else None
+        if d is None:
+            break
+        if k in nb and str(d).strip().upper() == "NULL":
+            add = dict(nb[k])
+        elif len(args[k]["cexpr"]) == 1:
+            cn = next(iter(args[k]["cexpr"]))
+            lit = sig_call_literal(byname[cn], d)
+            if lit is None:
+                break
+            add = {cn: lit}
+        else:
+            break
+        lits = {**lits, **add}
+        forms.append((k, dict(lits)))
+    return forms
+
+def emit_sig_call(f, plan, sfx, nargs, omitted):
+    """The per-row body of a #shape_sig_call form, Gen_<fn><sfx>, reading its first `nargs`
+    arguments, the omitted ones taking their literals, as #emit_nary_scalars reads each operand."""
+    s, order, args, bound, nb, ret = plan
+    name = f["name"]
+    args = args[:nargs]
+    dt, rcpp, rcall, rwrite, outx = ret
+    L = [f"static void Gen_{name}{sfx}(DataChunk &args, ExpressionState &, Vector &result) {{",
+         "    EnsureMeosThreadInitialized();",
+         "    const idx_t rows = args.size();",
+         f"    for (idx_t c = 0; c < {nargs}; c++) args.data[c].Flatten(rows);"]
+    for k, a in enumerate(args):
+        if a["kind"] == "list":
+            L += [f"    auto in{k} = ListVector::GetData(args.data[{k}]);",
+                  f"    auto &ch{k} = ListVector::GetEntry(args.data[{k}]);",
+                  f"    ch{k}.Flatten(ListVector::GetListSize(args.data[{k}]));",
+                  f"    auto ch{k}d = FlatVector::GetData<string_t>(ch{k});",
+                  f"    auto &ch{k}v = FlatVector::Validity(ch{k});"]
+        else:
+            L.append(f"    auto in{k} = FlatVector::GetData<{a['cpp']}>(args.data[{k}]);")
+    L += [f"    auto out = FlatVector::GetData<{rcpp}>(result);",
+          "    auto &outv = FlatVector::Validity(result);",
+          "    for (idx_t i = 0; i < rows; i++) {"]
+    for k in range(nargs):
+        if k in nb:
+            L.append(f"        const bool n{k} = !FlatVector::Validity(args.data[{k}]).RowIsValid(i);")
+        else:
+            L.append(f"        if (!FlatVector::Validity(args.data[{k}]).RowIsValid(i)) {{ outv.SetInvalid(i); continue; }}")
+    cexpr = dict(bound)
+    cexpr.update(omitted)
+    pre, post = [], []
+    for k, a in enumerate(args):
+        pre += a["pre"]
+        post += a["post"]
+        for cn, ex in a["cexpr"].items():
+            cexpr[cn] = ("(n%d ? %s : %s)" % (k, nb[k][cn], ex)) if k in nb else ex
+    cexpr.update(outx)
+    call = "%s(%s)" % (name, ", ".join(cexpr[p["name"]] for p in f.get("params") or []))
+    L += ["        " + x for x in pre]
+    L += ["        " + x.replace("CALL", call) for x in rcall]
+    L += ["        " + x for x in post]
+    L += ["        " + x for x in rwrite]
+    L += ["    }",
+          "    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);",
+          "}", ""]
+    return "\n".join(L)
 
 def gen_cpp(fns, out_path, declared=None, aliases=None):
     bodies, generic_regs, specific_regs = GReg(), GReg(), GReg()
@@ -7629,6 +7969,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            '#include "pose/tpose.hpp"\n'               # PoseTypes::pose()/tpose()
            '#include "rgeo/trgeometry.hpp"\n'          # TrgeometryTypes::trgeometry()
            '#include "posechain/tposechain.hpp"\n'     # PosechainTypes::posechain()/tposechain()
+           '#include "raster/raquet.hpp"\n'           # RaquetTypes::raquet()
            '#include "spatial/spatial_types.hpp"\n'   # MobilityDuckGeometryType() (duckdb-spatial)
            '#include "geo_util.hpp"\n'                # GeometryToGSerialized(blob, srid)
            '#include "meos_internal.h"\n'
@@ -7803,6 +8144,21 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "            std::to_string(blob.GetSize()));\n    }\n"
            "    Nsegment *copy = (Nsegment *)malloc(sizeof(Nsegment));\n"
            "    memcpy(copy, blob.GetData(), sizeof(Nsegment));\n    return copy;\n}\n"
+           "// Self-contained blob<->Raquet marshalling. The Raquet structure is opaque, so the\n"
+           "// stored BLOB is the WKB serialisation of the tile, the wire form its text hex-encodes.\n"
+           "inline string_t RaquetToBlob(Vector &result, Raquet *rq) {\n"
+           "    size_t sz = 0;\n"
+           "    uint8_t *wkb = raquet_as_wkb(rq, 0, &sz);\n"
+           "    free(rq);\n"
+           "    if (!wkb) throw InvalidInputException(\"raquet: cannot serialise the tile\");\n"
+           "    string_t out = StringVector::AddStringOrBlob(result, (const char *)wkb, sz);\n"
+           "    free(wkb);\n    return out;\n}\n"
+           "inline string_t RaquetToBlobN(Vector &result, Raquet *rq, ValidityMask &mask, idx_t idx) {\n"
+           "    if (!rq) { mask.SetInvalid(idx); return string_t(); }\n    return RaquetToBlob(result, rq);\n}\n"
+           "inline Raquet *BlobToRaquet(string_t blob) {\n"
+           "    Raquet *rq = raquet_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());\n"
+           "    if (!rq) throw InvalidInputException(\"raquet: invalid tile serialisation\");\n"
+           "    return rq;\n}\n"
            "// Self-contained blob<->STBox/TBox marshalling (FIXED-size structs -> sizeof).\n"
            "inline string_t StboxToBlob(Vector &result, STBox *b) {\n"
            "    string_t out = StringVector::AddStringOrBlob(result, (const char *)b, sizeof(STBox));\n"
@@ -7983,6 +8339,55 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         for a in su_accs:
             specific_regs.append(f'    loader.RegisterFunction(SetUnnest_{f["name"]}Table({a}));')
 
+    # The functions of a retired group no shape above emits, called per declared signature as the
+    # catalog places its arguments (#shape_sig_call). A signature whose name and DuckDB arguments
+    # another registration already takes registers nothing, as DuckDB refuses a second one.
+    _made = {m for acc in (bodies, set_bodies, span_bodies, temporal_box_bodies)
+             for _g, _line in acc.items
+             for m in re.findall(r'\bstatic void Gen_([A-Za-z0-9_]+)\(', _line)}
+    _regd = {(m.group(1).lower(), m.group(2))
+             for acc in (generic_regs, specific_regs, set_generic_regs, set_specific_regs,
+                         span_generic_regs, span_specific_regs, temporal_box_regs)
+             for _g, _line in acc.items
+             for m in [re.search(r'ScalarFunction\("([^"]+)", \{([^}]*)\}', _line)] if m}
+    for f in fns:
+        if declared is not None and f["name"] not in declared:
+            continue
+        if f["name"] in _made:
+            continue
+        plans = shape_sig_call(f)
+        if not plans:
+            continue
+        STATE["grp"] = f.get("group") or "meos_ungrouped"
+        fn = f["name"]
+        nbody = 0
+        for plan in plans:
+            s, _order, sargs, _bound, nb, sret = plan
+            for nargs, omitted in sig_call_forms(f, plan):
+                slots = ", ".join(a["dt"] for a in sargs[:nargs])
+                names = [nm for nm in reg_names(f, s.get("sqlName", f["sqlfn"]), aliases,
+                                                "{%s}" % slots)
+                         if (reg_name(nm, f).lower(), slots) not in _regd]
+                if not names:
+                    continue
+                sfx = "" if nbody == 0 else "_v%d" % nbody
+                nbody += 1
+                bodies.append(emit_sig_call(f, plan, sfx, nargs, omitted))
+                for nm in names:
+                    _regd.add((reg_name(nm, f).lower(), slots))
+                    sf = (f'ScalarFunction("{reg_name(nm, f)}", {{{slots}}}, {sret[0]}, '
+                          f'Gen_{fn}{sfx})')
+                    if any(k < nargs for k in nb):
+                        # a NULL argument binds a value rather than answering NULL, so the
+                        # function reads its NULL arguments itself
+                        specific_regs.append(
+                            f'    {{ ScalarFunction sf = {sf}; '
+                            f'sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; '
+                            f'RegisterSerializedScalarFunction(loader, sf); }}')
+                    else:
+                        specific_regs.append(
+                            f'    RegisterSerializedScalarFunction(loader, {sf});')
+
     # ---- bodies, sectioned by @ingroup group (one section per group) ----
     body_by_grp = defaultdict(list)
     for acc in (bodies, set_bodies, span_bodies, temporal_box_bodies):
@@ -8105,6 +8510,7 @@ BASE_HEADER = {
     "s2cell": "s2cell/ts2cell.hpp",
     "pose": "pose/tpose.hpp", "posechain": "posechain/tposechain.hpp",
     "pcpoint": "pointcloud/tpcpoint.hpp", "pcpatch": "pointcloud/tpcpatch.hpp",
+    "raquet": "raster/raquet.hpp",
 }
 # suffix (longest first so spanset wins over span), class, mapping struct, DEFINE
 # macro, and whether the family carries the spanset-only Set/Base child mappings.

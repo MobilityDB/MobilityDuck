@@ -26,6 +26,7 @@
 #include "pose/tpose.hpp"
 #include "rgeo/trgeometry.hpp"
 #include "posechain/tposechain.hpp"
+#include "raster/raquet.hpp"
 #include "spatial/spatial_types.hpp"
 #include "geo_util.hpp"
 #include "meos_internal.h"
@@ -269,6 +270,26 @@ inline Nsegment *BlobToNsegment(string_t blob) {
     Nsegment *copy = (Nsegment *)malloc(sizeof(Nsegment));
     memcpy(copy, blob.GetData(), sizeof(Nsegment));
     return copy;
+}
+// Self-contained blob<->Raquet marshalling. The Raquet structure is opaque, so the
+// stored BLOB is the WKB serialisation of the tile, the wire form its text hex-encodes.
+inline string_t RaquetToBlob(Vector &result, Raquet *rq) {
+    size_t sz = 0;
+    uint8_t *wkb = raquet_as_wkb(rq, 0, &sz);
+    free(rq);
+    if (!wkb) throw InvalidInputException("raquet: cannot serialise the tile");
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)wkb, sz);
+    free(wkb);
+    return out;
+}
+inline string_t RaquetToBlobN(Vector &result, Raquet *rq, ValidityMask &mask, idx_t idx) {
+    if (!rq) { mask.SetInvalid(idx); return string_t(); }
+    return RaquetToBlob(result, rq);
+}
+inline Raquet *BlobToRaquet(string_t blob) {
+    Raquet *rq = raquet_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());
+    if (!rq) throw InvalidInputException("raquet: invalid tile serialisation");
+    return rq;
 }
 // Self-contained blob<->STBox/TBox marshalling (FIXED-size structs -> sizeof).
 inline string_t StboxToBlob(Vector &result, STBox *b) {
@@ -982,6 +1003,9 @@ inline char * poseset_out_maxdd(const Set * p0) {
 inline char * posechainset_out_maxdd(const Set * p0) {
     return ::posechainset_out(p0, 15);
 }
+inline BandStats * raster_summary_stats_band_exclude_nodata(const Raster * p0) {
+    return ::raster_summary_stats(p0, 1, true);
+}
 inline STBox * trgeometry_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
     return ::trgeometry_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
 }
@@ -1102,6 +1126,94 @@ static void Gen_ever_ne_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &, Ve
             if (r < 0) { mask.SetInvalid(idx); return bool(); }
             return (r != 0);
         });
+}
+
+static void Gen_always_eq_cbuffer_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Cbuffer *p0 = BlobToCbuffer(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        int r = always_eq_cbuffer_tcbuffer(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_always_ne_cbuffer_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Cbuffer *p0 = BlobToCbuffer(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        int r = always_ne_cbuffer_tcbuffer(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_ever_eq_cbuffer_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Cbuffer *p0 = BlobToCbuffer(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        int r = ever_eq_cbuffer_tcbuffer(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_ever_ne_cbuffer_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Cbuffer *p0 = BlobToCbuffer(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        int r = ever_ne_cbuffer_tcbuffer(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 
@@ -2004,6 +2116,94 @@ static void Gen_ever_ne_tpose_tpose(DataChunk &args, ExpressionState &, Vector &
         });
 }
 
+static void Gen_always_eq_pose_tpose(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Pose *p0 = BlobToPose(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        int r = always_eq_pose_tpose(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_always_ne_pose_tpose(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Pose *p0 = BlobToPose(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        int r = always_ne_pose_tpose(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_ever_eq_pose_tpose(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Pose *p0 = BlobToPose(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        int r = ever_eq_pose_tpose(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_ever_ne_pose_tpose(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Pose *p0 = BlobToPose(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        int r = ever_ne_pose_tpose(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 
 // ===== @ingroup meos_pose_inout =====
 static void Gen_tpose_in(DataChunk &args, ExpressionState &, Vector &result) {
@@ -2228,6 +2428,28 @@ static TableFunction Unnest_tpose_unnestTable(const LogicalType &type) {
     return fn;
 }
 
+static void Gen_pose_compose_tpose(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Pose *p0 = BlobToPose(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        Temporal *r = (Temporal *) pose_compose_tpose(p0, p1);
+        free(p0);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 
 // ===== @ingroup meos_posechain_accessor =====
 static void Gen_tposechain_end_value(DataChunk &args, ExpressionState &, Vector &result) {
@@ -2338,6 +2560,135 @@ static void Gen_quadbinset_out(DataChunk &args, ExpressionState &, Vector &resul
             free(s);
             return TakeCString(result, r);
         });
+}
+
+
+// ===== @ingroup meos_raster_base_inout =====
+static void Gen_raquet_in(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Raquet *r = raquet_in(in.GetString().c_str());
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return RaquetToBlob(result, r);
+        });
+}
+
+static void Gen_raquet_from_wkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raquet *r = raquet_from_wkb((const uint8_t *) in0[i].GetData(), (size_t) in0[i].GetSize());
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RaquetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raquet_from_hexwkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        std::string s0 = in0[i].GetString();
+        Raquet *r = raquet_from_hexwkb(s0.c_str());
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RaquetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raquet_as_wkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raquet *p0 = BlobToRaquet(in0[i]);
+        size_t sz = 0;
+        uint8_t *r = raquet_as_wkb(p0, wkb_variant_from_endian(in1[i].GetString().c_str()), &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raquet_as_wkb_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raquet *p0 = BlobToRaquet(in0[i]);
+        size_t sz = 0;
+        uint8_t *r = raquet_as_wkb(p0, wkb_variant_from_endian(""), &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raquet_as_hexwkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raquet *p0 = BlobToRaquet(in0[i]);
+        size_t sz = 0;
+        char *r = raquet_as_hexwkb(p0, wkb_variant_from_endian(in1[i].GetString().c_str()), &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddString(result, r);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raquet_as_hexwkb_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raquet *p0 = BlobToRaquet(in0[i]);
+        size_t sz = 0;
+        char *r = raquet_as_hexwkb(p0, wkb_variant_from_endian(""), &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddString(result, r);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 
@@ -3919,6 +4270,14 @@ void RegisterGenerated_meos_cbuffer_comp_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_ever_ne_tcbuffer_cbuffer));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eNotEqual", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_ever_ne_tcbuffer_tcbuffer));
     RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_ever_ne_tcbuffer_tcbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aEqual", {CbufferTypes::cbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_always_eq_cbuffer_tcbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%=", {CbufferTypes::cbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_always_eq_cbuffer_tcbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aNotEqual", {CbufferTypes::cbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_always_ne_cbuffer_tcbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%<>", {CbufferTypes::cbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_always_ne_cbuffer_tcbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eEqual", {CbufferTypes::cbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_ever_eq_cbuffer_tcbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?=", {CbufferTypes::cbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_ever_eq_cbuffer_tcbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eNotEqual", {CbufferTypes::cbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_ever_ne_cbuffer_tcbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {CbufferTypes::cbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_ever_ne_cbuffer_tcbuffer));
 }
 
 void RegisterGenerated_meos_geo_base_spatial(ExtensionLoader &loader) {
@@ -4018,6 +4377,14 @@ void RegisterGenerated_meos_pose_comp_ever(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {PoseTypes::tpose(), PoseTypes::pose()}, LogicalType::BOOLEAN, Gen_ever_ne_tpose_pose));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eNotEqual", {PoseTypes::tpose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_ever_ne_tpose_tpose));
     RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {PoseTypes::tpose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_ever_ne_tpose_tpose));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aEqual", {PoseTypes::pose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_always_eq_pose_tpose));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%=", {PoseTypes::pose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_always_eq_pose_tpose));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aNotEqual", {PoseTypes::pose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_always_ne_pose_tpose));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("%<>", {PoseTypes::pose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_always_ne_pose_tpose));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eEqual", {PoseTypes::pose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_ever_eq_pose_tpose));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?=", {PoseTypes::pose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_ever_eq_pose_tpose));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eNotEqual", {PoseTypes::pose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_ever_ne_pose_tpose));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?<>", {PoseTypes::pose(), PoseTypes::tpose()}, LogicalType::BOOLEAN, Gen_ever_ne_pose_tpose));
 }
 
 void RegisterGenerated_meos_pose_inout(ExtensionLoader &loader) {
@@ -4036,6 +4403,7 @@ void RegisterGenerated_meos_pose_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("translate", {PoseTypes::tpose(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, PoseTypes::tpose(), Gen_tpose_translate));
     RegisterSerializedScalarFunction(loader, ScalarFunction("translate", {PoseTypes::tpose(), LogicalType::DOUBLE, LogicalType::DOUBLE}, PoseTypes::tpose(), Gen_tpose_translate_d));
     loader.RegisterFunction(Unnest_tpose_unnestTable(PoseTypes::tpose()));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("applyPose", {PoseTypes::pose(), PoseTypes::tpose()}, PoseTypes::tpose(), Gen_pose_compose_tpose));
 }
 
 void RegisterGenerated_meos_posechain_accessor(ExtensionLoader &loader) {
@@ -4058,6 +4426,16 @@ void RegisterGenerated_meos_quadbin_set_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("quadbinsetFromEWKT", {LogicalType::VARCHAR}, SetTypes::quadbinset(), Gen_quadbinset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("quadbinset", {LogicalType::VARCHAR}, SetTypes::quadbinset(), Gen_quadbinset_in));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {SetTypes::quadbinset()}, LogicalType::VARCHAR, Gen_quadbinset_out));
+}
+
+void RegisterGenerated_meos_raster_base_inout(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("raquet", {LogicalType::VARCHAR}, RaquetTypes::raquet(), Gen_raquet_in));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("raquetFromBinary", {LogicalType::BLOB}, RaquetTypes::raquet(), Gen_raquet_from_wkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("raquetFromHexWKB", {LogicalType::VARCHAR}, RaquetTypes::raquet(), Gen_raquet_from_hexwkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asBinary", {RaquetTypes::raquet(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_raquet_as_wkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asBinary", {RaquetTypes::raquet()}, LogicalType::BLOB, Gen_raquet_as_wkb_v1));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexWKB", {RaquetTypes::raquet(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_raquet_as_hexwkb));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexWKB", {RaquetTypes::raquet()}, LogicalType::VARCHAR, Gen_raquet_as_hexwkb_v1));
 }
 
 void RegisterGenerated_meos_rgeo_accessor(ExtensionLoader &loader) {

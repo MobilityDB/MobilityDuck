@@ -26,6 +26,7 @@
 #include "pose/tpose.hpp"
 #include "rgeo/trgeometry.hpp"
 #include "posechain/tposechain.hpp"
+#include "raster/raquet.hpp"
 #include "spatial/spatial_types.hpp"
 #include "geo_util.hpp"
 #include "meos_internal.h"
@@ -269,6 +270,26 @@ inline Nsegment *BlobToNsegment(string_t blob) {
     Nsegment *copy = (Nsegment *)malloc(sizeof(Nsegment));
     memcpy(copy, blob.GetData(), sizeof(Nsegment));
     return copy;
+}
+// Self-contained blob<->Raquet marshalling. The Raquet structure is opaque, so the
+// stored BLOB is the WKB serialisation of the tile, the wire form its text hex-encodes.
+inline string_t RaquetToBlob(Vector &result, Raquet *rq) {
+    size_t sz = 0;
+    uint8_t *wkb = raquet_as_wkb(rq, 0, &sz);
+    free(rq);
+    if (!wkb) throw InvalidInputException("raquet: cannot serialise the tile");
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)wkb, sz);
+    free(wkb);
+    return out;
+}
+inline string_t RaquetToBlobN(Vector &result, Raquet *rq, ValidityMask &mask, idx_t idx) {
+    if (!rq) { mask.SetInvalid(idx); return string_t(); }
+    return RaquetToBlob(result, rq);
+}
+inline Raquet *BlobToRaquet(string_t blob) {
+    Raquet *rq = raquet_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());
+    if (!rq) throw InvalidInputException("raquet: invalid tile serialisation");
+    return rq;
 }
 // Self-contained blob<->STBox/TBox marshalling (FIXED-size structs -> sizeof).
 inline string_t StboxToBlob(Vector &result, STBox *b) {
@@ -982,6 +1003,9 @@ inline char * poseset_out_maxdd(const Set * p0) {
 inline char * posechainset_out_maxdd(const Set * p0) {
     return ::posechainset_out(p0, 15);
 }
+inline BandStats * raster_summary_stats_band_exclude_nodata(const Raster * p0) {
+    return ::raster_summary_stats(p0, 1, true);
+}
 inline STBox * trgeometry_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
     return ::trgeometry_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
 }
@@ -1084,6 +1108,50 @@ static void Gen_tne_tcbuffer_cbuffer(DataChunk &args, ExpressionState &, Vector 
             free(a2p); free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
+}
+
+static void Gen_teq_cbuffer_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Cbuffer *p0 = BlobToCbuffer(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        Temporal *r = (Temporal *) teq_cbuffer_tcbuffer(p0, p1);
+        free(p0);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tne_cbuffer_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Cbuffer *p0 = BlobToCbuffer(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        Temporal *r = (Temporal *) tne_cbuffer_tcbuffer(p0, p1);
+        free(p0);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 
@@ -1600,6 +1668,50 @@ static void Gen_tne_tpose_pose(DataChunk &args, ExpressionState &, Vector &resul
             free(a2p); free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
+}
+
+static void Gen_teq_pose_tpose(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Pose *p0 = BlobToPose(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        Temporal *r = (Temporal *) teq_pose_tpose(p0, p1);
+        free(p0);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tne_pose_tpose(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Pose *p0 = BlobToPose(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        Temporal *r = (Temporal *) tne_pose_tpose(p0, p1);
+        free(p0);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 
@@ -4590,6 +4702,8 @@ void RegisterGenerated_meos_box_bbox_topo(ExtensionLoader &loader) {
 void RegisterGenerated_meos_cbuffer_comp_temp(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tEqual", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, TemporalTypes::tbool(), Gen_teq_tcbuffer_cbuffer));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tNotEqual", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, TemporalTypes::tbool(), Gen_tne_tcbuffer_cbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tEqual", {CbufferTypes::cbuffer(), CbufferTypes::tcbuffer()}, TemporalTypes::tbool(), Gen_teq_cbuffer_tcbuffer));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tNotEqual", {CbufferTypes::cbuffer(), CbufferTypes::tcbuffer()}, TemporalTypes::tbool(), Gen_tne_cbuffer_tcbuffer));
 }
 
 void RegisterGenerated_meos_cbuffer_set_conversion(ExtensionLoader &loader) {
@@ -4669,6 +4783,8 @@ void RegisterGenerated_meos_pointcloud_comp_ever(ExtensionLoader &loader) {
 void RegisterGenerated_meos_pose_comp_temp(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tEqual", {PoseTypes::tpose(), PoseTypes::pose()}, TemporalTypes::tbool(), Gen_teq_tpose_pose));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tNotEqual", {PoseTypes::tpose(), PoseTypes::pose()}, TemporalTypes::tbool(), Gen_tne_tpose_pose));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tEqual", {PoseTypes::pose(), PoseTypes::tpose()}, TemporalTypes::tbool(), Gen_teq_pose_tpose));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tNotEqual", {PoseTypes::pose(), PoseTypes::tpose()}, TemporalTypes::tbool(), Gen_tne_pose_tpose));
 }
 
 void RegisterGenerated_meos_pose_geopose_accessor(ExtensionLoader &loader) {

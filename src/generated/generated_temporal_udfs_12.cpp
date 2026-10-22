@@ -26,6 +26,7 @@
 #include "pose/tpose.hpp"
 #include "rgeo/trgeometry.hpp"
 #include "posechain/tposechain.hpp"
+#include "raster/raquet.hpp"
 #include "spatial/spatial_types.hpp"
 #include "geo_util.hpp"
 #include "meos_internal.h"
@@ -269,6 +270,26 @@ inline Nsegment *BlobToNsegment(string_t blob) {
     Nsegment *copy = (Nsegment *)malloc(sizeof(Nsegment));
     memcpy(copy, blob.GetData(), sizeof(Nsegment));
     return copy;
+}
+// Self-contained blob<->Raquet marshalling. The Raquet structure is opaque, so the
+// stored BLOB is the WKB serialisation of the tile, the wire form its text hex-encodes.
+inline string_t RaquetToBlob(Vector &result, Raquet *rq) {
+    size_t sz = 0;
+    uint8_t *wkb = raquet_as_wkb(rq, 0, &sz);
+    free(rq);
+    if (!wkb) throw InvalidInputException("raquet: cannot serialise the tile");
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)wkb, sz);
+    free(wkb);
+    return out;
+}
+inline string_t RaquetToBlobN(Vector &result, Raquet *rq, ValidityMask &mask, idx_t idx) {
+    if (!rq) { mask.SetInvalid(idx); return string_t(); }
+    return RaquetToBlob(result, rq);
+}
+inline Raquet *BlobToRaquet(string_t blob) {
+    Raquet *rq = raquet_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());
+    if (!rq) throw InvalidInputException("raquet: invalid tile serialisation");
+    return rq;
 }
 // Self-contained blob<->STBox/TBox marshalling (FIXED-size structs -> sizeof).
 inline string_t StboxToBlob(Vector &result, STBox *b) {
@@ -982,6 +1003,9 @@ inline char * poseset_out_maxdd(const Set * p0) {
 inline char * posechainset_out_maxdd(const Set * p0) {
     return ::posechainset_out(p0, 15);
 }
+inline BandStats * raster_summary_stats_band_exclude_nodata(const Raster * p0) {
+    return ::raster_summary_stats(p0, 1, true);
+}
 inline STBox * trgeometry_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
     return ::trgeometry_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
 }
@@ -1492,6 +1516,246 @@ static void Gen_spatialset_srid(DataChunk &args, ExpressionState &, Vector &resu
             free(p0); 
             return (int32_t) r;
         });
+}
+
+static void Gen_spatialset_transform_pipeline(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<bool>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Set *p0 = BlobToSet(in0[i]);
+        std::string s1 = in1[i].GetString();
+        Set *r = spatialset_transform_pipeline(p0, s1.c_str(), in2[i], in3[i]);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_spatialset_transform_pipeline_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Set *p0 = BlobToSet(in0[i]);
+        std::string s1 = in1[i].GetString();
+        Set *r = spatialset_transform_pipeline(p0, s1.c_str(), in2[i], true);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_spatialset_transform_pipeline_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<bool>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Set *p0 = BlobToSet(in0[i]);
+        std::string s1 = in1[i].GetString();
+        Set *r = spatialset_transform_pipeline(p0, s1.c_str(), in2[i], in3[i]);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_spatialset_transform_pipeline_v3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Set *p0 = BlobToSet(in0[i]);
+        std::string s1 = in1[i].GetString();
+        Set *r = spatialset_transform_pipeline(p0, s1.c_str(), in2[i], true);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_spatialset_transform_pipeline_v4(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<bool>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Set *p0 = BlobToSet(in0[i]);
+        std::string s1 = in1[i].GetString();
+        Set *r = spatialset_transform_pipeline(p0, s1.c_str(), in2[i], in3[i]);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_spatialset_transform_pipeline_v5(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Set *p0 = BlobToSet(in0[i]);
+        std::string s1 = in1[i].GetString();
+        Set *r = spatialset_transform_pipeline(p0, s1.c_str(), in2[i], true);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_spatialset_transform_pipeline_v6(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<bool>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Set *p0 = BlobToSet(in0[i]);
+        std::string s1 = in1[i].GetString();
+        Set *r = spatialset_transform_pipeline(p0, s1.c_str(), in2[i], in3[i]);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_spatialset_transform_pipeline_v7(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Set *p0 = BlobToSet(in0[i]);
+        std::string s1 = in1[i].GetString();
+        Set *r = spatialset_transform_pipeline(p0, s1.c_str(), in2[i], true);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_spatialset_transform_pipeline_v8(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<bool>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Set *p0 = BlobToSet(in0[i]);
+        std::string s1 = in1[i].GetString();
+        Set *r = spatialset_transform_pipeline(p0, s1.c_str(), in2[i], in3[i]);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_spatialset_transform_pipeline_v9(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Set *p0 = BlobToSet(in0[i]);
+        std::string s1 = in1[i].GetString();
+        Set *r = spatialset_transform_pipeline(p0, s1.c_str(), in2[i], true);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 static void Gen_spatialset_set_srid(DataChunk &args, ExpressionState &, Vector &result) {
@@ -2475,6 +2739,147 @@ static void Gen_tposechain_translate_d(DataChunk &args, ExpressionState &state, 
         Temporal *x0 = BlobToTemporal(in0[i]);
         Temporal *r = (Temporal *) tposechain_translate(x0, in1[i], in2[i], 0.0);
         free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+
+// ===== @ingroup meos_raster_base_accessor =====
+static void Gen_raquet_width(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, int32_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Raquet *v = BlobToRaquet(in);
+            int32_t r = raquet_width(v);
+            free(v);
+            return r;
+        });
+}
+
+static void Gen_raquet_height(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, int32_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Raquet *v = BlobToRaquet(in);
+            int32_t r = raquet_height(v);
+            free(v);
+            return r;
+        });
+}
+
+static void Gen_raquet_band_has_nodata_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, bool>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Raquet *v = BlobToRaquet(in);
+            bool r = raquet_band_has_nodata_value(v);
+            free(v);
+            return r;
+        });
+}
+
+static void Gen_raquet_quadbin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<int64_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raquet *p0 = BlobToRaquet(in0[i]);
+        uint64_t r = raquet_quadbin(p0);
+        free(p0);
+        out[i] = static_cast<int64_t>(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raquet_band_pixel_type(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raquet *p0 = BlobToRaquet(in0[i]);
+        char *r = raquet_band_pixel_type(p0);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TakeCString(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raquet_band_nodata_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<double>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raquet *p0 = BlobToRaquet(in0[i]);
+        double v{};
+        bool found = raquet_band_nodata_value(p0, &v);
+        free(p0);
+        if (!found) { outv.SetInvalid(i); continue; }
+        out[i] = (double) v;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raquet_pixels(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raquet *p0 = BlobToRaquet(in0[i]);
+        size_t sz = 0;
+        uint8_t *r = raquet_pixels(p0, &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_tile_value_quadbin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 8; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<int32_t>(args.data[3]);
+    auto in4 = FlatVector::GetData<int64_t>(args.data[4]);
+    auto in5 = FlatVector::GetData<string_t>(args.data[5]);
+    auto in6 = FlatVector::GetData<double>(args.data[6]);
+    auto in7 = FlatVector::GetData<bool>(args.data[7]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[5]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[6]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[7]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Temporal *r = (Temporal *) raster_tile_value_quadbin(p0, (const uint8_t *) in1[i].GetData(), (size_t) in1[i].GetSize(), in2[i], in3[i], static_cast<uint64_t>(in4[i]), raquet_pixtype_from_string(in5[i].GetString().c_str()), in6[i], in7[i]);
+        free(p0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = TemporalToBlob(result, r);
     }
@@ -4090,6 +4495,16 @@ void RegisterGenerated_meos_geo_set_srid(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {SpatialSetType::geogset()}, LogicalType::INTEGER, Gen_spatialset_srid));
     RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {SetTypes::poseset()}, LogicalType::INTEGER, Gen_spatialset_srid));
     RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {SetTypes::posechainset()}, LogicalType::INTEGER, Gen_spatialset_srid));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {SetTypes::cbufferset(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN}, SetTypes::cbufferset(), Gen_spatialset_transform_pipeline));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {SetTypes::cbufferset(), LogicalType::VARCHAR, LogicalType::INTEGER}, SetTypes::cbufferset(), Gen_spatialset_transform_pipeline_v1));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {SpatialSetType::geomset(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN}, SpatialSetType::geomset(), Gen_spatialset_transform_pipeline_v2));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {SpatialSetType::geomset(), LogicalType::VARCHAR, LogicalType::INTEGER}, SpatialSetType::geomset(), Gen_spatialset_transform_pipeline_v3));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {SpatialSetType::geogset(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN}, SpatialSetType::geogset(), Gen_spatialset_transform_pipeline_v4));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {SpatialSetType::geogset(), LogicalType::VARCHAR, LogicalType::INTEGER}, SpatialSetType::geogset(), Gen_spatialset_transform_pipeline_v5));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {SetTypes::poseset(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN}, SetTypes::poseset(), Gen_spatialset_transform_pipeline_v6));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {SetTypes::poseset(), LogicalType::VARCHAR, LogicalType::INTEGER}, SetTypes::poseset(), Gen_spatialset_transform_pipeline_v7));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {SetTypes::posechainset(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN}, SetTypes::posechainset(), Gen_spatialset_transform_pipeline_v8));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {SetTypes::posechainset(), LogicalType::VARCHAR, LogicalType::INTEGER}, SetTypes::posechainset(), Gen_spatialset_transform_pipeline_v9));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {SetTypes::cbufferset(), LogicalType::INTEGER}, SetTypes::cbufferset(), Gen_spatialset_set_srid));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {SpatialSetType::geomset(), LogicalType::INTEGER}, SpatialSetType::geomset(), Gen_spatialset_set_srid));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {SpatialSetType::geogset(), LogicalType::INTEGER}, SpatialSetType::geogset(), Gen_spatialset_set_srid));
@@ -4226,6 +4641,17 @@ void RegisterGenerated_meos_posechain_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("rotate", {PosechainTypes::tposechain(), LogicalType::DOUBLE}, PosechainTypes::tposechain(), Gen_tposechain_rotate_z));
     RegisterSerializedScalarFunction(loader, ScalarFunction("translate", {PosechainTypes::tposechain(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, PosechainTypes::tposechain(), Gen_tposechain_translate));
     RegisterSerializedScalarFunction(loader, ScalarFunction("translate", {PosechainTypes::tposechain(), LogicalType::DOUBLE, LogicalType::DOUBLE}, PosechainTypes::tposechain(), Gen_tposechain_translate_d));
+}
+
+void RegisterGenerated_meos_raster_base_accessor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("width", {RaquetTypes::raquet()}, LogicalType::INTEGER, Gen_raquet_width));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("height", {RaquetTypes::raquet()}, LogicalType::INTEGER, Gen_raquet_height));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bandHasNoDataValue", {RaquetTypes::raquet()}, LogicalType::BOOLEAN, Gen_raquet_band_has_nodata_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("quadbin", {RaquetTypes::raquet()}, QuadbinTypes::quadbin(), Gen_raquet_quadbin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bandPixelType", {RaquetTypes::raquet()}, LogicalType::VARCHAR, Gen_raquet_band_pixel_type));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bandNoDataValue", {RaquetTypes::raquet()}, LogicalType::DOUBLE, Gen_raquet_band_nodata_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("pixels", {RaquetTypes::raquet()}, LogicalType::BLOB, Gen_raquet_pixels));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("rasterTileValueQuadbin", {TgeompointType::tgeompoint(), LogicalType::BLOB, LogicalType::INTEGER, LogicalType::INTEGER, QuadbinTypes::quadbin(), LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_raster_tile_value_quadbin));
 }
 
 void RegisterGenerated_meos_s2cell_set_setops(ExtensionLoader &loader) {

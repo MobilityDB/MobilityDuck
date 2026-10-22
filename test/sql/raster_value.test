@@ -13,27 +13,28 @@ require mobilityduck
 
 # One instant per quadrant samples that quadrant's pixel.
 query I
-SELECT rasterValue('test/data/raster_4326.tif', tgeompoint
-  '{POINT(-90 45)@2024-01-01, POINT(90 45)@2024-01-02, POINT(-90 -45)@2024-01-03, POINT(90 -45)@2024-01-04}')::VARCHAR;
+SELECT rasterValue(tgeompoint
+  '{POINT(-90 45)@2024-01-01, POINT(90 45)@2024-01-02, POINT(-90 -45)@2024-01-03, POINT(90 -45)@2024-01-04}',
+  'test/data/raster_4326.tif')::VARCHAR;
 ----
 {1@2024-01-01 00:00:00+01, 2@2024-01-02 00:00:00+01, 3@2024-01-03 00:00:00+01, 4@2024-01-04 00:00:00+01}
 
 # Naming band 1 explicitly gives the same answer as the default.
 query I
-SELECT rasterValue('test/data/raster_4326.tif', tgeompoint 'POINT(-90 45)@2024-01-01', 1)
-     = rasterValue('test/data/raster_4326.tif', tgeompoint 'POINT(-90 45)@2024-01-01');
+SELECT rasterValue(tgeompoint 'POINT(-90 45)@2024-01-01', 'test/data/raster_4326.tif', 1)
+     = rasterValue(tgeompoint 'POINT(-90 45)@2024-01-01', 'test/data/raster_4326.tif');
 ----
 true
 
 # A band the raster does not have is rejected.
 statement error
-SELECT rasterValue('test/data/raster_4326.tif', tgeompoint 'POINT(-90 45)@2024-01-01', 7);
+SELECT rasterValue(tgeompoint 'POINT(-90 45)@2024-01-01', 'test/data/raster_4326.tif', 7);
 ----
 band
 
 # An unreadable path is rejected.
 statement error
-SELECT rasterValue('test/data/no_such_raster.tif', tgeompoint 'POINT(-90 45)@2024-01-01');
+SELECT rasterValue(tgeompoint 'POINT(-90 45)@2024-01-01', 'test/data/no_such_raster.tif');
 ----
 No such file or directory
 
@@ -61,24 +62,24 @@ FROM (SELECT minusRasterValue(tgeompoint
 
 # The trajectory ever samples a value in 1..2, but not always.
 query II
-SELECT eRasterValue('test/data/raster_4326.tif', tgeompoint
-         '{POINT(-90 45)@2024-01-01, POINT(90 -45)@2024-01-02}', floatspan '[1, 2]'),
-       aRasterValue('test/data/raster_4326.tif', tgeompoint
-         '{POINT(-90 45)@2024-01-01, POINT(90 -45)@2024-01-02}', floatspan '[1, 2]');
+SELECT eRasterValue(tgeompoint
+         '{POINT(-90 45)@2024-01-01, POINT(90 -45)@2024-01-02}', 'test/data/raster_4326.tif', floatspan '[1, 2]'),
+       aRasterValue(tgeompoint
+         '{POINT(-90 45)@2024-01-01, POINT(90 -45)@2024-01-02}', 'test/data/raster_4326.tif', floatspan '[1, 2]');
 ----
 true	false
 
 # A trajectory confined to the north-west quadrant always samples 1.
 query II
-SELECT eRasterValue('test/data/raster_4326.tif', tgeompoint
-         '{POINT(-90 45)@2024-01-01, POINT(-30 30)@2024-01-02}', floatspan '[1, 1]'),
-       aRasterValue('test/data/raster_4326.tif', tgeompoint
-         '{POINT(-90 45)@2024-01-01, POINT(-30 30)@2024-01-02}', floatspan '[1, 1]');
+SELECT eRasterValue(tgeompoint
+         '{POINT(-90 45)@2024-01-01, POINT(-30 30)@2024-01-02}', 'test/data/raster_4326.tif', floatspan '[1, 1]'),
+       aRasterValue(tgeompoint
+         '{POINT(-90 45)@2024-01-01, POINT(-30 30)@2024-01-02}', 'test/data/raster_4326.tif', floatspan '[1, 1]');
 ----
 true	true
 
 # NULL input propagates.
 query I
-SELECT rasterValue('test/data/raster_4326.tif', NULL::TGEOMPOINT) IS NULL;
+SELECT rasterValue(NULL::TGEOMPOINT, 'test/data/raster_4326.tif') IS NULL;
 ----
 true

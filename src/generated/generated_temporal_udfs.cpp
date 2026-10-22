@@ -26,6 +26,7 @@
 #include "pose/tpose.hpp"
 #include "rgeo/trgeometry.hpp"
 #include "posechain/tposechain.hpp"
+#include "raster/raquet.hpp"
 #include "spatial/spatial_types.hpp"
 #include "geo_util.hpp"
 #include "meos_internal.h"
@@ -238,6 +239,12 @@ void RegisterGenerated_meos_quadbin_set_conversion(ExtensionLoader &loader);
 void RegisterGenerated_meos_quadbin_set_inout(ExtensionLoader &loader);
 void RegisterGenerated_meos_quadbin_set_setops(ExtensionLoader &loader);
 void RegisterGenerated_meos_quadbin_transf(ExtensionLoader &loader);
+void RegisterGenerated_meos_raster(ExtensionLoader &loader);
+void RegisterGenerated_meos_raster_base_accessor(ExtensionLoader &loader);
+void RegisterGenerated_meos_raster_base_comp(ExtensionLoader &loader);
+void RegisterGenerated_meos_raster_base_constructor(ExtensionLoader &loader);
+void RegisterGenerated_meos_raster_base_conversion(ExtensionLoader &loader);
+void RegisterGenerated_meos_raster_base_inout(ExtensionLoader &loader);
 void RegisterGenerated_meos_rgeo_accessor(ExtensionLoader &loader);
 void RegisterGenerated_meos_rgeo_bbox_split(ExtensionLoader &loader);
 void RegisterGenerated_meos_rgeo_comp_ever(ExtensionLoader &loader);
@@ -495,6 +502,12 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_quadbin_set_inout(loader);
     RegisterGenerated_meos_quadbin_set_setops(loader);
     RegisterGenerated_meos_quadbin_transf(loader);
+    RegisterGenerated_meos_raster(loader);
+    RegisterGenerated_meos_raster_base_accessor(loader);
+    RegisterGenerated_meos_raster_base_comp(loader);
+    RegisterGenerated_meos_raster_base_constructor(loader);
+    RegisterGenerated_meos_raster_base_conversion(loader);
+    RegisterGenerated_meos_raster_base_inout(loader);
     RegisterGenerated_meos_rgeo_accessor(loader);
     RegisterGenerated_meos_rgeo_bbox_split(loader);
     RegisterGenerated_meos_rgeo_comp_ever(loader);
