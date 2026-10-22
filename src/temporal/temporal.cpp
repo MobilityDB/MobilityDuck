@@ -141,35 +141,6 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
         // timestamps(<temporal_type>) is generated from the catalog (temporal_timestamps) in generated_temporal_udfs.cpp.
 
-        if (type.GetAlias() == "tint" || type.GetAlias() == "tfloat") {
-            duckdb::RegisterSerializedScalarFunction(loader, 
-                ScalarFunction(
-                    "shiftValue",
-                    {type, LogicalType::BIGINT},
-                    type,
-                    TemporalFunctions::Tnumber_shift_value
-                )
-            );
-
-            duckdb::RegisterSerializedScalarFunction(loader, 
-                ScalarFunction(
-                    "scaleValue",
-                    {type, LogicalType::BIGINT},
-                    type,
-                    TemporalFunctions::Tnumber_scale_value
-                )
-            );
-
-            duckdb::RegisterSerializedScalarFunction(loader, 
-                ScalarFunction(
-                    "shiftScaleValue",
-                    {type, LogicalType::BIGINT, LogicalType::BIGINT},
-                    type,
-                    TemporalFunctions::Tnumber_shift_scale_value
-                )
-            );
-
-        }
         if (type.GetAlias() != "tbool") {
             duckdb::RegisterSerializedScalarFunction(loader, 
                 ScalarFunction(
@@ -204,14 +175,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // src/generated/generated_temporal_udfs.cpp. Behaviour-equivalent to the retired hand
     // regs (both call the MEOS set restriction), and the generated surface adds the
     // previously-missing tbigint overload.
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "whenTrue",
-            {TemporalTypes::tbool()},
-            SpansetTypes::tstzspanset(),
-            TemporalFunctions::Tbool_when_true
-        )
-    );
+
+    // whenTrue(tbool) is generated from the catalog (tbool_when_true, meos_temporal_bool).
 
     // atTbox / minusTbox (TNumber<T>, tbox) are now generated from the catalog
     // (tnumber_at_tbox / tnumber_minus_tbox, sqlSignatures-driven) — see
@@ -276,12 +241,8 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     // Temporal #= comparison (temporal_teq/tne/tlt/tle/tgt/tge) is generated
     // (group meos_temporal_comp_temp).
-    // tsample — time-domain rebinning (tprecision is generated from the catalog)
-    for (auto &t : TemporalTypes::AllTypes()) {
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tsample",    {t, LogicalType::INTERVAL}, t, TemporalFunctions::Temporal_tsample));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tsample",    {t, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, t, TemporalFunctions::Temporal_tsample));
-        duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction("tsample",    {t, LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::VARCHAR}, t, TemporalFunctions::Temporal_tsample));
-    }
+    // tsample over every temporal type is generated from the catalog (temporal_tsample,
+    // meos_temporal_analytics_reduction).
 
     // tspatial × {stbox, tspatial} position predicates (spatial axes
     // left/right/below/above/front/back + over*, and the time axis before/after/

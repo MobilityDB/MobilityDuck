@@ -85,9 +85,9 @@ SELECT tsample(tint '[1@2000-01-01, 5@2000-01-05]', INTERVAL '2 days', TIMESTAMP
 ----
 {1@2000-01-01 00:00:00+00, 1@2000-01-03 00:00:00+00, 5@2000-01-05 00:00:00+00}
 
-# Invalid interpolation rejected
+# Invalid interpolation rejected with MobilityDB's message
 
 statement error
 SELECT tsample(tfloat '[1@2000-01-01]', INTERVAL '1 day', TIMESTAMP '2000-01-01', 'invalid');
 ----
-Invalid interpolation
+Unknown interpolation type: invalid

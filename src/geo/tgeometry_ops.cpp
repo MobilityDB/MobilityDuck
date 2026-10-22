@@ -31,67 +31,10 @@ extern "C" {
 
 namespace duckdb {
 
-namespace {
-
-// ====================================================================
-// Argument-decoding helpers
-// ====================================================================
-
-inline Temporal *DecodeTemporalCopy(string_t blob) {
-    size_t sz = blob.GetSize();
-    Temporal *t = (Temporal *) malloc(sz);
-    memcpy(t, blob.GetData(), sz);
-    return t;
-}
-
-// ====================================================================
-// Spatial functions — SRID accessor, setSRID, transform, expand*,
-// round, traversedArea, centroid, convexHull, and the
-// tgeometry <-> tgeompoint coercions.
-// ====================================================================
-
-inline string_t StboxToBlob(Vector &result, STBox *box) {
-    string_t out = StringVector::AddStringOrBlob(
-        result, reinterpret_cast<const char *>(box), sizeof(STBox));
-    free(box);
-    return out;
-}
-
-void TspatialToStboxExec(DataChunk &args, ExpressionState &, Vector &result) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        args.data[0], result, args.size(),
-        [&](string_t blob) {
-            Temporal *t = DecodeTemporalCopy(blob);
-            STBox *box = tspatial_to_stbox(t);
-            free(t);
-            return StboxToBlob(result, box);
-        });
-}
-
-} // namespace
-
 void TGeometryOps::RegisterScalarFunctions(ExtensionLoader &loader) {
-    const LogicalType TGEOM = TGeometryTypes::tgeometry();
-    const LogicalType GEOM  = MobilityDuckGeometryType();
-    const LogicalType stbox = StboxType::stbox();
-    const LogicalType tstzspan = SpanTypes::tstzspan();
-    const LogicalType BOOL = LogicalType::BOOLEAN;
-    const LogicalType DBL = LogicalType::DOUBLE;
-    const LogicalType tfloat = TemporalTypes::tfloat();
-
-    // Time-axis position predicates on tgeometry × tstzspan (both directions;
-    // before/after/overbefore/overafter, backing fns before_temporal_tstzspan etc.
-    // @ingroup meos_temporal_bbox_pos) are generated from the catalog sqlSignatures
-    // in src/generated/generated_temporal_udfs.cpp. The stale-snake temporal_*
-    // aliases are dropped (bare names supersede them).
-
-    // tgeometry → stbox is a cast in the SQL surface; expose it as a
-    // function for now to keep the implementation a single template.
-    RegisterMeosFunction(loader, ScalarFunction(
-        "stbox", {TGEOM}, stbox, TspatialToStboxExec));
-
-    // Centroid / convexHull / traversedArea — produce a non-temporal
-    // geometry summary of the trajectory.
+    // The time-axis position predicates on tgeometry x tstzspan are generated from the catalog
+    // sqlSignatures (@ingroup meos_temporal_bbox_pos), and so is stbox(tgeometry)
+    // (tspatial_to_stbox, meos_geo_conversion).
 }
 
 } // namespace duckdb

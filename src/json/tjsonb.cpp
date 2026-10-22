@@ -148,22 +148,10 @@ bool TjsonbFunctions::Jsonb_in_cast(
  * ------------------------------------------------------------------ */
 
 void TJsonbTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
-    const auto T = TJsonbTypes::tjsonb();
-    const auto V = LogicalType::VARCHAR;
-
     /* Constructors: tjsonb(jsonb, timestamptz | tstzset | tstzspan | tstzspanset) and
-     * tjsonbSeq are generated (meos_json_constructor, meos_temporal_constructor). */
-
-    /* Generic temporal functions applied to tjsonb. timeSpan/tempSubtype/interp/merge
-     * are now GENERATED with identical signatures (generate-then-retire), so the hand
-     * registrations are retired here. memSize/setInterp stay hand (not generated yet);
-     * tjsonbInst stays hand (subtype cast). */
-    RegisterSerializedScalarFunction(loader,
-        ScalarFunction("tjsonbInst", {T}, T, TemporalFunctions::Temporal_to_tinstant));
-
-    /* Value accessors — startValue/endValue, valueAtTimestamp and valueN are all
-     * GENERATED (the out-parameter shape reaches the last two), so the whole
-     * meos_json_accessor group is retired here and no name registers twice. */
+     * tjsonbSeq are generated (meos_json_constructor, meos_temporal_constructor), and so are
+     * timeSpan, tempSubtype, interp, merge, tjsonbInst, tjsonbSeq and tjsonbSeqSet over a tjsonb
+     * (meos_temporal_transf) and its value accessors (meos_json_accessor). */
 }
 
 } // namespace duckdb

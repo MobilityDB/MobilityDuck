@@ -111,108 +111,9 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "stbox",
-            {tgeogpoint()},
-            StboxType::stbox(),
-            TgeompointFunctions::Tspatial_to_stbox
-        )
-    );
-
-    /* ***************************************************
-     * Conversion functions
-     ****************************************************/
-    // timeSpan(tgeogpoint) (temporal_to_tstzspan, group meos_temporal_conversion) is
-    // generated from the catalog in generated_temporal_udfs.cpp (RETIRED_GROUPS).
-
-    /***************************************************
-     * Transformation functions
-     ****************************************************/
-
-
-
-
-
-
-
-
-
-
-
-    /* ***************************************************
-    * Accessor functions
-    ****************************************************/
-
-
-
-
-    // timestamps(tgeogpoint) is generated from the catalog (temporal_timestamps) in generated_temporal_udfs.cpp.
-
-    /* ***************************************************
-     * Shift and Scale functions
-     ****************************************************/
-
-
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "shiftScaleTime",
-            {tgeogpoint(), LogicalType::INTERVAL, LogicalType::INTERVAL},
-            tgeogpoint(),
-            TemporalFunctions::Temporal_shift_scale_time
-        )
-    );
-
-    /* ***************************************************
-     * Restriction functions
-     ****************************************************/
-
-
-    /* ***************************************************
-     * Modification function
-     ****************************************************/
-
-
-
-
-
-
-
-
-
-
-
-
-    /* ***************************************************
-     * Stops function
-     ****************************************************/
-
-    /* ***************************************************
-     * Spatial functions
-     ****************************************************/
-
-
-
-
-
-
-
-
-
-
-    duckdb::RegisterSerializedScalarFunction(loader,
-        ScalarFunction(
-            "makeSimple",
-            {tgeogpoint()},
-            LogicalType::LIST(tgeogpoint()),
-            TgeompointFunctions::Tpoint_make_simple
-        )
-    );
-
-    // round(tgeogpoint) at both arities is generated from the catalog temporal_round
-    // signature (generated_temporal_udfs.cpp); no hand registration remains.
-
+    // stbox(tgeogpoint) and shiftScaleTime(tgeogpoint, interval, interval) are generated from the
+    // catalog (meos_geo_conversion, meos_temporal_transf); MobilityDB declares makeSimple over
+    // tgeompoint alone.
 }
 
 // ============================================================
@@ -316,38 +217,8 @@ TInstant **temparr_extract_gp(Vector &tgeogpoint_arr_vec, list_entry_t list_entr
 
 
 void TGeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
-
-    // timeSpan(tgeogpoint) is generated (meos_temporal_conversion, RETIRED_GROUPS).
-
-
-
-
-
-    
-
-
-
-
-    // ===================================================================
-    // Foundational tgeogpoint surface — accessors, time/value-restrict,
-    // modifiers, and comparison. The MEOS C functions delegated to here
-    // are subtype-agnostic (they take Temporal *), so we reuse the same
-    // generic handlers wired for tgeompoint in temporal_functions.cpp.
-    // ===================================================================
-
-    const LogicalType TGEOM = TGeogpointType::tgeogpoint();
-    const LogicalType GEOM  = MobilityDuckGeometryType();
-    const LogicalType TSTZ  = LogicalType::TIMESTAMP_TZ;
-    const LogicalType IVAL  = LogicalType::INTERVAL;
-    const LogicalType BIGI  = LogicalType::BIGINT;
-
-    // ---- Accessors ----
-    // timestamps(tgeogpoint) is generated from the catalog (temporal_timestamps) in generated_temporal_udfs.cpp.
-    // ---- Modifiers (shift / scale / shiftScale / append / insert / update /
-    // delete / round) ----
-    RegisterMeosFunction(loader, ScalarFunction(
-        "shiftScaleTime", {TGEOM, IVAL, IVAL}, TGEOM,
-        TemporalFunctions::Temporal_shift_scale_time));
+    // timeSpan(tgeogpoint) is generated (meos_temporal_conversion, RETIRED_GROUPS), and so is
+    // shiftScaleTime(tgeogpoint, interval, interval) (meos_temporal_transf).
 }
 
 void TGeogpointType::RegisterTypes(ExtensionLoader &loader) {
