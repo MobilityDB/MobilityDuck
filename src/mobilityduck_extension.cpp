@@ -376,7 +376,6 @@ static void LoadInternal(ExtensionLoader &loader) {
 	StboxType::RegisterCastFunctions(loader);
 	StboxType::RegisterScalarFunctions(loader);
 
-	SpanTypes::RegisterScalarFunctions(loader);
 	SpanTypes::RegisterTypes(loader);
 	SpanTypes::RegisterCastFunctions(loader);
 

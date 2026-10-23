@@ -40,7 +40,6 @@ extern "C" {
     typedef struct Pcpoint Pcpoint;
     extern Pcpoint *pcpoint_hex_in(const char *str);
     extern char *pcpoint_hex_out(const Pcpoint *pt, int maxdd);
-    extern uint32_t pcpoint_get_pcid(const Pcpoint *pt);
 }
 
 
@@ -123,34 +122,6 @@ bool TpcpointFunctions::Pcpoint_out_cast(
     return true;
 }
 
-static void Tpcpoint_pcid(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto count = args.size();
-    auto &input_vec = args.data[0];
-
-    UnaryExecutor::Execute<string_t, int32_t>(
-        input_vec, result, count,
-        [&](string_t input_str) -> int32_t {
-            std::string input = input_str.GetString();
-
-            Temporal *temp = reinterpret_cast<Temporal*>(const_cast<char*>(input.c_str()));
-
-            // temporal_start_value returns a freshly allocated copy of
-            // the pcpoint value (datum_copy), which the caller owns.
-            Datum start_datum = temporal_start_value(temp);
-            Pcpoint *pt = reinterpret_cast<Pcpoint*>(start_datum);
-
-            // pcpoint_get_pcid is schema-free (reads the serialized
-            // pcid field of the opaque pgpointcloud point).
-            uint32_t pcid = pcpoint_get_pcid(pt);
-            free(pt);
-            return static_cast<int32_t>(pcid);
-        });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-}
-
 
 
 
@@ -168,14 +139,6 @@ void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     /* getValue, startValue and endValue are now GENERATED (they return the pcpoint base value,
      * rendered as hex-WKB text via the pcpoint->VARCHAR cast), mirroring the cbuffer
      * sibling; the hand VARCHAR registrations are retired to avoid an ambiguous overload. */
-
-    auto tpcpoint_pcid_function = ScalarFunction(
-        "pcid",
-        {TPcpointTypes::tpcpoint()},
-        LogicalType::INTEGER,
-        Tpcpoint_pcid
-    );
-    duckdb::RegisterSerializedScalarFunction(loader,  tpcpoint_pcid_function);
 
     // tpcpointInst(tpcpoint) and shiftScaleTime(tpcpoint, interval, interval) are generated from
     // the catalog (meos_temporal_transf).
