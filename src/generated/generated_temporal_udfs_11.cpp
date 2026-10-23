@@ -958,6 +958,12 @@ inline Temporal * tgeo_translate_deltaz(const Temporal * p0, double p1, double p
 inline STBox * tgeo_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
     return ::tgeo_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
 }
+inline STBox * tgeo_time_boxes_bitmatrix_border_inc(const Temporal * p0, const MeosInterval * p1, TimestampTz p2, int * p3) {
+    return ::tgeo_time_boxes(p0, p1, p2, true, true, p3);
+}
+inline STBox * tgeo_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, const MeosInterval * p1, int * p2) {
+    return ::tgeo_time_boxes(p0, p1, timestamptz_in("2000-01-03", -1), true, true, p2);
+}
 inline STBox * tgeo_space_time_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, TimestampTz p6, int * p7) {
     return ::tgeo_space_time_boxes(p0, p1, p2, p3, p4, p5, p6, true, true, p7);
 }
@@ -1008,6 +1014,12 @@ inline BandStats * raster_summary_stats_band_exclude_nodata(const Raster * p0) {
 }
 inline STBox * trgeometry_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
     return ::trgeometry_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
+}
+inline STBox * trgeometry_time_boxes_bitmatrix_border_inc(const Temporal * p0, const MeosInterval * p1, TimestampTz p2, int * p3) {
+    return ::trgeometry_time_boxes(p0, p1, p2, true, true, p3);
+}
+inline STBox * trgeometry_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, const MeosInterval * p1, int * p2) {
+    return ::trgeometry_time_boxes(p0, p1, timestamptz_in("2000-01-03", -1), true, true, p2);
 }
 inline STBox * trgeometry_space_time_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, TimestampTz p6, int * p7) {
     return ::trgeometry_space_time_boxes(p0, p1, p2, p3, p4, p5, p6, true, true, p7);

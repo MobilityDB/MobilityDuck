@@ -958,6 +958,12 @@ inline Temporal * tgeo_translate_deltaz(const Temporal * p0, double p1, double p
 inline STBox * tgeo_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
     return ::tgeo_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
 }
+inline STBox * tgeo_time_boxes_bitmatrix_border_inc(const Temporal * p0, const MeosInterval * p1, TimestampTz p2, int * p3) {
+    return ::tgeo_time_boxes(p0, p1, p2, true, true, p3);
+}
+inline STBox * tgeo_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, const MeosInterval * p1, int * p2) {
+    return ::tgeo_time_boxes(p0, p1, timestamptz_in("2000-01-03", -1), true, true, p2);
+}
 inline STBox * tgeo_space_time_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, TimestampTz p6, int * p7) {
     return ::tgeo_space_time_boxes(p0, p1, p2, p3, p4, p5, p6, true, true, p7);
 }
@@ -1008,6 +1014,12 @@ inline BandStats * raster_summary_stats_band_exclude_nodata(const Raster * p0) {
 }
 inline STBox * trgeometry_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
     return ::trgeometry_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
+}
+inline STBox * trgeometry_time_boxes_bitmatrix_border_inc(const Temporal * p0, const MeosInterval * p1, TimestampTz p2, int * p3) {
+    return ::trgeometry_time_boxes(p0, p1, p2, true, true, p3);
+}
+inline STBox * trgeometry_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, const MeosInterval * p1, int * p2) {
+    return ::trgeometry_time_boxes(p0, p1, timestamptz_in("2000-01-03", -1), true, true, p2);
 }
 inline STBox * trgeometry_space_time_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, TimestampTz p6, int * p7) {
     return ::trgeometry_space_time_boxes(p0, p1, p2, p3, p4, p5, p6, true, true, p7);
@@ -2131,150 +2143,6 @@ static void Gen_tgeo_space_time_boxes_s2_a4(DataChunk &args, ExpressionState &, 
         int count = 0;
         STBox *arr = tgeo_space_time_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], 0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[3])[i]), g4, timestamptz_in("2000-01-03", -1), true, true, &count);
         free(x0); free(g4);
-        int n = (arr && count > 0) ? count : 0;
-        ListVector::Reserve(result, off + n);
-        ListVector::SetListSize(result, off + n);
-        list_entries[i] = list_entry_t{off, (uint64_t) n};
-        if (n > 0) {
-            auto &child_vector = ListVector::GetEntry(result);
-            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
-            auto *cd = FlatVector::GetData<string_t>(child_vector);
-            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
-            off += n;
-        }
-        free(arr);
-    }
-}
-
-static void Gen_tgeo_space_time_boxes_s3_a5(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    const idx_t rows = args.size();
-    for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
-    auto &outv = FlatVector::Validity(result);
-    auto list_entries = FlatVector::GetData<list_entry_t>(result);
-    idx_t off = 0;
-    for (idx_t i = 0; i < rows; i++) {
-        bool valid = true;
-        for (idx_t c = 0; c < 5; c++)
-            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
-        if (!valid) {
-            outv.SetInvalid(i); list_entries[i] = list_entry_t{off, 0};
-            continue;
-        }
-        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
-        Temporal *x0 = BlobToTemporal(a0);
-        int32_t srid0 = tspatial_srid(x0);
-        int count = 0;
-        STBox *arr = tgeo_space_time_boxes(x0, 0.0, 0.0, 0.0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[1])[i]), NULL, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[2])[i]).value, FlatVector::GetData<bool>(args.data[3])[i], FlatVector::GetData<bool>(args.data[4])[i], &count);
-        free(x0);
-        int n = (arr && count > 0) ? count : 0;
-        ListVector::Reserve(result, off + n);
-        ListVector::SetListSize(result, off + n);
-        list_entries[i] = list_entry_t{off, (uint64_t) n};
-        if (n > 0) {
-            auto &child_vector = ListVector::GetEntry(result);
-            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
-            auto *cd = FlatVector::GetData<string_t>(child_vector);
-            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
-            off += n;
-        }
-        free(arr);
-    }
-}
-
-static void Gen_tgeo_space_time_boxes_s3_a4(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    const idx_t rows = args.size();
-    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
-    auto &outv = FlatVector::Validity(result);
-    auto list_entries = FlatVector::GetData<list_entry_t>(result);
-    idx_t off = 0;
-    for (idx_t i = 0; i < rows; i++) {
-        bool valid = true;
-        for (idx_t c = 0; c < 4; c++)
-            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
-        if (!valid) {
-            outv.SetInvalid(i); list_entries[i] = list_entry_t{off, 0};
-            continue;
-        }
-        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
-        Temporal *x0 = BlobToTemporal(a0);
-        int32_t srid0 = tspatial_srid(x0);
-        int count = 0;
-        STBox *arr = tgeo_space_time_boxes(x0, 0.0, 0.0, 0.0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[1])[i]), NULL, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[2])[i]).value, FlatVector::GetData<bool>(args.data[3])[i], true, &count);
-        free(x0);
-        int n = (arr && count > 0) ? count : 0;
-        ListVector::Reserve(result, off + n);
-        ListVector::SetListSize(result, off + n);
-        list_entries[i] = list_entry_t{off, (uint64_t) n};
-        if (n > 0) {
-            auto &child_vector = ListVector::GetEntry(result);
-            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
-            auto *cd = FlatVector::GetData<string_t>(child_vector);
-            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
-            off += n;
-        }
-        free(arr);
-    }
-}
-
-static void Gen_tgeo_space_time_boxes_s3_a3(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    const idx_t rows = args.size();
-    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
-    auto &outv = FlatVector::Validity(result);
-    auto list_entries = FlatVector::GetData<list_entry_t>(result);
-    idx_t off = 0;
-    for (idx_t i = 0; i < rows; i++) {
-        bool valid = true;
-        for (idx_t c = 0; c < 3; c++)
-            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
-        if (!valid) {
-            outv.SetInvalid(i); list_entries[i] = list_entry_t{off, 0};
-            continue;
-        }
-        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
-        Temporal *x0 = BlobToTemporal(a0);
-        int32_t srid0 = tspatial_srid(x0);
-        int count = 0;
-        STBox *arr = tgeo_space_time_boxes(x0, 0.0, 0.0, 0.0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[1])[i]), NULL, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[2])[i]).value, true, true, &count);
-        free(x0);
-        int n = (arr && count > 0) ? count : 0;
-        ListVector::Reserve(result, off + n);
-        ListVector::SetListSize(result, off + n);
-        list_entries[i] = list_entry_t{off, (uint64_t) n};
-        if (n > 0) {
-            auto &child_vector = ListVector::GetEntry(result);
-            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
-            auto *cd = FlatVector::GetData<string_t>(child_vector);
-            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
-            off += n;
-        }
-        free(arr);
-    }
-}
-
-static void Gen_tgeo_space_time_boxes_s3_a2(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    const idx_t rows = args.size();
-    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
-    auto &outv = FlatVector::Validity(result);
-    auto list_entries = FlatVector::GetData<list_entry_t>(result);
-    idx_t off = 0;
-    for (idx_t i = 0; i < rows; i++) {
-        bool valid = true;
-        for (idx_t c = 0; c < 2; c++)
-            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
-        if (!valid) {
-            outv.SetInvalid(i); list_entries[i] = list_entry_t{off, 0};
-            continue;
-        }
-        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
-        Temporal *x0 = BlobToTemporal(a0);
-        int32_t srid0 = tspatial_srid(x0);
-        int count = 0;
-        STBox *arr = tgeo_space_time_boxes(x0, 0.0, 0.0, 0.0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[1])[i]), NULL, timestamptz_in("2000-01-03", -1), true, true, &count);
-        free(x0);
         int n = (arr && count > 0) ? count : 0;
         ListVector::Reserve(result, off + n);
         ListVector::SetListSize(result, off + n);
@@ -3724,14 +3592,6 @@ void RegisterGenerated_meos_geo_bbox_split(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("spaceTimeBoxes", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType()}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_time_boxes_s2_a5));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spaceTimeBoxes", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_time_boxes_s2_a4));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spaceTimeBoxes", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_time_boxes_s2_a4));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_time_boxes_s3_a5));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TgeompointType::tgeompoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_time_boxes_s3_a5));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_time_boxes_s3_a4));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TgeompointType::tgeompoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_time_boxes_s3_a4));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_time_boxes_s3_a3));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TgeompointType::tgeompoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_time_boxes_s3_a3));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_time_boxes_s3_a2));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TgeompointType::tgeompoint(), LogicalType::INTERVAL}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_time_boxes_s3_a2));
     RegisterSerializedScalarFunction(loader, ScalarFunction("stboxes", {CbufferTypes::tcbuffer()}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_stboxes));
     RegisterSerializedScalarFunction(loader, ScalarFunction("stboxes", {TGeometryTypes::tgeometry()}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_stboxes));
     RegisterSerializedScalarFunction(loader, ScalarFunction("stboxes", {TGeographyTypes::tgeography()}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_stboxes));
